@@ -1,0 +1,28 @@
+import <stdio>
+
+int main(string argc[])
+{
+	// 並べて書ける。
+	string str = "This is string"
+				" strin2";
+
+	int len = str.len; // 文字数
+	char c = str(2); // char は UTF8マルチバイト文字
+
+	int size = str.size; // バイト数
+	byte b = str[2];
+
+	// 変数の後ろに""でフォーマットを書くことで文字列化
+	int i = 3;
+	string dexstr = i.str; // コピーでなくて、内部的には移譲
+	string hexstr = i.str("h");
+
+	myprint("test(" i.str ")test2\n")
+	return 0;
+}
+
+// string出なく参照の配列、移譲されたものが渡る
+void myprint(in string strs[])
+{
+	foreach string s (strs) print(s);
+}

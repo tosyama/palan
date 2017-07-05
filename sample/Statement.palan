@@ -1,0 +1,34 @@
+import <stdio>
+
+int main(string argc[])
+{
+	for (int i=0; i<10; ++i)
+		print(i.str);
+
+	int i;
+	while (i<10) {
+		print(i.str);
+		++i;
+	}
+
+	// break / continue
+	for:outloop (int i=0; i<10; ++i)
+		for (int j=0; j<10; ++j) {
+			if (i==8 && j==5) break outloop;
+			print(i.str "," j.str "\n");
+		}
+
+	int i;
+	while:outloop (i<10) {
+		++i;
+		for (int j=0; j<10; ++j)
+			if (i==8 && j==5) continue outloop ;
+	}
+
+	foreach int i (1..5) print(i.str);
+	
+	int arr[10] = (1..10);
+	foreach int i (arr) print(i.str);
+
+	return 0;
+}

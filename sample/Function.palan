@@ -1,0 +1,18 @@
+import <stdio>
+
+int main(string argc[])
+{
+	int x, y;
+
+	x,y = pointadd(1,2,3,4);
+
+	_=0;
+}
+
+// multi return
+int x, int y pointadd(int sx, int sy int ax, int ay) {
+	x = sx + ax;
+	y = sy + ay;
+}
+
+
