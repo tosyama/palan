@@ -23,3 +23,11 @@ int x, int y pointadd(int sx, int sy int ax, int ay) {
 int x, int y swap(int sx, int sy) {
 	return sy, sx;
 }
+
+// object
+object func(object o1, io object o2, take object o2)
+{
+// o1 は lval or rval. rval はdelete.
+// o2はlval. deleteされない. rvalはNG.
+// o3はrval. deleteされる. lval.clone or lval.pass ならok.
+}
