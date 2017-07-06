@@ -1,6 +1,6 @@
 import <stdio>
 
-int main(string argc[])
+int main(string arg[])
 {
 	// 文字リテラルの静的な文字結合は"."を使う。な場合は配列化される。
 	string str = "This is string"
