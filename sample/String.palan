@@ -2,9 +2,9 @@ import <stdio>
 
 int main(string argc[])
 {
-	// 並べて書ける。
+	// 文字リテラルの静的な文字結合は"."を使う。な場合は配列化される。
 	string str = "This is string"
-				" strin2";
+		. " strin2";
 
 	int len = str.len; // 文字数
 	char c = str(2); // char は UTF8マルチバイト文字
@@ -21,7 +21,7 @@ int main(string argc[])
 	return 0;
 }
 
-// string出なく参照の配列、移譲されたものが渡る
+// stringコピーではなく参照の配列、移譲されたものが渡る
 void myprint(in string strs[])
 {
 	foreach string s (strs) print(s);
