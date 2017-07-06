@@ -4,15 +4,20 @@ int main(string argc[])
 {
 	int x, y;
 
-	x,y = pointadd(1,2,3,4);
+	(x,y) = pointadd(1,2,3,4);
 	print(x.str ":" y.str);
-	x,y = swap(x,y);
+	(x,y) = swap(x,y);
 	print(x.str ":" y.str);
 	return 0;
 }
 
+// Policy: returnはrval, output用
+//	parameterは input / io用
+//	parameterのプリミティブ型(int等)は、基本コピー渡し、ioの場合は、参照渡しとなる。
+//	parameterのオブジェクト型(string等)は参照渡しのみ。
+
 // multi return
-int x, int y pointadd(int sx, int sy int ax, int ay) {
+int x=0, y=0 pointadd(int sx, int sy int ax, int ay) {
 	x = sx + ax;
 	y = sy + ay;
 	
@@ -20,14 +25,16 @@ int x, int y pointadd(int sx, int sy int ax, int ay) {
 }
 
 // simple swap
-int x, int y swap(int sx, int sy) {
+int, int swap(int sx, int sy) {
 	return sy, sx;
 }
 
 // object
 object func(object o1, io object o2, take object o2)
 {
-// o1 は lval or rval. rval はdelete. read only.
-// o2はlval. deleteされない. rvalはNG.
-// o3はrval. deleteされる. lval.clone or lval.pass ならok.
+	// o1 は lval or rval. rval はdelete. read only.
+	// o2はlval. deleteされない. read/write rvalはNG.
+	// o3はrval. deleteされる. read/write lval.clone or lval.pass ならok.
+	
+	return o2;	// returnはrval
 }
