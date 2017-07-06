@@ -25,7 +25,7 @@ int main(string arg[])
 }
 
 // stringコピーではなく参照の配列、移譲されたものが渡る
-void myprint(in string strs[])
+void myprint(string strs[])
 {
 	foreach string s (strs) print(s);
 }
