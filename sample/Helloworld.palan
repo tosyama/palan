@@ -1,6 +1,6 @@
 import <stdio>
 
-int main(string argc[])
+int main(string arg[])
 {
 	// point1: ":"で区切って横に書くと並列処理される。(どちらが先に処理されるか不定)
 	//		;で　待ち合わせを行う。
