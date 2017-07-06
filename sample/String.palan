@@ -17,7 +17,10 @@ int main(string arg[])
 	string dexstr = i.str; // コピーでなくて、内部的には移譲
 	string hexstr = i.str("h");
 
-	myprint("test(" i.str ")test2\n")
+	myprint("test(" i.str ")test2\n");
+	
+	// 型がstringの時は、自動で.strにキャスト
+	myprint ("test(" i ")test2\n");
 	return 0;
 }
 
