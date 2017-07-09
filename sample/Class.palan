@@ -1,0 +1,57 @@
+// write to header for public.
+// shoud be note reserve size for private.
+class foo {
+	data:
+		reserved: 2;
+		io int a;
+		out string s;
+		reserved: 1;
+		int x; // private data for inline.
+	method:
+		construct(int aa = 0);
+		virtual int ff();	
+}
+
+// write source for private
+implement foo {
+	reserve int16 sec1;
+	reserve byte sec2;
+
+	foo construct(int aa) {
+		return null; // if error
+	}
+}
+
+interface baa {
+	data:
+		foo:impl d;
+		foo:impl arr[5];
+		foo ref;
+		foo ref_arr[5];
+	method:
+}
+
+class string {
+	data:
+		byte cstr[]; // Unknown instance size.
+	property:
+		int len;
+	method:
+		construct(string src, uint buf_size=0);
+		inline byte operator[](uint n) {
+			return cstr[n];
+		}
+		char operator()(uint n);
+}
+
+implement string {
+	string construct(string src, uint buf_size)
+	: cstr[buf_size?buf_size:src.size]
+	{
+		strcpy(src.cstr,this.cstr);
+	}
+	int len {
+		return utl8_len(cstr);
+	}
+}
+
