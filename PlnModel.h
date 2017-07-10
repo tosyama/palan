@@ -6,15 +6,18 @@ class PlnGenerator;
 
 class PlnFunction
 {
-	std::string m_name;
 public:
-	PlnFunction(const std::string& name);
+	std::string name;
+	PlnFunction(const std::string& func_name);
+	void gen(PlnGenerator &g);
 };
 
 class PlnModule
 {
+	bool is_main;
 	std::vector<PlnFunction*> functions;
 public:
+	PlnModule();
 	void addFunc(PlnFunction &func);
-	void gen(std::ostream &os, PlnGenerator &g);
+	void gen(PlnGenerator &g);
 };

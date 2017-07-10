@@ -6,5 +6,8 @@ OBJS=main.o PlnModule.o PlnFunction.o PlnX86_64Generator.o
 $(PROGRAM): $(OBJS)
 	$(CXX) -o $(PROGRAM) $(OBJS)
 .cpp.o:
-	$(CXX) -c -g $<
-
+	$(CXX) -std=c++11 -c -g $<
+depend: $(OBJS:.o=.cpp)
+	-@ $(RM) depend.inc
+	-@ for i in $^; do $(CXX) -MM $$i | sed "s/\ [_a-zA-Z0-9][_a-zA-Z0-9]*\.cpp//g" >> depend.inc; done
+-include depend.inc
