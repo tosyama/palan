@@ -23,11 +23,17 @@ void PlnX86_64Generator::genEntryPoint(const string& entryname)
 		os << entryname << endl;
 }
 
-void PlnX86_64Generator:: genLabel(const string& label)
+void PlnX86_64Generator::genLabel(const string& label)
 {
 	if (label == "main") os << "_start";
 	else os << label;
 	
 	os << ":" << endl;
+}
+
+void PlnX86_64Generator::genSysCall(int id)
+{
+	os << "\t" << "movq $" << id << ", %rax" << endl;
+	os << "\t" << "syscall" << endl;
 }
 

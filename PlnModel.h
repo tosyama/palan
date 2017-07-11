@@ -54,7 +54,9 @@ public:
 // Block: Statements
 class PlnBlock {
 public:
-	vector<PlnStatement*> statemants;
+	vector<PlnStatement*> statements;
+	void addStatement(PlnStatement &statement);
+	void gen(PlnGenerator& g);
 };
 
 
@@ -71,6 +73,8 @@ public:
 		PlnExpression* expression;
 		PlnBlock *block;
 	} inf;
+
+	void gen(PlnGenerator& g);
 };
 
 // Expression: FunctionCall
@@ -81,14 +85,16 @@ enum PlnExprsnType {
 class PlnExpression {
 public:
 	PlnExprsnType type;
+	virtual void gen(PlnGenerator& g);
 };
 
-// FunctionCall: Function arguments;
+// FunctionCall: Function Arguments;
 class PlnFunctionCall : public PlnExpression
 {
 public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
+	void gen(PlnGenerator& g);
 };
 
 // Variable: Type name

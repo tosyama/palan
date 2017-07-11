@@ -6,7 +6,8 @@ using std::cout;
 int main()
 {
 	PlnModule modu;
-	
+
+	// void exit(int status);
 	PlnFunction ext("exit");
 	ext.type = FT_SYS;
 	ext.inf.syscall.id = 60;
@@ -17,7 +18,9 @@ int main()
 	ext.addParam(ext_p1);
 	
 	modu.addFunc(ext);
-	
+
+	// void main()
+	// { return 0; }
 	PlnFunction f1("main");
 	f1.type = FT_PLN;
 	PlnBlock b;
@@ -26,6 +29,7 @@ int main()
 	fc.function = &ext;
 	s.type = ST_EXPRSN;
 	s.inf.expression = &fc;
+	b.addStatement(s);
 
 	f1.implement = &b; 
 	modu.addFunc(f1);

@@ -15,5 +15,10 @@ void PlnFunction::addParam(PlnVariable& param)
 
 void PlnFunction::gen(PlnGenerator &g)
 {
-	g.genLabel(name);
+	switch (type) {
+		case FT_PLN:
+			g.genLabel(name);
+			implement->gen(g);
+			break;
+	}
 }
