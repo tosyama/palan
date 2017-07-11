@@ -2,9 +2,9 @@
 #include <string>
 #include "PlnX86_64Generator.h"
 
-using namespace std;
+using std::endl;
 
-PlnX86_64Generator::PlnX86_64Generator(std::ostream& ostrm)
+PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
 	: PlnGenerator(ostrm)
 {
 }

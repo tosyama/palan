@@ -1,19 +1,22 @@
+using std::string;
+using std::ostream;
+
 class PlnGenerator
 {
 protected:
-	std::ostream& os;
+	ostream& os;
 public:
-	PlnGenerator(std::ostream& ostrm) : os(ostrm) {};
+	PlnGenerator(ostream& ostrm) : os(ostrm) {};
 	virtual void genSecText()=0;
-	virtual void genEntryPoint(const std::string& entryname)=0;
-	virtual void genLabel(const std::string& label)=0;
+	virtual void genEntryPoint(const string& entryname)=0;
+	virtual void genLabel(const string& label)=0;
 };
 
 class PlnX86_64Generator : public PlnGenerator
 {
 public:
-	PlnX86_64Generator(std::ostream& ostrm);
+	PlnX86_64Generator(ostream& ostrm);
 	void genSecText();
-	void genEntryPoint(const std::string& entryname);
-	void genLabel(const std::string& label);
+	void genEntryPoint(const string& entryname);
+	void genLabel(const string& label);
 };
