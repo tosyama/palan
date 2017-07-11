@@ -31,9 +31,10 @@ void PlnX86_64Generator::genLabel(const string& label)
 	os << ":" << endl;
 }
 
-void PlnX86_64Generator::genSysCall(int id)
+void PlnX86_64Generator::genSysCall(int id, const string& comment)
 {
-	os << "\t" << "movq $" << id << ", %rax" << endl;
+	os << "\t" << "movq $" << id << ", %rax";
+	os << "\t# " << comment << endl;
 	os << "\t" << "syscall" << endl;
 }
 

@@ -10,7 +10,7 @@ public:
 	virtual void genSecText()=0;
 	virtual void genEntryPoint(const string& entryname)=0;
 	virtual void genLabel(const string& label)=0;
-	virtual void genSysCall(int id)=0;
+	virtual void genSysCall(int id, const string& comment)=0;
 };
 
 class PlnX86_64Generator : public PlnGenerator
@@ -20,5 +20,5 @@ public:
 	void genSecText();
 	void genEntryPoint(const string& entryname);
 	void genLabel(const string& label);
-	void genSysCall(int id);
+	void genSysCall(int id, const string& comment);
 };
