@@ -20,6 +20,14 @@ int main()
 	
 	PlnFunction f1("main");
 	f1.type = FT_PLN;
+	PlnBlock b;
+	PlnStatement s;
+	PlnFunctionCall fc;
+	fc.function = &ext;
+	s.type = ST_EXPRSN;
+	s.inf.expression = &fc;
+
+	f1.implement = &b; 
 	modu.addFunc(f1);
 
 	PlnX86_64Generator generator(cout);

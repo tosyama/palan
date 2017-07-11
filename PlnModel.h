@@ -6,36 +6,25 @@ using std::string;
 using std::vector;
 
 class PlnGenerator;
+class PlnFunction;
+class PlnBlock;
+class PlnStatement;
+class PlnExpression;
+class PlnVariable;
+class PlnValue;
 
-class PlnValue {
-};
-
-enum PlnVarType {
-	VT_INT,
-	VT_OBJ,
-	VT_IMP,
-};
-
-class PlnVariable {
+// Module: Functions
+class PlnModule
+{
+	bool is_main;
+	vector<PlnFunction*> functions;
 public:
-	PlnVarType type;
-	string name;
-	union {
-		struct {
-			bool has_default;
-			PlnValue* dflt_value;
-		} param;
-	} inf;
+	PlnModule();
+	void addFunc(PlnFunction& func);
+	void gen(PlnGenerator& g);
 };
 
-class PlnStatement {
-};
-
-class PlnBlock {
-public:
-	vector<PlnStatement*> statemants;
-};
-
+// Function: Name Paramaters ReturnValues Block
 enum PlnFncType {
 	FT_PLN,
 	FT_INLINE,
@@ -62,13 +51,66 @@ public:
 	void gen(PlnGenerator& g);
 };
 
-class PlnModule
-{
-	bool is_main;
-	vector<PlnFunction*> functions;
+// Block: Statements
+class PlnBlock {
 public:
-	PlnModule();
-	void addFunc(PlnFunction& func);
-	void gen(PlnGenerator& g);
+	vector<PlnStatement*> statemants;
+};
+
+
+// Statement: Expression | Block
+enum PlnStmtType {
+	ST_EXPRSN,
+	ST_BLOCK
+};
+
+class PlnStatement {
+public:
+	PlnStmtType type;
+	union {
+		PlnExpression* expression;
+		PlnBlock *block;
+	} inf;
+};
+
+// Expression: FunctionCall
+enum PlnExprsnType {
+	ET_FUNCCALL,
+};
+
+class PlnExpression {
+public:
+	PlnExprsnType type;
+};
+
+// FunctionCall: Function arguments;
+class PlnFunctionCall : public PlnExpression
+{
+public:
+	PlnFunction* function;
+	vector<PlnExpression*> arguments;
+};
+
+// Variable: Type name
+enum PlnVarType {
+	VT_INT,
+	VT_OBJ,
+	VT_IMP,
+};
+
+class PlnVariable {
+public:
+	PlnVarType type;
+	string name;
+	union {
+		struct {
+			bool has_default;
+			PlnValue* dflt_value;
+		} param;
+	} inf;
+};
+
+// Value (rval)
+class PlnValue {
 };
 
