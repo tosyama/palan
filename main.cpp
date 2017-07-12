@@ -8,7 +8,7 @@ int main()
 	PlnModule modu;
 
 	// void exit(int status);
-	PlnFunction ext("exit");
+	PlnFunction ext("sys_exit");
 	ext.type = FT_SYS;
 	ext.inf.syscall.id = 60;
 	
@@ -19,14 +19,21 @@ int main()
 	
 	modu.addFunc(ext);
 
-	// void main()
-	// { return 0; }
+	// int main()
+	// {return 0; }
 	PlnFunction f1("main");
 	f1.type = FT_PLN;
 	PlnBlock b;
 	PlnStatement s;
 	PlnFunctionCall fc;
 	fc.function = &ext;
+
+	PlnExpression ev;
+	ev.type = ET_VALUE;
+	ev.value.type = VL_LIT_INT;
+	ev.value.inf.intValue = 0;
+	fc.addArgument(ev);
+
 	s.type = ST_EXPRSN;
 	s.inf.expression = &fc;
 	b.addStatement(s);

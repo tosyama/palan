@@ -6,6 +6,8 @@ using std::string;
 using std::vector;
 
 class PlnGenerator;
+class PlnGenEntity;
+
 class PlnFunction;
 class PlnBlock;
 class PlnStatement;
@@ -77,14 +79,30 @@ public:
 	void gen(PlnGenerator& g);
 };
 
+// Value (rval)
+enum PlnValType {
+	VL_LIT_INT
+};
+
+class PlnValue {
+public:
+	PlnValType type;
+	union {
+		int intValue;
+	} inf;
+	PlnGenEntity* gen(PlnGenerator& g);
+};
+
 // Expression: FunctionCall
 enum PlnExprsnType {
-	ET_FUNCCALL,
+	ET_VALUE,
+	ET_FUNCCALL
 };
 
 class PlnExpression {
 public:
 	PlnExprsnType type;
+	PlnValue value;
 	virtual void gen(PlnGenerator& g);
 };
 
@@ -94,6 +112,7 @@ class PlnFunctionCall : public PlnExpression
 public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
+	void addArgument(PlnExpression& arg);
 	void gen(PlnGenerator& g);
 };
 
@@ -114,9 +133,5 @@ public:
 			PlnValue* dflt_value;
 		} param;
 	} inf;
-};
-
-// Value (rval)
-class PlnValue {
 };
 
