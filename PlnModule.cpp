@@ -19,6 +19,14 @@ void PlnModule::addReadOnlyData(PlnReadOnlyData& rodata)
 	readonlydata.push_back(&rodata);
 }
 
+PlnFunction* PlnModule::getFunc(const string& func_name)
+{
+	for (auto f: functions)
+		if (f->name == func_name) return f;
+	
+	return NULL;
+}
+
 void PlnModule::gen(PlnGenerator &g)
 {
 	g.genSecReadOnlyData();

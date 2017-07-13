@@ -1,11 +1,10 @@
 # palan
 
 ## Basic Types
-int, uint  
 byte, ubyte  
-int16, uint16  
-int32, uint32  
-int64, uint64  
+int2, uint2  
+int4, uint4  
+int8, uint8  
   
 char  
 string  

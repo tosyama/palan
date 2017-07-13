@@ -28,6 +28,8 @@ public:
 	void addFunc(PlnFunction& func);
 	void addReadOnlyData(PlnReadOnlyData& rodata);
 
+	PlnFunction* getFunc(const string& func_name);
+
 	void gen(PlnGenerator& g);
 };
 
@@ -86,7 +88,7 @@ public:
 
 // Value (rval)
 enum PlnValType {
-	VL_LIT_INT,
+	VL_LIT_INT8,
 	VL_RO_DATA
 };
 
@@ -125,8 +127,8 @@ public:
 
 // Variable: Type name
 enum PlnVarType {
-	VT_INT,
-	VT_UINT,
+	VT_INT8,
+	VT_UINT8,
 	VT_OBJ,
 	VT_IMP,
 };
