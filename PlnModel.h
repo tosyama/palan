@@ -14,15 +14,20 @@ class PlnStatement;
 class PlnExpression;
 class PlnVariable;
 class PlnValue;
+class PlnReadOnlyData;
 
 // Module: Functions
 class PlnModule
 {
 	bool is_main;
 	vector<PlnFunction*> functions;
+	vector<PlnReadOnlyData*> readonlydata;
+	
 public:
 	PlnModule();
 	void addFunc(PlnFunction& func);
+	void addReadOnlyData(PlnReadOnlyData& rodata);
+
 	void gen(PlnGenerator& g);
 };
 
@@ -81,7 +86,8 @@ public:
 
 // Value (rval)
 enum PlnValType {
-	VL_LIT_INT
+	VL_LIT_INT,
+	VL_RO_DATA
 };
 
 class PlnValue {
@@ -89,8 +95,9 @@ public:
 	PlnValType type;
 	union {
 		int intValue;
+		PlnReadOnlyData* rod;
 	} inf;
-	PlnGenEntity* gen(PlnGenerator& g);
+	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
 // Expression: FunctionCall
@@ -119,6 +126,7 @@ public:
 // Variable: Type name
 enum PlnVarType {
 	VT_INT,
+	VT_UINT,
 	VT_OBJ,
 	VT_IMP,
 };
@@ -133,5 +141,19 @@ public:
 			PlnValue* dflt_value;
 		} param;
 	} inf;
+};
+
+// Read only data (String literal/Const)
+enum PlnRodType {
+	RO_LIT_STR
+};
+
+class PlnReadOnlyData {
+public:
+	PlnRodType type;
+	int index;
+	string name;
+	void gen(PlnGenerator& g);
+	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 

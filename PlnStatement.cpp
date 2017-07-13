@@ -1,3 +1,4 @@
+#include <boost/assert.hpp>
 #include "PlnModel.h"
 
 void PlnBlock::gen(PlnGenerator& g)
@@ -20,5 +21,7 @@ void PlnStatement::gen(PlnGenerator& g)
 		case ST_BLOCK:
 			inf.block->gen(g);
 			break;
+		default:
+			BOOST_ASSERT(false);	
 	}
 }

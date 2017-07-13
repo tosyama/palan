@@ -15,8 +15,10 @@ int main(string arg[])
 	// worker 処理 非同期処理の場合(先頭に^)
 	int n=0;
 	^2:workerTask(io n);
-	wait(n==2);
-
+	wait until(n==2) {
+	} else until (n==3){
+	} timeout(1000) {
+	}
 	return 0;
 }
 

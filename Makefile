@@ -1,6 +1,6 @@
-PROGRAM=a.out
+PROGRAM=plc
 OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
-	PlnX86_64Generator.o
+	PlnX86_64Generator.o PlnValue.o
 
 .SUFFIXES: .cpp .o
 
