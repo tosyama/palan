@@ -16,18 +16,38 @@ using std::endl;
 {
 int yylex(yy::PlnParser::semantic_type* yylval);
 }
-
+%define parse.error	verbose
 %define api.value.type	variant
 %token <int>	INT
-%token <string>	STR
+%token <string>	STR	"string"
+%type <string> func_name
 
-%start	statements
+%start module	
 %%
-statements: statements statement
-	| statement
+module: /* empty */
+	| module function_definition
 	;
-statement:	INT ':' STR '\n' { cout << "statement:" << $1 << "," << $3 << endl; }
+function_definition: return_values func_name '(' parameters ')' block
+	{ cout << "func def:" << $2 << endl; }
+;
+
+return_values: STR	{ cout << "ret values:" << $1 << endl; };
 	;
+func_name: STR		{ $$ = $1; }
+	;
+parameters: /* empty */
+	| STR
+	;
+block: '{' statements '}'
+	;
+statements:	/* empty */
+	| statements statement
+	;
+statement: func_call ';'
+	;
+func_call: func_name '(' ')'	{ cout << "call: " << $1 << endl; }
+	;
+
 %%
 
 using namespace yy;
@@ -48,18 +68,19 @@ enum {
 	STR = PlnParser::token::STR
 };
 
-lexdata data[4] = {
-	{ INT, 9, "" },
-	{ ':', 0, "" },
-	{ STR, 0, "test" },
-	{ '\n', 0, "" }
+lexdata data[] = {
+	{ STR, 0, "void" }, { STR, 0, "main" }, { '(', 0, "" }, { ')', 0, "" },
+	{ '{', 0, "" },
+		{ STR, 0, "sys_write" }, { '(', 0, "" }, { ')', 0, "" }, { ';', 0, "" },
+	{ '}', 0, "" }
 };
 
 int cur = 0;
 
 int yylex(PlnParser::semantic_type* yylval)
 {
-	if (cur >= 4) return 0;
+	int num = sizeof(data)/sizeof(lexdata);
+	if (cur >= num) return 0;
 	int ret = data[cur].ret;
 	switch (ret){
 		case INT: yylval->build<int>() = data[cur].i; break;
