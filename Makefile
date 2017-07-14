@@ -14,4 +14,6 @@ depend: $(OBJS:.o=.cpp)
 -include depend.inc
 package:
 	-apt-get -y install libboost-dev
+	-apt-get -y install bison
+
 
