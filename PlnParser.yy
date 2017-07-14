@@ -9,33 +9,45 @@
 #include <iostream>
 using std::string;
 using std::cout;
+using std::endl;
+}
 
-int yylex();
+%code
+{
+int yylex(yy::PlnParser::semantic_type* yylval);
 }
 
 %define api.value.type	variant
-%token	END	0
 %token	EOL	
 %token <int>	INT
 %token <string>	STR
 
 %start	statements
 %%
-
-statement:	INT ':' STR 
-	
-statements: /* empty */
-	| statements statement EOL
-	| statements statement END
+statements: statements statement
+	| statement
+	;
+statement:	INT ':' STR EOL { cout << "statement." << endl; }
+	;
 %%
 
-int yylex()
+using namespace yy;
+
+void PlnParser::error(const string& m)
 {
-	retrun END;
+	cout << "error: " << m << endl;
+}
+
+int yylex(PlnParser::semantic_type* yylval)
+{
+	cout << "lex" << endl;
+	return 0;
 }
 
 int main()
 {
-	cout << "test.\n";
+	PlnParser parser;
+	parser.parse();
+
 	return 0;
 }
