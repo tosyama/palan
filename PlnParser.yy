@@ -14,11 +14,14 @@ using std::endl;
 
 %code
 {
-int yylex(yy::PlnParser::semantic_type* yylval);
+int yylex(palan::PlnParser::semantic_type* yylval);
 }
+%define api.namespace {palan}
 %define parse.error	verbose
 %define api.value.type	variant
+
 %token <int>	INT
+%token <string>	ID "identifier"
 %token <string>	STR	"string"
 %type <string> func_name
 
@@ -31,26 +34,35 @@ function_definition: return_values func_name '(' parameters ')' block
 	{ cout << "func def:" << $2 << endl; }
 ;
 
-return_values: STR	{ cout << "ret values:" << $1 << endl; };
+return_values: ID	{ cout << "ret values:" << $1 << endl; };
 	;
-func_name: STR		{ $$ = $1; }
+func_name: ID		{ $$ = $1; }
 	;
 parameters: /* empty */
-	| STR
+	| ID
 	;
 block: '{' statements '}'
 	;
 statements:	/* empty */
 	| statements statement
 	;
-statement: func_call ';'
+statement: expression ';'
+	| block
 	;
-func_call: func_name '(' ')'	{ cout << "call: " << $1 << endl; }
+func_call: func_name '(' arguments ')'	{ cout << "call: " << $1 << endl; }
 	;
-
+arguments: argument
+	| arguments ',' argument
+	;
+argument: /* empty */
+	| expression
+	;
+expression: INT
+	| func_call
+	;
 %%
 
-using namespace yy;
+using namespace palan;
 
 void PlnParser::error(const string& m)
 {
@@ -65,13 +77,21 @@ typedef struct {
 
 enum {
 	INT = PlnParser::token::INT,
-	STR = PlnParser::token::STR
+	STR = PlnParser::token::STR,
+	ID = PlnParser::token::ID
 };
 
 lexdata data[] = {
-	{ STR, 0, "void" }, { STR, 0, "main" }, { '(', 0, "" }, { ')', 0, "" },
+	{ ID, 0, "void" }, { ID, 0, "main" }, { '(', 0, "" }, { ')', 0, "" },
 	{ '{', 0, "" },
-		{ STR, 0, "sys_write" }, { '(', 0, "" }, { ')', 0, "" }, { ';', 0, "" },
+		{ ID, 0, "sys_write" }, { '(', 0, "" },
+			{ INT, 1, "" }, { ',', 0, ""},
+			{ INT, 1, "" }, { ',', 0, ""},
+			{ INT, 14, "" }, 
+		{ ')', 0, "" }, { ';', 0, "" },
+		{ ID, 0, "sys_exit" }, { '(', 0, "" },
+			{ INT, 0, "" }, 
+		{ ')', 0, "" }, { ';', 0, "" },
 	{ '}', 0, "" }
 };
 
@@ -85,6 +105,7 @@ int yylex(PlnParser::semantic_type* yylval)
 	switch (ret){
 		case INT: yylval->build<int>() = data[cur].i; break;
 		case STR: yylval->build<string>() = data[cur].s; break;
+		case ID: yylval->build<string>() = data[cur].s; break;
 	}
 	cur++;
 	

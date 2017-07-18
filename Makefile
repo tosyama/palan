@@ -4,15 +4,19 @@ OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
 
 .SUFFIXES: .cpp .o
 
-all: $(PROGRAM) parser
+all: $(PROGRAM) parser lexer
 $(PROGRAM): $(OBJS)
 	$(CXX) -o $(PROGRAM) $(OBJS)
 .cpp.o:
 	$(CXX) -std=c++11 -c -g $<
-parser: PlnParser.tab.cc
+parser: PlnParser.cpp
 	$(CXX) -std=c++11 -o $@ $<
-PlnParser.tab.cc: PlnParser.yy
-	bison $<
+PlnParser.cpp: PlnParser.yy
+	bison -o $@ $<
+lexer: PlnFlexLexer.cpp
+	$(CXX) -std=c++11 -o $@ $<
+PlnFlexLexer.cpp: PlnFlexLexer.ll
+	flex -o $@ $<
 depend: $(OBJS:.o=.cpp)
 	-@ $(RM) depend.inc
 	-@ for i in $^; do $(CXX) -MM $$i | sed "s/\ [_a-zA-Z0-9][_a-zA-Z0-9]*\.cpp//g" >> depend.inc; done
@@ -20,5 +24,5 @@ depend: $(OBJS:.o=.cpp)
 package:
 	-apt-get -y install libboost-dev
 	-apt-get -y install bison
-
+	-apt-get -y install flex
 
