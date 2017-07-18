@@ -2,24 +2,24 @@
 %require "3.0.4"
 %defines
 %define parser_class_name {PlnParser}
-%parse-param	{ PlnFlexLexer &lexer }
-%lex-param		{ PlnFlexLexer &lexer }
+%parse-param	{ PlnLexer &lexer }
+%lex-param		{ PlnLexer &lexer }
 
 %code requires
 {
 #include <string>
 #include <iostream>
+
 using std::string;
 using std::cout;
 using std::endl;
 
-class PlnFlexLexer;
-
+class PlnLexer;
 }
 
 %code
 {
-int yylex(palan::PlnParser::semantic_type* yylval, PlnFlexLexer& lexer);
+int yylex(palan::PlnParser::semantic_type* yylval, PlnLexer& lexer);
 }
 
 %define api.namespace {palan}
@@ -64,7 +64,7 @@ argument: /* empty */
 	| expression
 	;
 expression: INT
-	| STR
+	| STR { cout << $1 << endl; }
 	| func_call
 	;
 %%
