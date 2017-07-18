@@ -2,6 +2,8 @@
 %require "3.0.4"
 %defines
 %define parser_class_name {PlnParser}
+%parse-param	{ PlnFlexLexer &lexer }
+%lex-param		{ PlnFlexLexer &lexer }
 
 %code requires
 {
@@ -10,12 +12,16 @@
 using std::string;
 using std::cout;
 using std::endl;
+
+class PlnFlexLexer;
+
 }
 
 %code
 {
-int yylex(palan::PlnParser::semantic_type* yylval);
+int yylex(palan::PlnParser::semantic_type* yylval, PlnFlexLexer& lexer);
 }
+
 %define api.namespace {palan}
 %define parse.error	verbose
 %define api.value.type	variant
@@ -58,64 +64,18 @@ argument: /* empty */
 	| expression
 	;
 expression: INT
+	| STR
 	| func_call
 	;
 %%
 
-using namespace palan;
+namespace palan 
+{
 
 void PlnParser::error(const string& m)
 {
 	cout << "error: " << m << endl;
 }
 
-typedef struct {
-	int ret;
-	int i;
-	string s;
-} lexdata;
+} // namespace
 
-enum {
-	INT = PlnParser::token::INT,
-	STR = PlnParser::token::STR,
-	ID = PlnParser::token::ID
-};
-
-lexdata data[] = {
-	{ ID, 0, "void" }, { ID, 0, "main" }, { '(', 0, "" }, { ')', 0, "" },
-	{ '{', 0, "" },
-		{ ID, 0, "sys_write" }, { '(', 0, "" },
-			{ INT, 1, "" }, { ',', 0, ""},
-			{ INT, 1, "" }, { ',', 0, ""},
-			{ INT, 14, "" }, 
-		{ ')', 0, "" }, { ';', 0, "" },
-		{ ID, 0, "sys_exit" }, { '(', 0, "" },
-			{ INT, 0, "" }, 
-		{ ')', 0, "" }, { ';', 0, "" },
-	{ '}', 0, "" }
-};
-
-int cur = 0;
-
-int yylex(PlnParser::semantic_type* yylval)
-{
-	int num = sizeof(data)/sizeof(lexdata);
-	if (cur >= num) return 0;
-	int ret = data[cur].ret;
-	switch (ret){
-		case INT: yylval->build<int>() = data[cur].i; break;
-		case STR: yylval->build<string>() = data[cur].s; break;
-		case ID: yylval->build<string>() = data[cur].s; break;
-	}
-	cur++;
-	
-	return ret;
-}
-
-int main()
-{
-	PlnParser parser;
-	parser.parse();
-
-	return 0;
-}

@@ -7,14 +7,12 @@ OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
 all: $(PROGRAM) parser lexer
 $(PROGRAM): $(OBJS)
 	$(CXX) -o $(PROGRAM) $(OBJS)
+parser: PlnParser.o PlnFlexLexer.o
+	$(CXX) -std=c++11 -o $@ $^
 .cpp.o:
 	$(CXX) -std=c++11 -c -g $<
-parser: PlnParser.cpp
-	$(CXX) -std=c++11 -o $@ $<
 PlnParser.cpp: PlnParser.yy
 	bison -o $@ $<
-lexer: PlnFlexLexer.cpp
-	$(CXX) -std=c++11 -o $@ $<
 PlnFlexLexer.cpp: PlnFlexLexer.ll
 	flex -o $@ $<
 depend: $(OBJS:.o=.cpp)

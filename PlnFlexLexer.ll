@@ -6,6 +6,7 @@
 using std::cout;
 using std::endl;
 using std::stringstream;
+
 using namespace palan;
 
 enum {
@@ -33,6 +34,19 @@ STRING	\"(\\.|\\\n|[^\\\"])*\"
 .		{ cout << "Lexer: Unrecognized: \"" << yytext[0] << "\"" << endl;}
 
 %%
+
+int yylex(PlnParser::semantic_type* yylval, PlnFlexLexer& lexer)
+{
+	int ret = lexer.yylex();
+	switch (ret){
+		case INT: yylval->build<int>() = 99; break;
+		case STR: yylval->build<string>() = "psr: str"; break;
+		case ID: yylval->build<string>() = "psr: id"; break;
+	}
+
+	return ret;
+}
+
 int main()
 {
 	PlnFlexLexer lexer;
@@ -44,8 +58,9 @@ int main()
 		"}"
 	);
 	lexer.switch_streams(&str,&cout);
-	while (lexer.yylex())
-		;
+
+	PlnParser parser(lexer);
+	parser.parse();
 
 	return 0;
 }
