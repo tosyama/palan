@@ -19,9 +19,11 @@ class PlnLexer;
 
 %code
 {
-int yylex(palan::PlnParser::semantic_type* yylval, PlnLexer& lexer);
+int yylex(	palan::PlnParser::semantic_type* yylval,
+			palan::PlnParser::location_type* location,
+			PlnLexer& lexer);
 }
-
+%locations
 %define api.namespace {palan}
 %define parse.error	verbose
 %define api.value.type	variant
@@ -72,9 +74,9 @@ expression: INT
 namespace palan 
 {
 
-void PlnParser::error(const string& m)
+void PlnParser::error(const location_type& l, const string& m)
 {
-	cout << "error: " << m << endl;
+	cout << "error: " << l << ":" << m << endl;
 }
 
 } // namespace

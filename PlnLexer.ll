@@ -9,32 +9,19 @@ using std::stringstream;
 
 using namespace palan;
 
+#include "PlnLexer.h"
+
+#undef YY_DECL
+#define YY_DECL int PlnLexer::yylex(PlnParser::semantic_type& lval, PlnParser::location_type& loc)
+#define YY_USER_ACTION	loc.columns(yyleng);
+
 enum {
 	INT = PlnParser::token::INT,
 	STR = PlnParser::token::STR,
 	ID = PlnParser::token::ID
 };
 
-#include "PlnLexer.h"
-inline void unescape(string& str)
-{
-	int sz = str.size();
-	int s = 0; int d= 0;
-	while (s<sz) {
-		if (str[s]=='\\') {
-			++s;	
-			switch(str[s]) {
-				case 'n': str[d] = '\n'; break;
-				case 't': str[d] = '\t'; break;
-				default: str[d] = str[s];
-			}
-		} else {
-			str[d] = str[s];
-		}
-		++d; ++s;
-	}
-	str.resize(d);
-}
+static string& unescape(string& str);
 
 %}
 %option c++
@@ -47,36 +34,88 @@ DELIMITER	"{"|"}"|"("|")"|","|";"
 STRING	\"(\\.|\\\n|[^\\\"])*\"
 
 %%
+%{
+	loc.begin.filename = &filename;
+	loc.end.filename = &filename;
+	loc.step();
+%}
 {DIGIT}	{
-			intValue = std::stoi(yytext);
-			return INT;
-		}
+		lval.build<int>() = std::stoi(yytext);
+		return INT;
+	}
 {ID}	{
-			strValue = yytext;
-			return ID;
-		}
+		lval.build<string>() = yytext;
+		return ID;
+	}
 {STRING}	{
-			strValue=yytext+1; 
-			strValue.resize(strValue.size()-1);
-			unescape(strValue);
-			return STR;
-		}
+		string str(yytext+1,yyleng-2); 
+		lval.build<string>() = unescape(str);
+		return STR;
+	}
 {DELIMITER}	{ return yytext[0]; }
-[ \n\t\n\r]+
-.		{ cout << "Lexer: Unrecognized char \"" << yytext[0] << "\"" << endl;}
+[ \t]+		{ loc.step(); }
+\r\n|\r|\n	{ loc.lines(); }
+.	{
+		cout << "Lexer: Unrecognized char \"" << yytext[0] << "\"" << endl;
+		loc.step();
+	}
 
 %%
 
-int yylex(PlnParser::semantic_type* yylval, PlnLexer& lexer)
+int yylex(PlnParser::semantic_type* yylval, PlnParser::location_type* location, PlnLexer& lexer)
 {
-	int ret = lexer.yylex();
-	switch (ret) {
-		case INT: yylval->build<int>() = lexer.intValue; break;
-		case STR: 
-		case ID: yylval->build<string>() = lexer.strValue; break;
-	}
+	return lexer.yylex(*yylval, *location);
+}
 
-	return ret;
+inline int hexc(int c)
+{
+	if (c>='0' && c<='9') return c-'0';
+	if (c>='a' && c<='f') return 10+c-'a';
+	if (c>='A' && c<='F') return 10+c-'A';
+	return -1;
+}
+
+static string& unescape(string& str)
+{
+	int sz = str.size();
+	int d=0;
+	for (int s=0; s<sz; ++s,++d) {
+		if (str[s] != '\\') {
+			str[d] = str[s];
+			continue;
+		}
+		
+		++s;
+		
+		switch(str[s]) {
+			case 'a': str[d] = '\a'; break;
+			case 'b': str[d] = '\b'; break;
+			case 'n': str[d] = '\n'; break;
+			case 'r': str[d] = '\r'; break;
+			case 't': str[d] = '\t'; break;
+			case 'v': str[d] = '\v'; break;
+			case '0': str[d] = '\0'; break;
+
+			case 'x': {
+				int h1 = hexc(str[s+1]), h2 = hexc(str[s+2]);
+				if (h1 >= 0 && h2 >= 0) {
+					str[d] = 16*h1 + h2; s+=2;
+				} else {
+					str[d] = 'x';
+				}
+			} break;
+
+			default: str[d] = str[s];
+		} /* switch */
+	}
+	str.resize(d);
+	return str;
+}
+
+
+void PlnLexer::set_filename(const string& filename)
+{
+	this->filename = filename;
 }
 
 int main()
@@ -90,6 +129,7 @@ int main()
 		"}"
 	);
 	lexer.switch_streams(&str,&cout);
+	lexer.set_filename("test.palan");
 
 	PlnParser parser(lexer);
 	parser.parse();
