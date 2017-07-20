@@ -2,10 +2,10 @@
 
 ## Basic Types
 byte, ubyte  
-int2, uint2  
-int4, uint4  
-int8, uint8  
+int16, uint16 
+int32, uint32  
+int64, uint64  
   
-char  
+char
 string  
 object  

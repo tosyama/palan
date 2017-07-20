@@ -29,7 +29,6 @@ class PlnModule
 public:
 	PlnModule();
 	void addFunc(PlnFunction& func);
-	void addReadOnlyData(PlnReadOnlyData& rodata);	// obsolute
 
 	PlnFunction* getFunc(const string& func_name);
 	PlnReadOnlyData* getReadOnlyData(string &str);
@@ -71,8 +70,6 @@ public:
 class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
-
-	void addStatement(PlnStatement &statement);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
@@ -134,9 +131,8 @@ public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
 
-	void addArgument(PlnExpression& arg);	// obsolute
-
-	void gen(PlnGenerator& g);
+	void dump(ostream& os, string indent="");	// override
+	void gen(PlnGenerator& g);	// override
 };
 
 // Variable: Type name

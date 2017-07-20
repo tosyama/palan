@@ -16,11 +16,6 @@ void PlnBlock::gen(PlnGenerator& g)
 		s->gen(g);
 }
 
-void PlnBlock::addStatement(PlnStatement& statement)
-{
-	statements.push_back(&statement);
-}
-
 void PlnStatement::dump(ostream& os, string indent)
 {
 	switch (type) {

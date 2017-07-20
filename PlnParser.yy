@@ -125,7 +125,8 @@ arguments: argument
 
 	| arguments ',' argument
 	{
-		$$.push_back($3);
+		$1.push_back($3);
+		$$ = move($1);
 	}
 	;
 argument: /* empty */ // ToDo: replace default

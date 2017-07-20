@@ -18,7 +18,7 @@ int main()
 	stringstream str(
 		"void main()\n"
 		"{\n"
-		"	sys_write(1,\"Hello World!\\n\", 14);\n"
+		"	sys_write(1,\"Hello World!\\n\", 13);\n"
 		"	sys_exit(0);\n"
 		"}"
 	);
@@ -32,64 +32,6 @@ int main()
 	parser.parse();
 
 	modu.dump(cout);
-
-	return 0;
-	
-	// int main()
-	// {
-	//	sys_write(1, "Hello, World!\n", 14);
-	//	return 0;
-	// }
-	PlnReadOnlyData slit;
-	slit.type = RO_LIT_STR;
-	slit.name = "Hello, World!\n";
-	modu.addReadOnlyData(slit);
-	
-	PlnFunction f1("main");
-	f1.type = FT_PLN;
-	PlnBlock b;
-	
-	PlnStatement s1;
-	PlnFunctionCall fc1;
-	fc1.function = modu.getFunc("sys_write");
-	PlnExpression warg1;
-	warg1.type = ET_VALUE;
-	warg1.value.type = VL_LIT_INT8;
-	warg1.value.inf.intValue = 1;
-	fc1.addArgument(warg1);
-
-	PlnExpression warg2;
-	warg2.type = ET_VALUE;
-	warg2.value.type = VL_RO_DATA;
-	warg2.value.inf.rod = &slit;
-	fc1.addArgument(warg2);
-
-	PlnExpression warg3;
-	warg3.type = ET_VALUE;
-	warg3.value.type = VL_LIT_INT8;
-	warg3.value.inf.intValue = 14;
-	fc1.addArgument(warg3);
-	
-	s1.type = ST_EXPRSN;
-	s1.inf.expression = &fc1;
-	b.addStatement(s1);
-
-	PlnStatement s;
-	PlnFunctionCall fc;
-	fc.function = modu.getFunc("sys_exit");
-
-	PlnExpression ev;
-	ev.type = ET_VALUE;
-	ev.value.type = VL_LIT_INT8;
-	ev.value.inf.intValue = 0;
-	fc.addArgument(ev);
-
-	s.type = ST_EXPRSN;
-	s.inf.expression = &fc;
-	b.addStatement(s);
-
-	f1.implement = &b; 
-	modu.addFunc(f1);
 
 	PlnX86_64Generator generator(cout);
 	modu.gen(generator);

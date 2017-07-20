@@ -7,21 +7,31 @@ using std::endl;
 // PlnExpression
 void PlnExpression::dump(ostream& os, string indent)
 {
-	os << indent << "Expression: " << type << endl;
+	if (type == ET_VALUE) {
+		switch (value.type) {
+			case VL_LIT_INT8:
+				os << indent << "Int literal: " << value.inf.intValue << endl;
+				break;
+			case VL_RO_DATA:
+				os << indent << "String literal: " << value.inf.rod->name.size() << endl;
+				break;
+		}
+	} else 
+		os << indent << "Expression: " << type << endl;
 }
 
 void PlnExpression::gen(PlnGenerator& g)
 {
 }
 
-
 // PlnFunctionCall
-void PlnFunctionCall::addArgument(PlnExpression& arg)
+void PlnFunctionCall:: dump(ostream& os, string indent)
 {
-	arguments.push_back(&arg);
+	os << indent << "FunctionCall: " << function->name << endl;
+	os << indent << " Arguments: " << arguments.size() << endl;
+	for (auto a: arguments)
+		a->dump(os, indent + "  ");
 }
-
-
 
 void PlnFunctionCall::gen(PlnGenerator &g)
 {

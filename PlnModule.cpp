@@ -13,12 +13,6 @@ void PlnModule::addFunc(PlnFunction &func)
 	functions.push_back(&func);
 }
 
-void PlnModule::addReadOnlyData(PlnReadOnlyData& rodata)
-{
-	rodata.index = readonlydata.size();
-	readonlydata.push_back(&rodata);
-}
-
 PlnFunction* PlnModule::getFunc(const string& func_name)
 {
 	for (auto f: functions)
