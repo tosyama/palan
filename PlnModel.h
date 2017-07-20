@@ -1,41 +1,43 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cstdint>
 
 using std::string;
 using std::vector;
+using std::ostream;
+using std::move;
 
 class PlnGenerator;
+class PlnGenEntity;
 
-class PlnValue {
-};
+class PlnFunction;
+class PlnBlock;
+class PlnStatement;
+class PlnExpression;
+class PlnVariable;
+class PlnValue;
+class PlnReadOnlyData;
 
-enum PlnVarType {
-	VT_INT,
-	VT_OBJ,
-	VT_IMP,
-};
-
-class PlnVariable {
+// Module: Functions
+class PlnModule
+{
+	bool is_main;
+	vector<PlnFunction*> functions;
+	vector<PlnReadOnlyData*> readonlydata;
+	
 public:
-	PlnVarType type;
-	string name;
-	union {
-		struct {
-			bool has_default;
-			PlnValue* dflt_value;
-		} param;
-	} inf;
+	PlnModule();
+	void addFunc(PlnFunction& func);
+
+	PlnFunction* getFunc(const string& func_name);
+	PlnReadOnlyData* getReadOnlyData(string &str);
+
+	void dump(ostream& os, string indent="");
+	void gen(PlnGenerator& g);
 };
 
-class PlnStatement {
-};
-
-class PlnBlock {
-public:
-	vector<PlnStatement*> statemants;
-};
-
+// Function: Name Paramaters ReturnValues Block
 enum PlnFncType {
 	FT_PLN,
 	FT_INLINE,
@@ -59,16 +61,111 @@ public:
 
 	PlnFunction(const string& func_name);
 	void addParam(PlnVariable& param);
+
+	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 
-class PlnModule
-{
-	bool is_main;
-	vector<PlnFunction*> functions;
+// Block: Statements
+class PlnBlock {
 public:
-	PlnModule();
-	void addFunc(PlnFunction& func);
+	vector<PlnStatement*> statements;
+
+	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
+};
+
+// Statement: Expression | Block
+enum PlnStmtType {
+	ST_EXPRSN,
+	ST_BLOCK
+};
+
+class PlnStatement {
+public:
+	PlnStmtType type;
+	union {
+		PlnExpression* expression;
+		PlnBlock *block;
+	} inf;
+
+	void dump(ostream& os, string indent="");
+	void gen(PlnGenerator& g);
+};
+
+// Value (rval)
+enum PlnValType {
+	VL_LIT_INT8,
+	VL_RO_DATA
+};
+
+class PlnValue {
+public:
+	PlnValType type;
+	union {
+		int64_t intValue;
+		PlnReadOnlyData* rod;
+	} inf;
+	PlnGenEntity* genEntity(PlnGenerator& g);
+};
+
+// Expression: FunctionCall
+enum PlnExprsnType {
+	ET_VALUE,
+	ET_FUNCCALL
+};
+
+class PlnExpression {
+public:
+	PlnExprsnType type;
+	PlnValue value;
+
+	virtual void dump(ostream& os, string indent="");
+	virtual void gen(PlnGenerator& g);
+};
+
+// FunctionCall: Function Arguments;
+class PlnFunctionCall : public PlnExpression
+{
+public:
+	PlnFunction* function;
+	vector<PlnExpression*> arguments;
+
+	void dump(ostream& os, string indent="");	// override
+	void gen(PlnGenerator& g);	// override
+};
+
+// Variable: Type name
+enum PlnVarType {
+	VT_INT8,
+	VT_UINT8,
+	VT_OBJ,
+	VT_IMP,
+};
+
+class PlnVariable {
+public:
+	PlnVarType type;
+	string name;
+	union {
+		struct {
+			bool has_default;
+			PlnValue* dflt_value;
+		} param;
+	} inf;
+};
+
+// Read only data (String literal/Const)
+enum PlnRodType {
+	RO_LIT_STR
+};
+
+class PlnReadOnlyData {
+public:
+	PlnRodType type;
+	int index;
+	string name;
+	void gen(PlnGenerator& g);
+	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
