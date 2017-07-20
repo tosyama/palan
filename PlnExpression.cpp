@@ -2,15 +2,26 @@
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
 
+using std::endl;
+
 // PlnExpression
+void PlnExpression::dump(ostream& os, string indent)
+{
+	os << indent << "Expression: " << type << endl;
+}
+
 void PlnExpression::gen(PlnGenerator& g)
 {
 }
 
+
+// PlnFunctionCall
 void PlnFunctionCall::addArgument(PlnExpression& arg)
 {
 	arguments.push_back(&arg);
 }
+
+
 
 void PlnFunctionCall::gen(PlnGenerator &g)
 {

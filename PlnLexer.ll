@@ -1,11 +1,9 @@
 %{
-#include <sstream>
 #include "PlnParser.hpp"
 
 using std::cout;
 using std::endl;
 using std::string;
-using std::stringstream;
 
 using namespace palan;
 
@@ -116,23 +114,4 @@ static string& unescape(string& str)
 void PlnLexer::set_filename(const string& filename)
 {
 	this->filename = filename;
-}
-
-int main()
-{
-	PlnLexer lexer;
-	stringstream str(
-		"void main()\n"
-		"{\n"
-		"	sys_write(1,\"Hello World!\\n\", 14);\n"
-		"	sys_exit(0);\n"
-		"}"
-	);
-	lexer.switch_streams(&str,&cout);
-	lexer.set_filename("test.palan");
-
-	PlnParser parser(lexer);
-	parser.parse();
-
-	return 0;
 }

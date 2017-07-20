@@ -1,18 +1,40 @@
+#include "PlnParser.hpp"
+#include "PlnLexer.h"
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
 #include <boost/assign.hpp>
+#include <sstream>
 
 using std::cout;
+using std::stringstream;
 using namespace boost::assign;
+using palan::PlnParser;
 
 void loadSystemCalls(PlnModule& module);
 
 int main()
 {
-	PlnModule modu;
+	PlnLexer lexer;
+	stringstream str(
+		"void main()\n"
+		"{\n"
+		"	sys_write(1,\"Hello World!\\n\", 14);\n"
+		"	sys_exit(0);\n"
+		"}"
+	);
+	lexer.switch_streams(&str,&cout);
+	lexer.set_filename("test.palan");
 
+	PlnModule modu;
 	loadSystemCalls(modu);
 
+	PlnParser parser(lexer, modu);
+	parser.parse();
+
+	modu.dump(cout);
+
+	return 0;
+	
 	// int main()
 	// {
 	//	sys_write(1, "Hello, World!\n", 14);

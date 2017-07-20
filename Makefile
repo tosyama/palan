@@ -1,18 +1,17 @@
 PROGRAM=plc
 OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
-	PlnX86_64Generator.o PlnValue.o
+	PlnX86_64Generator.o PlnValue.o PlnParser.o PlnLexer.o
 
 .SUFFIXES: .cpp .o
 
-all: $(PROGRAM) parser lexer
 $(PROGRAM): $(OBJS)
 	$(CXX) -o $(PROGRAM) $(OBJS)
-parser: PlnParser.o PlnLexer.o
-	$(CXX) -std=c++11 -o $@ $^
 .cpp.o:
 	$(CXX) -std=c++11 -c -g $<
 PlnParser.cpp: PlnParser.yy
 	bison -o $@ $<
+PlnParser.hpp: PlnParser.yy
+	bison -o PlnParser.cpp $<
 PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
 depend: $(OBJS:.o=.cpp)

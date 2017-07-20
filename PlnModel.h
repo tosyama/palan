@@ -1,9 +1,12 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cstdint>
 
 using std::string;
 using std::vector;
+using std::ostream;
+using std::move;
 
 class PlnGenerator;
 class PlnGenEntity;
@@ -26,10 +29,12 @@ class PlnModule
 public:
 	PlnModule();
 	void addFunc(PlnFunction& func);
-	void addReadOnlyData(PlnReadOnlyData& rodata);
+	void addReadOnlyData(PlnReadOnlyData& rodata);	// obsolute
 
 	PlnFunction* getFunc(const string& func_name);
+	PlnReadOnlyData* getReadOnlyData(string &str);
 
+	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 
@@ -57,6 +62,8 @@ public:
 
 	PlnFunction(const string& func_name);
 	void addParam(PlnVariable& param);
+
+	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 
@@ -64,10 +71,12 @@ public:
 class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
+
 	void addStatement(PlnStatement &statement);
+
+	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
-
 
 // Statement: Expression | Block
 enum PlnStmtType {
@@ -83,6 +92,7 @@ public:
 		PlnBlock *block;
 	} inf;
 
+	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 
@@ -96,7 +106,7 @@ class PlnValue {
 public:
 	PlnValType type;
 	union {
-		int intValue;
+		int64_t intValue;
 		PlnReadOnlyData* rod;
 	} inf;
 	PlnGenEntity* genEntity(PlnGenerator& g);
@@ -112,6 +122,8 @@ class PlnExpression {
 public:
 	PlnExprsnType type;
 	PlnValue value;
+
+	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
 };
 
@@ -121,7 +133,9 @@ class PlnFunctionCall : public PlnExpression
 public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
-	void addArgument(PlnExpression& arg);
+
+	void addArgument(PlnExpression& arg);	// obsolute
+
 	void gen(PlnGenerator& g);
 };
 
