@@ -4,14 +4,8 @@
 
 using namespace std;
 
-PlnModule::PlnModule() :is_main(false)
+PlnModule::PlnModule() 
 {}
-
-void PlnModule::addFunc(PlnFunction &func)
-{
-	if (func.name == "main") is_main = true;
-	functions.push_back(&func);
-}
 
 PlnFunction* PlnModule::getFunc(const string& func_name)
 {
@@ -52,7 +46,6 @@ void PlnModule::gen(PlnGenerator &g)
 		rod->gen(g);
 
 	g.genSecText();
-	if (is_main) g.genEntryPoint("_start");
 	for (auto f : functions)
 		f->gen(g);
 }

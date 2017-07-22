@@ -2,7 +2,7 @@
 %require "3.0.4"
 %defines
 %define parser_class_name {PlnParser}
-%parse-param	{ PlnLexer& lexer } { PlnModule& module }
+%parse-param	{ PlnLexer& lexer } { PlnModule& module } { PlnScopeStack& scopes }
 %lex-param		{ PlnLexer& lexer }
 
 %code requires
@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "PlnScopeStack.h"
 
 using std::string;
 using std::cout;
@@ -34,6 +35,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %code top
 {
+#include <boost/assert.hpp>
 #include "PlnModel.h"
 }
 
@@ -59,16 +61,32 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %start module	
 %%
 module: /* empty */
-	| module function_definition
+	| module
+		{
+			scopes.push_back(PlnScopeItem(&module));
+		}
+		function_definition
 	{
-		module.addFunc(*$2);
+		module.functions.push_back($3);
+		BOOST_ASSERT(scopes.back().type == SC_MODULE);
+		scopes.pop_back();
 	}
 	;
-function_definition: return_values func_name '(' parameters ')' block
+
+function_definition: return_values func_name '(' parameters ')'
+		{
+			PlnFunction* f = new PlnFunction($2);
+			f->type = FT_PLN;
+			f->setParent(scopes.back());
+			scopes.push_back(PlnScopeItem(f));
+		}
+		block
 	{
-		$$ = new PlnFunction($2);
-		$$->type = FT_PLN;
-		$$->implement = $6;
+		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+		$$ = scopes.back().inf.function;
+		$$->implement = $7;
+		$$->finish();
+		scopes.pop_back();
 	}
 ;
 
@@ -80,10 +98,18 @@ parameters: /* empty */
 	| ID
 	;
 
-block: '{' statements '}'
+block: '{'
+		{
+			PlnBlock *b = new PlnBlock();
+			b->setParent(scopes.back());
+			scopes.push_back(PlnScopeItem(b));
+		}
+		statements '}'
 	{
-		$$ = new PlnBlock();
-		$$->statements = move($2);
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = scopes.back().inf.block;
+		$$->statements = move($3);
+		scopes.pop_back();
 	}
 	;
 statements:	/* empty */ { }
@@ -95,16 +121,20 @@ statements:	/* empty */ { }
 	;
 statement: expression ';'
 	{
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement();
 		$$->type = ST_EXPRSN;
 		$$->inf.expression = $1;
+		$$->parent = scopes.back().inf.block;
 	}
 
 	| block
 	{
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement();
 		$$->type = ST_BLOCK;
 		$$->inf.block = $1;
+		$$->parent = scopes.back().inf.block;
 	}
 	;
 

@@ -19,7 +19,6 @@ int main()
 		"void main()\n"
 		"{\n"
 		"	sys_write(1,\"Hello World!\\n\", 13);\n"
-		"	sys_exit(0);\n"
 		"}"
 	);
 	lexer.switch_streams(&str,&cout);
@@ -28,10 +27,11 @@ int main()
 	PlnModule modu;
 	loadSystemCalls(modu);
 
-	PlnParser parser(lexer, modu);
+	PlnScopeStack	scopes;
+	PlnParser parser(lexer, modu, scopes);
 	parser.parse();
 
-	modu.dump(cout);
+//	modu.dump(cout);
 
 	PlnX86_64Generator generator(cout);
 	modu.gen(generator);
@@ -53,7 +53,7 @@ void loadSystemCall(PlnModule& module,
 		f->addParam(*p);
 	}
 	
-	module.addFunc(*f);
+	module.functions.push_back(f);
 }
 
 void loadSystemCalls(PlnModule& module)

@@ -72,6 +72,16 @@ void PlnX86_64Generator::genSysCall(int id, vector<PlnGenEntity*>& args, const s
 	os << "	syscall" << endl;
 }
 
+void PlnX86_64Generator::genMainRetun(vector<PlnGenEntity*> &return_vals)
+{
+	if (return_vals.size() > 0)
+		os << format("	movq %1%, %%rdi") % *(return_vals[0]->data.str) << endl;
+	else
+		os << "	xorq %rdi, %rdi" << endl;
+	os << "	movq $60, %rax" << endl;
+	os << "	syscall"<< endl;
+}
+
 void PlnX86_64Generator::genStringData(int index, const string& str)
 {
 	os << format(".LC%1%:") % index << endl;

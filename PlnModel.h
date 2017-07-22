@@ -6,10 +6,11 @@
 using std::string;
 using std::vector;
 using std::ostream;
-using std::move;
 
 class PlnGenerator;
 class PlnGenEntity;
+
+class PlnScopeItem;
 
 class PlnFunction;
 class PlnBlock;
@@ -22,16 +23,15 @@ class PlnReadOnlyData;
 // Module: Functions
 class PlnModule
 {
-	bool is_main;
+public:
 	vector<PlnFunction*> functions;
 	vector<PlnReadOnlyData*> readonlydata;
-	
-public:
 	PlnModule();
-	void addFunc(PlnFunction& func);
 
 	PlnFunction* getFunc(const string& func_name);
 	PlnReadOnlyData* getReadOnlyData(string &str);
+
+	int finish();
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
@@ -43,6 +43,10 @@ enum PlnFncType {
 	FT_INLINE,
 	FT_SYS,
 	FC_C
+};
+
+enum PlnFncPrntType {
+	FP_MODULE
 };
 
 class PlnFunction
@@ -58,18 +62,36 @@ public:
 		} syscall;
 	} inf;
 	PlnBlock* implement;
+	PlnFncPrntType parent_type;
+	union {
+		PlnModule *module;
+	} parent;
 
 	PlnFunction(const string& func_name);
 	void addParam(PlnVariable& param);
+	void setParent(PlnScopeItem& scope);
+	int finish();
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 
 // Block: Statements
+enum PlnBlkPrntType {
+	BP_FUNC,
+	BP_BLOCK
+};
+
 class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
+	PlnBlkPrntType parent_type;
+	union {
+		PlnFunction* function;
+		PlnBlock* block;
+	} parent;
+
+	void setParent(PlnScopeItem& scope);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
@@ -78,15 +100,18 @@ public:
 // Statement: Expression | Block
 enum PlnStmtType {
 	ST_EXPRSN,
-	ST_BLOCK
+	ST_BLOCK,
+	ST_RETURN
 };
 
 class PlnStatement {
 public:
 	PlnStmtType type;
+	PlnBlock* parent;
 	union {
 		PlnExpression* expression;
 		PlnBlock *block;
+		vector<PlnExpression*> *return_vals;
 	} inf;
 
 	void dump(ostream& os, string indent="");
