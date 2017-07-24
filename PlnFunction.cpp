@@ -6,12 +6,15 @@
 using std::string;
 using std::endl;
 
-PlnFunction::PlnFunction(const string &func_name)
-	: name(func_name), implement(NULL)
+PlnFunction::PlnFunction(PlnFncType func_type, const string &func_name)
+	: type(func_type), name(func_name), implement(NULL)
 {
+	if (func_type == FT_PLN) {
+		inf.pln.stack_size = 0;
+	}
 }
 
-void PlnFunction::addParam(PlnVariable& param)
+void PlnFunction::addParam(PlnParameter& param)
 {
 	parameters.push_back(&param);
 }
@@ -39,6 +42,8 @@ int PlnFunction::finish()
 				s->inf.return_vals = new vector<PlnExpression*>;
 				implement->statements.push_back(s);
 			}
+
+			inf.pln.stack_size += implement->stackSize();
 		}
 	}
 	return 0;
@@ -52,20 +57,22 @@ void PlnFunction::dump(ostream& os, string indent)
 	os << indent << " Returns: " << return_vals.size() << endl;
 	switch (type) {
 		case FT_PLN: 
-			if (implement) implement->dump(os, indent+" ");
-			else os << indent << " No Implementation" << endl;
+			if (implement) {
+				os << indent << " Stack size: " << inf.pln.stack_size << endl;
+				implement->dump(os, indent+" ");
+			} else os << indent << " No Implementation" << endl;
 		break;
 	}
 }
 
 void PlnFunction::gen(PlnGenerator &g)
 {
-	string ep(name);
-	if (name == "main") ep = "_start";
 	switch (type) {
 		case FT_PLN:
-			g.genEntryPoint(ep);
-			g.genLabel(ep);
+			g.genEntryPoint(name);
+			g.genLabel(name);
+			g.genEntryFunc();		
+			g.genLocalVarArea(inf.pln.stack_size);		
 			implement->gen(g);
 			break;
 	}

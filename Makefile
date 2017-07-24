@@ -16,7 +16,7 @@ PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
 depend: $(OBJS:.o=.cpp)
 	-@ $(RM) depend.inc
-	-@ for i in $^; do $(CXX) -MM $$i | sed "s/\ [_a-zA-Z0-9][_a-zA-Z0-9]*\.cpp//g" >> depend.inc; done
+	-@ for i in $^; do $(CXX) -std=c++11 -MM $$i | sed "s/\ [_a-zA-Z0-9][_a-zA-Z0-9]*\.cpp//g" >> depend.inc; done
 -include depend.inc
 package:
 	-apt-get -y install libboost-dev

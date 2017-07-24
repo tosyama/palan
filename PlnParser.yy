@@ -75,7 +75,7 @@ module: /* empty */
 
 function_definition: return_values func_name '(' parameters ')'
 		{
-			PlnFunction* f = new PlnFunction($2);
+			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->type = FT_PLN;
 			f->setParent(scopes.back());
 			scopes.push_back(PlnScopeItem(f));
@@ -125,6 +125,14 @@ statement: expression ';'
 		$$ = new PlnStatement();
 		$$->type = ST_EXPRSN;
 		$$->inf.expression = $1;
+		$$->parent = scopes.back().inf.block;
+	}
+
+	| declarations ';'
+	{
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = new PlnStatement();
+		$$->type = ST_DECLR;
 		$$->parent = scopes.back().inf.block;
 	}
 
@@ -186,6 +194,29 @@ expression: INT
 		$$ = $1;
 	}
 	;
+
+declarations: declaration
+	| declarations ',' subdeclaration 
+	| declarations ',' declaration 
+	;
+
+declaration: ID ID
+	{
+		PlnBlock* b = scopes.back().inf.block;
+		b->declareVariable($2, $1);
+	}
+
+	| ID ID '=' expression
+	;
+
+subdeclaration: ID
+	{
+		PlnBlock* b = scopes.back().inf.block;
+		b->declareVariable($1);
+	}
+	| ID '=' expression
+	;
+
 %%
 
 namespace palan 

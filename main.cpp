@@ -18,6 +18,7 @@ int main()
 	stringstream str(
 		"void main()\n"
 		"{\n"
+		"	int a, b;"
 		"	sys_write(1,\"Hello World!\\n\", 13);\n"
 		"}"
 	);
@@ -43,11 +44,11 @@ void loadSystemCall(PlnModule& module,
 	const char *fname, int id,
 	vector<PlnVarType>& pt, vector<const char*>& pn)
 {	
-	PlnFunction* f = new PlnFunction(fname);
+	PlnFunction* f = new PlnFunction(FT_SYS, fname);
 	f->type = FT_SYS;
 	f->inf.syscall.id = id;
 	for (int i=0; i<pt.size(); ++i) {
-		PlnVariable* p = new PlnVariable();
+		PlnParameter* p = new PlnParameter();
 		p->type = pt[i];
 		p->name = pn[i];
 		f->addParam(*p);

@@ -5,6 +5,16 @@
 
 using std::endl;
 
+inline PlnFunction* getFunction(PlnBlock *b)
+{
+	BOOST_ASSERT(b);
+	while (b->parent_type == BP_BLOCK) {
+		b = b->parent.block;
+	}
+	BOOST_ASSERT(b->parent_type == BP_FUNC);
+	return b->parent.function;
+}
+
 void PlnBlock::setParent(PlnScopeItem& scope)
 {
 	switch(scope.type) {
@@ -21,9 +31,41 @@ void PlnBlock::setParent(PlnScopeItem& scope)
 	}
 }
 
+int PlnBlock::stackSize()
+{
+	int sz;
+	int maxsz = 0;
+	for (auto s: statements) {
+		if (s->type == ST_BLOCK) {
+			if ((sz = s->inf.block->stackSize()) > maxsz) {
+				maxsz = sz;
+			}
+		}
+	}
+	return variables.size() * 8 + maxsz;
+}
+
+int PlnBlock::declareVariable(string& var_name, string type_name)
+{
+	PlnVariable* v = new PlnVariable();
+	if (type_name == "int") {
+		v->type = VT_INT8;
+	} else if (type_name == "") {
+		v->type = variables.back()->type;
+	} else
+		return 1;
+
+	variables.push_back(v);
+
+	return 0;
+}
+
 void PlnBlock::dump(ostream& os, string indent)
 {
 	os << indent << "Block: " << statements.size() << endl;
+	for (auto v: variables)
+		os << indent+" " << "Variable: " << v->name << "(" << v->type << ")" << endl;
+
 	for (auto s: statements)
 		s->dump(os, indent+" ");
 }
@@ -40,6 +82,9 @@ void PlnStatement::dump(ostream& os, string indent)
 		case ST_EXPRSN:
 			inf.expression->dump(os, indent);
 			break;
+		case ST_DECLR:
+			os << indent << "Declare:" << endl;
+			break;
 		case ST_BLOCK:
 			inf.block->dump(os, indent);
 			break;
@@ -51,15 +96,6 @@ void PlnStatement::dump(ostream& os, string indent)
 	}
 }
 
-inline PlnFunction* getFunction(PlnBlock *b)
-{
-	BOOST_ASSERT(b);
-	while (b->parent_type == BP_BLOCK) {
-		b = b->parent.block;
-	}
-	BOOST_ASSERT(b->parent_type == BP_FUNC);
-	return b->parent.function;
-}
 
 void PlnStatement::gen(PlnGenerator& g)
 {
@@ -76,12 +112,15 @@ void PlnStatement::gen(PlnGenerator& g)
 			for (auto r: *inf.return_vals) 
 				gen_rets.push_back(r->value.genEntity(g));
 			PlnFunction* f = getFunction(parent);
+
 			if (f->name == "main") 
 				g.genMainRetun(gen_rets);	
 			
 			for (auto gr: gen_rets)
 				PlnGenEntity::freeEntity(gr);
 		}
+			break;
+		case ST_DECLR:
 			break;
 		default:
 			BOOST_ASSERT(false);	

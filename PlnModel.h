@@ -17,6 +17,7 @@ class PlnBlock;
 class PlnStatement;
 class PlnExpression;
 class PlnVariable;
+class PlnParameter;
 class PlnValue;
 class PlnReadOnlyData;
 
@@ -54,12 +55,15 @@ class PlnFunction
 public:
 	string name;
 	PlnFncType type;
-	vector<PlnVariable*> parameters;
+	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
 	union {
 		struct {
 			int id;
 		} syscall;
+		struct {
+			int stack_size;
+		} pln;
 	} inf;
 	PlnBlock* implement;
 	PlnFncPrntType parent_type;
@@ -67,8 +71,8 @@ public:
 		PlnModule *module;
 	} parent;
 
-	PlnFunction(const string& func_name);
-	void addParam(PlnVariable& param);
+	PlnFunction(PlnFncType func_type, const string& func_name);
+	void addParam(PlnParameter& param);
 	void setParent(PlnScopeItem& scope);
 	int finish();
 
@@ -85,12 +89,15 @@ enum PlnBlkPrntType {
 class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
+	vector<PlnVariable*> variables;
 	PlnBlkPrntType parent_type;
 	union {
 		PlnFunction* function;
 		PlnBlock* block;
 	} parent;
 
+	int stackSize();
+	int declareVariable(string& var_name, string type_name="");
 	void setParent(PlnScopeItem& scope);
 
 	void dump(ostream& os, string indent="");
@@ -100,6 +107,7 @@ public:
 // Statement: Expression | Block
 enum PlnStmtType {
 	ST_EXPRSN,
+	ST_DECLR,
 	ST_BLOCK,
 	ST_RETURN
 };
@@ -172,12 +180,12 @@ class PlnVariable {
 public:
 	PlnVarType type;
 	string name;
-	union {
-		struct {
-			bool has_default;
-			PlnValue* dflt_value;
-		} param;
-	} inf;
+};
+
+class PlnParameter : public PlnVariable {
+public:
+	bool has_default;
+	PlnValue* dflt_value;
 };
 
 // Read only data (String literal/Const)

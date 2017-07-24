@@ -60,6 +60,17 @@ void PlnX86_64Generator::genLabel(const string& label)
 	os << ":" << endl;
 }
 
+void PlnX86_64Generator::genEntryFunc()
+{
+	os << "	push %rbp" << endl;
+	os << "	movq %rsp, %rbp" << endl;
+}
+
+void PlnX86_64Generator::genLocalVarArea(int size)
+{
+	os << format("	subq $%1%, $rsp") % size << endl;
+}
+
 void PlnX86_64Generator::genSysCall(int id, vector<PlnGenEntity*>& args, const string& comment)
 {
 	static const char* regs[] = {"%rdi", "%rsi", "%rdx", "%r10", "%r8", "%r9"};
@@ -74,6 +85,8 @@ void PlnX86_64Generator::genSysCall(int id, vector<PlnGenEntity*>& args, const s
 
 void PlnX86_64Generator::genMainRetun(vector<PlnGenEntity*> &return_vals)
 {
+	os << "	movq %rbp, %rsp" << endl;
+	os << "	pop %rbp" << endl;
 	if (return_vals.size() > 0)
 		os << format("	movq %1%, %%rdi") % *(return_vals[0]->data.str) << endl;
 	else
