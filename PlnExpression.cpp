@@ -8,6 +8,7 @@ using std::endl;
 void PlnExpression::dump(ostream& os, string indent)
 {
 	if (type == ET_VALUE) {
+		for (auto &value: values)
 		switch (value.type) {
 			case VL_LIT_INT8:
 				os << indent << "Int literal: " << value.inf.intValue << endl;
@@ -29,8 +30,10 @@ void PlnFunctionCall:: dump(ostream& os, string indent)
 {
 	os << indent << "FunctionCall: " << function->name << endl;
 	os << indent << " Arguments: " << arguments.size() << endl;
-	for (auto a: arguments)
-		a->dump(os, indent + "  ");
+	for (auto a: arguments) {
+		if (a) a->dump(os, indent + "  ");
+		else os << indent + "  NULL" << endl;
+	}
 }
 
 void PlnFunctionCall::gen(PlnGenerator &g)
@@ -40,7 +43,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		{
 			vector<PlnGenEntity*> gen_args;
 			for(auto arg: arguments)
-				gen_args.push_back(arg->value.genEntity(g));
+				gen_args.push_back(arg->values.front().genEntity(g));
 				
 			g.genSysCall(function->inf.syscall.id, gen_args, function->name);
 			for (auto garg: gen_args)

@@ -1,6 +1,16 @@
 #include <boost/assert.hpp>
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
+//PlnVariable
+
+PlnGenEntity* PlnVariable::genEntity(PlnGenerator& g)
+{
+	if (alloc_type == VA_STACK)
+		return g.getStackAddress(inf.stack.pos_from_base);
+
+	BOOST_ASSERT(false);
+	return NULL;
+}
 
 // PlnValue
 PlnGenEntity* PlnValue::genEntity(PlnGenerator& g)
@@ -10,6 +20,8 @@ PlnGenEntity* PlnValue::genEntity(PlnGenerator& g)
 			return g.getInt(inf.intValue);
 		case VL_RO_DATA:
 			return inf.rod->genEntity(g);
+		case VL_VAR:
+			return inf.var->genEntity(g);
 	}
 	BOOST_ASSERT(false);
 }

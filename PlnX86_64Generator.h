@@ -26,8 +26,10 @@ public:
 	virtual void genSysCall(int id, vector<PlnGenEntity*> &args, const string& comment)=0;
 	virtual void genMainRetun(vector<PlnGenEntity*> &return_vals)=0;
 	virtual void genStringData(int index, const string& str)=0;
+	virtual void genMove(PlnGenEntity* dst, PlnGenEntity* src, string& comment)=0;
 
 	virtual PlnGenEntity* getInt(int i)=0;
+	virtual PlnGenEntity* getStackAddress(int offset)=0;
 	virtual PlnGenEntity* getStrAddress(int index)=0;
 };
 
@@ -45,7 +47,9 @@ public:
 	void genSysCall(int id, vector<PlnGenEntity*> &args, const string& comment);
 	void genMainRetun(vector<PlnGenEntity*> &return_vals);
 	void genStringData(int index, const string& str);
+	void genMove(PlnGenEntity* dst, PlnGenEntity* src, string& comment);
 
 	PlnGenEntity* getInt(int i);
+	PlnGenEntity* getStackAddress(int offset);
 	PlnGenEntity* getStrAddress(int index);
 };

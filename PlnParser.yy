@@ -13,7 +13,7 @@
 #include "PlnScopeStack.h"
 
 using std::string;
-using std::cout;
+using std::cerr;
 using std::endl;
 using std::vector;
 
@@ -23,6 +23,7 @@ class PlnFunction;
 class PlnBlock;
 class PlnStatement;
 class PlnExpression;
+class PlnVarInit;
 
 }
 
@@ -37,6 +38,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 {
 #include <boost/assert.hpp>
 #include "PlnModel.h"
+#include "PlnMessage.h"
+
 }
 
 %locations
@@ -57,6 +60,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
+%type <vector<PlnVarInit*>>	declarations
+%type <PlnVarInit*>	declaration
+%type <PlnVarInit*>	subdeclaration
 
 %start module	
 %%
@@ -115,7 +121,11 @@ block: '{'
 statements:	/* empty */ { }
 	| statements statement
 	{
-		$1.push_back($2);
+		if ($2->isEmpty()) {
+			//TODO: free inner memory.
+		} else {
+			$1.push_back($2);
+		}
 		$$ = move($1);
 	}
 	;
@@ -132,8 +142,10 @@ statement: expression ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement();
-		$$->type = ST_DECLR;
+		$$->type = ST_VARINIT;
 		$$->parent = scopes.back().inf.block;
+		$$->inf.var_inits = new vector<PlnVarInit*>();
+		*$$->inf.var_inits =  move($1);
 	}
 
 	| block
@@ -177,16 +189,33 @@ expression: INT
 	{
 		$$  = new PlnExpression();
 		$$->type = ET_VALUE;
-		$$->value.type = VL_LIT_INT8;
-		$$->value.inf.intValue = $1;
+		$$->values.push_back(PlnValue());
+		$$->values.back().type = VL_LIT_INT8;
+		$$->values.back().inf.intValue = $1;
 	}
 
 	| STR
 	{
 		$$ = new PlnExpression();
 		$$->type = ET_VALUE;
-		$$->value.type = VL_RO_DATA;
-		$$->value.inf.rod = module.getReadOnlyData($1);
+		$$->values.push_back(PlnValue());
+		$$->values.back().type = VL_RO_DATA;
+		$$->values.back().inf.rod = module.getReadOnlyData($1);
+	}
+
+	| ID
+	{
+		PlnVariable *v = scopes.back().inf.block->getVariable($1);
+		if (v) {
+			$$ = new PlnExpression();
+			$$->type = ET_VALUE;
+			$$->values.push_back(PlnValue());
+			$$->values.back().type = VL_VAR;
+			$$->values.back().inf.var = v;
+		} else {
+			error(@$, PlnMessage::getErr(E_UndefinedVariable, $1));
+			YYABORT;
+		}
 	}
 
 	| func_call
@@ -196,25 +225,57 @@ expression: INT
 	;
 
 declarations: declaration
+	{
+		if ($1)	$$.push_back($1);
+	}
+
 	| declarations ',' subdeclaration 
+	{
+		$$ = move($1);
+		if ($3) $$.push_back($3);
+	}
+
 	| declarations ',' declaration 
+	{
+		$$ = move($1);
+		if ($3) $$.push_back($3);
+	}
 	;
 
 declaration: ID ID
 	{
 		PlnBlock* b = scopes.back().inf.block;
 		b->declareVariable($2, $1);
+		$$ = NULL;
 	}
 
 	| ID ID '=' expression
+	{
+		PlnBlock* b = scopes.back().inf.block;
+		b->declareVariable($2, $1);
+		PlnVarInit* vi = new PlnVarInit();
+		vi->vars.push_back(b->variables.back());
+		vi->initializer = $4;
+		$$ = vi;
+	}
 	;
 
 subdeclaration: ID
 	{
 		PlnBlock* b = scopes.back().inf.block;
 		b->declareVariable($1);
+		$$ = NULL;
 	}
+
 	| ID '=' expression
+	{
+		PlnBlock* b = scopes.back().inf.block;
+		b->declareVariable($1);
+		PlnVarInit* vi = new PlnVarInit();
+		vi->vars.push_back(b->variables.back());
+		vi->initializer = $3;
+		$$ = vi;
+	}
 	;
 
 %%
@@ -224,7 +285,7 @@ namespace palan
 
 void PlnParser::error(const location_type& l, const string& m)
 {
-	cout << "error: " << l << ":" << m << endl;
+	cerr << "error: " << l << ": " << m << endl;
 }
 
 } // namespace

@@ -43,7 +43,7 @@ int PlnFunction::finish()
 				implement->statements.push_back(s);
 			}
 
-			inf.pln.stack_size += implement->stackSize();
+			inf.pln.stack_size += implement->totalStackSize();
 		}
 	}
 	return 0;

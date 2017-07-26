@@ -21,6 +21,8 @@ class PlnParameter;
 class PlnValue;
 class PlnReadOnlyData;
 
+class PlnVarInit;
+
 // Module: Functions
 class PlnModule
 {
@@ -95,8 +97,13 @@ public:
 		PlnFunction* function;
 		PlnBlock* block;
 	} parent;
+	int cur_stack_size;
 
-	int stackSize();
+	PlnBlock();
+
+	int totalStackSize();
+	PlnVariable* getVariable(string& var_name);
+
 	int declareVariable(string& var_name, string type_name="");
 	void setParent(PlnScopeItem& scope);
 
@@ -107,7 +114,7 @@ public:
 // Statement: Expression | Block
 enum PlnStmtType {
 	ST_EXPRSN,
-	ST_DECLR,
+	ST_VARINIT,
 	ST_BLOCK,
 	ST_RETURN
 };
@@ -118,9 +125,12 @@ public:
 	PlnBlock* parent;
 	union {
 		PlnExpression* expression;
+		vector<PlnVarInit*> *var_inits;
 		PlnBlock *block;
 		vector<PlnExpression*> *return_vals;
 	} inf;
+
+	bool isEmpty();
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
@@ -129,7 +139,8 @@ public:
 // Value (rval)
 enum PlnValType {
 	VL_LIT_INT8,
-	VL_RO_DATA
+	VL_RO_DATA,
+	VL_VAR
 };
 
 class PlnValue {
@@ -138,6 +149,7 @@ public:
 	union {
 		int64_t intValue;
 		PlnReadOnlyData* rod;
+		PlnVariable* var;
 	} inf;
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };
@@ -145,13 +157,14 @@ public:
 // Expression: FunctionCall
 enum PlnExprsnType {
 	ET_VALUE,
-	ET_FUNCCALL
+	ET_FUNCCALL,
+	ET_ASSIGN
 };
 
 class PlnExpression {
 public:
 	PlnExprsnType type;
-	PlnValue value;
+	vector<PlnValue> values;
 
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
@@ -176,10 +189,22 @@ enum PlnVarType {
 	VT_IMP,
 };
 
+enum PlnVarAllocType {
+	VA_STACK
+};
+
 class PlnVariable {
 public:
 	PlnVarType type;
 	string name;
+	PlnVarAllocType alloc_type;
+	union {
+		struct {
+			int pos_from_base;
+		} stack;
+	} inf;
+
+	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
 class PlnParameter : public PlnVariable {
@@ -202,3 +227,11 @@ public:
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
+// Variable initialization
+class PlnVarInit {
+public:
+	vector<PlnVariable*> vars;
+	PlnExpression* initializer;
+
+	void gen(PlnGenerator& g);
+};

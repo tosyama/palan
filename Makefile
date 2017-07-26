@@ -1,6 +1,6 @@
 PROGRAM=plc
 OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
-	PlnX86_64Generator.o PlnValue.o PlnParser.o PlnLexer.o
+	PlnX86_64Generator.o PlnValue.o PlnParser.o PlnLexer.o PlnMessage.o
 
 .SUFFIXES: .cpp .o
 

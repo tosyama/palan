@@ -68,7 +68,7 @@ void PlnX86_64Generator::genEntryFunc()
 
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
-	os << format("	subq $%1%, $rsp") % size << endl;
+	os << format("	subq $%1%, %%rsp") % size << endl;
 }
 
 void PlnX86_64Generator::genSysCall(int id, vector<PlnGenEntity*>& args, const string& comment)
@@ -102,11 +102,27 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 	os << format("	.string \"%1%\"") % ostr << endl;
 }
 
+void PlnX86_64Generator::genMove(PlnGenEntity* dst, PlnGenEntity* src, string& comment)
+{
+	os << format("	movq %1%, %2%") % *src->data.str % *dst->data.str;
+	if (comment != "") os << "	# " << comment;
+	os << endl;
+}
+
 PlnGenEntity* PlnX86_64Generator::getInt(int i)
 {
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
 	e->data.str = new string((format("$%1%") % i).str());
+
+	return e;
+}
+
+PlnGenEntity* PlnX86_64Generator::getStackAddress(int offset)
+{
+	PlnGenEntity* e= new PlnGenEntity();
+	e->type = GE_STRING;
+	e->data.str = new string((format("-%1%(%%rbp)") % offset).str());
 
 	return e;
 }

@@ -18,8 +18,11 @@ int main()
 	stringstream str(
 		"void main()\n"
 		"{\n"
-		"	int a, b;"
-		"	sys_write(1,\"Hello World!\\n\", 13);\n"
+		"	int a, b=3;"
+		"	{int a=1, cc=3;}"
+		"	int c=4;"
+		"	{int d; }"
+		"	sys_write(1,\"Hello World!\\n\", d);\n"
 		"}"
 	);
 	lexer.switch_streams(&str,&cout);
@@ -32,10 +35,10 @@ int main()
 	PlnParser parser(lexer, modu, scopes);
 	parser.parse();
 
-//	modu.dump(cout);
+	modu.dump(cout);
 
 	PlnX86_64Generator generator(cout);
-	modu.gen(generator);
+	// modu.gen(generator);
 
 	return 0;
 }
