@@ -9,6 +9,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 	switch (err_code) {
 		case E_UndefinedVariable:
 			f  = "variable '%1%' was not declared in this scope."; break;
+		case E_UndefinedFunction:
+			f  = "function '%1%' was not declared in this scope."; break;
 	}
 	
 	string message;

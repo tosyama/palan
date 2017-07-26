@@ -160,11 +160,17 @@ statement: expression ';'
 
 func_call: func_name '(' arguments ')'
 	{
-		PlnFunctionCall* fc = new PlnFunctionCall();
-		fc->type = ET_FUNCCALL;
-		fc->function = module.getFunc($1);
-		fc->arguments = move($3);
-		$$ = fc;
+		PlnFunction* f = module.getFunc($1);
+		if (f) {
+			PlnFunctionCall* fc = new PlnFunctionCall();
+			fc->type = ET_FUNCCALL;
+			fc->function = f;
+			fc->arguments = move($3);
+			$$ = fc;
+		} else {
+			error(@$, PlnMessage::getErr(E_UndefinedFunction, $1));
+			YYABORT;
+		}
 	}
 	;
 

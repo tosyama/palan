@@ -22,7 +22,7 @@ int main()
 		"	{int a=1, cc=3;}"
 		"	int c=4;"
 		"	{int d; }"
-		"	sys_write(1,\"Hello World!\\n\", d);\n"
+		"	sys_write(1,\"Hello World!\\n\", b);\n"
 		"}"
 	);
 	lexer.switch_streams(&str,&cout);

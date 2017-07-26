@@ -13,6 +13,9 @@ void PlnExpression::dump(ostream& os, string indent)
 			case VL_LIT_INT8:
 				os << indent << "Int literal: " << value.inf.intValue << endl;
 				break;
+			case VL_VAR:
+				os << indent << "Variable: " << value.inf.var->name << endl;
+				break;
 			case VL_RO_DATA:
 				os << indent << "String literal: " << value.inf.rod->name.size() << endl;
 				break;
