@@ -8,9 +8,11 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 	string f;
 	switch (err_code) {
 		case E_UndefinedVariable:
-			f  = "variable '%1%' was not declared in this scope."; break;
+			f  = "Variable '%1%' was not declared in this scope."; break;
 		case E_UndefinedFunction:
-			f  = "function '%1%' was not declared in this scope."; break;
+			f  = "Function '%1%' was not declared in this scope."; break;
+		case E_CouldnotOpenFile:
+			f = "Could not open file '%1%'."; break;
 	}
 	
 	string message;

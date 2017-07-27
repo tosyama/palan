@@ -5,7 +5,7 @@ OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
 .SUFFIXES: .cpp .o
 
 $(PROGRAM): $(OBJS)
-	$(CXX) -o $(PROGRAM) $(OBJS)
+	$(CXX) -o $(PROGRAM) $(OBJS) -lboost_program_options
 .cpp.o:
 	$(CXX) -std=c++11 -c -g $<
 PlnParser.cpp: PlnParser.yy
@@ -20,6 +20,7 @@ depend: $(OBJS:.o=.cpp)
 -include depend.inc
 package:
 	-apt-get -y install libboost-dev
+	-apt-get -y install libboost-program-options-dev
 	-apt-get -y install bison
 	-apt-get -y install flex
 

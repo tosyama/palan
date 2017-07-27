@@ -3,7 +3,8 @@ using std::string;
 
 enum PlnErrCode {
 	E_UndefinedVariable,
-	E_UndefinedFunction
+	E_UndefinedFunction,
+	E_CouldnotOpenFile
 };
 
 enum PlnWarnCode {

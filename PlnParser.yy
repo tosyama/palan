@@ -47,8 +47,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %define parse.error	verbose
 %define api.value.type	variant
 
-%token <int>	INT
-%token <string>	ID "identifier"
+%token <int>	INT	"integer"
+%token <string>	ID	"identifier"
 %token <string>	STR	"string"
 
 %type <string>	func_name
@@ -82,7 +82,6 @@ module: /* empty */
 function_definition: return_values func_name '(' parameters ')'
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
-			f->type = FT_PLN;
 			f->setParent(scopes.back());
 			scopes.push_back(PlnScopeItem(f));
 		}
@@ -228,6 +227,15 @@ expression: INT
 	{
 		$$ = $1;
 	}
+
+	| lvals '=' expression
+	{
+		$$ = NULL;
+	}
+	;
+
+lvals: ID
+	| lvals ',' ID
 	;
 
 declarations: declaration

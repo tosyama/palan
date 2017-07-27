@@ -68,7 +68,8 @@ void PlnX86_64Generator::genEntryFunc()
 
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
-	os << format("	subq $%1%, %%rsp") % size << endl;
+	if (size)
+		os << format("	subq $%1%, %%rsp") % size << endl;
 }
 
 void PlnX86_64Generator::genSysCall(int id, vector<PlnGenEntity*>& args, const string& comment)

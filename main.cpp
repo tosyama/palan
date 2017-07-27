@@ -2,18 +2,92 @@
 #include "PlnLexer.h"
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
+#include "PlnMessage.h"
 #include <boost/assign.hpp>
+#include <boost/program_options.hpp>
+#include <fstream>
 #include <sstream>
 
 using std::cout;
+using std::cerr;
+using std::endl;
+using std::exception;
+using std::ifstream;
 using std::stringstream;
 using namespace boost::assign;
 using palan::PlnParser;
 
+namespace po = boost::program_options;
+
 void loadSystemCalls(PlnModule& module);
 
-int main()
+int main(int argc, char* argv[])
 {
+	po::options_description opt("Options");
+	po::positional_options_description p_opt;
+	po::variables_map vm;
+	bool do_dump = false;
+	bool do_asm = true;
+
+	opt.add_options()
+		("help,h", "Display this help")
+		("dump,d", "Dump semantic tree")
+		("input-file", po::value<vector<string>>(), "Input file");
+
+	p_opt.add("input-file", -1);
+	
+	try {
+		po::store(po::command_line_parser(argc, argv)
+				.options(opt).positional(p_opt).run(), vm);
+	} catch (exception &e) {
+		cerr << "error: " << e.what() << endl;
+		cerr << opt;
+		return -1;
+	}
+
+	po::notify(vm);
+
+	if (vm.count("help")) {
+		cout << opt;
+		return 0;
+	}
+	if (vm.count("dump")) {
+		do_dump = true;
+		do_asm = false;
+	}
+
+	if (vm.count("input-file")){
+		vector<string> files(vm["input-file"].as< vector<string> >());
+		for (string& fname: files) {
+			ifstream	f;
+			f.open(fname);
+			
+			if (f) {
+				PlnLexer	lexer;
+				lexer.set_filename(fname);
+				lexer.switch_streams(&f, &cout);
+				PlnModule module;
+				loadSystemCalls(module);
+
+				PlnScopeStack	scopes;
+				PlnParser parser(lexer, module, scopes);
+				parser.parse();
+
+				if (do_dump) module.dump(cout);
+
+				if (do_asm) {
+					PlnX86_64Generator generator(cout);
+					module.gen(generator);
+				}
+			} else {
+				string msg(PlnMessage::getErr(E_CouldnotOpenFile, fname));
+				cerr << "error: " << msg << endl;
+			}
+		}
+		return 0;
+	} 
+
+	// test code
 	PlnLexer lexer;
 	stringstream str(
 		"void main()\n"
@@ -35,10 +109,12 @@ int main()
 	PlnParser parser(lexer, modu, scopes);
 	parser.parse();
 
-	modu.dump(cout);
+	if (do_dump) modu.dump(cout);
 
-	PlnX86_64Generator generator(cout);
-	// modu.gen(generator);
+	if (do_asm) {
+		PlnX86_64Generator generator(cout);
+		modu.gen(generator);
+	}
 
 	return 0;
 }
