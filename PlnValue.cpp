@@ -1,8 +1,8 @@
 #include <boost/assert.hpp>
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
-//PlnVariable
 
+//PlnVariable
 PlnGenEntity* PlnVariable::genEntity(PlnGenerator& g)
 {
 	if (alloc_type == VA_STACK)
@@ -10,6 +10,12 @@ PlnGenEntity* PlnVariable::genEntity(PlnGenerator& g)
 
 	BOOST_ASSERT(false);
 	return NULL;
+}
+
+PlnVarInit::PlnVarInit(PlnVariable* var, PlnExpression* initializer)
+	: initializer(initializer)
+{
+	vars.push_back(var);
 }
 
 // PlnValue

@@ -16,6 +16,7 @@ class PlnFunction;
 class PlnBlock;
 class PlnStatement;
 class PlnExpression;
+class PlnType;
 class PlnVariable;
 class PlnParameter;
 class PlnValue;
@@ -31,6 +32,7 @@ public:
 	vector<PlnReadOnlyData*> readonlydata;
 	PlnModule();
 
+	PlnType* getType(const string& type_name);
 	PlnFunction* getFunc(const string& func_name);
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
@@ -104,7 +106,7 @@ public:
 	int totalStackSize();
 	PlnVariable* getVariable(string& var_name);
 
-	int declareVariable(string& var_name, string type_name="");
+	PlnVariable* declareVariable(string& var_name, PlnType* var_type=NULL);
 	void setParent(PlnScopeItem& scope);
 
 	void dump(ostream& os, string indent="");
@@ -194,6 +196,21 @@ public:
 	void gen(PlnGenerator& g);	// override
 };
 
+// PlnType
+enum PlnTypType {
+	TP_INT8,
+	TP_UINT8,
+	TP_OBJ,
+	TP_IMP,
+};
+
+class PlnType {
+public:
+	PlnTypType	type;
+	string name;
+	int size;
+};
+
 // Variable: Type name
 enum PlnVarType {
 	VT_INT8,
@@ -208,9 +225,9 @@ enum PlnVarAllocType {
 
 class PlnVariable {
 public:
-	PlnVarType type;
-	string name;
 	PlnVarAllocType alloc_type;
+	PlnType *var_type;
+	string name;
 	union {
 		struct {
 			int pos_from_base;
@@ -243,6 +260,8 @@ public:
 // Variable initialization
 class PlnVarInit {
 public:
+	PlnVarInit(PlnVariable* var, PlnExpression* initializer);
+
 	vector<PlnVariable*> vars;
 	PlnExpression* initializer;
 

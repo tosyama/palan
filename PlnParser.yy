@@ -24,7 +24,6 @@ class PlnBlock;
 class PlnStatement;
 class PlnExpression;
 class PlnVarInit;
-
 }
 
 %code
@@ -39,7 +38,6 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 #include <boost/assert.hpp>
 #include "PlnModel.h"
 #include "PlnMessage.h"
-
 }
 
 %locations
@@ -117,6 +115,7 @@ block: '{'
 		scopes.pop_back();
 	}
 	;
+
 statements:	/* empty */ { }
 	| statements statement
 	{
@@ -172,6 +171,7 @@ arguments: argument
 		$$ = move($1);
 	}
 	;
+
 argument: /* empty */ // ToDo: replace default
 	| expression
 	{
@@ -234,37 +234,54 @@ declarations: declaration
 
 declaration: ID ID
 	{
+		PlnType* t = module.getType($1);
+		if (!t) {
+			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
+			YYABORT;
+		}
 		PlnBlock* b = scopes.back().inf.block;
-		b->declareVariable($2, $1);
+		if (!b->declareVariable($2, t)) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
+			YYABORT;
+		}
 		$$ = NULL;
 	}
 
 	| ID ID '=' expression
 	{
-		PlnBlock* b = scopes.back().inf.block;
-		b->declareVariable($2, $1);
-		PlnVarInit* vi = new PlnVarInit();
-		vi->vars.push_back(b->variables.back());
-		vi->initializer = $4;
-		$$ = vi;
+		PlnType* t = module.getType($1);
+		if (!t) {
+			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
+			YYABORT;
+		}
+		PlnVariable* v = scopes.back().inf.block->declareVariable($2, t);
+		if (!v) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
+			YYABORT;
+		}
+		$$ = new PlnVarInit(v, $4);
 	}
 	;
 
 subdeclaration: ID
 	{
 		PlnBlock* b = scopes.back().inf.block;
-		b->declareVariable($1);
+		if (!b->declareVariable($1)) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
+			YYABORT;
+		}
 		$$ = NULL;
 	}
 
 	| ID '=' expression
 	{
 		PlnBlock* b = scopes.back().inf.block;
-		b->declareVariable($1);
-		PlnVarInit* vi = new PlnVarInit();
-		vi->vars.push_back(b->variables.back());
-		vi->initializer = $3;
-		$$ = vi;
+		PlnVariable* v = b->declareVariable($1);
+		if (!v) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
+			YYABORT;
+		}
+		$$ = new PlnVarInit(v, $3);
 	}
 	;
 

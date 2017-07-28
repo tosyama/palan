@@ -4,6 +4,8 @@ using std::string;
 enum PlnErrCode {
 	E_UndefinedVariable,
 	E_UndefinedFunction,
+	E_UndefinedType,
+	E_DuplicateVarName,
 	E_CouldnotOpenFile
 };
 

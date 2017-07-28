@@ -1,11 +1,13 @@
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include "PlnModel.h"
 #include "PlnScopeStack.h"
 #include "PlnX86_64Generator.h"
 
 using std::endl;
 using boost::format;
+using boost::adaptors::reverse;
 
 inline PlnFunction* getFunction(PlnBlock *b)
 {
@@ -70,6 +72,13 @@ int PlnBlock::totalStackSize()
 {
 	int sz;
 	int maxsz = 0;
+	for (auto v: reverse(variables)) {
+		if (v->alloc_type == VA_STACK) {
+			maxsz = v->inf.stack.pos_from_base;
+			break;
+		}
+	}
+	
 	for (auto s: statements) {
 		if (s->type == ST_BLOCK) {
 			if ((sz = s->inf.block->totalStackSize()) > maxsz) {
@@ -77,33 +86,27 @@ int PlnBlock::totalStackSize()
 			}
 		}
 	}
-	return cur_stack_size + maxsz;
+	return maxsz;
 }
 
-int PlnBlock::declareVariable(string& var_name, string type_name)
+PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 {
-	PlnVariable* v = new PlnVariable();
+	for (auto v: variables)
+		if (v->name == var_name) return NULL;
 	
-	if (type_name == "int") {
-		v->type = VT_INT8;
-	} else if (type_name == "") {
-		v->type = variables.back()->type;
-	} else
-		return 1;
-
+	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
-	switch (v->type) {
-		case VT_INT8:
-			cur_stack_size += 8;
-			break;
-		default:
-			BOOST_ASSERT(false);
-	}
+
+	if (var_type) v->var_type = var_type;
+	else v->var_type = variables.back()->var_type;
+
+	cur_stack_size += v->var_type->size;
+
 	v->alloc_type = VA_STACK;
 	v->inf.stack.pos_from_base = getBasePos(this)+cur_stack_size;
 	variables.push_back(v);
 
-	return 0;
+	return v;
 }
 
 void PlnBlock::dump(ostream& os, string indent)
@@ -111,7 +114,7 @@ void PlnBlock::dump(ostream& os, string indent)
 	os << indent << "Block: " << statements.size() << endl;
 	for (auto v: variables)
 		os << format("%1% Variable: %2% %3%(%4%)")
-				% indent % v->type % v->name % v->inf.stack.pos_from_base << endl;
+				% indent % v->var_type->name % v->name % v->inf.stack.pos_from_base << endl;
 
 	for (auto s: statements)
 		s->dump(os, indent+" ");

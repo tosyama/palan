@@ -71,7 +71,9 @@ int main(int argc, char* argv[])
 
 				PlnScopeStack	scopes;
 				PlnParser parser(lexer, module, scopes);
-				parser.parse();
+				int res = parser.parse();
+
+				if (res) return res;	// parse error
 
 				if (do_dump) module.dump(cout);
 
@@ -107,8 +109,9 @@ int main(int argc, char* argv[])
 
 	PlnScopeStack	scopes;
 	PlnParser parser(lexer, modu, scopes);
-	parser.parse();
+	int res = parser.parse();
 
+	if (res) return res;	// parse error
 	if (do_dump) modu.dump(cout);
 
 	if (do_asm) {
@@ -121,14 +124,14 @@ int main(int argc, char* argv[])
 
 void loadSystemCall(PlnModule& module,
 	const char *fname, int id,
-	vector<PlnVarType>& pt, vector<const char*>& pn)
+	vector<string>& pt, vector<const char*>& pn)
 {	
 	PlnFunction* f = new PlnFunction(FT_SYS, fname);
 	f->type = FT_SYS;
 	f->inf.syscall.id = id;
 	for (int i=0; i<pt.size(); ++i) {
 		PlnParameter* p = new PlnParameter();
-		p->type = pt[i];
+		p->var_type = module.getType(pt[i]);
 		p->name = pn[i];
 		f->addParam(*p);
 	}
@@ -140,13 +143,13 @@ void loadSystemCalls(PlnModule& module)
 {
 	const char *fname;
 	int id;
-	vector<PlnVarType> pt;
+	vector<string> pt;
 	vector<const char*> pn;
 	
 	// void exit(int status);
 	fname = "sys_exit";
 	id = 60;
-	pt += VT_INT8;
+	pt += "int";
 	pn += "error_code";
 	loadSystemCall(module, fname, id, pt, pn);
 
@@ -155,7 +158,7 @@ void loadSystemCalls(PlnModule& module)
 
 	fname = "sys_write";
 	id = 1;
-	pt += VT_UINT8, VT_OBJ, VT_UINT8;
+	pt += "int", "object", "int";
 	pn += "fd", "buf", "count";
 	loadSystemCall(module, fname, id, pt, pn);
 }

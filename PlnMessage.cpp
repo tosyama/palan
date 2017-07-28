@@ -11,6 +11,10 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f  = "Variable '%1%' was not declared in this scope."; break;
 		case E_UndefinedFunction:
 			f  = "Function '%1%' was not declared in this scope."; break;
+		case E_UndefinedType:
+			f  = "Type '%1%' was not declared in this scope."; break;
+		case E_DuplicateVarName:
+			f = "Variable name '%1%' already defined."; break;
 		case E_CouldnotOpenFile:
 			f = "Could not open file '%1%'."; break;
 	}
