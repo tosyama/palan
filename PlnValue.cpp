@@ -13,6 +13,24 @@ PlnGenEntity* PlnVariable::genEntity(PlnGenerator& g)
 }
 
 // PlnValue
+PlnValue::PlnValue(int intValue)
+	: type(VL_LIT_INT8)
+{
+	inf.intValue = intValue;
+}
+
+PlnValue::PlnValue(PlnReadOnlyData* rod)
+	: type(VL_RO_DATA)
+{
+	inf.rod = rod;
+}
+
+PlnValue::PlnValue(PlnVariable* var)
+	: type(VL_VAR)
+{
+	inf.var = var;
+}
+
 PlnGenEntity* PlnValue::genEntity(PlnGenerator& g)
 {
 	switch (type) {

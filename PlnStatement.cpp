@@ -123,6 +123,26 @@ void PlnBlock::gen(PlnGenerator& g)
 		s->gen(g);
 }
 
+// PlnStatement
+PlnStatement::PlnStatement(PlnExpression *exp, PlnBlock* parent)
+	: type(ST_EXPRSN), parent(parent)
+{
+	inf.expression = exp;
+}
+
+PlnStatement::PlnStatement(vector<PlnVarInit*> &var_inits, PlnBlock* parent)
+	: type(ST_VARINIT), parent(parent)
+{
+	inf.var_inits = new vector<PlnVarInit*>();
+	*(inf.var_inits) = move(var_inits);
+}
+
+PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
+	: type(ST_BLOCK), parent(parent)
+{
+	inf.block = block;
+}
+
 bool PlnStatement::isEmpty()
 {
 	if (type == ST_VARINIT && inf.var_inits->size() == 0) return true;

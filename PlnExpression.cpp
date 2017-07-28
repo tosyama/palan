@@ -5,6 +5,12 @@
 using std::endl;
 
 // PlnExpression
+PlnExpression::PlnExpression(PlnValue value)
+	: type(ET_VALUE) 
+{
+	values.push_back(value);
+}
+
 void PlnExpression::dump(ostream& os, string indent)
 {
 	if (type == ET_VALUE) {

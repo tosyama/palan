@@ -130,6 +130,11 @@ public:
 		vector<PlnExpression*> *return_vals;
 	} inf;
 
+	PlnStatement() {};
+	PlnStatement(PlnExpression *exp, PlnBlock* parent);
+	PlnStatement(vector<PlnVarInit*> &var_inits, PlnBlock* parent);
+	PlnStatement(PlnBlock* block, PlnBlock* parent);
+
 	bool isEmpty();
 
 	void dump(ostream& os, string indent="");
@@ -151,6 +156,12 @@ public:
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
 	} inf;
+
+	PlnValue() {};
+	PlnValue(int intValue);
+	PlnValue(PlnReadOnlyData* rod);
+	PlnValue(PlnVariable* var);
+
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
@@ -166,6 +177,8 @@ public:
 	PlnExprsnType type;
 	vector<PlnValue> values;
 
+	PlnExpression() {};
+	PlnExpression(PlnValue value);
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
 };

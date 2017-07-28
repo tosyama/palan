@@ -120,40 +120,28 @@ block: '{'
 statements:	/* empty */ { }
 	| statements statement
 	{
-		if ($2->isEmpty()) {
-			//TODO: free inner memory.
-		} else {
-			$1.push_back($2);
-		}
+		if ($2) $1.push_back($2);
 		$$ = move($1);
 	}
 	;
+
 statement: expression ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement();
-		$$->type = ST_EXPRSN;
-		$$->inf.expression = $1;
-		$$->parent = scopes.back().inf.block;
+		$$ = new PlnStatement($1, scopes.back().inf.block);
 	}
 
 	| declarations ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement();
-		$$->type = ST_VARINIT;
-		$$->parent = scopes.back().inf.block;
-		$$->inf.var_inits = new vector<PlnVarInit*>();
-		*$$->inf.var_inits =  move($1);
+		if ($1.size()) $$ = new PlnStatement($1, scopes.back().inf.block);
+		else $$ = NULL;
 	}
 
 	| block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement();
-		$$->type = ST_BLOCK;
-		$$->inf.block = $1;
-		$$->parent = scopes.back().inf.block;
+		$$ = new PlnStatement($1, scopes.back().inf.block);
 	}
 	;
 
@@ -190,34 +178,22 @@ argument: /* empty */ // ToDo: replace default
 		$$ = $1;
 	}
 	;
+
 expression: INT
 	{
-		$$  = new PlnExpression();
-		$$->type = ET_VALUE;
-		$$->values.push_back(PlnValue());
-		$$->values.back().type = VL_LIT_INT8;
-		$$->values.back().inf.intValue = $1;
+		$$  = new PlnExpression(PlnValue($1));
 	}
 
 	| STR
 	{
-		$$ = new PlnExpression();
-		$$->type = ET_VALUE;
-		$$->values.push_back(PlnValue());
-		$$->values.back().type = VL_RO_DATA;
-		$$->values.back().inf.rod = module.getReadOnlyData($1);
+		$$ = new PlnExpression(PlnValue(module.getReadOnlyData($1)));
 	}
 
 	| ID
 	{
 		PlnVariable *v = scopes.back().inf.block->getVariable($1);
-		if (v) {
-			$$ = new PlnExpression();
-			$$->type = ET_VALUE;
-			$$->values.push_back(PlnValue());
-			$$->values.back().type = VL_VAR;
-			$$->values.back().inf.var = v;
-		} else {
+		if (v) $$ = new PlnExpression(PlnValue(v));
+		else {
 			error(@$, PlnMessage::getErr(E_UndefinedVariable, $1));
 			YYABORT;
 		}
