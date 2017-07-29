@@ -23,6 +23,7 @@ class PlnFunction;
 class PlnBlock;
 class PlnStatement;
 class PlnExpression;
+class PlnVariable;
 class PlnVarInit;
 }
 
@@ -38,6 +39,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 #include <boost/assert.hpp>
 #include "PlnModel.h"
 #include "PlnMessage.h"
+
+#define CUR_BLOCK	scopes.back().inf.block
 }
 
 %locations
@@ -58,6 +61,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
+%type <vector<PlnVariable*>>	lvals
 %type <vector<PlnVarInit*>>	declarations
 %type <PlnVarInit*>	declaration
 %type <PlnVarInit*>	subdeclaration
@@ -110,7 +114,7 @@ block: '{'
 		statements '}'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = scopes.back().inf.block;
+		$$ = CUR_BLOCK;
 		$$->statements = move($3);
 		scopes.pop_back();
 	}
@@ -127,20 +131,20 @@ statements:	/* empty */ { }
 statement: expression ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement($1, scopes.back().inf.block);
+		$$ = new PlnStatement($1, CUR_BLOCK);
 	}
 
 	| declarations ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		if ($1.size()) $$ = new PlnStatement($1, scopes.back().inf.block);
+		if ($1.size()) $$ = new PlnStatement($1, CUR_BLOCK);
 		else $$ = NULL;
 	}
 
 	| block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement($1, scopes.back().inf.block);
+		$$ = new PlnStatement($1, CUR_BLOCK);
 	}
 	;
 
@@ -191,7 +195,7 @@ expression: INT
 
 	| ID
 	{
-		PlnVariable *v = scopes.back().inf.block->getVariable($1);
+		PlnVariable *v = CUR_BLOCK->getVariable($1);
 		if (v) $$ = new PlnExpression(PlnValue(v));
 		else {
 			error(@$, PlnMessage::getErr(E_UndefinedVariable, $1));
@@ -206,12 +210,34 @@ expression: INT
 
 	| lvals '=' expression
 	{
-		$$ = NULL;
+		if ($1.size() != $3->values.size()) {
+			error(@$, "err");
+			YYABORT;
+		}
+		$$ = new PlnAssignment($1, $3);
 	}
 	;
 
 lvals: ID
+	{
+		PlnVariable* v=CUR_BLOCK->getVariable($1);
+		if (v) $$.push_back(v);
+		else {
+			error(@$, PlnMessage::getErr(E_UndefinedVariable,$1));
+			YYABORT;
+		}
+	}
+
 	| lvals ',' ID
+	{
+		$$ = move($1);
+		PlnVariable* v=CUR_BLOCK->getVariable($3);
+		if (v) $$.push_back(v);
+		else {
+			error(@$, PlnMessage::getErr(E_UndefinedVariable,$3));
+			YYABORT;
+		}
+	}
 	;
 
 declarations: declaration
@@ -239,8 +265,7 @@ declaration: ID ID
 			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
 			YYABORT;
 		}
-		PlnBlock* b = scopes.back().inf.block;
-		if (!b->declareVariable($2, t)) {
+		if (!CUR_BLOCK->declareVariable($2, t)) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
 		}
@@ -254,7 +279,7 @@ declaration: ID ID
 			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
 			YYABORT;
 		}
-		PlnVariable* v = scopes.back().inf.block->declareVariable($2, t);
+		PlnVariable* v = CUR_BLOCK->declareVariable($2, t);
 		if (!v) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -265,8 +290,7 @@ declaration: ID ID
 
 subdeclaration: ID
 	{
-		PlnBlock* b = scopes.back().inf.block;
-		if (!b->declareVariable($1)) {
+		if (!CUR_BLOCK->declareVariable($1)) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
 		}
@@ -275,8 +299,7 @@ subdeclaration: ID
 
 	| ID '=' expression
 	{
-		PlnBlock* b = scopes.back().inf.block;
-		PlnVariable* v = b->declareVariable($1);
+		PlnVariable* v = CUR_BLOCK->declareVariable($1);
 		if (!v) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;

@@ -137,8 +137,6 @@ public:
 	PlnStatement(vector<PlnVarInit*> &var_inits, PlnBlock* parent);
 	PlnStatement(PlnBlock* block, PlnBlock* parent);
 
-	bool isEmpty();
-
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
@@ -179,7 +177,7 @@ public:
 	PlnExprsnType type;
 	vector<PlnValue> values;
 
-	PlnExpression() {};
+	PlnExpression(PlnExprsnType type) : type(type) {};
 	PlnExpression(PlnValue value);
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
@@ -191,6 +189,20 @@ class PlnFunctionCall : public PlnExpression
 public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
+
+	PlnFunctionCall();
+
+	void dump(ostream& os, string indent="");	// override
+	void gen(PlnGenerator& g);	// override
+};
+
+// Assignment: lvals Expression
+class PlnAssignment : public PlnExpression
+{
+public:
+	PlnAssignment(vector<PlnVariable*>& lvals, PlnExpression* exp);
+	vector<PlnVariable*> lvals;
+	PlnExpression* expression;
 
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
@@ -212,13 +224,6 @@ public:
 };
 
 // Variable: Type name
-enum PlnVarType {
-	VT_INT8,
-	VT_UINT8,
-	VT_OBJ,
-	VT_IMP,
-};
-
 enum PlnVarAllocType {
 	VA_STACK
 };

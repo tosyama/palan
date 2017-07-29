@@ -146,14 +146,6 @@ PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	inf.block = block;
 }
 
-bool PlnStatement::isEmpty()
-{
-	if (type == ST_VARINIT && inf.var_inits->size() == 0) return true;
-	else if (type == ST_EXPRSN && inf.expression == NULL) return true;
-	
-	return false;
-}
-
 void PlnStatement::dump(ostream& os, string indent)
 {
 	switch (type) {
