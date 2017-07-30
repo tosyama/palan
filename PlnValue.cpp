@@ -12,10 +12,9 @@ PlnGenEntity* PlnVariable::genEntity(PlnGenerator& g)
 	return NULL;
 }
 
-PlnVarInit::PlnVarInit(PlnVariable* var, PlnExpression* initializer)
-	: initializer(initializer)
+PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, PlnExpression* initializer)
+	: vars(move(vars)), initializer(initializer)
 {
-	vars.push_back(var);
 }
 
 // PlnValue

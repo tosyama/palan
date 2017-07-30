@@ -23,6 +23,7 @@ class PlnFunction;
 class PlnBlock;
 class PlnStatement;
 class PlnExpression;
+class PlnValue;
 class PlnVariable;
 class PlnVarInit;
 }
@@ -61,10 +62,10 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
-%type <vector<PlnVariable*>>	lvals
-%type <vector<PlnVarInit*>>	declarations
-%type <PlnVarInit*>	declaration
-%type <PlnVarInit*>	subdeclaration
+%type <vector<PlnValue>>	lvals
+%type <vector<PlnVariable*>>	declarations
+%type <PlnVariable*>	declaration
+%type <PlnVariable*>	subdeclaration
 
 %start module	
 %%
@@ -137,8 +138,17 @@ statement: expression ';'
 	| declarations ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		if ($1.size()) $$ = new PlnStatement($1, CUR_BLOCK);
-		else $$ = NULL;
+		$$ = NULL;
+	}
+
+	| declarations '=' expression ';'
+	{
+		if ($1.size() != $3->values.size()) {
+			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
+			YYABORT;
+		}
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = new PlnStatement(new PlnVarInit($1,$3), CUR_BLOCK);
 	}
 
 	| block
@@ -211,7 +221,7 @@ expression: INT
 	| lvals '=' expression
 	{
 		if ($1.size() != $3->values.size()) {
-			error(@$, "err");
+			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
 			YYABORT;
 		}
 		$$ = new PlnAssignment($1, $3);
@@ -242,19 +252,19 @@ lvals: ID
 
 declarations: declaration
 	{
-		if ($1)	$$.push_back($1);
+		$$.push_back($1);
 	}
 
 	| declarations ',' subdeclaration 
 	{
 		$$ = move($1);
-		if ($3) $$.push_back($3);
+		$$.push_back($3);
 	}
 
 	| declarations ',' declaration 
 	{
 		$$ = move($1);
-		if ($3) $$.push_back($3);
+		$$.push_back($3);
 	}
 	;
 
@@ -265,46 +275,21 @@ declaration: ID ID
 			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
 			YYABORT;
 		}
-		if (!CUR_BLOCK->declareVariable($2, t)) {
+		$$ = CUR_BLOCK->declareVariable($2, t);
+		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
 		}
-		$$ = NULL;
-	}
-
-	| ID ID '=' expression
-	{
-		PlnType* t = module.getType($1);
-		if (!t) {
-			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
-			YYABORT;
-		}
-		PlnVariable* v = CUR_BLOCK->declareVariable($2, t);
-		if (!v) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
-			YYABORT;
-		}
-		$$ = new PlnVarInit(v, $4);
 	}
 	;
 
 subdeclaration: ID
 	{
-		if (!CUR_BLOCK->declareVariable($1)) {
+		$$ = CUR_BLOCK->declareVariable($1);
+		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
 		}
-		$$ = NULL;
-	}
-
-	| ID '=' expression
-	{
-		PlnVariable* v = CUR_BLOCK->declareVariable($1);
-		if (!v) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
-			YYABORT;
-		}
-		$$ = new PlnVarInit(v, $3);
 	}
 	;
 

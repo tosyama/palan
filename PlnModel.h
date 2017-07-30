@@ -127,14 +127,14 @@ public:
 	PlnBlock* parent;
 	union {
 		PlnExpression* expression;
-		vector<PlnVarInit*> *var_inits;
+		PlnVarInit* var_init;
 		PlnBlock *block;
 		vector<PlnExpression*> *return_vals;
 	} inf;
 
 	PlnStatement() {};
 	PlnStatement(PlnExpression *exp, PlnBlock* parent);
-	PlnStatement(vector<PlnVarInit*> &var_inits, PlnBlock* parent);
+	PlnStatement(PlnVarInit* var_init, PlnBlock* parent);
 	PlnStatement(PlnBlock* block, PlnBlock* parent);
 
 	void dump(ostream& os, string indent="");
@@ -200,8 +200,7 @@ public:
 class PlnAssignment : public PlnExpression
 {
 public:
-	PlnAssignment(vector<PlnVariable*>& lvals, PlnExpression* exp);
-	vector<PlnVariable*> lvals;
+	PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp);
 	PlnExpression* expression;
 
 	void dump(ostream& os, string indent="");	// override
@@ -265,7 +264,7 @@ public:
 // Variable initialization
 class PlnVarInit {
 public:
-	PlnVarInit(PlnVariable* var, PlnExpression* initializer);
+	PlnVarInit(vector<PlnVariable*>& vars, PlnExpression* initializer);
 
 	vector<PlnVariable*> vars;
 	PlnExpression* initializer;

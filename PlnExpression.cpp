@@ -72,16 +72,17 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 }
 
 // PlnAssignment
-PlnAssignment::PlnAssignment(vector<PlnVariable*>& lvals, PlnExpression* exp)
-	: PlnExpression(ET_ASSIGN), lvals(move(lvals)), expression(exp)
+PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp)
+	: PlnExpression(ET_ASSIGN), expression(exp)
 {
+	values = move(lvals);
 }
 
 void PlnAssignment::dump(ostream& os, string indent)
 {
 	os << indent << "Assign:";
-	for (auto lv: lvals)
-		os << " " << lv-> name;
+	for (auto lv: values)
+		os << " " << lv.inf.var->name;
 	os << endl;
 	expression->dump(os, indent+" ");	
 }
@@ -89,10 +90,10 @@ void PlnAssignment::dump(ostream& os, string indent)
 void PlnAssignment::gen(PlnGenerator& g)
 {
 	expression->gen(g);
-	for (int i=0; i<lvals.size(); ++i) {
-		PlnGenEntity* le = lvals[i]->genEntity(g);
+	for (int i=0; i<values.size(); ++i) {
+		PlnGenEntity* le = values[i].genEntity(g);
 		PlnGenEntity* re = expression->values[i].genEntity(g);
-		g.genMove(le, re, lvals[i]->name);
+		g.genMove(le, re, values[i].inf.var->name);
 		PlnGenEntity::freeEntity(le);
 		PlnGenEntity::freeEntity(re);
 	}

@@ -5,6 +5,7 @@ using std::ostream;
 class PlnGenEntity {
 public:
 	int type;
+	int alloc_type;
 	union {
 		string* str;
 	}data;

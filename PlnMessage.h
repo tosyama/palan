@@ -6,6 +6,7 @@ enum PlnErrCode {
 	E_UndefinedFunction,
 	E_UndefinedType,
 	E_DuplicateVarName,
+	E_NumOfLRVariables,
 	E_CouldnotOpenFile
 };
 

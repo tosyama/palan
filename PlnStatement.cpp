@@ -133,11 +133,10 @@ PlnStatement::PlnStatement(PlnExpression *exp, PlnBlock* parent)
 	inf.expression = exp;
 }
 
-PlnStatement::PlnStatement(vector<PlnVarInit*> &var_inits, PlnBlock* parent)
+PlnStatement::PlnStatement(PlnVarInit* var_init, PlnBlock* parent)
 	: type(ST_VARINIT), parent(parent)
 {
-	inf.var_inits = new vector<PlnVarInit*>();
-	*(inf.var_inits) = move(var_inits);
+	inf.var_init = var_init;
 }
 
 PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
@@ -155,8 +154,8 @@ void PlnStatement::dump(ostream& os, string indent)
 
 		case ST_VARINIT:
 			os << indent << "Initialize: ";
-			for (auto vi: *inf.var_inits)
-				os << vi->vars[0]->name << " ";
+			for (auto v: inf.var_init->vars)
+				os << v->name << " ";
 			os << endl;
 			break;
 
@@ -181,8 +180,7 @@ void PlnStatement::gen(PlnGenerator& g)
 			inf.expression->gen(g);
 			break;
 		case ST_VARINIT:
-			for (auto vi: *inf.var_inits)
-				vi->gen(g);
+			inf.var_init->gen(g);
 			break;
 		case ST_BLOCK:
 			inf.block->gen(g);

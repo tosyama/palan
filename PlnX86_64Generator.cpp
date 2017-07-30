@@ -16,6 +16,11 @@ using boost::algorithm::replace_all_copy;
 enum GenEttyType {
 	GE_STRING
 };
+enum GenEttyAllocType {
+	GA_CODE,
+	GA_REG,
+	GA_MEM
+};
 
 void PlnGenEntity::freeEntity(PlnGenEntity* e)
 {
@@ -105,7 +110,12 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 
 void PlnX86_64Generator::genMove(PlnGenEntity* dst, PlnGenEntity* src, string& comment)
 {
-	os << format("	movq %1%, %2%") % *src->data.str % *dst->data.str;
+	if (dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM) {
+		os << format("	movq %1%, %2%") % *src->data.str % *dst->data.str;
+	} else {
+		os << format("	movq %1%, %%rax") % *src->data.str << endl;
+		os << format("	movq %%rax, %1%") % *dst->data.str;
+	}
 	if (comment != "") os << "	# " << comment;
 	os << endl;
 }
@@ -114,6 +124,7 @@ PlnGenEntity* PlnX86_64Generator::getInt(int i)
 {
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
+	e->alloc_type = GA_CODE;
 	e->data.str = new string((format("$%1%") % i).str());
 
 	return e;
@@ -123,6 +134,7 @@ PlnGenEntity* PlnX86_64Generator::getStackAddress(int offset)
 {
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
+	e->alloc_type = GA_MEM;
 	e->data.str = new string((format("-%1%(%%rbp)") % offset).str());
 
 	return e;
@@ -132,6 +144,7 @@ PlnGenEntity* PlnX86_64Generator::getStrAddress(int index)
 {
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
+	e->type = GA_MEM;
 	e->data.str = new string((format("$.LC%1%") % index).str());
 
 	return e;
