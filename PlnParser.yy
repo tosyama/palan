@@ -58,6 +58,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
+%type <PlnExpression*>	expressions
 %type <PlnExpression*>	expression
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
@@ -141,7 +142,7 @@ statement: expression ';'
 		$$ = NULL;
 	}
 
-	| declarations '=' expression ';'
+	| declarations '=' expressions ';'
 	{
 		if ($1.size() != $3->values.size()) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
@@ -193,6 +194,22 @@ argument: /* empty */ // ToDo: replace default
 	}
 	;
 
+expressions: expression
+	{
+		$$ = $1;
+	}
+
+	| expressions ',' expression
+	{
+		if ($1->type == ET_MULTI) {
+			$$ = $1;
+			static_cast<PlnMultiExpression*>($$)->append($3);
+		} else {
+			$$ = new PlnMultiExpression($1, $3);
+		}
+	}
+	;
+
 expression: INT
 	{
 		$$  = new PlnExpression(PlnValue($1));
@@ -218,7 +235,7 @@ expression: INT
 		$$ = $1;
 	}
 
-	| lvals '=' expression
+	| lvals '=' expressions
 	{
 		if ($1.size() != $3->values.size()) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));

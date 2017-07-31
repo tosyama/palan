@@ -58,10 +58,10 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 void PlnModule::dump(ostream& os, string indent)
 {
 	os << indent << "Module: " << endl;
+	os << indent << " Readonly Data: " << readonlydata.size() << endl;
 	os << indent << " Functions: " << functions.size() << endl;
 	for (auto f: functions)
 		f->dump(os, indent+"  ");
-	os << indent << " Readonly Data: " << readonlydata.size() << endl;
 }
 
 void PlnModule::gen(PlnGenerator &g)

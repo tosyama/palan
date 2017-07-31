@@ -168,6 +168,7 @@ public:
 // Expression: FunctionCall
 enum PlnExprsnType {
 	ET_VALUE,
+	ET_MULTI,
 	ET_FUNCCALL,
 	ET_ASSIGN
 };
@@ -179,8 +180,22 @@ public:
 
 	PlnExpression(PlnExprsnType type) : type(type) {};
 	PlnExpression(PlnValue value);
+
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
+};
+
+// MultiExpression
+class PlnMultiExpression : public PlnExpression
+{
+public:
+	vector<PlnExpression*> exps;
+
+	PlnMultiExpression(PlnExpression* first, PlnExpression *second);
+	void append(PlnExpression *exp);
+
+	void dump(ostream& os, string indent="");	// override
+	void gen(PlnGenerator& g);	// override
 };
 
 // FunctionCall: Function Arguments;

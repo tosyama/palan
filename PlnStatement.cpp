@@ -157,6 +157,7 @@ void PlnStatement::dump(ostream& os, string indent)
 			for (auto v: inf.var_init->vars)
 				os << v->name << " ";
 			os << endl;
+			inf.var_init->initializer->dump(os, indent+" ");
 			break;
 
 		case ST_BLOCK:
