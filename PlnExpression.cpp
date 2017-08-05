@@ -71,14 +71,14 @@ void PlnExpression::dump(ostream& os, string indent)
 
 void PlnExpression::gen(PlnGenerator& g)
 {
-	BOOST_ASSERT(type == ET_VALUE);
-
-	PlnGenEntity* re = values[0].genEntity(g);
-	PlnGenEntity* le = ret_places[0].genEntity(g);
-	
-	g.genMove(le, re, ret_places[0].commentStr());
-	PlnGenEntity::freeEntity(re);
-	PlnGenEntity::freeEntity(le);
+	for (int i=0; i<ret_places.size(); ++i) {
+		PlnGenEntity* re = values[i].genEntity(g);
+		PlnGenEntity* le = ret_places[i].genEntity(g);
+		
+		g.genMove(le, re, ret_places[i].commentStr());
+		PlnGenEntity::freeEntity(re);
+		PlnGenEntity::freeEntity(le);
+	}
 }
 
 PlnMultiExpression::PlnMultiExpression(
@@ -210,5 +210,6 @@ void PlnAssignment::dump(ostream& os, string indent)
 void PlnAssignment::gen(PlnGenerator& g)
 {
 	expression->gen(g);
+	PlnExpression::gen(g);
 }
 
