@@ -60,6 +60,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnStatement*>	statement
 %type <PlnExpression*>	expressions
 %type <PlnExpression*>	expression
+%type <PlnExpression*>	st_expression
+%type <PlnExpression*>	assignment
+%type <PlnExpression*>	term
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
@@ -67,6 +70,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<PlnVariable*>>	declarations
 %type <PlnVariable*>	declaration
 %type <PlnVariable*>	subdeclaration
+
+%right '='
+%left ',' 
 
 %start module	
 %%
@@ -130,7 +136,7 @@ statements:	/* empty */ { }
 	}
 	;
 
-statement: expression ';'
+statement: st_expression ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement($1, CUR_BLOCK);
@@ -210,42 +216,7 @@ expressions: expression
 	}
 	;
 
-expression: INT
-	{
-		$$  = new PlnExpression(PlnValue($1));
-	}
-
-	| STR
-	{
-		$$ = new PlnExpression(PlnValue(module.getReadOnlyData($1)));
-	}
-
-	| ID
-	{
-		PlnVariable *v = CUR_BLOCK->getVariable($1);
-		if (v) $$ = new PlnExpression(PlnValue(v));
-		else {
-			error(@$, PlnMessage::getErr(E_UndefinedVariable, $1));
-			YYABORT;
-		}
-	}
-
-	| func_call
-	{
-		$$ = $1;
-	}
-
-	| lvals '=' expressions
-	{
-		if ($1.size() != $3->values.size()) {
-			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
-			YYABORT;
-		}
-		$$ = new PlnAssignment($1, $3);
-	}
-	;
-
-lvals: ID
+lvals:  ID
 	{
 		PlnVariable* v=CUR_BLOCK->getVariable($1);
 		if (v) $$.push_back(v);
@@ -267,6 +238,69 @@ lvals: ID
 	}
 	;
 
+term: INT
+	{
+		$$  = new PlnExpression(PlnValue($1));
+	}
+
+	| STR
+	{
+		$$ = new PlnExpression(PlnValue(module.getReadOnlyData($1)));
+	}
+
+	| ID
+	{
+		PlnVariable *v = CUR_BLOCK->getVariable($1);
+		if (v) $$ = new PlnExpression(PlnValue(v));
+		else {
+			error(@$, PlnMessage::getErr(E_UndefinedVariable, $1));
+			YYABORT;
+		}
+	} 
+
+	| '(' expression ')'
+	{
+		$$ = $2;
+	}
+	;
+	
+expression:
+	func_call
+	{
+		$$ = $1;
+	}
+
+	| '(' assignment ')'
+	{
+		$$ = $2;
+	}
+	
+	| term
+	{
+		$$ = $1;
+	}
+	;
+
+st_expression: expression
+	{
+		$$ = $1;
+	}
+	| assignment
+	{
+		$$ = $1;
+	}
+	;
+
+assignment: lvals '=' expressions
+	{
+		if ($1.size() != $3->values.size()) {
+			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
+			YYABORT;
+		}
+		$$ = new PlnAssignment($1, $3);
+	}
+	;
+	
 declarations: declaration
 	{
 		$$.push_back($1);

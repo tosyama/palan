@@ -1,14 +1,51 @@
 #include <boost/assert.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
 
 using std::endl;
+using std::to_string;
+using boost::adaptors::reverse;
+
+// PlnReturnPlace
+string PlnReturnPlace::commentStr()
+{
+	switch (type) {
+		case RP_ARGPLN:
+		case RP_ARGSYS:
+			return "arg" + to_string(inf.index);
+		case RP_VAR:
+			return inf.var->name;
+	}
+	return "";
+}
+
+PlnGenEntity* PlnReturnPlace::genEntity(PlnGenerator& g)
+{
+	switch (type) {
+		case RP_ARGPLN:
+			return g.getArgument(inf.index);
+			break;
+		case RP_ARGSYS:
+			return g.getSysArgument(inf.index);
+			break;
+		case RP_VAR:
+			return inf.var->genEntity(g);
+		default:
+			BOOST_ASSERT(false);
+	}
+	return NULL;
+}
 
 // PlnExpression
 PlnExpression::PlnExpression(PlnValue value)
 	: type(ET_VALUE) 
 {
 	values.push_back(value);
+}
+
+void PlnExpression::finish()
+{
 }
 
 void PlnExpression::dump(ostream& os, string indent)
@@ -34,6 +71,14 @@ void PlnExpression::dump(ostream& os, string indent)
 
 void PlnExpression::gen(PlnGenerator& g)
 {
+	BOOST_ASSERT(type == ET_VALUE);
+
+	PlnGenEntity* re = values[0].genEntity(g);
+	PlnGenEntity* le = ret_places[0].genEntity(g);
+	
+	g.genMove(le, re, ret_places[0].commentStr());
+	PlnGenEntity::freeEntity(re);
+	PlnGenEntity::freeEntity(le);
 }
 
 PlnMultiExpression::PlnMultiExpression(
@@ -51,6 +96,17 @@ void PlnMultiExpression::append(PlnExpression* exp)
 	exps.push_back(exp);
 }
 
+void PlnMultiExpression::finish()
+{
+	int i=0;
+	for (auto exp: exps) {
+		for (auto v: exp->values) {
+			exp->ret_places.push_back(ret_places[i]);
+			i++;
+		}
+	}
+}
+
 void PlnMultiExpression::dump(ostream& os, string indent)
 {
 	os << indent << "MultiExpression: " << exps.size() << endl;
@@ -60,14 +116,43 @@ void PlnMultiExpression::dump(ostream& os, string indent)
 
 void PlnMultiExpression::gen(PlnGenerator& g)
 {
-	for (auto e: exps)
+	for (auto e: exps) {
 		e->gen(g);
+	}
+
+	int i=0;
+	for (auto exp: exps)
+		for (auto rp: exp->ret_places) {
+			PlnGenEntity* re = rp.genEntity(g);
+			PlnGenEntity* le = ret_places[i].genEntity(g);
+			g.genMove(le, re, ret_places[i].commentStr());
+			PlnGenEntity::freeEntity(re);
+			PlnGenEntity::freeEntity(le);
+			i++;
+		}
 }
 
 // PlnFunctionCall
 PlnFunctionCall::PlnFunctionCall()
 	: PlnExpression(ET_FUNCCALL)
 {
+}
+
+void PlnFunctionCall::finish()
+{
+	if (function->type == FT_SYS) {
+		PlnReturnPlace rp;
+		rp.type = RP_ARGSYS;
+		int i = 1;
+		for (auto a: arguments) {
+			rp.inf.index = i;
+			a->ret_places.push_back(rp);
+			a->finish();
+			i++;
+		}
+	} else {
+		BOOST_ASSERT(false); //not implemmented.
+	}
 }
 
 void PlnFunctionCall:: dump(ostream& os, string indent)
@@ -85,13 +170,9 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 	switch (function->type) {
 		case FT_SYS:
 		{
-			vector<PlnGenEntity*> gen_args;
-			for(auto arg: arguments)
-				gen_args.push_back(arg->values.front().genEntity(g));
-				
-			g.genSysCall(function->inf.syscall.id, gen_args, function->name);
-			for (auto garg: gen_args)
-				PlnGenEntity::freeEntity(garg);
+			for (auto arg: reverse(arguments)) 
+				arg->gen(g);
+			g.genSysCall(function->inf.syscall.id, function->name);
 			break;
 		}
 		default:
@@ -106,6 +187,17 @@ PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp)
 	values = move(lvals);
 }
 
+void PlnAssignment::finish()
+{
+	PlnReturnPlace rp;
+	rp.type = RP_VAR;
+	for (auto lv: values) {
+		rp.inf.var = lv.inf.var;
+		expression->ret_places.push_back(rp);
+	}
+	expression->finish();
+}
+
 void PlnAssignment::dump(ostream& os, string indent)
 {
 	os << indent << "Assign:";
@@ -118,12 +210,5 @@ void PlnAssignment::dump(ostream& os, string indent)
 void PlnAssignment::gen(PlnGenerator& g)
 {
 	expression->gen(g);
-	for (int i=0; i<values.size(); ++i) {
-		PlnGenEntity* le = values[i].genEntity(g);
-		PlnGenEntity* re = expression->values[i].genEntity(g);
-		g.genMove(le, re, values[i].inf.var->name);
-		PlnGenEntity::freeEntity(le);
-		PlnGenEntity::freeEntity(re);
-	}
 }
 

@@ -94,10 +94,10 @@ int main(int argc, char* argv[])
 	stringstream str(
 		"void main()\n"
 		"{\n"
-		"	int a, b;"
-		"	{int a, cc = 3,5;}"
-		"	int c=4;"
-		"	b = 13;"
+		"	int a, b;\n"
+		"	{int a, cc = 3,5;}\n"
+		"	int c=4;\n"
+		"	b = 13;\n"
 		"	sys_write(1,\"Hello World!\\n\", b);\n"
 		"}"
 	);

@@ -77,14 +77,8 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 		os << format("	subq $%1%, %%rsp") % size << endl;
 }
 
-void PlnX86_64Generator::genSysCall(int id, vector<PlnGenEntity*>& args, const string& comment)
+void PlnX86_64Generator::genSysCall(int id, const string& comment)
 {
-	static const char* regs[] = {"%rdi", "%rsi", "%rdx", "%r10", "%r8", "%r9"};
-	BOOST_ASSERT(args.size() <= 6);
-
-	for (int i=args.size()-1; i>=0; --i)
-		os << format("	movq %1%, %2%") % *(args[i]->data.str) % regs[i] << endl;
-		
 	os << format("	movq $%1%, %%rax	# %2%") % id % comment << endl;
 	os << "	syscall" << endl;
 }
@@ -108,8 +102,12 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 	os << format("	.string \"%1%\"") % ostr << endl;
 }
 
-void PlnX86_64Generator::genMove(PlnGenEntity* dst, PlnGenEntity* src, string& comment)
+void PlnX86_64Generator::genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment)
 {
+	if (dst->alloc_type == src->alloc_type) {
+		if(*dst->data.str == *src->data.str) return;	// do nothing
+	}
+
 	if (dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM) {
 		os << format("	movq %1%, %2%") % *src->data.str % *dst->data.str;
 	} else {
@@ -147,5 +145,41 @@ PlnGenEntity* PlnX86_64Generator::getStrAddress(int index)
 	e->type = GA_MEM;
 	e->data.str = new string((format("$.LC%1%") % index).str());
 
+	return e;
+}
+
+PlnGenEntity* PlnX86_64Generator::getArgument(int i)
+{
+	BOOST_ASSERT(i>=0 && i <= 6);
+	PlnGenEntity* e= new PlnGenEntity();
+	e->type = GE_STRING;
+	e->type = GA_REG;
+	switch (i) {
+		case 0: e->data.str = new string("%rax");	break;
+		case 1: e->data.str = new string("%rdi");	break;
+		case 2: e->data.str = new string("%rsi");	break;
+		case 3: e->data.str = new string("%rdx");	break;
+		case 4: e->data.str = new string("%rcx");	break;
+		case 5: e->data.str = new string("%r8");	break;
+		case 6: e->data.str = new string("%r9");	break;
+	}
+	return e;
+}
+
+PlnGenEntity* PlnX86_64Generator::getSysArgument(int i)
+{
+	BOOST_ASSERT(i>=0 && i <= 6);
+	PlnGenEntity* e= new PlnGenEntity();
+	e->type = GE_STRING;
+	e->type = GA_REG;
+	switch (i) {
+		case 0: e->data.str = new string("%rax");	break;
+		case 1: e->data.str = new string("%rdi");	break;
+		case 2: e->data.str = new string("%rsi");	break;
+		case 3: e->data.str = new string("%rdx");	break;
+		case 4: e->data.str = new string("%r10");	break;
+		case 5: e->data.str = new string("%r8");	break;
+		case 6: e->data.str = new string("%r9");	break;
+	}
 	return e;
 }

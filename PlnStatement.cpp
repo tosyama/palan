@@ -131,12 +131,14 @@ PlnStatement::PlnStatement(PlnExpression *exp, PlnBlock* parent)
 	: type(ST_EXPRSN), parent(parent)
 {
 	inf.expression = exp;
+	exp->finish();
 }
 
 PlnStatement::PlnStatement(PlnVarInit* var_init, PlnBlock* parent)
 	: type(ST_VARINIT), parent(parent)
 {
 	inf.var_init = var_init;
+	var_init->finish();
 }
 
 PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
@@ -206,17 +208,19 @@ void PlnStatement::gen(PlnGenerator& g)
 	}
 }
 
+void PlnVarInit::finish()
+{
+	PlnReturnPlace rp;
+	rp.type = RP_VAR;
+	for (auto var: vars) {
+		rp.inf.var = var;
+		initializer->ret_places.push_back(rp);
+	}
+	initializer->finish();
+}
+
 void PlnVarInit::gen(PlnGenerator& g)
 {
 	initializer->gen(g);
 	BOOST_ASSERT(initializer->values.size() >= vars.size());
-	int i=0;
-	for (auto var: vars) {
-		PlnGenEntity *src_en = initializer->values[i].genEntity(g);
-		PlnGenEntity *dst_en = var->genEntity(g);
-		g.genMove(dst_en, src_en, var->name);
-		PlnGenEntity::freeEntity(src_en);
-		PlnGenEntity::freeEntity(dst_en);
-		++i;
-	}
 }

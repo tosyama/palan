@@ -11,7 +11,7 @@ $(PROGRAM): $(OBJS)
 PlnParser.cpp: PlnParser.yy
 	bison -o $@ $<
 PlnParser.hpp: PlnParser.yy
-	bison -o PlnParser.cpp $<
+	bison -o PlnParser.cpp -r all --report-file=bison.log $<
 PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
 depend: $(OBJS:.o=.cpp)

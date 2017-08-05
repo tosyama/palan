@@ -165,6 +165,28 @@ public:
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
+enum PlnRtnPlcType {
+	RP_NULL,
+	RP_TEMP,
+	RP_WORK,
+	RP_VAR,
+	RP_ARGPLN,
+	RP_ARGSYS
+};
+
+class PlnReturnPlace
+{
+public:
+	PlnRtnPlcType type;
+	union {
+		int index;
+		PlnVariable* var;
+	}	inf;
+
+	string commentStr();
+	PlnGenEntity* genEntity(PlnGenerator& g);
+};
+
 // Expression: FunctionCall
 enum PlnExprsnType {
 	ET_VALUE,
@@ -176,11 +198,13 @@ enum PlnExprsnType {
 class PlnExpression {
 public:
 	PlnExprsnType type;
+	vector<PlnReturnPlace> ret_places;
 	vector<PlnValue> values;
 
 	PlnExpression(PlnExprsnType type) : type(type) {};
 	PlnExpression(PlnValue value);
 
+	virtual void finish();
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
 };
@@ -194,6 +218,7 @@ public:
 	PlnMultiExpression(PlnExpression* first, PlnExpression *second);
 	void append(PlnExpression *exp);
 
+	void finish();	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
 };
@@ -207,6 +232,7 @@ public:
 
 	PlnFunctionCall();
 
+	void finish();	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
 };
@@ -218,6 +244,7 @@ public:
 	PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp);
 	PlnExpression* expression;
 
+	void finish();	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
 };
@@ -284,5 +311,6 @@ public:
 	vector<PlnVariable*> vars;
 	PlnExpression* initializer;
 
+	void finish();
 	void gen(PlnGenerator& g);
 };
