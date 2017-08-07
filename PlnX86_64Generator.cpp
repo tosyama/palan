@@ -17,6 +17,7 @@ enum GenEttyType {
 	GE_STRING
 };
 enum GenEttyAllocType {
+	GA_NULL,
 	GA_CODE,
 	GA_REG,
 	GA_MEM
@@ -108,6 +109,8 @@ void PlnX86_64Generator::genMove(PlnGenEntity* dst, PlnGenEntity* src, string co
 		if(*dst->data.str == *src->data.str) return;	// do nothing
 	}
 
+	if (dst->alloc_type == GA_NULL) return;
+
 	if (dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM) {
 		os << format("	movq %1%, %2%") % *src->data.str % *dst->data.str;
 	} else {
@@ -116,6 +119,26 @@ void PlnX86_64Generator::genMove(PlnGenEntity* dst, PlnGenEntity* src, string co
 	}
 	if (comment != "") os << "	# " << comment;
 	os << endl;
+}
+
+void PlnX86_64Generator::genAdd(PlnGenEntity* dst, PlnGenEntity* src)
+{
+	BOOST_ASSERT(dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM);
+	if (src->alloc_type == GA_CODE && *src->data.str == "$1") {
+		os << "	incq " << *dst->data.str << endl;
+		return;
+	}
+	os << format("	addq %1%, %2%") % *src->data.str % *dst->data.str << endl;
+}
+
+PlnGenEntity* PlnX86_64Generator::getNull()
+{
+	PlnGenEntity* e= new PlnGenEntity();
+	e->type = GE_STRING;
+	e->alloc_type = GA_NULL;
+	e->data.str = new string("$0");
+
+	return e;
 }
 
 PlnGenEntity* PlnX86_64Generator::getInt(int i)
@@ -142,7 +165,7 @@ PlnGenEntity* PlnX86_64Generator::getStrAddress(int index)
 {
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
-	e->type = GA_MEM;
+	e->alloc_type = GA_MEM;
 	e->data.str = new string((format("$.LC%1%") % index).str());
 
 	return e;
@@ -153,7 +176,7 @@ PlnGenEntity* PlnX86_64Generator::getArgument(int i)
 	BOOST_ASSERT(i>=0 && i <= 6);
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
-	e->type = GA_REG;
+	e->alloc_type = GA_REG;
 	switch (i) {
 		case 0: e->data.str = new string("%rax");	break;
 		case 1: e->data.str = new string("%rdi");	break;
@@ -171,7 +194,7 @@ PlnGenEntity* PlnX86_64Generator::getSysArgument(int i)
 	BOOST_ASSERT(i>=0 && i <= 6);
 	PlnGenEntity* e= new PlnGenEntity();
 	e->type = GE_STRING;
-	e->type = GA_REG;
+	e->alloc_type = GA_REG;
 	switch (i) {
 		case 0: e->data.str = new string("%rax");	break;
 		case 1: e->data.str = new string("%rdi");	break;
@@ -180,6 +203,20 @@ PlnGenEntity* PlnX86_64Generator::getSysArgument(int i)
 		case 4: e->data.str = new string("%r10");	break;
 		case 5: e->data.str = new string("%r8");	break;
 		case 6: e->data.str = new string("%r9");	break;
+	}
+	return e;
+}
+
+PlnGenEntity* PlnX86_64Generator::getWork(int i)
+{
+	BOOST_ASSERT(i>=0 && i <= 2);
+	PlnGenEntity* e= new PlnGenEntity();
+	e->type = GE_STRING;
+	e->alloc_type = GA_REG;
+	switch (i) {
+		case 0: e->data.str = new string("%rax");	break;
+		case 1: e->data.str = new string("%rdi");	break;
+		case 2: e->data.str = new string("%rsi");	break;
 	}
 	return e;
 }

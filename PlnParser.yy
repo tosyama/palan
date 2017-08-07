@@ -73,6 +73,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %right '='
 %left ',' 
+%left '+'
 
 %start module	
 %%
@@ -268,6 +269,11 @@ expression:
 	func_call
 	{
 		$$ = $1;
+	}
+
+	| expression '+' expression
+	{
+		$$ = PlnAddOperation::create($1, $3);
 	}
 
 	| '(' assignment ')'

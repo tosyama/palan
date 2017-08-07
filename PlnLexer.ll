@@ -28,7 +28,7 @@ static string& unescape(string& str);
 
 DIGIT	[0-9]+
 ID	[a-zA-Z_][0-9a-zA-Z_]*
-DELIMITER	"{"|"}"|"("|")"|","|";"|"="
+DELIMITER	"{"|"}"|"("|")"|","|";"|"="|"+"
 STRING	\"(\\.|\\\n|[^\\\"])*\"
 
 %%

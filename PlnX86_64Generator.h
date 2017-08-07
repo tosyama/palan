@@ -28,12 +28,15 @@ public:
 	virtual void genMainRetun(vector<PlnGenEntity*> &return_vals)=0;
 	virtual void genStringData(int index, const string& str)=0;
 	virtual void genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment)=0;
+	virtual void genAdd(PlnGenEntity* dst, PlnGenEntity* src)=0;
 
+	virtual PlnGenEntity* getNull() = 0;
 	virtual PlnGenEntity* getInt(int i)=0;
 	virtual PlnGenEntity* getStackAddress(int offset)=0;
 	virtual PlnGenEntity* getStrAddress(int index)=0;
 	virtual PlnGenEntity* getArgument(int i)=0;
 	virtual PlnGenEntity* getSysArgument(int i)=0;
+	virtual PlnGenEntity* getWork(int i)=0;
 };
 
 
@@ -51,10 +54,13 @@ public:
 	void genMainRetun(vector<PlnGenEntity*> &return_vals);
 	void genStringData(int index, const string& str);
 	void genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment);
+	void genAdd(PlnGenEntity* dst, PlnGenEntity* src);
 
+	PlnGenEntity* getNull();
 	PlnGenEntity* getInt(int i);
 	PlnGenEntity* getStackAddress(int offset);
 	PlnGenEntity* getStrAddress(int index);
 	PlnGenEntity* getArgument(int i);
 	PlnGenEntity* getSysArgument(int i);
+	PlnGenEntity* getWork(int i);
 };

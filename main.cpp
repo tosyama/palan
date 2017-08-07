@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 		"	int a, b;\n"
 		"	{int a, cc = 3,5;}\n"
 		"	int c=4;\n"
-		"	b = 13;\n"
+		"	b = c+5+b+1;\n"
 		"	sys_write(1,\"Hello World!\\n\", b);\n"
 		"}"
 	);

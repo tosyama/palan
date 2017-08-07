@@ -144,14 +144,16 @@ public:
 // Value (rval)
 enum PlnValType {
 	VL_LIT_INT8,
+	VL_WK_INT8,
 	VL_RO_DATA,
-	VL_VAR
+	VL_VAR,
 };
 
 class PlnValue {
 public:
 	PlnValType type;
 	union {
+		int index;
 		int64_t intValue;
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
@@ -170,6 +172,7 @@ enum PlnRtnPlcType {
 	RP_TEMP,
 	RP_WORK,
 	RP_VAR,
+	RP_AS_IS,
 	RP_ARGPLN,
 	RP_ARGSYS
 };
@@ -181,9 +184,11 @@ public:
 	union {
 		int index;
 		PlnVariable* var;
+		PlnValue* as_is;
 	}	inf;
 
 	string commentStr();
+	void dump(ostream& os, string indent="");
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 
@@ -192,6 +197,7 @@ enum PlnExprsnType {
 	ET_VALUE,
 	ET_MULTI,
 	ET_FUNCCALL,
+	ET_ADD,
 	ET_ASSIGN
 };
 
@@ -232,6 +238,20 @@ public:
 
 	PlnFunctionCall();
 
+	void finish();	// override
+	void dump(ostream& os, string indent="");	// override
+	void gen(PlnGenerator& g);	// override
+};
+
+class PlnAddOperation : public PlnExpression
+{
+public:
+	PlnExpression* l;
+	PlnExpression* r;
+
+	PlnAddOperation(PlnExpression* l, PlnExpression* r);
+	static PlnExpression* create(PlnExpression* l, PlnExpression* r);
+	
 	void finish();	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override

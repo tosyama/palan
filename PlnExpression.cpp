@@ -20,17 +20,31 @@ string PlnReturnPlace::commentStr()
 	return "";
 }
 
+void PlnReturnPlace::dump(ostream& os, string indent)
+{
+	os << indent << "ReturnPlace:";
+	switch (type) {
+		case RP_NULL: os << "Null"; break;
+		case RP_VAR: os << "Variable"; break;
+		case RP_AS_IS: os << "As is"; break;
+		case RP_ARGPLN: os << "Palan Argument"; break;
+		case RP_ARGSYS: os << "Syscall Argument"; break;
+		case RP_WORK: os << "Work Area"; break;
+		default:
+			os << "Unknown" << to_string(type);
+	}
+	os << endl;
+}
+
 PlnGenEntity* PlnReturnPlace::genEntity(PlnGenerator& g)
 {
 	switch (type) {
-		case RP_ARGPLN:
-			return g.getArgument(inf.index);
-			break;
-		case RP_ARGSYS:
-			return g.getSysArgument(inf.index);
-			break;
-		case RP_VAR:
-			return inf.var->genEntity(g);
+		case RP_NULL: return g.getNull();
+		case RP_VAR: return inf.var->genEntity(g);
+		case RP_AS_IS: return inf.as_is->genEntity(g);
+		case RP_ARGPLN: return g.getArgument(inf.index);
+		case RP_ARGSYS: return g.getSysArgument(inf.index);
+		case RP_WORK: return g.getWork(inf.index);
 		default:
 			BOOST_ASSERT(false);
 	}
@@ -46,6 +60,9 @@ PlnExpression::PlnExpression(PlnValue value)
 
 void PlnExpression::finish()
 {
+	if (ret_places[0].type == RP_AS_IS) {
+		ret_places[0].inf.as_is = &values[0];
+	}
 }
 
 void PlnExpression::dump(ostream& os, string indent)
@@ -102,6 +119,7 @@ void PlnMultiExpression::finish()
 	for (auto exp: exps) {
 		for (auto v: exp->values) {
 			exp->ret_places.push_back(ret_places[i]);
+			exp->finish();
 			i++;
 		}
 	}
@@ -178,6 +196,95 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		default:
 			BOOST_ASSERT(false);
 	}
+}
+
+// PlnAddOperation
+PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
+{
+	if (l->type == ET_VALUE && l->values[0].type == VL_LIT_INT8) {
+		if (r->type == ET_VALUE && r->values[0].type == VL_LIT_INT8) {
+			// e.g.) 1+2 => 3
+			l->values[0].inf.intValue += r->values[0].inf.intValue;
+			delete r;
+			return l;
+		} else {
+			// e.g.) 1+a => a+1
+			PlnExpression *t;
+			t = l;
+			l = r;
+			r = t;
+		}
+	} else if (l->type == ET_ADD) {
+		PlnAddOperation* po = static_cast<PlnAddOperation*>(l);
+		if (po->r->type == ET_VALUE
+				&& po->r->values[0].type == VL_LIT_INT8) {
+			if (r->type == ET_VALUE) {
+				if (r->values[0].type == VL_LIT_INT8) {
+					// e.g.) a+1+2 => a+3
+					po->r->values[0].inf.intValue += r->values[0].inf.intValue;
+					return po;
+				}
+			} 
+			// e.g.) a+1+b => a+b+1
+			PlnExpression *lr = po->r;
+			po->r = r;
+			return new PlnAddOperation(po, lr);
+		}
+	}
+
+	return new PlnAddOperation(l,r);
+}
+
+PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r)
+	: PlnExpression(ET_ADD), l(l), r(r)
+{
+	PlnValue v;
+	v.type = VL_WK_INT8;
+	values.push_back(v);
+}
+
+void PlnAddOperation::finish()
+{
+	BOOST_ASSERT(ret_places.size()==1);
+	int index = 0;
+	if (ret_places[0].type == RP_WORK) {
+		index = ret_places[0].inf.index;
+	}
+	PlnReturnPlace rp;
+	rp.type = RP_WORK;
+	rp.inf.index = index;
+	l->ret_places.push_back(rp);
+	l->finish();
+
+	if (r->type == ET_VALUE)
+		rp.type = RP_AS_IS;
+	else
+		rp.inf.index = index+1;
+	r->ret_places.push_back(rp);
+	r->finish();
+}
+
+void PlnAddOperation::dump(ostream& os, string indent)
+{
+	os << indent << "ADD" << endl;
+	l->dump(os, indent+" ");
+	r->dump(os, indent+" ");
+}
+
+void PlnAddOperation::gen(PlnGenerator& g)
+{
+	l->gen(g);
+	r->gen(g);
+
+	PlnGenEntity* le = l->ret_places[0].genEntity(g);
+	PlnGenEntity* re = r->ret_places[0].genEntity(g);
+	PlnGenEntity* rpe = ret_places[0].genEntity(g);
+	g.genAdd(le, re);
+	g.genMove(rpe, le, "+");
+
+	PlnGenEntity::freeEntity(le);
+	PlnGenEntity::freeEntity(re);
+
 }
 
 // PlnAssignment
