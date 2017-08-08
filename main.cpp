@@ -5,8 +5,13 @@
 #include "PlnMessage.h"
 #include <boost/assign.hpp>
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <fstream>
 #include <sstream>
+#ifdef __GNUC__
+	#include <ext/stdio_sync_filebuf.h>    
+	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
+#endif
 
 using std::cout;
 using std::cerr;
@@ -15,11 +20,14 @@ using std::exception;
 using std::ifstream;
 using std::stringstream;
 using namespace boost::assign;
+using boost::algorithm::join;
 using palan::PlnParser;
 
 namespace po = boost::program_options;
 
 void loadSystemCalls(PlnModule& module);
+static string getFileName(string& fpath);
+static string getExtention(string& fpath);
 
 int main(int argc, char* argv[])
 {
@@ -28,10 +36,16 @@ int main(int argc, char* argv[])
 	po::variables_map vm;
 	bool do_dump = false;
 	bool do_asm = true;
+	bool do_compile = false;
+	bool do_link = false;
+	string out_file;
+	vector<string> object_files;
 
 	opt.add_options()
 		("help,h", "Display this help")
 		("dump,d", "Dump semantic tree")
+		("compile,c", "Compile and create object file")
+		("output,o", po::value<string>(), "Output executable file")
 		("input-file", po::value<vector<string>>(), "Input file");
 
 	p_opt.add("input-file", -1);
@@ -47,21 +61,38 @@ int main(int argc, char* argv[])
 
 	po::notify(vm);
 
-	if (vm.count("help")) {
+	if (vm.count("help") || !vm.count("input-file")) {
 		cout << opt;
 		return 0;
 	}
+
+
+	if (vm.count("output")) {
+		do_link = true;
+		out_file = vm["output"].as<string>();
+	}
+
 	if (vm.count("dump")) {
 		do_dump = true;
 		do_asm = false;
+		do_compile = false;
+		do_link = false;
+
+	} else if (vm.count("compile")) {
+		do_dump = false;
+		do_asm = false;
+		do_compile = true;
 	}
 
 	if (vm.count("input-file")){
 		vector<string> files(vm["input-file"].as< vector<string> >());
+
 		for (string& fname: files) {
-			ifstream	f;
-			f.open(fname);
+			if (getExtention(fname) == "o") continue;
 			
+			ifstream f;
+			f.open(fname);
+
 			if (f) {
 				PlnLexer	lexer;
 				lexer.set_filename(fname);
@@ -78,46 +109,44 @@ int main(int argc, char* argv[])
 				if (do_dump) module.dump(cout);
 
 				if (do_asm) {
-					PlnX86_64Generator generator(cout);
+						PlnX86_64Generator generator(cout);
+						module.gen(generator);
+				} 
+
+				if (do_compile) {
+					FILE* as;
+					string obj_file = getFileName(fname) + ".o";
+					string cmd = "as -o \"" + obj_file + "\"" ;
+
+					as = popen(cmd.c_str(), "w");
+					popen_filebuf p_buf(as);
+					ostream as_input(&p_buf);
+
+					PlnX86_64Generator generator(as_input);
 					module.gen(generator);
+					
+					int ret = pclose(as);
+					if (ret) return ret;
+
+					object_files.push_back(obj_file);
 				}
 			} else {
 				string msg(PlnMessage::getErr(E_CouldnotOpenFile, fname));
 				cerr << "error: " << msg << endl;
+				return -1;
 			}
 		}
-		return 0;
 	} 
 
-	// test code
-	PlnLexer lexer;
-	stringstream str(
-		"void main()\n"
-		"{\n"
-		"	int a, b;\n"
-		"	{int a, cc = 3,5;}\n"
-		"	int c=4;\n"
-		"	b = c+5+b+1;\n"
-		"	sys_write(1,\"Hello World!\\n\", b);\n"
-		"}"
-	);
-	lexer.switch_streams(&str,&cout);
-	lexer.set_filename("test.palan");
-
-	PlnModule modu;
-	loadSystemCalls(modu);
-
-	PlnScopeStack	scopes;
-	PlnParser parser(lexer, modu, scopes);
-	int res = parser.parse();
-
-	if (res) return res;	// parse error
-	if (do_dump) modu.dump(cout);
-
-	if (do_asm) {
-		PlnX86_64Generator generator(cout);
-		modu.gen(generator);
+	if (do_link) {
+		string flist = join(object_files, " ");
+		cout << "linking: " << flist << endl;
+		string cmd = "ld -o " + out_file + " " + flist;
+		int ret = system(cmd.c_str());
+		if (ret) return ret;
 	}
+
+	if (vm.count("input-file")) return 0;
 
 	return 0;
 }
@@ -162,3 +191,20 @@ void loadSystemCalls(PlnModule& module)
 	pn += "fd", "buf", "count";
 	loadSystemCall(module, fname, id, pt, pn);
 }
+
+static string getFileName(string& fpath)
+{
+	int path_i = fpath.find_last_of("\\")+1;
+	int ext_i = fpath.find_last_of(".");
+	if (ext_i < path_i) ext_i = fpath.length();
+	return fpath.substr(path_i, ext_i-path_i);
+}
+
+static string getExtention(string& fpath)
+{
+	int path_i = fpath.find_last_of("\\")+1;
+	int ext_i = fpath.find_last_of(".");
+	if (ext_i < path_i) return "";
+	return fpath.substr(ext_i);
+}
+

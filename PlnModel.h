@@ -299,7 +299,6 @@ public:
 			int pos_from_base;
 		} stack;
 	} inf;
-
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };
 

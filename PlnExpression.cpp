@@ -225,10 +225,6 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 					return po;
 				}
 			} 
-			// e.g.) a+1+b => a+b+1
-			PlnExpression *lr = po->r;
-			po->r = r;
-			return new PlnAddOperation(po, lr);
 		}
 	}
 
@@ -280,7 +276,7 @@ void PlnAddOperation::gen(PlnGenerator& g)
 	PlnGenEntity* re = r->ret_places[0].genEntity(g);
 	PlnGenEntity* rpe = ret_places[0].genEntity(g);
 	g.genAdd(le, re);
-	g.genMove(rpe, le, "+");
+	g.genMove(rpe, le, ret_places[0].commentStr());
 
 	PlnGenEntity::freeEntity(le);
 	PlnGenEntity::freeEntity(re);
