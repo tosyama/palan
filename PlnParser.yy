@@ -52,9 +52,14 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token <int>	INT	"integer"
 %token <string>	ID	"identifier"
 %token <string>	STR	"string"
+%token KW_CCALL	"ccall"
+%token KW_SYSCALL	"syscall"
+%token KW_VOID	"void"
 
 %type <string>	func_name
 %type <PlnFunction*>	function_definition
+%type <PlnFunction*>	ccall_declaration
+%type <PlnFunction*>	syscall_definition
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
@@ -76,21 +81,31 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '+'
 
 %start module	
+
 %%
 module: /* empty */
-	| module
-		{
-			scopes.push_back(PlnScopeItem(&module));
-		}
-		function_definition
 	{
-		module.functions.push_back($3);
+		scopes.push_back(PlnScopeItem(&module));
+	}
+
+	| module function_definition
+	{
+		module.functions.push_back($2);
 		BOOST_ASSERT(scopes.back().type == SC_MODULE);
-		scopes.pop_back();
+	}
+
+	| module ccall_declaration
+	{
+		module.functions.push_back($2);
+	}
+
+	| module syscall_definition
+	{
+		module.functions.push_back($2);
 	}
 	;
 
-function_definition: return_values func_name '(' parameters ')'
+function_definition: func_return func_name '(' parameters ')'
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->setParent(scopes.back());
@@ -106,11 +121,52 @@ function_definition: return_values func_name '(' parameters ')'
 	}
 ;
 
-return_values: ID	{ }
-	;
 func_name: ID		{ $$ = $1; }
 	;
+
+func_return: KW_VOID
+	| return_values
+	;
+
+return_values: return_value
+	| return_values ',' return_value
+	;
+
+return_value: ID ID
+	;
+
 parameters: /* empty */
+	| parameter
+	| parameters ',' parameter
+	;
+
+parameter: ID ID
+	| ID ID '=' default_value
+	;
+
+default_value: ID
+	| INT
+	| STR
+	;
+
+ccall_declaration: KW_CCALL single_return func_name '(' parameters ')' ';'
+	{
+		PlnFunction* f = new PlnFunction(FT_C, $3);
+		f->setParent(scopes.back());
+		$$ = f;
+	}
+	;
+
+syscall_definition: KW_SYSCALL INT ':' single_return func_name '(' parameters ')' ';'
+	{
+		PlnFunction* f = new PlnFunction(FT_SYS, $5);
+		f->inf.syscall.id = $2;
+		f->setParent(scopes.back());
+		$$ = f;
+	}
+	;
+
+single_return: KW_VOID
 	| ID
 	;
 

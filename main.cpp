@@ -3,7 +3,6 @@
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
 #include "PlnMessage.h"
-#include <boost/assign.hpp>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <fstream>
@@ -19,13 +18,11 @@ using std::endl;
 using std::exception;
 using std::ifstream;
 using std::stringstream;
-using namespace boost::assign;
 using boost::algorithm::join;
 using palan::PlnParser;
 
 namespace po = boost::program_options;
 
-void loadSystemCalls(PlnModule& module);
 static string getFileName(string& fpath);
 static string getExtention(string& fpath);
 
@@ -68,20 +65,25 @@ int main(int argc, char* argv[])
 
 
 	if (vm.count("output")) {
+		do_compile = true;
+		do_asm = false;
 		do_link = true;
 		out_file = vm["output"].as<string>();
 	}
 
 	if (vm.count("dump")) {
+		//TODO: error when set with -o option.
 		do_dump = true;
 		do_asm = false;
 		do_compile = false;
 		do_link = false;
 
 	} else if (vm.count("compile")) {
+		//TODO: error when set with -o option.
 		do_dump = false;
 		do_asm = false;
 		do_compile = true;
+		do_link = false;
 	}
 
 	if (vm.count("input-file")){
@@ -98,7 +100,6 @@ int main(int argc, char* argv[])
 				lexer.set_filename(fname);
 				lexer.switch_streams(&f, &cout);
 				PlnModule module;
-				loadSystemCalls(module);
 
 				PlnScopeStack	scopes;
 				PlnParser parser(lexer, module, scopes);
@@ -126,6 +127,7 @@ int main(int argc, char* argv[])
 					module.gen(generator);
 					
 					int ret = pclose(as);
+					// TODO: error message
 					if (ret) return ret;
 
 					object_files.push_back(obj_file);
@@ -141,55 +143,15 @@ int main(int argc, char* argv[])
 	if (do_link) {
 		string flist = join(object_files, " ");
 		cout << "linking: " << flist << endl;
-		string cmd = "ld -o " + out_file + " " + flist;
+		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " -lc " + flist;
 		int ret = system(cmd.c_str());
+		// TODO: error message
 		if (ret) return ret;
 	}
 
 	if (vm.count("input-file")) return 0;
 
 	return 0;
-}
-
-void loadSystemCall(PlnModule& module,
-	const char *fname, int id,
-	vector<string>& pt, vector<const char*>& pn)
-{	
-	PlnFunction* f = new PlnFunction(FT_SYS, fname);
-	f->type = FT_SYS;
-	f->inf.syscall.id = id;
-	for (int i=0; i<pt.size(); ++i) {
-		PlnParameter* p = new PlnParameter();
-		p->var_type = module.getType(pt[i]);
-		p->name = pn[i];
-		f->addParam(*p);
-	}
-	
-	module.functions.push_back(f);
-}
-
-void loadSystemCalls(PlnModule& module)
-{
-	const char *fname;
-	int id;
-	vector<string> pt;
-	vector<const char*> pn;
-	
-	// void exit(int status);
-	fname = "sys_exit";
-	id = 60;
-	pt += "int";
-	pn += "error_code";
-	loadSystemCall(module, fname, id, pt, pn);
-
-	pt.resize(0);	
-	pn.resize(0);	
-
-	fname = "sys_write";
-	id = 1;
-	pt += "int", "object", "int";
-	pn += "fd", "buf", "count";
-	loadSystemCall(module, fname, id, pt, pn);
 }
 
 static string getFileName(string& fpath)

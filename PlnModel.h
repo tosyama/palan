@@ -36,8 +36,6 @@ public:
 	PlnFunction* getFunc(const string& func_name);
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
-	int finish();
-
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
@@ -46,8 +44,8 @@ public:
 enum PlnFncType {
 	FT_PLN,
 	FT_INLINE,
-	FT_SYS,
-	FC_C
+	FT_C,
+	FT_SYS
 };
 
 enum PlnFncPrntType {

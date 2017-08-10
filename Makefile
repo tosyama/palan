@@ -1,4 +1,4 @@
-PROGRAM=plc
+PROGRAM=pac
 OBJS=main.o PlnModule.o PlnFunction.o PlnStatement.o PlnExpression.o \
 	PlnX86_64Generator.o PlnValue.o PlnParser.o PlnLexer.o PlnMessage.o
 

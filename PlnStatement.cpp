@@ -196,7 +196,9 @@ void PlnStatement::gen(PlnGenerator& g)
 			PlnFunction* f = getFunction(parent);
 
 			if (f->name == "main") 
-				g.genMainRetun(gen_rets);	
+				g.genMainReturn(gen_rets);	
+			else
+				g.genReturn();
 			
 			for (auto gr: gen_rets)
 				PlnGenEntity::freeEntity(gr);

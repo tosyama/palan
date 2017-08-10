@@ -158,18 +158,21 @@ PlnFunctionCall::PlnFunctionCall()
 
 void PlnFunctionCall::finish()
 {
-	if (function->type == FT_SYS) {
-		PlnReturnPlace rp;
-		rp.type = RP_ARGSYS;
-		int i = 1;
-		for (auto a: arguments) {
-			rp.inf.index = i;
-			a->ret_places.push_back(rp);
-			a->finish();
-			i++;
-		}
-	} else {
-		BOOST_ASSERT(false); //not implemmented.
+	PlnReturnPlace rp;
+	switch (function->type) {
+		case FT_PLN: rp.type = RP_ARGPLN; break;
+		case FT_SYS: rp.type = RP_ARGSYS; break;
+		case FT_C: rp.type = RP_ARGPLN; break;
+		default:
+			BOOST_ASSERT(false);
+	}
+
+	int i = 1;
+	for (auto a: arguments) {
+		rp.inf.index = i;
+		a->ret_places.push_back(rp);
+		a->finish();
+		i++;
 	}
 }
 
@@ -186,11 +189,25 @@ void PlnFunctionCall:: dump(ostream& os, string indent)
 void PlnFunctionCall::gen(PlnGenerator &g)
 {
 	switch (function->type) {
+		case FT_PLN:
+		{
+			for (auto arg: reverse(arguments)) 
+				arg->gen(g);
+			g.genCCall(function->name);
+			break;
+		}
 		case FT_SYS:
 		{
 			for (auto arg: reverse(arguments)) 
 				arg->gen(g);
 			g.genSysCall(function->inf.syscall.id, function->name);
+			break;
+		}
+		case FT_C:
+		{
+			for (auto arg: reverse(arguments)) 
+				arg->gen(g);
+			g.genCCall(function->name);
 			break;
 		}
 		default:
