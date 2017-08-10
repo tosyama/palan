@@ -31,10 +31,11 @@ void PlnFunction::setParent(PlnScopeItem& scope)
 	}
 }
 
-int PlnFunction::finish()
+void PlnFunction::finish()
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
+			implement->finish();
 			if (return_vals.size()==0) {	// if void, add return to tail.
 				PlnStatement* s = new PlnStatement();
 				s->type = ST_RETURN;
@@ -46,7 +47,6 @@ int PlnFunction::finish()
 			inf.pln.stack_size += implement->totalStackSize();
 		}
 	}
-	return 0;
 }
 
 void PlnFunction::dump(ostream& os, string indent)

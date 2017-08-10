@@ -55,6 +55,12 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 	return rodata;
 }
 
+void PlnModule::finish()
+{
+	for (auto f: functions)
+		f->finish();
+}
+
 void PlnModule::dump(ostream& os, string indent)
 {
 	os << indent << "Module: " << endl;

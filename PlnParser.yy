@@ -116,7 +116,7 @@ function_definition: func_return func_name '(' parameters ')'
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		$$ = scopes.back().inf.function;
 		$$->implement = $7;
-		$$->finish();
+		// $$->finish();
 		scopes.pop_back();
 	}
 ;
@@ -202,7 +202,7 @@ statement: st_expression ';'
 	| declarations ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = NULL;
+		$$ = new PlnStatement(new PlnVarInit($1, NULL), CUR_BLOCK);
 	}
 
 	| declarations '=' expressions ';'
@@ -212,7 +212,7 @@ statement: st_expression ';'
 			YYABORT;
 		}
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1,$3), CUR_BLOCK);
+		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
 	}
 
 	| block

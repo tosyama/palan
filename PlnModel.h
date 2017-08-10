@@ -36,6 +36,8 @@ public:
 	PlnFunction* getFunc(const string& func_name);
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
+	void finish();
+
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
@@ -76,7 +78,7 @@ public:
 	PlnFunction(PlnFncType func_type, const string& func_name);
 	void addParam(PlnParameter& param);
 	void setParent(PlnScopeItem& scope);
-	int finish();
+	void finish();
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
@@ -107,6 +109,7 @@ public:
 	PlnVariable* declareVariable(string& var_name, PlnType* var_type=NULL);
 	void setParent(PlnScopeItem& scope);
 
+	void finish();
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
@@ -135,6 +138,7 @@ public:
 	PlnStatement(PlnVarInit* var_init, PlnBlock* parent);
 	PlnStatement(PlnBlock* block, PlnBlock* parent);
 
+	void finish();
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
@@ -284,6 +288,7 @@ public:
 
 // Variable: Type name
 enum PlnVarAllocType {
+	VA_UNKNOWN,
 	VA_STACK
 };
 
@@ -327,6 +332,7 @@ public:
 
 	vector<PlnVariable*> vars;
 	PlnExpression* initializer;
+	PlnBlock* parent;
 
 	void finish();
 	void gen(PlnGenerator& g);

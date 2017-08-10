@@ -19,17 +19,6 @@ inline PlnFunction* getFunction(PlnBlock *b)
 	return b->parent.function;
 }
 
-inline int getBasePos(PlnBlock *b)
-{
-	BOOST_ASSERT(b);
-	int pos = 0;
-	while (b->parent_type == BP_BLOCK) {
-		b = b->parent.block;
-		pos += b->cur_stack_size;
-	}
-	BOOST_ASSERT(b->parent_type == BP_FUNC);
-	return b->parent.function->inf.pln.stack_size + pos;
-}
 
 PlnBlock::PlnBlock() : cur_stack_size(0)
 {
@@ -100,13 +89,17 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 	if (var_type) v->var_type = var_type;
 	else v->var_type = variables.back()->var_type;
 
-	cur_stack_size += v->var_type->size;
-
-	v->alloc_type = VA_STACK;
-	v->inf.stack.pos_from_base = getBasePos(this)+cur_stack_size;
+	v->alloc_type = VA_UNKNOWN;
 	variables.push_back(v);
 
 	return v;
+}
+
+void PlnBlock::finish()
+{
+	cur_stack_size = 0;
+	for (auto s: statements)
+		s->finish();
 }
 
 void PlnBlock::dump(ostream& os, string indent)
@@ -131,20 +124,34 @@ PlnStatement::PlnStatement(PlnExpression *exp, PlnBlock* parent)
 	: type(ST_EXPRSN), parent(parent)
 {
 	inf.expression = exp;
-	exp->finish();
 }
 
 PlnStatement::PlnStatement(PlnVarInit* var_init, PlnBlock* parent)
 	: type(ST_VARINIT), parent(parent)
 {
 	inf.var_init = var_init;
-	var_init->finish();
+	var_init->parent = parent;
 }
 
 PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	: type(ST_BLOCK), parent(parent)
 {
 	inf.block = block;
+}
+
+void PlnStatement::finish()
+{
+	switch (type) {
+		case ST_EXPRSN:
+			inf.expression->finish();
+			break;
+		case ST_BLOCK:
+			inf.block->finish();
+			break;
+		case ST_VARINIT:
+			inf.var_init->finish();
+			break;
+	}
 }
 
 void PlnStatement::dump(ostream& os, string indent)
@@ -210,19 +217,3 @@ void PlnStatement::gen(PlnGenerator& g)
 	}
 }
 
-void PlnVarInit::finish()
-{
-	PlnReturnPlace rp;
-	rp.type = RP_VAR;
-	for (auto var: vars) {
-		rp.inf.var = var;
-		initializer->ret_places.push_back(rp);
-	}
-	initializer->finish();
-}
-
-void PlnVarInit::gen(PlnGenerator& g)
-{
-	initializer->gen(g);
-	BOOST_ASSERT(initializer->values.size() >= vars.size());
-}

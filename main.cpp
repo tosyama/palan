@@ -107,6 +107,8 @@ int main(int argc, char* argv[])
 
 				if (res) return res;	// parse error
 
+				module.finish();
+
 				if (do_dump) module.dump(cout);
 
 				if (do_asm) {
