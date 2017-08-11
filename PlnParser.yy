@@ -25,6 +25,7 @@ class PlnStatement;
 class PlnExpression;
 class PlnValue;
 class PlnVariable;
+class PlnParameter;
 class PlnVarInit;
 }
 
@@ -60,6 +61,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
 %type <PlnFunction*>	syscall_definition
+%type <PlnParameter*>	parameter
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
@@ -105,18 +107,22 @@ module: /* empty */
 	}
 	;
 
-function_definition: func_return func_name '(' parameters ')'
+function_definition: func_return func_name
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->setParent(scopes.back());
 			scopes.push_back(PlnScopeItem(f));
 		}
+		'(' parameters ')'
+		{
+			BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+			PlnFunction* f = scopes.back().inf.function;
+		}
 		block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		$$ = scopes.back().inf.function;
-		$$->implement = $7;
-		// $$->finish();
+		$$->implement = $8;
 		scopes.pop_back();
 	}
 ;
@@ -141,7 +147,37 @@ parameters: /* empty */
 	;
 
 parameter: ID ID
+	{
+		PlnType* t = module.getType($1);
+		if (!t) {
+			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
+			YYABORT;
+		}
+		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+		PlnFunction* f = scopes.back().inf.function;
+		$$ = f->addParam($2, t);
+		if (!$$) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
+			YYABORT;
+		}
+	}
+
 	| ID ID '=' default_value
+	{
+		PlnType* t = module.getType($1);
+		if (!t) {
+			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
+			YYABORT;
+		}
+		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+		PlnFunction* f = scopes.back().inf.function;
+		$$ = f->addParam($2, t);
+		if (!$$) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
+			YYABORT;
+		}
+	}
+
 	;
 
 default_value: ID

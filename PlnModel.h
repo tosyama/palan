@@ -76,7 +76,7 @@ public:
 	} parent;
 
 	PlnFunction(PlnFncType func_type, const string& func_name);
-	void addParam(PlnParameter& param);
+	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
 	void setParent(PlnScopeItem& scope);
 	void finish();
 
@@ -307,7 +307,6 @@ public:
 
 class PlnParameter : public PlnVariable {
 public:
-	bool has_default;
 	PlnValue* dflt_value;
 };
 

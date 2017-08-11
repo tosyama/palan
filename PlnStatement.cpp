@@ -35,7 +35,11 @@ PlnVariable* PlnBlock::getVariable(string& var_name)
 			b = b->parent.block;
 		else {
 			PlnFunction* f=b->parent.function;
-			// TODO: search param.
+			for (auto rv: f->return_vals)
+				if (rv->name == var_name) return rv;
+			for (auto p: f->parameters)
+				if (p->name == var_name) return p;
+			// TODO: search grobal.
 			return NULL;
 		}
 	}

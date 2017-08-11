@@ -63,7 +63,6 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-
 	if (vm.count("output")) {
 		do_compile = true;
 		do_asm = false;

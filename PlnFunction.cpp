@@ -14,9 +14,22 @@ PlnFunction::PlnFunction(PlnFncType func_type, const string &func_name)
 	}
 }
 
-void PlnFunction::addParam(PlnParameter& param)
+PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)
 {
-	parameters.push_back(&param);
+	for (auto rv: return_vals)
+		if (rv->name == pname) return NULL;
+	for (auto p: parameters)
+		if (p->name == pname) return NULL;
+
+	PlnParameter* param = new PlnParameter();
+	param->name = pname;
+	param->var_type = ptype;
+	param->alloc_type = VA_UNKNOWN;
+	param->dflt_value = defaultVal;
+	
+	parameters.push_back(param);
+
+	return	param;
 }
 
 void PlnFunction::setParent(PlnScopeItem& scope)
@@ -34,6 +47,13 @@ void PlnFunction::setParent(PlnScopeItem& scope)
 void PlnFunction::finish()
 {
 	if (type == FT_PLN || type == FT_INLINE) {
+		for (auto p: parameters) 
+			if (p->alloc_type == VA_UNKNOWN) {
+				inf.pln.stack_size += p->var_type->size;
+				p->alloc_type = VA_STACK;
+				p->inf.stack.pos_from_base = inf.pln.stack_size;
+			}
+
 		if (implement) {
 			implement->finish();
 			if (return_vals.size()==0) {	// if void, add return to tail.
@@ -69,11 +89,23 @@ void PlnFunction::gen(PlnGenerator &g)
 {
 	switch (type) {
 		case FT_PLN:
+		{
 			g.genEntryPoint(name);
 			g.genLabel(name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
+			int i=1;
+			for (auto p: parameters) {
+				PlnGenEntity* arg = g.getArgument(i);
+				PlnGenEntity* prm = p->genEntity(g);
+				g.genMove(prm, arg, p->name);
+				PlnGenEntity::freeEntity(arg);
+				PlnGenEntity::freeEntity(prm);
+				++i;
+			}
 			implement->gen(g);
 			break;
+		}
 	}
 }
+

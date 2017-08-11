@@ -92,6 +92,7 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 
 void PlnX86_64Generator::genReturn()
 {
+	os << "	movq %rbp, %rsp" << endl;
 	os << "	popq %rbp" << endl;
 	os << "	ret" << endl;
 }
