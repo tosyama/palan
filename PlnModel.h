@@ -130,13 +130,25 @@ public:
 		PlnExpression* expression;
 		PlnVarInit* var_init;
 		PlnBlock *block;
-		vector<PlnExpression*> *return_vals;
+//		vector<PlnExpression*> *return_vals;
 	} inf;
 
 	PlnStatement() {};
 	PlnStatement(PlnExpression *exp, PlnBlock* parent);
 	PlnStatement(PlnVarInit* var_init, PlnBlock* parent);
 	PlnStatement(PlnBlock* block, PlnBlock* parent);
+
+	virtual void finish();
+	virtual void dump(ostream& os, string indent="");
+	virtual void gen(PlnGenerator& g);
+};
+
+class PlnReturnStmt : public PlnStatement
+{
+public:
+	PlnFunction *function;
+	
+	PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent);
 
 	void finish();
 	void dump(ostream& os, string indent="");
@@ -223,6 +235,7 @@ class PlnMultiExpression : public PlnExpression
 public:
 	vector<PlnExpression*> exps;
 
+	PlnMultiExpression();
 	PlnMultiExpression(PlnExpression* first, PlnExpression *second);
 	void append(PlnExpression *exp);
 

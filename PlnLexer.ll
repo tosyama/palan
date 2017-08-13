@@ -19,7 +19,8 @@ enum {
 	ID			= PlnParser::token::ID,
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
-	KW_VOID		= PlnParser::token::KW_VOID
+	KW_VOID		= PlnParser::token::KW_VOID,
+	KW_RETURN	= PlnParser::token::KW_RETURN
 };
 
 static string& unescape(string& str);
@@ -50,6 +51,7 @@ COMMENT1	\/\/[^\n]*\n
 ccall	{ return KW_CCALL; }
 syscall	{ return KW_SYSCALL; }
 void	{ return KW_VOID; }
+return	{ return KW_RETURN; }
 {ID}	{
 		lval.build<string>() = yytext;
 		return ID;

@@ -98,6 +98,11 @@ void PlnExpression::gen(PlnGenerator& g)
 	}
 }
 
+PlnMultiExpression::PlnMultiExpression()
+	: PlnExpression(ET_MULTI)
+{
+}
+
 PlnMultiExpression::PlnMultiExpression(
 	PlnExpression* first, PlnExpression* second)
 	: PlnExpression(ET_MULTI)

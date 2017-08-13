@@ -27,7 +27,7 @@ public:
 	virtual void genCCall(string& cfuncname)=0;
 	virtual void genSysCall(int id, const string& comment)=0;
 	virtual void genReturn()=0;
-	virtual void genMainReturn(vector<PlnGenEntity*> &return_vals)=0;
+	virtual void genMainReturn()=0;
 	virtual void genStringData(int index, const string& str)=0;
 	virtual void genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment)=0;
 	virtual void genAdd(PlnGenEntity* dst, PlnGenEntity* src)=0;
@@ -55,7 +55,7 @@ public:
 	void genCCall(string& cfuncname);
 	void genSysCall(int id, const string& comment);
 	void genReturn();
-	void genMainReturn(vector<PlnGenEntity*> &return_vals);
+	void genMainReturn();
 	void genStringData(int index, const string& str);
 	void genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment);
 	void genAdd(PlnGenEntity* dst, PlnGenEntity* src);

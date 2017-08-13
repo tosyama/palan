@@ -177,15 +177,10 @@ void PlnStatement::dump(ostream& os, string indent)
 			inf.block->dump(os, indent);
 			break;
 
-		case ST_RETURN:
-			os << indent << "Return: " << inf.return_vals->size() << endl;
-			break;
-
 		default:
 			os << indent << "Unknown type" << endl;
 	}
 }
-
 
 void PlnStatement::gen(PlnGenerator& g)
 {
@@ -199,25 +194,66 @@ void PlnStatement::gen(PlnGenerator& g)
 		case ST_BLOCK:
 			inf.block->gen(g);
 			break;
-		case ST_RETURN:
-		{
-			vector<PlnGenEntity*> gen_rets;
-			for (auto r: *inf.return_vals) 
-				gen_rets.push_back(r->values.front().genEntity(g));
-			PlnFunction* f = getFunction(parent);
-
-			if (f->name == "main") 
-				g.genMainReturn(gen_rets);	
-			else
-				g.genReturn();
-			
-			for (auto gr: gen_rets)
-				PlnGenEntity::freeEntity(gr);
-		}
-			break;
 		default:
 			BOOST_ASSERT(false);	
 			break;
 	}
+}
+
+// PlnReturnStmt
+PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
+{
+	type = ST_RETURN;
+	this->parent = parent;
+	function = getFunction(parent);
+
+	if (retexp) {
+		inf.expression = retexp;
+	} else if (!function->return_vals.size()) {
+		if (function->name == "main")
+			inf.expression = new PlnExpression(0);
+		else
+			inf.expression = NULL;
+	} else if (function->return_vals.size() == 1) {
+		inf.expression = new PlnExpression(function->return_vals[0]);
+	} else {
+		PlnMultiExpression *m = new PlnMultiExpression();
+		for (auto v: function->return_vals)
+			m->append(new PlnExpression(v));
+		inf.expression = m;
+	}
+}
+
+void PlnReturnStmt::finish()
+{
+	if (inf.expression) {
+		int i=0;
+		for (auto v: inf.expression->values) {
+			PlnReturnPlace rp;
+			rp.type = RP_ARGPLN;
+			rp.inf.index = i;
+			inf.expression->ret_places.push_back(rp);
+			if (i) ++i; else i = function->parameters.size()+1;
+		}
+		inf.expression->finish();
+	}
+}
+
+void PlnReturnStmt::dump(ostream& os, string indent)
+{
+	os << indent << "Return: " << endl;
+	if (inf.expression) 
+		inf.expression->dump(os, indent+" ");
+}
+
+void PlnReturnStmt::gen(PlnGenerator& g)
+{
+	if (inf.expression)
+		inf.expression->gen(g);
+
+	if (function->name == "main") 
+		g.genMainReturn();	
+	else
+		g.genReturn();
 }
 

@@ -54,15 +54,20 @@ void PlnFunction::finish()
 				p->inf.stack.pos_from_base = inf.pln.stack_size;
 			}
 
-		if (implement) {
-			implement->finish();
-			if (return_vals.size()==0) {	// if void, add return to tail.
-				PlnStatement* s = new PlnStatement();
-				s->type = ST_RETURN;
-				s->parent = implement;
-				s->inf.return_vals = new vector<PlnExpression*>;
-				implement->statements.push_back(s);
+		for (auto rv: return_vals)
+			if (rv->alloc_type == VA_UNKNOWN) {
+				inf.pln.stack_size += rv->var_type->size;
+				rv->alloc_type = VA_STACK;
+				rv->inf.stack.pos_from_base = inf.pln.stack_size;
 			}
+
+		if (implement) {
+			if (implement->statements.back()->type != ST_RETURN) {
+				PlnReturnStmt* rs = new PlnReturnStmt(NULL, implement);
+				implement->statements.push_back(rs);
+			}
+
+			implement->finish();
 
 			inf.pln.stack_size += implement->totalStackSize();
 		}

@@ -56,11 +56,15 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_CCALL	"ccall"
 %token KW_SYSCALL	"syscall"
 %token KW_VOID	"void"
+%token KW_RETURN	"return"
 
 %type <string>	func_name
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
 %type <PlnFunction*>	syscall_definition
+%type <vector<PlnVariable*>>	func_return
+%type <vector<PlnVariable*>>	return_values
+%type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
@@ -77,6 +81,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<PlnVariable*>>	declarations
 %type <PlnVariable*>	declaration
 %type <PlnVariable*>	subdeclaration
+%type <PlnStatement*>	return_stmt
 
 %right '='
 %left ',' 
@@ -111,6 +116,7 @@ function_definition: func_return func_name
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->setParent(scopes.back());
+			f->return_vals = move($1);
 			scopes.push_back(PlnScopeItem(f));
 		}
 		'(' parameters ')'
@@ -130,15 +136,44 @@ function_definition: func_return func_name
 func_name: ID		{ $$ = $1; }
 	;
 
-func_return: KW_VOID
+func_return: KW_VOID { }
+
 	| return_values
+	{
+		$$ = move($1);
+	}
 	;
 
 return_values: return_value
+	{
+		$$.push_back($1);
+	}
+
 	| return_values ',' return_value
+	{
+		$$ = move($1);
+		for (auto v: $$)
+			if (v->name == $3->name) {
+				error(@$, PlnMessage::getErr(E_DuplicateVarName, $3->name));
+				delete $3;
+				YYABORT;
+			}
+		$$.push_back($3);
+	}
 	;
 
 return_value: ID ID
+	{
+		PlnType* t = module.getType($1);
+		if (!t) {
+			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
+			YYABORT;
+		}
+		$$ = new PlnVariable();
+		$$->name = $2;
+		$$->var_type = t;
+		$$->alloc_type = VA_UNKNOWN;
+	}
 	;
 
 parameters: /* empty */
@@ -177,7 +212,6 @@ parameter: ID ID
 			YYABORT;
 		}
 	}
-
 	;
 
 default_value: ID
@@ -250,11 +284,64 @@ statement: st_expression ';'
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
 	}
+	
+	| return_stmt ';'
+	{
+		$$ = $1;	
+	}
 
 	| block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement($1, CUR_BLOCK);
+	}
+	;
+	
+st_expression: expression
+	{
+		$$ = $1;
+	}
+	| assignment
+	{
+		$$ = $1;
+	}
+	;
+
+expressions: expression
+	{
+		$$ = $1;
+	}
+
+	| expressions ',' expression
+	{
+		if ($1->type == ET_MULTI) {
+			$$ = $1;
+			static_cast<PlnMultiExpression*>($$)->append($3);
+		} else {
+			$$ = new PlnMultiExpression($1, $3);
+		}
+	}
+	;
+
+expression:
+	func_call
+	{
+		$$ = $1;
+	}
+
+	| expression '+' expression
+	{
+		$$ = PlnAddOperation::create($1, $3);
+	}
+
+	| '(' assignment ')'
+	{
+		$$ = $2;
+	}
+	
+	| term
+	{
+		$$ = $1;
 	}
 	;
 
@@ -290,22 +377,6 @@ argument: /* empty */ // ToDo: replace default
 	| expression
 	{
 		$$ = $1;
-	}
-	;
-
-expressions: expression
-	{
-		$$ = $1;
-	}
-
-	| expressions ',' expression
-	{
-		if ($1->type == ET_MULTI) {
-			$$ = $1;
-			static_cast<PlnMultiExpression*>($$)->append($3);
-		} else {
-			$$ = new PlnMultiExpression($1, $3);
-		}
 	}
 	;
 
@@ -354,38 +425,6 @@ term: INT
 	| '(' expression ')'
 	{
 		$$ = $2;
-	}
-	;
-	
-expression:
-	func_call
-	{
-		$$ = $1;
-	}
-
-	| expression '+' expression
-	{
-		$$ = PlnAddOperation::create($1, $3);
-	}
-
-	| '(' assignment ')'
-	{
-		$$ = $2;
-	}
-	
-	| term
-	{
-		$$ = $1;
-	}
-	;
-
-st_expression: expression
-	{
-		$$ = $1;
-	}
-	| assignment
-	{
-		$$ = $1;
 	}
 	;
 
@@ -439,6 +478,18 @@ subdeclaration: ID
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
 		}
+	}
+	;
+
+return_stmt: KW_RETURN
+	{
+		$$ = new PlnReturnStmt(NULL, CUR_BLOCK);
+	}
+
+	| KW_RETURN expressions
+	{
+		$$ = new PlnReturnStmt($2, CUR_BLOCK);
+		// TODO: type&num check
 	}
 	;
 
