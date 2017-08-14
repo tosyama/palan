@@ -251,7 +251,7 @@ public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
 
-	PlnFunctionCall();
+	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
 
 	void finish();	// override
 	void dump(ostream& os, string indent="");	// override
@@ -302,7 +302,8 @@ public:
 // Variable: Type name
 enum PlnVarAllocType {
 	VA_UNKNOWN,
-	VA_STACK
+	VA_STACK,
+	VA_RETVAL
 };
 
 class PlnVariable {
@@ -314,6 +315,7 @@ public:
 		struct {
 			int pos_from_base;
 		} stack;
+		int index;
 	} inf;
 	PlnGenEntity* genEntity(PlnGenerator& g);
 };

@@ -349,11 +349,7 @@ func_call: func_name '(' arguments ')'
 	{
 		PlnFunction* f = module.getFunc($1);
 		if (f) {
-			PlnFunctionCall* fc = new PlnFunctionCall();
-			fc->type = ET_FUNCCALL;
-			fc->function = f;
-			fc->arguments = move($3);
-			$$ = fc;
+			$$ = new PlnFunctionCall(f, $3);
 		} else {
 			error(@$, PlnMessage::getErr(E_UndefinedFunction, $1));
 			YYABORT;

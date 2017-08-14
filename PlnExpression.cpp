@@ -156,9 +156,22 @@ void PlnMultiExpression::gen(PlnGenerator& g)
 }
 
 // PlnFunctionCall
-PlnFunctionCall::PlnFunctionCall()
-	: PlnExpression(ET_FUNCCALL)
+PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
+	: PlnExpression(ET_FUNCCALL),
+	function(f),
+	arguments(move(args))
 {
+	int i=0;
+	for (auto rv: f->return_vals) {
+		PlnVariable* ret_var = new PlnVariable();
+		ret_var->name = rv->name;
+		ret_var->alloc_type = VA_RETVAL;
+		ret_var->inf.index = i;
+
+		values.push_back(PlnValue(ret_var));
+
+		if (i) ++i; else i=f->parameters.size()+1;
+	}
 }
 
 void PlnFunctionCall::finish()
@@ -199,6 +212,17 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: reverse(arguments)) 
 				arg->gen(g);
 			g.genCCall(function->name);
+			int i = 0;
+			for (auto rp: ret_places) {
+				PlnGenEntity* dst = rp.genEntity(g);
+				PlnGenEntity* src = values[i].genEntity(g);
+
+				g.genMove(dst, src, rp.commentStr());
+
+				PlnGenEntity::freeEntity(dst);
+				PlnGenEntity::freeEntity(src);
+				++i;
+			}
 			break;
 		}
 		case FT_SYS:
