@@ -32,10 +32,38 @@ PlnType* PlnModule::getType(const string& type_name)
 		return NULL;
 }
 
-PlnFunction* PlnModule::getFunc(const string& func_name)
+PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
 {
 	for (auto f: functions)
-		if (f->name == func_name) return f;
+		if (f->name == func_name) {
+			// Check arguments.
+			if (f->parameters.size()==0 && args.size()==0)
+				return f;
+			int i=0;
+			bool ng = false; 
+			for (auto p: f->parameters) {
+				if (i+1>args.size() || !args[i]) {
+					if (!p->dflt_value) {
+						ng = true; break;
+					}
+				} else {
+					//TODO: type check.
+				}
+				++i;
+			}
+			if (!ng) {
+				// Set default.
+				i=0;
+				for (auto p: f->parameters) {
+					if (i+1>args.size()) 
+						args.push_back(new PlnExpression(*p->dflt_value));
+					else if(!args[i])
+						args[i] = new PlnExpression(*p->dflt_value);
+					++i;
+				}
+				return f;
+			}
+		}
 	
 	return NULL;
 }

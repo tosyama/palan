@@ -33,7 +33,7 @@ public:
 	PlnModule();
 
 	PlnType* getType(const string& type_name);
-	PlnFunction* getFunc(const string& func_name);
+	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
 	void finish();

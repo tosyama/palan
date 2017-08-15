@@ -233,7 +233,7 @@ void PlnReturnStmt::finish()
 			rp.type = RP_ARGPLN;
 			rp.inf.index = i;
 			inf.expression->ret_places.push_back(rp);
-			if (i) ++i; else i = function->parameters.size()+1;
+			++i;
 		}
 		inf.expression->finish();
 	}

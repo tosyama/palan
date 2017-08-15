@@ -17,6 +17,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Variable name '%1%' already defined."; break;
 		case E_NumOfLRVariables:
 			f = "Number of values left and right are not match."; break;
+		case E_NumOfRetValues:
+			f = "Number of return arguments and definitions are not mutch."; break;
 		case E_CouldnotOpenFile:
 			f = "Could not open file '%1%'."; break;
 		default:

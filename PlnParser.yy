@@ -22,6 +22,7 @@ class PlnModule;
 class PlnFunction;
 class PlnBlock;
 class PlnStatement;
+class PlnReturnStmt;
 class PlnExpression;
 class PlnValue;
 class PlnVariable;
@@ -66,6 +67,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<PlnVariable*>>	return_values
 %type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
+%type <PlnValue*>	default_value
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
@@ -81,7 +83,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<PlnVariable*>>	declarations
 %type <PlnVariable*>	declaration
 %type <PlnVariable*>	subdeclaration
-%type <PlnStatement*>	return_stmt
+%type <PlnReturnStmt*>	return_stmt
 
 %right '='
 %left ',' 
@@ -206,7 +208,7 @@ parameter: ID ID
 		}
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, t);
+		$$ = f->addParam($2, t, $4);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -215,8 +217,19 @@ parameter: ID ID
 	;
 
 default_value: ID
+	{	
+		$$ = NULL; // TODO: get const value.
+	}
+
 	| INT
+	{
+		$$ = new PlnValue($1);
+	}
+
 	| STR
+	{
+		$$ = new PlnValue(module.getReadOnlyData($1));
+	}
 	;
 
 ccall_declaration: KW_CCALL single_return func_name '(' parameters ')' ';'
@@ -347,7 +360,7 @@ expression:
 
 func_call: func_name '(' arguments ')'
 	{
-		PlnFunction* f = module.getFunc($1);
+		PlnFunction* f = module.getFunc($1, $3);
 		if (f) {
 			$$ = new PlnFunctionCall(f, $3);
 		} else {
@@ -369,7 +382,11 @@ arguments: argument
 	}
 	;
 
-argument: /* empty */ // ToDo: replace default
+argument: /* empty */
+	{
+		$$ = NULL;
+	}
+
 	| expression
 	{
 		$$ = $1;
@@ -480,12 +497,18 @@ subdeclaration: ID
 return_stmt: KW_RETURN
 	{
 		$$ = new PlnReturnStmt(NULL, CUR_BLOCK);
+		// TODO: check vals were set.
 	}
 
 	| KW_RETURN expressions
 	{
 		$$ = new PlnReturnStmt($2, CUR_BLOCK);
-		// TODO: type&num check
+		// TODO: type check
+		if ($$->function->return_vals.size() != $2->values.size())
+		{
+			error(@$, PlnMessage::getErr(E_NumOfRetValues));
+			YYABORT;
+		}
 	}
 	;
 

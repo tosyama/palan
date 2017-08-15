@@ -47,18 +47,18 @@ void PlnFunction::setParent(PlnScopeItem& scope)
 void PlnFunction::finish()
 {
 	if (type == FT_PLN || type == FT_INLINE) {
-		for (auto p: parameters) 
-			if (p->alloc_type == VA_UNKNOWN) {
-				inf.pln.stack_size += p->var_type->size;
-				p->alloc_type = VA_STACK;
-				p->inf.stack.pos_from_base = inf.pln.stack_size;
-			}
-
 		for (auto rv: return_vals)
 			if (rv->alloc_type == VA_UNKNOWN) {
 				inf.pln.stack_size += rv->var_type->size;
 				rv->alloc_type = VA_STACK;
 				rv->inf.stack.pos_from_base = inf.pln.stack_size;
+			}
+			
+		for (auto p: parameters) 
+			if (p->alloc_type == VA_UNKNOWN) {
+				inf.pln.stack_size += p->var_type->size;
+				p->alloc_type = VA_STACK;
+				p->inf.stack.pos_from_base = inf.pln.stack_size;
 			}
 
 		if (implement) {
@@ -99,7 +99,10 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genLabel(name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
-			int i=1;
+			
+			int i=return_vals.size();
+			if (i==0) i = 1;
+			
 			for (auto p: parameters) {
 				PlnGenEntity* arg = g.getArgument(i);
 				PlnGenEntity* prm = p->genEntity(g);

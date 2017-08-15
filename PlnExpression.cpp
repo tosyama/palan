@@ -170,7 +170,7 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 
 		values.push_back(PlnValue(ret_var));
 
-		if (i) ++i; else i=f->parameters.size()+1;
+		++i;
 	}
 }
 
@@ -185,12 +185,13 @@ void PlnFunctionCall::finish()
 			BOOST_ASSERT(false);
 	}
 
-	int i = 1;
+	int i = function->return_vals.size();
+	if (i==0) i=1;
 	for (auto a: arguments) {
 		rp.inf.index = i;
 		a->ret_places.push_back(rp);
 		a->finish();
-		i++;
+		++i;
 	}
 }
 
