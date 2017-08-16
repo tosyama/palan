@@ -14,9 +14,13 @@ using namespace palan;
 #define YY_USER_ACTION	loc.columns(yyleng);
 
 enum {
-	INT = PlnParser::token::INT,
-	STR = PlnParser::token::STR,
-	ID = PlnParser::token::ID
+	INT			= PlnParser::token::INT,
+	STR			= PlnParser::token::STR,
+	ID			= PlnParser::token::ID,
+	KW_CCALL	= PlnParser::token::KW_CCALL,
+	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
+	KW_VOID		= PlnParser::token::KW_VOID,
+	KW_RETURN	= PlnParser::token::KW_RETURN
 };
 
 static string& unescape(string& str);
@@ -28,8 +32,9 @@ static string& unescape(string& str);
 
 DIGIT	[0-9]+
 ID	[a-zA-Z_][0-9a-zA-Z_]*
-DELIMITER	"{"|"}"|"("|")"|","|";"
-STRING	\"(\\.|\\\n|[^\\\"])*\"
+DELIMITER	"{"|"}"|"("|")"|","|";"|":"|"="|"+"|"-"
+STRING	"\""(\\.|\\\n|[^\\\"])*"\""
+COMMENT1	\/\/[^\n]*\n
 
 %%
 %{
@@ -37,10 +42,16 @@ STRING	\"(\\.|\\\n|[^\\\"])*\"
 	loc.end.filename = &filename;
 	loc.step();
 %}
+
+{COMMENT1}	{ loc.lines(); }
 {DIGIT}	{
 		lval.build<int>() = std::stoi(yytext);
 		return INT;
 	}
+ccall	{ return KW_CCALL; }
+syscall	{ return KW_SYSCALL; }
+void	{ return KW_VOID; }
+return	{ return KW_RETURN; }
 {ID}	{
 		lval.build<string>() = yytext;
 		return ID;

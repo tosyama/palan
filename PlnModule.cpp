@@ -1,22 +1,69 @@
+#include <unordered_map>
 #include <boost/assert.hpp>
 #include "PlnModel.h"
 #include "PlnX86_64Generator.h"
 
 using namespace std;
 
-PlnModule::PlnModule() :is_main(false)
-{}
+// Basic types
+static bool is_initialzed_type = false;
+static unordered_map<string, PlnType*> basic_types;
 
-void PlnModule::addFunc(PlnFunction &func)
+PlnModule::PlnModule() 
 {
-	if (func.name == "main") is_main = true;
-	functions.push_back(&func);
+	if (is_initialzed_type) return;
+	
+	PlnType* t = new PlnType();
+	t->type = TP_INT8;
+	t->name = "int";
+	t->size = 8;
+	basic_types[t->name] = t;
+
+	is_initialzed_type = true;
+
 }
 
-PlnFunction* PlnModule::getFunc(const string& func_name)
+PlnType* PlnModule::getType(const string& type_name)
+{
+	unordered_map<string, PlnType*>::const_iterator t = basic_types.find(type_name);
+	if (t != basic_types.end())
+		return t->second;
+	else
+		return NULL;
+}
+
+PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
 {
 	for (auto f: functions)
-		if (f->name == func_name) return f;
+		if (f->name == func_name) {
+			// Check arguments.
+			if (f->parameters.size()==0 && args.size()==0)
+				return f;
+			int i=0;
+			bool ng = false; 
+			for (auto p: f->parameters) {
+				if (i+1>args.size() || !args[i]) {
+					if (!p->dflt_value) {
+						ng = true; break;
+					}
+				} else {
+					//TODO: type check.
+				}
+				++i;
+			}
+			if (!ng) {
+				// Set default.
+				i=0;
+				for (auto p: f->parameters) {
+					if (i+1>args.size()) 
+						args.push_back(new PlnExpression(*p->dflt_value));
+					else if(!args[i])
+						args[i] = new PlnExpression(*p->dflt_value);
+					++i;
+				}
+				return f;
+			}
+		}
 	
 	return NULL;
 }
@@ -36,13 +83,19 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 	return rodata;
 }
 
+void PlnModule::finish()
+{
+	for (auto f: functions)
+		f->finish();
+}
+
 void PlnModule::dump(ostream& os, string indent)
 {
 	os << indent << "Module: " << endl;
+	os << indent << " Readonly Data: " << readonlydata.size() << endl;
 	os << indent << " Functions: " << functions.size() << endl;
 	for (auto f: functions)
 		f->dump(os, indent+"  ");
-	os << indent << " Readonly Data: " << readonlydata.size() << endl;
 }
 
 void PlnModule::gen(PlnGenerator &g)
@@ -52,7 +105,6 @@ void PlnModule::gen(PlnGenerator &g)
 		rod->gen(g);
 
 	g.genSecText();
-	if (is_main) g.genEntryPoint("_start");
 	for (auto f : functions)
 		f->gen(g);
 }

@@ -1,24 +1,24 @@
-// write to header for public.
-// shoud be note reserve size for private.
-class foo {
-	data:
-		reserved: 2;
+export class foo {
+data:
+		int16 sec1;	// private
 		io int a;
 		out string s;
-		reserved: 1;
-		int x; // private data for inline.
-	method:
-		construct(int aa = 0);
-		virtual int ff();	
-}
+		byte sec2;	// private
+		int x; 
 
-// write source for private
-implement foo {
-	reserve int16 sec1;
-	reserve byte sec2;
-
-	foo construct(int aa) {
+method:
+	/// foo constractor
+	export construct(
+		int aa=0	/// aa value
+	) {
 		return null; // if error
+	}
+	export inline int result caloc() {
+		return result = a*x;
+	}
+
+	void test()	// private method
+	{
 	}
 }
 
