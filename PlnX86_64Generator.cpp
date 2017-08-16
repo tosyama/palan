@@ -141,6 +141,21 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* dst, PlnGenEntity* src)
 	os << format("	addq %1%, %2%") % *src->data.str % *dst->data.str << endl;
 }
 
+void PlnX86_64Generator::genSub(PlnGenEntity* dst, PlnGenEntity* src)
+{
+	BOOST_ASSERT(dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM);
+	if (src->alloc_type == GA_CODE && *src->data.str == "$1") {
+		os << "	decq " << *dst->data.str << endl;
+		return;
+	}
+	os << format("	subq %1%, %2%") % *src->data.str % *dst->data.str << endl;
+}
+
+void PlnX86_64Generator::genNegative(PlnGenEntity* tgt)
+{
+	os << "	negq " << *tgt->data.str << endl;
+}
+
 PlnGenEntity* PlnX86_64Generator::getNull()
 {
 	PlnGenEntity* e= new PlnGenEntity();

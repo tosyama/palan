@@ -87,7 +87,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %right '='
 %left ',' 
-%left '+'
+%left '+' '-'
+%left UMINUS
 
 %start module	
 
@@ -347,9 +348,19 @@ expression:
 		$$ = PlnAddOperation::create($1, $3);
 	}
 
+	| expression '-' expression
+	{
+		$$ = PlnAddOperation::create_sub($1, $3);
+	}
+
 	| '(' assignment ')'
 	{
 		$$ = $2;
+	}
+
+	| '-' expression %prec UMINUS
+	{
+		$$ = PlnNegative::create($2);
 	}
 	
 	| term
