@@ -1,6 +1,11 @@
 #include <boost/assert.hpp>
-#include "PlnModel.h"
-#include "PlnX86_64Generator.h"
+
+#include "PlnFunction.h"
+#include "PlnBlock.h"
+#include "PlnExpression.h"
+#include "PlnType.h"
+#include "PlnVariable.h"
+#include "../PlnGenerator.h"
 
 inline int getBasePos(PlnBlock *b)
 {

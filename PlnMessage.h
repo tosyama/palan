@@ -1,3 +1,10 @@
+/// Message definitions.
+///
+/// Manage output message descriptions in Palan compiler.
+///
+/// @file	PlnMessage.h
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include <string>
 using std::string;
 

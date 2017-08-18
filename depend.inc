@@ -1,15 +1,57 @@
-main.o: PlnParser.hpp PlnScopeStack.h stack.hh location.hh \
- position.hh PlnLexer.h PlnModel.h PlnX86_64Generator.h
-PlnModule.o: PlnModel.h PlnX86_64Generator.h
-PlnFunction.o: PlnModel.h PlnScopeStack.h \
- PlnX86_64Generator.h
-PlnStatement.o: PlnModel.h PlnScopeStack.h \
- PlnX86_64Generator.h
-PlnExpression.o: PlnModel.h PlnX86_64Generator.h
-PlnX86_64Generator.o: PlnModel.h \
- PlnX86_64Generator.h
-PlnValue.o: PlnModel.h PlnX86_64Generator.h
-PlnParser.o: PlnModel.h PlnParser.hpp PlnScopeStack.h \
- stack.hh location.hh position.hh
-PlnLexer.o: PlnParser.hpp PlnScopeStack.h stack.hh \
- location.hh position.hh PlnLexer.h
+palan.o:  PlnParser.hpp PlnScopeStack.h stack.hh location.hh \
+	position.hh PlnLexer.h models/PlnModule.h models/PlnExpression.h \
+	models/../PlnModel.h PlnMessage.h generators/PlnX86_64Generator.h \
+	generators/../PlnGenerator.h
+PlnModule.o:  models/PlnModule.h \
+	models/PlnExpression.h models/../PlnModel.h models/PlnFunction.h \
+	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h
+PlnFunction.o:  models/PlnFunction.h \
+	models/../PlnModel.h models/PlnBlock.h models/PlnStatement.h \
+	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h
+PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
+	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
+	models/PlnVariable.h models/../PlnScopeStack.h
+PlnStatement.o:  models/PlnFunction.h \
+	models/../PlnModel.h models/PlnBlock.h models/PlnStatement.h \
+	models/PlnVariable.h models/expressions/PlnMultiExpression.h \
+	models/expressions/../PlnExpression.h models/../PlnGenerator.h
+PlnExpression.o:  models/PlnExpression.h \
+	models/../PlnModel.h models/PlnVariable.h models/../PlnGenerator.h
+PlnValue.o:  models/PlnFunction.h models/../PlnModel.h \
+	models/PlnBlock.h models/PlnExpression.h models/PlnType.h \
+	models/PlnVariable.h models/../PlnGenerator.h
+PlnMultiExpression.o:  \
+	models/expressions/PlnMultiExpression.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnGenerator.h
+PlnFunctionCall.o:  \
+	models/expressions/../../PlnModel.h models/expressions/../PlnFunction.h \
+	models/expressions/PlnFunctionCall.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../PlnVariable.h \
+	models/expressions/../../PlnGenerator.h
+PlnAddOperation.o:  \
+	models/expressions/PlnAddOperation.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnGenerator.h
+PlnAssignment.o:  \
+	models/expressions/PlnAssignment.h models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
+	models/expressions/../../PlnGenerator.h
+PlnX86_64Generator.o:  \
+	generators/../PlnModel.h generators/PlnX86_64Generator.h \
+	generators/../PlnGenerator.h
+PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
+	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
+	models/PlnStatement.h models/PlnType.h models/PlnVariable.h \
+	models/expressions/PlnMultiExpression.h \
+	models/expressions/PlnFunctionCall.h \
+	models/expressions/PlnAddOperation.h models/expressions/PlnAssignment.h \
+	PlnMessage.h PlnParser.hpp PlnScopeStack.h stack.hh location.hh \
+	position.hh
+PlnLexer.o:  PlnParser.hpp PlnScopeStack.h stack.hh \
+	location.hh position.hh PlnLexer.h
+PlnMessage.o:  PlnMessage.h

@@ -1,3 +1,8 @@
+/// x86-64 (Linux) assembly generator class definition.
+///
+/// @file	PlnX86_64Generator.cpp
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include <vector>
 #include <iostream>
 #include <string>
@@ -5,7 +10,7 @@
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
-#include "PlnModel.h"
+#include "../PlnModel.h"
 #include "PlnX86_64Generator.h"
 
 using std::endl;

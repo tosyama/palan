@@ -1,3 +1,8 @@
+/// Palan Lexer class declaration.
+///
+/// @file	PlnLexer.h
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #ifndef FLEX_SCANNER
 #include <FlexLexer.h>
 #endif

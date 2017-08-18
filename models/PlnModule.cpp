@@ -1,7 +1,18 @@
+/// Module model class definition.
+///
+/// Module is root of model tree.
+/// Module includes function definitions.
+///
+/// @file	PlnModule.cpp
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include <unordered_map>
 #include <boost/assert.hpp>
-#include "PlnModel.h"
-#include "PlnX86_64Generator.h"
+#include "PlnModule.h"
+#include "PlnFunction.h"
+#include "PlnType.h"
+#include "PlnVariable.h"
+#include "../PlnGenerator.h"
 
 using namespace std;
 
@@ -20,7 +31,6 @@ PlnModule::PlnModule()
 	basic_types[t->name] = t;
 
 	is_initialzed_type = true;
-
 }
 
 PlnType* PlnModule::getType(const string& type_name)

@@ -1,7 +1,20 @@
+/// Function model class definition.
+///
+/// Function model mainly manage return values
+/// and paramater difinition.
+/// e.g.) int ret1, int ret2 funcname(int arg1, int arg2) { ... }
+///
+/// @file	PlnFunction.cpp
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include <boost/assert.hpp>
-#include "PlnModel.h"
-#include "PlnScopeStack.h"
-#include "PlnX86_64Generator.h"
+#include "PlnFunction.h"
+#include "PlnBlock.h"
+#include "PlnStatement.h"
+#include "PlnType.h"
+#include "PlnVariable.h"
+#include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 
 using std::string;
 using std::endl;

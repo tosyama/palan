@@ -1,4 +1,13 @@
 %{
+/// Palan Lexer.
+///
+/// Anarize token of input soruce code.
+/// Palan Lexer (PlnLexer.cpp) is created
+/// from this definition file by flex.
+///
+/// @file	PlnLexer.ll
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include "PlnParser.hpp"
 
 using std::cout;

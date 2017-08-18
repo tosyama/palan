@@ -1,8 +1,11 @@
-#include "PlnParser.hpp"
-#include "PlnLexer.h"
-#include "PlnModel.h"
-#include "PlnX86_64Generator.h"
-#include "PlnMessage.h"
+/// Palan compiler CUI.
+///
+/// Call lexcer, parser, generator, assembler(as) and linker(ld)
+/// depend on command-line options.
+///
+/// @file	palan.cpp
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <fstream>
@@ -11,6 +14,12 @@
 	#include <ext/stdio_sync_filebuf.h>    
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
+
+#include "PlnParser.hpp"
+#include "PlnLexer.h"
+#include "models/PlnModule.h"
+#include "PlnMessage.h"
+#include "generators/PlnX86_64Generator.h"
 
 using std::cout;
 using std::cerr;
@@ -26,6 +35,7 @@ namespace po = boost::program_options;
 static string getFileName(string& fpath);
 static string getExtention(string& fpath);
 
+/// Main function for palan compiler CUI.
 int main(int argc, char* argv[])
 {
 	po::options_description opt("Options");

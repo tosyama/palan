@@ -1,3 +1,12 @@
+/// Palan Parser.
+///
+/// Bulid Palan model tree from lexer input.
+/// Palan parser (PlnParser.cpp, PlnParser.hpp and rerated files)
+/// is created from this definition file by bison.
+///
+/// @file	PlnParser.yy
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 %skeleton "lalr1.cc"
 %require "3.0.4"
 %defines
@@ -40,7 +49,16 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %code top
 {
 #include <boost/assert.hpp>
-#include "PlnModel.h"
+#include "models/PlnModule.h"
+#include "models/PlnFunction.h"
+#include "models/PlnBlock.h"
+#include "models/PlnStatement.h"
+#include "models/PlnType.h"
+#include "models/PlnVariable.h"
+#include "models/expressions/PlnMultiExpression.h"
+#include "models/expressions/PlnFunctionCall.h"
+#include "models/expressions/PlnAddOperation.h"
+#include "models/expressions/PlnAssignment.h"
 #include "PlnMessage.h"
 
 #define CUR_BLOCK	scopes.back().inf.block
