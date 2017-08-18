@@ -1,7 +1,7 @@
 /// Palan Parser.
 ///
 /// Bulid Palan model tree from lexer input.
-/// Palan parser (PlnParser.cpp, PlnParser.hpp and rerated files)
+/// Palan parser (PlnParser.cpp, PlnParser.hpp and related files)
 /// is created from this definition file by bison.
 ///
 /// @file	PlnParser.yy
@@ -19,6 +19,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "PlnModel.h"
 #include "PlnScopeStack.h"
 
 using std::string;
@@ -27,16 +28,6 @@ using std::endl;
 using std::vector;
 
 class PlnLexer;
-class PlnModule;
-class PlnFunction;
-class PlnBlock;
-class PlnStatement;
-class PlnReturnStmt;
-class PlnExpression;
-class PlnValue;
-class PlnVariable;
-class PlnParameter;
-class PlnVarInit;
 }
 
 %code

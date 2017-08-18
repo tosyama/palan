@@ -1,3 +1,10 @@
+/// Variable model class definition.
+///
+/// PlnVariable model manage variable information
+/// such as type and momory allocation.
+///
+/// @file	PlnVariable.cpp
+/// @copyright	2017- YAMAGUCHI Toshinobu 
 #include <boost/assert.hpp>
 
 #include "PlnFunction.h"
@@ -65,55 +72,3 @@ void PlnVarInit::gen(PlnGenerator& g)
 	}
 }
 
-// PlnValue
-PlnValue::PlnValue(int intValue)
-	: type(VL_LIT_INT8)
-{
-	inf.intValue = intValue;
-}
-
-PlnValue::PlnValue(PlnReadOnlyData* rod)
-	: type(VL_RO_DATA)
-{
-	inf.rod = rod;
-}
-
-PlnValue::PlnValue(PlnVariable* var)
-	: type(VL_VAR)
-{
-	inf.var = var;
-}
-
-PlnGenEntity* PlnValue::genEntity(PlnGenerator& g)
-{
-	switch (type) {
-		case VL_LIT_INT8:
-			return g.getInt(inf.intValue);
-		case VL_RO_DATA:
-			return inf.rod->genEntity(g);
-		case VL_VAR:
-			return inf.var->genEntity(g);
-	}
-	BOOST_ASSERT(false);
-}
-
-void PlnReadOnlyData::gen(PlnGenerator &g)
-{
-	switch (type) {
-		case RO_LIT_STR:
-			g.genStringData(index, name); 
-			break;
-		default:
-			BOOST_ASSERT(false);
-	}
-}
-
-PlnGenEntity* PlnReadOnlyData::genEntity(PlnGenerator &g)
-{
-	switch (type) {
-		case RO_LIT_STR:
-			return g.getStrAddress(index); 
-		default:
-			BOOST_ASSERT(false);
-	}
-}

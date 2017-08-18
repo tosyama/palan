@@ -1,7 +1,7 @@
 PROGRAM=pac
 SRCS=palan.cpp \
 	models/PlnModule.cpp models/PlnFunction.cpp models/PlnBlock.cpp \
-	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnValue.cpp \
+	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnVariable.cpp \
 	models/expressions/PlnMultiExpression.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \

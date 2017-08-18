@@ -23,6 +23,7 @@ class PlnFunction;
 class PlnBlock;
 class PlnStatement;
 	class PlnVarInit;
+	class PlnReturnStmt;
 class PlnExpression;
 	class PlnValue;
 class PlnType;
