@@ -79,13 +79,11 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			g.genCCall(function->name);
 			int i = 0;
 			for (auto rp: ret_places) {
-				PlnGenEntity* dst = rp.genEntity(g);
-				PlnGenEntity* src = values[i].genEntity(g);
+				auto dst = rp.genEntity(g);
+				auto src = values[i].genEntity(g);
 
-				g.genMove(dst, src, rp.commentStr());
+				g.genMove(dst.get(), src.get(), rp.commentStr());
 
-				PlnGenEntity::freeEntity(dst);
-				PlnGenEntity::freeEntity(src);
 				++i;
 			}
 			break;

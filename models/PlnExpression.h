@@ -55,7 +55,7 @@ public:
 	PlnValue(PlnReadOnlyData* rod);
 	PlnValue(PlnVariable* var);
 
-	PlnGenEntity* genEntity(PlnGenerator& g);
+	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 enum PlnRtnPlcType {
@@ -80,7 +80,7 @@ public:
 
 	string commentStr();
 	void dump(ostream& os, string indent="");
-	PlnGenEntity* genEntity(PlnGenerator& g);
+	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 // Read only data (String literal/Const)
@@ -94,7 +94,7 @@ public:
 	int index;
 	string name;
 	void gen(PlnGenerator& g);
-	PlnGenEntity* genEntity(PlnGenerator& g);
+	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 

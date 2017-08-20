@@ -1,6 +1,6 @@
-palan.o:  PlnParser.hpp PlnScopeStack.h stack.hh location.hh \
-	position.hh PlnLexer.h models/PlnModule.h models/PlnExpression.h \
-	models/../PlnModel.h PlnMessage.h generators/PlnX86_64Generator.h \
+palan.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h stack.hh \
+	location.hh position.hh PlnLexer.h models/PlnModule.h \
+	models/PlnExpression.h PlnMessage.h generators/PlnX86_64Generator.h \
 	generators/../PlnGenerator.h
 PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnFunction.h \
@@ -18,9 +18,9 @@ PlnStatement.o:  models/PlnFunction.h \
 	models/expressions/../PlnExpression.h models/../PlnGenerator.h
 PlnExpression.o:  models/PlnExpression.h \
 	models/../PlnModel.h models/PlnVariable.h models/../PlnGenerator.h
-PlnValue.o:  models/PlnFunction.h models/../PlnModel.h \
-	models/PlnBlock.h models/PlnExpression.h models/PlnType.h \
-	models/PlnVariable.h models/../PlnGenerator.h
+PlnVariable.o:  models/PlnFunction.h \
+	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
+	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h
 PlnMultiExpression.o:  \
 	models/expressions/PlnMultiExpression.h \
 	models/expressions/../PlnExpression.h \
@@ -52,6 +52,6 @@ PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/expressions/PlnAddOperation.h models/expressions/PlnAssignment.h \
 	PlnMessage.h PlnParser.hpp PlnScopeStack.h stack.hh location.hh \
 	position.hh
-PlnLexer.o:  PlnParser.hpp PlnScopeStack.h stack.hh \
-	location.hh position.hh PlnLexer.h
+PlnLexer.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
+	stack.hh location.hh position.hh PlnLexer.h
 PlnMessage.o:  PlnMessage.h

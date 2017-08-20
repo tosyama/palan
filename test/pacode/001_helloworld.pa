@@ -1,0 +1,6 @@
+syscall 1: int write();
+
+void main()
+{
+	write(1, "Hello World!\n", 13);
+}

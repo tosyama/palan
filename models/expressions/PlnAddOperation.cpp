@@ -118,15 +118,12 @@ void PlnAddOperation::gen(PlnGenerator& g)
 	l->gen(g);
 	r->gen(g);
 
-	PlnGenEntity* le = l->ret_places[0].genEntity(g);
-	PlnGenEntity* re = r->ret_places[0].genEntity(g);
-	PlnGenEntity* rpe = ret_places[0].genEntity(g);
-	if (is_add) g.genAdd(le, re);
-	else g.genSub(le, re);
-	g.genMove(rpe, le, ret_places[0].commentStr());
-
-	PlnGenEntity::freeEntity(le);
-	PlnGenEntity::freeEntity(re);
+	auto le = l->ret_places[0].genEntity(g);
+	auto re = r->ret_places[0].genEntity(g);
+	auto rpe = ret_places[0].genEntity(g);
+	if (is_add) g.genAdd(le.get(), re.get());
+	else g.genSub(le.get(), re.get());
+	g.genMove(rpe.get(), le.get(), ret_places[0].commentStr());
 }
 
 // PlnNegative
@@ -170,11 +167,9 @@ void PlnNegative::gen(PlnGenerator& g)
 {
 	e->gen(g);
 
-	PlnGenEntity* ne = e->ret_places[0].genEntity(g);
-	PlnGenEntity* rpe = ret_places[0].genEntity(g);
+	auto ne = e->ret_places[0].genEntity(g);
+	auto rpe = ret_places[0].genEntity(g);
 
-	g.genNegative(ne);
-	g.genMove(rpe, ne, ret_places[0].commentStr());
-
-	PlnGenEntity::freeEntity(ne);
+	g.genNegative(ne.get());
+	g.genMove(rpe.get(), ne.get(), ret_places[0].commentStr());
 }

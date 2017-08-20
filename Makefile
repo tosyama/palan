@@ -10,9 +10,12 @@ SRCS=palan.cpp \
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators
 
+TEST = test/tester
+
 .SUFFIXES: .cpp .o
 
-$(PROGRAM): $(OBJS)
+$(PROGRAM): $(OBJS)	$(TEST)
+	cd test && $(MAKE) test
 	$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
 .cpp.o:
 	@mkdir -p objs
@@ -34,4 +37,5 @@ package:
 	-apt-get -y install libboost-program-options-dev
 	-apt-get -y install bison
 	-apt-get -y install flex
+	-curl -o test/catch.hpp https://raw.githubusercontent.com/philsquared/Catch/master/single_include/catch.hpp
 

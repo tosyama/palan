@@ -3,9 +3,16 @@
 /// @file	PlnGenerator.h
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
+#include <memory>
+
 using std::vector;
 using std::string;
 using std::ostream;
+using std::unique_ptr;
+
+enum GenEttyType {
+	GE_STRING
+};
 
 class PlnGenEntity {
 public:
@@ -14,7 +21,14 @@ public:
 	union {
 		string* str;
 	}data;
-	static void freeEntity(PlnGenEntity* e);
+	~PlnGenEntity()
+	{
+		switch (type) {
+			case GE_STRING:
+				delete data.str;
+				break;
+		}
+	}
 };
 
 class PlnGenerator
@@ -34,17 +48,17 @@ public:
 	virtual void genReturn()=0;
 	virtual void genMainReturn()=0;
 	virtual void genStringData(int index, const string& str)=0;
-	virtual void genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment)=0;
+	virtual void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
 	virtual void genAdd(PlnGenEntity* dst, PlnGenEntity* src)=0;
 	virtual void genSub(PlnGenEntity* dst, PlnGenEntity* src)=0;
 	virtual void genNegative(PlnGenEntity* tgt)=0;
 
-	virtual PlnGenEntity* getNull() = 0;
-	virtual PlnGenEntity* getInt(int i)=0;
-	virtual PlnGenEntity* getStackAddress(int offset)=0;
-	virtual PlnGenEntity* getStrAddress(int index)=0;
-	virtual PlnGenEntity* getArgument(int i)=0;
-	virtual PlnGenEntity* getSysArgument(int i)=0;
-	virtual PlnGenEntity* getWork(int i)=0;
+	virtual unique_ptr<PlnGenEntity> getNull() = 0;
+	virtual unique_ptr<PlnGenEntity> getInt(int i)=0;
+	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset)=0;
+	virtual unique_ptr<PlnGenEntity> getStrAddress(int index)=0;
+	virtual unique_ptr<PlnGenEntity> getArgument(int i)=0;
+	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
+	virtual unique_ptr<PlnGenEntity> getWork(int i)=0;
 };
 

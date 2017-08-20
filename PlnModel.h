@@ -8,11 +8,13 @@
 #include <string>
 #include <iostream>
 #include <cstdint>
+#include <memory>
 
 using std::string;
 using std::vector;
 using std::ostream;
 using std::endl;
+using std::unique_ptr;
 
 // parser
 class PlnScopeItem;

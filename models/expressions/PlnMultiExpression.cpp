@@ -58,11 +58,9 @@ void PlnMultiExpression::gen(PlnGenerator& g)
 	int i=0;
 	for (auto exp: exps)
 		for (auto rp: exp->ret_places) {
-			PlnGenEntity* re = rp.genEntity(g);
-			PlnGenEntity* le = ret_places[i].genEntity(g);
-			g.genMove(le, re, ret_places[i].commentStr());
-			PlnGenEntity::freeEntity(re);
-			PlnGenEntity::freeEntity(le);
+			auto re = rp.genEntity(g);
+			auto le = ret_places[i].genEntity(g);
+			g.genMove(le.get(), re.get(), ret_places[i].commentStr());
 			i++;
 		}
 }

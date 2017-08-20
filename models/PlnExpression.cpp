@@ -45,7 +45,7 @@ void PlnReturnPlace::dump(ostream& os, string indent)
 	os << endl;
 }
 
-PlnGenEntity* PlnReturnPlace::genEntity(PlnGenerator& g)
+unique_ptr<PlnGenEntity> PlnReturnPlace::genEntity(PlnGenerator& g)
 {
 	switch (type) {
 		case RP_NULL: return g.getNull();
@@ -57,7 +57,6 @@ PlnGenEntity* PlnReturnPlace::genEntity(PlnGenerator& g)
 		default:
 			BOOST_ASSERT(false);
 	}
-	return NULL;
 }
 
 // PlnValue
@@ -79,7 +78,7 @@ PlnValue::PlnValue(PlnVariable* var)
 	inf.var = var;
 }
 
-PlnGenEntity* PlnValue::genEntity(PlnGenerator& g)
+unique_ptr<PlnGenEntity> PlnValue::genEntity(PlnGenerator& g)
 {
 	switch (type) {
 		case VL_LIT_INT8:
@@ -103,7 +102,7 @@ void PlnReadOnlyData::gen(PlnGenerator &g)
 	}
 }
 
-PlnGenEntity* PlnReadOnlyData::genEntity(PlnGenerator &g)
+unique_ptr<PlnGenEntity> PlnReadOnlyData::genEntity(PlnGenerator &g)
 {
 	switch (type) {
 		case RO_LIT_STR:
@@ -151,12 +150,10 @@ void PlnExpression::dump(ostream& os, string indent)
 void PlnExpression::gen(PlnGenerator& g)
 {
 	for (int i=0; i<ret_places.size(); ++i) {
-		PlnGenEntity* re = values[i].genEntity(g);
-		PlnGenEntity* le = ret_places[i].genEntity(g);
+		auto re = values[i].genEntity(g);
+		auto le = ret_places[i].genEntity(g);
 		
-		g.genMove(le, re, ret_places[i].commentStr());
-		PlnGenEntity::freeEntity(re);
-		PlnGenEntity::freeEntity(le);
+		g.genMove(le.get(), re.get(), ret_places[i].commentStr());
 	}
 }
 

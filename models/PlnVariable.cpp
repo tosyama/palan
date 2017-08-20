@@ -27,15 +27,14 @@ inline int getBasePos(PlnBlock *b)
 }
 
 //PlnVariable
-PlnGenEntity* PlnVariable::genEntity(PlnGenerator& g)
+unique_ptr<PlnGenEntity> PlnVariable::genEntity(PlnGenerator& g)
 {
 	if (alloc_type == VA_STACK)
 		return g.getStackAddress(inf.stack.pos_from_base);
 	else if (alloc_type == VA_RETVAL)
 		return g.getArgument(inf.index);
-
-	BOOST_ASSERT(false);
-	return NULL;
+	else 
+		BOOST_ASSERT(false);
 }
 
 // PlnVarInit

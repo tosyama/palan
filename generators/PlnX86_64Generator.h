@@ -20,17 +20,17 @@ public:
 	void genReturn();
 	void genMainReturn();
 	void genStringData(int index, const string& str);
-	void genMove(PlnGenEntity* dst, PlnGenEntity* src, string comment);
+	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
 	void genAdd(PlnGenEntity* dst, PlnGenEntity* src);
 	void genSub(PlnGenEntity* dst, PlnGenEntity* src);
 	void genNegative(PlnGenEntity* tgt);
 
-	PlnGenEntity* getNull();
-	PlnGenEntity* getInt(int i);
-	PlnGenEntity* getStackAddress(int offset);
-	PlnGenEntity* getStrAddress(int index);
-	PlnGenEntity* getArgument(int i);
-	PlnGenEntity* getSysArgument(int i);
-	PlnGenEntity* getWork(int i);
+	unique_ptr<PlnGenEntity> getNull();
+	unique_ptr<PlnGenEntity> getInt(int i);
+	unique_ptr<PlnGenEntity> getStackAddress(int offset);
+	unique_ptr<PlnGenEntity> getStrAddress(int index);
+	unique_ptr<PlnGenEntity> getArgument(int i);
+	unique_ptr<PlnGenEntity> getSysArgument(int i);
+	unique_ptr<PlnGenEntity> getWork(int i);
 };
 

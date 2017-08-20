@@ -26,7 +26,7 @@ PlnModule::PlnModule()
 	
 	PlnType* t = new PlnType();
 	t->type = TP_INT8;
-	t->name = "int";
+	t->name = "int64";
 	t->size = 8;
 	basic_types[t->name] = t;
 

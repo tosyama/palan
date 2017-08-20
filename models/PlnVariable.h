@@ -18,7 +18,7 @@ public:
 		} stack;
 		int index;
 	} inf;
-	PlnGenEntity* genEntity(PlnGenerator& g);
+	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 class PlnParameter : public PlnVariable {

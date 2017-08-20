@@ -117,11 +117,9 @@ void PlnFunction::gen(PlnGenerator &g)
 			if (i==0) i = 1;
 			
 			for (auto p: parameters) {
-				PlnGenEntity* arg = g.getArgument(i);
-				PlnGenEntity* prm = p->genEntity(g);
-				g.genMove(prm, arg, p->name);
-				PlnGenEntity::freeEntity(arg);
-				PlnGenEntity::freeEntity(prm);
+				auto arg = g.getArgument(i);
+				auto prm = p->genEntity(g);
+				g.genMove(prm.get(), arg.get(), p->name);
 				++i;
 			}
 			implement->gen(g);
