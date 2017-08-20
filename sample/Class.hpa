@@ -1,0 +1,18 @@
+// hash: dfadfasdfadfadsfadf
+// auto careated
+
+class foo {
+	data:
+		reserved: 2;
+		io int a;
+		out string s;
+		reserved: 1;
+	method:
+
+		/// foo constractor
+		///
+		/// @param aa aa value.
+		construct(int aa = 0);
+
+		virtual int ff();	
+}
