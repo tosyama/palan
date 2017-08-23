@@ -18,4 +18,6 @@ public:
 	PlnTypType	type;
 	string name;
 	int size;
+
+	static PlnType* getBasicType(const string& type_name);
 };

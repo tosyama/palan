@@ -2,6 +2,7 @@ PROGRAM=pac
 SRCS=palan.cpp \
 	models/PlnModule.cpp models/PlnFunction.cpp models/PlnBlock.cpp \
 	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnVariable.cpp \
+	models/PlnType.cpp models/PlnStack.cpp\
 	models/expressions/PlnMultiExpression.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
@@ -9,14 +10,14 @@ SRCS=palan.cpp \
 	generators/PlnX86_64Generator.cpp PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators
-
 TEST = test/tester
 
 .SUFFIXES: .cpp .o
 
 $(PROGRAM): $(OBJS)	$(TEST)
-	cd test && $(MAKE) test
-	$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
+	@cd test && $(MAKE) test
+	@echo link $(PROGRAM).
+	@$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
 .cpp.o:
 	@mkdir -p objs
 	$(CXX) -std=c++11 -c -g $< -o objs/$@
@@ -26,6 +27,8 @@ PlnParser.hpp: PlnParser.yy
 	bison -o PlnParser.cpp -r all --report-file=bison.log $<
 PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
+$(TEST): $(OBJS) test/*.cpp
+	@$(MAKE) -C test
 depend: $(SRCS)
 	-@ $(RM) depend.inc
 	-@ for i in $^; do $(CXX) -std=c++11 -MM $$i \
