@@ -13,9 +13,7 @@ public:
 	PlnType *var_type;
 	string name;
 	union {
-		struct {
-			int pos_from_base;
-		} stack;
+		PlnStackItem* stack_item;
 		int index;
 	} inf;
 	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);

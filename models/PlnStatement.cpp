@@ -9,16 +9,6 @@
 
 using std::endl;
 
-inline PlnFunction* getFunction(PlnBlock *b)
-{
-	BOOST_ASSERT(b);
-	while (b->parent_type == BP_BLOCK) {
-		b = b->parent.block;
-	}
-	BOOST_ASSERT(b->parent_type == BP_FUNC);
-	return b->parent.function;
-}
-
 // PlnStatement
 PlnStatement::PlnStatement(PlnExpression *exp, PlnBlock* parent)
 	: type(ST_EXPRSN), parent(parent)
@@ -101,7 +91,7 @@ PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
 {
 	type = ST_RETURN;
 	this->parent = parent;
-	function = getFunction(parent);
+	function = parent->parent_func;
 
 	if (retexp) {
 		inf.expression = retexp;

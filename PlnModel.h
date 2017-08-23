@@ -34,6 +34,9 @@ class PlnVariable;
 
 class PlnReadOnlyData;
 
+class PlnStack;
+class PlnStackItem;
+
 // generator
 class PlnGenerator;
 class PlnGenEntity;

@@ -7,11 +7,11 @@ PlnModule.o:  models/PlnModule.h \
 	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnStatement.h \
-	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h \
-	models/../PlnScopeStack.h
+	models/PlnType.h models/PlnVariable.h models/PlnStack.h \
+	models/../PlnGenerator.h
 PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
-	models/PlnVariable.h models/../PlnScopeStack.h
+	models/PlnVariable.h models/PlnStack.h
 PlnStatement.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnStatement.h \
 	models/PlnVariable.h models/expressions/PlnMultiExpression.h \
@@ -20,7 +20,8 @@ PlnExpression.o:  models/PlnExpression.h \
 	models/../PlnModel.h models/PlnVariable.h models/../PlnGenerator.h
 PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
-	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h
+	models/PlnType.h models/PlnVariable.h models/PlnStack.h \
+	models/../PlnGenerator.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h
 PlnStack.o:  models/PlnStack.h models/../PlnModel.h
 PlnMultiExpression.o:  \

@@ -13,8 +13,8 @@
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnStack.h"
 #include "../PlnGenerator.h"
-#include "../PlnScopeStack.h"
 
 using std::string;
 using std::endl;
@@ -23,7 +23,25 @@ PlnFunction::PlnFunction(PlnFncType func_type, const string &func_name)
 	: type(func_type), name(func_name), implement(NULL)
 {
 	if (func_type == FT_PLN) {
-		inf.pln.stack_size = 0;
+		inf.pln.stack = new PlnStack();
+	}
+}
+
+void PlnFunction::setParent(PlnModule* parent_mod)
+{
+	parent_type = FP_MODULE;
+	parent.module = parent_mod;
+}
+
+void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
+{
+	return_vals = move(vars);
+
+	for (auto rv: return_vals) {
+		rv->alloc_type = VA_STACK;
+		PlnStackItem* si = new PlnStackItem(rv->var_type->size);
+		rv->inf.stack_item = si;
+		inf.pln.stack->addItem(si);
 	}
 }
 
@@ -37,42 +55,23 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
 	param->var_type = ptype;
-	param->alloc_type = VA_UNKNOWN;
 	param->dflt_value = defaultVal;
+
+	param->alloc_type = VA_STACK;
+	PlnStackItem* si = new PlnStackItem(ptype->size);
+	param->inf.stack_item = si;
+	inf.pln.stack->addItem(si);
 	
 	parameters.push_back(param);
 
 	return	param;
 }
 
-void PlnFunction::setParent(PlnScopeItem& scope)
-{
-	switch (scope.type) {
-		case SC_MODULE:
-			parent_type = FP_MODULE;
-			parent.module = scope.inf.module;
-			break;
-		default:
-			BOOST_ASSERT(false);
-	}
-}
 
 void PlnFunction::finish()
 {
 	if (type == FT_PLN || type == FT_INLINE) {
-		for (auto rv: return_vals)
-			if (rv->alloc_type == VA_UNKNOWN) {
-				inf.pln.stack_size += rv->var_type->size;
-				rv->alloc_type = VA_STACK;
-				rv->inf.stack.pos_from_base = inf.pln.stack_size;
-			}
-			
-		for (auto p: parameters) 
-			if (p->alloc_type == VA_UNKNOWN) {
-				inf.pln.stack_size += p->var_type->size;
-				p->alloc_type = VA_STACK;
-				p->inf.stack.pos_from_base = inf.pln.stack_size;
-			}
+		inf.pln.stack->allocItems1();	
 
 		if (implement) {
 			if (implement->statements.back()->type != ST_RETURN) {
@@ -81,8 +80,6 @@ void PlnFunction::finish()
 			}
 
 			implement->finish();
-
-			inf.pln.stack_size += implement->totalStackSize();
 		}
 	}
 }
@@ -96,7 +93,7 @@ void PlnFunction::dump(ostream& os, string indent)
 	switch (type) {
 		case FT_PLN: 
 			if (implement) {
-				os << indent << " Stack size: " << inf.pln.stack_size << endl;
+				os << indent << " Stack size: " << inf.pln.stack->total_size << endl;
 				implement->dump(os, indent+" ");
 			} else os << indent << " No Implementation" << endl;
 		break;
@@ -111,7 +108,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genEntryPoint(name);
 			g.genLabel(name);
 			g.genEntryFunc();		
-			g.genLocalVarArea(inf.pln.stack_size);		
+			g.genLocalVarArea(inf.pln.stack->total_size);		
 			
 			int i=return_vals.size();
 			if (i==0) i = 1;

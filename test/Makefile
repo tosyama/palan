@@ -14,3 +14,6 @@ $(PROGRAM): $(TESTOBJS) $(OBJS)
 test:
 	./$(PROGRAM)
 
+force:
+	@$(CXX) -o fpac ../objs/palan.o $(OBJS) -lboost_program_options
+

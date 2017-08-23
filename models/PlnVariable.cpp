@@ -12,26 +12,15 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnStack.h"
 #include "../PlnGenerator.h"
-
-inline int getBasePos(PlnBlock *b)
-{
-	BOOST_ASSERT(b);
-	int pos = b->cur_stack_size;
-	while (b->parent_type == BP_BLOCK) {
-		b = b->parent.block;
-		pos += b->cur_stack_size;
-	}
-	BOOST_ASSERT(b->parent_type == BP_FUNC);
-	return b->parent.function->inf.pln.stack_size + pos;
-}
 
 //PlnVariable
 unique_ptr<PlnGenEntity> PlnVariable::genEntity(PlnGenerator& g)
 {
-	if (alloc_type == VA_STACK)
-		return g.getStackAddress(inf.stack.pos_from_base);
-	else if (alloc_type == VA_RETVAL)
+	if (alloc_type == VA_STACK) {
+		return g.getStackAddress(inf.stack_item->pos_from_base);
+	} else if (alloc_type == VA_RETVAL)
 		return g.getArgument(inf.index);
 	else 
 		BOOST_ASSERT(false);
@@ -45,13 +34,6 @@ PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, PlnExpression* initializer)
 
 void PlnVarInit::finish()
 {
-	for (auto v: vars)
-		if (v->alloc_type == VA_UNKNOWN) {
-			v->alloc_type = VA_STACK;
-			parent->cur_stack_size += v->var_type->size;
-			v->inf.stack.pos_from_base = getBasePos(parent);
-		}
-
 	if (initializer) {
 		PlnReturnPlace rp;
 		rp.type = RP_VAR;

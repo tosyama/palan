@@ -29,7 +29,7 @@ public:
 			int id;
 		} syscall;
 		struct {
-			int stack_size;
+			PlnStack*	stack;
 		} pln;
 	} inf;
 	PlnBlock* implement;
@@ -39,8 +39,10 @@ public:
 	} parent;
 
 	PlnFunction(PlnFncType func_type, const string& func_name);
+	void setParent(PlnModule* parent_mod);
+	void setRetValues(vector<PlnVariable*>& vars);
 	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
-	void setParent(PlnScopeItem& scope);
+
 	void finish();
 
 	void dump(ostream& os, string indent="");
