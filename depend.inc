@@ -21,6 +21,8 @@ PlnExpression.o:  models/PlnExpression.h \
 PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
 	models/PlnType.h models/PlnVariable.h models/../PlnGenerator.h
+PlnType.o:  models/PlnType.h models/../PlnModel.h
+PlnStack.o:  models/PlnStack.h models/../PlnModel.h
 PlnMultiExpression.o:  \
 	models/expressions/PlnMultiExpression.h \
 	models/expressions/../PlnExpression.h \
