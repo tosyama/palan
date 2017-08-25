@@ -15,13 +15,13 @@ static unordered_map<string, PlnType*> basic_types;
 static void initBasicTypes()
 {
 	PlnType* t = new PlnType();
-	t->type = TP_INT8;
+	t->type = TP_INT;
 	t->name = "int64";
 	t->size = 8;
 	basic_types[t->name] = t;
 
 	t = new PlnType();
-	t->type = TP_INT8;
+	t->type = TP_UINT;
 	t->name = "byte";
 	t->size = 1;
 	basic_types[t->name] = t;

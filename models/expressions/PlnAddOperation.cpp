@@ -88,19 +88,21 @@ void PlnAddOperation::finish()
 {
 	BOOST_ASSERT(ret_places.size()==1);
 	int index = 0;
+	int size = 8;
 	if (ret_places[0].type == RP_WORK) {
-		index = ret_places[0].inf.index;
+		index = ret_places[0].inf.wk.index;
 	}
 	PlnReturnPlace rp;
 	rp.type = RP_WORK;
-	rp.inf.index = index;
+	rp.inf.wk.index = index;
 	l->ret_places.push_back(rp);
 	l->finish();
 
 	if (r->type == ET_VALUE)
 		rp.type = RP_AS_IS;
-	else
-		rp.inf.index = index+1;
+	else {
+		rp.inf.wk.index = index+1;
+	}
 	r->ret_places.push_back(rp);
 	r->finish();
 }
@@ -148,11 +150,11 @@ void PlnNegative::finish()
 {
 	int index = 0;
 	if (ret_places[0].type == RP_WORK) {
-		index = ret_places[0].inf.index;
+		index = ret_places[0].inf.wk.index;
 	}
 	PlnReturnPlace rp;
 	rp.type = RP_WORK;
-	rp.inf.index = index;
+	rp.inf.wk.index = index;
 	e->ret_places.push_back(rp);
 	e->finish();
 }

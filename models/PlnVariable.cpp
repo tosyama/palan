@@ -19,9 +19,9 @@
 unique_ptr<PlnGenEntity> PlnVariable::genEntity(PlnGenerator& g)
 {
 	if (alloc_type == VA_STACK) {
-		return g.getStackAddress(inf.stack_item->pos_from_base);
+		return g.getStackAddress(inf.stack_item->pos_from_base, var_type->size);
 	} else if (alloc_type == VA_RETVAL)
-		return g.getArgument(inf.index);
+		return g.getArgument(inf.index, var_type->size);
 	else 
 		BOOST_ASSERT(false);
 }

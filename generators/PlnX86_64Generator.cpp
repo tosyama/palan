@@ -13,7 +13,6 @@
 #include "../PlnModel.h"
 #include "PlnX86_64Generator.h"
 
-using std::endl;
 using std::ostringstream;
 using boost::format;
 using boost::algorithm::replace_all_copy;
@@ -65,8 +64,20 @@ void PlnX86_64Generator::genEntryFunc()
 
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
-	if (size)
+	if (size) {
+		if (size % 16)
+			size = 16 * (size / 16 + 1);
 		os << format("	subq $%1%, %%rsp") % size << endl;
+	}
+}
+
+void PlnX86_64Generator::genFreeLocalVarArea(int size)
+{
+	if (size) {
+		if (size % 16)
+			size = 16 * (size / 16 + 1);
+		os << format("	addq $%1%, %%rsp") % size << endl;
+	}
 }
 
 void PlnX86_64Generator::genCCall(string& cfuncname)
@@ -92,7 +103,6 @@ void PlnX86_64Generator::genMainReturn()
 {
 	os << "	movq %rbp, %rsp" << endl;
 	os << "	popq %rbp" << endl;
-	os << "	movq %rax, %rdi" << endl;
 	os << "	movq $60, %rax" << endl;
 	os << "	syscall"<< endl;
 }
@@ -104,8 +114,41 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 	os << format("	.string \"%1%\"") % ostr << endl;
 }
 
+static string resizeReg(string* reg, int size)
+{
+	if (*reg == "%rax") 
+		switch(size) {
+			case 1: return "%al";
+			case 2: return "%ax";
+			case 4: return "%eax";
+		}
+	BOOST_ASSERT(false);
+}
+
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
+	string dst_safix = "q";
+	string src_safix = "";
+
+	if (dst->alloc_type == GA_MEM) {
+		switch (dst->size) {
+			case 1: dst_safix = "b"; break;
+			case 2: dst_safix = "w"; break;
+			case 4: dst_safix = "l"; break;
+		}
+		if (src->alloc_type == GA_REG && dst->size<=4)
+			*src->data.str = resizeReg(src->data.str, dst->size);
+	}
+
+	if (src->alloc_type == GA_MEM) {
+		if (dst->size > src->size)
+			switch (src->size) {
+				case 1: src_safix = "zb"; break;
+				case 2: src_safix = "zw"; break;
+				case 4: src_safix = "zl"; break;
+			}
+	}
+
 	if (dst->alloc_type == src->alloc_type) {
 		if(*dst->data.str == *src->data.str) return;	// do nothing
 	}
@@ -113,10 +156,10 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	if (dst->alloc_type == GA_NULL) return;
 
 	if (dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM) {
-		os << format("	movq %1%, %2%") % *src->data.str % *dst->data.str;
+		os << "	mov" << src_safix << dst_safix << " " << *src->data.str << ", " << *dst->data.str;
 	} else {
-		os << format("	movq %1%, %%rax") % *src->data.str << endl;
-		os << format("	movq %%rax, %1%") % *dst->data.str;
+		os << "	mov" << src_safix << dst_safix << " " << *src->data.str << ", %rax" << endl;
+		os << "	mov" << dst_safix << " %rax, " <<  *dst->data.str;
 	}
 	if (comment != "") os << "	# " << comment;
 	os << endl;
@@ -129,7 +172,21 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* dst, PlnGenEntity* src)
 		os << "	incq " << *dst->data.str << endl;
 		return;
 	}
-	os << format("	addq %1%, %2%") % *src->data.str % *dst->data.str << endl;
+
+
+	// TODO: templary imprement. need to refacter.
+	PlnGenEntity work;
+	if (src->alloc_type == GA_MEM) {
+		if (src->size < 8) {
+			work.type = GA_REG;
+			work.size = 8;
+			work.data.str = new string("%r11");
+			genMove(&work, src, "");
+			src = &work;
+		}
+	}
+		
+	os << "	addq " << *src->data.str << ", " << *dst->data.str << endl;
 }
 
 void PlnX86_64Generator::genSub(PlnGenEntity* dst, PlnGenEntity* src)
@@ -138,6 +195,17 @@ void PlnX86_64Generator::genSub(PlnGenEntity* dst, PlnGenEntity* src)
 	if (src->alloc_type == GA_CODE && *src->data.str == "$1") {
 		os << "	decq " << *dst->data.str << endl;
 		return;
+	}
+	// TODO: templary imprement. need to refacter.
+	PlnGenEntity work;
+	if (src->alloc_type == GA_MEM) {
+		if (src->size < 8) {
+			work.type = GA_REG;
+			work.size = 8;
+			work.data.str = new string("%r11");
+			genMove(&work, src, "");
+			src = &work;
+		}
 	}
 	os << format("	subq %1%, %2%") % *src->data.str % *dst->data.str << endl;
 }
@@ -167,11 +235,12 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getInt(int i)
 	return e;
 }
 
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getStackAddress(int offset)
+unique_ptr<PlnGenEntity> PlnX86_64Generator::getStackAddress(int offset, int size)
 {
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	e->type = GE_STRING;
 	e->alloc_type = GA_MEM;
+	e->size = size;
 	e->data.str = new string((format("-%1%(%%rbp)") % offset).str());
 
 	return e;
@@ -187,12 +256,13 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getStrAddress(int index)
 	return e;
 }
 
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getArgument(int i)
+unique_ptr<PlnGenEntity> PlnX86_64Generator::getArgument(int i, int size)
 {
 	BOOST_ASSERT(i>=0 && i <= 6);
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	e->type = GE_STRING;
 	e->alloc_type = GA_REG;
+	e->size = size;
 	switch (i) {
 		case 0: e->data.str = new string("%rax");	break;
 		case 1: e->data.str = new string("%rdi");	break;
@@ -211,6 +281,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getSysArgument(int i)
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	e->type = GE_STRING;
 	e->alloc_type = GA_REG;
+	e->size = 8;
 	switch (i) {
 		case 0: e->data.str = new string("%rax");	break;
 		case 1: e->data.str = new string("%rdi");	break;
@@ -229,6 +300,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getWork(int i)
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	e->type = GE_STRING;
 	e->alloc_type = GA_REG;
+	e->size = 8;
 	switch (i) {
 		case 0: e->data.str = new string("%rax");	break;
 		case 1: e->data.str = new string("%rdi");	break;

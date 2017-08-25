@@ -15,6 +15,7 @@ public:
 	void genLabel(const string& label);
 	void genEntryFunc();
 	void genLocalVarArea(int size);
+	void genFreeLocalVarArea(int size);
 	void genCCall(string& cfuncname);
 	void genSysCall(int id, const string& comment);
 	void genReturn();
@@ -27,9 +28,9 @@ public:
 
 	unique_ptr<PlnGenEntity> getNull();
 	unique_ptr<PlnGenEntity> getInt(int i);
-	unique_ptr<PlnGenEntity> getStackAddress(int offset);
+	unique_ptr<PlnGenEntity> getStackAddress(int offset, int size);
 	unique_ptr<PlnGenEntity> getStrAddress(int index);
-	unique_ptr<PlnGenEntity> getArgument(int i);
+	unique_ptr<PlnGenEntity> getArgument(int i, int size);
 	unique_ptr<PlnGenEntity> getSysArgument(int i);
 	unique_ptr<PlnGenEntity> getWork(int i);
 };

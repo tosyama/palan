@@ -71,6 +71,7 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 void PlnFunction::finish()
 {
 	if (type == FT_PLN || type == FT_INLINE) {
+		inf.pln.stack->normalize();
 		inf.pln.stack->allocItems1();	
 
 		if (implement) {
@@ -114,7 +115,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			if (i==0) i = 1;
 			
 			for (auto p: parameters) {
-				auto arg = g.getArgument(i);
+				auto arg = g.getArgument(i, p->var_type->size);
 				auto prm = p->genEntity(g);
 				g.genMove(prm.get(), arg.get(), p->name);
 				++i;

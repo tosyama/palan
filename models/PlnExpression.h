@@ -73,9 +73,15 @@ class PlnReturnPlace
 public:
 	PlnRtnPlcType type;
 	union {
-		int index;
+		struct {
+			int32_t index;
+			int32_t size;
+		} arg;
 		PlnVariable* var;
 		PlnValue* as_is;
+		struct {
+			int index;
+		} wk;
 	}	inf;
 
 	string commentStr();

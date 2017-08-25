@@ -14,6 +14,7 @@
 #include "../PlnFunction.h"
 #include "PlnFunctionCall.h"
 #include "../PlnVariable.h"
+#include "../PlnType.h"
 #include "../../PlnGenerator.h"
 
 using std::endl;
@@ -31,6 +32,7 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		ret_var->name = rv->name;
 		ret_var->alloc_type = VA_RETVAL;
 		ret_var->inf.index = i;
+		ret_var->var_type = rv->var_type;
 
 		values.push_back(PlnValue(ret_var));
 
@@ -49,13 +51,18 @@ void PlnFunctionCall::finish()
 			BOOST_ASSERT(false);
 	}
 
-	int i = function->return_vals.size();
-	if (i==0) i=1;
+	int ai = function->return_vals.size();
+	if (ai==0) ai=1;
+	int i = 0;
 	for (auto a: arguments) {
-		rp.inf.index = i;
+		rp.inf.arg.index = ai;
+		if (i < function->parameters.size())
+			rp.inf.arg.size = function->parameters[i]->var_type->size;
+		else
+			rp.inf.arg.size = 8;	// TODO: get system default
 		a->ret_places.push_back(rp);
 		a->finish();
-		++i;
+		++ai; ++i;
 	}
 }
 

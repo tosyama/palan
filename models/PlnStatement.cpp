@@ -4,7 +4,9 @@
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnVariable.h"
+#include "PlnType.h"
 #include "expressions/PlnMultiExpression.h"
+#include "PlnStack.h"
 #include "../PlnGenerator.h"
 
 using std::endl;
@@ -114,10 +116,26 @@ void PlnReturnStmt::finish()
 {
 	if (inf.expression) {
 		int i=0;
+		if (function->name == "main") {
+			BOOST_ASSERT(function->return_vals.size()<=1);
+			PlnReturnPlace rp;
+			rp.type = RP_ARGPLN;
+			rp.inf.arg.index = 1;
+			inf.expression->ret_places.push_back(rp);
+			rp.inf.arg.size = 8;	// TODO: get default.
+			inf.expression->finish();
+			return;
+		}
+
 		for (auto v: inf.expression->values) {
 			PlnReturnPlace rp;
 			rp.type = RP_ARGPLN;
-			rp.inf.index = i;
+			rp.inf.arg.index = i;
+			if (i < function->return_vals.size()) 
+				rp.inf.arg.size = function->return_vals[i]->var_type->size;
+			else
+				rp.inf.arg.size = 8;	// TODO: get default.
+				
 			inf.expression->ret_places.push_back(rp);
 			++i;
 		}
@@ -137,6 +155,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	if (inf.expression)
 		inf.expression->gen(g);
 
+	g.genFreeLocalVarArea(function->inf.pln.stack->total_size);
 	if (function->name == "main") 
 		g.genMainReturn();	
 	else

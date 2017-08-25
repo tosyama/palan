@@ -18,6 +18,7 @@ class PlnGenEntity {
 public:
 	int type;
 	int alloc_type;
+	int size;
 	union {
 		string* str;
 	}data;
@@ -43,6 +44,7 @@ public:
 	virtual void genLabel(const string& label)=0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
+	virtual void genFreeLocalVarArea(int size)=0;
 	virtual void genCCall(string& cfuncname)=0;
 	virtual void genSysCall(int id, const string& comment)=0;
 	virtual void genReturn()=0;
@@ -55,9 +57,9 @@ public:
 
 	virtual unique_ptr<PlnGenEntity> getNull() = 0;
 	virtual unique_ptr<PlnGenEntity> getInt(int i)=0;
-	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset)=0;
+	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset, int size)=0;
 	virtual unique_ptr<PlnGenEntity> getStrAddress(int index)=0;
-	virtual unique_ptr<PlnGenEntity> getArgument(int i)=0;
+	virtual unique_ptr<PlnGenEntity> getArgument(int i, int size)=0;
 	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
 	virtual unique_ptr<PlnGenEntity> getWork(int i)=0;
 };

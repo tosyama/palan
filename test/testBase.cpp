@@ -38,20 +38,21 @@ string build(string srcf)
 	PlnParser parser(lexer, module, scopes);
 	int ret = parser.parse();
 	if (ret) return "parse err:"+srcf;
-	
+
+	// compile
 	module.finish();
+	string asmf = "out/" + srcf + ".s";
+	ofstream as_output;
+	as_output.open(asmf, ios::out);
+
+	PlnX86_64Generator generator(as_output);
+	module.gen(generator);
+
+	as_output.close();
 
 	// assemble
-	string cmd = "as -o tmp.o";
-
-	FILE* as = popen(cmd.c_str(), "w");
-	popen_filebuf p_buf(as);
-	ostream as_input(&p_buf);
-
-	PlnX86_64Generator generator(as_input);
-	module.gen(generator);
-					
-	ret = pclose(as);
+	string cmd = "as -o tmp.o " + asmf;
+	ret = system(cmd.c_str());
 	if (ret) return "assemble err:"+srcf;
 
 	// link

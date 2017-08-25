@@ -12,6 +12,7 @@ $(PROGRAM): $(TESTOBJS) $(OBJS)
 	$(CXX) -std=c++11 -c -g $<
 
 test:
+	@mkdir -p out
 	./$(PROGRAM)
 
 force:

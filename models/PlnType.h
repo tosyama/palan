@@ -7,8 +7,8 @@
 
 // PlnType
 enum PlnTypType {
-	TP_INT8,
-	TP_UINT8,
+	TP_INT,
+	TP_UINT,
 	TP_OBJ,
 	TP_IMP,
 };
