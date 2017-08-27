@@ -5,8 +5,11 @@
 
 #include "../PlnGenerator.h"
 
+class RegisterManager;
 class PlnX86_64Generator : public PlnGenerator
 {
+	RegisterManager* regm;
+
 public:
 	PlnX86_64Generator(ostream& ostrm);
 	void genSecReadOnlyData();

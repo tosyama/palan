@@ -11,7 +11,8 @@ using std::ostream;
 using std::unique_ptr;
 
 enum GenEttyType {
-	GE_STRING
+	GE_STRING,
+	GE_INT
 };
 
 class PlnGenEntity {
@@ -21,6 +22,7 @@ public:
 	int size;
 	union {
 		string* str;
+		int i;
 	}data;
 	~PlnGenEntity()
 	{
