@@ -116,21 +116,16 @@ void PlnReturnStmt::finish()
 {
 	if (inf.expression) {
 		int i=0;
+		int diff=0;
 		if (function->name == "main") {
 			BOOST_ASSERT(function->return_vals.size()<=1);
-			PlnReturnPlace rp;
-			rp.type = RP_ARGPLN;
-			rp.inf.arg.index = 1;
-			inf.expression->ret_places.push_back(rp);
-			rp.inf.arg.size = 8;	// TODO: get default.
-			inf.expression->finish();
-			return;
+			diff = 1;
 		}
 
 		for (auto v: inf.expression->values) {
 			PlnReturnPlace rp;
 			rp.type = RP_ARGPLN;
-			rp.inf.arg.index = i;
+			rp.inf.arg.index = i+diff;
 			if (i < function->return_vals.size()) 
 				rp.inf.arg.size = function->return_vals[i]->var_type->size;
 			else

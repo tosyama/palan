@@ -51,17 +51,7 @@ void PlnMultiExpression::dump(ostream& os, string indent)
 
 void PlnMultiExpression::gen(PlnGenerator& g)
 {
-	for (auto e: exps) {
+	for (auto e: exps)
 		e->gen(g);
-	}
-
-	int i=0;
-	for (auto exp: exps)
-		for (auto rp: exp->ret_places) {
-			auto re = rp.genEntity(g);
-			auto le = ret_places[i].genEntity(g);
-			g.genMove(le.get(), re.get(), ret_places[i].commentStr());
-			i++;
-		}
 }
 

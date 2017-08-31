@@ -182,17 +182,6 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 	os << format("	.string \"%1%\"") % ostr << endl;
 }
 
-static string resizeReg(string* reg, int size)
-{
-	if (*reg == "%rax") 
-		switch(size) {
-			case 1: return "%al";
-			case 2: return "%ax";
-			case 4: return "%eax";
-		}
-	BOOST_ASSERT(false);
-}
-
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
 	string dst_safix = "q";

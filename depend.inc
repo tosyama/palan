@@ -14,8 +14,10 @@ PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnStack.h
 PlnStatement.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnStatement.h \
-	models/PlnVariable.h models/expressions/PlnMultiExpression.h \
-	models/expressions/../PlnExpression.h models/../PlnGenerator.h
+	models/PlnVariable.h models/PlnType.h \
+	models/expressions/PlnMultiExpression.h \
+	models/expressions/../PlnExpression.h models/PlnStack.h \
+	models/../PlnGenerator.h
 PlnExpression.o:  models/PlnExpression.h \
 	models/../PlnModel.h models/PlnVariable.h models/../PlnGenerator.h
 PlnVariable.o:  models/PlnFunction.h \
@@ -33,7 +35,7 @@ PlnFunctionCall.o:  \
 	models/expressions/../../PlnModel.h models/expressions/../PlnFunction.h \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
-	models/expressions/../PlnVariable.h \
+	models/expressions/../PlnVariable.h models/expressions/../PlnType.h \
 	models/expressions/../../PlnGenerator.h
 PlnAddOperation.o:  \
 	models/expressions/PlnAddOperation.h \
@@ -47,6 +49,8 @@ PlnAssignment.o:  \
 PlnX86_64Generator.o:  \
 	generators/../PlnModel.h generators/PlnX86_64Generator.h \
 	generators/../PlnGenerator.h
+PlnX86_64DataAllocator.o:  \
+	generators/PlnX86_64DataAllocator.h generators/../PlnDataAllocator.h
 PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
 	models/PlnStatement.h models/PlnType.h models/PlnVariable.h \

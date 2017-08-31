@@ -11,5 +11,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "003_varbyte";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "19 32 7 255 267");
+
+	testcode = "004_regalloc";
+	REQUIRE(build(testcode) == "success");
+	// REQUIRE(exec(testcode) == "56");
 }
 

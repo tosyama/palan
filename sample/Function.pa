@@ -1,13 +1,30 @@
 import <stdio>
 
+alias int=int32;
+
 int main(string argc[])
 {
 	int x, y;
 
-	(x,y) = pointadd(1,2,3,4);
+	x,y = pointadd(1,2,3,4);
 	print(x.str ":" y.str);
-	(x,y) = swap(x,y);
+	x,y = swap(x,y);
 	print(x.str ":" y.str);
+
+	object o1,o2,o3;
+on_null nh:  o2;	// もしnullのときにアクセスするとnhにとばされる
+
+	o1 = func(o1,o2.clone,<-o3); // 所有を渡したので、o3はnull.
+	o2 = <-o1; // 所有権を渡したので、o1はnull.
+	auto &o4 = o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
+
+off_null o2;
+
+	x = func2(x, y);
+
+	return 0;
+nh:
+	print("null");
 	return 0;
 }
 
@@ -17,24 +34,31 @@ int main(string argc[])
 //	parameterのオブジェクト型(string等)は参照渡しのみ。
 
 // multi return
-int x=0, y=0 pointadd(int sx, int sy int ax, int ay) {
+int x, int y pointadd(int sx, int sy int ax, int ay) {
 	x = sx + ax;
 	y = sy + ay;
-	
 	return;
 }
 
 // simple swap
-int, int swap(int sx, int sy) {
+int x, int y swap(int sx, int sy) {
 	return sy, sx;
 }
 
 // object
-object func(object o1, io object o2, take object o2)
+object o2 func(object o1, o2 <-, object o3 <-)
 {
 	// o1 は lval or rval. rval はdelete. read only.
 	// o2はlval. deleteされない. read/write rvalはNG.
-	// o3はrval. deleteされる. read/write lval.clone or lval.pass ならok.
+	// o3はrval. deleteされる. read/write lval.clone or <-lval ならok.
 	
-	return o2;	// returnはrval
+	return ;	// returnはo2がrval
 }
+
+// 戻り値とパラメータは重複して同じ名前を使うことができる。
+// 入出力の意図の記述とレジスタの共有ができる。
+int a func2( a <-, int b)
+{
+	a += b;
+}
+
