@@ -50,4 +50,5 @@ public:
 	virtual PlnDataPlace* popArgDp(int index)=0;
 	virtual void pushSysArgDp(int index, PlnDataPlace* place) = 0;
 	virtual PlnDataPlace* popSysArgDp(int index)=0;
+	virtual void funcCalled() = 0;	// TODO: pass assured data save resigsters info from default.
 };

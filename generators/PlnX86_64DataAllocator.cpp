@@ -21,8 +21,6 @@ void PlnX86_64DataAllocator::reset()
 	tmp_stack.resize(0);
 	arg_stack.resize(0);
 	alldp.resize(0);
-
-	max_tmp_stack = 0;
 }
 
 void PlnX86_64DataAllocator::pushReg(int reg, PlnDataPlace* dp)
@@ -43,8 +41,10 @@ void PlnX86_64DataAllocator::pushReg(int reg, PlnDataPlace* dp)
 		assignAnother(sav_dp);
 	}
 
-	if (pre_reg)
-		assignAnother(pre_reg);
+	if (pre_reg) {
+		if (pre_reg->type == DP_REG && pre_reg->index==reg)
+			assignAnother(pre_reg);
+	}
 }
 
 
@@ -62,7 +62,8 @@ void PlnX86_64DataAllocator::pushArgStack(int index, PlnDataPlace* dp)
 	arg_stack[index].push_back(dp);
 
 	if (pre_arg)
-		assignAnother(pre_arg);
+		if (pre_arg->type==DP_ARG_STK && pre_arg->index == index)
+			assignAnother(pre_arg);
 }
 
 void PlnX86_64DataAllocator::assignAnother(PlnDataPlace* dp)
@@ -75,11 +76,15 @@ void PlnX86_64DataAllocator::assignAnother(PlnDataPlace* dp)
 			save_regs[r] = dp;
 			return ;
 		}
-	
-	tmp_stack.push_back(dp);
-	if (max_tmp_stack < tmp_stack.size()) max_tmp_stack = tmp_stack.size(); 
+
+	int i;
+	for(i=0; i<tmp_stack.size(); ++i)
+		if (!tmp_stack[i]) break;
+	if (i==tmp_stack.size()) tmp_stack.push_back(dp);
+	else tmp_stack[i] = dp;
+
 	dp->type = DP_TEMP_STK;
-	dp->index = tmp_stack.size();
+	dp->index = i;
 }
 
 void PlnX86_64DataAllocator::pushArgDp(int index, PlnDataPlace* dp)
@@ -106,6 +111,7 @@ PlnDataPlace* PlnX86_64DataAllocator::popArgDp(int index)
 		dp = arg_stack[idx].back();
 		arg_stack[idx].pop_back();
 	}
+
 	return dp;
 }
 
@@ -131,4 +137,38 @@ PlnDataPlace* PlnX86_64DataAllocator::popSysArgDp(int index)
 	place_regs[idx].pop_back();
 
 	return dp;
+}
+
+void PlnX86_64DataAllocator::funcCalled()
+{
+	static const int destoroy_regs[] = {RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11};
+	// save data that would be destoroyed to memory.
+	for (auto reg: destoroy_regs) {
+		auto& regs = place_regs[reg];
+		if (regs.size() > 0) {
+			PlnDataPlace* dp = regs.back();
+			if (dp->type == DP_REG && dp->index == reg) {
+				int i;
+				for(i=0; i<tmp_stack.size(); ++i)
+					if (!tmp_stack[i]) break;
+				if (i==tmp_stack.size()) tmp_stack.push_back(dp);
+				else tmp_stack[i] = dp;
+
+				dp->type = DP_TEMP_STK;
+				dp->index = i;
+			}
+		}
+		if (save_regs[reg] != NULL) {
+			PlnDataPlace* dp = save_regs[reg];
+			save_regs[reg] = NULL;
+			int i;
+			for(i=0; i<tmp_stack.size(); ++i)
+				if (!tmp_stack[i]) break;
+			if (i==tmp_stack.size()) tmp_stack.push_back(dp);
+			else tmp_stack[i] = dp;
+
+			dp->type = DP_TEMP_STK;
+			dp->index = i;
+		}
+	}
 }

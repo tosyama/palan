@@ -16,6 +16,7 @@ public:
 	int align_space;
 
 	vector<PlnStackItem*> items;
+	int args_size;
 	PlnStack*	parent;
 	PlnStack*	block_stack;
 	PlnStack*	after_stack;
@@ -24,6 +25,7 @@ public:
 	~PlnStack();
 
 	void addItem(PlnStackItem* item);
+	void reserveArgs(int size);
 	void intoBlock();
 	bool outofBlock();
 

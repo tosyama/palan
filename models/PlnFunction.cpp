@@ -1,7 +1,7 @@
 /// Function model class definition.
 ///
 /// Function model mainly manage return values
-/// and paramater difinition.
+/// and paramater definition.
 /// e.g.) int ret1, int ret2 funcname(int arg1, int arg2) { ... }
 ///
 /// @file	PlnFunction.cpp

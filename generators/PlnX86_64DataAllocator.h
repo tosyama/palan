@@ -22,8 +22,6 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 	PlnDataPlace* save_regs[16];
 	vector<PlnDataPlace*> tmp_stack;
 	vector<vector<PlnDataPlace*>> arg_stack;
-	int max_tmp_stack;
-
 	vector<PlnDataPlace*> alldp;
 
 	void pushReg(int reg, PlnDataPlace* dp);
@@ -47,5 +45,7 @@ public:
 
 	void pushSysArgDp(int index, PlnDataPlace* place);
 	PlnDataPlace* popSysArgDp(int index);
+
+	void funcCalled();
 };
 

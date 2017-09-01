@@ -40,7 +40,7 @@ TEST_CASE("Register allocation basic test.(Normal call)", "[allocate]")
 	dp = allocator.popArgDp(7);
 	REQUIRE(dp == &dp8);
 	REQUIRE(dp->type == DP_TEMP_STK);
-	REQUIRE(dp->index == 1);
+	REQUIRE(dp->index == 0);
 	REQUIRE(dp->place_index == 0);
 	
 	dp = allocator.popArgDp(7);
@@ -51,7 +51,7 @@ TEST_CASE("Register allocation basic test.(Normal call)", "[allocate]")
 	dp = allocator.popArgDp(6);
 	REQUIRE(dp == &dp6);
 	REQUIRE(dp->type == DP_TEMP_STK);
-	REQUIRE(dp->index == 2);
+	REQUIRE(dp->index == 1);
 	REQUIRE(dp->place_index == R9);
 
 	dp = allocator.popArgDp(2);
@@ -139,13 +139,13 @@ TEST_CASE("Register allocation basic test.(System call)", "[allocate]")
 	dp = allocator.popSysArgDp(4);
 	REQUIRE(dp == &dp4);
 	REQUIRE(dp->type == DP_TEMP_STK);
-	REQUIRE(dp->index == 2);
+	REQUIRE(dp->index == 1);
 	REQUIRE(dp->place_index == R10);
 
 	dp = allocator.popSysArgDp(3);
 	REQUIRE(dp == &dp3);
 	REQUIRE(dp->type == DP_TEMP_STK);
-	REQUIRE(dp->index == 1);
+	REQUIRE(dp->index == 0);
 	REQUIRE(dp->place_index == RDX);
 
 	dp = allocator.popSysArgDp(2);
@@ -157,4 +157,26 @@ TEST_CASE("Register allocation basic test.(System call)", "[allocate]")
 	REQUIRE(dp == &dp1);
 	REQUIRE(dp->index == RCX);
 	REQUIRE(dp->place_index == RDI);
+}
+
+TEST_CASE("Register data destroy test.", "[allocate]")
+{
+	PlnDataPlace
+		dp1(DPS_SIGNED, 8, 8), dp2(DPS_SIGNED, 8, 8),
+		dp3(DPS_SIGNED, 8, 8), dp4(DPS_SIGNED, 8, 8),
+		dp5(DPS_SIGNED, 8, 8), dp6(DPS_SIGNED, 8, 8),
+		dp7(DPS_SIGNED, 8, 8), dp8(DPS_SIGNED, 8, 8),
+		dp9(DPS_SIGNED, 8, 8), dp10(DPS_SIGNED, 8, 8);
+
+	PlnX86_64DataAllocator x64allocator;
+	PlnDataAllocator& allocator = x64allocator;
+
+	allocator.reset();
+
+	allocator.pushSysArgDp(1,&dp1);
+	allocator.pushSysArgDp(2,&dp2);
+	allocator.pushSysArgDp(1,&dp3);
+	allocator.pushSysArgDp(2,&dp4);
+	allocator.funcCalled();
+	allocator.pushSysArgDp(3,&dp5);
 }

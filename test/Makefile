@@ -19,3 +19,9 @@ test:
 force:
 	@$(CXX) -o fpac ../objs/palan.o $(OBJS) -lboost_program_options
 
+depend: 
+	-@ $(RM) depend.inc
+	-@ for i in $(basename $(TESTOBJS)); do $(CXX) -std=c++11 -MM $$i.cpp \
+	| sed "s/[_a-zA-Z0-9/][_a-zA-Z0-9/]*\.cpp//g" \
+	| sed "s/^\ /\t/g" >> depend.inc; done
+-include depend.inc
