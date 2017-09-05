@@ -1,54 +1,81 @@
-/// Register allocation class declaration.
+/// Register/Stack allocation class declaration.
 ///
 /// @file	PlnDataAllocator.h
 /// @copyright	2017- YAMAGUCHI Toshinobu
 
-#include<vector>
+#include <vector>
+#include <stdint.h>
 using std::vector;
 
 class PlnGenerator;
 
-enum PlnPlcType {
-	DP_REG,
-	DP_VAR_STK,
-	DP_TEMP_STK,
-	DP_ARG_STK
-};
-
-enum PlnDPSignType {
-	DPS_SIGNED,
-	DPS_UNSIGNED,
-	DPS_FLOAT
-};
-
-class PlnDataPlace
-{ 
-public:
-	PlnDataPlace(int sign, int size, int psize)
-		: sign(sign), size(size), place_size(psize) { }
-	int type;
-	int index;
-	int size;
-
-	int place_type;
-	int place_index;
-	int place_size;
-
-	int sign;	// signed int, unsigned int, float
-	int use;	// var, param, arg, work
-
-	void* genEntity(PlnGenerator& g); // for data store to place
-	void* gen(PlnGenerator& g);	// for get data (it place data)
-};
+class PlnDataPlace;
+class PlnDataDeliver;
+class PlnParameter;
+class PlnVariable;
 
 class PlnDataAllocator
 {
-public:
-	virtual void reset() = 0;
+	int regnum;
 
-	virtual void pushArgDp(int index, PlnDataPlace* place) = 0;
-	virtual PlnDataPlace* popArgDp(int index)=0;
-	virtual void pushSysArgDp(int index, PlnDataPlace* place) = 0;
-	virtual PlnDataPlace* popSysArgDp(int index)=0;
-	virtual void funcCalled() = 0;	// TODO: pass assured data save resigsters info from default.
+public:
+	vector<PlnDataPlace*> data_stack;
+	vector<PlnDataPlace*> arg_stack;
+	vector<PlnDataPlace*> regs;
+
+	int step;
+
+	PlnDataAllocator(int regnum);
+
+	PlnDataPlace* allocData(int size);
+	void releaseData(PlnDataPlace* dp);
+
+	void prepareDataDeliver(PlnDataDeliver* dd, PlnDataPlace* dp);
+	void pushData(PlnDataDeliver* dd);
+	void popData(PlnDataDeliver* dd);
+
+	virtual vector<PlnDataPlace*> allocArgs(vector<PlnParameter*>& params, vector<PlnVariable*>& rets) = 0;
+	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets) = 0;
 };
+
+enum {
+	DP_STK_BP,
+	DP_STK_SP,
+	DP_REG,
+	DP_BYTES
+};
+
+enum {
+	DS_RELEASED,
+	DS_CALLEE_PAR,
+	DS_ASSIGNED,
+	DS_ASSIGNED_SOME,
+	DS_ARGUMENT,
+	DS_DESTROYED
+};
+
+class PlnDataPlace
+{
+public:
+	int type;
+	int size;
+
+	int status;
+	int accessCount;
+
+	int alloc_step;
+	int release_step;
+
+	union {
+		struct {int32_t idx; int32_t offset;} stack;
+		struct {int32_t id; int32_t offset;} reg;
+		vector<PlnDataPlace*> *bytesData;
+	} data;
+
+	PlnDataPlace* previous;
+	PlnDataPlace* save_place;
+
+	int allocable_size();
+	void access();
+};
+

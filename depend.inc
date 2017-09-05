@@ -51,6 +51,7 @@ PlnX86_64Generator.o:  \
 	generators/../PlnGenerator.h
 PlnX86_64DataAllocator.o:  \
 	generators/PlnX86_64DataAllocator.h generators/../PlnDataAllocator.h
+PlnDataAllocator.o:  PlnDataAllocator.h
 PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
 	models/PlnStatement.h models/PlnType.h models/PlnVariable.h \
