@@ -16,8 +16,8 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 {
 public:
 	PlnX86_64DataAllocator();
-	vector<PlnDataPlace*> allocArgs(vector<PlnParameter*>& params, vector<PlnVariable*>& rets);
-	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets);
+	vector<PlnDataPlace*> allocArgs(vector<PlnParameter*>& params, vector<PlnVariable*>& rets, int func_type = DPF_PLN);
+	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type = DPF_PLN);
 };
 
 

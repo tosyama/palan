@@ -8,6 +8,7 @@
 #include <limits.h>
 #include "PlnX86_64DataAllocator.h"
 
+using namespace std;
 static const int ARG_TBL[] = { RDI, RSI, RDX, RCX, R8, R9 };
 static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
 static const int SYSARG_TBL[] = { RDI, RSI, RDX, R10, R8, R9 };
@@ -18,8 +19,7 @@ PlnX86_64DataAllocator::PlnX86_64DataAllocator()
 }
 
 vector<PlnDataPlace*> PlnX86_64DataAllocator::allocArgs(
-	vector<PlnParameter*>& params,
-	vector<PlnVariable*>& rets)
+	vector<PlnParameter*>& params, vector<PlnVariable*>& rets, int func_type)
 {
 	int param_ind;
 	vector<PlnDataPlace*> dps;
@@ -28,10 +28,17 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::allocArgs(
 	else param_ind = rets.size()-1;
 
 	for (auto par: params) {
-		int regid = ARG_TBL[param_ind];
 		PlnDataPlace* dp = new PlnDataPlace();
 
 		if (param_ind < 6) {
+			int regid;
+			if (func_type == DPF_PLN || func_type == DPF_C)
+				regid = ARG_TBL[param_ind];
+			else if (func_type == DPF_SYS)
+				regid = SYSARG_TBL[param_ind];
+			else
+				BOOST_ASSERT(false);
+			
 			PlnDataPlace* pdp = regs[regid];
 			dp->type = DP_REG;
 			dp->size = 8;	// TODO get from type.
@@ -48,11 +55,12 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::allocArgs(
 			
 			regs[regid] = dp;
 
-			if (pdp && pdp->status != DS_RELEASED) {
-				pdp->save_place = allocData(dp->size);
-			}
+			if (pdp && pdp->status != DS_RELEASED)
+				allocSaveData(pdp);
+
 			dps.push_back(dp);
-		} else {
+		} else {	// param_ind >= 6
+			BOOST_ASSERT(func_type != DPF_SYS);
 			int ind = param_ind-6;
 			while (arg_stack.size() <= ind) 
 				arg_stack.push_back(NULL);
@@ -73,9 +81,9 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::allocArgs(
 
 			arg_stack[ind] = dp;
 
-			if (pdp && pdp->status != DS_RELEASED) {
-				pdp->save_place = allocData(dp->size);
-			}
+			if (pdp && pdp->status != DS_RELEASED)
+				allocSaveData(pdp);
+
 			dps.push_back(dp);
 		}
 		param_ind++;
@@ -83,32 +91,38 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::allocArgs(
 	return dps;
 }
 
-void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets)
+static bool checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 {
-	step++;
+	PlnDataPlace *curdp = root;
+	while (curdp != dp) {
+		BOOST_ASSERT(curdp != NULL);
+		if (curdp->status != DS_DESTROYED && curdp->status != DS_RELEASED)
+			return true;
+		curdp = curdp->previous;
+	}
+	return false;
+}
+
+void PlnX86_64DataAllocator::funcCalled(
+	vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type)
+{
 	for (auto dp: args) {
 		dp->status = DS_RELEASED;
 		dp->release_step = step;
-		// check invalid state.
-		if (dp->type == DP_REG) {
-			PlnDataPlace* dpp = regs[dp->data.reg.id];
-			while (dpp != dp) {
-				BOOST_ASSERT(dpp != NULL);
-				BOOST_ASSERT(dpp->status == DS_DESTROYED || dpp->status == DS_RELEASED);
-				dpp = dpp->previous;
-			}
-		} else if (dp->type == DP_STK_SP) {
-			PlnDataPlace* dpp = arg_stack[dp->data.stack.idx];
-			while (dpp != dp) {
-				BOOST_ASSERT(dpp != NULL);
-				BOOST_ASSERT(dpp->status == DS_RELEASED);
-				dpp = dpp->previous;
-			}
+		if (PlnDataPlace* pdp = dp->save_place) {
+			pdp->status = DS_RELEASED;
+			pdp->release_step = step;
 		}
+
+		// check invalid state.
+		if (dp->type == DP_REG) 
+			BOOST_ASSERT(!checkExistsActiveDP(regs[dp->data.reg.id], dp));
+		else if (dp->type == DP_STK_SP)
+			BOOST_ASSERT(!checkExistsActiveDP(arg_stack[dp->data.stack.idx], dp));
 	}
 	for (int regid: DSTRY_TBL) {
 		PlnDataPlace* pdp = regs[regid];
-		if (!pdp || pdp->release_step != step) {
+		if (!pdp || (pdp->release_step != step)) {
 			PlnDataPlace* dp = new PlnDataPlace();
 			dp->type = DP_REG;
 			dp->size = 8;
@@ -116,7 +130,11 @@ void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, vector<PlnV
 			dp->alloc_step = dp->release_step = step;
 			dp->previous = pdp;
 			regs[regid] = dp;
+			if (pdp && pdp->status != DS_RELEASED && pdp->status != DS_DESTROYED)
+				if (!pdp->save_place) 
+					allocSaveData(pdp);
 		}
 	}
+	step++;
 }
 

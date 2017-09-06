@@ -14,9 +14,16 @@ class PlnDataDeliver;
 class PlnParameter;
 class PlnVariable;
 
+enum {	// Function call type.
+	DPF_PLN,
+	DPF_C,
+	DPF_SYS
+};
+
 class PlnDataAllocator
 {
 	int regnum;
+	int stack_size;
 
 public:
 	vector<PlnDataPlace*> data_stack;
@@ -27,15 +34,16 @@ public:
 
 	PlnDataAllocator(int regnum);
 
+	PlnDataPlace* allocDataWithDetail(int size, int alloc_step, int release_step);
 	PlnDataPlace* allocData(int size);
+
+	void allocSaveData(PlnDataPlace* dp);
 	void releaseData(PlnDataPlace* dp);
 
-	void prepareDataDeliver(PlnDataDeliver* dd, PlnDataPlace* dp);
-	void pushData(PlnDataDeliver* dd);
-	void popData(PlnDataDeliver* dd);
+	virtual vector<PlnDataPlace*> allocArgs(vector<PlnParameter*>& params, vector<PlnVariable*>& rets, int func_type = DPF_PLN) = 0;
+	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type = DPF_PLN) = 0;
 
-	virtual vector<PlnDataPlace*> allocArgs(vector<PlnParameter*>& params, vector<PlnVariable*>& rets) = 0;
-	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets) = 0;
+	void finish();
 };
 
 enum {
