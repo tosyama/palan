@@ -10,6 +10,7 @@
 #include "../PlnParser.hpp"
 #include "../PlnLexer.h"
 #include "../models/PlnModule.h"
+#include "../generators/PlnX86_64DataAllocator.h"
 #include "../generators/PlnX86_64Generator.h"
 
 using namespace palan;
@@ -40,7 +41,8 @@ string build(string srcf)
 	if (ret) return "parse err:"+srcf;
 
 	// compile
-	module.finish();
+	PlnX86_64DataAllocator allocator;
+	module.finish(allocator);
 	string asmf = "out/" + srcf + ".s";
 	ofstream as_output;
 	as_output.open(asmf, ios::out);

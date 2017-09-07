@@ -268,7 +268,6 @@ block: '{'
 				BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 				b->setParent(scopes.back().inf.function);
 			}
-			b->startParse();
 			scopes.push_back(PlnScopeItem(b));
 		}
 		statements '}'
@@ -276,7 +275,6 @@ block: '{'
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = CUR_BLOCK;
 		$$->statements = move($3);
-		$$->endParse();
 		scopes.pop_back();
 	}
 	;

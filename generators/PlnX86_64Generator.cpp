@@ -12,6 +12,7 @@
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
 #include "../PlnModel.h"
+#include "PlnX86_64DataAllocator.h"
 #include "PlnX86_64Generator.h"
 
 using std::ostringstream;
@@ -25,14 +26,7 @@ enum GenEttyAllocType {
 	GA_MEM
 };
 
-enum GenRegType {
-	RAX, RBX, RCX, RDX,
-	RDI, RSI, RBP, RSP,
-	R8, R9, R10, R11,
-	R12, R13, R14, R15
-};
-
-static const char* r(GenRegType rt, int size=8)
+static const char* r(int rt, int size=8)
 {
 	static const char* tbl[16][4];
 	static bool init = false;
@@ -82,7 +76,7 @@ static const char* oprnd(const PlnGenEntity *e)
 		return e->data.str->c_str();
 	} else if (e->type == GE_INT) {
 		if (e->alloc_type == GA_REG)
-			return r(GenRegType(e->data.i), e->size);
+			return r(e->data.i, e->size);
 	}
 	BOOST_ASSERT(false);
 }
@@ -195,7 +189,7 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 			case 4: dst_safix = "l"; break;
 		}
 		if (src->alloc_type == GA_REG && dst->size<=4)
-			srcstr = r(GenRegType(src->data.i), dst->size);
+			srcstr = r(src->data.i, dst->size);
 	}
 
 	if (src->alloc_type == GA_MEM) {
@@ -367,3 +361,17 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getWork(int i)
 	}
 	return e;
 }
+
+unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
+{
+	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
+	if (dp->type == DP_STK_BP) {
+		e->type = GE_STRING;
+		e->alloc_type = GA_MEM;
+		e->size = dp->size;
+		e->data.str = new string((format("%1%(%%rbp)") % dp->data.stack.offset).str());
+	} else
+		BOOST_ASSERT(false);
+	return e;
+}
+

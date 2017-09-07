@@ -17,7 +17,7 @@ PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp)
 	values = move(lvals);
 }
 
-void PlnAssignment::finish()
+void PlnAssignment::finish(PlnDataAllocator& da)
 {
 	PlnReturnPlace rp;
 	rp.type = RP_VAR;
@@ -25,7 +25,7 @@ void PlnAssignment::finish()
 		rp.inf.var = lv.inf.var;
 		expression->ret_places.push_back(rp);
 	}
-	expression->finish();
+	expression->finish(da);
 }
 
 void PlnAssignment::dump(ostream& os, string indent)

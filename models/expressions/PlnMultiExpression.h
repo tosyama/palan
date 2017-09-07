@@ -15,7 +15,7 @@ public:
 	PlnMultiExpression(PlnExpression* first, PlnExpression *second);
 	void append(PlnExpression *exp);
 
-	void finish();	// override
+	void finish(PlnDataAllocator& da);	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
 };

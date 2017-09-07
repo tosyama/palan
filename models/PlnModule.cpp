@@ -12,6 +12,7 @@
 #include "PlnFunction.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
 using namespace std;
@@ -76,10 +77,12 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 	return rodata;
 }
 
-void PlnModule::finish()
+void PlnModule::finish(PlnDataAllocator& da)
 {
-	for (auto f: functions)
-		f->finish();
+	for (auto f: functions) {
+		f->finish(da);
+		da.reset();
+	}
 }
 
 void PlnModule::dump(ostream& os, string indent)

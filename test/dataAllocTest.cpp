@@ -44,7 +44,10 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	CHECK(dp1->data.stack.offset == -8);	
 	CHECK(dp2->data.stack.offset == -16);	
 	CHECK(dp3->data.stack.offset == -16);	
+	CHECK(dps2[5]->data.stack.offset == 0);	
+	CHECK(dps2[6]->data.stack.offset == 8);	
 	CHECK(dps1[0]->save_place->data.stack.offset == -56);	
 	CHECK(dps1[1]->save_place->data.stack.offset == -24);	
 	CHECK(dps1[5]->save_place->data.stack.offset == -48);	
+	CHECK(allocator.stack_size == 80);
 }

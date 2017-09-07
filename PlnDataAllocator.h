@@ -7,10 +7,7 @@
 #include <stdint.h>
 using std::vector;
 
-class PlnGenerator;
-
 class PlnDataPlace;
-class PlnDataDeliver;
 class PlnParameter;
 class PlnVariable;
 
@@ -22,16 +19,18 @@ enum {	// Function call type.
 
 class PlnDataAllocator
 {
+protected:
 	int regnum;
+	int step;
+public:
 	int stack_size;
 
-public:
 	vector<PlnDataPlace*> data_stack;
 	vector<PlnDataPlace*> arg_stack;
 	vector<PlnDataPlace*> regs;
+	vector<PlnDataPlace*> all;
 
-	int step;
-
+	void reset();
 	PlnDataAllocator(int regnum);
 
 	PlnDataPlace* allocDataWithDetail(int size, int alloc_step, int release_step);

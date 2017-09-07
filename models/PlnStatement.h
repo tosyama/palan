@@ -23,7 +23,7 @@ public:
 	PlnStatement(PlnVarInit* var_init, PlnBlock* parent);
 	PlnStatement(PlnBlock* block, PlnBlock* parent);
 
-	virtual void finish();
+	virtual void finish(PlnDataAllocator& da);
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
 };
@@ -35,7 +35,7 @@ public:
 	
 	PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent);
 
-	void finish();
+	void finish(PlnDataAllocator& da);
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };

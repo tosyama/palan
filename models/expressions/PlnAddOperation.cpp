@@ -84,7 +84,7 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	values.push_back(v);
 }
 
-void PlnAddOperation::finish()
+void PlnAddOperation::finish(PlnDataAllocator& da)
 {
 	BOOST_ASSERT(ret_places.size()==1);
 	int index = 0;
@@ -96,7 +96,7 @@ void PlnAddOperation::finish()
 	rp.type = RP_WORK;
 	rp.inf.wk.index = index;
 	l->ret_places.push_back(rp);
-	l->finish();
+	l->finish(da);
 
 	if (r->type == ET_VALUE)
 		rp.type = RP_AS_IS;
@@ -104,7 +104,7 @@ void PlnAddOperation::finish()
 		rp.inf.wk.index = index+1;
 	}
 	r->ret_places.push_back(rp);
-	r->finish();
+	r->finish(da);
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
@@ -146,7 +146,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	values.push_back(v);
 }
 
-void PlnNegative::finish()
+void PlnNegative::finish(PlnDataAllocator& da)
 {
 	int index = 0;
 	if (ret_places[0].type == RP_WORK) {
@@ -156,7 +156,7 @@ void PlnNegative::finish()
 	rp.type = RP_WORK;
 	rp.inf.wk.index = index;
 	e->ret_places.push_back(rp);
-	e->finish();
+	e->finish(da);
 }
 
 void PlnNegative::dump(ostream& os, string indent)

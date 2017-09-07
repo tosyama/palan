@@ -1,6 +1,5 @@
 PROGRAM = tester
-TESTOBJS = testMain.o testBase.o basicTest.o stackTest.o \
-		dataAllocTest.o
+TESTOBJS = testMain.o testBase.o basicTest.o dataAllocTest.o
 OBJS = $(filter-out ../objs/palan.o, $(wildcard ../objs/*.o))
 
 .SUFFIXES: .cpp .o

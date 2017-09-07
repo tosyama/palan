@@ -17,13 +17,11 @@ public:
 	PlnBlock();
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
-	void startParse();
-	void endParse();
 
 	PlnVariable* declareVariable(string& var_name, PlnType* var_type=NULL);
 	PlnVariable* getVariable(string& var_name);
 
-	void finish();
+	void finish(PlnDataAllocator& da);
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };

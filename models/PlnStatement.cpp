@@ -6,7 +6,6 @@
 #include "PlnVariable.h"
 #include "PlnType.h"
 #include "expressions/PlnMultiExpression.h"
-#include "PlnStack.h"
 #include "../PlnGenerator.h"
 
 using std::endl;
@@ -31,17 +30,17 @@ PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	inf.block = block;
 }
 
-void PlnStatement::finish()
+void PlnStatement::finish(PlnDataAllocator& da)
 {
 	switch (type) {
 		case ST_EXPRSN:
-			inf.expression->finish();
+			inf.expression->finish(da);
 			break;
 		case ST_BLOCK:
-			inf.block->finish();
+			inf.block->finish(da);
 			break;
 		case ST_VARINIT:
-			inf.var_init->finish();
+			inf.var_init->finish(da);
 			break;
 	}
 }
@@ -58,7 +57,8 @@ void PlnStatement::dump(ostream& os, string indent)
 			for (auto v: inf.var_init->vars)
 				os << v->name << " ";
 			os << endl;
-			inf.var_init->initializer->dump(os, indent+" ");
+			if (inf.var_init->initializer)
+				inf.var_init->initializer->dump(os, indent+" ");
 			break;
 
 		case ST_BLOCK:
@@ -112,7 +112,7 @@ PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
 	}
 }
 
-void PlnReturnStmt::finish()
+void PlnReturnStmt::finish(PlnDataAllocator& da)
 {
 	if (inf.expression) {
 		int i=0;
@@ -134,7 +134,7 @@ void PlnReturnStmt::finish()
 			inf.expression->ret_places.push_back(rp);
 			++i;
 		}
-		inf.expression->finish();
+		inf.expression->finish(da);
 	}
 }
 
@@ -150,7 +150,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	if (inf.expression)
 		inf.expression->gen(g);
 
-	g.genFreeLocalVarArea(function->inf.pln.stack->total_size);
+	g.genFreeLocalVarArea(function->inf.pln.stack_size);
 	if (function->name == "main") 
 		g.genMainReturn();	
 	else

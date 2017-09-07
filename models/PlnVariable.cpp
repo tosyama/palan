@@ -12,18 +12,13 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnStack.h"
+#include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
 //PlnVariable
 unique_ptr<PlnGenEntity> PlnVariable::genEntity(PlnGenerator& g)
 {
-	if (alloc_type == VA_STACK) {
-		return g.getStackAddress(inf.stack_item->pos_from_base, var_type->size);
-	} else if (alloc_type == VA_RETVAL)
-		return g.getArgument(inf.index, var_type->size);
-	else 
-		BOOST_ASSERT(false);
+	return g.getEntity(place);
 }
 
 // PlnVarInit
@@ -32,8 +27,11 @@ PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, PlnExpression* initializer)
 {
 }
 
-void PlnVarInit::finish()
+void PlnVarInit::finish(PlnDataAllocator& da)
 {
+	for (auto v: vars)
+		v->place = da.allocData(8);
+
 	if (initializer) {
 		PlnReturnPlace rp;
 		rp.type = RP_VAR;
@@ -41,7 +39,7 @@ void PlnVarInit::finish()
 			rp.inf.var = v;
 			initializer->ret_places.push_back(rp);
 		}
-		initializer->finish();
+		initializer->finish(da);
 	}
 }
 

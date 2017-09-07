@@ -119,7 +119,7 @@ PlnExpression::PlnExpression(PlnValue value)
 	values.push_back(value);
 }
 
-void PlnExpression::finish()
+void PlnExpression::finish(PlnDataAllocator& da)
 {
 	if (ret_places[0].type == RP_AS_IS) {
 		ret_places[0].inf.as_is = &values[0];

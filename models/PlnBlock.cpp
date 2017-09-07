@@ -16,7 +16,7 @@
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnStack.h"
+#include "../PlnDataAllocator.h"
 
 using std::endl;
 using boost::format;
@@ -39,18 +39,6 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-void PlnBlock::startParse()
-{
-	PlnStack* s = parent_func->inf.pln.stack;
-	s->intoBlock();
-}
-
-void PlnBlock::endParse()
-{
-	PlnStack* s = parent_func->inf.pln.stack;
-	s->outofBlock();
-}
-
 PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 {
 	for (auto v: variables)
@@ -63,11 +51,6 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 	else v->var_type = variables.back()->var_type;
 
 	v->alloc_type = VA_STACK;
-	PlnStackItem* si = new PlnStackItem(v->var_type->size);
-	v->inf.stack_item = si;
-	PlnStack* s = parent_func->inf.pln.stack;
-	s->addItem(si);
-
 	variables.push_back(v);
 
 	return v;
@@ -93,10 +76,13 @@ PlnVariable* PlnBlock::getVariable(string& var_name)
 	}
 }
 
-void PlnBlock::finish()
+void PlnBlock::finish(PlnDataAllocator& da)
 {
 	for (auto s: statements)
-		s->finish();
+		s->finish(da);
+	
+	for (auto v: variables)
+		da.releaseData(v->place);
 }
 
 void PlnBlock::dump(ostream& os, string indent)
@@ -104,7 +90,8 @@ void PlnBlock::dump(ostream& os, string indent)
 	os << indent << "Block: " << statements.size() << endl;
 	for (auto v: variables)
 		os << format("%1% Variable: %2% %3%(%4%)")
-				% indent % v->var_type->name % v->name % v->inf.stack_item->pos_from_base << endl;
+				% indent % v->var_type->name % v->name 
+				% v->place->data.stack.offset << endl;
 
 	for (auto s: statements)
 		s->dump(os, indent+" ");

@@ -12,9 +12,18 @@ PlnDataAllocator::PlnDataAllocator(int regnum)
 	: regnum(regnum)
 {
 	regs.resize(regnum);
-	for (auto& reg: regs)
-		reg = NULL;
+	reset();
+}
 
+void PlnDataAllocator::reset()
+{
+	all.insert(all.end(),data_stack.begin(),data_stack.end());
+	data_stack.resize(0);
+	all.insert(all.end(),arg_stack.begin(),arg_stack.end());
+	arg_stack.resize(0);
+	all.insert(all.end(),regs.begin(),regs.end());
+	for (auto& reg: regs) reg = NULL;
+	stack_size = 0;
 	step = 0;
 }
 

@@ -13,18 +13,16 @@
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnStack.h"
+#include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
 using std::string;
 using std::endl;
+using std::to_string;
 
 PlnFunction::PlnFunction(PlnFncType func_type, const string &func_name)
 	: type(func_type), name(func_name), implement(NULL)
 {
-	if (func_type == FT_PLN) {
-		inf.pln.stack = new PlnStack();
-	}
 }
 
 void PlnFunction::setParent(PlnModule* parent_mod)
@@ -37,12 +35,8 @@ void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 {
 	return_vals = move(vars);
 
-	for (auto rv: return_vals) {
+	for (auto rv: return_vals)
 		rv->alloc_type = VA_STACK;
-		PlnStackItem* si = new PlnStackItem(rv->var_type->size);
-		rv->inf.stack_item = si;
-		inf.pln.stack->addItem(si);
-	}
 }
 
 PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)
@@ -58,29 +52,33 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 	param->dflt_value = defaultVal;
 
 	param->alloc_type = VA_STACK;
-	PlnStackItem* si = new PlnStackItem(ptype->size);
-	param->inf.stack_item = si;
-	inf.pln.stack->addItem(si);
-	
 	parameters.push_back(param);
 
 	return	param;
 }
 
-
-void PlnFunction::finish()
+void PlnFunction::finish(PlnDataAllocator& da)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
-		inf.pln.stack->normalize();
-		inf.pln.stack->allocItems1();	
-
 		if (implement) {
+			for (auto r: return_vals)
+				r->place = da.allocData(8);
+			for (auto p: parameters)
+				p->place = da.allocData(8);
+
 			if (implement->statements.back()->type != ST_RETURN) {
 				PlnReturnStmt* rs = new PlnReturnStmt(NULL, implement);
 				implement->statements.push_back(rs);
 			}
 
-			implement->finish();
+			for (auto r: return_vals)
+				da.releaseData(r->place);
+			for (auto p: parameters)
+				da.releaseData(p->place);
+
+			implement->finish(da);
+			da.finish();
+			inf.pln.stack_size = da.stack_size;
 		}
 	}
 }
@@ -89,12 +87,18 @@ void PlnFunction::dump(ostream& os, string indent)
 {
 	os << indent << "Function: " << name << endl;
 	os << indent << " Type: " << type << endl;
-	os << indent << " Paramaters: " << parameters.size() << endl;
 	os << indent << " Returns: " << return_vals.size() << endl;
+	os << indent << " Paramaters: " << parameters.size() << endl;
 	switch (type) {
 		case FT_PLN: 
 			if (implement) {
-				os << indent << " Stack size: " << inf.pln.stack->total_size << endl;
+				os << indent << " Stack size: " << inf.pln.stack_size << endl;
+				for (auto r: return_vals)
+					os << indent << " RetValue: " << r->var_type->name << " " << r->name
+						<< "(" << r->place->data.stack.offset << ")" << endl;
+				for (auto p: parameters)
+					os << indent << " Paramater: " << p->var_type->name << " " << p->name
+						<< "(" << p->place->data.stack.offset << ")" << endl;
 				implement->dump(os, indent+" ");
 			} else os << indent << " No Implementation" << endl;
 		break;
@@ -109,7 +113,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genEntryPoint(name);
 			g.genLabel(name);
 			g.genEntryFunc();		
-			g.genLocalVarArea(inf.pln.stack->total_size);		
+			g.genLocalVarArea(inf.pln.stack_size);		
 			
 			int i=return_vals.size();
 			if (i==0) i = 1;

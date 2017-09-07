@@ -40,7 +40,7 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	}
 }
 
-void PlnFunctionCall::finish()
+void PlnFunctionCall::finish(PlnDataAllocator& da)
 {
 	PlnReturnPlace rp;
 	switch (function->type) {
@@ -61,7 +61,7 @@ void PlnFunctionCall::finish()
 		else
 			rp.inf.arg.size = 8;	// TODO: get system default
 		a->ret_places.push_back(rp);
-		a->finish();
+		a->finish(da);
 		++ai; ++i;
 	}
 }
@@ -87,7 +87,8 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			int i = 0;
 			for (auto rp: ret_places) {
 				auto dst = rp.genEntity(g);
-				auto src = values[i].genEntity(g);
+				auto src = g.getArgument(i, function->return_vals[i]->var_type->size);
+				// auto src = values[i].genEntity(g);
 
 				g.genMove(dst.get(), src.get(), rp.commentStr());
 

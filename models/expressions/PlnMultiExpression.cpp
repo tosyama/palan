@@ -9,6 +9,7 @@
 
 #include "PlnMultiExpression.h"
 #include "../../PlnGenerator.h"
+#include <string>
 
 PlnMultiExpression::PlnMultiExpression()
 	: PlnExpression(ET_MULTI)
@@ -30,13 +31,13 @@ void PlnMultiExpression::append(PlnExpression* exp)
 	exps.push_back(exp);
 }
 
-void PlnMultiExpression::finish()
+void PlnMultiExpression::finish(PlnDataAllocator& da)
 {
 	int i=0;
 	for (auto exp: exps) {
 		for (auto v: exp->values) {
 			exp->ret_places.push_back(ret_places[i]);
-			exp->finish();
+			exp->finish(da);
 			i++;
 		}
 	}

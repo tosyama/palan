@@ -29,7 +29,7 @@ public:
 			int id;
 		} syscall;
 		struct {
-			PlnStack*	stack;
+			int stack_size;
 		} pln;
 	} inf;
 	PlnBlock* implement;
@@ -43,7 +43,7 @@ public:
 	void setRetValues(vector<PlnVariable*>& vars);
 	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
 
-	void finish();
+	void finish(PlnDataAllocator& da);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);

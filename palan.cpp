@@ -19,6 +19,7 @@
 #include "PlnLexer.h"
 #include "models/PlnModule.h"
 #include "PlnMessage.h"
+#include "generators/PlnX86_64DataAllocator.h"
 #include "generators/PlnX86_64Generator.h"
 
 using std::cout;
@@ -115,8 +116,8 @@ int main(int argc, char* argv[])
 				int res = parser.parse();
 
 				if (res) return res;	// parse error
-
-				module.finish();
+				PlnX86_64DataAllocator allocator;
+				module.finish(allocator);
 
 				if (do_dump) module.dump(cout);
 

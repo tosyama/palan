@@ -10,6 +10,8 @@ using std::string;
 using std::ostream;
 using std::unique_ptr;
 
+class PlnDataPlace;
+
 enum GenEttyType {
 	GE_STRING,
 	GE_INT
@@ -40,6 +42,7 @@ protected:
 	ostream& os;
 public:
 	PlnGenerator(ostream& ostrm) : os(ostrm) {};
+	void comment(const string s) { os << "#" << s << endl; };
 	virtual void genSecReadOnlyData()=0;
 	virtual void genSecText()=0;
 	virtual void genEntryPoint(const string& entryname)=0;
@@ -64,5 +67,7 @@ public:
 	virtual unique_ptr<PlnGenEntity> getArgument(int i, int size)=0;
 	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
 	virtual unique_ptr<PlnGenEntity> getWork(int i)=0;
+
+	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 };
 
