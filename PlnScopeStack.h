@@ -1,4 +1,5 @@
 #include <vector>
+#include <algorithm>
 
 class PlnModule;
 class PlnFunction;
@@ -26,3 +27,9 @@ public:
 
 typedef std::vector<PlnScopeItem>	PlnScopeStack;
 
+inline PlnFunction* searchFunction(PlnScopeStack& ss)
+{
+	auto itm = std::find_if(ss.rbegin(), ss.rend(), [](PlnScopeItem& i) { return i.type == SC_FUNCTION; });
+	if (itm != ss.rend()) return itm->inf.function;
+	else return NULL;
+}

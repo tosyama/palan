@@ -39,9 +39,11 @@ public:
 	} parent;
 
 	PlnFunction(PlnFncType func_type, const string& func_name);
+	void setParent(PlnModule* parent_mod);
+	void setRetValues(vector<PlnVariable*>& vars);
 	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
-	void setParent(PlnScopeItem& scope);
-	void finish();
+
+	void finish(PlnDataAllocator& da);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);

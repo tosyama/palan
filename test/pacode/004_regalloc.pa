@@ -1,0 +1,17 @@
+ccall int printf();
+ccall void exit();
+
+int64 a func(int64 a1, int64 a2, int64 a3)
+{
+	return a1+a2+a3;
+}
+
+void main()
+{
+	int64 a1, a2, a3 = 1, 2, 3;
+
+	int64 a = func(a1+1, func(4,5,6)+a2, func(7,8,9)+a3+10);
+
+	printf ("%d\n", a);
+	exit(0);
+}

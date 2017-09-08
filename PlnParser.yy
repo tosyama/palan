@@ -53,6 +53,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 #include "PlnMessage.h"
 
 #define CUR_BLOCK	scopes.back().inf.block
+#define CUR_FUNC	searchFunction(scopes)
 }
 
 %locations
@@ -127,20 +128,15 @@ module: /* empty */
 function_definition: func_return func_name
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
-			f->setParent(scopes.back());
-			f->return_vals = move($1);
+			f->setParent(&module);
+			f->setRetValues($1);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		'(' parameters ')'
-		{
-			BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
-			PlnFunction* f = scopes.back().inf.function;
-		}
-		block
+		'(' parameters ')' block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		$$ = scopes.back().inf.function;
-		$$->implement = $8;
+		$$->implement = $7;
 		scopes.pop_back();
 	}
 ;
@@ -245,7 +241,7 @@ default_value: ID
 ccall_declaration: KW_CCALL single_return func_name '(' parameters ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_C, $3);
-		f->setParent(scopes.back());
+		f->setParent(&module);
 		$$ = f;
 	}
 	;
@@ -254,7 +250,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return func_name '(' parameters ')
 	{
 		PlnFunction* f = new PlnFunction(FT_SYS, $5);
 		f->inf.syscall.id = $2;
-		f->setParent(scopes.back());
+		f->setParent(&module);
 		$$ = f;
 	}
 	;
@@ -266,7 +262,12 @@ single_return: KW_VOID
 block: '{'
 		{
 			PlnBlock *b = new PlnBlock();
-			b->setParent(scopes.back());
+			if (scopes.back().type == SC_BLOCK)
+				b->setParent(scopes.back().inf.block);
+			else {
+				BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+				b->setParent(scopes.back().inf.function);
+			}
 			scopes.push_back(PlnScopeItem(b));
 		}
 		statements '}'

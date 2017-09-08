@@ -22,7 +22,7 @@ string PlnReturnPlace::commentStr()
 	switch (type) {
 		case RP_ARGPLN:
 		case RP_ARGSYS:
-			return "arg" + to_string(inf.index);
+			return "arg" + to_string(inf.arg.index);
 		case RP_VAR:
 			return inf.var->name;
 	}
@@ -51,9 +51,9 @@ unique_ptr<PlnGenEntity> PlnReturnPlace::genEntity(PlnGenerator& g)
 		case RP_NULL: return g.getNull();
 		case RP_VAR: return inf.var->genEntity(g);
 		case RP_AS_IS: return inf.as_is->genEntity(g);
-		case RP_ARGPLN: return g.getArgument(inf.index);
-		case RP_ARGSYS: return g.getSysArgument(inf.index);
-		case RP_WORK: return g.getWork(inf.index);
+		case RP_ARGPLN: return g.getArgument(inf.arg.index, inf.arg.size);
+		case RP_ARGSYS: return g.getSysArgument(inf.arg.index);
+		case RP_WORK: return g.getWork(inf.arg.index);
 		default:
 			BOOST_ASSERT(false);
 	}
@@ -119,7 +119,7 @@ PlnExpression::PlnExpression(PlnValue value)
 	values.push_back(value);
 }
 
-void PlnExpression::finish()
+void PlnExpression::finish(PlnDataAllocator& da)
 {
 	if (ret_places[0].type == RP_AS_IS) {
 		ret_places[0].inf.as_is = &values[0];

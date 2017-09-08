@@ -1,7 +1,7 @@
 /// Function model class definition.
 ///
 /// Function model mainly manage return values
-/// and paramater difinition.
+/// and paramater definition.
 /// e.g.) int ret1, int ret2 funcname(int arg1, int arg2) { ... }
 ///
 /// @file	PlnFunction.cpp
@@ -13,18 +13,30 @@
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
-#include "../PlnScopeStack.h"
 
 using std::string;
 using std::endl;
+using std::to_string;
 
 PlnFunction::PlnFunction(PlnFncType func_type, const string &func_name)
 	: type(func_type), name(func_name), implement(NULL)
 {
-	if (func_type == FT_PLN) {
-		inf.pln.stack_size = 0;
-	}
+}
+
+void PlnFunction::setParent(PlnModule* parent_mod)
+{
+	parent_type = FP_MODULE;
+	parent.module = parent_mod;
+}
+
+void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
+{
+	return_vals = move(vars);
+
+	for (auto rv: return_vals)
+		rv->alloc_type = VA_STACK;
 }
 
 PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)
@@ -37,52 +49,36 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
 	param->var_type = ptype;
-	param->alloc_type = VA_UNKNOWN;
 	param->dflt_value = defaultVal;
-	
+
+	param->alloc_type = VA_STACK;
 	parameters.push_back(param);
 
 	return	param;
 }
 
-void PlnFunction::setParent(PlnScopeItem& scope)
-{
-	switch (scope.type) {
-		case SC_MODULE:
-			parent_type = FP_MODULE;
-			parent.module = scope.inf.module;
-			break;
-		default:
-			BOOST_ASSERT(false);
-	}
-}
-
-void PlnFunction::finish()
+void PlnFunction::finish(PlnDataAllocator& da)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
-		for (auto rv: return_vals)
-			if (rv->alloc_type == VA_UNKNOWN) {
-				inf.pln.stack_size += rv->var_type->size;
-				rv->alloc_type = VA_STACK;
-				rv->inf.stack.pos_from_base = inf.pln.stack_size;
-			}
-			
-		for (auto p: parameters) 
-			if (p->alloc_type == VA_UNKNOWN) {
-				inf.pln.stack_size += p->var_type->size;
-				p->alloc_type = VA_STACK;
-				p->inf.stack.pos_from_base = inf.pln.stack_size;
-			}
-
 		if (implement) {
+			for (auto r: return_vals)
+				r->place = da.allocData(8);
+			for (auto p: parameters)
+				p->place = da.allocData(8);
+
 			if (implement->statements.back()->type != ST_RETURN) {
 				PlnReturnStmt* rs = new PlnReturnStmt(NULL, implement);
 				implement->statements.push_back(rs);
 			}
 
-			implement->finish();
+			for (auto r: return_vals)
+				da.releaseData(r->place);
+			for (auto p: parameters)
+				da.releaseData(p->place);
 
-			inf.pln.stack_size += implement->totalStackSize();
+			implement->finish(da);
+			da.finish();
+			inf.pln.stack_size = da.stack_size;
 		}
 	}
 }
@@ -91,12 +87,18 @@ void PlnFunction::dump(ostream& os, string indent)
 {
 	os << indent << "Function: " << name << endl;
 	os << indent << " Type: " << type << endl;
-	os << indent << " Paramaters: " << parameters.size() << endl;
 	os << indent << " Returns: " << return_vals.size() << endl;
+	os << indent << " Paramaters: " << parameters.size() << endl;
 	switch (type) {
 		case FT_PLN: 
 			if (implement) {
 				os << indent << " Stack size: " << inf.pln.stack_size << endl;
+				for (auto r: return_vals)
+					os << indent << " RetValue: " << r->var_type->name << " " << r->name
+						<< "(" << r->place->data.stack.offset << ")" << endl;
+				for (auto p: parameters)
+					os << indent << " Paramater: " << p->var_type->name << " " << p->name
+						<< "(" << p->place->data.stack.offset << ")" << endl;
 				implement->dump(os, indent+" ");
 			} else os << indent << " No Implementation" << endl;
 		break;
@@ -117,7 +119,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			if (i==0) i = 1;
 			
 			for (auto p: parameters) {
-				auto arg = g.getArgument(i);
+				auto arg = g.getArgument(i, p->var_type->size);
 				auto prm = p->genEntity(g);
 				g.genMove(prm.get(), arg.get(), p->name);
 				++i;

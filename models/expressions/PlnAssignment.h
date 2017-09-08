@@ -12,7 +12,7 @@ public:
 	PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp);
 	PlnExpression* expression;
 
-	void finish();	// override
+	void finish(PlnDataAllocator& da);	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
 };

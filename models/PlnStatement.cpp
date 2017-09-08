@@ -4,20 +4,11 @@
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnVariable.h"
+#include "PlnType.h"
 #include "expressions/PlnMultiExpression.h"
 #include "../PlnGenerator.h"
 
 using std::endl;
-
-inline PlnFunction* getFunction(PlnBlock *b)
-{
-	BOOST_ASSERT(b);
-	while (b->parent_type == BP_BLOCK) {
-		b = b->parent.block;
-	}
-	BOOST_ASSERT(b->parent_type == BP_FUNC);
-	return b->parent.function;
-}
 
 // PlnStatement
 PlnStatement::PlnStatement(PlnExpression *exp, PlnBlock* parent)
@@ -39,17 +30,17 @@ PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	inf.block = block;
 }
 
-void PlnStatement::finish()
+void PlnStatement::finish(PlnDataAllocator& da)
 {
 	switch (type) {
 		case ST_EXPRSN:
-			inf.expression->finish();
+			inf.expression->finish(da);
 			break;
 		case ST_BLOCK:
-			inf.block->finish();
+			inf.block->finish(da);
 			break;
 		case ST_VARINIT:
-			inf.var_init->finish();
+			inf.var_init->finish(da);
 			break;
 	}
 }
@@ -66,7 +57,8 @@ void PlnStatement::dump(ostream& os, string indent)
 			for (auto v: inf.var_init->vars)
 				os << v->name << " ";
 			os << endl;
-			inf.var_init->initializer->dump(os, indent+" ");
+			if (inf.var_init->initializer)
+				inf.var_init->initializer->dump(os, indent+" ");
 			break;
 
 		case ST_BLOCK:
@@ -101,7 +93,7 @@ PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
 {
 	type = ST_RETURN;
 	this->parent = parent;
-	function = getFunction(parent);
+	function = parent->parent_func;
 
 	if (retexp) {
 		inf.expression = retexp;
@@ -120,18 +112,29 @@ PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
 	}
 }
 
-void PlnReturnStmt::finish()
+void PlnReturnStmt::finish(PlnDataAllocator& da)
 {
 	if (inf.expression) {
 		int i=0;
+		int diff=0;
+		if (function->name == "main") {
+			BOOST_ASSERT(function->return_vals.size()<=1);
+			diff = 1;
+		}
+
 		for (auto v: inf.expression->values) {
 			PlnReturnPlace rp;
 			rp.type = RP_ARGPLN;
-			rp.inf.index = i;
+			rp.inf.arg.index = i+diff;
+			if (i < function->return_vals.size()) 
+				rp.inf.arg.size = function->return_vals[i]->var_type->size;
+			else
+				rp.inf.arg.size = 8;	// TODO: get default.
+				
 			inf.expression->ret_places.push_back(rp);
 			++i;
 		}
-		inf.expression->finish();
+		inf.expression->finish(da);
 	}
 }
 
@@ -147,6 +150,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	if (inf.expression)
 		inf.expression->gen(g);
 
+	g.genFreeLocalVarArea(function->inf.pln.stack_size);
 	if (function->name == "main") 
 		g.genMainReturn();	
 	else

@@ -6,31 +6,22 @@
 #include "../PlnModel.h"
 
 // Block: Statements
-enum PlnBlkPrntType {
-	BP_FUNC,
-	BP_BLOCK
-};
 
 class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
 	vector<PlnVariable*> variables;
-	PlnBlkPrntType parent_type;
-	union {
-		PlnFunction* function;
-		PlnBlock* block;
-	} parent;
-	int cur_stack_size;
+	PlnFunction* parent_func;
+	PlnBlock* parent_block;
 
 	PlnBlock();
-
-	int totalStackSize();
-	PlnVariable* getVariable(string& var_name);
+	void setParent(PlnFunction* f);
+	void setParent(PlnBlock* b);
 
 	PlnVariable* declareVariable(string& var_name, PlnType* var_type=NULL);
-	void setParent(PlnScopeItem& scope);
+	PlnVariable* getVariable(string& var_name);
 
-	void finish();
+	void finish(PlnDataAllocator& da);
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };

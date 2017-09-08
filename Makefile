@@ -2,12 +2,16 @@ PROGRAM=pac
 SRCS=palan.cpp \
 	models/PlnModule.cpp models/PlnFunction.cpp models/PlnBlock.cpp \
 	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnVariable.cpp \
-	models/PlnType.cpp models/PlnStack.cpp\
+	models/PlnType.cpp \
 	models/expressions/PlnMultiExpression.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnAssignment.cpp \
-	generators/PlnX86_64Generator.cpp PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
+	generators/PlnX86_64Generator.cpp \
+	generators/PlnX86_64DataAllocator.cpp \
+	PlnDataAllocator.cpp \
+	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
+
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators
 TEST = test/tester

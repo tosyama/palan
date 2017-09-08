@@ -8,7 +8,6 @@ PlnParser.hpp
 location.hh
 position.hh
 stack.hh
-test.*
 pac
 test/tester
 test/out

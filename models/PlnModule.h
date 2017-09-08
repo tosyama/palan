@@ -20,7 +20,7 @@ public:
 	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
-	void finish();
+	void finish(PlnDataAllocator& da);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);

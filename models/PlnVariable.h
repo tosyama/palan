@@ -12,10 +12,8 @@ public:
 	PlnVarAllocType alloc_type;
 	PlnType *var_type;
 	string name;
+	PlnDataPlace* place;
 	union {
-		struct {
-			int pos_from_base;
-		} stack;
 		int index;
 	} inf;
 	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
@@ -35,6 +33,6 @@ public:
 	PlnExpression* initializer;
 	PlnBlock* parent;
 
-	void finish();
+	void finish(PlnDataAllocator& da);
 	void gen(PlnGenerator& g);
 };
