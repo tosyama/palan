@@ -136,8 +136,6 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 void PlnX86_64Generator::genFreeLocalVarArea(int size)
 {
 	if (size) {
-		if (size % 16)
-			size = 16 * (size / 16 + 1);
 		os << format("	addq $%1%, %%rsp") % size << endl;
 	}
 }
@@ -163,6 +161,7 @@ void PlnX86_64Generator::genReturn()
 
 void PlnX86_64Generator::genMainReturn()
 {
+	os << "	movq %rax, %rdi" << endl;
 	os << "	movq %rbp, %rsp" << endl;
 	os << "	popq %rbp" << endl;
 	os << "	movq $60, %rax" << endl;
@@ -362,6 +361,24 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getWork(int i)
 	return e;
 }
 
+unique_ptr<PlnGenEntity> PlnX86_64Generator::getPushEntity(PlnDataPlace* dp)
+{
+	if (dp->save_place) {
+		return getEntity(dp->save_place);
+	} else
+		return getEntity(dp);
+}
+
+unique_ptr<PlnGenEntity> PlnX86_64Generator::getPopEntity(PlnDataPlace* dp)
+{
+	auto e = getEntity(dp);
+	if (dp->save_place) {
+		auto se = getEntity(dp->save_place);
+		genMove(e.get(), se.get(), "load from save");
+	}
+	return getEntity(dp);
+}
+
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 {
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
@@ -370,7 +387,16 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->alloc_type = GA_MEM;
 		e->size = dp->size;
 		e->data.str = new string((format("%1%(%%rbp)") % dp->data.stack.offset).str());
-	} else
+	} else if (dp->type == DP_REG) {
+		e->type = GE_INT;
+		e->alloc_type = GA_REG;
+		e->size = 8;
+		e->data.i = dp->data.reg.id;
+	} else if (dp->type == DP_LIT_INT)
+		return getInt(dp->data.intValue);
+	else if (dp->type == DP_RO_DATA)
+		return getStrAddress(dp->data.index);
+	else
 		BOOST_ASSERT(false);
 	return e;
 }

@@ -37,7 +37,9 @@ void PlnMultiExpression::finish(PlnDataAllocator& da)
 	for (auto exp: exps) {
 		for (auto v: exp->values) {
 			exp->ret_places.push_back(ret_places[i]);
+			exp->data_places.push_back(data_places[i]);
 			exp->finish(da);
+
 			i++;
 		}
 	}

@@ -1,4 +1,4 @@
-ccall int printf();
+ccall int32 printf();
 ccall void exit();
 
 int64 aa, int64 ab add(int64 a, int64 b)

@@ -8,12 +8,14 @@ data:
 
 method:
 	/// foo constractor
-	export construct(
+	pub construct(
 		int aa=0	/// aa value
-	) {
+	)
+	{
 		return null; // if error
 	}
-	export inline int result caloc() {
+
+	pub inline int result caloc() {
 		return result = a*x;
 	}
 

@@ -11,6 +11,7 @@
 
 #include "PlnExpression.h"
 #include "PlnVariable.h"
+#include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
 using std::to_string;
@@ -76,6 +77,19 @@ PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR)
 {
 	inf.var = var;
+}
+
+PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
+{
+	switch(type) {
+		case VL_LIT_INT8:
+			return da.getLiteralIntDp(inf.intValue);
+		case VL_RO_DATA:
+			return da.getReadOnlyDp(inf.rod->index);
+		case VL_VAR:
+			return inf.var->place;
+	}
+	BOOST_ASSERT(false);
 }
 
 unique_ptr<PlnGenEntity> PlnValue::genEntity(PlnGenerator& g)
@@ -149,9 +163,9 @@ void PlnExpression::dump(ostream& os, string indent)
 
 void PlnExpression::gen(PlnGenerator& g)
 {
-	for (int i=0; i<ret_places.size(); ++i) {
+	for (int i=0; i<data_places.size(); ++i) {
 		auto re = values[i].genEntity(g);
-		auto le = ret_places[i].genEntity(g);
+	 	auto le = g.getPushEntity(data_places[i]);
 		
 		g.genMove(le.get(), re.get(), ret_places[i].commentStr());
 	}

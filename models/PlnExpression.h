@@ -22,6 +22,7 @@ class PlnExpression {
 public:
 	PlnExprsnType type;
 	vector<PlnReturnPlace> ret_places;
+	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
 
 	PlnExpression(PlnExprsnType type) : type(type) {};
@@ -55,6 +56,7 @@ public:
 	PlnValue(PlnReadOnlyData* rod);
 	PlnValue(PlnVariable* var);
 
+	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
 	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
@@ -102,5 +104,3 @@ public:
 	void gen(PlnGenerator& g);
 	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
-
-

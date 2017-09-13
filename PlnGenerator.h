@@ -68,6 +68,9 @@ public:
 	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
 	virtual unique_ptr<PlnGenEntity> getWork(int i)=0;
 
+	// TODO: take virtual from push & pop
+	virtual unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp) = 0;
+	virtual unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp) = 0;
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 };
 

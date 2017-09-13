@@ -1,46 +1,43 @@
 import <stdio>
 
-int main(string arg[])
-{
-	// 文字リテラルの静的な文字結合は"."を使う。な場合は配列化される。
-	string str = "This is string"
-		. " strin2";
-	// ヒアドキュメント形式。<<は先頭から。<<-は1行目分のインデントは削除
-	// エスケープシーケンスは効かない
-	string str2 = <<END
+// 文字リテラルの静的な文字結合は"."を使う。な場合は配列化される。
+string str = "This is string"
+	. " strin2";
+// ヒアドキュメント形式。<<は先頭から。<<-は1行目分のインデントは削除
+// エスケープシーケンスは効かない
+string str2 = <<END
 teddfadfa
 dfadf
 END;
 
-	string str3 = <<-END
-		This is Test.
-		END;
-	// 最後の改行を含めない場合は後ろに-
-	string str4 <<-END-
-		This is Test.
-		END;
+string str3 = <<-END
+	This is Test.
+	END;
+// 最後の改行を含めない場合は後ろに-
+string str4 <<-END-
+	This is Test.
+	END;
 
 
-	int len = str.len; // 文字数
-	char c = str(2); // char は UTF8マルチバイト文字
+int len = str.len; // 文字数
+char c = str(2); // char は UTF8マルチバイト文字
 
-	int size = str.size; // バイト数
-	byte b = str[2];
+int size = str.size; // バイト数
+byte b = str[2];
 
-	// 変数の後ろに""でフォーマットを書くことで文字列化
-	int i = 3;
-	string dexstr = i.str; // コピーでなくて、内部的には移譲
-	string hexstr = i.str("h");
+// 変数の後ろに""でフォーマットを書くことで文字列化
+int i = 3;
+string dexstr = i.str; // コピーでなくて、内部的には移譲
+string hexstr = i.str("h");
 
-	myprint("test(" i.str ")test2\n");
+myprint("test(" i.str ")test2\n");
 	
-	// 型がstringの時は、自動で.strにキャスト
-	myprint ("test(" i ")test2\n");
-	return 0;
-}
+// 型がstringの時は、自動で.strにキャスト
+myprint ("test(" i ")test2\n");
 
 // stringコピーではなく参照の配列、移譲されたものが渡る
 void myprint(string strs[])
 {
 	foreach string s (strs) print(s);
 }
+

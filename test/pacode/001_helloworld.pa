@@ -1,4 +1,4 @@
-syscall 1: int write();
+syscall 1: int64 write();
 
 void main()
 {

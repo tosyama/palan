@@ -37,6 +37,8 @@ public:
 	unique_ptr<PlnGenEntity> getSysArgument(int i);
 	unique_ptr<PlnGenEntity> getWork(int i);
 
+	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
+	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);
 	unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp);
 };
 

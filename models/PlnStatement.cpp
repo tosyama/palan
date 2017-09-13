@@ -6,6 +6,7 @@
 #include "PlnVariable.h"
 #include "PlnType.h"
 #include "expressions/PlnMultiExpression.h"
+#include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
 using std::endl;
@@ -98,12 +99,13 @@ PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
 	if (retexp) {
 		inf.expression = retexp;
 	} else if (!function->return_vals.size()) {
-		if (function->name == "main")
+		inf.expression = NULL;
+	} else if (function->return_vals.size() == 1) {
+		if (function->name == "main"
+			&& function->return_vals[0]->name=="")
 			inf.expression = new PlnExpression(0);
 		else
-			inf.expression = NULL;
-	} else if (function->return_vals.size() == 1) {
-		inf.expression = new PlnExpression(function->return_vals[0]);
+			inf.expression = new PlnExpression(function->return_vals[0]);
 	} else {
 		PlnMultiExpression *m = new PlnMultiExpression();
 		for (auto v: function->return_vals)
@@ -122,6 +124,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 			diff = 1;
 		}
 
+		vector<PlnDataPlace*> dps = da.allocReturnValues(function->return_vals);
 		for (auto v: inf.expression->values) {
 			PlnReturnPlace rp;
 			rp.type = RP_ARGPLN;
@@ -132,9 +135,12 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 				rp.inf.arg.size = 8;	// TODO: get default.
 				
 			inf.expression->ret_places.push_back(rp);
+
+			inf.expression->data_places.push_back(dps[i]);
 			++i;
 		}
 		inf.expression->finish(da);
+		da.returnedValues(dps);
 	}
 }
 

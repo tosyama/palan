@@ -15,6 +15,7 @@
 #include "PlnFunctionCall.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"
+#include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 
 using std::endl;
@@ -30,7 +31,6 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	for (auto rv: f->return_vals) {
 		PlnVariable* ret_var = new PlnVariable();
 		ret_var->name = rv->name;
-		ret_var->alloc_type = VA_RETVAL;
 		ret_var->inf.index = i;
 		ret_var->var_type = rv->var_type;
 
@@ -54,16 +54,31 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 	int ai = function->return_vals.size();
 	if (ai==0) ai=1;
 	int i = 0;
+	int func_type;
+	switch (function->type) {
+		case FT_PLN: func_type=DPF_PLN; break;
+		case FT_C: func_type=DPF_C; break;
+		case FT_SYS: func_type=DPF_SYS; break;
+	}		
+	auto dps = da.prepareArgDps(
+		arguments.size(), function->parameters,
+		function->return_vals, func_type);
+
 	for (auto a: arguments) {
 		rp.inf.arg.index = ai;
 		if (i < function->parameters.size())
 			rp.inf.arg.size = function->parameters[i]->var_type->size;
 		else
 			rp.inf.arg.size = 8;	// TODO: get system default
+
 		a->ret_places.push_back(rp);
+		a->data_places.push_back(dps[i]);
 		a->finish(da);
+		da.allocDp(dps[i]);
+
 		++ai; ++i;
 	}
+	da.funcCalled(dps, function->return_vals, func_type);
 }
 
 void PlnFunctionCall:: dump(ostream& os, string indent)
@@ -81,8 +96,11 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 	switch (function->type) {
 		case FT_PLN:
 		{
-			for (auto arg: reverse(arguments)) 
+			for (auto arg: arguments) 
 				arg->gen(g);
+			for (auto arg: arguments)
+				g.getPopEntity(arg->data_places[0]);
+
 			g.genCCall(function->name);
 			int i = 0;
 			for (auto rp: ret_places) {
@@ -98,8 +116,10 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		}
 		case FT_SYS:
 		{
-			for (auto arg: reverse(arguments)) 
+			for (auto arg: arguments) 
 				arg->gen(g);
+			for (auto arg: arguments)
+				g.getPopEntity(arg->data_places[0]);
 			g.genSysCall(function->inf.syscall.id, function->name);
 			break;
 		}
