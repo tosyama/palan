@@ -8,7 +8,6 @@
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
-#include <boost/range/adaptor/reversed.hpp>
 
 #include "../../PlnModel.h"
 #include "../PlnFunction.h"
@@ -19,7 +18,6 @@
 #include "../../PlnGenerator.h"
 
 using std::endl;
-using boost::adaptors::reverse;
 
 // PlnFunctionCall
 PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
@@ -35,24 +33,12 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		ret_var->var_type = rv->var_type;
 
 		values.push_back(PlnValue(ret_var));
-
 		++i;
 	}
 }
 
 void PlnFunctionCall::finish(PlnDataAllocator& da)
 {
-	PlnReturnPlace rp;
-	switch (function->type) {
-		case FT_PLN: rp.type = RP_ARGPLN; break;
-		case FT_SYS: rp.type = RP_ARGSYS; break;
-		case FT_C: rp.type = RP_ARGPLN; break;
-		default:
-			BOOST_ASSERT(false);
-	}
-
-	int ai = function->return_vals.size();
-	if (ai==0) ai=1;
 	int i = 0;
 	int func_type;
 	switch (function->type) {
@@ -65,18 +51,11 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 		function->return_vals, func_type);
 
 	for (auto a: arguments) {
-		rp.inf.arg.index = ai;
-		if (i < function->parameters.size())
-			rp.inf.arg.size = function->parameters[i]->var_type->size;
-		else
-			rp.inf.arg.size = 8;	// TODO: get system default
-
-		a->ret_places.push_back(rp);
 		a->data_places.push_back(dps[i]);
 		a->finish(da);
 		da.allocDp(dps[i]);
 
-		++ai; ++i;
+		++i;
 	}
 	da.funcCalled(dps, function->return_vals, func_type);
 }
@@ -124,8 +103,10 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		}
 		case FT_C:
 		{
-			for (auto arg: reverse(arguments)) 
+			for (auto arg: arguments) 
 				arg->gen(g);
+			for (auto arg: arguments)
+				g.getPopEntity(arg->data_places[0]);
 			g.genCCall(function->name);
 			break;
 		}

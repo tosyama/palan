@@ -17,49 +17,6 @@
 using std::to_string;
 using boost::adaptors::reverse;
 
-// PlnReturnPlace
-string PlnReturnPlace::commentStr()
-{
-	switch (type) {
-		case RP_ARGPLN:
-		case RP_ARGSYS:
-			return "arg" + to_string(inf.arg.index);
-		case RP_VAR:
-			return inf.var->name;
-	}
-	return "";
-}
-
-void PlnReturnPlace::dump(ostream& os, string indent)
-{
-	os << indent << "ReturnPlace:";
-	switch (type) {
-		case RP_NULL: os << "Null"; break;
-		case RP_VAR: os << "Variable"; break;
-		case RP_AS_IS: os << "As is"; break;
-		case RP_ARGPLN: os << "Palan Argument"; break;
-		case RP_ARGSYS: os << "Syscall Argument"; break;
-		case RP_WORK: os << "Work Area"; break;
-		default:
-			os << "Unknown" << to_string(type);
-	}
-	os << endl;
-}
-
-unique_ptr<PlnGenEntity> PlnReturnPlace::genEntity(PlnGenerator& g)
-{
-	switch (type) {
-		case RP_NULL: return g.getNull();
-		case RP_VAR: return inf.var->genEntity(g);
-		case RP_AS_IS: return inf.as_is->genEntity(g);
-		case RP_ARGPLN: return g.getArgument(inf.arg.index, inf.arg.size);
-		case RP_ARGSYS: return g.getSysArgument(inf.arg.index);
-		case RP_WORK: return g.getWork(inf.arg.index);
-		default:
-			BOOST_ASSERT(false);
-	}
-}
-
 // PlnValue
 PlnValue::PlnValue(int intValue)
 	: type(VL_LIT_INT8)
@@ -135,9 +92,6 @@ PlnExpression::PlnExpression(PlnValue value)
 
 void PlnExpression::finish(PlnDataAllocator& da)
 {
-	if (ret_places[0].type == RP_AS_IS) {
-		ret_places[0].inf.as_is = &values[0];
-	}
 }
 
 void PlnExpression::dump(ostream& os, string indent)

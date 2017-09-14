@@ -21,13 +21,6 @@ PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp)
 
 void PlnAssignment::finish(PlnDataAllocator& da)
 {
-	PlnReturnPlace rp;
-	rp.type = RP_VAR;
-	for (auto lv: values) {
-		rp.inf.var = lv.inf.var;
-		expression->ret_places.push_back(rp);
-	}
-
 	for (auto lv: values) {
 		PlnDataPlace* dp = lv.inf.var->place;
 		expression->data_places.push_back(dp);

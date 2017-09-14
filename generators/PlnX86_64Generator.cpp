@@ -81,13 +81,8 @@ static const char* oprnd(const PlnGenEntity *e)
 	BOOST_ASSERT(false);
 }
 
-class RegisterManager
-{
-public:
-};
-
 PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
-	: PlnGenerator(ostrm), regm(new RegisterManager())
+	: PlnGenerator(ostrm)
 {
 }
 
@@ -267,16 +262,6 @@ void PlnX86_64Generator::genNegative(PlnGenEntity* tgt)
 	os << "	negq " << oprnd(tgt) << endl;
 }
 
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getNull()
-{
-	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
-	e->type = GE_STRING;
-	e->alloc_type = GA_NULL;
-	e->data.str = new string("$0");
-
-	return e;
-}
-
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getInt(int i)
 {
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
@@ -342,21 +327,6 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getSysArgument(int i)
 		case 4: e->data.i = R10;	break;
 		case 5: e->data.i = R8;	break;
 		case 6: e->data.i = R9;	break;
-	}
-	return e;
-}
-
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getWork(int i)
-{
-	BOOST_ASSERT(i>=0 && i <= 2);
-	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
-	e->type = GE_INT;
-	e->alloc_type = GA_REG;
-	e->size = 8;
-	switch (i) {
-		case 0: e->data.i = RAX;	break;
-		case 1: e->data.i = RDI;	break;
-		case 2: e->data.i = RSI;	break;
 	}
 	return e;
 }

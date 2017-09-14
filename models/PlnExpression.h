@@ -6,8 +6,6 @@
 #pragma once
 #include "../PlnModel.h"
 
-class PlnReturnPlace;
-
 // Expression: 
 enum PlnExprsnType {
 	ET_VALUE,
@@ -21,7 +19,6 @@ enum PlnExprsnType {
 class PlnExpression {
 public:
 	PlnExprsnType type;
-	vector<PlnReturnPlace> ret_places;
 	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
 
@@ -57,37 +54,6 @@ public:
 	PlnValue(PlnVariable* var);
 
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
-	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
-};
-
-enum PlnRtnPlcType {
-	RP_NULL,
-	RP_TEMP,
-	RP_WORK,
-	RP_VAR,
-	RP_AS_IS,
-	RP_ARGPLN,
-	RP_ARGSYS
-};
-
-class PlnReturnPlace
-{
-public:
-	PlnRtnPlcType type;
-	union {
-		struct {
-			int32_t index;
-			int32_t size;
-		} arg;
-		PlnVariable* var;
-		PlnValue* as_is;
-		struct {
-			int index;
-		} wk;
-	}	inf;
-
-	string commentStr();
-	void dump(ostream& os, string indent="");
 	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 

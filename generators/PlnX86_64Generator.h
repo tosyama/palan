@@ -5,11 +5,8 @@
 
 #include "../PlnGenerator.h"
 
-class RegisterManager;
 class PlnX86_64Generator : public PlnGenerator
 {
-	RegisterManager* regm;
-
 public:
 	PlnX86_64Generator(ostream& ostrm);
 	void genSecReadOnlyData();
@@ -29,13 +26,11 @@ public:
 	void genSub(PlnGenEntity* dst, PlnGenEntity* src);
 	void genNegative(PlnGenEntity* tgt);
 
-	unique_ptr<PlnGenEntity> getNull();
 	unique_ptr<PlnGenEntity> getInt(int i);
 	unique_ptr<PlnGenEntity> getStackAddress(int offset, int size);
 	unique_ptr<PlnGenEntity> getStrAddress(int index);
 	unique_ptr<PlnGenEntity> getArgument(int i, int size);
 	unique_ptr<PlnGenEntity> getSysArgument(int i);
-	unique_ptr<PlnGenEntity> getWork(int i);
 
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
 	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);

@@ -126,16 +126,6 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 
 		vector<PlnDataPlace*> dps = da.allocReturnValues(function->return_vals);
 		for (auto v: inf.expression->values) {
-			PlnReturnPlace rp;
-			rp.type = RP_ARGPLN;
-			rp.inf.arg.index = i+diff;
-			if (i < function->return_vals.size()) 
-				rp.inf.arg.size = function->return_vals[i]->var_type->size;
-			else
-				rp.inf.arg.size = 8;	// TODO: get default.
-				
-			inf.expression->ret_places.push_back(rp);
-
 			inf.expression->data_places.push_back(dps[i]);
 			++i;
 		}

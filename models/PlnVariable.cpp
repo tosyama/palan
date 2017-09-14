@@ -35,11 +35,7 @@ void PlnVarInit::finish(PlnDataAllocator& da)
 	}
 
 	if (initializer) {
-		PlnReturnPlace rp;
-		rp.type = RP_VAR;
 		for (auto v: vars) {
-			rp.inf.var = v;
-			initializer->ret_places.push_back(rp);
 			initializer->data_places.push_back(v->place);
 		}
 		initializer->finish(da);

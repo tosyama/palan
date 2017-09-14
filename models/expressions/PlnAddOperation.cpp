@@ -87,17 +87,6 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 
 void PlnAddOperation::finish(PlnDataAllocator& da)
 {
-	BOOST_ASSERT(ret_places.size()==1);
-	int index = 0;
-	int size = 8;
-	if (ret_places[0].type == RP_WORK) {
-		index = ret_places[0].inf.wk.index;
-	}
-	PlnReturnPlace rp;
-	rp.type = RP_WORK;
-	rp.inf.wk.index = index;
-	l->ret_places.push_back(rp);
-
 	// l => RAX
 	PlnDataPlace* ldp = new PlnDataPlace();
 	l->data_places.push_back(ldp);
@@ -105,13 +94,9 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	da.allocAccumulator(ldp);
 
 	if (r->type == ET_VALUE) {
-		rp.type = RP_AS_IS; // del
-		r->ret_places.push_back(rp); // del
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
 	} else {
-		rp.inf.wk.index = index+1; // del
-		r->ret_places.push_back(rp); // del
 		PlnDataPlace* rdp = new PlnDataPlace();
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
@@ -175,16 +160,6 @@ void PlnNegative::finish(PlnDataAllocator& da)
 {
 	PlnDataPlace* dp = new PlnDataPlace();
 	e->data_places.push_back(dp);
-	//--
-	int index = 0;
-	if (ret_places[0].type == RP_WORK) {
-		index = ret_places[0].inf.wk.index;
-	}
-	PlnReturnPlace rp;
-	rp.type = RP_WORK;
-	rp.inf.wk.index = index;
-	e->ret_places.push_back(rp);
-	// --
 	e->finish(da);
 	da.allocAccumulator(dp);
 	da.releaseAccumulator(dp);

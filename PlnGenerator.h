@@ -60,13 +60,11 @@ public:
 	virtual void genSub(PlnGenEntity* dst, PlnGenEntity* src)=0;
 	virtual void genNegative(PlnGenEntity* tgt)=0;
 
-	virtual unique_ptr<PlnGenEntity> getNull() = 0;
 	virtual unique_ptr<PlnGenEntity> getInt(int i)=0;
 	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset, int size)=0;
 	virtual unique_ptr<PlnGenEntity> getStrAddress(int index)=0;
 	virtual unique_ptr<PlnGenEntity> getArgument(int i, int size)=0;
 	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
-	virtual unique_ptr<PlnGenEntity> getWork(int i)=0;
 
 	// TODO: take virtual from push & pop
 	virtual unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp) = 0;
