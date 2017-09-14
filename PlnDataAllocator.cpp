@@ -34,11 +34,8 @@ PlnDataPlace* PlnDataAllocator::allocDataWithDetail(int size, int alloc_step, in
 	dp->type = DP_STK_BP;
 	dp->size = size;
 	dp->status = DS_ASSIGNED;
-	dp->accessCount = 0;
-	dp->previous = NULL;
 	dp->alloc_step = alloc_step;
 	dp->release_step = release_step;
-	dp->save_place = NULL;
 
 	if (size < 8) {
 		// TODO search alloc some bytes place first.
@@ -70,6 +67,8 @@ void PlnDataAllocator::allocSaveData(PlnDataPlace* dp)
 {
 	BOOST_ASSERT(dp->save_place == NULL);
 	dp->save_place = allocDataWithDetail(dp->size, dp->alloc_step, dp->release_step, NULL);
+	static string cmt = "(save)";
+	dp->save_place->comment = &cmt;
 }
 
 void PlnDataAllocator::releaseData(PlnDataPlace* dp)
@@ -113,11 +112,10 @@ PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int intValue)
 	dp->size = 8;
 	dp->status = DS_ASSIGNED;
 	dp->data.intValue = intValue;
-	dp->accessCount = 0;
-	dp->previous = NULL;
 	dp->alloc_step = step;
 	dp->release_step = step;
-	dp->save_place = NULL;
+	static string cmt = "$";
+	dp->comment = &cmt;
 	all.push_back(dp);
 	return dp;
 }
@@ -129,11 +127,10 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 	dp->size = 8;
 	dp->status = DS_ASSIGNED;
 	dp->data.index = index;
-	dp->accessCount = 0;
-	dp->previous = NULL;
 	dp->alloc_step = step;
 	dp->release_step = step;
-	dp->save_place = NULL;
+	static string cmt = "\"..\"";
+	dp->comment = &cmt;
 	all.push_back(dp);
 	return dp;
 }
@@ -163,6 +160,14 @@ void PlnDataAllocator::finish()
 	int stk_size = data_stack.size() + arg_stack.size();
 	if (stk_size % 2) stk_size++;  // for 16byte align.
 	stack_size = stk_size * 8;
+}
+
+PlnDataPlace::PlnDataPlace()
+	: status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
+	 previous(NULL), save_place(NULL)
+{
+	static string emp="";
+	comment = &emp;
 }
 
 int PlnDataPlace::allocable_size()

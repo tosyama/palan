@@ -30,6 +30,7 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::prepareArgDps(
 
 	for (int i=0; i<argnum; ++i) {
 		PlnDataPlace* dp = new PlnDataPlace();
+		static string cmt="arg";
 
 		if (param_ind <= 6) {
 			int regid;
@@ -52,12 +53,8 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::prepareArgDps(
 			dp->data.stack.offset = ind*8;
 		}
 		dp->size = 8;	// TODO get from type.
-		dp->status = DS_ARGUMENT;
-		dp->accessCount = 0;
-		dp->previous = NULL;
-		dp->alloc_step = INT_MAX;
-		dp->release_step = INT_MAX;
-		dp->save_place = NULL;
+		dp->status = DS_ASSIGNED;
+		dp->comment = &cmt;
 			
 		dps.push_back(dp);
 		param_ind++;
@@ -131,16 +128,16 @@ vector<PlnDataPlace*> PlnX86_64DataAllocator::allocReturnValues(vector<PlnVariab
 			PlnDataPlace* pdp = regs[regid];
 			dp->type = DP_REG;
 			dp->size = 8;	// TODO get from type.
-			dp->status = DS_ARGUMENT;
+			dp->status = DS_ASSIGNED;
 
 			dp->data.reg.id = regid;
 			dp->data.reg.offset = 0;
 
-			dp->accessCount = 0;
 			dp->previous = pdp;
 			dp->alloc_step = step++;
-	 		dp->release_step = INT_MAX;
-			dp->save_place = NULL;
+
+			static string cmt="return";
+			dp->comment = &cmt;
 			
 			regs[regid] = dp;
 
@@ -182,11 +179,11 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 	dp->data.reg.id = RAX;
 	dp->data.reg.offset = 0;
 
-	dp->accessCount = 0;
 	dp->previous = pdp;
 	dp->alloc_step = step++;
-	dp->release_step = INT_MAX;
-	dp->save_place = NULL;
+
+	static string cmt = "%work";
+	dp->comment = &cmt;
 
 	if (pdp && pdp->status != DS_RELEASED)
 		if (!pdp->save_place) 

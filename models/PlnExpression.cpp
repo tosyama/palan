@@ -161,13 +161,25 @@ void PlnExpression::dump(ostream& os, string indent)
 		os << indent << "Expression: " << type << endl;
 }
 
+static string exp_cmt(PlnValue& v, PlnDataPlace* dp)
+{
+	switch (v.type) {
+		case VL_LIT_INT8:
+			return (string("$ -> ") + *dp->comment);
+		case VL_VAR:
+			return (v.inf.var->name+" -> " + *dp->comment);
+		case VL_RO_DATA:
+			return ("\"..\" -> " + *dp->comment);
+	}
+}
+
 void PlnExpression::gen(PlnGenerator& g)
 {
 	for (int i=0; i<data_places.size(); ++i) {
 		auto re = values[i].genEntity(g);
 	 	auto le = g.getPushEntity(data_places[i]);
 		
-		g.genMove(le.get(), re.get(), ret_places[i].commentStr());
+		g.genMove(le.get(), re.get(), exp_cmt(values[i],data_places[i]));
 	}
 }
 

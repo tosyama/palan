@@ -112,7 +112,9 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	} else {
 		rp.inf.wk.index = index+1; // del
 		r->ret_places.push_back(rp); // del
-		PlnDataPlace* rdp = new PlnDataPlace;
+		PlnDataPlace* rdp = new PlnDataPlace();
+		static string cmt="(temp)";
+		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
 		da.allocData(8, rdp);	
@@ -129,20 +131,26 @@ void PlnAddOperation::dump(ostream& os, string indent)
 	r->dump(os, indent+" ");
 }
 
+static string gen_cmt(bool is_add, PlnDataPlace* l, PlnDataPlace* r, PlnDataPlace* result)
+{
+	const char* ope = "+";
+	if (!is_add)
+		ope = "-";
+	
+	return l->cmt() + ope + r->cmt() + " -> " + result->cmt();
+}
+
 void PlnAddOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
 	r->gen(g);
 
-//	auto le = l->ret_places[0].genEntity(g);
-//	auto re = r->ret_places[0].genEntity(g);
-//	auto rpe = ret_places[0].genEntity(g);
 	auto le = g.getPopEntity(l->data_places[0]);
 	auto re = g.getPopEntity(r->data_places[0]);
 	auto rpe = g.getPushEntity(data_places[0]);
 	if (is_add) g.genAdd(le.get(), re.get());
 	else g.genSub(le.get(), re.get());
-	g.genMove(rpe.get(), le.get(), ret_places[0].commentStr());
+	g.genMove(rpe.get(), le.get(), gen_cmt(is_add, l->data_places[0],r->data_places[0],data_places[0]));
 }
 
 // PlnNegative
@@ -188,16 +196,18 @@ void PlnNegative::dump(ostream& os, string indent)
 	e->dump(os, indent+" ");
 }
 
+static string gen_n_cmt(PlnDataPlace* dp, PlnDataPlace* result)
+{
+	return string("-") + dp->cmt() + " -> " + result->cmt();
+}
+
 void PlnNegative::gen(PlnGenerator& g)
 {
 	e->gen(g);
-
-//	auto ne = e->ret_places[0].genEntity(g);
-//	auto rpe = ret_places[0].genEntity(g);
 
 	auto ne = g.getPopEntity(e->data_places[0]);
 	auto rpe = g.getPushEntity(data_places[0]);
 	
 	g.genNegative(ne.get());
-	g.genMove(rpe.get(), ne.get(), ret_places[0].commentStr());
+	g.genMove(rpe.get(), ne.get(), gen_n_cmt(e->data_places[0], data_places[0]));
 }

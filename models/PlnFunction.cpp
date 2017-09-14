@@ -65,13 +65,16 @@ void PlnFunction::finish(PlnDataAllocator& da)
 				return_vals.push_back(v);
 			}
 			for (auto r: return_vals) {
-				if (r->name != "")
+				if (r->name != "") {
 					r->place = da.allocData(8);
-				else
+					r->place->comment = &r->name;
+				} else
 					r->place = NULL;
 			}
-			for (auto p: parameters)
+			for (auto p: parameters) {
 				p->place = da.allocData(8);
+				p->place->comment = &p->name;
+			}
 
 			if (implement->statements.back()->type != ST_RETURN) {
 				PlnReturnStmt* rs = new PlnReturnStmt(NULL, implement);
@@ -134,7 +137,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			for (auto p: parameters) {
 				auto arg = g.getArgument(i, p->var_type->size);
 				auto prm = p->genEntity(g);
-				g.genMove(prm.get(), arg.get(), p->name);
+				g.genMove(prm.get(), arg.get(), string("param -> ") + p->name);
 				++i;
 			}
 			implement->gen(g);

@@ -103,12 +103,11 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 
 			g.genCCall(function->name);
 			int i = 0;
-			for (auto rp: ret_places) {
-				auto dst = rp.genEntity(g);
+			for (auto dp: data_places) {
+				auto dst = g.getPushEntity(data_places[i]);
 				auto src = g.getArgument(i, function->return_vals[i]->var_type->size);
-				// auto src = values[i].genEntity(g);
 
-				g.genMove(dst.get(), src.get(), rp.commentStr());
+				g.genMove(dst.get(), src.get(), string("ret -> ") + data_places[i]->cmt());
 
 				++i;
 			}

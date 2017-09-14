@@ -22,7 +22,8 @@ PlnStatement.o:  models/PlnFunction.h \
 	models/expressions/../PlnExpression.h models/../PlnDataAllocator.h \
 	models/../PlnGenerator.h
 PlnExpression.o:  models/PlnExpression.h \
-	models/../PlnModel.h models/PlnVariable.h models/../PlnGenerator.h
+	models/../PlnModel.h models/PlnVariable.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h
 PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
 	models/PlnType.h models/PlnVariable.h models/../PlnDataAllocator.h \
@@ -44,6 +45,7 @@ PlnAddOperation.o:  \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h
 PlnAssignment.o:  \
 	models/expressions/PlnAssignment.h models/expressions/../PlnExpression.h \

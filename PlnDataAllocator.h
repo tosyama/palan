@@ -6,7 +6,9 @@
 #include <cstddef>
 #include <vector>
 #include <stdint.h>
+#include <string>
 using std::vector;
+using std::string;
 
 class PlnDataPlace;
 class PlnParameter;
@@ -73,7 +75,6 @@ enum {
 	DS_CALLEE_PAR,
 	DS_ASSIGNED,
 	DS_ASSIGNED_SOME,
-	DS_ARGUMENT
 };
 
 class PlnDataPlace
@@ -98,7 +99,10 @@ public:
 
 	PlnDataPlace* previous;
 	PlnDataPlace* save_place;
+	string* comment;
 
+	PlnDataPlace();
+	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
 	int allocable_size();
 	void access();
 };
