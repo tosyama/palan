@@ -29,15 +29,14 @@ PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, PlnExpression* initializer)
 
 void PlnVarInit::finish(PlnDataAllocator& da)
 {
-	for (auto v: vars)
-		v->place = da.allocData(8);
+	for (auto v: vars) {
+		v->place = da.allocData(v->var_type->size);
+		v->place->comment = &v->name;
+	}
 
 	if (initializer) {
-		PlnReturnPlace rp;
-		rp.type = RP_VAR;
 		for (auto v: vars) {
-			rp.inf.var = v;
-			initializer->ret_places.push_back(rp);
+			initializer->data_places.push_back(v->place);
 		}
 		initializer->finish(da);
 	}

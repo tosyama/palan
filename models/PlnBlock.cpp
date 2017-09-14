@@ -50,7 +50,6 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 	if (var_type) v->var_type = var_type;
 	else v->var_type = variables.back()->var_type;
 
-	v->alloc_type = VA_STACK;
 	variables.push_back(v);
 
 	return v;

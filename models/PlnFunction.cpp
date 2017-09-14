@@ -9,6 +9,7 @@
 
 #include <boost/assert.hpp>
 #include "PlnFunction.h"
+#include "PlnModule.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnType.h"
@@ -34,9 +35,6 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 {
 	return_vals = move(vars);
-
-	for (auto rv: return_vals)
-		rv->alloc_type = VA_STACK;
 }
 
 PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)
@@ -51,7 +49,6 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 	param->var_type = ptype;
 	param->dflt_value = defaultVal;
 
-	param->alloc_type = VA_STACK;
 	parameters.push_back(param);
 
 	return	param;
@@ -61,18 +58,33 @@ void PlnFunction::finish(PlnDataAllocator& da)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
-			for (auto r: return_vals)
-				r->place = da.allocData(8);
-			for (auto p: parameters)
+			if (name == "main" && return_vals.size() == 0) {
+				auto v = new PlnVariable();
+				v->name = "";
+				v->var_type = parent.module->getType("int64");
+				return_vals.push_back(v);
+			}
+			for (auto r: return_vals) {
+				if (r->name != "") {
+					r->place = da.allocData(8);
+					r->place->comment = &r->name;
+				} else
+					r->place = NULL;
+			}
+			for (auto p: parameters) {
 				p->place = da.allocData(8);
+				p->place->comment = &p->name;
+			}
 
 			if (implement->statements.back()->type != ST_RETURN) {
 				PlnReturnStmt* rs = new PlnReturnStmt(NULL, implement);
 				implement->statements.push_back(rs);
 			}
 
-			for (auto r: return_vals)
-				da.releaseData(r->place);
+			for (auto r: return_vals) {
+				if (r->place)
+					da.releaseData(r->place);
+			}
 			for (auto p: parameters)
 				da.releaseData(p->place);
 
@@ -93,9 +105,13 @@ void PlnFunction::dump(ostream& os, string indent)
 		case FT_PLN: 
 			if (implement) {
 				os << indent << " Stack size: " << inf.pln.stack_size << endl;
-				for (auto r: return_vals)
-					os << indent << " RetValue: " << r->var_type->name << " " << r->name
-						<< "(" << r->place->data.stack.offset << ")" << endl;
+				for (auto r: return_vals) {
+					os << indent << " RetValue: " << r->var_type->name << " " << r->name;
+					if (r->place)
+						os << "(" << r->place->data.stack.offset << ")" << endl;
+					else
+						os << "(NULL)" << endl;
+				}
 				for (auto p: parameters)
 					os << indent << " Paramater: " << p->var_type->name << " " << p->name
 						<< "(" << p->place->data.stack.offset << ")" << endl;
@@ -121,7 +137,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			for (auto p: parameters) {
 				auto arg = g.getArgument(i, p->var_type->size);
 				auto prm = p->genEntity(g);
-				g.genMove(prm.get(), arg.get(), p->name);
+				g.genMove(prm.get(), arg.get(), string("param -> ") + p->name);
 				++i;
 			}
 			implement->gen(g);

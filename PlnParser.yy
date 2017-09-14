@@ -180,7 +180,6 @@ return_value: ID ID
 		$$ = new PlnVariable();
 		$$->name = $2;
 		$$->var_type = t;
-		$$->alloc_type = VA_UNKNOWN;
 	}
 	;
 

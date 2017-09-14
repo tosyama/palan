@@ -6,8 +6,10 @@
 /// @file	PlnAssignment.cpp
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
+#include <iostream>
 #include "PlnAssignment.h"
 #include "../PlnVariable.h"
+#include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 
 // PlnAssignment
@@ -19,11 +21,9 @@ PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp)
 
 void PlnAssignment::finish(PlnDataAllocator& da)
 {
-	PlnReturnPlace rp;
-	rp.type = RP_VAR;
 	for (auto lv: values) {
-		rp.inf.var = lv.inf.var;
-		expression->ret_places.push_back(rp);
+		PlnDataPlace* dp = lv.inf.var->place;
+		expression->data_places.push_back(dp);
 	}
 	expression->finish(da);
 }

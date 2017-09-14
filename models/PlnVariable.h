@@ -1,15 +1,7 @@
 #include "../PlnModel.h"
 
-// Variable: Type name
-enum PlnVarAllocType {
-	VA_UNKNOWN,
-	VA_STACK,
-	VA_RETVAL
-};
-
 class PlnVariable {
 public:
-	PlnVarAllocType alloc_type;
 	PlnType *var_type;
 	string name;
 	PlnDataPlace* place;

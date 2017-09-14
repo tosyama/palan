@@ -1,0 +1,23 @@
+// point1: ":"で区切って横に書くと並列処理される。(どちらが先に処理されるか不定)
+//		;で　待ち合わせを行う。
+print("Hello World!\n"): print("Hello Palan!\n");
+
+// Point: ":"の最初が配列の場合、要素分の処理が走る。
+(1..5):print("Hello Palan World" _.str "!\n");
+
+// Point: ":"の最初が整数場合、その分の処理が走る。
+2:workerTask(0);
+
+// worker 処理 非同期処理の場合(先頭に^)
+int32 n[] = {0,0};
+^n.size: n[_] = workerTask(&n[_]);
+
+wait until(n.total()==2) {
+} timeout(1000) {
+}
+
+int32 &n workerTask(&n)
+{
+	sleep(1000);
+	++n;
+}
