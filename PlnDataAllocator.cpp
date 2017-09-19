@@ -96,6 +96,10 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp)
 			arg_stack.push_back(NULL);
 		pdp = arg_stack[idx];
 		arg_stack[idx] = dp;
+	} else if (dp->type == DP_STK_BP
+			&& dp->data.stack.offset >= 16) {
+		pdp = NULL;
+		all.push_back(dp);
 	} else
 		BOOST_ASSERT(false);
 
@@ -103,6 +107,36 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp)
 	dp->alloc_step = step++;
 	if (pdp && pdp->status != DS_RELEASED)
 		allocSaveData(pdp);
+}
+
+vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee)
+{
+	int param_ind = ret_num > 0 ? ret_num : 1;
+	int end_ind = param_ind + arg_num;
+
+	vector<PlnDataPlace*> dps;
+	for (int i=param_ind; i<end_ind; ++i) {
+		auto dp = createArgDp(func_type, i, is_callee);
+		static string cmt="arg";
+		dp->comment = &cmt;
+		dps.push_back(dp);
+	}
+
+	return dps;
+}
+
+vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_type, bool is_callee)
+{
+	vector<PlnDataPlace*> dps;
+
+	for (int i=0; i<ret_num; ++i) {
+		static string cmt="return";
+		auto dp = createArgDp(func_type, i, is_callee);
+		dp->comment = &cmt;
+		dps.push_back(dp);
+	}
+
+	return dps;
 }
 
 PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int intValue)
@@ -149,8 +183,7 @@ void PlnDataAllocator::finish()
 	}
 	offset = 0;
 	for (auto dp: arg_stack) {
-		dp->data.stack.offset = offset;
-		PlnDataPlace* dpp = dp->previous;
+		PlnDataPlace* dpp = dp;
 		while (dpp) {
 			dpp->data.stack.offset = offset;
 			dpp = dpp->previous;

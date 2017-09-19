@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <boost/assert.hpp>
 #include <limits.h>
+#include "../models/PlnVariable.h"
+#include "../models/PlnType.h"
 #include "PlnX86_64DataAllocator.h"
 
 using namespace std;
@@ -18,48 +20,42 @@ PlnX86_64DataAllocator::PlnX86_64DataAllocator()
 {
 }
 
-vector<PlnDataPlace*> PlnX86_64DataAllocator::prepareArgDps(
-	int argnum, 
-	vector<PlnParameter*>& params, vector<PlnVariable*>& rets, int func_type)
+PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool is_callee)
 {
-	int param_ind;
-	vector<PlnDataPlace*> dps;
+	PlnDataPlace* dp = new PlnDataPlace();
 
-	if (rets.size() == 0) param_ind = 1;
-	else param_ind = rets.size();
+	if (index <= 6) {
+		int regid;
+		if (func_type == DPF_PLN || func_type == DPF_C)
+			regid = ARG_TBL[index];
+		else if (func_type == DPF_SYS)
+			regid = SYSARG_TBL[index];
+		else
+			BOOST_ASSERT(false);
 
-	for (int i=0; i<argnum; ++i) {
-		PlnDataPlace* dp = new PlnDataPlace();
-		static string cmt="arg";
+		dp->type = DP_REG;
+		dp->data.reg.id = regid;
+		dp->data.reg.offset = 0;
+	} else {	// index >= 6
+		BOOST_ASSERT(func_type != DPF_SYS);
+		int ind = index-7;
 
-		if (param_ind <= 6) {
-			int regid;
-			if (func_type == DPF_PLN || func_type == DPF_C)
-				regid = ARG_TBL[param_ind];
-			else if (func_type == DPF_SYS)
-				regid = SYSARG_TBL[param_ind];
-			else
-				BOOST_ASSERT(false);
+		if (is_callee) {
+			dp->type = DP_STK_BP;
+			dp->data.stack.idx = ind;
+			dp->data.stack.offset = ind*8+16;
 
-			dp->type = DP_REG;
-			dp->data.reg.id = regid;
-			dp->data.reg.offset = 0;
-		} else {	// param_ind >= 6
-			BOOST_ASSERT(func_type != DPF_SYS);
-			int ind = param_ind-7;
+		} else {
 			dp->type = DP_STK_SP;
 
 			dp->data.stack.idx = ind;
 			dp->data.stack.offset = ind*8;
 		}
-		dp->size = 8;	// TODO get from type.
-		dp->status = DS_ASSIGNED;
-		dp->comment = &cmt;
-			
-		dps.push_back(dp);
-		param_ind++;
 	}
-	return dps;
+	dp->size = 8;
+	dp->status = DS_ASSIGNED;
+
+	return dp;
 }
 
 static bool checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
@@ -110,53 +106,11 @@ void PlnX86_64DataAllocator::funcCalled(
 	step++;
 }
 
-vector<PlnDataPlace*> PlnX86_64DataAllocator::allocReturnValues(vector<PlnVariable*>& rets, int func_type)
-{
-	vector<PlnDataPlace*> dps;
-	int i = 0;
-	for (auto r: rets) {
-		PlnDataPlace* dp = new PlnDataPlace();
-		if (i<=6) {
-			int regid;
-			if (func_type == DPF_PLN || func_type == DPF_C)
-				regid = ARG_TBL[i];
-			else if (func_type == DPF_SYS)
-				regid = SYSARG_TBL[i];
-			else
-				BOOST_ASSERT(false);
-
-			PlnDataPlace* pdp = regs[regid];
-			dp->type = DP_REG;
-			dp->size = 8;	// TODO get from type.
-			dp->status = DS_ASSIGNED;
-
-			dp->data.reg.id = regid;
-			dp->data.reg.offset = 0;
-
-			dp->previous = pdp;
-			dp->alloc_step = step++;
-
-			static string cmt="return";
-			dp->comment = &cmt;
-			
-			regs[regid] = dp;
-
-			if (pdp && pdp->status != DS_RELEASED) {
-				allocSaveData(pdp);
-			}
-
-			dps.push_back(dp);
-		} else {
-			// not impl yet.
-			BOOST_ASSERT(false);
-		}
-		i++;
-	}
-	return dps;
-}
-
 void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type)
 {
+	if (ret_dps.size() >= 7)
+		allocSaveData(ret_dps[0]);
+
 	for (auto dp: ret_dps) {
 		dp->status = DS_RELEASED;
 		dp->release_step = step;
@@ -165,6 +119,8 @@ void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int 
 		if (dp->type == DP_REG) 
 			BOOST_ASSERT(!checkExistsActiveDP(regs[dp->data.reg.id], dp));
 	}
+
+
 	step++;
 }
 
@@ -197,5 +153,10 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 void PlnX86_64DataAllocator::releaseAccumulator(PlnDataPlace* dp)
 {
 	releaseData(dp);
+}
+
+bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
+{
+	return dp->type == DP_REG && dp->data.reg.id == RAX;
 }
 

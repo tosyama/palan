@@ -1,3 +1,7 @@
+/// PlnStatement model class definition.
+///
+/// @file	PlnStatement.cpp
+/// @copyright	2017- YAMAGUCHI Toshinobu 
 #include <boost/assert.hpp>
 
 #include "PlnFunction.h"
@@ -58,8 +62,8 @@ void PlnStatement::dump(ostream& os, string indent)
 			for (auto v: inf.var_init->vars)
 				os << v->name << " ";
 			os << endl;
-			if (inf.var_init->initializer)
-				inf.var_init->initializer->dump(os, indent+" ");
+			for (auto i: inf.var_init->initializer)
+				i->dump(os, indent+" ");
 			break;
 
 		case ST_BLOCK:
@@ -90,61 +94,67 @@ void PlnStatement::gen(PlnGenerator& g)
 }
 
 // PlnReturnStmt
-PlnReturnStmt::PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent)
+PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 {
 	type = ST_RETURN;
 	this->parent = parent;
 	function = parent->parent_func;
+	late_pop_dp = NULL;
+	
+	expressions = move(retexp);
 
-	if (retexp) {
-		inf.expression = retexp;
-	} else if (!function->return_vals.size()) {
-		inf.expression = NULL;
-	} else if (function->return_vals.size() == 1) {
-		if (function->name == "main"
-			&& function->return_vals[0]->name=="")
-			inf.expression = new PlnExpression(0);
-		else
-			inf.expression = new PlnExpression(function->return_vals[0]);
-	} else {
-		PlnMultiExpression *m = new PlnMultiExpression();
+	if (expressions.size()==0 && 
+		function->return_vals.size() > 0)
+	{
 		for (auto v: function->return_vals)
-			m->append(new PlnExpression(v));
-		inf.expression = m;
+			expressions.push_back(new PlnExpression(v));
 	}
 }
 
 void PlnReturnStmt::finish(PlnDataAllocator& da)
 {
-	if (inf.expression) {
-		int i=0;
-		int diff=0;
-		if (function->name == "main") {
-			BOOST_ASSERT(function->return_vals.size()<=1);
-			diff = 1;
-		}
+	int i=0, j=0;
 
-		vector<PlnDataPlace*> dps = da.allocReturnValues(function->return_vals);
-		for (auto v: inf.expression->values) {
-			inf.expression->data_places.push_back(dps[i]);
+	BOOST_ASSERT(function->type == FT_PLN);
+
+	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), DPF_PLN, true);
+	for (auto e: expressions) {
+		for (auto v: e->values) {
+			e->data_places.push_back(dps[i]);
+			if (da.isAccumulator(dps[i])) {
+				late_pop_dp = dps[i];
+			}
 			++i;
 		}
-		inf.expression->finish(da);
-		da.returnedValues(dps);
+		e->finish(da);
+		for(;j<i;++j) {
+			da.allocDp(dps[j]);
+		}
 	}
+	da.returnedValues(dps, DPF_PLN);
 }
 
 void PlnReturnStmt::dump(ostream& os, string indent)
 {
 	os << indent << "Return: " << endl;
-	if (inf.expression) 
-		inf.expression->dump(os, indent+" ");
+	for (auto e: expressions)
+		e->dump(os, indent+" ");
 }
 
 void PlnReturnStmt::gen(PlnGenerator& g)
 {
-	if (inf.expression)
-		inf.expression->gen(g);
+	for (auto e: expressions)
+		e->gen(g);
+
+	PlnDataPlace* adp = NULL;
+
+	for (auto e: expressions)
+		for (auto dp: e->data_places)
+			if (dp != late_pop_dp)
+				g.getPopEntity(dp);
+				
+	if (late_pop_dp)
+		g.getPopEntity(late_pop_dp);
 
 	g.genFreeLocalVarArea(function->inf.pln.stack_size);
 	if (function->name == "main") 

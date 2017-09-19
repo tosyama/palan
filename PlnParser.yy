@@ -81,7 +81,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
-%type <PlnExpression*>	expressions
+%type <vector<PlnExpression*>>	expressions
 %type <PlnExpression*>	expression
 %type <PlnExpression*>	st_expression
 %type <PlnExpression*>	assignment
@@ -295,12 +295,16 @@ statement: st_expression ';'
 	| declarations ';'
 	{
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1, NULL), CUR_BLOCK);
+		$$ = new PlnStatement(new PlnVarInit($1), CUR_BLOCK);
 	}
 
 	| declarations '=' expressions ';'
 	{
-		if ($1.size() != $3->values.size()) {
+		int count=0;
+		for (auto e: $3)
+			count+=e->values.size();
+
+		if ($1.size() != count) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
 			YYABORT;
 		}
@@ -332,17 +336,13 @@ st_expression: expression
 
 expressions: expression
 	{
-		$$ = $1;
+		$$.push_back($1);
 	}
 
 	| expressions ',' expression
 	{
-		if ($1->type == ET_MULTI) {
-			$$ = $1;
-			static_cast<PlnMultiExpression*>($$)->append($3);
-		} else {
-			$$ = new PlnMultiExpression($1, $3);
-		}
+		$$ = move($1);
+		$$.push_back($3);
 	}
 	;
 
@@ -463,7 +463,10 @@ term: INT
 
 assignment: lvals '=' expressions
 	{
-		if ($1.size() != $3->values.size()) {
+		int count=0;
+		for (auto e: $3)
+			count+=e->values.size();
+		if ($1.size() != count) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
 			YYABORT;
 		}
@@ -516,15 +519,19 @@ subdeclaration: ID
 
 return_stmt: KW_RETURN
 	{
-		$$ = new PlnReturnStmt(NULL, CUR_BLOCK);
+		vector<PlnExpression*> empty;
+		$$ = new PlnReturnStmt(empty, CUR_BLOCK);
 		// TODO: check vals were set.
 	}
 
 	| KW_RETURN expressions
 	{
-		$$ = new PlnReturnStmt($2, CUR_BLOCK);
 		// TODO: type check
-		if ($$->function->return_vals.size() != $2->values.size())
+		int count=0;
+		for (auto e: $2)
+			count+=e->values.size();
+		$$ = new PlnReturnStmt($2, CUR_BLOCK);
+		if ($$->function->return_vals.size() != count)
 		{
 			error(@$, PlnMessage::getErr(E_NumOfRetValues));
 			YYABORT;

@@ -71,15 +71,26 @@ void PlnFunction::finish(PlnDataAllocator& da)
 				} else
 					r->place = NULL;
 			}
+
+			auto dps = da.prepareArgDps(return_vals.size(), parameters.size(), DPF_PLN, true);
+			int i=0;
 			for (auto p: parameters) {
-				p->place = da.allocData(8);
-				p->place->comment = &p->name;
+				auto dp = da.allocData(8);
+				dp->comment = &p->name;
+				p->place = dp;
+				p->load_place = dps[i];
+				i++;
 			}
 
 			if (implement->statements.back()->type != ST_RETURN) {
-				PlnReturnStmt* rs = new PlnReturnStmt(NULL, implement);
+				vector<PlnExpression *> rv;
+				if (name=="main")
+					rv.push_back(new PlnExpression(0));
+				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);
 				implement->statements.push_back(rs);
 			}
+
+			implement->finish(da);
 
 			for (auto r: return_vals) {
 				if (r->place)
@@ -88,7 +99,6 @@ void PlnFunction::finish(PlnDataAllocator& da)
 			for (auto p: parameters)
 				da.releaseData(p->place);
 
-			implement->finish(da);
 			da.finish();
 			inf.pln.stack_size = da.stack_size;
 		}
@@ -135,11 +145,11 @@ void PlnFunction::gen(PlnGenerator &g)
 			if (i==0) i = 1;
 			
 			for (auto p: parameters) {
-				auto arg = g.getArgument(i, p->var_type->size);
-				auto prm = p->genEntity(g);
-				g.genMove(prm.get(), arg.get(), string("param -> ") + p->name);
-				++i;
+				auto le = g.getPopEntity(p->place);
+				auto re = g.getPopEntity(p->load_place);
+				g.genMove(le.get(), re.get(), string("param->") + p->name);
 			}
+			
 			implement->gen(g);
 			break;
 		}

@@ -20,8 +20,6 @@ void main()
 	h = a+d;
 	f = e-f+-d;
 	int64 k,l = add(5,6);
-	printf("%d %d %d", h, j, f);
-	printf(" %d %d", k, l);
-	printf("\n");
+	printf("%d %d %d %d %d %d\n", h, j, f, a+b+c, k, l);
 	exit(0);	// to flush buffer.
 }

@@ -344,7 +344,8 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getPopEntity(PlnDataPlace* dp)
 	auto e = getEntity(dp);
 	if (dp->save_place) {
 		auto se = getEntity(dp->save_place);
-		genMove(e.get(), se.get(), "load from save");
+		string cmt = string("load ") + *dp->comment + " from " + *dp->save_place->comment;
+		genMove(e.get(), se.get(), cmt);
 	}
 	return getEntity(dp);
 }
@@ -357,6 +358,11 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->alloc_type = GA_MEM;
 		e->size = dp->size;
 		e->data.str = new string((format("%1%(%%rbp)") % dp->data.stack.offset).str());
+	} else if (dp->type == DP_STK_SP) {
+		e->type = GE_STRING;
+		e->alloc_type = GA_MEM;
+		e->size = dp->size;
+		e->data.str = new string((format("%1%(%%rsp)") % dp->data.stack.offset).str());
 	} else if (dp->type == DP_REG) {
 		e->type = GE_INT;
 		e->alloc_type = GA_REG;

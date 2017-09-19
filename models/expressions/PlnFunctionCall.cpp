@@ -39,25 +39,35 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 
 void PlnFunctionCall::finish(PlnDataAllocator& da)
 {
-	int i = 0;
 	int func_type;
 	switch (function->type) {
 		case FT_PLN: func_type=DPF_PLN; break;
 		case FT_C: func_type=DPF_C; break;
 		case FT_SYS: func_type=DPF_SYS; break;
 	}		
-	auto dps = da.prepareArgDps(
-		arguments.size(), function->parameters,
-		function->return_vals, func_type);
 
+	auto dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
+
+	int i = 0;
 	for (auto a: arguments) {
 		a->data_places.push_back(dps[i]);
 		a->finish(da);
 		da.allocDp(dps[i]);
-
 		++i;
 	}
 	da.funcCalled(dps, function->return_vals, func_type);
+	auto rdps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
+	
+	for (i=0; i<rdps.size(); ++i) {
+		if (i < data_places.size()) {
+			BOOST_ASSERT(data_places[i]->save_place == NULL);
+			data_places[i]->save_place = rdps[i];
+			// TODO: set step.
+		} else {
+			delete rdps[i];
+		}
+	}
+
 }
 
 void PlnFunctionCall:: dump(ostream& os, string indent)
@@ -81,15 +91,9 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 				g.getPopEntity(arg->data_places[0]);
 
 			g.genCCall(function->name);
-			int i = 0;
-			for (auto dp: data_places) {
-				auto dst = g.getPushEntity(data_places[i]);
-				auto src = g.getArgument(i, function->return_vals[i]->var_type->size);
+			for (auto dp: data_places)
+				g.getPopEntity(dp);
 
-				g.genMove(dst.get(), src.get(), string("ret -> ") + data_places[i]->cmt());
-
-				++i;
-			}
 			break;
 		}
 		case FT_SYS:

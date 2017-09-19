@@ -1,3 +1,8 @@
+/// PlnStatement model class declaration.
+///
+/// @file	PlnStatement.h
+/// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include "../PlnModel.h"
 
 // Statement: Expression | Block
@@ -32,8 +37,10 @@ class PlnReturnStmt : public PlnStatement
 {
 public:
 	PlnFunction *function;
-	
-	PlnReturnStmt(PlnExpression *retexp, PlnBlock* parent);
+	vector<PlnExpression*> expressions;
+	PlnDataPlace *late_pop_dp;
+
+	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);
 
 	void finish(PlnDataAllocator& da);
 	void dump(ostream& os, string indent="");

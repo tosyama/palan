@@ -27,6 +27,7 @@ protected:
 	int step;
 
 	PlnDataPlace* allocDataWithDetail(int size, int alloc_step, int release_step, PlnDataPlace* new_dp);
+	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
 
 public:
 	int stack_size;
@@ -45,14 +46,14 @@ public:
 	void releaseData(PlnDataPlace* dp);
 
 	void allocDp(PlnDataPlace *Dp);
-	virtual vector<PlnDataPlace*> prepareArgDps(int argnum, vector<PlnParameter*>& params, vector<PlnVariable*>& rets, int func_type = DPF_PLN) = 0;
-	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type = DPF_PLN) = 0;
-
-	virtual vector<PlnDataPlace*> allocReturnValues(vector<PlnVariable*>& rets, int func_type = DPF_PLN) = 0;
-	virtual void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type = DPF_PLN) = 0;
+	vector<PlnDataPlace*> prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee);
+	vector<PlnDataPlace*> prepareRetValDps(int ret_num, int func_type, bool is_callee);
+	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
+	virtual void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type) = 0;
 
 	virtual PlnDataPlace* allocAccumulator(PlnDataPlace* dp) = 0;
 	virtual void releaseAccumulator(PlnDataPlace* dp) = 0;
+	virtual bool isAccumulator(PlnDataPlace* dp) = 0;
 
 	PlnDataPlace* getLiteralIntDp(int intValue);
 	PlnDataPlace* getReadOnlyDp(int index);

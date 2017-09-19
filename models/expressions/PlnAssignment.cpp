@@ -13,19 +13,24 @@
 #include "../../PlnGenerator.h"
 
 // PlnAssignment
-PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp)
-	: PlnExpression(ET_ASSIGN), expression(exp)
+PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps)
+	: PlnExpression(ET_ASSIGN), expressions(move(exps))
 {
 	values = move(lvals);
 }
 
 void PlnAssignment::finish(PlnDataAllocator& da)
 {
-	for (auto lv: values) {
-		PlnDataPlace* dp = lv.inf.var->place;
-		expression->data_places.push_back(dp);
+	int i=0;
+	for (auto e: expressions) {
+		for (auto v: e->values) {
+			if (i >= values.size()) break;
+			auto dp = values[i].inf.var->place;
+			e->data_places.push_back(dp);
+			i++;
+		}
+		e->finish(da);
 	}
-	expression->finish(da);
 }
 
 void PlnAssignment::dump(ostream& os, string indent)
@@ -34,11 +39,13 @@ void PlnAssignment::dump(ostream& os, string indent)
 	for (auto lv: values)
 		os << " " << lv.inf.var->name;
 	os << endl;
-	expression->dump(os, indent+" ");	
+	for (auto e: expressions)
+		e->dump(os, indent+" ");	
 }
 
 void PlnAssignment::gen(PlnGenerator& g)
 {
-	expression->gen(g);
+	for (auto e: expressions)
+		e->gen(g);
 	PlnExpression::gen(g);
 }

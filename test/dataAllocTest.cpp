@@ -18,7 +18,7 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 
 	vector<PlnParameter*> params(6);
 	vector<PlnVariable*> rets;
-	auto dps1 = allocator.prepareArgDps(6, params, rets, DPF_SYS);
+	auto dps1 = allocator.prepareArgDps(rets.size(), params.size(), DPF_SYS, false);
 	for (auto dp: dps1)
 		allocator.allocDp(dp);
 	REQUIRE(dps1.size() == 6);
@@ -27,13 +27,13 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 
 	rets.resize(2);
 	params.resize(7);
-	auto dps2 = allocator.prepareArgDps(7, params, rets);
+	auto dps2 = allocator.prepareArgDps(rets.size(), params.size(), DPF_PLN, false);
 	for (auto dp: dps2)
 		allocator.allocDp(dp);
 	REQUIRE(dps2.size() == 7);
 	REQUIRE(allocator.data_stack.size() == 6);
 	REQUIRE(allocator.arg_stack.size() == 2);
-	allocator.funcCalled(dps2, rets);
+	allocator.funcCalled(dps2, rets, DPF_PLN);
 	REQUIRE(allocator.regs[RSI] == dps2[0]);
 	REQUIRE(dps2[0]->status==DS_RELEASED);
 	REQUIRE(dps2[6]->status==DS_RELEASED);
