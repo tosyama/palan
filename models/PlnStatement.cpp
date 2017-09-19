@@ -9,7 +9,7 @@
 #include "PlnStatement.h"
 #include "PlnVariable.h"
 #include "PlnType.h"
-#include "expressions/PlnMultiExpression.h"
+#include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
