@@ -5,6 +5,7 @@
 ///
 /// @file	PlnVariable.cpp
 /// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #include <boost/assert.hpp>
 
 #include "PlnFunction.h"
@@ -15,39 +16,42 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
-//PlnVariable
+// PlnVariable
 unique_ptr<PlnGenEntity> PlnVariable::genEntity(PlnGenerator& g)
 {
 	return g.getEntity(place);
 }
 
 // PlnVarInit
-PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, PlnExpression* initializer)
-	: vars(move(vars)), initializer(initializer)
+PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars) : vars(move(vars))
+{
+}
+
+PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*> &initializer)
+	: vars(move(vars)), initializer(move(initializer))
 {
 }
 
 void PlnVarInit::finish(PlnDataAllocator& da)
 {
-	for (auto v: vars)
-		v->place = da.allocData(8);
-
-	if (initializer) {
-		PlnReturnPlace rp;
-		rp.type = RP_VAR;
-		for (auto v: vars) {
-			rp.inf.var = v;
-			initializer->ret_places.push_back(rp);
+	for (auto v: vars) {
+		v->place = da.allocData(v->var_type->size);
+		v->place->comment = &v->name;
+	}
+	int i=0;
+	for (auto ie: initializer) {
+		for (auto ev: ie->values) {
+			if (i >= vars.size()) break;
+			ie->data_places.push_back(vars[i]->place);
+			i++;
 		}
-		initializer->finish(da);
+		ie->finish(da);
 	}
 }
 
 void PlnVarInit::gen(PlnGenerator& g)
 {
-	if (initializer) {
-		initializer->gen(g);
-		BOOST_ASSERT(initializer->values.size() >= vars.size());
-	}
+	for (auto i: initializer)
+		i->gen(g);
 }
 

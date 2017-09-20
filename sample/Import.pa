@@ -1,10 +1,7 @@
 import "test"	// import names to current namespace.
 import "../test2" as t2	// expand as t2 namespace
 
-void main()
-{
-	test_func();
-	t2.test_func();
-}
+test_func();
+t2.test_func();
 
 

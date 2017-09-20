@@ -14,10 +14,17 @@ enum {
 
 class PlnX86_64DataAllocator: public PlnDataAllocator
 {
+protected:
+	PlnDataPlace* createArgDp(int func_type, int index, bool is_callee);
+
 public:
 	PlnX86_64DataAllocator();
-	vector<PlnDataPlace*> allocArgs(vector<PlnParameter*>& params, vector<PlnVariable*>& rets, int func_type = DPF_PLN);
-	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type = DPF_PLN);
-};
 
+	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type);
+	void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type);
+
+	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
+	void releaseAccumulator(PlnDataPlace* dp);
+	bool isAccumulator(PlnDataPlace* dp);
+};
 

@@ -18,24 +18,28 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 
 	vector<PlnParameter*> params(6);
 	vector<PlnVariable*> rets;
-	vector<PlnDataPlace*> dps1 = allocator.allocArgs(params, rets, DPF_SYS);
+	auto dps1 = allocator.prepareArgDps(rets.size(), params.size(), DPF_SYS, false);
+	for (auto dp: dps1)
+		allocator.allocDp(dp);
 	REQUIRE(dps1.size() == 6);
 	REQUIRE(allocator.data_stack.size() == 2);
 	REQUIRE(allocator.arg_stack.size() == 0);
 
 	rets.resize(2);
 	params.resize(7);
-	vector<PlnDataPlace*> dps2 = allocator.allocArgs(params, rets);
+	auto dps2 = allocator.prepareArgDps(rets.size(), params.size(), DPF_PLN, false);
+	for (auto dp: dps2)
+		allocator.allocDp(dp);
 	REQUIRE(dps2.size() == 7);
 	REQUIRE(allocator.data_stack.size() == 6);
 	REQUIRE(allocator.arg_stack.size() == 2);
-	allocator.funcCalled(dps2, rets);
+	allocator.funcCalled(dps2, rets, DPF_PLN);
 	REQUIRE(allocator.regs[RSI] == dps2[0]);
 	REQUIRE(dps2[0]->status==DS_RELEASED);
 	REQUIRE(dps2[6]->status==DS_RELEASED);
 
 	allocator.funcCalled(dps1, rets, DPF_SYS);
-	REQUIRE(allocator.regs[RDI]->status == DS_DESTROYED);
+	REQUIRE(allocator.regs[RDI]->status == DS_RELEASED);
 	REQUIRE(dps1[0]->status==DS_RELEASED);
 	REQUIRE(dps1[5]->status==DS_RELEASED);
 

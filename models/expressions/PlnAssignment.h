@@ -9,8 +9,8 @@
 class PlnAssignment : public PlnExpression
 {
 public:
-	PlnAssignment(vector<PlnValue>& lvals, PlnExpression* exp);
-	PlnExpression* expression;
+	PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps);
+	vector<PlnExpression*> expressions;
 
 	void finish(PlnDataAllocator& da);	// override
 	void dump(ostream& os, string indent="");	// override

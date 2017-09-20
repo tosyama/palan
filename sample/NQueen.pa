@@ -1,0 +1,34 @@
+// nqueen: may not work..
+
+const auto MAX_N = 30;
+alias int int64;
+
+int n;
+scanf("%d", &n);
+
+int board[n, n] = 0;
+int count = queen(borad, 0, n);
+printf("answer: %d", count);
+
+int count queen(int board[,], x, y)
+{
+	assert(board.size[0] == borad.size[1]);
+	int n = borad.size[0];
+	count = 0;
+	for (int xx: 1 << x-1)
+		if (board[xx,y]) return;
+		
+	for (int xx,yy: 1<<x-1, 1<<y-1)
+		if (board[xx,yy]) return;
+
+	for (int xx,yy: 1<<x-1, y+1>>n)
+		if (board[xx,yy]) return;
+	
+	board[x,y] = 1;
+	if (x == n) count++;
+	else
+		for (int yy: 1<<n)
+			count += queen(board, x+1, yy);
+
+	board[x,y] = 0;
+}
