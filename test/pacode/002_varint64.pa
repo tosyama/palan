@@ -1,12 +1,13 @@
-ccall int32 printf();
-ccall void exit();
+ccall int64 printf();
+ccall exit();
 
-int64 aa, int64 ab add(int64 a, int64 b)
+func int64 aa, int64 ab
+	add(int64 a, int64 b)
 {
 	aa,ab = a+1,b+2;
 }
 
-void main()
+func main()
 {
 	int64 a = 1;
 	int64 b,c,d = 2,3,4;

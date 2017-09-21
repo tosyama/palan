@@ -1,6 +1,6 @@
 syscall 1: int64 write();
 
-void main()
+func main()
 {
 	write(1, "Hello World!\n", 13);
 }

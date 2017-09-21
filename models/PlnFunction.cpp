@@ -35,6 +35,11 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 {
 	return_vals = move(vars);
+	PlnType* t;
+	for (auto rv: return_vals) {
+		if (rv->var_type) t = rv->var_type;
+		else rv->var_type = t;
+	}
 }
 
 PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)

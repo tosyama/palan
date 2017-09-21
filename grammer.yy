@@ -48,9 +48,12 @@ return_types: TYPENAME
 	| return_types TYPENAME
 	;
 
-return_values: TYPENAME ID
+return_values: return_value
+	| return_values ',' return_value
 	| return_values ',' ID
-	| return_values ',' TYPENAME ID
+	;
+
+return_value: TYPENAME ID
 	;
 
 parameters: /* empty */

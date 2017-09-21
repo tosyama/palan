@@ -6,7 +6,7 @@
 /// @file	PlnModule.cpp
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
-#include <unordered_map>
+#include <algorithm>
 #include <boost/assert.hpp>
 #include "PlnModule.h"
 #include "PlnFunction.h"
@@ -19,11 +19,14 @@ using namespace std;
 
 PlnModule::PlnModule() 
 {
+	types = PlnType::getBasicTypes();
 }
 
 PlnType* PlnModule::getType(const string& type_name)
 {
-	return PlnType::getBasicType(type_name);
+	auto t = std::find_if(types.begin(), types.end(),
+		[type_name](PlnType* t) { return t->name == type_name; });
+	return (t != types.end()) ? *t : NULL; 
 }
 
 PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
