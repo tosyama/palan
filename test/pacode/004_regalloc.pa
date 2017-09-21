@@ -1,13 +1,12 @@
 ccall int64 printf();
 ccall exit();
 
-func int64 func1(int64 a1, int64 a2, int64 a3)
+func int64 func1(int64 a1, a2, a3)
 {
 	return a1+a2+a3;
 }
 
-func
-int64 r1, r2, r3, r4, r5, r6, r7, r8
+func int64 r1, r2, r3, r4, r5, r6, r7, r8
 	many_ret_func (int64 a1)
 {
 	r1,r2,r3	= a1+1, 2, 3;

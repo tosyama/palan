@@ -137,7 +137,7 @@ function_definition: KW_FUNC return_def FUNC_ID
 			f->setRetValues($2);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		parameters ')' block
+		parameter_def ')' block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		$$ = scopes.back().inf.function;
@@ -217,9 +217,21 @@ return_value: TYPENAME ID
 	}
 	;
 
-parameters: /* empty */
-	| parameter
+parameter_def: /* empty */
+	| parameters
+	;
+
+parameters: parameter
 	| parameters ',' parameter
+	| parameters ',' ID
+	{
+		PlnFunction* f = scopes.back().inf.function;
+		auto prm = f->addParam($3, NULL);
+		if (!prm) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
+			YYABORT;
+		}
+	}
 	;
 
 parameter: TYPENAME ID
@@ -263,7 +275,7 @@ default_value: ID
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID parameters ')' ';'
+ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_C, $3);
 		f->setParent(&module);
@@ -271,7 +283,7 @@ ccall_declaration: KW_CCALL single_return FUNC_ID parameters ')' ';'
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameters ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_SYS, $5);
 		f->inf.syscall.id = $2;
@@ -543,6 +555,11 @@ return_stmt: KW_RETURN
 	{
 		vector<PlnExpression*> empty;
 		$$ = new PlnReturnStmt(empty, CUR_BLOCK);
+		auto& rvs = $$->function->return_vals;
+		if (rvs.size() > 0 && rvs[0]->name == "") {
+			error(@$, PlnMessage::getErr(E_NeedRetValues));
+			YYABORT;
+		}
 		// TODO: check vals were set.
 	}
 

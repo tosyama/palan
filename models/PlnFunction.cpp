@@ -51,7 +51,7 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type = ptype;
+	param->var_type = ptype ? ptype : parameters.back()->var_type;
 	param->dflt_value = defaultVal;
 
 	parameters.push_back(param);
