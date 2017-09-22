@@ -14,13 +14,10 @@ func int64 r1, r2, r3, r4, r5, r6, r7, r8
 	r7,r8		= 7, 8+a1;
 }
 
-func main()
-{
-	int64 a1, a2, a3 = 1, 2, 3;
+int64 a1, a2, a3 = 1, 2, 3;
 
-	int64 a = func1(a1+1, func1(4,5,6)+a2, func1(7,8,9)+a3+10);
-	int64 r1,r2,r3,r4,r5,r6,r7,r8 = many_ret_func(10);
+int64 a = func1(a1+1, func1(4,5,6)+a2, func1(7,8,9)+a3+10);
+int64 r1,r2,r3,r4,r5,r6,r7,r8 = many_ret_func(10);
 
-	printf ("%d %d %d %d %d %d %d %d %d\n", a, r1, r2, r3, r4, r5, r6, r7, r8);
-	exit(0);
-}
+printf ("%d %d %d %d %d %d %d %d %d\n", a, r1, r2, r3, r4, r5, r6, r7, r8);
+exit(0);

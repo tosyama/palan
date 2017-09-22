@@ -99,7 +99,7 @@ void PlnX86_64Generator::genSecText()
 void PlnX86_64Generator::genEntryPoint(const string& entryname)
 {
 	os << ".global ";
-	if (entryname == "main")
+	if (entryname == "")
 		os << "_start" << endl;
 	else
 		os << entryname << endl;
@@ -107,10 +107,8 @@ void PlnX86_64Generator::genEntryPoint(const string& entryname)
 
 void PlnX86_64Generator::genLabel(const string& label)
 {
-	if (label == "main") os << "_start";
-	else os << label;
-	
-	os << ":" << endl;
+	if (label == "") os << "_start:" << endl;
+	else os << label << ":" << endl;
 }
 
 void PlnX86_64Generator::genEntryFunc()
@@ -156,9 +154,9 @@ void PlnX86_64Generator::genReturn()
 
 void PlnX86_64Generator::genMainReturn()
 {
-	os << "	movq %rax, %rdi" << endl;
 	os << "	movq %rbp, %rsp" << endl;
 	os << "	popq %rbp" << endl;
+	os << "	xorq %rdi, %rdi" << endl;
 	os << "	movq $60, %rax" << endl;
 	os << "	syscall"<< endl;
 }

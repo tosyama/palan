@@ -1,15 +1,12 @@
 ccall int64 printf();
 ccall exit();
 
-func main()
-{
-	byte a = 12;
-	byte b = a+7;
-	byte c,d = b+1+a, b-a;
-	byte e = 255;
-	int64 i = e+a;
+byte a = 12;
+byte b = a+7;
+byte c,d = b+1+a, b-a;
+byte e = 255;
+int64 i = e+a;
 
-	printf("%d %d %d ", b, c, d);
-	printf("%d %d\n", e, i);
-	exit(0);
-}
+printf("%d %d %d ", b, c, d);
+printf("%d %d\n", e, i);
+exit(0);

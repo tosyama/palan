@@ -18,7 +18,6 @@ int yylex();
 %token FUNC_ID
 %token KW_CCALL
 %token KW_SYSCALL
-%token KW_VOID
 %token KW_FUNC
 %token KW_RETURN
 

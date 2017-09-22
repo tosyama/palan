@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <boost/assert.hpp>
 #include "PlnModule.h"
+#include "PlnBlock.h"
 #include "PlnFunction.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
@@ -17,9 +18,11 @@
 
 using namespace std;
 
-PlnModule::PlnModule() 
+PlnModule::PlnModule()
 {
 	types = PlnType::getBasicTypes();
+	toplevel = new PlnBlock();
+	stack_size = 0;
 }
 
 PlnType* PlnModule::getType(const string& type_name)
@@ -86,6 +89,9 @@ void PlnModule::finish(PlnDataAllocator& da)
 		f->finish(da);
 		da.reset();
 	}
+	toplevel->finish(da);
+	da.finish();
+	stack_size = da.stack_size;
 }
 
 void PlnModule::dump(ostream& os, string indent)
@@ -95,6 +101,8 @@ void PlnModule::dump(ostream& os, string indent)
 	os << indent << " Functions: " << functions.size() << endl;
 	for (auto f: functions)
 		f->dump(os, indent+"  ");
+	os << indent << " Top Level Code: " << endl;
+	toplevel->dump(os, indent+ "  "); 
 }
 
 void PlnModule::gen(PlnGenerator &g)
@@ -106,5 +114,15 @@ void PlnModule::gen(PlnGenerator &g)
 	g.genSecText();
 	for (auto f : functions)
 		f->gen(g);
-}
+	
+	string s="";
+	g.genEntryPoint(s);
+	g.genLabel(s);
+	g.genEntryFunc();
+	g.genLocalVarArea(stack_size);
+	
+	toplevel->gen(g);
+
+	g.genMainReturn();
+}	
 

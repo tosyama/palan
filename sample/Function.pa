@@ -7,7 +7,7 @@ print(x.str ":" y.str);
 
 object o1, o3;
 
-o1 = func(o1,o2.clone, &o3); // 所有を渡したので、o3は無効.
+o1 = funco(o1,o2.clone, &o3, o2); // 所有を渡したので、o3は無効.
 o2 = &o1; // 所有権を取られたので、o1は無効. o2=o1はコンパイルエラー
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
@@ -22,6 +22,7 @@ x = func2(x, y);
 //	parameterのオブジェクト型(string等)は参照渡しのみ。
 
 // multi return
+func
 int x, int y pointadd(int sx, int sy int ax, int ay) {
 	x = sx + ax;
 	y = sy + ay;
@@ -29,23 +30,27 @@ int x, int y pointadd(int sx, int sy int ax, int ay) {
 }
 
 // simple swap
-int x, int y swap(int sx, int sy) {
+int x, y swap(int sx, sy) {
 	return sy, sx;
 }
 
 // object
-object &o2 func(object o1, &o2, object &o3)
+func
+object &o2 funco(object *o1, &o2, &o3, o4)
 {
-	// o1 は lval or rval. rval はdelete. read only.
+	// o1 は lval read only.
 	// o2はlval. deleteされない. read/write rvalはNG.
 	// o3はrval. deleteされる. read/write lval.clone or &lval ならok.
+	// o4はrval. deleteされる。暗黙でコピーが渡される。
+	// プリミティブ(int64等)には &は使えない。
 	
 	return ;	// returnはo2がrval
 }
 
 // 戻り値とパラメータは重複して同じ名前を使うことができる。
 // 入出力の意図の記述とレジスタの共有ができる。
-int a func2(a , int b)
+func
+int a func2(int a, int b)
 {
 	a += b;
 }

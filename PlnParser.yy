@@ -75,6 +75,10 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
 %type <PlnFunction*>	syscall_definition
+%type <PlnStatement*>	toplv_statement
+%type <PlnStatement*>	basic_statement
+%type <PlnBlock*>	toplv_block
+%type <vector<PlnStatement*>>	toplv_statements
 %type <vector<PlnVariable*>>	return_def
 %type <vector<PlnVariable*>>	return_types
 %type <vector<PlnVariable*>>	return_values
@@ -108,15 +112,15 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %%
 module: /* empty */
 	{
-		scopes.push_back(PlnScopeItem(&module));
 		for (auto t: module.types)
 			lexer.push_typename(t->name);
+		scopes.push_back(PlnScopeItem(&module));
+		scopes.push_back(PlnScopeItem(module.toplevel));
 	}
 
 	| module function_definition
 	{
 		module.functions.push_back($2);
-		BOOST_ASSERT(scopes.back().type == SC_MODULE);
 	}
 
 	| module ccall_declaration
@@ -127,6 +131,10 @@ module: /* empty */
 	| module syscall_definition
 	{
 		module.functions.push_back($2);
+	}
+	| module toplv_statement
+	{
+		module.toplevel->statements.push_back($2);
 	}
 	;
 
@@ -296,6 +304,68 @@ single_return: /* empty */
 	| TYPENAME
 	;
 
+toplv_statement: basic_statement
+	{
+		$$ = $1;
+	}
+
+	| toplv_block
+	{
+		$$ = new PlnStatement($1, CUR_BLOCK);
+	}
+	;
+
+basic_statement: st_expression ';'
+	{ 
+		$$ = new PlnStatement($1, CUR_BLOCK);
+	}
+
+	| declarations ';'
+	{
+		$$ = new PlnStatement(new PlnVarInit($1), CUR_BLOCK);
+	}
+
+	| declarations '=' expressions ';'
+	{
+		int count=0;
+		for (auto e: $3)
+			count+=e->values.size();
+
+		if ($1.size() != count) {
+			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
+			YYABORT;
+		}
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
+	}
+	;
+	
+toplv_block: '{'
+		{
+			PlnBlock *b = new PlnBlock();
+			if (scopes.back().type == SC_BLOCK)
+				b->setParent(scopes.back().inf.block);
+			else
+				BOOST_ASSERT(false);
+			scopes.push_back(PlnScopeItem(b));
+		}
+		toplv_statements '}'
+	{
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = CUR_BLOCK;
+		$$->statements = move($3);
+		scopes.pop_back();
+	}
+	;
+
+toplv_statements:	/* empty */ { }
+	| toplv_statements toplv_statement
+	{
+		if ($2) $1.push_back($2);
+		$$ = move($1);
+	}
+	;
+
 block: '{'
 		{
 			PlnBlock *b = new PlnBlock();
@@ -324,30 +394,9 @@ statements:	/* empty */ { }
 	}
 	;
 
-statement: st_expression ';'
+statement: basic_statement
 	{
-		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement($1, CUR_BLOCK);
-	}
-
-	| declarations ';'
-	{
-		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1), CUR_BLOCK);
-	}
-
-	| declarations '=' expressions ';'
-	{
-		int count=0;
-		for (auto e: $3)
-			count+=e->values.size();
-
-		if ($1.size() != count) {
-			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
-			YYABORT;
-		}
-		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
+		$$ = $1;
 	}
 	
 	| return_stmt ';'

@@ -157,9 +157,6 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 		g.getPopEntity(late_pop_dp);
 
 	g.genFreeLocalVarArea(function->inf.pln.stack_size);
-	if (function->name == "main") 
-		g.genMainReturn();	
-	else
-		g.genReturn();
+	g.genReturn();
 }
 

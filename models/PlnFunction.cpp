@@ -63,12 +63,6 @@ void PlnFunction::finish(PlnDataAllocator& da)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
-			if (name == "main" && return_vals.size() == 0) {
-				auto v = new PlnVariable();
-				v->name = "";
-				v->var_type = parent.module->getType("int64");
-				return_vals.push_back(v);
-			}
 			for (auto r: return_vals) {
 				if (r->name != "") {
 					r->place = da.allocData(8);
@@ -89,8 +83,6 @@ void PlnFunction::finish(PlnDataAllocator& da)
 
 			if (implement->statements.back()->type != ST_RETURN) {
 				vector<PlnExpression *> rv;
-				if (name=="main")
-					rv.push_back(new PlnExpression(0));
 				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);
 				implement->statements.push_back(rs);
 			}

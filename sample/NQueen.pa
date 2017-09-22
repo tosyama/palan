@@ -1,16 +1,15 @@
 // nqueen: may not work..
-
 const auto MAX_N = 30;
 alias int int64;
 
 int n;
 scanf("%d", &n);
 
-int board[n, n] = 0;
+int[#n,n] board = 0;
 int count = queen(borad, 0, n);
 printf("answer: %d", count);
 
-int count queen(int board[,], x, y)
+int count queen(int[#,#] *board, x, y)
 {
 	assert(board.size[0] == borad.size[1]);
 	int n = borad.size[0];

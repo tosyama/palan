@@ -12,9 +12,12 @@
 class PlnModule
 {
 public:
+	PlnBlock* toplevel;
+	int stack_size;
 	vector<PlnFunction*> functions;
 	vector<PlnReadOnlyData*> readonlydata;
 	vector<PlnType*> types;
+
 	PlnModule();
 
 	PlnType* getType(const string& type_name);
