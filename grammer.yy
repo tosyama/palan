@@ -18,7 +18,6 @@ int yylex();
 %token FUNC_ID
 %token KW_CCALL
 %token KW_SYSCALL
-%token KW_VOID
 %token KW_FUNC
 %token KW_RETURN
 
@@ -48,9 +47,12 @@ return_types: TYPENAME
 	| return_types TYPENAME
 	;
 
-return_values: TYPENAME ID
+return_values: return_value
+	| return_values ',' return_value
 	| return_values ',' ID
-	| return_values ',' TYPENAME ID
+	;
+
+return_value: TYPENAME ID
 	;
 
 parameters: /* empty */

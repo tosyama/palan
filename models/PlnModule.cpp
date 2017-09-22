@@ -6,9 +6,10 @@
 /// @file	PlnModule.cpp
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
-#include <unordered_map>
+#include <algorithm>
 #include <boost/assert.hpp>
 #include "PlnModule.h"
+#include "PlnBlock.h"
 #include "PlnFunction.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
@@ -17,13 +18,18 @@
 
 using namespace std;
 
-PlnModule::PlnModule() 
+PlnModule::PlnModule()
 {
+	types = PlnType::getBasicTypes();
+	toplevel = new PlnBlock();
+	stack_size = 0;
 }
 
 PlnType* PlnModule::getType(const string& type_name)
 {
-	return PlnType::getBasicType(type_name);
+	auto t = std::find_if(types.begin(), types.end(),
+		[type_name](PlnType* t) { return t->name == type_name; });
+	return (t != types.end()) ? *t : NULL; 
 }
 
 PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
@@ -83,6 +89,9 @@ void PlnModule::finish(PlnDataAllocator& da)
 		f->finish(da);
 		da.reset();
 	}
+	toplevel->finish(da);
+	da.finish();
+	stack_size = da.stack_size;
 }
 
 void PlnModule::dump(ostream& os, string indent)
@@ -92,6 +101,8 @@ void PlnModule::dump(ostream& os, string indent)
 	os << indent << " Functions: " << functions.size() << endl;
 	for (auto f: functions)
 		f->dump(os, indent+"  ");
+	os << indent << " Top Level Code: " << endl;
+	toplevel->dump(os, indent+ "  "); 
 }
 
 void PlnModule::gen(PlnGenerator &g)
@@ -103,5 +114,15 @@ void PlnModule::gen(PlnGenerator &g)
 	g.genSecText();
 	for (auto f : functions)
 		f->gen(g);
-}
+	
+	string s="";
+	g.genEntryPoint(s);
+	g.genLabel(s);
+	g.genEntryFunc();
+	g.genLocalVarArea(stack_size);
+	
+	toplevel->gen(g);
+
+	g.genMainReturn();
+}	
 

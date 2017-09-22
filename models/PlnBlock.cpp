@@ -64,14 +64,15 @@ PlnVariable* PlnBlock::getVariable(string& var_name)
 				return v;
 		if (b->parent_block)
 			b = b->parent_block;
-		else {
+		else if (b->parent_func) {
 			for (auto rv: parent_func->return_vals)
 				if (rv->name == var_name) return rv;
 			for (auto p: parent_func->parameters)
 				if (p->name == var_name) return p;
-			// TODO: search grobal.
 			return NULL;
-		}
+		} else
+			return NULL;
+		// TODO: search grobal.
 	}
 }
 

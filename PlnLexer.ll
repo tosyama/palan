@@ -8,6 +8,7 @@
 /// @file	PlnLexer.ll
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
+#include <algorithm>
 #include "PlnParser.hpp"
 
 using std::cout;
@@ -26,9 +27,11 @@ enum {
 	INT			= PlnParser::token::INT,
 	STR			= PlnParser::token::STR,
 	ID			= PlnParser::token::ID,
+	TYPENAME	= PlnParser::token::TYPENAME,
+	FUNC_ID		= PlnParser::token::FUNC_ID,
+	KW_FUNC		= PlnParser::token::KW_FUNC,
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
-	KW_VOID		= PlnParser::token::KW_VOID,
 	KW_RETURN	= PlnParser::token::KW_RETURN
 };
 
@@ -41,6 +44,7 @@ static string& unescape(string& str);
 
 DIGIT	[0-9]+
 ID	[a-zA-Z_][0-9a-zA-Z_]*
+FUNC_ID	{ID}[ \t\n\r]*"("
 DELIMITER	"{"|"}"|"("|")"|","|";"|":"|"="|"+"|"-"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
@@ -59,10 +63,25 @@ COMMENT1	\/\/[^\n]*\n
 	}
 ccall	{ return KW_CCALL; }
 syscall	{ return KW_SYSCALL; }
-void	{ return KW_VOID; }
+func	{ return KW_FUNC; }
 return	{ return KW_RETURN; }
+{FUNC_ID}	{
+		string s = yytext;
+		for (auto& c: s)
+			if (c==' ' || c=='\t' || c=='\n' || c=='\r' || c=='(') {
+				c = '\0';
+				break;
+			}
+		lval.build<string>() = s.c_str();
+		return FUNC_ID;
+	}
 {ID}	{
-		lval.build<string>() = yytext;
+		string id = yytext;
+		if (std::binary_search(typenames.begin(), typenames.end(), id)) {
+			lval.build<string>() = move(id);
+			return TYPENAME;
+		}
+		lval.build<string>() = move(id);
 		return ID;
 	}
 {STRING}	{
@@ -130,8 +149,16 @@ static string& unescape(string& str)
 	return str;
 }
 
-
 void PlnLexer::set_filename(const string& filename)
 {
 	this->filename = filename;
+}
+
+void PlnLexer::push_typename(string name)
+{
+	// sort for binary_search. note: Trie is better.
+	auto ti=typenames.begin();
+	for(; ti != typenames.end(); ++ti)
+		if (*ti > name)  break;
+	typenames.insert(ti, name);
 }

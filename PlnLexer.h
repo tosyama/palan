@@ -8,8 +8,11 @@
 #endif
 
 class PlnLexer : public yyFlexLexer {
-	std::string	filename;
+	string	filename;
+	vector<string> typenames;
+
 public:
 	void set_filename(const std::string& filename);
+	void push_typename(string name);
 	int yylex(palan::PlnParser::semantic_type& lval, palan::PlnParser::location_type& loc);
 };

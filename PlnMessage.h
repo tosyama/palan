@@ -15,6 +15,7 @@ enum PlnErrCode {
 	E_DuplicateVarName,
 	E_NumOfLRVariables,
 	E_NumOfRetValues,
+	E_NeedRetValues,
 	E_CouldnotOpenFile
 };
 

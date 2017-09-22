@@ -35,6 +35,11 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 {
 	return_vals = move(vars);
+	PlnType* t;
+	for (auto rv: return_vals) {
+		if (rv->var_type) t = rv->var_type;
+		else rv->var_type = t;
+	}
 }
 
 PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)
@@ -46,7 +51,7 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type = ptype;
+	param->var_type = ptype ? ptype : parameters.back()->var_type;
 	param->dflt_value = defaultVal;
 
 	parameters.push_back(param);
@@ -58,12 +63,6 @@ void PlnFunction::finish(PlnDataAllocator& da)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
-			if (name == "main" && return_vals.size() == 0) {
-				auto v = new PlnVariable();
-				v->name = "";
-				v->var_type = parent.module->getType("int64");
-				return_vals.push_back(v);
-			}
 			for (auto r: return_vals) {
 				if (r->name != "") {
 					r->place = da.allocData(8);
@@ -84,8 +83,6 @@ void PlnFunction::finish(PlnDataAllocator& da)
 
 			if (implement->statements.back()->type != ST_RETURN) {
 				vector<PlnExpression *> rv;
-				if (name=="main")
-					rv.push_back(new PlnExpression(0));
 				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);
 				implement->statements.push_back(rs);
 			}

@@ -1,24 +1,23 @@
-ccall int printf();
-ccall void exit();
+ccall int64 printf();
+ccall exit();
 
-int64 a func(int64 a1, int64 a2, int64 a3)
+func int64 func1(int64 a1, a2, a3)
 {
 	return a1+a2+a3;
 }
 
-int64 r1, int64 r2, int64 r3, int64 r4, int64 r5, int64 r6, int64 r7, int64 r8
-many_ret_func(int64 a1)
+func int64 r1, r2, r3, r4, r5, r6, r7, r8
+	many_ret_func (int64 a1)
 {
-	r1,r2,r3,r4,r5,r6,r7,r8 = a1+1,2,3,4,5,6,7,8+a1;
+	r1,r2,r3	= a1+1, 2, 3;
+	r4,r5,r6	= 4, 5, 6;
+	r7,r8		= 7, 8+a1;
 }
 
-void main()
-{
-	int64 a1, a2, a3 = 1, 2, 3;
+int64 a1, a2, a3 = 1, 2, 3;
 
-	int64 a = func(a1+1, func(4,5,6)+a2, func(7,8,9)+a3+10);
-	int64 r1,r2,r3,r4,r5,r6,r7,r8 = many_ret_func(10);
+int64 a = func1(a1+1, func1(4,5,6)+a2, func1(7,8,9)+a3+10);
+int64 r1,r2,r3,r4,r5,r6,r7,r8 = many_ret_func(10);
 
-	printf ("%d %d %d %d %d %d %d %d %d\n", a, r1, r2, r3, r4, r5, r6, r7, r8);
-	exit(0);
-}
+printf ("%d %d %d %d %d %d %d %d %d\n", a, r1, r2, r3, r4, r5, r6, r7, r8);
+exit(0);

@@ -30,13 +30,6 @@ using std::vector;
 class PlnLexer;
 }
 
-%code
-{
-int yylex(	palan::PlnParser::semantic_type* yylval,
-			palan::PlnParser::location_type* location,
-			PlnLexer& lexer);
-}
-
 %code top
 {
 #include <boost/assert.hpp>
@@ -55,24 +48,39 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 #define CUR_FUNC	searchFunction(scopes)
 }
 
+%code
+{
+#include "PlnLexer.h"
+
+int yylex(	palan::PlnParser::semantic_type* yylval,
+			palan::PlnParser::location_type* location,
+			PlnLexer& lexer);
+}
+
 %locations
 %define api.namespace {palan}
 %define parse.error	verbose
 %define api.value.type	variant
 
 %token <int>	INT	"integer"
-%token <string>	ID	"identifier"
 %token <string>	STR	"string"
-%token KW_CCALL	"ccall"
-%token KW_SYSCALL	"syscall"
-%token KW_VOID	"void"
-%token KW_RETURN	"return"
+%token <string>	ID	"identifier"
+%token <string>	TYPENAME	"type name"
+%token <string>	FUNC_ID	"function name"
+%token KW_FUNC	"'func'"
+%token KW_CCALL	"'ccall'"
+%token KW_SYSCALL	"'syscall'"
+%token KW_RETURN	"'return'"
 
-%type <string>	func_name
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
 %type <PlnFunction*>	syscall_definition
-%type <vector<PlnVariable*>>	func_return
+%type <PlnStatement*>	toplv_statement
+%type <PlnStatement*>	basic_statement
+%type <PlnBlock*>	toplv_block
+%type <vector<PlnStatement*>>	toplv_statements
+%type <vector<PlnVariable*>>	return_def
+%type <vector<PlnVariable*>>	return_types
 %type <vector<PlnVariable*>>	return_values
 %type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
@@ -104,13 +112,15 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %%
 module: /* empty */
 	{
+		for (auto t: module.types)
+			lexer.push_typename(t->name);
 		scopes.push_back(PlnScopeItem(&module));
+		scopes.push_back(PlnScopeItem(module.toplevel));
 	}
 
 	| module function_definition
 	{
 		module.functions.push_back($2);
-		BOOST_ASSERT(scopes.back().type == SC_MODULE);
 	}
 
 	| module ccall_declaration
@@ -122,16 +132,20 @@ module: /* empty */
 	{
 		module.functions.push_back($2);
 	}
+	| module toplv_statement
+	{
+		module.toplevel->statements.push_back($2);
+	}
 	;
 
-function_definition: func_return func_name
+function_definition: KW_FUNC return_def FUNC_ID
 		{
-			PlnFunction* f = new PlnFunction(FT_PLN, $2);
+			PlnFunction* f = new PlnFunction(FT_PLN, $3);
 			f->setParent(&module);
-			f->setRetValues($1);
+			f->setRetValues($2);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		'(' parameters ')' block
+		parameter_def ')' block
 	{
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		$$ = scopes.back().inf.function;
@@ -140,14 +154,34 @@ function_definition: func_return func_name
 	}
 ;
 
-func_name: ID		{ $$ = $1; }
-	;
-
-func_return: KW_VOID { }
+return_def: /* empty */ { }
+	| return_types
+	{
+		$$ = move($1);
+	}
 
 	| return_values
 	{
 		$$ = move($1);
+	}
+	;
+
+return_types: TYPENAME
+	{
+		auto t = module.getType($1);
+		auto v = new PlnVariable();
+		v->name = "";
+		v->var_type = t;
+		$$.push_back(v);
+	}
+	| return_types TYPENAME
+	{
+		$$ = move($1);
+		auto t = module.getType($2);
+		auto v = new PlnVariable();
+		v->name = "";
+		v->var_type = t;
+		$$.push_back(v);
 	}
 	;
 
@@ -167,33 +201,50 @@ return_values: return_value
 			}
 		$$.push_back($3);
 	}
+	| return_values ',' ID
+	{
+		$$ = move($1);
+		for (auto v: $$)
+			if (v->name == $3) {
+				error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
+				YYABORT;
+			}
+		auto rv = new PlnVariable();
+		rv->name = $3;
+		rv->var_type = NULL;
+		$$.push_back(rv);
+	}
 	;
 
-return_value: ID ID
+return_value: TYPENAME ID
 	{
 		PlnType* t = module.getType($1);
-		if (!t) {
-			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
-			YYABORT;
-		}
 		$$ = new PlnVariable();
 		$$->name = $2;
 		$$->var_type = t;
 	}
 	;
 
-parameters: /* empty */
-	| parameter
-	| parameters ',' parameter
+parameter_def: /* empty */
+	| parameters
 	;
 
-parameter: ID ID
+parameters: parameter
+	| parameters ',' parameter
+	| parameters ',' ID
 	{
-		PlnType* t = module.getType($1);
-		if (!t) {
-			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
+		PlnFunction* f = scopes.back().inf.function;
+		auto prm = f->addParam($3, NULL);
+		if (!prm) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
 			YYABORT;
 		}
+	}
+	;
+
+parameter: TYPENAME ID
+	{
+		PlnType* t = module.getType($1);
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
 		$$ = f->addParam($2, t);
@@ -203,13 +254,9 @@ parameter: ID ID
 		}
 	}
 
-	| ID ID '=' default_value
+	| TYPENAME ID '=' default_value
 	{
 		PlnType* t = module.getType($1);
-		if (!t) {
-			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
-			YYABORT;
-		}
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
 		$$ = f->addParam($2, t, $4);
@@ -236,7 +283,7 @@ default_value: ID
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return func_name '(' parameters ')' ';'
+ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_C, $3);
 		f->setParent(&module);
@@ -244,7 +291,7 @@ ccall_declaration: KW_CCALL single_return func_name '(' parameters ')' ';'
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return func_name '(' parameters ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_SYS, $5);
 		f->inf.syscall.id = $2;
@@ -253,8 +300,70 @@ syscall_definition: KW_SYSCALL INT ':' single_return func_name '(' parameters ')
 	}
 	;
 
-single_return: KW_VOID
-	| ID
+single_return: /* empty */
+	| TYPENAME
+	;
+
+toplv_statement: basic_statement
+	{
+		$$ = $1;
+	}
+
+	| toplv_block
+	{
+		$$ = new PlnStatement($1, CUR_BLOCK);
+	}
+	;
+
+basic_statement: st_expression ';'
+	{ 
+		$$ = new PlnStatement($1, CUR_BLOCK);
+	}
+
+	| declarations ';'
+	{
+		$$ = new PlnStatement(new PlnVarInit($1), CUR_BLOCK);
+	}
+
+	| declarations '=' expressions ';'
+	{
+		int count=0;
+		for (auto e: $3)
+			count+=e->values.size();
+
+		if ($1.size() != count) {
+			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
+			YYABORT;
+		}
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
+	}
+	;
+	
+toplv_block: '{'
+		{
+			PlnBlock *b = new PlnBlock();
+			if (scopes.back().type == SC_BLOCK)
+				b->setParent(scopes.back().inf.block);
+			else
+				BOOST_ASSERT(false);
+			scopes.push_back(PlnScopeItem(b));
+		}
+		toplv_statements '}'
+	{
+		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
+		$$ = CUR_BLOCK;
+		$$->statements = move($3);
+		scopes.pop_back();
+	}
+	;
+
+toplv_statements:	/* empty */ { }
+	| toplv_statements toplv_statement
+	{
+		if ($2) $1.push_back($2);
+		$$ = move($1);
+	}
 	;
 
 block: '{'
@@ -285,30 +394,9 @@ statements:	/* empty */ { }
 	}
 	;
 
-statement: st_expression ';'
+statement: basic_statement
 	{
-		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement($1, CUR_BLOCK);
-	}
-
-	| declarations ';'
-	{
-		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1), CUR_BLOCK);
-	}
-
-	| declarations '=' expressions ';'
-	{
-		int count=0;
-		for (auto e: $3)
-			count+=e->values.size();
-
-		if ($1.size() != count) {
-			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
-			YYABORT;
-		}
-		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
+		$$ = $1;
 	}
 	
 	| return_stmt ';'
@@ -377,11 +465,11 @@ expression:
 	}
 	;
 
-func_call: func_name '(' arguments ')'
+func_call: FUNC_ID arguments ')'
 	{
-		PlnFunction* f = module.getFunc($1, $3);
+		PlnFunction* f = module.getFunc($1, $2);
 		if (f) {
-			$$ = new PlnFunctionCall(f, $3);
+			$$ = new PlnFunctionCall(f, $2);
 		} else {
 			error(@$, PlnMessage::getErr(E_UndefinedFunction, $1));
 			YYABORT;
@@ -491,13 +579,9 @@ declarations: declaration
 	}
 	;
 
-declaration: ID ID
+declaration: TYPENAME ID
 	{
 		PlnType* t = module.getType($1);
-		if (!t) {
-			error(@$, PlnMessage::getErr(E_UndefinedType, $1));
-			YYABORT;
-		}
 		$$ = CUR_BLOCK->declareVariable($2, t);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
@@ -520,6 +604,11 @@ return_stmt: KW_RETURN
 	{
 		vector<PlnExpression*> empty;
 		$$ = new PlnReturnStmt(empty, CUR_BLOCK);
+		auto& rvs = $$->function->return_vals;
+		if (rvs.size() > 0 && rvs[0]->name == "") {
+			error(@$, PlnMessage::getErr(E_NeedRetValues));
+			YYABORT;
+		}
 		// TODO: check vals were set.
 	}
 

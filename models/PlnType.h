@@ -19,5 +19,6 @@ public:
 	string name;
 	int size;
 
-	static PlnType* getBasicType(const string& type_name);
+	// static PlnType* getBasicType(const string& type_name);
+	static vector<PlnType*> getBasicTypes();
 };
