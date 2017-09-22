@@ -35,7 +35,7 @@ int64[#n,4] m2a = [1>>4*n];
 int64[#3,4] m3 = 0; // all 0;
 int64[+][+] m4 = [[1,2,3,4],[3],[2,3,4]]; // need camma.
 
-func int64[10] &a, int64[#] &b, int64[+] &aa, int64[3,4]&m, int64[+][+] &mm
+func int64[10] a, int64[#] b, int64[+] aa, int64[3,4]m, int64[+][+] mm
 	setArray(&a, &b, &aa, &m, &mm)
 {
 }
