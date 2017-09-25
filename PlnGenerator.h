@@ -56,9 +56,11 @@ public:
 	virtual void genMainReturn()=0;
 	virtual void genStringData(int index, const string& str)=0;
 	virtual void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
-	virtual void genAdd(PlnGenEntity* dst, PlnGenEntity* src)=0;
-	virtual void genSub(PlnGenEntity* dst, PlnGenEntity* src)=0;
+	virtual void genAdd(PlnGenEntity* tgt, PlnGenEntity* second)=0;
+	virtual void genSub(PlnGenEntity* tgt, PlnGenEntity* second)=0;
 	virtual void genNegative(PlnGenEntity* tgt)=0;
+	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second)=0;
+	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second)=0;
 
 	virtual unique_ptr<PlnGenEntity> getInt(int i)=0;
 	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset, int size)=0;

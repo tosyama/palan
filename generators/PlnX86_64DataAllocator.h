@@ -26,5 +26,7 @@ public:
 	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
 	void releaseAccumulator(PlnDataPlace* dp);
 	bool isAccumulator(PlnDataPlace* dp);
+	void multiplied();
+	void divided();
 };
 

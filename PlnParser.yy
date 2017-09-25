@@ -41,6 +41,8 @@ class PlnLexer;
 #include "models/PlnVariable.h"
 #include "models/expressions/PlnFunctionCall.h"
 #include "models/expressions/PlnAddOperation.h"
+#include "models/expressions/PlnMulOperation.h"
+#include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnAssignment.h"
 #include "PlnMessage.h"
 
@@ -105,6 +107,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %right '='
 %left ',' 
 %left '+' '-'
+%left '*' '/'
 %left UMINUS
 
 %start module	
@@ -447,6 +450,16 @@ expression:
 	| expression '-' expression
 	{
 		$$ = PlnAddOperation::create_sub($1, $3);
+	}
+
+	| expression '*' expression
+	{
+		$$ = PlnMulOperation::create($1, $3);
+	}
+
+	| expression '/' expression
+	{
+		$$ = PlnDivOperation::create($1, $3);
 	}
 
 	| '(' assignment ')'

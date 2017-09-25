@@ -67,7 +67,6 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 			delete rdps[i];
 		}
 	}
-
 }
 
 void PlnFunctionCall:: dump(ostream& os, string indent)

@@ -6,11 +6,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8");
+	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8 1263");
 
 	testcode = "003_varbyte";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "19 32 7 255 267");
+	REQUIRE(exec(testcode) == "19 32 7 255 267 36");
 
 	testcode = "004_regalloc";
 	REQUIRE(build(testcode) == "success");

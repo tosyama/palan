@@ -160,3 +160,46 @@ bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
 	return dp->type == DP_REG && dp->data.reg.id == RAX;
 }
 
+void PlnX86_64DataAllocator::multiplied()
+{
+// This code for single operand. don't use currently.
+/*	BOOST_ASSERT(regs[RAX]->status==DS_RELEASED);
+
+	for (auto regid: {RAX, RDX}) {
+		auto pdp = regs[regid];
+		auto dp = new PlnDataPlace();
+		dp->type = DP_REG;
+		dp->size = 8;
+		dp->status = DS_RELEASED;
+		dp->alloc_step = dp->release_step = step;
+		dp->previous = pdp;
+		regs[regid] = dp;
+		if (pdp && pdp->status != DS_RELEASED)
+			if (!pdp->save_place)  {
+				allocSaveData(pdp);
+			}
+	}
+	step++;
+	*/
+}
+
+void PlnX86_64DataAllocator::divided()
+{
+	BOOST_ASSERT(regs[RAX]->status==DS_RELEASED);
+
+	for (auto regid: {RAX, RDX}) {
+		auto pdp = regs[regid];
+		auto dp = new PlnDataPlace();
+		dp->type = DP_REG;
+		dp->size = 8;
+		dp->status = DS_RELEASED;
+		dp->alloc_step = dp->release_step = step;
+		dp->previous = pdp;
+		regs[regid] = dp;
+		if (pdp && pdp->status != DS_RELEASED)
+			if (!pdp->save_place)  {
+				allocSaveData(pdp);
+			}
+	}
+	step++;
+}

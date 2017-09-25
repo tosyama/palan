@@ -22,9 +22,11 @@ public:
 	void genMainReturn();
 	void genStringData(int index, const string& str);
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
-	void genAdd(PlnGenEntity* dst, PlnGenEntity* src);
-	void genSub(PlnGenEntity* dst, PlnGenEntity* src);
+	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second);
+	void genSub(PlnGenEntity* tgt, PlnGenEntity* second);
 	void genNegative(PlnGenEntity* tgt);
+	void genMul(PlnGenEntity* tgt, PlnGenEntity* second);
+	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second);
 
 	unique_ptr<PlnGenEntity> getInt(int i);
 	unique_ptr<PlnGenEntity> getStackAddress(int offset, int size);
