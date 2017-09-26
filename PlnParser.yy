@@ -111,7 +111,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %right '='
 %left ',' 
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left UMINUS
 
 %start module	
