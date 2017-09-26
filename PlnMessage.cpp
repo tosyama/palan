@@ -16,9 +16,9 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_DuplicateVarName:
 			f = "Variable name '%1%' already defined."; break;
 		case E_NumOfLRVariables:
-			f = "Number of values left and right are not match."; break;
+			f = "A lot of left values."; break;
 		case E_NumOfRetValues:
-			f = "Number of return arguments and definitions are not mutch."; break;
+			f = "Number of return arguments and definitions are not match."; break;
 		case E_NeedRetValues:
 			f = "Return argument(s) can't be omitted at this function."; break;
 		case E_CouldnotOpenFile:
@@ -27,6 +27,27 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Unknown error.";
 	}
 	
+	string message;
+	if (arg1 == "")
+		message = f;
+	else if (arg2 == "")
+		message = (format(f) % arg1).str();
+	else
+		message = (format(f) % arg1 % arg2).str();
+
+	return  message;
+}
+
+string PlnMessage::getWarn(PlnWarnCode warn_code, string arg1, string arg2)
+{
+	string f;
+	switch (warn_code) {
+		case W_NumOfLRVariables:
+			f = "Number of left values and rights are not match"; break;
+		default:
+			f = "Unknown warning.";
+	}
+
 	string message;
 	if (arg1 == "")
 		message = f;

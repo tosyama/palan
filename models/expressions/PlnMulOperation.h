@@ -8,8 +8,8 @@
 class PlnMulOperation : public PlnExpression
 {
 public:
-	PlnExpression* l;
-	PlnExpression* r;
+	PlnExpression *l, *r;
+	PlnDataPlace* product;
 
 	PlnMulOperation(PlnExpression* l, PlnExpression* r);
 	static PlnExpression* create(PlnExpression* l, PlnExpression* r);

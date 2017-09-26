@@ -278,11 +278,11 @@ void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
 	os << format("	imulq %1%, %2%") % oprnd(second) % oprnd(tgt) << endl;
 }
 
-void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type == GA_REG && tgt->data.i == RAX);
 	PlnGenEntity work;
-	if (second->alloc_type != GA_REG) { 
+	if (second->alloc_type == GA_CODE) { 
 		work.type = GE_STRING;
 		work.alloc_type = GA_REG;
 		work.size = 8;
@@ -291,7 +291,7 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second)
 		second = &work;
 	}
 	os << "	cqto"	<< endl;
-	os << "	idivq " << oprnd(second) << endl;
+	os << "	idivq " << oprnd(second) << "	# " << comment << endl;
 }
 
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getInt(int i)

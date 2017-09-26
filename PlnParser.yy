@@ -57,6 +57,10 @@ class PlnLexer;
 int yylex(	palan::PlnParser::semantic_type* yylval,
 			palan::PlnParser::location_type* location,
 			PlnLexer& lexer);
+namespace palan {
+static void warn(const PlnParser::location_type& l, const string& m);
+}
+
 }
 
 %locations
@@ -334,10 +338,13 @@ basic_statement: st_expression ';'
 		for (auto e: $3)
 			count+=e->values.size();
 
-		if ($1.size() != count) {
+		if ($1.size() > count) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
 			YYABORT;
+		} if ($1.size() > 1 && $1.size() < count) {
+			warn(@$, PlnMessage::getWarn(W_NumOfLRVariables));
 		}
+
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
 	}
@@ -462,6 +469,11 @@ expression:
 		$$ = PlnDivOperation::create($1, $3);
 	}
 
+	| expression '%' expression
+	{
+		$$ = PlnDivOperation::create_mod($1, $3);
+	}
+
 	| '(' assignment ')'
 	{
 		$$ = $2;
@@ -566,9 +578,12 @@ assignment: lvals '=' expressions
 		int count=0;
 		for (auto e: $3)
 			count+=e->values.size();
-		if ($1.size() != count) {
+
+		if ($1.size() > count) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
 			YYABORT;
+		} if ($1.size() > 1 && $1.size() < count) {
+			warn(@$, PlnMessage::getWarn(W_NumOfLRVariables));
 		}
 		$$ = new PlnAssignment($1, $3);
 	}
@@ -648,6 +663,11 @@ namespace palan
 void PlnParser::error(const location_type& l, const string& m)
 {
 	cerr << "error: " << l << ": " << m << endl;
+}
+
+void warn(const PlnParser::location_type& l, const string& m)
+{
+	cerr << "warning: " << l << ": " << m << endl;
 }
 
 } // namespace

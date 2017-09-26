@@ -18,11 +18,11 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 	if (l->type == ET_VALUE && l->values[0].type == VL_LIT_INT8) {
 		if (r->type == ET_VALUE && r->values[0].type == VL_LIT_INT8) {
 			// e.g.) 5/2 => 2
-			l->values[0].inf.intValue *= r->values[0].inf.intValue;
+			l->values[0].inf.intValue /= r->values[0].inf.intValue;
 			delete r;
 			return l;
 		}
-	} else if (l->type == ET_MUL) {
+	} else if (l->type == ET_DIV && static_cast<PlnDivOperation*>(l)->div_type == DT_DIV) {
 		PlnDivOperation* po = static_cast<PlnDivOperation*>(l);
 		if (po->r->type == ET_VALUE
 				&& po->r->values[0].type == VL_LIT_INT8) {
@@ -36,16 +36,33 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 		}
 	}
 
-	return new PlnDivOperation(l,r);
+	return new PlnDivOperation(l,r, DT_DIV);
 }
 
-PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r)
-	: PlnExpression(ET_MUL), l(l), r(r)
+PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
+{
+	if (l->type == ET_VALUE && l->values[0].type == VL_LIT_INT8) {
+		if (r->type == ET_VALUE && r->values[0].type == VL_LIT_INT8) {
+			// e.g.) 5%2 => 1
+			l->values[0].inf.intValue %= r->values[0].inf.intValue;
+			delete r;
+			return l;
+		}
+	} 
+
+	return new PlnDivOperation(l,r, DT_MOD);
+}
+
+PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType dt)
+	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt)
 {
 	PlnValue v;
 	v.type = VL_WK_INT8;
-	values.push_back(v);
-	values.push_back(v);	// for remainder
+	if (div_type == DT_DIV) {
+		values.push_back(v);
+		values.push_back(v);	// for remainder
+	} else	// DT_MOD
+		values.push_back(v);
 }
 
 void PlnDivOperation::finish(PlnDataAllocator& da)
@@ -69,12 +86,12 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 		da.releaseData(rdp);
 	}
 	da.releaseAccumulator(ldp);
-	da.divided();
+	da.divided(&quotient, &remainder);
 }
 
 void PlnDivOperation::dump(ostream& os, string indent)
 {
-	os << indent << "DIV" << endl;
+	os << indent << (div_type==DT_DIV ? "DIV" : "MOD") << endl;
 	l->dump(os, indent+" ");
 	r->dump(os, indent+" ");
 }
@@ -86,11 +103,25 @@ void PlnDivOperation::gen(PlnGenerator& g)
 
 	auto le = g.getPopEntity(l->data_places[0]);
 	auto re = g.getPopEntity(r->data_places[0]);
-	auto rpe = g.getPushEntity(data_places[0]);
 
-	string cmt=l->data_places[0]->cmt() + "/" + r->data_places[0]->cmt()
-			+ "->" + data_places[0]->cmt();
-	g.genDiv(le.get(), re.get());
-	g.genMove(rpe.get(), le.get(), cmt);
+	string cmt=l->data_places[0]->cmt() + " / " + r->data_places[0]->cmt();
+	g.genDiv(le.get(), re.get(), cmt);
+	
+	if (data_places.size() > 0) {
+		if (div_type == DT_DIV) {
+			auto rpe = g.getPushEntity(data_places[0]);
+			auto qe = g.getPopEntity(quotient);
+			g.genMove(rpe.get(), qe.get(), "");
+			if (data_places.size() > 1) {
+				auto rpe2 = g.getPushEntity(data_places[1]);
+				auto rme = g.getPopEntity(remainder);
+				g.genMove(rpe2.get(), rme.get(), "");
+			}
+		} else { // div_type == DT_MOD
+			auto rpe = g.getPushEntity(data_places[0]);
+			auto rme = g.getPopEntity(remainder);
+			g.genMove(rpe.get(), rme.get(), "");
+		}
+	}
 }
 

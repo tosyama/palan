@@ -2,6 +2,7 @@
 ///
 /// @file	PlnX86_64DataAllocator.cpp
 /// @copyright	2017- YAMAGUCHI Toshinobu
+
 #include <iostream>
 #include <cstddef>
 #include <boost/assert.hpp>
@@ -160,30 +161,25 @@ bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
 	return dp->type == DP_REG && dp->data.reg.id == RAX;
 }
 
-void PlnX86_64DataAllocator::multiplied()
+PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* tgt)
 {
-// This code for single operand. don't use currently.
-/*	BOOST_ASSERT(regs[RAX]->status==DS_RELEASED);
-
-	for (auto regid: {RAX, RDX}) {
-		auto pdp = regs[regid];
-		auto dp = new PlnDataPlace();
-		dp->type = DP_REG;
-		dp->size = 8;
-		dp->status = DS_RELEASED;
-		dp->alloc_step = dp->release_step = step;
-		dp->previous = pdp;
-		regs[regid] = dp;
-		if (pdp && pdp->status != DS_RELEASED)
-			if (!pdp->save_place)  {
-				allocSaveData(pdp);
-			}
-	}
+	BOOST_ASSERT(tgt->type == DP_REG);
+	auto regid = tgt->data.reg.id;
+	auto pdp = regs[regid];
+	BOOST_ASSERT(!pdp || pdp->status == DS_RELEASED);
+	auto dp = new PlnDataPlace();
+	dp->type = DP_REG;
+	dp->size = 8;
+	dp->status = DS_RELEASED;
+	dp->data.reg.id = regid;
+	dp->alloc_step = dp->release_step = step;
+	dp->previous = pdp;
+	regs[regid] = dp;
 	step++;
-	*/
+	return dp;
 }
 
-void PlnX86_64DataAllocator::divided()
+void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder)
 {
 	BOOST_ASSERT(regs[RAX]->status==DS_RELEASED);
 
@@ -193,6 +189,7 @@ void PlnX86_64DataAllocator::divided()
 		dp->type = DP_REG;
 		dp->size = 8;
 		dp->status = DS_RELEASED;
+		dp->data.reg.id = regid;
 		dp->alloc_step = dp->release_step = step;
 		dp->previous = pdp;
 		regs[regid] = dp;
@@ -201,5 +198,8 @@ void PlnX86_64DataAllocator::divided()
 				allocSaveData(pdp);
 			}
 	}
+	*quotient = regs[RAX];
+	*reminder = regs[RDX];
+
 	step++;
 }

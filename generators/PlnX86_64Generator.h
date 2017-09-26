@@ -26,7 +26,7 @@ public:
 	void genSub(PlnGenEntity* tgt, PlnGenEntity* second);
 	void genNegative(PlnGenEntity* tgt);
 	void genMul(PlnGenEntity* tgt, PlnGenEntity* second);
-	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second);
+	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 
 	unique_ptr<PlnGenEntity> getInt(int i);
 	unique_ptr<PlnGenEntity> getStackAddress(int offset, int size);

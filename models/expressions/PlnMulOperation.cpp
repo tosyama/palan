@@ -74,7 +74,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 		da.releaseData(rdp);
 	}
 	da.releaseAccumulator(ldp);
-	da.multiplied();
+	product = da.multiplied(ldp);
 }
 
 void PlnMulOperation::dump(ostream& os, string indent)
@@ -88,13 +88,16 @@ void PlnMulOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
 	r->gen(g);
-
 	auto le = g.getPopEntity(l->data_places[0]);
 	auto re = g.getPopEntity(r->data_places[0]);
-	auto rpe = g.getPushEntity(data_places[0]);
-	string cmt=l->data_places[0]->cmt() + "*" + r->data_places[0]->cmt()
-			+ "->" + data_places[0]->cmt();
 	g.genMul(le.get(), re.get());
-	g.genMove(rpe.get(), le.get(), cmt);
+
+	if (data_places.size() > 0) {
+		string cmt=l->data_places[0]->cmt() + "*" + r->data_places[0]->cmt()
+			+ "->" + data_places[0]->cmt();
+		auto rpe = g.getPushEntity(data_places[0]);
+		auto pe = g.getPopEntity(product);
+		g.genMove(rpe.get(), pe.get(), cmt);
+	}
 }
 
