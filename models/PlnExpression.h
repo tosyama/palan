@@ -9,9 +9,10 @@
 // Expression: 
 enum PlnExprsnType {
 	ET_VALUE,
-	ET_MULTI,
 	ET_FUNCCALL,
 	ET_ADD,
+	ET_MUL,
+	ET_DIV,
 	ET_NEG,
 	ET_ASSIGN
 };

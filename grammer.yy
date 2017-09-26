@@ -24,6 +24,7 @@ int yylex();
 %right '='
 %left ',' 
 %left '+' '-'
+%left '*'
 %left UMINUS
 
 %start module	
@@ -116,6 +117,7 @@ expression:
 	func_call
 	| expression '+' expression
 	| expression '-' expression
+	| expression '*' expression
 	| '(' assignment ')'
 	| '-' expression %prec UMINUS
 	| term

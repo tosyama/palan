@@ -1,0 +1,30 @@
+ccall FILE* fopen() : null ->;
+
+func int MaybeError(int a)
+	: -1 -> int error, string msg
+{
+	// return -1 ; // ng
+
+	if (ok)
+		return 0;
+	else
+		return -> 100, msg; // return -1 internal
+	
+}
+
+int success = MaybeError(10) -> err;
+
+->err(int error, string msg)
+{
+//NG int a=success;
+// need to recover main returns if you will access.
+success = -1;
+}
+
+FILE* f=fopen("r", "string") -> operr;
+write(f, "data") ->ioerr;
+->ioerr();
+
+close(f);
+->operr() {
+}

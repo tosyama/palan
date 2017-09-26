@@ -132,10 +132,13 @@ void PlnAddOperation::gen(PlnGenerator& g)
 
 	auto le = g.getPopEntity(l->data_places[0]);
 	auto re = g.getPopEntity(r->data_places[0]);
-	auto rpe = g.getPushEntity(data_places[0]);
 	if (is_add) g.genAdd(le.get(), re.get());
 	else g.genSub(le.get(), re.get());
-	g.genMove(rpe.get(), le.get(), gen_cmt(is_add, l->data_places[0],r->data_places[0],data_places[0]));
+
+	if (data_places.size() > 0) {
+		auto rpe = g.getPushEntity(data_places[0]);
+		g.genMove(rpe.get(), le.get(), gen_cmt(is_add, l->data_places[0],r->data_places[0],data_places[0]));
+	}
 }
 
 // PlnNegative
@@ -181,8 +184,10 @@ void PlnNegative::gen(PlnGenerator& g)
 	e->gen(g);
 
 	auto ne = g.getPopEntity(e->data_places[0]);
-	auto rpe = g.getPushEntity(data_places[0]);
 	
 	g.genNegative(ne.get());
-	g.genMove(rpe.get(), ne.get(), gen_n_cmt(e->data_places[0], data_places[0]));
+	if (data_places.size() > 0) {
+		auto rpe = g.getPushEntity(data_places[0]);
+		g.genMove(rpe.get(), ne.get(), gen_n_cmt(e->data_places[0], data_places[0]));
+	}
 }

@@ -54,6 +54,8 @@ public:
 	virtual PlnDataPlace* allocAccumulator(PlnDataPlace* dp) = 0;
 	virtual void releaseAccumulator(PlnDataPlace* dp) = 0;
 	virtual bool isAccumulator(PlnDataPlace* dp) = 0;
+	virtual PlnDataPlace* multiplied(PlnDataPlace* tgt) = 0;
+	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
 
 	PlnDataPlace* getLiteralIntDp(int intValue);
 	PlnDataPlace* getReadOnlyDp(int index);

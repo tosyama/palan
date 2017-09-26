@@ -74,8 +74,11 @@ string exec(string srcf)
 	popen_filebuf p_buf(p);
 	istream is(&p_buf);
 	string result_str;
-
-	getline(is,result_str);
+	string tmp_str;
+	getline(is, result_str);
+	while(getline(is,tmp_str)) {
+		result_str += "\n" + tmp_str;
+	}
 
 	int ret = pclose(p);
 	if (ret) return "return:" + to_string(ret);

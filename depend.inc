@@ -4,9 +4,9 @@ palan.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h stack.hh \
 	generators/../PlnDataAllocator.h generators/PlnX86_64Generator.h \
 	generators/../PlnGenerator.h
 PlnModule.o:  models/PlnModule.h \
-	models/PlnExpression.h models/../PlnModel.h models/PlnFunction.h \
-	models/PlnType.h models/PlnVariable.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h
+	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
+	models/PlnFunction.h models/PlnType.h models/PlnVariable.h \
+	models/../PlnDataAllocator.h models/../PlnGenerator.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
@@ -40,6 +40,18 @@ PlnAddOperation.o:  \
 	models/expressions/../../PlnModel.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h
+PlnMulOperation.o:  \
+	models/expressions/PlnMulOperation.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h
+PlnDivOperation.o:  \
+	models/expressions/PlnDivOperation.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h
 PlnAssignment.o:  \
 	models/expressions/PlnAssignment.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
@@ -58,9 +70,10 @@ PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
 	models/PlnStatement.h models/PlnType.h models/PlnVariable.h \
 	models/expressions/PlnFunctionCall.h \
-	models/expressions/PlnAddOperation.h models/expressions/PlnAssignment.h \
+	models/expressions/PlnAddOperation.h \
+	models/expressions/PlnMulOperation.h models/expressions/PlnAssignment.h \
 	PlnMessage.h PlnParser.hpp PlnScopeStack.h stack.hh location.hh \
-	position.hh
+	position.hh PlnLexer.h
 PlnLexer.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
 	stack.hh location.hh position.hh PlnLexer.h
 PlnMessage.o:  PlnMessage.h

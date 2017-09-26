@@ -5,6 +5,8 @@ SRCS=palan.cpp \
 	models/PlnType.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
+	models/expressions/PlnMulOperation.cpp \
+	models/expressions/PlnDivOperation.cpp \
 	models/expressions/PlnAssignment.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \

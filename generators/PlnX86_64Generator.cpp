@@ -209,55 +209,89 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	os << endl;
 }
 
-void PlnX86_64Generator::genAdd(PlnGenEntity* dst, PlnGenEntity* src)
+void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second)
 {
-	BOOST_ASSERT(dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM);
-	if (src->alloc_type == GA_CODE && *src->data.str == "$1") {
-		os << "	incq " << oprnd(dst) << endl;
+	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
+	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
+		os << "	incq " << oprnd(tgt) << endl;
 		return;
 	}
 
 	// TODO: templary imprement. need to refacter.
 	PlnGenEntity work;
-	if (src->alloc_type == GA_MEM) {
-		if (src->size < 8) {
+	if (second->alloc_type == GA_MEM) {
+		if (second->size < 8) {
 			work.type = GE_STRING;
 			work.alloc_type = GA_REG;
 			work.size = 8;
 			work.data.str = new string("%r11");
-			genMove(&work, src, "");
-			src = &work;
+			genMove(&work, second, "");
+			second = &work;
 		}
 	}
 		
-	os << "	addq " << oprnd(src) << ", " << oprnd(dst) << endl;
+	os << "	addq " << oprnd(second) << ", " << oprnd(tgt) << endl;
 }
 
-void PlnX86_64Generator::genSub(PlnGenEntity* dst, PlnGenEntity* src)
+void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second)
 {
-	BOOST_ASSERT(dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM);
-	if (src->alloc_type == GA_CODE && *src->data.str == "$1") {
-		os << "	decq " << oprnd(dst) << endl;
+	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
+	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
+		os << "	decq " << oprnd(tgt) << endl;
 		return;
 	}
 	// TODO: templary imprement. need to refacter.
 	PlnGenEntity work;
-	if (src->alloc_type == GA_MEM) { 
-		if (src->size < 8) {
+	if (second->alloc_type == GA_MEM) { 
+		if (second->size < 8) {
 			work.type = GE_STRING;
 			work.alloc_type = GA_REG;
 			work.size = 8;
 			work.data.str = new string("%r11");
-			genMove(&work, src, "");
-			src = &work;
+			genMove(&work, second, "");
+			second = &work;
 		}
 	}
-	os << format("	subq %1%, %2%") % oprnd(src) % oprnd(dst) << endl;
+	os << format("	subq %1%, %2%") % oprnd(second) % oprnd(tgt) << endl;
 }
 
 void PlnX86_64Generator::genNegative(PlnGenEntity* tgt)
 {
 	os << "	negq " << oprnd(tgt) << endl;
+}
+
+void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
+{
+	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
+	// TODO: templary imprement. need to refacter.
+	PlnGenEntity work;
+	if (second->alloc_type == GA_MEM) { 
+		if (second->size < 8) {
+			work.type = GE_STRING;
+			work.alloc_type = GA_REG;
+			work.size = 8;
+			work.data.str = new string("%r11");
+			genMove(&work, second, "");
+			second = &work;
+		}
+	}
+	os << format("	imulq %1%, %2%") % oprnd(second) % oprnd(tgt) << endl;
+}
+
+void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
+{
+	BOOST_ASSERT(tgt->alloc_type == GA_REG && tgt->data.i == RAX);
+	PlnGenEntity work;
+	if (second->alloc_type == GA_CODE) { 
+		work.type = GE_STRING;
+		work.alloc_type = GA_REG;
+		work.size = 8;
+		work.data.str = new string("%r11");
+		genMove(&work, second, "");
+		second = &work;
+	}
+	os << "	cqto"	<< endl;
+	os << "	idivq " << oprnd(second) << "	# " << comment << endl;
 }
 
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getInt(int i)

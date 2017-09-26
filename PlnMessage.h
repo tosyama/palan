@@ -20,6 +20,7 @@ enum PlnErrCode {
 };
 
 enum PlnWarnCode {
+	W_NumOfLRVariables
 };
 
 class PlnMessage
