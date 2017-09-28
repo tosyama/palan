@@ -34,7 +34,9 @@ public:
 // Value (rval)
 enum PlnValType {
 	VL_LIT_INT8,
+	VL_LIT_UINT8,
 	VL_WK_INT8,
+	VL_WK_UINT8,
 	VL_RO_DATA,
 	VL_VAR,
 };
@@ -45,12 +47,14 @@ public:
 	union {
 		int index;
 		int64_t intValue;
+		uint64_t uintValue;
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
 	} inf;
 
 	PlnValue() {};
-	PlnValue(int intValue);
+	PlnValue(int64_t intValue);
+	PlnValue(uint64_t uintValue);
 	PlnValue(PlnReadOnlyData* rod);
 	PlnValue(PlnVariable* var);
 

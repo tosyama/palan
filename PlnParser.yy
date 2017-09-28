@@ -68,7 +68,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %define parse.error	verbose
 %define api.value.type	variant
 
-%token <int>	INT	"integer"
+%token <int64_t>	INT	"integer"
+%token <uint64_t>	UINT	"unsigned integer"
 %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	TYPENAME	"type name"
@@ -550,6 +551,11 @@ lvals:  ID
 term: INT
 	{
 		$$  = new PlnExpression(PlnValue($1));
+	}
+
+	| UINT
+	{
+		$$ = new PlnExpression(PlnValue($1));
 	}
 
 	| STR

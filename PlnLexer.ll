@@ -25,6 +25,7 @@ using namespace palan;
 
 enum {
 	INT			= PlnParser::token::INT,
+	UINT		= PlnParser::token::UINT,
 	STR			= PlnParser::token::STR,
 	ID			= PlnParser::token::ID,
 	TYPENAME	= PlnParser::token::TYPENAME,
@@ -43,6 +44,8 @@ static string& unescape(string& str);
 %option noyywrap
 
 DIGIT	[0-9]+
+UDIGIT	[0-9]+"u"
+DIGIT_MIN	"-9223372036854775808"
 ID	[a-zA-Z_][0-9a-zA-Z_]*
 FUNC_ID	{ID}[ \t\n\r]*"("
 DELIMITER	"{"|"}"|"("|")"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"
@@ -57,9 +60,24 @@ COMMENT1	\/\/[^\n]*\n
 %}
 
 {COMMENT1}	{ loc.lines(); }
-{DIGIT}	{
-		lval.build<int>() = std::stoi(yytext);
+{UDIGIT}	{
+			lval.build<uint64_t>() = std::stoull(yytext);
+			return UINT;
+	}
+{DIGIT_MIN} {
+		lval.build<int64_t>() = -9223372036854775807-1;
 		return INT;
+	}
+{DIGIT}	{
+		int len = strlen(yytext);
+		if (len < 19 || len == 19 && strcmp(yytext, "9223372036854775807")<=0) {
+			lval.build<int64_t>() = std::stoll(yytext);
+			return INT;
+		} else {
+			cerr << "Lexer: Overflow number: \"" << yytext << "\"" << endl;
+			lval.build<int64_t>() = 0;
+			return INT;
+		}
 	}
 ccall	{ return KW_CCALL; }
 syscall	{ return KW_SYSCALL; }
@@ -93,7 +111,7 @@ return	{ return KW_RETURN; }
 [ \t]+		{ loc.step(); }
 \r\n|\r|\n	{ loc.lines(); }
 .	{
-		cout << "Lexer: Unrecognized char \"" << yytext[0] << "\"" << endl;
+		cerr << "Lexer: Unrecognized char \"" << yytext[0] << "\"" << endl;
 		loc.step();
 	}
 

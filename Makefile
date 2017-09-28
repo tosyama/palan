@@ -32,7 +32,7 @@ PlnParser.hpp: PlnParser.yy
 	bison -o PlnParser.cpp -r all --report-file=bison.log $<
 PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
-$(TEST): $(OBJS) test/*.cpp
+$(TEST): $(OBJS) test/*.cpp test/pacode/*
 	@$(MAKE) -C test
 depend: $(SRCS)
 	-@ $(RM) depend.inc

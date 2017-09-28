@@ -24,7 +24,7 @@ public:
 	int size;
 	union {
 		string* str;
-		int i;
+		int64_t i;
 	}data;
 	~PlnGenEntity()
 	{
@@ -62,7 +62,7 @@ public:
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 
-	virtual unique_ptr<PlnGenEntity> getInt(int i)=0;
+	virtual unique_ptr<PlnGenEntity> getInt(int64_t i)=0;
 	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset, int size)=0;
 	virtual unique_ptr<PlnGenEntity> getStrAddress(int index)=0;
 	virtual unique_ptr<PlnGenEntity> getArgument(int i, int size)=0;

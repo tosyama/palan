@@ -13,16 +13,51 @@ static vector<PlnType*> basic_types;
 
 static void initBasicTypes()
 {
-	// Note: should sort by name
 	PlnType* t = new PlnType();
+	t->name = "sbyte";
+	t->type = TP_INT;
+	t->size = 1;
+	basic_types.push_back(t);
+
+	t = new PlnType();
 	t->name = "byte";
 	t->type = TP_UINT;
 	t->size = 1;
 	basic_types.push_back(t);
+
+	t = new PlnType();
+	t->name = "int16";
+	t->type = TP_INT;
+	t->size = 2;
+	basic_types.push_back(t);
+
+	t = new PlnType();
+	t->name = "uint16";
+	t->type = TP_UINT;
+	t->size = 2;
+	basic_types.push_back(t);
 	
+	t = new PlnType();
+	t->name = "int32";
+	t->type = TP_INT;
+	t->size = 4;
+	basic_types.push_back(t);
+
+	t = new PlnType();
+	t->name = "uint32";
+	t->type = TP_UINT;
+	t->size = 4;
+	basic_types.push_back(t);
+
 	t = new PlnType();
 	t->name = "int64";
 	t->type = TP_INT;
+	t->size = 8;
+	basic_types.push_back(t);
+
+	t = new PlnType();
+	t->name = "uint64";
+	t->type = TP_UINT;
 	t->size = 8;
 	basic_types.push_back(t);
 
@@ -35,14 +70,3 @@ vector<PlnType*> PlnType::getBasicTypes()
 	return basic_types;
 }
 
-/*PlnType* PlnType::getBasicType(const string& type_name)
-{
-	if (!is_initialzed_type) initBasicTypes();
-
-	auto t = basic_types.find(type_name);
-	if (t != basic_types.end())
-		return t->second;
-	else
-		return NULL;
-}
-*/

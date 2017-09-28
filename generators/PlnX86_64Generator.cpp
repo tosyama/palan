@@ -64,9 +64,12 @@ static const char* r(int rt, int size=8)
 
 		tbl[R10][0] = "%r10b"; tbl[R10][1] = "%r10w";
 		tbl[R10][2] = "%r10d"; tbl[R10][3] = "%r10";
+
+		tbl[R11][0] = "%r11b"; tbl[R11][1] = "%r11w";
+		tbl[R11][2] = "%r11d"; tbl[R11][3] = "%r11";
 	}
 	// 1->0, 2->1, 4->2, 8->3
-	int i = (size & 3) ? size >> 1 : 3;
+	int i = (size & 7) ? size >> 1 : 3;
 	return tbl[rt][i];
 }
 
@@ -170,10 +173,18 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
+	if (dst->alloc_type == src->alloc_type) {
+		if (!strcmp(oprnd(dst), oprnd(src))) return;	// do nothing
+	}
+	if (dst->alloc_type == GA_NULL) return;
+
 	string dst_safix = "q";
 	string src_safix = "";
+	string predst_safix = "";
 
 	const char* srcstr = oprnd(src);
+	const char* dststr = oprnd(dst);
+
 	if (dst->alloc_type == GA_MEM) {
 		switch (dst->size) {
 			case 1: dst_safix = "b"; break;
@@ -189,22 +200,40 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 			switch (src->size) {
 				case 1: src_safix = "zb"; break;
 				case 2: src_safix = "zw"; break;
-				case 4: src_safix = "zl"; break;
+				case 4:
+					src_safix = "";
+					predst_safix = "l";
+					if (dst->alloc_type == GA_REG) {
+						dststr = r(dst->data.i, 4);
+						dst_safix = "l";
+					}
+					break;
 			}
+	} else if (src->alloc_type == GA_CODE) {
+		const char* ints = src->data.str->c_str();
+		if (ints[1] == '-') {
+			ints+=2;
+			int len = strlen(ints);
+			if (strlen(ints) > 10 || (len==10&&strcmp(ints, "2147483648") > 0))
+				src_safix = "abs";
+			
+		} else {
+			ints++;
+			int len = strlen(ints);
+			if (strlen(ints) > 10 || (len==10&&strcmp(ints, "4294967295") > 0))
+				src_safix = "abs";
+		}
 	}
 
-	if (dst->alloc_type == src->alloc_type) {
-		if (!strcmp(oprnd(dst), oprnd(src))) return;	// do nothing
-	}
+	if (dst->alloc_type == GA_MEM && src->alloc_type == GA_MEM) {
+		os << "	mov" << src_safix << predst_safix << " " << srcstr << ", %r11" << endl;
+		os << "	mov" << dst_safix << " %r11, " << dststr;
+	} else if (src_safix == "abs" && dst->alloc_type == GA_MEM) {
+		os << "	mov" << src_safix << "q " << srcstr << ", %r11" << endl;
+		os << "	mov" << dst_safix << " " <<  r(R11,dst->size) << ", " << dststr;
+	} else
+		os << "	mov" << src_safix << dst_safix << " " << srcstr << ", " << dststr;
 
-	if (dst->alloc_type == GA_NULL) return;
-
-	if (dst->alloc_type != GA_MEM || src->alloc_type != GA_MEM) {
-		os << "	mov" << src_safix << dst_safix << " " << srcstr << ", " << oprnd(dst);
-	} else {
-		os << "	mov" << src_safix << dst_safix << " " << srcstr << ", %rax" << endl;
-		os << "	mov" << dst_safix << " %rax, " << oprnd(dst);
-	}
 	if (comment != "") os << "	# " << comment;
 	os << endl;
 }
@@ -294,7 +323,7 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 	os << "	idivq " << oprnd(second) << "	# " << comment << endl;
 }
 
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getInt(int i)
+unique_ptr<PlnGenEntity> PlnX86_64Generator::getInt(int64_t i)
 {
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	e->type = GE_STRING;
