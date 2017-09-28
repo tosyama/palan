@@ -1,0 +1,16 @@
+ccall int64 printf();
+ccall exit();
+
+sbyte sb, byte ub = -128, 255;
+int16 sd, uint16 ud = -32768, 65535;
+int32 sl, uint32 ul = -2147483648, 4294967295;
+int64 sq = -9223372036854775808;
+uint64 uq = 18446744073709551615u;
+
+printf("%d %d %d %d\n", sb, ub, sd, ud);
+printf("%d %u\n", sl, ul);
+printf("%lld\n", sq);
+printf("%llu\n", uq);
+
+exit(0);
+
