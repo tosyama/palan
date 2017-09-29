@@ -5,14 +5,6 @@
 
 #include "../PlnModel.h"
 
-// Function: Name Paramaters ReturnValues Block
-enum PlnFncType {
-	FT_PLN,
-	FT_INLINE,
-	FT_C,
-	FT_SYS
-};
-
 enum PlnFncPrntType {
 	FP_MODULE
 };
@@ -21,7 +13,7 @@ class PlnFunction
 {
 public:
 	string name;
-	PlnFncType type;
+	int type;
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
 	union {
@@ -38,7 +30,7 @@ public:
 		PlnModule *module;
 	} parent;
 
-	PlnFunction(PlnFncType func_type, const string& func_name);
+	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
 	void setRetValues(vector<PlnVariable*>& vars);
 	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);

@@ -2,6 +2,7 @@
 ///
 /// @file	PlnModel.h
 /// @copyright	2017- YAMAGUCHI Toshinobu 
+
 #pragma once
 
 #include <vector>

@@ -9,6 +9,7 @@
 
 #include <boost/assert.hpp>
 
+#include "../../PlnConstants.h"
 #include "../../PlnModel.h"
 #include "../PlnFunction.h"
 #include "PlnFunctionCall.h"
@@ -39,13 +40,7 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 
 void PlnFunctionCall::finish(PlnDataAllocator& da)
 {
-	int func_type;
-	switch (function->type) {
-		case FT_PLN: func_type=DPF_PLN; break;
-		case FT_C: func_type=DPF_C; break;
-		case FT_SYS: func_type=DPF_SYS; break;
-	}		
-
+	int func_type = function->type;
 	auto dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
 
 	int i = 0;

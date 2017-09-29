@@ -22,6 +22,8 @@ public:
 	int type;
 	int alloc_type;
 	int size;
+	int data_type;
+
 	union {
 		string* str;
 		int64_t i;

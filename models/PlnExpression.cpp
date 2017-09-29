@@ -10,6 +10,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "PlnExpression.h"
+#include "PlnType.h"
 #include "PlnVariable.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
@@ -40,6 +41,23 @@ PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR)
 {
 	inf.var = var;
+}
+
+PlnType* PlnValue::getType()
+{
+	switch(type) {
+		case VL_LIT_INT8:
+			return PlnType::getSint();
+		case VL_LIT_UINT8:
+			return PlnType::getUint();
+		case VL_RO_DATA:
+			return PlnType::getReadOnlyCStr();
+		case VL_VAR:
+			return inf.var->var_type;
+		case VL_WORK:
+			return inf.wk_type;
+	}
+	BOOST_ASSERT(false);
 }
 
 PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)

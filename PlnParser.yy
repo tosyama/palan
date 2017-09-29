@@ -45,6 +45,7 @@ class PlnLexer;
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnAssignment.h"
 #include "PlnMessage.h"
+#include "PlnConstants.h"
 
 #define CUR_BLOCK	scopes.back().inf.block
 #define CUR_FUNC	searchFunction(scopes)

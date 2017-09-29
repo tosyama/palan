@@ -35,10 +35,9 @@ public:
 enum PlnValType {
 	VL_LIT_INT8,
 	VL_LIT_UINT8,
-	VL_WK_INT8,
-	VL_WK_UINT8,
 	VL_RO_DATA,
 	VL_VAR,
+	VL_WORK
 };
 
 class PlnValue {
@@ -50,6 +49,7 @@ public:
 		uint64_t uintValue;
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
+		PlnType* wk_type;
 	} inf;
 
 	PlnValue() {};
@@ -58,6 +58,7 @@ public:
 	PlnValue(PlnReadOnlyData* rod);
 	PlnValue(PlnVariable* var);
 
+	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
 	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };

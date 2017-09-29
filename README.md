@@ -16,6 +16,7 @@ $ sudo make package
 $ make
 ```
 Note: `make package` installs [Boost], [Bison], [Flex] and [Catch].
+
 [Boost]: http://boost.org
 [Bison]: https://www.gnu.org/software/bison/
 [Flex]: https://github.com/westes/flex
@@ -25,7 +26,7 @@ Note: `make package` installs [Boost], [Bison], [Flex] and [Catch].
 ```sh
 $ vi helloworld.pa
 ```
-```
+```c
 syscall 1: write();
 write(1, "Hello World!\n", 13);
 ```

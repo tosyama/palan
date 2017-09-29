@@ -14,12 +14,6 @@ class PlnDataPlace;
 class PlnParameter;
 class PlnVariable;
 
-enum {	// Function call type.
-	DPF_PLN,
-	DPF_C,
-	DPF_SYS
-};
-
 class PlnDataAllocator
 {
 protected:
@@ -40,7 +34,7 @@ public:
 	void reset();
 	PlnDataAllocator(int regnum);
 
-	PlnDataPlace* allocData(int size, PlnDataPlace* new_dp = NULL);
+	PlnDataPlace* allocData(int size, int data_type, PlnDataPlace* new_dp = NULL);
 
 	void allocSaveData(PlnDataPlace* dp);
 	void releaseData(PlnDataPlace* dp);
@@ -83,14 +77,15 @@ enum {
 class PlnDataPlace
 {
 public:
-	int type;
-	int size;
+	char type;
+	char size;
+	char data_type;
+	char status;
 
-	int status;
-	int accessCount;
+	int32_t accessCount;
 
-	int alloc_step;
-	int release_step;
+	int32_t alloc_step;
+	int32_t release_step;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
@@ -109,4 +104,3 @@ public:
 	int allocable_size();
 	void access();
 };
-

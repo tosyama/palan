@@ -3,7 +3,7 @@
 /// @file	PlnStatement.cpp
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 #include <boost/assert.hpp>
-
+#include "../PlnConstants.h"
 #include "PlnFunction.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
@@ -116,8 +116,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 	int i=0, j=0;
 
 	BOOST_ASSERT(function->type == FT_PLN);
-
-	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), DPF_PLN, true);
+	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), FT_PLN, true);
 	for (auto e: expressions) {
 		for (auto v: e->values) {
 			e->data_places.push_back(dps[i]);
@@ -131,7 +130,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 			da.allocDp(dps[j]);
 		}
 	}
-	da.returnedValues(dps, DPF_PLN);
+	da.returnedValues(dps, FT_PLN);
 }
 
 void PlnReturnStmt::dump(ostream& os, string indent)

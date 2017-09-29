@@ -11,6 +11,7 @@
 #include "PlnMulOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../PlnType.h"
 
 // PlnMulOperation
 PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
@@ -49,7 +50,8 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	: PlnExpression(ET_MUL), l(l), r(r)
 {
 	PlnValue v;
-	v.type = VL_WK_INT8;
+	v.type = VL_WORK;
+	v.inf.wk_type = l->values[0].getType();
 	values.push_back(v);
 }
 
@@ -70,7 +72,8 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.allocData(8, rdp);	
+		auto tp = r->values[0].getType();
+		da.allocData(tp->size, tp->data_type, rdp);	
 		da.releaseData(rdp);
 	}
 	da.releaseAccumulator(ldp);

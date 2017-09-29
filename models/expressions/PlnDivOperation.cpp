@@ -11,6 +11,7 @@
 #include "PlnDivOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../PlnType.h"
 
 // PlnDivOperation
 PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
@@ -22,7 +23,7 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 			delete r;
 			return l;
 		}
-	} else if (l->type == ET_DIV && static_cast<PlnDivOperation*>(l)->div_type == DT_DIV) {
+	} else if (l->type == ET_DIV && static_cast<PlnDivOperation*>(l)->div_type == DV_DIV) {
 		PlnDivOperation* po = static_cast<PlnDivOperation*>(l);
 		if (po->r->type == ET_VALUE
 				&& po->r->values[0].type == VL_LIT_INT8) {
@@ -36,7 +37,7 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 		}
 	}
 
-	return new PlnDivOperation(l,r, DT_DIV);
+	return new PlnDivOperation(l,r, DV_DIV);
 }
 
 PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
@@ -50,15 +51,16 @@ PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 		}
 	} 
 
-	return new PlnDivOperation(l,r, DT_MOD);
+	return new PlnDivOperation(l,r, DV_MOD);
 }
 
 PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType dt)
 	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt)
 {
 	PlnValue v;
-	v.type = VL_WK_INT8;
-	if (div_type == DT_DIV) {
+	v.type = VL_WORK;
+	v.inf.wk_type = l->values[0].getType();
+	if (div_type == DV_DIV) {
 		values.push_back(v);
 		values.push_back(v);	// for remainder
 	} else	// DT_MOD
@@ -82,7 +84,8 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.allocData(8, rdp);	
+		auto tp = r->values[0].getType();
+		da.allocData(tp->size, tp->data_type, rdp);	
 		da.releaseData(rdp);
 	}
 	da.releaseAccumulator(ldp);
@@ -91,7 +94,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 
 void PlnDivOperation::dump(ostream& os, string indent)
 {
-	os << indent << (div_type==DT_DIV ? "DIV" : "MOD") << endl;
+	os << indent << (div_type==DV_DIV ? "DIV" : "MOD") << endl;
 	l->dump(os, indent+" ");
 	r->dump(os, indent+" ");
 }
@@ -108,7 +111,7 @@ void PlnDivOperation::gen(PlnGenerator& g)
 	g.genDiv(le.get(), re.get(), cmt);
 	
 	if (data_places.size() > 0) {
-		if (div_type == DT_DIV) {
+		if (div_type == DV_DIV) {
 			auto rpe = g.getPushEntity(data_places[0]);
 			auto qe = g.getPopEntity(quotient);
 			g.genMove(rpe.get(), qe.get(), "");

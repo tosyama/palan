@@ -11,6 +11,7 @@
 #include "PlnAddOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../PlnType.h"
 
 // PlnAddOperation
 PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
@@ -81,7 +82,8 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	: PlnExpression(ET_ADD), l(l), r(r), is_add(is_add)
 {
 	PlnValue v;
-	v.type = VL_WK_INT8;
+	v.type = VL_WORK;
+	v.inf.wk_type = l->values[0].getType();
 	values.push_back(v);
 }
 
@@ -102,7 +104,8 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.allocData(8, rdp);	
+		auto tp = r->values[0].getType();
+		da.allocData(tp->size, tp->data_type, rdp);	
 		da.releaseData(rdp);
 	}
 	da.releaseAccumulator(ldp);
@@ -155,7 +158,8 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	: PlnExpression(ET_NEG), e(e)
 {
 	PlnValue v;
-	v.type = VL_WK_INT8;
+	v.type = VL_WORK;
+	v.inf.wk_type = e->values[0].getType();
 	values.push_back(v);
 }
 

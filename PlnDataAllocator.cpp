@@ -58,7 +58,7 @@ PlnDataPlace* PlnDataAllocator::allocDataWithDetail(int size, int alloc_step, in
 	return dp;
 }
 
-PlnDataPlace* PlnDataAllocator::allocData(int size, PlnDataPlace* new_dp)
+PlnDataPlace* PlnDataAllocator::allocData(int size, int data_type, PlnDataPlace* new_dp)
 {
 	return allocDataWithDetail(size, step++, INT_MAX, new_dp);
 }
