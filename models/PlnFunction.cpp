@@ -80,6 +80,8 @@ void PlnFunction::finish(PlnDataAllocator& da)
 				auto dp = da.allocData(t->size, t->data_type);
 				dp->comment = &p->name;
 				p->place = dp;
+
+				dps[i]->data_type = t->data_type;
 				p->load_place = dps[i];
 				i++;
 			}

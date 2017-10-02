@@ -10,7 +10,7 @@ SRCS=palan.cpp \
 	models/expressions/PlnAssignment.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
-	PlnDataAllocator.cpp \
+	PlnDataAllocator.cpp PlnGenerator.cpp\
 	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))

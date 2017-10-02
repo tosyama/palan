@@ -117,8 +117,13 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 
 	BOOST_ASSERT(function->type == FT_PLN);
 	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), FT_PLN, true);
+	for (auto rt: function->return_vals)
+		dps[i]->data_type = rt->var_type->data_type;
+	
 	for (auto e: expressions) {
-		for (auto v: e->values) {
+		for (auto &v: e->values) {
+			if (dps[i]->data_type == DT_UNKNOWN)
+				dps[i]->data_type = v.getType()->data_type;
 			e->data_places.push_back(dps[i]);
 			if (da.isAccumulator(dps[i])) {
 				late_pop_dp = dps[i];

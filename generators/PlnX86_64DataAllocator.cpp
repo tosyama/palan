@@ -25,7 +25,7 @@ PlnX86_64DataAllocator::PlnX86_64DataAllocator()
 
 PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool is_callee)
 {
-	PlnDataPlace* dp = new PlnDataPlace();
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
 
 	if (index <= 6) {
 		int regid;
@@ -55,7 +55,6 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool
 			dp->data.stack.offset = ind*8;
 		}
 	}
-	dp->size = 8;
 	dp->status = DS_ASSIGNED;
 
 	return dp;
@@ -93,9 +92,8 @@ void PlnX86_64DataAllocator::funcCalled(
 	for (int regid: DSTRY_TBL) {
 		PlnDataPlace* pdp = regs[regid];
 		if (!pdp || (pdp->release_step != step)) {
-			PlnDataPlace* dp = new PlnDataPlace();
+			PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
 			dp->type = DP_REG;
-			dp->size = 8;
 			dp->status = DS_RELEASED;
 			dp->alloc_step = dp->release_step = step;
 			dp->previous = pdp;
@@ -129,10 +127,9 @@ void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int 
 
 PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 {
-	auto dp = new_dp ? new_dp : new PlnDataPlace();
+	auto dp = new_dp ? new_dp : new PlnDataPlace(8, DT_SINT);
 	auto pdp = regs[RAX];
 	dp->type = DP_REG;
-	dp->size = 8;
 	dp->status = DS_ASSIGNED;
 
 	dp->data.reg.id = RAX;
@@ -169,9 +166,8 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* tgt)
 	auto regid = tgt->data.reg.id;
 	auto pdp = regs[regid];
 	BOOST_ASSERT(!pdp || pdp->status == DS_RELEASED);
-	auto dp = new PlnDataPlace();
+	auto dp = new PlnDataPlace(8,tgt->data_type);
 	dp->type = DP_REG;
-	dp->size = 8;
 	dp->status = DS_RELEASED;
 	dp->data.reg.id = regid;
 	dp->alloc_step = dp->release_step = step;
@@ -187,9 +183,9 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 
 	for (auto regid: {RAX, RDX}) {
 		auto pdp = regs[regid];
-		auto dp = new PlnDataPlace();
+		auto dp = new PlnDataPlace(8,DT_SINT);
+		// TODO: reconsider DT_SINT/DT_UINT
 		dp->type = DP_REG;
-		dp->size = 8;
 		dp->status = DS_RELEASED;
 		dp->data.reg.id = regid;
 		dp->alloc_step = dp->release_step = step;

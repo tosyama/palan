@@ -11,6 +11,7 @@
 #include "PlnAddOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnConstants.h"
 #include "../PlnType.h"
 
 // PlnAddOperation
@@ -83,14 +84,14 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = l->values[0].getType();
+	v.inf.wk_type = PlnType::getSint();
 	values.push_back(v);
 }
 
 void PlnAddOperation::finish(PlnDataAllocator& da)
 {
 	// l => RAX
-	PlnDataPlace* ldp = new PlnDataPlace();
+	PlnDataPlace* ldp = new PlnDataPlace(8, DT_SINT);
 	l->data_places.push_back(ldp);
 	l->finish(da);
 	da.allocAccumulator(ldp);
@@ -99,13 +100,12 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
 	} else {
-		PlnDataPlace* rdp = new PlnDataPlace();
+		PlnDataPlace* rdp = new PlnDataPlace(8, DT_SINT);
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		auto tp = r->values[0].getType();
-		da.allocData(tp->size, tp->data_type, rdp);	
+		da.allocData(rdp);	
 		da.releaseData(rdp);
 	}
 	da.releaseAccumulator(ldp);
@@ -165,7 +165,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 
 void PlnNegative::finish(PlnDataAllocator& da)
 {
-	PlnDataPlace* dp = new PlnDataPlace();
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_SINT);
 	e->data_places.push_back(dp);
 	e->finish(da);
 	da.allocAccumulator(dp);

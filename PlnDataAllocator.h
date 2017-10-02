@@ -20,7 +20,7 @@ protected:
 	int regnum;
 	int step;
 
-	PlnDataPlace* allocDataWithDetail(int size, int alloc_step, int release_step, PlnDataPlace* new_dp);
+	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
 
 public:
@@ -34,7 +34,8 @@ public:
 	void reset();
 	PlnDataAllocator(int regnum);
 
-	PlnDataPlace* allocData(int size, int data_type, PlnDataPlace* new_dp = NULL);
+	PlnDataPlace* allocData(int size, int data_type);
+	void allocData(PlnDataPlace* new_dp);
 
 	void allocSaveData(PlnDataPlace* dp);
 	void releaseData(PlnDataPlace* dp);
@@ -99,7 +100,7 @@ public:
 	PlnDataPlace* save_place;
 	string* comment;
 
-	PlnDataPlace();
+	PlnDataPlace(int size, int data_type);
 	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
 	int allocable_size();
 	void access();

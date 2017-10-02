@@ -12,6 +12,7 @@
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
 #include "../PlnModel.h"
+#include "../PlnConstants.h"
 #include "PlnX86_64DataAllocator.h"
 #include "PlnX86_64Generator.h"
 
@@ -197,17 +198,25 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 
 	if (src->alloc_type == GA_MEM) {
 		if (dst->size > src->size)
-			switch (src->size) {
-				case 1: src_safix = "zb"; break;
-				case 2: src_safix = "zw"; break;
-				case 4:
-					src_safix = "";
-					predst_safix = "l";
-					if (dst->alloc_type == GA_REG) {
-						dststr = r(dst->data.i, 4);
-						dst_safix = "l";
-					}
-					break;
+			if (src->data_type == DT_SINT) {
+				switch (src->size) {
+					case 1: src_safix = "sb"; break;
+					case 2: src_safix = "sw"; break;
+					case 4: src_safix = "sl"; break;
+				}
+			} else { // unsigned
+				switch (src->size) {
+					case 1: src_safix = "zb"; break;
+					case 2: src_safix = "zw"; break;
+					case 4:
+							src_safix = "";
+							predst_safix = "l";
+							if (dst->alloc_type == GA_REG) {
+								dststr = r(dst->data.i, 4);
+								dst_safix = "l";
+							}
+							break;
+				}
 			}
 	} else if (src->alloc_type == GA_CODE) {
 		const char* ints = src->data.str->c_str();
@@ -349,6 +358,8 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getStrAddress(int index)
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	e->type = GE_STRING;
 	e->alloc_type = GA_MEM;
+	e->size = 8;
+	e->data_type = DT_OBJECT_REF;
 	e->data.str = new string((format("$.LC%1%") % index).str());
 
 	return e;
@@ -392,42 +403,27 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getSysArgument(int i)
 	return e;
 }
 
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getPushEntity(PlnDataPlace* dp)
-{
-	if (dp->save_place) {
-		return getEntity(dp->save_place);
-	} else
-		return getEntity(dp);
-}
-
-unique_ptr<PlnGenEntity> PlnX86_64Generator::getPopEntity(PlnDataPlace* dp)
-{
-	auto e = getEntity(dp);
-	if (dp->save_place) {
-		auto se = getEntity(dp->save_place);
-		string cmt = string("load ") + *dp->comment + " from " + *dp->save_place->comment;
-		genMove(e.get(), se.get(), cmt);
-	}
-	return getEntity(dp);
-}
-
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 {
+	BOOST_ASSERT(dp->data_type != DT_UNKNOWN);
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	if (dp->type == DP_STK_BP) {
 		e->type = GE_STRING;
 		e->alloc_type = GA_MEM;
 		e->size = dp->size;
+		e->data_type = dp->data_type;
 		e->data.str = new string((format("%1%(%%rbp)") % dp->data.stack.offset).str());
 	} else if (dp->type == DP_STK_SP) {
 		e->type = GE_STRING;
 		e->alloc_type = GA_MEM;
 		e->size = dp->size;
+		e->data_type = dp->data_type;
 		e->data.str = new string((format("%1%(%%rsp)") % dp->data.stack.offset).str());
 	} else if (dp->type == DP_REG) {
 		e->type = GE_INT;
 		e->alloc_type = GA_REG;
-		e->size = 8;
+		e->size = dp->size;
+		e->data_type = dp->data_type;
 		e->data.i = dp->data.reg.id;
 	} else if (dp->type == DP_LIT_INT)
 		return getInt(dp->data.intValue);
