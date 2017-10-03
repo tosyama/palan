@@ -64,12 +64,6 @@ public:
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 
-	virtual unique_ptr<PlnGenEntity> getInt(int64_t i)=0;
-	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset, int size)=0;
-	virtual unique_ptr<PlnGenEntity> getStrAddress(int index)=0;
-	virtual unique_ptr<PlnGenEntity> getArgument(int i, int size)=0;
-	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
-
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
 	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);

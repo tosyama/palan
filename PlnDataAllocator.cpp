@@ -148,7 +148,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 	return dps;
 }
 
-PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int intValue)
+PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_SINT);
 	dp->type = DP_LIT_INT;

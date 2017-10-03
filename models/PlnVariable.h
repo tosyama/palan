@@ -8,7 +8,6 @@ public:
 	union {
 		int index;
 	} inf;
-	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 class PlnParameter : public PlnVariable {

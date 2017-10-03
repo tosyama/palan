@@ -52,7 +52,7 @@ public:
 	virtual PlnDataPlace* multiplied(PlnDataPlace* tgt) = 0;
 	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
 
-	PlnDataPlace* getLiteralIntDp(int intValue);
+	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
 
 	void finish();
@@ -92,7 +92,7 @@ public:
 		struct {int32_t idx; int32_t offset;} stack;
 		struct {int32_t id; int32_t offset;} reg;
 		vector<PlnDataPlace*> *bytesData;
-		int intValue;
+		int64_t intValue;
 		int index;
 	} data;
 

@@ -22,8 +22,9 @@ public:
 	PlnExprsnType type;
 	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
+	PlnDataPlace* val_place;	// TODO: divide value expression.
 
-	PlnExpression(PlnExprsnType type) : type(type) {};
+	PlnExpression(PlnExprsnType type) : type(type), val_place(NULL) {};
 	PlnExpression(PlnValue value);
 
 	virtual void finish(PlnDataAllocator& da);
@@ -60,7 +61,6 @@ public:
 
 	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
-	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 // Read only data (String literal/Const)
@@ -74,5 +74,4 @@ public:
 	int index;
 	string name;
 	void gen(PlnGenerator& g);
-	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
