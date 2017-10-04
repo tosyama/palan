@@ -10,7 +10,7 @@ SRCS=palan.cpp \
 	models/expressions/PlnAssignment.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
-	PlnDataAllocator.cpp \
+	PlnDataAllocator.cpp PlnGenerator.cpp\
 	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
@@ -32,7 +32,7 @@ PlnParser.hpp: PlnParser.yy
 	bison -o PlnParser.cpp -r all --report-file=bison.log $<
 PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
-$(TEST): $(OBJS) test/*.cpp
+$(TEST): $(OBJS) test/*.cpp test/pacode/*
 	@$(MAKE) -C test
 depend: $(SRCS)
 	-@ $(RM) depend.inc

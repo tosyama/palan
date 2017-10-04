@@ -9,6 +9,7 @@
 
 #include <boost/assert.hpp>
 
+#include "../../PlnConstants.h"
 #include "../../PlnModel.h"
 #include "../PlnFunction.h"
 #include "PlnFunctionCall.h"
@@ -39,30 +40,38 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 
 void PlnFunctionCall::finish(PlnDataAllocator& da)
 {
-	int func_type;
-	switch (function->type) {
-		case FT_PLN: func_type=DPF_PLN; break;
-		case FT_C: func_type=DPF_C; break;
-		case FT_SYS: func_type=DPF_SYS; break;
-	}		
-
+	int func_type = function->type;
 	auto dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
-
 	int i = 0;
+	for (auto p: function->parameters) {
+		dps[i]->data_type = p->var_type->data_type;
+		++i;
+	}
+
+	i = 0;
 	for (auto a: arguments) {
 		a->data_places.push_back(dps[i]);
+		if (dps[i]->data_type == DT_UNKNOWN) {
+			dps[i]->data_type = a->values[0].getType()->data_type;
+		}
 		a->finish(da);
 		da.allocDp(dps[i]);
 		++i;
 	}
 	da.funcCalled(dps, function->return_vals, func_type);
 	auto rdps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
+
+	i = 0;
+	for (auto r: function->return_vals) {
+		rdps[i]->data_type = r->var_type->data_type;
+		++i;
+	}
 	
 	for (i=0; i<rdps.size(); ++i) {
 		if (i < data_places.size()) {
 			BOOST_ASSERT(data_places[i]->save_place == NULL);
+			rdps[i]->alloc_step = data_places[i]->alloc_step;
 			data_places[i]->save_place = rdps[i];
-			// TODO: set step.
 		} else {
 			delete rdps[i];
 		}

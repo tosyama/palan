@@ -22,9 +22,13 @@ public:
 	PlnExprsnType type;
 	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
+	PlnDataPlace* val_place;	// TODO: divide value expression.
 
-	PlnExpression(PlnExprsnType type) : type(type) {};
+	PlnExpression(PlnExprsnType type) : type(type), val_place(NULL) {};
 	PlnExpression(PlnValue value);
+
+	int getDataType(int val_ind=0);
+	bool isLitNum(int& num_type);
 
 	virtual void finish(PlnDataAllocator& da);
 	virtual void dump(ostream& os, string indent="");
@@ -34,9 +38,10 @@ public:
 // Value (rval)
 enum PlnValType {
 	VL_LIT_INT8,
-	VL_WK_INT8,
+	VL_LIT_UINT8,
 	VL_RO_DATA,
 	VL_VAR,
+	VL_WORK
 };
 
 class PlnValue {
@@ -45,17 +50,20 @@ public:
 	union {
 		int index;
 		int64_t intValue;
+		uint64_t uintValue;
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
+		PlnType* wk_type;
 	} inf;
 
 	PlnValue() {};
-	PlnValue(int intValue);
+	PlnValue(int64_t intValue);
+	PlnValue(uint64_t uintValue);
 	PlnValue(PlnReadOnlyData* rod);
 	PlnValue(PlnVariable* var);
 
+	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
-	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };
 
 // Read only data (String literal/Const)
@@ -69,5 +77,4 @@ public:
 	int index;
 	string name;
 	void gen(PlnGenerator& g);
-	unique_ptr<PlnGenEntity> genEntity(PlnGenerator& g);
 };

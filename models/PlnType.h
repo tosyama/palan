@@ -5,20 +5,14 @@
 
 #include "../PlnModel.h"
 
-// PlnType
-enum PlnTypType {
-	TP_INT,
-	TP_UINT,
-	TP_OBJ,
-	TP_IMP,
-};
-
 class PlnType {
 public:
-	PlnTypType	type;
+	int	data_type;
 	string name;
 	int size;
 
-	// static PlnType* getBasicType(const string& type_name);
 	static vector<PlnType*> getBasicTypes();
+	static PlnType* getSint();
+	static PlnType* getUint();
+	static PlnType* getReadOnlyCStr();
 };

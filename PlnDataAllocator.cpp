@@ -1,13 +1,15 @@
 /// Register/Stack allocation class definition.
 ///
 /// @file	PlnDataAllocator.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu
+/// @copyright	2017 YAMAGUCHI Toshinobu
 
-#include "PlnDataAllocator.h"
 #include <iostream>
 #include <stdlib.h>
 #include <limits.h>
 #include <boost/assert.hpp>
+
+#include "PlnDataAllocator.h"
+#include "PlnConstants.h"
 
 PlnDataAllocator::PlnDataAllocator(int regnum)
 	: regnum(regnum)
@@ -28,14 +30,13 @@ void PlnDataAllocator::reset()
 	step = 0;
 }
 
-PlnDataPlace* PlnDataAllocator::allocDataWithDetail(int size, int alloc_step, int release_step, PlnDataPlace* new_dp)
+void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step)
 {
-	PlnDataPlace* dp = new_dp ? new_dp : new PlnDataPlace();
 	dp->type = DP_STK_BP;
-	dp->size = size;
 	dp->status = DS_ASSIGNED;
 	dp->alloc_step = alloc_step;
 	dp->release_step = release_step;
+	int size = dp->size;
 
 	if (size < 8) {
 		// TODO search alloc some bytes place first.
@@ -49,24 +50,32 @@ PlnDataPlace* PlnDataAllocator::allocDataWithDetail(int size, int alloc_step, in
 			dp->data.stack.idx = i;
 			data_stack[i] = dp;
 			dp->previous = pdp;
-			return dp;
+			return;
 		}
 	}
 
 	dp->data.stack.idx = data_stack.size();
 	data_stack.push_back(dp);
-	return dp;
 }
 
-PlnDataPlace* PlnDataAllocator::allocData(int size, PlnDataPlace* new_dp)
+PlnDataPlace* PlnDataAllocator::allocData(int size, int data_type)
 {
-	return allocDataWithDetail(size, step++, INT_MAX, new_dp);
+	PlnDataPlace* new_dp = new PlnDataPlace(size, data_type);
+	allocData(new_dp);
+	return new_dp;
+}
+
+void PlnDataAllocator::allocData(PlnDataPlace *new_dp)
+{
+	allocDataWithDetail(new_dp, step++, INT_MAX);
 }
 
 void PlnDataAllocator::allocSaveData(PlnDataPlace* dp)
 {
 	BOOST_ASSERT(dp->save_place == NULL);
-	dp->save_place = allocDataWithDetail(dp->size, dp->alloc_step, dp->release_step, NULL);
+	PlnDataPlace *save_dp = new PlnDataPlace(dp->size, dp->data_type);
+	allocDataWithDetail(save_dp, dp->alloc_step, dp->release_step);
+	dp->save_place = save_dp;
 	static string cmt = "(save)";
 	dp->save_place->comment = &cmt;
 }
@@ -139,11 +148,10 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 	return dps;
 }
 
-PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int intValue)
+PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)
 {
-	PlnDataPlace* dp = new PlnDataPlace();
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_SINT);
 	dp->type = DP_LIT_INT;
-	dp->size = 8;
 	dp->status = DS_ASSIGNED;
 	dp->data.intValue = intValue;
 	dp->alloc_step = step;
@@ -156,9 +164,8 @@ PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int intValue)
 
 PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 {
-	PlnDataPlace* dp = new PlnDataPlace();
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
-	dp->size = 8;
 	dp->status = DS_ASSIGNED;
 	dp->data.index = index;
 	dp->alloc_step = step;
@@ -195,9 +202,9 @@ void PlnDataAllocator::finish()
 	stack_size = stk_size * 8;
 }
 
-PlnDataPlace::PlnDataPlace()
+PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
-	 previous(NULL), save_place(NULL)
+	 previous(NULL), save_place(NULL), size(size), data_type(data_type)
 {
 	static string emp="";
 	comment = &emp;

@@ -14,19 +14,13 @@ class PlnDataPlace;
 class PlnParameter;
 class PlnVariable;
 
-enum {	// Function call type.
-	DPF_PLN,
-	DPF_C,
-	DPF_SYS
-};
-
 class PlnDataAllocator
 {
 protected:
 	int regnum;
 	int step;
 
-	PlnDataPlace* allocDataWithDetail(int size, int alloc_step, int release_step, PlnDataPlace* new_dp);
+	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
 
 public:
@@ -40,7 +34,8 @@ public:
 	void reset();
 	PlnDataAllocator(int regnum);
 
-	PlnDataPlace* allocData(int size, PlnDataPlace* new_dp = NULL);
+	PlnDataPlace* allocData(int size, int data_type);
+	void allocData(PlnDataPlace* new_dp);
 
 	void allocSaveData(PlnDataPlace* dp);
 	void releaseData(PlnDataPlace* dp);
@@ -57,7 +52,7 @@ public:
 	virtual PlnDataPlace* multiplied(PlnDataPlace* tgt) = 0;
 	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
 
-	PlnDataPlace* getLiteralIntDp(int intValue);
+	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
 
 	void finish();
@@ -83,20 +78,21 @@ enum {
 class PlnDataPlace
 {
 public:
-	int type;
-	int size;
+	char type;
+	char size;
+	char data_type;
+	char status;
 
-	int status;
-	int accessCount;
+	int32_t accessCount;
 
-	int alloc_step;
-	int release_step;
+	int32_t alloc_step;
+	int32_t release_step;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
 		struct {int32_t id; int32_t offset;} reg;
 		vector<PlnDataPlace*> *bytesData;
-		int intValue;
+		int64_t intValue;
 		int index;
 	} data;
 
@@ -104,9 +100,8 @@ public:
 	PlnDataPlace* save_place;
 	string* comment;
 
-	PlnDataPlace();
+	PlnDataPlace(int size, int data_type);
 	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
 	int allocable_size();
 	void access();
 };
-

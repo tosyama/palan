@@ -22,9 +22,11 @@ public:
 	int type;
 	int alloc_type;
 	int size;
+	int data_type;
+
 	union {
 		string* str;
-		int i;
+		int64_t i;
 	}data;
 	~PlnGenEntity()
 	{
@@ -62,15 +64,8 @@ public:
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 
-	virtual unique_ptr<PlnGenEntity> getInt(int i)=0;
-	virtual unique_ptr<PlnGenEntity> getStackAddress(int offset, int size)=0;
-	virtual unique_ptr<PlnGenEntity> getStrAddress(int index)=0;
-	virtual unique_ptr<PlnGenEntity> getArgument(int i, int size)=0;
-	virtual unique_ptr<PlnGenEntity> getSysArgument(int i)=0;
-
-	// TODO: take virtual from push & pop
-	virtual unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp) = 0;
-	virtual unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp) = 0;
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
+	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
+	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);
 };
 

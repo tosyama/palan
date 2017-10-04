@@ -1,14 +1,14 @@
-ccall FILE* fopen() : null ->;
+ccall FILE* fopen() : null ->;	// for c language.
 
 func int MaybeError(int a)
-	: -1 -> int error, string msg
+	: -> int error, string msg
 {
 	// return -1 ; // ng
 
 	if (ok)
 		return 0;
 	else
-		return -> 100, msg; // return -1 internal
+		return -> 100, msg;
 	
 }
 
@@ -27,4 +27,16 @@ write(f, "data") ->ioerr;
 
 close(f);
 ->operr() {
+	printf(stderr, "file open error!\n");
+	exit(1);
+}
+
+do_somthing() -> err1;
+do_somthing() -> err2;
+
+->	// allow the nest. nomal flow can't into this block.
+{
+	->err1() do_recover1();
+	->err2() do_recover2();
+	printf(stderr, "error!\n");	// can share the error logic.
 }

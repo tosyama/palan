@@ -16,12 +16,13 @@
 #include "PlnVariable.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnConstants.h"
 
 using std::string;
 using std::endl;
 using std::to_string;
 
-PlnFunction::PlnFunction(PlnFncType func_type, const string &func_name)
+PlnFunction::PlnFunction(int func_type, const string &func_name)
 	: type(func_type), name(func_name), implement(NULL)
 {
 }
@@ -64,19 +65,23 @@ void PlnFunction::finish(PlnDataAllocator& da)
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
 			for (auto r: return_vals) {
-				if (r->name != "") {
-					r->place = da.allocData(8);
+				if (r->name == "") r->place = NULL;
+				else {
+					auto t = r->var_type;
+					r->place = da.allocData(t->size, t->data_type);
 					r->place->comment = &r->name;
-				} else
-					r->place = NULL;
+				}
 			}
 
-			auto dps = da.prepareArgDps(return_vals.size(), parameters.size(), DPF_PLN, true);
+			auto dps = da.prepareArgDps(return_vals.size(), parameters.size(), FT_PLN, true);
 			int i=0;
 			for (auto p: parameters) {
-				auto dp = da.allocData(8);
+				auto t = p->var_type;
+				auto dp = da.allocData(t->size, t->data_type);
 				dp->comment = &p->name;
 				p->place = dp;
+
+				dps[i]->data_type = t->data_type;
 				p->load_place = dps[i];
 				i++;
 			}

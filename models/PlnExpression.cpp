@@ -10,7 +10,9 @@
 #include <boost/range/adaptor/reversed.hpp>
 
 #include "PlnExpression.h"
+#include "PlnType.h"
 #include "PlnVariable.h"
+#include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
@@ -18,10 +20,16 @@ using std::to_string;
 using boost::adaptors::reverse;
 
 // PlnValue
-PlnValue::PlnValue(int intValue)
+PlnValue::PlnValue(int64_t intValue)
 	: type(VL_LIT_INT8)
 {
 	inf.intValue = intValue;
+}
+
+PlnValue::PlnValue(uint64_t uintValue)
+	: type(VL_LIT_UINT8)
+{
+	inf.uintValue = uintValue;
 }
 
 PlnValue::PlnValue(PlnReadOnlyData* rod)
@@ -36,28 +44,38 @@ PlnValue::PlnValue(PlnVariable* var)
 	inf.var = var;
 }
 
-PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
+PlnType* PlnValue::getType()
 {
 	switch(type) {
 		case VL_LIT_INT8:
-			return da.getLiteralIntDp(inf.intValue);
+			return PlnType::getSint();
+		case VL_LIT_UINT8:
+			return PlnType::getUint();
 		case VL_RO_DATA:
-			return da.getReadOnlyDp(inf.rod->index);
+			return PlnType::getReadOnlyCStr();
 		case VL_VAR:
-			return inf.var->place;
+			return inf.var->var_type;
+		case VL_WORK:
+			return inf.wk_type;
 	}
 	BOOST_ASSERT(false);
 }
 
-unique_ptr<PlnGenEntity> PlnValue::genEntity(PlnGenerator& g)
+PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 {
-	switch (type) {
+	switch(type) {
 		case VL_LIT_INT8:
-			return g.getInt(inf.intValue);
+				return da.getLiteralIntDp(inf.intValue);
+		case VL_LIT_UINT8:
+			{
+				auto dp = da.getLiteralIntDp(inf.intValue);
+				dp->data_type = DT_UINT;
+				return dp;
+			}
 		case VL_RO_DATA:
-			return inf.rod->genEntity(g);
+			return da.getReadOnlyDp(inf.rod->index);
 		case VL_VAR:
-			return inf.var->genEntity(g);
+			return inf.var->place;
 	}
 	BOOST_ASSERT(false);
 }
@@ -73,25 +91,34 @@ void PlnReadOnlyData::gen(PlnGenerator &g)
 	}
 }
 
-unique_ptr<PlnGenEntity> PlnReadOnlyData::genEntity(PlnGenerator &g)
-{
-	switch (type) {
-		case RO_LIT_STR:
-			return g.getStrAddress(index); 
-		default:
-			BOOST_ASSERT(false);
-	}
-}
-
 // PlnExpression
 PlnExpression::PlnExpression(PlnValue value)
-	: type(ET_VALUE) 
+	: type(ET_VALUE), val_place(NULL)
 {
 	values.push_back(value);
 }
 
+int PlnExpression::getDataType(int val_ind)
+{
+	BOOST_ASSERT(values.size() > val_ind && val_ind >= 0);
+	return values[val_ind].getType()->data_type;
+}
+
+bool PlnExpression::isLitNum(int& num_type)
+{
+	if (type != ET_VALUE) return false;
+
+	auto t = values[0].type;
+	if (t == VL_LIT_INT8 || t== VL_LIT_UINT8) {
+		num_type = t;
+		return true;
+	}
+	return false;
+}
+
 void PlnExpression::finish(PlnDataAllocator& da)
 {
+	val_place = values[0].getDataPlace(da);
 }
 
 void PlnExpression::dump(ostream& os, string indent)
@@ -119,21 +146,24 @@ static string exp_cmt(PlnValue& v, PlnDataPlace* dp)
 {
 	switch (v.type) {
 		case VL_LIT_INT8:
+		case VL_LIT_UINT8:
 			return (string("$ -> ") + *dp->comment);
 		case VL_VAR:
 			return (v.inf.var->name+" -> " + *dp->comment);
 		case VL_RO_DATA:
 			return ("\"..\" -> " + *dp->comment);
+		default:
+			BOOST_ASSERT(false);
 	}
 }
 
 void PlnExpression::gen(PlnGenerator& g)
 {
-	for (int i=0; i<data_places.size(); ++i) {
-		auto re = values[i].genEntity(g);
-	 	auto le = g.getPushEntity(data_places[i]);
-		
-		g.genMove(le.get(), re.get(), exp_cmt(values[i],data_places[i]));
+	BOOST_ASSERT(data_places.size() <= 1);
+	if (data_places.size()) {
+		auto re = g.getEntity(val_place);
+	 	auto le = g.getPushEntity(data_places[0]);
+		g.genMove(le.get(), re.get(), exp_cmt(values[0],data_places[0]));
 	}
 }
 

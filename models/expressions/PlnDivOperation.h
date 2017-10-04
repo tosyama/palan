@@ -6,8 +6,8 @@
 #include "../PlnExpression.h"
 
 enum PlnDivType {
-	DT_DIV,
-	DT_MOD
+	DV_DIV,
+	DV_MOD
 };
 
 class PlnDivOperation : public PlnExpression

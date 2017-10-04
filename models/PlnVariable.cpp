@@ -16,12 +16,6 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
-// PlnVariable
-unique_ptr<PlnGenEntity> PlnVariable::genEntity(PlnGenerator& g)
-{
-	return g.getEntity(place);
-}
-
 // PlnVarInit
 PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars) : vars(move(vars))
 {
@@ -35,7 +29,8 @@ PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*> &initi
 void PlnVarInit::finish(PlnDataAllocator& da)
 {
 	for (auto v: vars) {
-		v->place = da.allocData(v->var_type->size);
+		auto tp = v->var_type;
+		v->place = da.allocData(tp->size, tp->data_type);
 		v->place->comment = &v->name;
 	}
 	int i=0;
@@ -54,4 +49,3 @@ void PlnVarInit::gen(PlnGenerator& g)
 	for (auto i: initializer)
 		i->gen(g);
 }
-
