@@ -15,25 +15,13 @@
 #include "../PlnType.h"
 
 // PlnDivOperation
-static bool isLitNum(PlnExpression* e, int& num_type)
-{
-	if (e->type != ET_VALUE) return false;
-
-	auto t = e->values[0].type;
-	if (t == VL_LIT_INT8 || t== VL_LIT_UINT8) {
-		num_type = t;
-		return true;
-	}
-	return false;
-}
-
 PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 {
 	int r_num_type;
 
-	if (isLitNum(r, r_num_type)) {
+	if (r->isLitNum(r_num_type)) {
 		int l_num_type;
-		if (isLitNum(l, l_num_type)) { 
+		if (l->isLitNum(l_num_type)) { 
 			PlnExpression* new_val;
 
 			// e.g.) 5/2 => 2
@@ -50,22 +38,20 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 		} else if (l->type == ET_DIV) {
 			PlnDivOperation* dv = static_cast<PlnDivOperation*>(l);
 			int lr_num_type;
-			if (dv->div_type == DV_DIV && isLitNum(dv->r, lr_num_type)) {
+			if (dv->div_type == DV_DIV && dv->r->isLitNum(lr_num_type)) {
 
 				// e.g.) a/2/3 => a/6
-				PlnExpression* new_rval;
 				if (lr_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-					uint64_t val = dv->r->values[0].inf.uintValue * r->values[0].inf.uintValue;
-					new_rval = new PlnExpression(val);
+					dv->r->values[0].inf.uintValue *= r->values[0].inf.uintValue;
+					delete r;
+					return dv;
 				} else {
 					int64_t val = dv->r->values[0].inf.intValue * r->values[0].inf.intValue;
-					new_rval = new PlnExpression(val);
+					delete r;
+					r = new PlnExpression(val);
+					l = dv->l;
+					dv->l = NULL; delete dv;
 				}
-				delete r;
-				r = new_rval;
-
-				l = dv->l;
-				dv->l = NULL; delete dv;
 			} 
 		}
 	} 
@@ -75,14 +61,20 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 
 PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 {
-	if (l->type == ET_VALUE && l->values[0].type == VL_LIT_INT8) {
-		if (r->type == ET_VALUE && r->values[0].type == VL_LIT_INT8) {
-			// e.g.) 5%2 => 1
-			l->values[0].inf.intValue %= r->values[0].inf.intValue;
-			delete r;
-			return l;
+	int l_num_type, r_num_type;
+	if (l->isLitNum(l_num_type) && r->isLitNum(r_num_type)) {
+		PlnExpression* new_val;
+		// e.g.) 5%2 => 1
+		if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
+			uint64_t ui = l->values[0].inf.uintValue % r->values[0].inf.uintValue;
+			new_val = new PlnExpression(ui);
+		} else {
+			int64_t i = l->values[0].inf.intValue % r->values[0].inf.intValue;
+			new_val = new PlnExpression(i);
 		}
-	} 
+		delete l; delete r;
+		return new_val;
+	}
 
 	return new PlnDivOperation(l,r, DV_MOD);
 }

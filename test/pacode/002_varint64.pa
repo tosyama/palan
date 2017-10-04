@@ -8,7 +8,7 @@ func int64 aa, ab
 }
 
 int64 a = 1;
-int64 b,c,d = 2,3,4;
+int64 b,c,d = 2,1+2,4;
 int64 e,f = -1,-2;
 int64 h;
 int64 i,j = 0, 1-4;

@@ -18,6 +18,9 @@ int64 idiv, imod = uq / 3;
 
 printf("%llu %llu\n", udiv, umod);
 printf("%lld %lld\n", idiv, imod);
+umod = uq % 3u;
+imod = uq % 3;
+printf("%lld %lld\n", umod, imod);
 
 exit(0);
 

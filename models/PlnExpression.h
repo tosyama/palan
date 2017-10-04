@@ -28,6 +28,7 @@ public:
 	PlnExpression(PlnValue value);
 
 	int getDataType(int val_ind=0);
+	bool isLitNum(int& num_type);
 
 	virtual void finish(PlnDataAllocator& da);
 	virtual void dump(ostream& os, string indent="");
