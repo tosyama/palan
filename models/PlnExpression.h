@@ -27,6 +27,8 @@ public:
 	PlnExpression(PlnExprsnType type) : type(type), val_place(NULL) {};
 	PlnExpression(PlnValue value);
 
+	int getDataType(int val_ind=0);
+
 	virtual void finish(PlnDataAllocator& da);
 	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);

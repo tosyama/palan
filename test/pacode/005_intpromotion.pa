@@ -13,11 +13,11 @@ printf("%lld\n", sq);
 printf("%llu\n", uq);
 
 // integer promotion
-uint64 udiv = uq / 3u;
-uint64 idiv = uq / 3;
+uint64 udiv, umod = uq / 3u;
+int64 idiv, imod = uq / 3;
 
-printf("%llu\n", udiv);
-printf("%llu\n", idiv);
+printf("%llu %llu\n", udiv, umod);
+printf("%lld %lld\n", idiv, imod);
 
 exit(0);
 

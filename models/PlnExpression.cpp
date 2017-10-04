@@ -12,6 +12,7 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 
@@ -64,8 +65,13 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 {
 	switch(type) {
 		case VL_LIT_INT8:
+				return da.getLiteralIntDp(inf.intValue);
 		case VL_LIT_UINT8:
-			return da.getLiteralIntDp(inf.intValue);
+			{
+				auto dp = da.getLiteralIntDp(inf.intValue);
+				dp->data_type = DT_UINT;
+				return dp;
+			}
 		case VL_RO_DATA:
 			return da.getReadOnlyDp(inf.rod->index);
 		case VL_VAR:
@@ -90,6 +96,12 @@ PlnExpression::PlnExpression(PlnValue value)
 	: type(ET_VALUE), val_place(NULL)
 {
 	values.push_back(value);
+}
+
+int PlnExpression::getDataType(int val_ind)
+{
+	BOOST_ASSERT(values.size() > val_ind && val_ind >= 0);
+	return values[val_ind].getType()->data_type;
 }
 
 void PlnExpression::finish(PlnDataAllocator& da)

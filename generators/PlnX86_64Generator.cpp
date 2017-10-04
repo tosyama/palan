@@ -345,7 +345,7 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 	}
 
 	if (tgt->data_type == DT_UINT && second->data_type == DT_UINT) {
-		os << "	movq $0, $rdx" << endl;
+		os << "	movq $0, %rdx" << endl;
 		os << "	divq " << div_str << "	# " << comment << endl;
 	} else {
 		os << "	cqto"	<< endl;

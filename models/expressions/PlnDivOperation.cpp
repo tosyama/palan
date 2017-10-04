@@ -15,28 +15,60 @@
 #include "../PlnType.h"
 
 // PlnDivOperation
+static bool isLitNum(PlnExpression* e, int& num_type)
+{
+	if (e->type != ET_VALUE) return false;
+
+	auto t = e->values[0].type;
+	if (t == VL_LIT_INT8 || t== VL_LIT_UINT8) {
+		num_type = t;
+		return true;
+	}
+	return false;
+}
+
 PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 {
-	if (l->type == ET_VALUE && l->values[0].type == VL_LIT_INT8) {
-		if (r->type == ET_VALUE && r->values[0].type == VL_LIT_INT8) {
+	int r_num_type;
+
+	if (isLitNum(r, r_num_type)) {
+		int l_num_type;
+		if (isLitNum(l, l_num_type)) { 
+			PlnExpression* new_val;
+
 			// e.g.) 5/2 => 2
-			l->values[0].inf.intValue /= r->values[0].inf.intValue;
-			delete r;
-			return l;
-		}
-	} else if (l->type == ET_DIV && static_cast<PlnDivOperation*>(l)->div_type == DV_DIV) {
-		PlnDivOperation* po = static_cast<PlnDivOperation*>(l);
-		if (po->r->type == ET_VALUE
-				&& po->r->values[0].type == VL_LIT_INT8) {
-			if (r->type == ET_VALUE) {
-				if (r->values[0].type == VL_LIT_INT8) {
-					// e.g.) a/2/3 => a/6
-					po->r->values[0].inf.intValue *= r->values[0].inf.intValue;
-					return po;
+			if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
+				uint64_t val = l->values[0].inf.uintValue / r->values[0].inf.uintValue;
+				new_val = new PlnExpression(val);
+			} else {
+				int64_t val = l->values[0].inf.intValue / r->values[0].inf.intValue;
+				new_val = new PlnExpression(val);
+			}
+			delete l; delete r;
+			return new_val;
+
+		} else if (l->type == ET_DIV) {
+			PlnDivOperation* dv = static_cast<PlnDivOperation*>(l);
+			int lr_num_type;
+			if (dv->div_type == DV_DIV && isLitNum(dv->r, lr_num_type)) {
+
+				// e.g.) a/2/3 => a/6
+				PlnExpression* new_rval;
+				if (lr_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
+					uint64_t val = dv->r->values[0].inf.uintValue * r->values[0].inf.uintValue;
+					new_rval = new PlnExpression(val);
+				} else {
+					int64_t val = dv->r->values[0].inf.intValue * r->values[0].inf.intValue;
+					new_rval = new PlnExpression(val);
 				}
+				delete r;
+				r = new_rval;
+
+				l = dv->l;
+				dv->l = NULL; delete dv;
 			} 
 		}
-	}
+	} 
 
 	return new PlnDivOperation(l,r, DV_DIV);
 }
@@ -58,9 +90,11 @@ PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType dt)
 	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt)
 {
+	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
+	
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = PlnType::getSint();
+	v.inf.wk_type = isUnsigned ? PlnType::getUint() : PlnType::getSint();
 	if (div_type == DV_DIV) {
 		values.push_back(v);
 		values.push_back(v);	// for remainder
@@ -71,7 +105,7 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 void PlnDivOperation::finish(PlnDataAllocator& da)
 {
 	// l => RAX
-	PlnDataPlace* ldp = new PlnDataPlace(8, DT_SINT);
+	PlnDataPlace* ldp = new PlnDataPlace(8, l->getDataType());
 	l->data_places.push_back(ldp);
 	l->finish(da);
 	da.allocAccumulator(ldp);
@@ -80,7 +114,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
 	} else {
-		PlnDataPlace* rdp = new PlnDataPlace(8, DT_SINT);
+		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
