@@ -90,6 +90,7 @@ public:
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
+		struct {int32_t idx; int32_t offset;} bytes;
 		struct {int32_t id; int32_t offset;} reg;
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
@@ -101,6 +102,9 @@ public:
 	string* comment;
 
 	PlnDataPlace(int size, int data_type);
+	unsigned int getAllocBytesBits();
+	bool tryAllocBytes(PlnDataPlace* dp);
+
 	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
 	int allocable_size();
 	void access();

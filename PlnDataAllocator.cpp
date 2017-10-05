@@ -39,23 +39,65 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 	int size = dp->size;
 
 	if (size < 8) {
-		// TODO search alloc some bytes place first.
-	//	BOOST_ASSERT(false);
+		int s=data_stack.size();
+		for (int i=0; i<s; i++) {
+			if (data_stack[i]->type == DP_BYTES) {
+				if (data_stack[i]->tryAllocBytes(dp)) {
+					dp->data.bytes.idx = i;
+					return;
+				}
+			}
+		}
 	}
 
 	int s=data_stack.size();
 	for (int i=0; i<s; i++) {
 		PlnDataPlace *pdp = data_stack[i];
 		if (pdp->status == DS_RELEASED) {
+			// Reuse unused place.
 			dp->data.stack.idx = i;
-			data_stack[i] = dp;
-			dp->previous = pdp;
-			return;
+
+			if (size < 8) {
+				// Create bytes data place containter.
+				auto dp_ctnr = new PlnDataPlace(8, DT_UNKNOWN);
+				dp_ctnr->type = DP_BYTES;
+				dp_ctnr->data.bytesData = new vector<PlnDataPlace *>();
+				dp_ctnr->status = DS_ASSIGNED_SOME;
+				dp_ctnr->alloc_step = alloc_step;
+				dp_ctnr->release_step = release_step;
+
+				data_stack[i] = dp_ctnr;
+				dp_ctnr->data.bytesData->push_back(dp);
+				dp_ctnr->previous = pdp;
+				return;
+
+			} else { // size == 8
+				data_stack[i] = dp;
+				dp->previous = pdp;
+				return;
+			}
 		}
 	}
 
-	dp->data.stack.idx = data_stack.size();
-	data_stack.push_back(dp);
+	if (size < 8) {
+		dp->data.bytes.idx = data_stack.size();
+		dp->data.bytes.offset = 0;
+
+		auto dp_ctnr = new PlnDataPlace(8, DT_UNKNOWN);
+		dp_ctnr->type = DP_BYTES;
+		dp_ctnr->data.bytesData = new vector<PlnDataPlace *>();
+		dp_ctnr->status = DS_ASSIGNED_SOME;
+		dp_ctnr->alloc_step = alloc_step;
+		dp_ctnr->release_step = release_step;
+
+		dp_ctnr->data.bytesData->push_back(dp);
+		dp_ctnr->previous = NULL;
+		data_stack.push_back(dp_ctnr);
+
+	} else {
+		dp->data.stack.idx = data_stack.size();
+		data_stack.push_back(dp);
+	}
 }
 
 PlnDataPlace* PlnDataAllocator::allocData(int size, int data_type)
@@ -87,6 +129,16 @@ void PlnDataAllocator::releaseData(PlnDataPlace* dp)
 	if (dp->save_place) {
 		dp->save_place->status = DS_RELEASED;
 		dp->save_place->release_step = step;
+	}
+
+	if (dp->size < 8) {
+		auto parent_dp = data_stack[dp->data.stack.idx];
+		BOOST_ASSERT(parent_dp->type == DP_BYTES);
+		BOOST_ASSERT(parent_dp->status == DS_ASSIGNED_SOME);
+		if (parent_dp->allocable_size() == parent_dp->size) {
+			parent_dp->status = DS_RELEASED;
+			parent_dp->release_step = step;
+		}
 	}
 
 	step++;
@@ -178,13 +230,25 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 
 void PlnDataAllocator::finish()
 {
+	//TODO: refactoring
 	int offset = 0;
 	for (auto dp: data_stack) {
 		offset -= 8;
-		dp->data.stack.offset = offset;
+		if (dp->type == DP_BYTES) {
+			for (auto child: *dp->data.bytesData) {
+				child->data.stack.offset = offset + child->data.bytes.offset;
+			}
+		} else
+			dp->data.stack.offset = offset;
+
 		PlnDataPlace* dpp = dp->previous;
 		while (dpp) {
-			dpp->data.stack.offset = offset;
+			if (dpp->type == DP_BYTES) {
+				for (auto child: *dpp->data.bytesData) {
+					child->data.stack.offset = offset + child->data.bytes.offset;
+				}
+			} else
+				dpp->data.stack.offset = offset;
 			dpp = dpp->previous;
 		}
 	}
@@ -202,6 +266,7 @@ void PlnDataAllocator::finish()
 	stack_size = stk_size * 8;
 }
 
+// PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
 	 previous(NULL), save_place(NULL), size(size), data_type(data_type)
@@ -210,18 +275,68 @@ PlnDataPlace::PlnDataPlace(int size, int data_type)
 	comment = &emp;
 }
 
-int PlnDataPlace::allocable_size()
+unsigned int PlnDataPlace::getAllocBytesBits()
 {
-	if (type != DP_BYTES) {
-		if (status == DS_RELEASED) return size;
-		else return 0;
+	// return 8bit flg. e.g) 0000 0100: a byte of offset 2 byte is alloced.
+	BOOST_ASSERT(type == DP_BYTES);
+	unsigned int alloc_bytes = 0;
+	for (auto child: (*data.bytesData)) 
+		if (child->status != DS_RELEASED) 
+			switch (child->size) {
+				case 1:	
+					alloc_bytes |= 0x1 << child->data.bytes.offset; break;
+				case 2:
+					alloc_bytes |= 0x3 << child->data.bytes.offset; break;
+				case 4:
+					alloc_bytes |= 0xf << child->data.bytes.offset; break;
+			}
+
+	return alloc_bytes;
+}
+
+bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
+{
+	BOOST_ASSERT(type == DP_BYTES);
+	BOOST_ASSERT(dp->size <= 4);
+
+	int dp_size  = dp->size;
+	unsigned int alloc_bytes = getAllocBytesBits();
+	unsigned int flg;
+
+	switch (dp_size) {
+		case 4: flg == 0xf; break;
+		case 2: flg == 0x3; break;
+		case 1: flg == 0x1; break;
 	}
 
-	int max_size = 0;
-	for (auto child: (*data.bytesData)) {
-		int s = child->allocable_size();
-		if (max_size < s) size = s; 
+	for (int i=0; i<size; i+=dp_size) {
+		if ((alloc_bytes & (flg << i)) == 0) {
+			dp->data.bytes.offset = i;
+			data.bytesData->push_back(dp);
+			return true;
+		}
 	}
-	return max_size;
+
+	return false;
+
+}
+
+int PlnDataPlace::allocable_size()
+{
+	if (status == DS_RELEASED) return size;
+	if (type != DP_BYTES) return 0;
+
+	// DP_BYTES
+	unsigned int alloc_bytes = getAllocBytesBits();
+	if (alloc_bytes == 0) return 8;
+	if ((alloc_bytes & 0x0F) == 0 || (alloc_bytes & 0xF0) == 0)
+		return 4;
+
+	unsigned flg = 0x3;
+	for (int i=0; i<4; ++i) {
+		if ((alloc_bytes & flg) == 0) return 2;
+		flg <<= 2;
+	}
+	return 1;
 }
 

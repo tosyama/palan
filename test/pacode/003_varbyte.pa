@@ -4,6 +4,9 @@ ccall exit();
 byte a = 12;
 byte b = a+7;
 byte c,d = b+1+a, b-a;
+{
+	byte tmp = d+1;	// tmp memory should be share with e.
+}
 byte e = 255;
 int64 i = e+a;
 byte i2 = 3*a;
