@@ -304,9 +304,9 @@ bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
 	unsigned int flg;
 
 	switch (dp_size) {
-		case 4: flg == 0xf; break;
-		case 2: flg == 0x3; break;
-		case 1: flg == 0x1; break;
+		case 4: flg = 0xf; break;
+		case 2: flg = 0x3; break;
+		case 1: flg = 0x1; break;
 	}
 
 	for (int i=0; i<size; i+=dp_size) {
@@ -318,7 +318,6 @@ bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
 	}
 
 	return false;
-
 }
 
 int PlnDataPlace::allocable_size()
