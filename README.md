@@ -5,7 +5,7 @@ Current palan is very draft.
 ## Quick Start
 ### Environment:
 * Ubuntu 16.04.2 LTS (64bit)
-* g++ (gcc 5.4.0) or later
+* g++ (gcc 5.4.0/ as,ld 2.26.1) or later
 * GNU Make 4.1 or later
 * curl
 * git
@@ -22,7 +22,7 @@ Note: `make package` installs [Boost], [Bison], [Flex] and [Catch].
 [Flex]: https://github.com/westes/flex
 [Catch]: https://github.com/philsquared/Catch 
 
-### Coding:
+### Write Code:
 ```sh
 $ vi helloworld.pa
 ```
@@ -36,13 +36,3 @@ write(1, "Hello World!\n", 13);
 $ ./pac helloworld.pa -o a.out
 $ ./a.out
 ```
-
-## Basic Types
-sbyte, byte  
-int16, uint16 
-int32, uint32  
-int64, uint64  
-  
-char
-string  
-object  

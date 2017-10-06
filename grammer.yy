@@ -11,20 +11,21 @@ int yylex();
 %define parse.error	verbose
 %define api.value.type	variant
 
-%token ID
-%token STR
 %token INT
+%token UINT
+%token STR
+%token ID
 %token TYPENAME
 %token FUNC_ID
+%token KW_FUNC
 %token KW_CCALL
 %token KW_SYSCALL
-%token KW_FUNC
 %token KW_RETURN
 
 %right '='
 %left ',' 
 %left '+' '-'
-%left '*'
+%left '*' '/' '%'
 %left UMINUS
 
 %start module	
@@ -36,7 +37,7 @@ module: /* empty */
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC return_def FUNC_ID parameters ')' block
+function_definition: KW_FUNC return_def FUNC_ID parameter_def ')' block
 	;
 
 return_def: /* empty */
@@ -56,39 +57,50 @@ return_values: return_value
 return_value: TYPENAME ID
 	;
 
-parameters: /* empty */
-	| TYPENAME ID
+parameter_def: /* empty */
+	| parameters
+	;
+
+parameters: parameter
 	| parameters ',' parameter
+	| parameters ',' ID
 	;
 
 parameter: TYPENAME ID
 	| TYPENAME ID '=' default_value
-	| ID
 	| ID '=' default_value
 	;
 
 default_value: ID
 	| INT
+	| UINT
 	| STR
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID parameters ')' ';'
+ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameters ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
 	;
 
 single_return: /* empty */
 	| TYPENAME
 	;
 
-toplv_statement: st_expression ';'
-	| declarations ';'
-	| declarations '=' expressions ';'
+toplv_statement: basic_statement
 	| toplv_block
 	;
+
+basic_statement: st_expression ';'
+	| declarations ';'
+	| declarations '=' expression ';'
+	;
 	
-toplv_block: '{' toplv_statement '}'
+toplv_block: '{' toplv_statements '}'
+	;
+
+toplv_statements:	/* empty */
+	| toplv_statements toplv_statement
 	;
 
 block: '{' statements '}'
@@ -98,9 +110,7 @@ statements:	/* empty */ { }
 	| statements statement
 	;
 
-statement: st_expression ';'
-	| declarations ';'
-	| declarations '=' expressions ';'
+statement: basic_statement
 	| return_stmt ';'
 	| block
 	;
@@ -118,6 +128,8 @@ expression:
 	| expression '+' expression
 	| expression '-' expression
 	| expression '*' expression
+	| expression '/' expression
+	| expression '%' expression
 	| '(' assignment ')'
 	| '-' expression %prec UMINUS
 	| term
@@ -139,6 +151,7 @@ lvals:  ID
 	;
 
 term: INT
+	| UINT
 	| STR
 	| ID
 	| '(' expression ')'

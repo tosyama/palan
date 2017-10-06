@@ -56,3 +56,34 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	CHECK(dps1[5]->save_place->data.stack.offset == -48);	
 	CHECK(allocator.stack_size == 80);
 }
+
+TEST_CASE("Mixed bytes allocation jtest.", "[allocate]")
+{
+	PlnX86_64DataAllocator x64allocator;
+	PlnDataAllocator& allocator = x64allocator;
+
+	auto dp1=allocator.allocData(1, DT_SINT);
+	auto dp2=allocator.allocData(2, DT_SINT);
+	auto dp3=allocator.allocData(4, DT_SINT);
+	REQUIRE(allocator.data_stack.size() == 1);
+
+	auto dp4=allocator.allocData(2, DT_SINT);
+	REQUIRE(allocator.data_stack.size() == 2);
+
+	auto dp5=allocator.allocData(1, DT_SINT);
+	allocator.releaseData(dp2);
+	auto dp6=allocator.allocData(2, DT_SINT);
+	auto dp7=allocator.allocData(4, DT_SINT);
+
+	allocator.finish();
+
+	CHECK(allocator.stack_size == 16);
+	CHECK(dp1->data.stack.offset == -8);	
+	CHECK(dp2->data.stack.offset == -6);	
+	CHECK(dp3->data.stack.offset == -4);	
+	CHECK(dp4->data.stack.offset == -16);	
+	CHECK(dp5->data.stack.offset == -7);	
+	CHECK(dp6->data.stack.offset == -6);	
+	CHECK(dp7->data.stack.offset == -12);	
+}
+
