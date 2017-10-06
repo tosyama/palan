@@ -286,6 +286,11 @@ default_value: ID
 		$$ = new PlnValue($1);
 	}
 
+	| UINT
+	{
+		$$ = new PlnValue($1);
+	}
+
 	| STR
 	{
 		$$ = new PlnValue(module.getReadOnlyData($1));

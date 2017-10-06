@@ -38,65 +38,55 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 	dp->release_step = release_step;
 	int size = dp->size;
 
-	if (size < 8) {
-		int s=data_stack.size();
-		for (int i=0; i<s; i++) {
-			if (data_stack[i]->type == DP_BYTES) {
-				if (data_stack[i]->tryAllocBytes(dp)) {
-					dp->data.bytes.idx = i;
-					return;
-				}
-			}
-		}
-	}
+	int stack_size=data_stack.size();
 
-	int s=data_stack.size();
-	for (int i=0; i<s; i++) {
-		PlnDataPlace *pdp = data_stack[i];
-		if (pdp->status == DS_RELEASED) {
-			// Reuse unused place.
-			dp->data.stack.idx = i;
-
-			if (size < 8) {
-				// Create bytes data place containter.
-				auto dp_ctnr = new PlnDataPlace(8, DT_UNKNOWN);
-				dp_ctnr->type = DP_BYTES;
-				dp_ctnr->data.bytesData = new vector<PlnDataPlace *>();
-				dp_ctnr->status = DS_ASSIGNED_SOME;
-				dp_ctnr->alloc_step = alloc_step;
-				dp_ctnr->release_step = release_step;
-
-				data_stack[i] = dp_ctnr;
-				dp_ctnr->data.bytesData->push_back(dp);
-				dp_ctnr->previous = pdp;
-				return;
-
-			} else { // size == 8
+	if (size == 8) {
+		for (int i=0; i<stack_size; ++i) {
+			if (data_stack[i]->status == DS_RELEASED) {
+				dp->data.stack.idx = i;
+				dp->previous = data_stack[i];
 				data_stack[i] = dp;
-				dp->previous = pdp;
 				return;
 			}
 		}
+
+		dp->data.stack.idx = stack_size;
+		dp->previous = NULL;
+		data_stack.push_back(dp);
+		return;
 	}
 
-	if (size < 8) {
-		dp->data.bytes.idx = data_stack.size();
-		dp->data.bytes.offset = 0;
+	// size < 8
+	int free_index = -1;
+	for (int i=0; i<stack_size; ++i) {
+		if (free_index < 0 && data_stack[i]->status == DS_RELEASED) 
+			free_index = i;
+			
+		else if (data_stack[i]->status == DS_ASSIGNED_SOME
+				&& data_stack[i]->tryAllocBytes(dp)) {
+			dp->data.bytes.idx = i;
+			return;
+		}
+	}
 
-		auto dp_ctnr = new PlnDataPlace(8, DT_UNKNOWN);
-		dp_ctnr->type = DP_BYTES;
-		dp_ctnr->data.bytesData = new vector<PlnDataPlace *>();
-		dp_ctnr->status = DS_ASSIGNED_SOME;
-		dp_ctnr->alloc_step = alloc_step;
-		dp_ctnr->release_step = release_step;
+	// Create new DP_BYTES data place.
+	auto dp_ctnr = new PlnDataPlace(8, DT_UNKNOWN);
+	dp_ctnr->type = DP_BYTES;
+	dp_ctnr->data.bytesData = new vector<PlnDataPlace *>();
+	dp_ctnr->status = DS_ASSIGNED_SOME;
+	dp_ctnr->alloc_step = alloc_step;
+	dp_ctnr->release_step = release_step;
+	dp_ctnr->data.bytesData->push_back(dp);
+	dp->data.bytes.offset = 0;
 
-		dp_ctnr->data.bytesData->push_back(dp);
+	if (free_index >= 0) {
+		dp->data.bytes.idx = free_index;
+		dp_ctnr->previous = data_stack[free_index];
+		data_stack[free_index] = dp_ctnr;
+	} else {
+		dp->data.bytes.idx = stack_size;
 		dp_ctnr->previous = NULL;
 		data_stack.push_back(dp_ctnr);
-
-	} else {
-		dp->data.stack.idx = data_stack.size();
-		data_stack.push_back(dp);
 	}
 }
 
@@ -151,16 +141,19 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp)
 		int regid = dp->data.reg.id;
 		pdp = regs[regid];
 		regs[regid] = dp;
+
 	} else if (dp->type == DP_STK_SP) {
 		int idx = dp->data.stack.idx;
 		while (arg_stack.size() <= idx) 
 			arg_stack.push_back(NULL);
 		pdp = arg_stack[idx];
 		arg_stack[idx] = dp;
+
 	} else if (dp->type == DP_STK_BP
 			&& dp->data.stack.offset >= 16) {
 		pdp = NULL;
 		all.push_back(dp);
+
 	} else
 		BOOST_ASSERT(false);
 
@@ -230,40 +223,31 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 
 void PlnDataAllocator::finish()
 {
-	//TODO: refactoring
 	int offset = 0;
+	// Set offset from base stack pointer.
 	for (auto dp: data_stack) {
 		offset -= 8;
-		if (dp->type == DP_BYTES) {
-			for (auto child: *dp->data.bytesData) {
-				child->data.stack.offset = offset + child->data.bytes.offset;
-			}
-		} else
-			dp->data.stack.offset = offset;
-
-		PlnDataPlace* dpp = dp->previous;
-		while (dpp) {
+		for (auto dpp=dp; dpp; dpp = dpp->previous) {
 			if (dpp->type == DP_BYTES) {
-				for (auto child: *dpp->data.bytesData) {
+				for (auto child: *dpp->data.bytesData) 
 					child->data.stack.offset = offset + child->data.bytes.offset;
-				}
 			} else
 				dpp->data.stack.offset = offset;
-			dpp = dpp->previous;
 		}
 	}
+
+	// Set offset from stack pointer.
 	offset = 0;
 	for (auto dp: arg_stack) {
-		PlnDataPlace* dpp = dp;
-		while (dpp) {
+		for (auto dpp = dp; dpp; dpp = dpp->previous)
 			dpp->data.stack.offset = offset;
-			dpp = dpp->previous;
-		}
 		offset += 8;
 	}
-	int stk_size = data_stack.size() + arg_stack.size();
-	if (stk_size % 2) stk_size++;  // for 16byte align.
-	stack_size = stk_size * 8;
+
+	// Set total stack size.
+	int stk_itm_num = data_stack.size() + arg_stack.size();
+	if (stk_itm_num & 0x1) stk_itm_num++;  // for 16byte align.
+	stack_size = stk_itm_num * 8;
 }
 
 // PlnDataPlace
