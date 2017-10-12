@@ -26,6 +26,12 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	function(f),
 	arguments(move(args))
 {
+	// arg == void
+	if (arguments.size() == 1 && arguments[0]==NULL && f->parameters.size() == 0) 
+			arguments.pop_back();
+
+	// TODO: set dafault arguments if arg == NULL
+
 	int i=0;
 	for (auto rv: f->return_vals) {
 		PlnVariable* ret_var = new PlnVariable();

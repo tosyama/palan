@@ -11,4 +11,7 @@ public:
 	int dim;
 	vector<int>	ar_sizes;
 	vector<PlnType*> ar_types;
+	PlnDataPlace* item_num_dp;
+
+	void finish(PlnDataAllocator& da);
 };

@@ -75,6 +75,12 @@ static void initBasicTypes()
 	basic_types.push_back(t);
 	ro_cstr_type = t;
 
+	t = new PlnType();
+	t->name = "[]";
+	t->data_type = DT_OBJECT_REF;
+	t->size = 8;
+	basic_types.push_back(t);
+
 	is_initialzed_type = true;
 }
 

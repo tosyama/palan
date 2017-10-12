@@ -7,8 +7,10 @@ print(x.str ":" y.str);
 
 object o1, o3;
 
-&o1 = funco(o1,o2.clone, &o3, o2); // 所有を渡したので、o3は無効.
-o2 = &o1; // 所有権を取られたので、o1は無効. o2=o1はコンパイルエラー
+o1 = funco(o1,o2.clone, &o3, o2); // 所有を渡したので、o3は無効.
+					// 内部処理的にはo1の無効処理(null代入)は行わない。
+
+o2 = &o1; // 所有権を取られたので、o1は無効(null代入). o2=o1はコンパイルエラー
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
 
@@ -36,14 +38,14 @@ int x, y swap(int sx, sy) {
 
 // object
 func
-object o2 funco(object *o1, &o2, &o3, o4)
+object o2 funco(object o1, &o2, &o3, *o4)
 {
-	// o1 は lval read only.
-	// o2はlval. deleteされない. read/write rvalはNG.
+	// o1 は lval/rval input only.(関数内で変更がされる場合はclone)
+	// o2はlval. 戻り値なのでdeleteされない. read/write rvalはNG.
 	// o3はrval. deleteされる. read/write lval.clone or &lval ならok.
-	// o4はrval. deleteされる。暗黙でコピーが渡される。
+	// o4はlval. deleteされない。io可能(非推奨)
 	// プリミティブ(int64等)には &は使えない。
-	
+
 	return ;	// returnはo2がrval
 }
 

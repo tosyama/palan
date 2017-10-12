@@ -60,7 +60,7 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 	return	param;
 }
 
-void PlnFunction::finish(PlnDataAllocator& da)
+void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
@@ -86,13 +86,13 @@ void PlnFunction::finish(PlnDataAllocator& da)
 				i++;
 			}
 
-			if (implement->statements.back()->type != ST_RETURN) {
+			if (implement->statements.size() == 0 || implement->statements.back()->type != ST_RETURN) {
 				vector<PlnExpression *> rv;
 				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);
 				implement->statements.push_back(rs);
 			}
 
-			implement->finish(da);
+			implement->finish(da, si);
 
 			for (auto r: return_vals) {
 				if (r->place)

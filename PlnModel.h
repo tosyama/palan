@@ -19,6 +19,7 @@ using std::unique_ptr;
 
 // parser
 class PlnScopeItem;
+class PlnScopeInfo;
 
 // model
 class PlnModule;
@@ -34,7 +35,7 @@ class PlnVariable;
 	class PlnParameter;
 
 class PlnReadOnlyData;
-
+class PlnArray;
 class PlnDataAllocator;
 class PlnDataPlace;
 

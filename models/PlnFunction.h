@@ -35,7 +35,7 @@ public:
 	void setRetValues(vector<PlnVariable*>& vars);
 	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
 
-	void finish(PlnDataAllocator& da);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);

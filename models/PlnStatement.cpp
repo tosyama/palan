@@ -12,6 +12,7 @@
 #include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 
 using std::endl;
 
@@ -35,17 +36,17 @@ PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	inf.block = block;
 }
 
-void PlnStatement::finish(PlnDataAllocator& da)
+void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	switch (type) {
 		case ST_EXPRSN:
 			inf.expression->finish(da);
 			break;
 		case ST_BLOCK:
-			inf.block->finish(da);
+			inf.block->finish(da, si);
 			break;
 		case ST_VARINIT:
-			inf.var_init->finish(da);
+			inf.var_init->finish(da, si);
 			break;
 	}
 }
@@ -111,7 +112,7 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 	}
 }
 
-void PlnReturnStmt::finish(PlnDataAllocator& da)
+void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	int i=0, j=0;
 
@@ -135,6 +136,13 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 			da.allocDp(dps[j]);
 		}
 	}
+
+	if (si.owner_vars.size() > 0) {
+		da.memFreed();
+		for (auto &i: si.owner_vars) 
+			to_free_vars.push_back(i.var);
+	}
+
 	da.returnedValues(dps, FT_PLN);
 }
 
@@ -152,11 +160,17 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 
 	PlnDataPlace* adp = NULL;
 
+	for (auto v: to_free_vars) {
+		auto ve = g.getPopEntity(v->place);
+		g.genMemFree(ve.get(), v->name);	
+	}
+
 	for (auto e: expressions)
 		for (auto dp: e->data_places)
 			if (dp != late_pop_dp)
 				g.getPopEntity(dp);
 				
+
 	if (late_pop_dp)
 		g.getPopEntity(late_pop_dp);
 

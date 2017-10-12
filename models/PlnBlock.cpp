@@ -16,7 +16,10 @@
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnArray.h"
 #include "../PlnDataAllocator.h"
+#include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 
 using std::endl;
 using boost::format;
@@ -48,7 +51,10 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 	v->name = var_name;
 
 	if (var_type) v->var_type = var_type;
-	else v->var_type = variables.back()->var_type;
+	else {
+		v->var_type = variables.back()->var_type;
+		v->ptr_type = variables.back()->ptr_type;
+	}
 
 	variables.push_back(v);
 
@@ -76,13 +82,20 @@ PlnVariable* PlnBlock::getVariable(string& var_name)
 	}
 }
 
-void PlnBlock::finish(PlnDataAllocator& da)
+void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	si.push(this);
 	for (auto s: statements)
-		s->finish(da);
+		s->finish(da, si);
 	
-	for (auto v: variables)
+	for (auto v: variables) {
 		da.releaseData(v->place);
+		if (v->ptr_type == PTR_OWNERSHIP) {
+			da.memFreed();
+		}
+	}
+	si.pop_owner_vars(this);
+	si.pop();
 }
 
 void PlnBlock::dump(ostream& os, string indent)
@@ -99,6 +112,29 @@ void PlnBlock::dump(ostream& os, string indent)
 
 void PlnBlock::gen(PlnGenerator& g)
 {
+	{
+		// initalize all pointers.
+		vector<unique_ptr<PlnGenEntity>> refs;
+		for (auto v: variables) 
+			if (v->ptr_type != NO_PTR) 
+				refs.push_back(g.getPopEntity(v->place));
+
+		g.genNullClear(refs);
+	}
+
 	for (auto s: statements)
 		s->gen(g);
+
+	// TODO: check condition: need not call this after jump statement.
+	genFreeOwnershipVars(g);
 }
+
+void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)
+{
+	for (auto v: variables) 
+		if (v->ptr_type == PTR_OWNERSHIP) {
+			auto e = g.getPopEntity(v->place);
+			g.genMemFree(e.get(), v->name);
+		}
+}
+

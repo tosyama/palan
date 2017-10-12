@@ -15,6 +15,7 @@
 #include "PlnVariable.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 
 using namespace std;
 
@@ -85,11 +86,14 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 
 void PlnModule::finish(PlnDataAllocator& da)
 {
+	PlnScopeInfo si;
 	for (auto f: functions) {
-		f->finish(da);
+		f->finish(da, si);
 		da.reset();
 	}
-	toplevel->finish(da);
+	BOOST_ASSERT(si.scope.size() == 0);
+	BOOST_ASSERT(si.owner_vars.size() == 0);
+	toplevel->finish(da, si);
 	da.finish();
 	stack_size = da.stack_size;
 }

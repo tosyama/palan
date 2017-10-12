@@ -4,6 +4,7 @@
 class PlnModule;
 class PlnFunction;
 class PlnBlock;
+class PlnVariable;
 
 enum PlnScpType {
 	SC_MODULE,
@@ -11,6 +12,7 @@ enum PlnScpType {
 	SC_BLOCK
 };
 
+// use for parse.
 class PlnScopeItem
 {
 public:
@@ -33,3 +35,27 @@ inline PlnFunction* searchFunction(PlnScopeStack& ss)
 	if (itm != ss.rend()) return itm->inf.function;
 	else return NULL;
 }
+
+// use for finishing
+class PlnScopeVarInfo {
+public:	
+	PlnVariable* var;
+	PlnScopeItem scope;
+
+	PlnScopeVarInfo(PlnVariable* v, PlnScopeItem s) :var(v), scope(s) { };
+};
+
+class PlnScopeInfo {
+public:
+	vector<PlnScopeVarInfo> owner_vars;
+	PlnScopeStack scope;
+	void push(PlnBlock* b) { scope.push_back(PlnScopeItem(b)); }
+	void pop() { scope.pop_back(); }
+	void push_owner_var(PlnVariable* v) { owner_vars.push_back(PlnScopeVarInfo(v, scope.back())); }
+	void pop_owner_vars(PlnBlock *b) {
+		for (auto it=owner_vars.begin(); it!=owner_vars.end();) {
+			if (it->scope.inf.block == b) it = owner_vars.erase(it);
+			else ++it;
+		}
+	}
+};

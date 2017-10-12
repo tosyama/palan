@@ -333,7 +333,7 @@ void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
 void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type == GA_REG && tgt->data.i == RAX);
-	PlnGenEntity work;
+
 	const char* div_str = oprnd(second);
 	if (second->alloc_type == GA_CODE) { 
 		div_str = r(R11, 8);
@@ -351,6 +351,48 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 		os << "	cqto"	<< endl;
 		os << "	idivq " << div_str << "	# " << comment << endl;
 	}
+}
+
+void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
+{
+	os << "	xorq %rax, %rax" << endl;
+	for (auto& r: refs)
+		os << "	movq %rax, " << oprnd(r.get()) << endl;
+}
+
+void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int item_size, PlnGenEntity* num, string& comment)
+{
+	int align = item_size >= 8 ? 8 : item_size;
+	const char* dststr;
+	string tmp_s;
+
+	// TODO: Refactoring. Following code may be ugly.
+	if (num->alloc_type == GA_CODE && ((*num->data.str)[0] == '$')) {
+		int size = item_size * atoi(num->data.str->c_str()+1);
+		tmp_s = "$" + to_string(size);
+		dststr = tmp_s.c_str();
+
+	} else {
+		BOOST_ASSERT(false);	// TODO: calc size item_size*num
+	}
+
+	os << "	movq $" << align << ", %rdi"	<< endl;
+	os << "	movq " << dststr << ", %rsi"	<< endl;
+	os << "	call aligned_alloc" << endl;
+	os << "	movq %rax, " << oprnd(ref);
+	
+	if (comment != "") os << "	# alloc " << comment;
+	os << endl;
+}
+
+void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment)
+{
+	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
+	os << "	call free" << endl;
+	os << "	movq $0, " << oprnd(ref);
+
+	if (comment != "") os << "	# free " << comment;
+	os << endl;
 }
 
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)

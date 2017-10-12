@@ -166,9 +166,13 @@ declarations: declaration
 	;
 
 declaration: TYPENAME ID
+	TYPENAME array_def ID
 	;
 
 subdeclaration: ID
+	;
+
+array_def: '[' expressions ']'
 	;
 
 return_stmt: KW_RETURN

@@ -6,7 +6,8 @@ palan.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h stack.hh \
 PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnFunction.h models/PlnType.h models/PlnVariable.h \
-	models/../PlnDataAllocator.h models/../PlnGenerator.h
+	models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
@@ -14,22 +15,26 @@ PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnGenerator.h models/../PlnConstants.h
 PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
-	models/PlnVariable.h models/../PlnDataAllocator.h
+	models/PlnVariable.h models/PlnArray.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h models/../PlnScopeStack.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnStatement.h models/PlnVariable.h models/PlnType.h \
 	models/PlnExpression.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h
+	models/../PlnGenerator.h models/../PlnScopeStack.h
 PlnExpression.o:  models/PlnExpression.h \
 	models/../PlnModel.h models/PlnType.h models/PlnVariable.h \
 	models/../PlnConstants.h models/../PlnDataAllocator.h \
 	models/../PlnGenerator.h
 PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
-	models/PlnType.h models/PlnVariable.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h
+	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
+	models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/../PlnConstants.h
+PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
+	models/../PlnDataAllocator.h
 PlnFunctionCall.o:  \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnFunction.h \
@@ -79,7 +84,7 @@ PlnGenerator.o:  PlnModel.h PlnDataAllocator.h \
 PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
 	models/PlnStatement.h models/PlnType.h models/PlnVariable.h \
-	models/expressions/PlnFunctionCall.h \
+	models/PlnArray.h models/expressions/PlnFunctionCall.h \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h models/expressions/PlnAssignment.h \

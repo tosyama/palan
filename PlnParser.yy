@@ -39,6 +39,7 @@ class PlnLexer;
 #include "models/PlnStatement.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
+#include "models/PlnArray.h"
 #include "models/expressions/PlnFunctionCall.h"
 #include "models/expressions/PlnAddOperation.h"
 #include "models/expressions/PlnMulOperation.h"
@@ -108,6 +109,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnVariable*>>	declarations
 %type <PlnVariable*>	declaration
 %type <PlnVariable*>	subdeclaration
+%type <vector<int>>	array_def
 %type <PlnReturnStmt*>	return_stmt
 
 %right '='
@@ -627,6 +629,27 @@ declaration: TYPENAME ID
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
 		}
+		if (t->data_type == DT_OBJECT_REF)
+			$$->ptr_type = PTR_OWNERSHIP;
+		else
+			$$->ptr_type = NO_PTR;
+	}
+	| TYPENAME array_def ID
+	{
+		PlnType* at = module.getType("[]");
+		PlnType* t = module.getType($1);
+		PlnArray* ar = new PlnArray();
+		ar->dim = 1;
+		ar->ar_sizes = move($2);
+		ar->ar_types.push_back(t);
+
+		$$ = CUR_BLOCK->declareVariable($3, at);
+		$$-> inf.arr = ar;
+		if (!$$) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
+			YYABORT;
+		}
+		$$->ptr_type = PTR_OWNERSHIP;
 	}
 	;
 
@@ -637,6 +660,12 @@ subdeclaration: ID
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
 		}
+	}
+	;
+
+array_def: '[' INT ']'
+	{
+		$$.push_back($2);
 	}
 	;
 

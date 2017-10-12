@@ -1,12 +1,25 @@
+/// Variable model class declaration.
+///
+/// @file	PlnVariable.cpp
+/// @copyright	2017 YAMAGUCHI Toshinobu 
+
 #include "../PlnModel.h"
+
+enum {
+	NO_PTR,
+	PTR_OWNERSHIP,
+	PTR_REFERENCE
+};
 
 class PlnVariable {
 public:
 	PlnType *var_type;
 	string name;
 	PlnDataPlace* place;
+	int ptr_type;
 	union {
 		int index;
+		PlnArray *arr;
 	} inf;
 };
 
@@ -26,6 +39,6 @@ public:
 	vector<PlnExpression*> initializer;
 	PlnBlock* parent;
 
-	void finish(PlnDataAllocator& da);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
 };

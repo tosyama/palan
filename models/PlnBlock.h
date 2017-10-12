@@ -21,7 +21,8 @@ public:
 	PlnVariable* declareVariable(string& var_name, PlnType* var_type=NULL);
 	PlnVariable* getVariable(string& var_name);
 
-	void finish(PlnDataAllocator& da);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
+	void genFreeOwnershipVars(PlnGenerator& g);
 };

@@ -13,8 +13,10 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnArray.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 
 // PlnVarInit
 PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars) : vars(move(vars))
@@ -26,12 +28,17 @@ PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*> &initi
 {
 }
 
-void PlnVarInit::finish(PlnDataAllocator& da)
+void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	for (auto v: vars) {
 		auto tp = v->var_type;
 		v->place = da.allocData(tp->size, tp->data_type);
 		v->place->comment = &v->name;
+		if (v->ptr_type == PTR_OWNERSHIP) {
+			v->inf.arr->finish(da);
+			da.memAlloced();
+			si.push_owner_var(v);
+		}
 	}
 	int i=0;
 	for (auto ie: initializer) {
@@ -46,6 +53,17 @@ void PlnVarInit::finish(PlnDataAllocator& da)
 
 void PlnVarInit::gen(PlnGenerator& g)
 {
+	for (auto v: vars) {
+		if (v->ptr_type == PTR_OWNERSHIP)
+			if (v->var_type->name == "[]") {
+				auto e = g.getPopEntity(v->place);
+				auto s = g.getPopEntity(v->inf.arr->item_num_dp);
+				g.genMemAlloc(e.get(), v->inf.arr->ar_types[0]->size, s.get(), v->name);
+			} else {
+				BOOST_ASSERT(false);	// TODO: need to implement.
+			}
+	}
+
 	for (auto i: initializer)
 		i->gen(g);
 }

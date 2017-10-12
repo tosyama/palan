@@ -30,6 +30,10 @@ public:
 	void genMul(PlnGenEntity* tgt, PlnGenEntity* second);
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 
+	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);
+	void genMemAlloc(PlnGenEntity* ref, int item_size, PlnGenEntity* num, string& comment);
+	void genMemFree(PlnGenEntity* ref, string& comment);
+
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
 	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);
 	unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp);
