@@ -31,11 +31,10 @@ PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*> &initi
 void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	for (auto v: vars) {
-		auto tp = v->var_type;
+		auto tp = v->var_type.back();
 		v->place = da.allocData(tp->size, tp->data_type);
 		v->place->comment = &v->name;
 		if (v->ptr_type == PTR_OWNERSHIP) {
-			v->inf.arr->finish(da);
 			da.memAlloced();
 			si.push_owner_var(v);
 		}
@@ -55,10 +54,16 @@ void PlnVarInit::gen(PlnGenerator& g)
 {
 	for (auto v: vars) {
 		if (v->ptr_type == PTR_OWNERSHIP)
-			if (v->var_type->name == "[]") {
+			if (v->var_type.back()->name == "[]") {
+				auto t = v->var_type.back();
 				auto e = g.getPopEntity(v->place);
-				auto s = g.getPopEntity(v->inf.arr->item_num_dp);
-				g.genMemAlloc(e.get(), v->inf.arr->ar_types[0]->size, s.get(), v->name);
+				int item_size = t->inf.fixedarray.item_size;
+				int asize = 0;
+				for (int i: *t->inf.fixedarray.sizes)
+					asize += i;
+				asize *= item_size;
+				int align = (item_size > 8) ? 8 : item_size;
+				g.genMemAlloc(e.get(), align, asize, v->name);
 			} else {
 				BOOST_ASSERT(false);	// TODO: need to implement.
 			}

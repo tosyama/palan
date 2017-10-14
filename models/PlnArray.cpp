@@ -6,7 +6,3 @@
 #include "PlnArray.h"
 #include "../PlnDataAllocator.h"
 
-void PlnArray::finish(PlnDataAllocator& da)
-{
-	item_num_dp = da.getLiteralIntDp(ar_sizes[0]);
-}

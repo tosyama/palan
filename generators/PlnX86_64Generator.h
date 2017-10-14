@@ -31,7 +31,7 @@ public:
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);
-	void genMemAlloc(PlnGenEntity* ref, int item_size, PlnGenEntity* num, string& comment);
+	void genMemAlloc(PlnGenEntity* ref, int align, int al_size, string& comment);
 	void genMemFree(PlnGenEntity* ref, string& comment);
 
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);

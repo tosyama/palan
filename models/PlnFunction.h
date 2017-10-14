@@ -33,7 +33,7 @@ public:
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
 	void setRetValues(vector<PlnVariable*>& vars);
-	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
+	PlnParameter* addParam(string& pname, vector<PlnType*>* ptype, PlnValue* defaultVal = NULL);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 

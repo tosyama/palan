@@ -54,7 +54,7 @@ PlnType* PlnValue::getType()
 		case VL_RO_DATA:
 			return PlnType::getReadOnlyCStr();
 		case VL_VAR:
-			return inf.var->var_type;
+			return inf.var->var_type.back();
 		case VL_WORK:
 			return inf.wk_type;
 	}

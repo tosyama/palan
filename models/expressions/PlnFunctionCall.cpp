@@ -50,7 +50,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 	auto dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
 	int i = 0;
 	for (auto p: function->parameters) {
-		dps[i]->data_type = p->var_type->data_type;
+		dps[i]->data_type = p->var_type.back()->data_type;
 		++i;
 	}
 
@@ -69,7 +69,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 
 	i = 0;
 	for (auto r: function->return_vals) {
-		rdps[i]->data_type = r->var_type->data_type;
+		rdps[i]->data_type = r->var_type.back()->data_type;
 		++i;
 	}
 	

@@ -360,24 +360,10 @@ void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
 		os << "	movq %rax, " << oprnd(r.get()) << endl;
 }
 
-void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int item_size, PlnGenEntity* num, string& comment)
+void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int align, int al_size, string& comment)
 {
-	int align = item_size >= 8 ? 8 : item_size;
-	const char* dststr;
-	string tmp_s;
-
-	// TODO: Refactoring. Following code may be ugly.
-	if (num->alloc_type == GA_CODE && ((*num->data.str)[0] == '$')) {
-		int size = item_size * atoi(num->data.str->c_str()+1);
-		tmp_s = "$" + to_string(size);
-		dststr = tmp_s.c_str();
-
-	} else {
-		BOOST_ASSERT(false);	// TODO: calc size item_size*num
-	}
-
 	os << "	movq $" << align << ", %rdi"	<< endl;
-	os << "	movq " << dststr << ", %rsi"	<< endl;
+	os << "	movq $" << al_size << ", %rsi"	<< endl;
 	os << "	call aligned_alloc" << endl;
 	os << "	movq %rax, " << oprnd(ref);
 	

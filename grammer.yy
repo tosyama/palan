@@ -45,8 +45,8 @@ return_def: /* empty */
 	| return_values
 	;
 
-return_types: TYPENAME
-	| return_types TYPENAME
+return_types: type_def
+	| return_types type_def
 	;
 
 return_values: return_value
@@ -54,7 +54,7 @@ return_values: return_value
 	| return_values ',' ID
 	;
 
-return_value: TYPENAME ID
+return_value: type_def ID
 	;
 
 parameter_def: /* empty */
@@ -66,8 +66,8 @@ parameters: parameter
 	| parameters ',' ID
 	;
 
-parameter: TYPENAME ID
-	| TYPENAME ID '=' default_value
+parameter: type_def ID
+	| type_def ID '=' default_value
 	| ID '=' default_value
 	;
 
@@ -84,7 +84,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' '
 	;
 
 single_return: /* empty */
-	| TYPENAME
+	| type_def
 	;
 
 toplv_statement: basic_statement
@@ -142,7 +142,7 @@ arguments: argument
 	| arguments ',' argument
 	;
 
-argument: /* empty */ // ToDo: replace default
+argument: /* empty */
 	| expression
 	;
 
@@ -165,18 +165,30 @@ declarations: declaration
 	| declarations ',' declaration 
 	;
 
-declaration: TYPENAME ID
-	TYPENAME array_def ID
+declaration: type_def ID
 	;
 
 subdeclaration: ID
 	;
 
-array_def: '[' expressions ']'
-	;
-
 return_stmt: KW_RETURN
 	| KW_RETURN expressions
+	;
+
+type_def: TYPENAME
+	| type_def array_def
+	| type_def '*'
+	;
+	
+array_def: '[' array_sizes ']'
+	;
+
+array_sizes: array_size
+	| array_sizes ',' array_size
+	;
+
+array_size: /* empty */
+	| INT | ID
 	;
 
 %%

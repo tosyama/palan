@@ -65,7 +65,7 @@ public:
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
-	virtual void genMemAlloc(PlnGenEntity* ref, int item_size, PlnGenEntity* num, string& comment)=0;
+	virtual void genMemAlloc(PlnGenEntity* ref, int align, int al_size, string& comment)=0;
 	virtual void genMemFree(PlnGenEntity* ref, string& comment)=0;
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;

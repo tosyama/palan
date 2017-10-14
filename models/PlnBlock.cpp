@@ -42,7 +42,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
+PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -50,8 +50,13 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, PlnType* var_type)
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 
-	if (var_type) v->var_type = var_type;
-	else {
+	if (var_type.size()>0){
+		v->var_type = move(var_type);
+		if (v->var_type.back()->name == "[]") {
+			v->ptr_type = PTR_OWNERSHIP;
+		}
+		else v->ptr_type = NO_PTR;
+	} else {
 		v->var_type = variables.back()->var_type;
 		v->ptr_type = variables.back()->ptr_type;
 	}
@@ -103,7 +108,7 @@ void PlnBlock::dump(ostream& os, string indent)
 	os << indent << "Block: " << statements.size() << endl;
 	for (auto v: variables)
 		os << format("%1% Variable: %2% %3%(%4%)")
-				% indent % v->var_type->name % v->name 
+				% indent % v->var_type.back()->name % v->name 
 				% v->place->data.stack.offset << endl;
 
 	for (auto s: statements)

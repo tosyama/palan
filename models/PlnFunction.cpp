@@ -36,14 +36,14 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 {
 	return_vals = move(vars);
-	PlnType* t;
+	vector<PlnType*> t;
 	for (auto rv: return_vals) {
-		if (rv->var_type) t = rv->var_type;
+		if (rv->var_type.size()) t = rv->var_type;
 		else rv->var_type = t;
 	}
 }
 
-PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* defaultVal)
+PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnValue* defaultVal)
 {
 	for (auto rv: return_vals)
 		if (rv->name == pname) return NULL;
@@ -52,7 +52,7 @@ PlnParameter* PlnFunction::addParam(string& pname, PlnType* ptype, PlnValue* def
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type = ptype ? ptype : parameters.back()->var_type;
+	param->var_type = ptype ? move(*ptype) : parameters.back()->var_type;
 	param->dflt_value = defaultVal;
 
 	parameters.push_back(param);
@@ -67,7 +67,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			for (auto r: return_vals) {
 				if (r->name == "") r->place = NULL;
 				else {
-					auto t = r->var_type;
+					auto t = r->var_type.back();
 					r->place = da.allocData(t->size, t->data_type);
 					r->place->comment = &r->name;
 				}
@@ -76,7 +76,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			auto dps = da.prepareArgDps(return_vals.size(), parameters.size(), FT_PLN, true);
 			int i=0;
 			for (auto p: parameters) {
-				auto t = p->var_type;
+				auto t = p->var_type.back();
 				auto dp = da.allocData(t->size, t->data_type);
 				dp->comment = &p->name;
 				p->place = dp;
@@ -118,14 +118,14 @@ void PlnFunction::dump(ostream& os, string indent)
 			if (implement) {
 				os << indent << " Stack size: " << inf.pln.stack_size << endl;
 				for (auto r: return_vals) {
-					os << indent << " RetValue: " << r->var_type->name << " " << r->name;
+					os << indent << " RetValue: " << r->var_type.back()->name << " " << r->name;
 					if (r->place)
 						os << "(" << r->place->data.stack.offset << ")" << endl;
 					else
 						os << "(NULL)" << endl;
 				}
 				for (auto p: parameters)
-					os << indent << " Paramater: " << p->var_type->name << " " << p->name
+					os << indent << " Paramater: " << p->var_type.back()->name << " " << p->name
 						<< "(" << p->place->data.stack.offset << ")" << endl;
 				implement->dump(os, indent+" ");
 			} else os << indent << " No Implementation" << endl;

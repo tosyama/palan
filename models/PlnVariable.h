@@ -13,13 +13,12 @@ enum {
 
 class PlnVariable {
 public:
-	PlnType *var_type;
+	vector<PlnType*> var_type;
 	string name;
 	PlnDataPlace* place;
 	int ptr_type;
 	union {
 		int index;
-		PlnArray *arr;
 	} inf;
 };
 

@@ -10,6 +10,12 @@ public:
 	int	data_type;
 	string name;
 	int size;
+	union {
+		struct {
+			vector<int>* sizes;
+			int item_size;
+		} fixedarray;
+	} inf;
 
 	static vector<PlnType*> getBasicTypes();
 	static PlnType* getSint();

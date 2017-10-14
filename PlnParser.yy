@@ -109,8 +109,9 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnVariable*>>	declarations
 %type <PlnVariable*>	declaration
 %type <PlnVariable*>	subdeclaration
-%type <vector<int>>	array_def
 %type <PlnReturnStmt*>	return_stmt
+%type <vector<PlnType*>>	type_def
+%type <vector<int>>	array_def
 
 %right '='
 %left ',' 
@@ -177,21 +178,19 @@ return_def: /* empty */ { }
 	}
 	;
 
-return_types: TYPENAME
+return_types: type_def
 	{
-		auto t = module.getType($1);
 		auto v = new PlnVariable();
 		v->name = "";
-		v->var_type = t;
+		v->var_type = move($1);
 		$$.push_back(v);
 	}
-	| return_types TYPENAME
+	| return_types type_def
 	{
 		$$ = move($1);
-		auto t = module.getType($2);
 		auto v = new PlnVariable();
 		v->name = "";
-		v->var_type = t;
+		v->var_type = move($2);
 		$$.push_back(v);
 	}
 	;
@@ -222,17 +221,15 @@ return_values: return_value
 			}
 		auto rv = new PlnVariable();
 		rv->name = $3;
-		rv->var_type = NULL;
 		$$.push_back(rv);
 	}
 	;
 
-return_value: TYPENAME ID
+return_value: type_def ID
 	{
-		PlnType* t = module.getType($1);
 		$$ = new PlnVariable();
 		$$->name = $2;
-		$$->var_type = t;
+		$$->var_type = move($1);
 	}
 	;
 
@@ -253,24 +250,22 @@ parameters: parameter
 	}
 	;
 
-parameter: TYPENAME ID
+parameter: type_def ID
 	{
-		PlnType* t = module.getType($1);
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, t);
+		$$ = f->addParam($2, &$1);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
 		}
 	}
 
-	| TYPENAME ID '=' default_value
+	| type_def ID '=' default_value
 	{
-		PlnType* t = module.getType($1);
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, t, $4);
+		$$ = f->addParam($2, &$1, $4);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -621,51 +616,24 @@ declarations: declaration
 	}
 	;
 
-declaration: TYPENAME ID
+declaration: type_def ID
 	{
-		PlnType* t = module.getType($1);
-		$$ = CUR_BLOCK->declareVariable($2, t);
+		$$ = CUR_BLOCK->declareVariable($2, $1);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
 		}
-		if (t->data_type == DT_OBJECT_REF)
-			$$->ptr_type = PTR_OWNERSHIP;
-		else
-			$$->ptr_type = NO_PTR;
-	}
-	| TYPENAME array_def ID
-	{
-		PlnType* at = module.getType("[]");
-		PlnType* t = module.getType($1);
-		PlnArray* ar = new PlnArray();
-		ar->dim = 1;
-		ar->ar_sizes = move($2);
-		ar->ar_types.push_back(t);
-
-		$$ = CUR_BLOCK->declareVariable($3, at);
-		$$-> inf.arr = ar;
-		if (!$$) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
-			YYABORT;
-		}
-		$$->ptr_type = PTR_OWNERSHIP;
 	}
 	;
 
 subdeclaration: ID
 	{
-		$$ = CUR_BLOCK->declareVariable($1);
+		vector<PlnType *> v;
+		$$ = CUR_BLOCK->declareVariable($1, v);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
 		}
-	}
-	;
-
-array_def: '[' INT ']'
-	{
-		$$.push_back($2);
 	}
 	;
 
@@ -693,6 +661,21 @@ return_stmt: KW_RETURN
 			error(@$, PlnMessage::getErr(E_NumOfRetValues));
 			YYABORT;
 		}
+	}
+	;
+
+type_def: TYPENAME	{ $$.push_back(module.getType($1)); }
+	| type_def array_def
+	{
+		$$ = move($1);
+		auto t = module.getFixedArrayType($$.back()->size, $2);
+		$$.push_back(t);
+	}
+	;
+
+array_def: '[' INT ']'
+	{
+		$$.push_back($2);
 	}
 	;
 
