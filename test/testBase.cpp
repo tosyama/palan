@@ -22,6 +22,11 @@ TEST_CASE ("Hello World", "[basic]")
 	REQUIRE(exec(testcode) == "Hello World!");
 }
 
+int clean()
+{
+	return system("rm out/*");
+}
+
 string build(string srcf)
 {
 	ifstream f;
@@ -84,5 +89,21 @@ string exec(string srcf)
 	if (ret) return "return:" + to_string(ret);
 
 	return result_str;
+}
+
+string mcheck(string tracef)
+{
+	ifstream f;
+	f.open("out/" + tracef);
+	if (!f) return "file open err:" + tracef;
+	int alloc_cnt= 0;
+	int free_cnt= 0;
+
+	while (!f.eof()) {
+		int c = f.get();
+		if (c=='+') alloc_cnt++;
+		else if (c=='-') free_cnt++;
+	}
+	return "+" + to_string(alloc_cnt) + " -" + to_string(free_cnt);
 }
 

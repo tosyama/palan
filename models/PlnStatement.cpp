@@ -1,7 +1,8 @@
 /// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
+
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
 #include "PlnFunction.h"
@@ -13,6 +14,7 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
+#include "expressions/PlnMoveOwnership.h"
 
 using std::endl;
 
@@ -110,6 +112,16 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 		for (auto v: function->return_vals)
 			expressions.push_back(new PlnExpression(v));
 	}
+
+	// for ownership
+	int i = 0;
+	for (auto v: function->return_vals) {
+		if (v->ptr_type == PTR_OWNERSHIP) {
+			auto oe = new PlnMoveOwnership(expressions[i]);
+			expressions[i] = oe;
+		}
+		i++;
+	}
 }
 
 void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -123,8 +135,10 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	
 	for (auto e: expressions) {
 		for (auto &v: e->values) {
+			
 			if (dps[i]->data_type == DT_UNKNOWN)
 				dps[i]->data_type = v.getType()->data_type;
+
 			e->data_places.push_back(dps[i]);
 			if (da.isAccumulator(dps[i])) {
 				late_pop_dp = dps[i];

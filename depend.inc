@@ -7,7 +7,7 @@ PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnFunction.h models/PlnType.h models/PlnVariable.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
-	models/../PlnScopeStack.h
+	models/../PlnScopeStack.h models/../PlnConstants.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \

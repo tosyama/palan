@@ -40,6 +40,13 @@ void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 	for (auto rv: return_vals) {
 		if (rv->var_type.size()) t = rv->var_type;
 		else rv->var_type = t;
+
+		auto t = rv->var_type.back();
+		if (t->data_type == DT_OBJECT_REF) {
+			rv->ptr_type = PTR_OWNERSHIP;
+		} else {
+			rv->ptr_type = NO_PTR;
+		}
 	}
 }
 
@@ -54,6 +61,13 @@ PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnV
 	param->name = pname;
 	param->var_type = ptype ? move(*ptype) : parameters.back()->var_type;
 	param->dflt_value = defaultVal;
+
+	auto t = param->var_type.back();
+	if (t->data_type == DT_OBJECT_REF) {
+		param->ptr_type = PTR_OWNERSHIP;
+	} else {
+		param->ptr_type = NO_PTR;
+	}
 
 	parameters.push_back(param);
 

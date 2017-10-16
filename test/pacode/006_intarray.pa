@@ -1,17 +1,24 @@
 ccall int32 printf();
 ccall exit();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
 
-func arr_func()
+func int16[3] pb arr_func(int32[10] pa)
 {
 	int32[5] a1;
 	{
 		int16[5] a2;
 		int16[3] a3;
-		return;
+		return a3;
 	}
 	byte[10] a4;
+	return;
 }
 
+setenv("MALLOC_TRACE", "out/mtrace006", 1);
+mtrace();
+{
 int32[10] a;
 int16[5] b;
 
@@ -19,7 +26,9 @@ int16[5] b;
 // int16[5] c = arr_func(a);
 // b = c;
 
-arr_func();
+arr_func(a);
+}
+muntrace();
 
 exit(0);
 
