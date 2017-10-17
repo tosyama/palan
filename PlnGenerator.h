@@ -66,7 +66,7 @@ public:
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemAlloc(PlnGenEntity* ref, int align, int al_size, string& comment)=0;
-	virtual void genMemFree(PlnGenEntity* ref, string& comment)=0;
+	virtual void genMemFree(PlnGenEntity* ref, string& comment, bool doNull=true)=0;
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);

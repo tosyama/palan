@@ -89,7 +89,7 @@ PlnVariable* PlnBlock::getVariable(string& var_name)
 
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	si.push(this);
+	si.push_scope(this);
 	for (auto s: statements)
 		s->finish(da, si);
 	
@@ -100,7 +100,7 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		}
 	}
 	si.pop_owner_vars(this);
-	si.pop();
+	si.pop_scope();
 }
 
 void PlnBlock::dump(ostream& os, string indent)
@@ -130,8 +130,9 @@ void PlnBlock::gen(PlnGenerator& g)
 	for (auto s: statements)
 		s->gen(g);
 
-	// TODO: check condition: need not call this after jump statement.
-	genFreeOwnershipVars(g);
+	// TODO?: check condition: need not call this after jump statement.
+	// Note: "return statement" frees vars insted of block when function end.
+	if (parent_block) genFreeOwnershipVars(g);
 }
 
 void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)

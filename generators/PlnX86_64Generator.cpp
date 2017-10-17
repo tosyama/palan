@@ -371,11 +371,14 @@ void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int align, int al_size, 
 	os << endl;
 }
 
-void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment)
+void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doNull)
 {
 	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
-	os << "	call free" << endl;
-	os << "	movq $0, " << oprnd(ref);
+	os << "	call free";
+
+	if (doNull) {
+		os << endl << "	movq $0, " << oprnd(ref);
+	}
 
 	if (comment != "") os << "	# free " << comment;
 	os << endl;

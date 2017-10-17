@@ -47,26 +47,52 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 void PlnFunctionCall::finish(PlnDataAllocator& da)
 {
 	int func_type = function->type;
-	auto dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
+	arg_dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
+
 	int i = 0;
 	for (auto p: function->parameters) {
-		dps[i]->data_type = p->var_type.back()->data_type;
+		arg_dps[i]->data_type = p->var_type.back()->data_type;
 		++i;
 	}
 
 	i = 0;
 	for (auto a: arguments) {
-		a->data_places.push_back(dps[i]);
-		if (dps[i]->data_type == DT_UNKNOWN) {
-			dps[i]->data_type = a->values[0].getType()->data_type;
+		auto t = a->values[0].getType();
+		// in the case declaration parameters omited or variable length parameter
+		if (arg_dps[i]->data_type == DT_UNKNOWN) {
+			arg_dps[i]->data_type = t->data_type;
 		}
-		a->finish(da);
-		da.allocDp(dps[i]);
+
+		// Create a clone of object instance.
+		// Clone only VL_VAR case.
+		// VL_WORK is not necessary to create clone. we can reuse the instance.
+		if (function->type == FT_PLN && t->data_type == DT_OBJECT_REF
+			&& a->values[0].type == VL_VAR ) {
+			if (t->name == "[]") {
+				int item_size = t->inf.fixedarray.item_size;
+				int asize = 0;
+				for (int i: *t->inf.fixedarray.sizes)
+					asize += i;
+				asize *= item_size;
+				clone_size.push_back(asize); // temp.
+			} else {
+				BOOST_ASSERT(false); // not implemented.
+			}
+			da.memAlloced();
+			// TODO: memcpy
+			a->finish(da);
+
+		} else {	// DT_INT, DT_UINT, DT_OBJECT
+			a->data_places.push_back(arg_dps[i]);
+			a->finish(da);
+			clone_size.push_back(0);
+		}
+		da.allocDp(arg_dps[i]);
 		++i;
 	}
-	da.funcCalled(dps, function->return_vals, func_type);
-	auto rdps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
+	da.funcCalled(arg_dps, function->return_vals, func_type);
 
+	auto rdps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
 	i = 0;
 	for (auto r: function->return_vals) {
 		rdps[i]->data_type = r->var_type.back()->data_type;
@@ -79,9 +105,14 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 			rdps[i]->alloc_step = data_places[i]->alloc_step;
 			data_places[i]->save_place = rdps[i];
 		} else {
-			delete rdps[i];
+			if (function->return_vals[i]->ptr_type == PTR_OWNERSHIP)
+				free_dps.push_back(rdps[i]);
+			else
+				delete rdps[i];
+
 		}
 	}
+	if (free_dps.size()) da.memFreed();
 }
 
 void PlnFunctionCall:: dump(ostream& os, string indent)
@@ -99,14 +130,31 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 	switch (function->type) {
 		case FT_PLN:
 		{
-			for (auto arg: arguments) 
-				arg->gen(g);
-			for (auto arg: arguments)
-				g.getPopEntity(arg->data_places[0]);
+			int i =0;
+			for (auto arg: arguments) {
+				if (clone_size[i]) {
+					static string cmt = "clone";
+					auto cln_e = g.getPushEntity(arg_dps[i]);
+					g.genMemAlloc(cln_e.get(), 8, clone_size[i], cmt);
+					arg->gen(g);
+				} else {
+					arg->gen(g);
+				}
+				++i;
+			}
+
+			for (auto dp: arg_dps)
+				g.getPopEntity(dp);
 
 			g.genCCall(function->name);
 			for (auto dp: data_places)
 				g.getPopEntity(dp);
+
+			for (auto fdp: free_dps) {
+				auto fe = g.getPopEntity(fdp);
+				static string cmt="unused return";
+				g.genMemFree(fe.get(), cmt, false);
+			}
 
 			break;
 		}

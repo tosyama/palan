@@ -4,7 +4,7 @@ ccall setenv();
 ccall mtrace();
 ccall muntrace();
 
-func int16[3] pb arr_func(int32[10] pa)
+func int16[3] pb arr_func(int32 x, int32[10] pa)
 {
 	int32[5] a1;
 	{
@@ -26,7 +26,7 @@ int16[5] b;
 // int16[5] c = arr_func(a);
 // b = c;
 
-arr_func(a);
+arr_func(3, a);
 }
 muntrace();
 

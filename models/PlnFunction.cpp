@@ -78,6 +78,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
+			// Allocate stack space for return value if needed.
 			for (auto r: return_vals) {
 				if (r->name == "") r->place = NULL;
 				else {
@@ -87,6 +88,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				}
 			}
 
+			// Allocate stack space for parameters.
 			auto dps = da.prepareArgDps(return_vals.size(), parameters.size(), FT_PLN, true);
 			int i=0;
 			for (auto p: parameters) {
@@ -100,6 +102,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				i++;
 			}
 
+			// Insert return statement to end of function if needed.
 			if (implement->statements.size() == 0 || implement->statements.back()->type != ST_RETURN) {
 				vector<PlnExpression *> rv;
 				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);

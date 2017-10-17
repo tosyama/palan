@@ -112,33 +112,24 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 		for (auto v: function->return_vals)
 			expressions.push_back(new PlnExpression(v));
 	}
-
-	// for ownership
-	int i = 0;
-	for (auto v: function->return_vals) {
-		if (v->ptr_type == PTR_OWNERSHIP) {
-			auto oe = new PlnMoveOwnership(expressions[i]);
-			expressions[i] = oe;
-		}
-		i++;
-	}
 }
 
 void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	int i=0, j=0;
 
 	BOOST_ASSERT(function->type == FT_PLN);
 	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), FT_PLN, true);
-	for (auto rt: function->return_vals)
+	vector<PlnVariable*> ret_vars;
+
+	int i=0, j=0;
+	for (auto rt: function->return_vals) {
 		dps[i]->data_type = rt->var_type.back()->data_type;
+		i++;
+	}
 	
+	i = 0;
 	for (auto e: expressions) {
 		for (auto &v: e->values) {
-			
-			if (dps[i]->data_type == DT_UNKNOWN)
-				dps[i]->data_type = v.getType()->data_type;
-
 			e->data_places.push_back(dps[i]);
 			if (da.isAccumulator(dps[i])) {
 				late_pop_dp = dps[i];
@@ -149,12 +140,30 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		for(;j<i;++j) {
 			da.allocDp(dps[j]);
 		}
+		if (e->type == ET_VALUE
+				&& e->values[0].type == VL_VAR
+				&& e->values[0].inf.var->ptr_type == PTR_OWNERSHIP)
+		{
+			ret_vars.push_back(e->values[0].inf.var);
+		}
 	}
 
 	if (si.owner_vars.size() > 0) {
-		da.memFreed();
-		for (auto &i: si.owner_vars) 
-			to_free_vars.push_back(i.var);
+		bool do_free = false;
+		for (auto &i: si.owner_vars) {
+			bool do_ret = false;
+			for (auto rv: ret_vars)
+				if (rv == i.var) {
+					do_ret = true;
+					break;
+				}
+			if (!do_ret) {
+				to_free_vars.push_back(i.var);
+				do_free = true;
+			}
+		}
+		if (do_free)
+			da.memFreed();
 	}
 
 	da.returnedValues(dps, FT_PLN);
@@ -176,7 +185,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 
 	for (auto v: to_free_vars) {
 		auto ve = g.getPopEntity(v->place);
-		g.genMemFree(ve.get(), v->name);	
+		g.genMemFree(ve.get(), v->name, false);	
 	}
 
 	for (auto e: expressions)
@@ -184,7 +193,6 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 			if (dp != late_pop_dp)
 				g.getPopEntity(dp);
 				
-
 	if (late_pop_dp)
 		g.getPopEntity(late_pop_dp);
 

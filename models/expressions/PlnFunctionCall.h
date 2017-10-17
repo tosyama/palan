@@ -11,6 +11,9 @@ class PlnFunctionCall : public PlnExpression
 public:
 	PlnFunction* function;
 	vector<PlnExpression*> arguments;
+	vector<PlnDataPlace*> arg_dps;
+	vector<int> clone_size;
+	vector<PlnDataPlace*> free_dps;
 
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
 

@@ -32,7 +32,7 @@ public:
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);
 	void genMemAlloc(PlnGenEntity* ref, int align, int al_size, string& comment);
-	void genMemFree(PlnGenEntity* ref, string& comment);
+	void genMemFree(PlnGenEntity* ref, string& comment, bool doNull = true);
 
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
 	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);
