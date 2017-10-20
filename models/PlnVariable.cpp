@@ -34,7 +34,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		auto tp = v->var_type.back();
 		v->place = da.allocData(tp->size, tp->data_type);
 		v->place->comment = &v->name;
-		if (v->ptr_type == PTR_OWNERSHIP) {
+		if (v->ptr_type & PTR_OWNERSHIP) {
 			da.memAlloced();
 			si.push_owner_var(v);
 		}
@@ -53,7 +53,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnVarInit::gen(PlnGenerator& g)
 {
 	for (auto v: vars) {
-		if (v->ptr_type == PTR_OWNERSHIP)
+		if (v->ptr_type & PTR_OWNERSHIP)
 			if (v->var_type.back()->name == "[]") {
 				auto t = v->var_type.back();
 				auto e = g.getPopEntity(v->place);
@@ -62,8 +62,7 @@ void PlnVarInit::gen(PlnGenerator& g)
 				for (int i: *t->inf.fixedarray.sizes)
 					asize += i;
 				asize *= item_size;
-				int align = (item_size > 8) ? 8 : item_size;
-				g.genMemAlloc(e.get(), align, asize, v->name);
+				g.genMemAlloc(e.get(), asize, v->name);
 			} else {
 				BOOST_ASSERT(false);	// TODO: need to implement.
 			}

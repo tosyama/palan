@@ -49,12 +49,19 @@ class PlnScopeInfo {
 public:
 	vector<PlnScopeVarInfo> owner_vars;
 	PlnScopeStack scope;
+	void push_scope(PlnFunction* f) { scope.push_back(PlnScopeItem(f)); }
 	void push_scope(PlnBlock* b) { scope.push_back(PlnScopeItem(b)); }
 	void pop_scope() { scope.pop_back(); }
 	void push_owner_var(PlnVariable* v) { owner_vars.push_back(PlnScopeVarInfo(v, scope.back())); }
 	void pop_owner_vars(PlnBlock *b) {
 		for (auto it=owner_vars.begin(); it!=owner_vars.end();) {
 			if (it->scope.inf.block == b) it = owner_vars.erase(it);
+			else ++it;
+		}
+	}
+	void pop_owner_vars(PlnFunction *f) {
+		for (auto it=owner_vars.begin(); it!=owner_vars.end();) {
+			if (it->scope.inf.function == f) it = owner_vars.erase(it);
 			else ++it;
 		}
 	}

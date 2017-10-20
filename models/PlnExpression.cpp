@@ -80,7 +80,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 	BOOST_ASSERT(false);
 }
 
-void PlnReadOnlyData::gen(PlnGenerator &g)
+	void PlnReadOnlyData::gen(PlnGenerator &g)
 {
 	switch (type) {
 		case RO_LIT_STR:
@@ -128,6 +128,9 @@ void PlnExpression::dump(ostream& os, string indent)
 		switch (value.type) {
 			case VL_LIT_INT8:
 				os << indent << "Int literal: " << value.inf.intValue << endl;
+				break;
+			case VL_LIT_UINT8:
+				os << indent << "Uint literal: " << value.inf.intValue << endl;
 				break;
 			case VL_VAR:
 				os << indent << "Variable: " << value.inf.var->name << endl;

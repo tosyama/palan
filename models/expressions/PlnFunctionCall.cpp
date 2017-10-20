@@ -17,6 +17,7 @@
 #include "../PlnType.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "PlnClone.h"
 
 using std::endl;
 
@@ -42,6 +43,16 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		values.push_back(PlnValue(ret_var));
 		++i;
 	}
+
+	// insert clone expression if needed.
+	for (i=0; i<arguments.size(); ++i) {
+		if (i < f->parameters.size()) {
+			if (f->parameters[i]->ptr_type & PTR_CLONE) {
+				auto clone_ex = new PlnClone(arguments[i]);
+				arguments[i] = clone_ex;
+			}
+		}
+	}
 }
 
 void PlnFunctionCall::finish(PlnDataAllocator& da)
@@ -63,30 +74,9 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 			arg_dps[i]->data_type = t->data_type;
 		}
 
-		// Create a clone of object instance.
-		// Clone only VL_VAR case.
-		// VL_WORK is not necessary to create clone. we can reuse the instance.
-		if (function->type == FT_PLN && t->data_type == DT_OBJECT_REF
-			&& a->values[0].type == VL_VAR ) {
-			if (t->name == "[]") {
-				int item_size = t->inf.fixedarray.item_size;
-				int asize = 0;
-				for (int i: *t->inf.fixedarray.sizes)
-					asize += i;
-				asize *= item_size;
-				clone_size.push_back(asize); // temp.
-			} else {
-				BOOST_ASSERT(false); // not implemented.
-			}
-			da.memAlloced();
-			// TODO: memcpy
-			a->finish(da);
+		a->data_places.push_back(arg_dps[i]);
+		a->finish(da);
 
-		} else {	// DT_INT, DT_UINT, DT_OBJECT
-			a->data_places.push_back(arg_dps[i]);
-			a->finish(da);
-			clone_size.push_back(0);
-		}
 		da.allocDp(arg_dps[i]);
 		++i;
 	}
@@ -105,7 +95,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 			rdps[i]->alloc_step = data_places[i]->alloc_step;
 			data_places[i]->save_place = rdps[i];
 		} else {
-			if (function->return_vals[i]->ptr_type == PTR_OWNERSHIP)
+			if (function->return_vals[i]->ptr_type & PTR_OWNERSHIP)
 				free_dps.push_back(rdps[i]);
 			else
 				delete rdps[i];
@@ -130,18 +120,8 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 	switch (function->type) {
 		case FT_PLN:
 		{
-			int i =0;
-			for (auto arg: arguments) {
-				if (clone_size[i]) {
-					static string cmt = "clone";
-					auto cln_e = g.getPushEntity(arg_dps[i]);
-					g.genMemAlloc(cln_e.get(), 8, clone_size[i], cmt);
-					arg->gen(g);
-				} else {
-					arg->gen(g);
-				}
-				++i;
-			}
+			for (auto arg: arguments)
+				arg->gen(g);
 
 			for (auto dp: arg_dps)
 				g.getPopEntity(dp);

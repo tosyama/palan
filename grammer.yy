@@ -63,12 +63,17 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
+	| parameters ',' ref_type ID
 	| parameters ',' ID
+	| parameters ',' ID '=' default_value
 	;
 
-parameter: type_def ID
+parameter: type_def ref_type ID
+	| type_def ID
 	| type_def ID '=' default_value
-	| ID '=' default_value
+	;
+
+ref_type: '&' | '*'
 	;
 
 default_value: ID
@@ -177,7 +182,7 @@ return_stmt: KW_RETURN
 
 type_def: TYPENAME
 	| type_def array_def
-	| type_def '*'
+	| type_def '@'
 	;
 	
 array_def: '[' array_sizes ']'

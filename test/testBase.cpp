@@ -24,7 +24,7 @@ TEST_CASE ("Hello World", "[basic]")
 
 int clean()
 {
-	return system("rm out/*");
+	return system("rm -f out/*");
 }
 
 string build(string srcf)

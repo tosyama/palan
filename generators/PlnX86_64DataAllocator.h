@@ -27,6 +27,8 @@ public:
 
 	void memAlloced();
 	void memFreed();
+	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src);
+	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src);
 
 	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
 	void releaseAccumulator(PlnDataPlace* dp);

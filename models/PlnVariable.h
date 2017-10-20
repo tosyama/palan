@@ -6,9 +6,10 @@
 #include "../PlnModel.h"
 
 enum {
-	NO_PTR,
-	PTR_OWNERSHIP,
-	PTR_REFERENCE
+	NO_PTR = 0,
+	PTR_REFERENCE = 1,
+	PTR_OWNERSHIP = 2,
+	PTR_CLONE = 4, 
 };
 
 class PlnVariable {

@@ -1,6 +1,7 @@
 *.o
 *.log
 *.tab.*
+core.*
 .exrc
 PlnLexer.cpp
 PlnParser.cpp

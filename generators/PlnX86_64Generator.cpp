@@ -360,15 +360,22 @@ void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
 		os << "	movq %rax, " << oprnd(r.get()) << endl;
 }
 
-void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int align, int al_size, string& comment)
+void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)
 {
-	os << "	movq $" << align << ", %rdi"	<< endl;
-	os << "	movq $" << al_size << ", %rsi"	<< endl;
-	os << "	call aligned_alloc" << endl;
+	os << "	movq $" << al_size << ", %rdi"	<< endl;
+	os << "	call malloc" << endl;
 	os << "	movq %rax, " << oprnd(ref);
 	
 	if (comment != "") os << "	# alloc " << comment;
 	os << endl;
+}
+
+void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
+{
+	BOOST_ASSERT(cp_size % 8 == 0);
+	os << "	cld" << endl;
+	os << "	movq $" << (cp_size/8) << ", %rcx"	<< endl;
+	os << "	rep movsq" << endl;
 }
 
 void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doNull)

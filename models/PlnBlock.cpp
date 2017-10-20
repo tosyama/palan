@@ -53,7 +53,7 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_t
 	if (var_type.size()>0){
 		v->var_type = move(var_type);
 		if (v->var_type.back()->name == "[]") {
-			v->ptr_type = PTR_OWNERSHIP;
+			v->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
 		}
 		else v->ptr_type = NO_PTR;
 	} else {
@@ -95,7 +95,7 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	
 	for (auto v: variables) {
 		da.releaseData(v->place);
-		if (v->ptr_type == PTR_OWNERSHIP) {
+		if (v->ptr_type & PTR_OWNERSHIP) {
 			da.memFreed();
 		}
 	}
@@ -117,28 +117,32 @@ void PlnBlock::dump(ostream& os, string indent)
 
 void PlnBlock::gen(PlnGenerator& g)
 {
+	g.comment("{");
 	{
 		// initalize all pointers.
 		vector<unique_ptr<PlnGenEntity>> refs;
 		for (auto v: variables) 
-			if (v->ptr_type != NO_PTR) 
+			if (v->ptr_type & PTR_REFERENCE) 
 				refs.push_back(g.getPopEntity(v->place));
 
 		g.genNullClear(refs);
 	}
 
-	for (auto s: statements)
+	for (auto s: statements) {
 		s->gen(g);
+		g.blank();
+	}
 
 	// TODO?: check condition: need not call this after jump statement.
 	// Note: "return statement" frees vars insted of block when function end.
 	if (parent_block) genFreeOwnershipVars(g);
+	g.comment("}");
 }
 
 void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)
 {
 	for (auto v: variables) 
-		if (v->ptr_type == PTR_OWNERSHIP) {
+		if (v->ptr_type & PTR_OWNERSHIP) {
 			auto e = g.getPopEntity(v->place);
 			g.genMemFree(e.get(), v->name);
 		}

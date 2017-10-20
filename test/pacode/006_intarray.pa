@@ -16,6 +16,12 @@ func int16[3] pb arr_func(int32 x, int32[10] pa)
 	return;
 }
 
+func int16[3] pb arr_func2(int32 x, int32[10] pa)
+{
+	int32[5] a1;
+	return;
+}
+
 setenv("MALLOC_TRACE", "out/mtrace006", 1);
 mtrace();
 {
@@ -27,6 +33,7 @@ int16[5] b;
 // b = c;
 
 arr_func(3, a);
+arr_func2(4, a);
 }
 muntrace();
 

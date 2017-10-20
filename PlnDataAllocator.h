@@ -46,9 +46,11 @@ public:
 	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
 	virtual void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type) = 0;
 
-	// Regster data may be breaken by this process.
+	// Process register data may be breaken by this process.
 	virtual void memAlloced() = 0;
 	virtual void memFreed() = 0;
+	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) = 0;
+	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) = 0;
 
 	virtual PlnDataPlace* allocAccumulator(PlnDataPlace* dp) = 0;
 	virtual void releaseAccumulator(PlnDataPlace* dp) = 0;

@@ -15,7 +15,8 @@ enum PlnExprsnType {
 	ET_DIV,
 	ET_NEG,
 	ET_ASSIGN,
-	ET_MVOWN
+	ET_MVOWN,
+	ET_CLONE
 };
 
 class PlnExpression {
@@ -23,7 +24,7 @@ public:
 	PlnExprsnType type;
 	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
-	PlnDataPlace* val_place;	// TODO: divide value expression.
+	PlnDataPlace* val_place;	// TODO: move this member to PlnValue expression.
 
 	PlnExpression(PlnExprsnType type) : type(type), val_place(NULL) {};
 	PlnExpression(PlnValue value);

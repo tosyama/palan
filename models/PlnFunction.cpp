@@ -17,6 +17,7 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnConstants.h"
+#include "../PlnScopeStack.h"
 
 using std::string;
 using std::endl;
@@ -43,7 +44,7 @@ void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 
 		auto t = rv->var_type.back();
 		if (t->data_type == DT_OBJECT_REF) {
-			rv->ptr_type = PTR_OWNERSHIP;
+			rv->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
 		} else {
 			rv->ptr_type = NO_PTR;
 		}
@@ -64,7 +65,7 @@ PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnV
 
 	auto t = param->var_type.back();
 	if (t->data_type == DT_OBJECT_REF) {
-		param->ptr_type = PTR_OWNERSHIP;
+		param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE;
 	} else {
 		param->ptr_type = NO_PTR;
 	}
@@ -78,6 +79,8 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
+			si.push_scope(this);
+
 			// Allocate stack space for return value if needed.
 			for (auto r: return_vals) {
 				if (r->name == "") r->place = NULL;
@@ -100,6 +103,9 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				dps[i]->data_type = t->data_type;
 				p->load_place = dps[i];
 				i++;
+
+				if (p->ptr_type & PTR_OWNERSHIP)
+					si.push_owner_var(p);
 			}
 
 			// Insert return statement to end of function if needed.
@@ -117,6 +123,9 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			}
 			for (auto p: parameters)
 				da.releaseData(p->place);
+
+			si.pop_owner_vars(this);
+			si.pop_scope();
 
 			da.finish();
 			inf.pln.stack_size = da.stack_size;
@@ -145,6 +154,7 @@ void PlnFunction::dump(ostream& os, string indent)
 					os << indent << " Paramater: " << p->var_type.back()->name << " " << p->name
 						<< "(" << p->place->data.stack.offset << ")" << endl;
 				implement->dump(os, indent+" ");
+
 			} else os << indent << " No Implementation" << endl;
 		break;
 	}
@@ -159,9 +169,6 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genLabel(name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
-			
-			int i=return_vals.size();
-			if (i==0) i = 1;
 			
 			for (auto p: parameters) {
 				auto le = g.getPopEntity(p->place);

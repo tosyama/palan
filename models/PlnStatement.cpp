@@ -1,4 +1,4 @@
-/// PlnStatement model class definition.
+// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
 /// @copyright	2017 YAMAGUCHI Toshinobu 
@@ -140,14 +140,17 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		for(;j<i;++j) {
 			da.allocDp(dps[j]);
 		}
+
+		// ret_vars is just used checking requirement of free varialbes.
 		if (e->type == ET_VALUE
 				&& e->values[0].type == VL_VAR
-				&& e->values[0].inf.var->ptr_type == PTR_OWNERSHIP)
+				&& (e->values[0].inf.var->ptr_type & PTR_OWNERSHIP))
 		{
 			ret_vars.push_back(e->values[0].inf.var);
 		}
 	}
 
+	// create free varialbe list.(variables in scope except returning)
 	if (si.owner_vars.size() > 0) {
 		bool do_free = false;
 		for (auto &i: si.owner_vars) {

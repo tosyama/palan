@@ -9,6 +9,7 @@ SRCS=palan.cpp \
 	models/expressions/PlnDivOperation.cpp \
 	models/expressions/PlnAssignment.cpp \
 	models/expressions/PlnMoveOwnership.cpp \
+	models/expressions/PlnClone.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp\

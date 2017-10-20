@@ -142,6 +142,45 @@ void PlnX86_64DataAllocator::memFreed()
 	step++;
 }
 
+void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src)
+{
+	static string dcmt = "copy dst";
+	static string scmt = "copy src";
+
+	dst = new PlnDataPlace(8, DT_OBJECT_REF);
+	dst->status = DS_ASSIGNED;
+	dst->data.reg.id = RDI;
+	dst->data.reg.offset = 0;
+	dst->type = DP_REG;
+	dst->comment = &dcmt;
+
+	src = new PlnDataPlace(8, DT_OBJECT_REF);
+	src->type = DP_REG;
+	src->status = DS_ASSIGNED;
+	src->data.reg.id = RSI;
+	src->data.reg.offset = 0;
+	src->comment = &scmt;
+}
+
+void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
+{
+	releaseData(dst);
+	releaseData(src);
+
+	PlnDataPlace* pdp = regs[RCX];
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+	dp->type = DP_REG;
+	dp->status = DS_RELEASED;
+	dp->alloc_step = dp->release_step = step;
+	dp->previous = pdp;
+	regs[RCX] = dp;
+	if (pdp && pdp->status != DS_RELEASED)
+		if (!pdp->save_place)  {
+			allocSaveData(pdp);
+		}
+	step++;
+}
+
 PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 {
 	auto dp = new_dp ? new_dp : new PlnDataPlace(8, DT_SINT);
