@@ -22,7 +22,8 @@ while (i<10) :out
 		if (i==8 && j==5) continue out ;
 }
 
-for(int i:1>>5) print(i.str);
+for(int i:1..5) print(i.str);
+for(int i:1<<5) print(i.str);
 
 int arr[10] = (1..10);
 for(int i: arr) print(i.str);

@@ -24,7 +24,7 @@ using std::endl;
 using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
-	: type(func_type), name(func_name), implement(NULL)
+	: type(func_type), name(func_name), retval_init(NULL), implement(NULL)
 {
 }
 
@@ -82,13 +82,10 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.push_scope(this);
 
 			// Allocate stack space for return value if needed.
+			vector<PlnVariable*> rets;
 			for (auto r: return_vals) {
 				if (r->name == "") r->place = NULL;
-				else {
-					auto t = r->var_type.back();
-					r->place = da.allocData(t->size, t->data_type);
-					r->place->comment = &r->name;
-				}
+				else rets.push_back(r);
 			}
 
 			// Allocate stack space for parameters.
@@ -106,6 +103,12 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 				if (p->ptr_type & PTR_OWNERSHIP)
 					si.push_owner_var(p);
+				// TODO: delete from rets if exists.
+			}
+
+			if (rets.size()) {
+				retval_init = new PlnVarInit(rets);
+				retval_init->finish(da, si);
 			}
 
 			// Insert return statement to end of function if needed.
@@ -175,6 +178,9 @@ void PlnFunction::gen(PlnGenerator &g)
 				auto re = g.getPopEntity(p->load_place);
 				g.genMove(le.get(), re.get(), string("param->") + p->name);
 			}
+
+			if (retval_init) retval_init->gen(g);
+			// TODO: if malloc failed.
 			
 			implement->gen(g);
 			break;

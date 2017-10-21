@@ -16,6 +16,7 @@ public:
 	int type;
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
+	PlnVarInit *retval_init;
 	union {
 		struct {
 			int id;
