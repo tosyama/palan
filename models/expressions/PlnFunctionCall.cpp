@@ -82,24 +82,19 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 	}
 	da.funcCalled(arg_dps, function->return_vals, func_type);
 
-	auto rdps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
+	ret_dps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
 	i = 0;
 	for (auto r: function->return_vals) {
-		rdps[i]->data_type = r->var_type.back()->data_type;
+		ret_dps[i]->data_type = r->var_type.back()->data_type;
 		++i;
 	}
 	
-	for (i=0; i<rdps.size(); ++i) {
-		if (i < data_places.size()) {
-			BOOST_ASSERT(data_places[i]->save_place == NULL);
-			rdps[i]->alloc_step = data_places[i]->alloc_step;
-			data_places[i]->save_place = rdps[i];
-		} else {
+	for (i=0; i<ret_dps.size(); ++i) {
+		da.allocDp(ret_dps[i]);
+		da.releaseData(ret_dps[i]);
+		if (i >= data_places.size()) {
 			if (function->return_vals[i]->ptr_type & PTR_OWNERSHIP)
-				free_dps.push_back(rdps[i]);
-			else
-				delete rdps[i];
-
+				free_dps.push_back(ret_dps[i]);
 		}
 	}
 	if (free_dps.size()) da.memFreed();
@@ -127,8 +122,13 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 				g.getPopEntity(dp);
 
 			g.genCCall(function->name);
-			for (auto dp: data_places)
-				g.getPopEntity(dp);
+			int i=0;
+			for (auto dp: data_places) {
+				auto e = g.getPushEntity(dp);
+				auto re = g.getPopEntity(ret_dps[i]);
+				g.genMove(e.get(), re.get(), *ret_dps[i]->comment  +" -> " +*dp->comment);
+				i++;
+			}
 
 			for (auto fdp: free_dps) {
 				auto fe = g.getPopEntity(fdp);

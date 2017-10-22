@@ -26,13 +26,13 @@ setenv("MALLOC_TRACE", "out/mtrace006", 1);
 mtrace();
 {
 int32[10] a;
-int16[5] b;
+int16[3] b;
 
 // b = arr_func(a);
 // int16[5] c = arr_func(a);
 // b = c;
 
-arr_func(3, a);
+b = arr_func(3, a);
 arr_func2(4, a);
 }
 muntrace();
