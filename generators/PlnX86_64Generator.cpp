@@ -372,10 +372,25 @@ void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string& com
 
 void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
 {
-	BOOST_ASSERT(cp_size % 8 == 0);
+	int cpy_count;
+	const char* safix = "";
+	if (cp_size % 8 == 0) {
+		cpy_count = cp_size/8;
+		safix = "q";
+	} else if (cp_size % 4 == 0) {
+		cpy_count = cp_size/4;
+		safix = "l";
+	} else if (cp_size % 2 == 0) {
+		cpy_count = cp_size/2;
+		safix = "w";
+	} else {
+		cpy_count = cp_size;
+		safix = "b";
+	}
+
 	os << "	cld" << endl;
-	os << "	movq $" << (cp_size/8) << ", %rcx"	<< endl;
-	os << "	rep movsq" << endl;
+	os << "	movq $" << cpy_count << ", %rcx"	<< endl;
+	os << "	rep movs" << safix << "	# " << comment << endl;
 }
 
 void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doNull)

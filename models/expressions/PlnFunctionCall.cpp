@@ -35,13 +35,10 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 
 	int i=0;
 	for (auto rv: f->return_vals) {
-		PlnVariable* ret_var = new PlnVariable();
-		ret_var->name = rv->name;
-		ret_var->inf.index = i;
-		ret_var->var_type = rv->var_type;
-
-		values.push_back(PlnValue(ret_var));
-		++i;
+		PlnValue val;
+		val.type = VL_WORK;
+		val.inf.wk_type = rv->var_type.back();
+		values.push_back(val);
 	}
 
 	// insert clone expression if needed.
