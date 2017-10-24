@@ -46,9 +46,16 @@ enum PlnValType {
 	VL_WORK
 };
 
+enum PlnLValType {
+	LVL_COPY,
+	LVL_MOVE,
+	LVL_REF
+};
+
 class PlnValue {
 public:
 	PlnValType type;
+	PlnLValType lval_type;
 	union {
 		int index;
 		int64_t intValue;

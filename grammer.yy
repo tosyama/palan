@@ -21,6 +21,7 @@ int yylex();
 %token KW_CCALL
 %token KW_SYSCALL
 %token KW_RETURN
+%token DBL_LESS
 
 %right '='
 %left ',' 
@@ -63,23 +64,21 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' ref_type ID
-	| parameters ',' ID
-	| parameters ',' ID '=' default_value
+	| parameters ',' move_owner_suffix ID default_value
 	;
 
-parameter: type_def ref_type ID
-	| type_def ID
-	| type_def ID '=' default_value
+parameter: type_def move_owner_suffix ID default_value
 	;
 
-ref_type: '&' | '*'
+move_owner_suffix: /* empty */
+	| DBL_LESS
 	;
 
-default_value: ID
-	| INT
-	| UINT
-	| STR
+default_value: /* empty */
+	| '=' ID
+	| '=' INT
+	| '=' UINT
+	| '=' STR
 	;
 
 ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
@@ -148,12 +147,14 @@ arguments: argument
 	;
 
 argument: /* empty */
-	| expression
+	| move_owner_suffix expression
 	;
 
-lvals:  ID
-	| lvals ',' ID
+lvals: lval
+	| lvals ',' lval
 	;
+
+lval: ID move_owner_suffix;
 
 term: INT
 	| UINT

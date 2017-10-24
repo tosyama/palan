@@ -33,7 +33,8 @@ enum {
 	KW_FUNC		= PlnParser::token::KW_FUNC,
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
-	KW_RETURN	= PlnParser::token::KW_RETURN
+	KW_RETURN	= PlnParser::token::KW_RETURN,
+	DBL_LESS	= PlnParser::token::DBL_LESS
 };
 
 static string& unescape(string& str);
@@ -48,6 +49,7 @@ UDIGIT	[0-9]+"u"
 DIGIT_MIN	"-9223372036854775808"
 ID	[a-zA-Z_][0-9a-zA-Z_]*
 FUNC_ID	{ID}[ \t\n\r]*"("
+DBL_LESS	"<<"
 DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
@@ -106,6 +108,9 @@ return	{ return KW_RETURN; }
 		string str(yytext+1,yyleng-2); 
 		lval.build<string>() = unescape(str);
 		return STR;
+	}
+{DBL_LESS}	{
+		return DBL_LESS;
 	}
 {DELIMITER}	{ return yytext[0]; }
 [ \t]+		{ loc.step(); }

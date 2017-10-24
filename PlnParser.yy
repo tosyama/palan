@@ -21,6 +21,7 @@
 #include <iostream>
 #include "PlnModel.h"
 #include "PlnScopeStack.h"
+#include "models/PlnExpression.h"	// for sizeof(PlnValue)
 
 using std::string;
 using std::cerr;
@@ -80,6 +81,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token KW_CCALL	"'ccall'"
 %token KW_SYSCALL	"'syscall'"
 %token KW_RETURN	"'return'"
+%token DBL_LESS		"'<<'"
 
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
@@ -93,6 +95,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnVariable*>>	return_values
 %type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
+%type <bool>	move_owner_suffix
 %type <PlnValue*>	default_value
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
@@ -106,6 +109,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
 %type <vector<PlnValue>>	lvals
+%type <PlnValue>	lval
 %type <vector<PlnVariable*>>	declarations
 %type <PlnVariable*>	declaration
 %type <PlnVariable*>	subdeclaration
@@ -250,18 +254,7 @@ parameters: parameter
 	}
 	;
 
-parameter: type_def ID
-	{
-		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
-		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, &$1);
-		if (!$$) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
-			YYABORT;
-		}
-	}
-
-	| type_def ID '=' default_value
+parameter: type_def ID move_owner_suffix default_value
 	{
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
@@ -273,24 +266,29 @@ parameter: type_def ID
 	}
 	;
 
-default_value: ID
+move_owner_suffix: /* empty */	{ $$ = false; }
+	| DBL_LESS { $$ = true; }
+	;
+
+default_value:	/* empty */	{ $$ = NULL; }
+	| '=' ID
 	{	
 		$$ = NULL; // TODO: get const value.
 	}
 
-	| INT
+	| '=' INT
 	{
-		$$ = new PlnValue($1);
+		$$ = new PlnValue($2);
 	}
 
-	| UINT
+	| '=' UINT
 	{
-		$$ = new PlnValue($1);
+		$$ = new PlnValue($2);
 	}
 
-	| STR
+	| '=' STR
 	{
-		$$ = new PlnValue(module.getReadOnlyData($1));
+		$$ = new PlnValue(module.getReadOnlyData($2));
 	}
 	;
 
@@ -523,33 +521,44 @@ argument: /* empty */
 		$$ = NULL;
 	}
 
-	| expression
+	| move_owner_suffix expression
 	{
-		$$ = $1;
+		$$ = $2;
 	}
 	;
 
-lvals:  ID
+lvals:  lval
+	{
+		$$.push_back($1);
+	}
+
+	| lvals ',' lval
+	{
+		$$ = move($1);
+		$$.push_back($3);
+	}
+	;
+
+lval:	ID move_owner_suffix
 	{
 		PlnVariable* v=CUR_BLOCK->getVariable($1);
-		if (v) $$.push_back(v);
-		else {
+		if (v) {
+			$$ = v;
+			if ($2) {
+				if (v->var_type.back()->data_type != DT_OBJECT_REF) {
+					// TODO: change error message.
+					error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
+					YYABORT;
+				}
+				$$.lval_type = LVL_MOVE;
+			} else {
+				$$.lval_type = LVL_COPY;
+			}
+		} else {
 			error(@$, PlnMessage::getErr(E_UndefinedVariable,$1));
 			YYABORT;
 		}
 	}
-
-	| lvals ',' ID
-	{
-		$$ = move($1);
-		PlnVariable* v=CUR_BLOCK->getVariable($3);
-		if (v) $$.push_back(v);
-		else {
-			error(@$, PlnMessage::getErr(E_UndefinedVariable,$3));
-			YYABORT;
-		}
-	}
-	;
 
 term: INT
 	{
