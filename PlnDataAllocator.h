@@ -65,6 +65,7 @@ public:
 };
 
 enum {
+	DP_UNKNOWN,
 	DP_STK_BP,
 	DP_STK_SP,
 	DP_REG,
