@@ -355,9 +355,13 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 
 void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
 {
-	os << "	xorq %rax, %rax" << endl;
-	for (auto& r: refs)
-		os << "	movq %rax, " << oprnd(r.get()) << endl;
+	if (refs.size() == 1)
+		os << "	movq $0, " << oprnd(refs[0].get()) << endl;
+	else if (refs.size() >= 2) {
+		os << "	xorq %rax, %rax" << endl;
+		for (auto& r: refs)
+			os << "	movq %rax, " << oprnd(r.get()) << endl;
+	}
 }
 
 void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)

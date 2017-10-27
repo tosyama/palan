@@ -17,7 +17,10 @@ SRCS=palan.cpp \
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators
-TEST = test/tester
+TEST=test/tester
+# workarround of mtrace hung with double free.
+MALLOC_CHECK_=1	
+export MALLOC_CHECK_
 
 .SUFFIXES: .cpp .o
 

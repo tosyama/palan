@@ -9,14 +9,15 @@
 
 #include <boost/assert.hpp>
 
-#include "../../PlnConstants.h"
-#include "../../PlnModel.h"
-#include "../PlnFunction.h"
 #include "PlnFunctionCall.h"
+#include "PlnMoveOwnership.h"
+#include "../PlnFunction.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"
+#include "../../PlnModel.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnConstants.h"
 #include "PlnClone.h"
 
 using std::endl;
@@ -41,12 +42,16 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		values.push_back(val);
 	}
 
-	// insert clone expression if needed.
+	// insert clone/move owner expression if needed.
 	for (i=0; i<arguments.size(); ++i) {
 		if (i < f->parameters.size()) {
-			if (f->parameters[i]->ptr_type & PTR_CLONE) {
+			int ptr_type = f->parameters[i]->ptr_type;
+			if (ptr_type & PTR_CLONE) {
 				auto clone_ex = new PlnClone(arguments[i]);
 				arguments[i] = clone_ex;
+			} else if(ptr_type & PTR_OWNERSHIP) {
+				auto mv_owner_ex = new PlnMoveOwnership(arguments[i]);
+				arguments[i] = mv_owner_ex;
 			}
 		}
 	}

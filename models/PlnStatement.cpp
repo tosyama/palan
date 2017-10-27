@@ -14,7 +14,6 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
-#include "expressions/PlnMoveOwnership.h"
 
 using std::endl;
 

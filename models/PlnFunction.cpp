@@ -51,7 +51,7 @@ void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
 	}
 }
 
-PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnValue* defaultVal)
+PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnPassingMethod pass_method, PlnValue* defaultVal)
 {
 	for (auto rv: return_vals)
 		if (rv->name == pname) return NULL;
@@ -65,7 +65,10 @@ PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnV
 
 	auto t = param->var_type.back();
 	if (t->data_type == DT_OBJECT_REF) {
-		param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE;
+		if (pass_method == FPM_MOVEOWNER) 
+			param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
+		else // FMP_COPY
+			param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE;
 	} else {
 		param->ptr_type = NO_PTR;
 	}

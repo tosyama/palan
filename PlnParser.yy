@@ -243,12 +243,13 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' ID
+	| parameters ',' move_owner_suffix ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		auto prm = f->addParam($3, NULL);
+		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
+		auto prm = f->addParam($4, NULL, pm);
 		if (!prm) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $4));
 			YYABORT;
 		}
 	}
@@ -258,7 +259,8 @@ parameter: type_def ID move_owner_suffix default_value
 	{
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, &$1, $4);
+		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
+		$$ = f->addParam($2, &$1, pm, $4);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;

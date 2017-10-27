@@ -23,6 +23,7 @@ func int16[3] pb arr_func2(int32 x, int32[10] pa <<)
 }
 
 setenv("MALLOC_TRACE", "out/mtrace006", 1);
+setenv("MALLOC_CHECK_", "0", 1);
 mtrace();
 {
 int32[10] a;
