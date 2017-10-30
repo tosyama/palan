@@ -13,8 +13,14 @@
 PlnClone::PlnClone(PlnExpression* src)
 	: PlnExpression(ET_CLONE), clone_src(src)
 {
-	values = src->values;
-	BOOST_ASSERT(values.size() == 1);
+	BOOST_ASSERT(src->values.size() == 1);
+	for (auto sval: src->values) {
+		PlnValue val;
+		val.type = VL_WORK;
+		// TODO: lval_type?
+		val.inf.wk_type = sval.getType();
+		values.push_back(val);
+	}
 
 	auto t = values[0].getType();
 	if (t->name == "[]") {

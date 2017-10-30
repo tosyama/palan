@@ -30,6 +30,6 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "006_intarray";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "");
-	CHECK(mcheck("mtrace006") == "+10 -10");
+	CHECK(mcheck("mtrace006") == "+16 -16");
 }
 

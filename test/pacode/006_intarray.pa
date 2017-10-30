@@ -19,24 +19,24 @@ func int16[3] pb arr_func(int32 x, int32[10] pa)
 func int16[3] pb arr_func2(int32 x, int32[10] pa <<)
 {
 	int32[5] a1;
-	return;
 }
 
 setenv("MALLOC_TRACE", "out/mtrace006", 1);
-setenv("MALLOC_CHECK_", "0", 1);
 mtrace();
 {
+// alloc only
 int32[10] a;
 int16[3] b, c;
 
-// b = arr_func(a);
-// int16[5] c = arr_func(a);
-// b = c;
+// d: copy of a, e: user return as is.
+int32[10] d = a;
+int16[3] e = arr_func(1, a);
 
 b = arr_func(3, a);
 b <<= arr_func2(4, <<a);
 c = b;
 c <<= b;
+
 }
 muntrace();
 

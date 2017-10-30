@@ -33,7 +33,7 @@ public:
 class PlnVarInit {
 public:
 	PlnVarInit(vector<PlnVariable*>& vars);
-	PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*>& initializer);
+	PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*>& inits);
 
 	vector<PlnVariable*> vars;
 	vector<PlnExpression*> initializer;
