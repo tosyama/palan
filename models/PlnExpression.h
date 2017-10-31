@@ -47,6 +47,7 @@ enum PlnValType {
 };
 
 enum PlnLValType {
+	NO_LVL,
 	LVL_COPY,
 	LVL_MOVE,
 	LVL_REF

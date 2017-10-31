@@ -1,5 +1,6 @@
 /// PlnMoveOwnership model class definition.
-///
+/// Clear variable after pass it's ownership.
+/// 
 /// @file	PlnMoveOwnership.cpp
 /// @copyright	2017 YAMAGUCHI Toshinobu 
 

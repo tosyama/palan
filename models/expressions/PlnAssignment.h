@@ -10,18 +10,24 @@ union PlnAssignInf
 	int16_t	type;
 	struct {
 		int16_t	type;
-
 		int16_t exp_ind;
-		int32_t val_ind;
+		int16_t val_ind;
+	} inf;
+
+	struct {
+		int16_t	type;
+		int16_t exp_ind;
+		int16_t val_ind;
+
 		int32_t cp_size;
 		PlnDataPlace *src, *dst;
 		PlnDataPlace *free_dp;
 	} mcopy;
 	struct {
 		int16_t	type;
-
 		int16_t exp_ind;
-		int32_t val_ind;
+		int16_t val_ind;
+
 		PlnDataPlace *src, *dst;
 		bool do_clear;
 	} move;

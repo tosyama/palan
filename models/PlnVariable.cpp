@@ -18,40 +18,51 @@
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "expressions/PlnClone.h"
+#include "expressions/PlnMoveOwnership.h"
 
 // PlnVarInit
-PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars) : vars(move(vars))
+PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
 {
 }
 
-PlnVarInit::PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*> &inits)
+PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 	: vars(move(vars)), initializer(move(inits))
 {
 	BOOST_ASSERT(initializer.size()); // Should use another constractor.
 	int val_num = 0;
 	int ii = 0;
 	for (auto e: initializer) {
-		// insert clone exp when init by variable.
+		// insert clone/move owner exp when init by variable.
 		if (e->type == ET_VALUE && e->values[0].type == VL_VAR) {
 			auto src_var = e->values[0].inf.var;
 			if (src_var->ptr_type & PTR_REFERENCE) {
-				auto cln = new PlnClone(e);
-				initializer[ii] = cln;
+				switch(this->vars[val_num].lval_type) {
+					case LVL_COPY:
+						initializer[ii] = new PlnClone(e);
+						break;
+					case LVL_MOVE:
+						initializer[ii] = new PlnMoveOwnership(e);
+						break;
+					defalut:
+						BOOST_ASSERT(false);
+				} 
 			}
 		}
 		++ii;
-		val_num += e->values.size();
+		val_num += e->values.size();	// for assertion
 	}
-
-	// compiler must assure all variable have initializer.
+	// compiler must assure all variables have initializer.
 	BOOST_ASSERT(val_num >= vars.size());
+
 }
 
 void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	bool do_init = initializer.size()>0;
+	bool do_init = (initializer.size() > 0);
 
-	for (auto v: vars) {
+	// alloc memory.
+	for (auto val: vars) {
+		PlnVariable *v = val.inf.var;
 		auto tp = v->var_type.back();
 		v->place = da.allocData(tp->size, tp->data_type);
 		v->place->comment = &v->name;
@@ -61,11 +72,13 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.push_owner_var(v);
 		}
 	}
+
+	// initialze.
 	int i=0;
 	for (auto ie: initializer) {
 		for (auto ev: ie->values) {
 			if (i >= vars.size()) break;
-			ie->data_places.push_back(vars[i]->place);
+			ie->data_places.push_back(vars[i].inf.var->place);
 			i++;
 		}
 		ie->finish(da);
@@ -75,7 +88,8 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnVarInit::gen(PlnGenerator& g)
 {
 	bool do_init = initializer.size()>0;
-	for (auto v: vars) {
+	for (auto val: vars) {
+		PlnVariable *v = val.inf.var;
 		if (v->ptr_type & PTR_OWNERSHIP)
 			if (!do_init) {
 				if (v->var_type.back()->name == "[]") {

@@ -144,7 +144,7 @@ void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)
 	for (auto v: variables) 
 		if (v->ptr_type & PTR_OWNERSHIP) {
 			auto e = g.getPopEntity(v->place);
-			g.genMemFree(e.get(), v->name);
+			g.genMemFree(e.get(), v->name, false);
 		}
 }
 

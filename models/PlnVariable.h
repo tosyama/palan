@@ -32,10 +32,10 @@ public:
 // Variable initialization
 class PlnVarInit {
 public:
-	PlnVarInit(vector<PlnVariable*>& vars);
-	PlnVarInit(vector<PlnVariable*>& vars, vector<PlnExpression*>& inits);
+	PlnVarInit(vector<PlnValue>& vars);
+	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*>& inits);
 
-	vector<PlnVariable*> vars;
+	vector<PlnValue> vars;
 	vector<PlnExpression*> initializer;
 	PlnBlock* parent;
 

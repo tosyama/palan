@@ -110,9 +110,9 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnExpression*>	argument
 %type <vector<PlnValue>>	lvals
 %type <PlnValue>	lval
-%type <vector<PlnVariable*>>	declarations
-%type <PlnVariable*>	declaration
-%type <PlnVariable*>	subdeclaration
+%type <vector<PlnValue>>	declarations
+%type <PlnValue>	declaration
+%type <PlnValue>	subdeclaration
 %type <PlnReturnStmt*>	return_stmt
 %type <vector<PlnType*>>	type_def
 %type <vector<int>>	array_def
@@ -545,10 +545,9 @@ lval:	ID move_owner_suffix
 	{
 		PlnVariable* v=CUR_BLOCK->getVariable($1);
 		if (v) {
-			$$ = v;
+			$$ = PlnValue(v);
 			if ($2) {
 				if (v->var_type.back()->data_type != DT_OBJECT_REF) {
-					// TODO: change error message.
 					error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
 					YYABORT;
 				}
@@ -627,23 +626,43 @@ declarations: declaration
 	}
 	;
 
-declaration: type_def ID
+declaration: type_def ID move_owner_suffix
 	{
-		$$ = CUR_BLOCK->declareVariable($2, $1);
-		if (!$$) {
+		auto var = CUR_BLOCK->declareVariable($2, $1);
+		if (!var) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
+		}
+		$$ = PlnValue(var);
+		if ($3) {
+			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $2));
+				YYABORT;
+			}
+			$$.lval_type = LVL_MOVE;
+		} else {
+			$$.lval_type = LVL_COPY;
 		}
 	}
 	;
 
-subdeclaration: ID
+subdeclaration: ID move_owner_suffix
 	{
-		vector<PlnType *> v;
-		$$ = CUR_BLOCK->declareVariable($1, v);
-		if (!$$) {
+		vector<PlnType *> null_type;
+		auto var = CUR_BLOCK->declareVariable($1, null_type);
+		if (!var) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
+		}
+		$$ = PlnValue(var);
+		if ($2) {
+			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
+				YYABORT;
+			}
+			$$.lval_type = LVL_MOVE;
+		} else {
+			$$.lval_type = LVL_COPY;
 		}
 	}
 	;

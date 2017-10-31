@@ -85,10 +85,10 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.push_scope(this);
 
 			// Allocate stack space for return value if needed.
-			vector<PlnVariable*> rets;
+			vector<PlnValue> rets;
 			for (auto r: return_vals) {
 				if (r->name == "") r->place = NULL;
-				else rets.push_back(r);
+				else rets.push_back(PlnValue(r));
 			}
 
 			// Allocate stack space for parameters.

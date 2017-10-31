@@ -28,9 +28,10 @@ mtrace();
 int32[10] a;
 int16[3] b, c;
 
-// d: copy of a, e: user return as is.
+// d: copy of a, e: use return as is.
 int32[10] d = a;
 int16[3] e = arr_func(1, a);
+int16[3] f <<= e;
 
 b = arr_func(3, a);
 b <<= arr_func2(4, <<a);
