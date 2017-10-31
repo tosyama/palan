@@ -21,25 +21,25 @@ using boost::adaptors::reverse;
 
 // PlnValue
 PlnValue::PlnValue(int64_t intValue)
-	: type(VL_LIT_INT8)
+	: type(VL_LIT_INT8), lval_type(NO_LVL)
 {
 	inf.intValue = intValue;
 }
 
 PlnValue::PlnValue(uint64_t uintValue)
-	: type(VL_LIT_UINT8)
+	: type(VL_LIT_UINT8), lval_type(NO_LVL)
 {
 	inf.uintValue = uintValue;
 }
 
 PlnValue::PlnValue(PlnReadOnlyData* rod)
-	: type(VL_RO_DATA)
+	: type(VL_RO_DATA), lval_type(NO_LVL)
 {
 	inf.rod = rod;
 }
 
 PlnValue::PlnValue(PlnVariable* var)
-	: type(VL_VAR)
+	: type(VL_VAR), lval_type(NO_LVL)
 {
 	inf.var = var;
 }
@@ -54,7 +54,7 @@ PlnType* PlnValue::getType()
 		case VL_RO_DATA:
 			return PlnType::getReadOnlyCStr();
 		case VL_VAR:
-			return inf.var->var_type;
+			return inf.var->var_type.back();
 		case VL_WORK:
 			return inf.wk_type;
 	}
@@ -80,7 +80,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 	BOOST_ASSERT(false);
 }
 
-void PlnReadOnlyData::gen(PlnGenerator &g)
+	void PlnReadOnlyData::gen(PlnGenerator &g)
 {
 	switch (type) {
 		case RO_LIT_STR:
@@ -128,6 +128,9 @@ void PlnExpression::dump(ostream& os, string indent)
 		switch (value.type) {
 			case VL_LIT_INT8:
 				os << indent << "Int literal: " << value.inf.intValue << endl;
+				break;
+			case VL_LIT_UINT8:
+				os << indent << "Uint literal: " << value.inf.intValue << endl;
 				break;
 			case VL_VAR:
 				os << indent << "Variable: " << value.inf.var->name << endl;

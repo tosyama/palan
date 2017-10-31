@@ -15,6 +15,8 @@
 #include "PlnVariable.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
+#include "../PlnConstants.h"
 
 using namespace std;
 
@@ -30,6 +32,34 @@ PlnType* PlnModule::getType(const string& type_name)
 	auto t = std::find_if(types.begin(), types.end(),
 		[type_name](PlnType* t) { return t->name == type_name; });
 	return (t != types.end()) ? *t : NULL; 
+}
+
+PlnType* PlnModule::getFixedArrayType(int item_size, vector<int>& sizes)
+{
+	for (auto t: fixedarray_types) {
+		auto as = t->inf.fixedarray.sizes;
+		if (item_size == t->inf.fixedarray.item_size && sizes.size() == as->size()) {
+			bool found = true;
+			for (int i=0; i<sizes.size(); ++i) {
+				if (sizes[i] != (*as)[i]) {
+					found = false;
+					break;
+				}
+			}
+			if (found) return t;
+		}
+	}
+
+	auto t = new PlnType();
+	t->name = "[]";
+	t->data_type = DT_OBJECT_REF;
+	t->size = 8;
+	t->inf.fixedarray.sizes = new vector<int>(move(sizes));
+	t->inf.fixedarray.item_size = item_size;
+
+	fixedarray_types.push_back(t);
+
+	return t;
 }
 
 PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
@@ -85,11 +115,14 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 
 void PlnModule::finish(PlnDataAllocator& da)
 {
+	PlnScopeInfo si;
 	for (auto f: functions) {
-		f->finish(da);
+		f->finish(da, si);
 		da.reset();
 	}
-	toplevel->finish(da);
+	BOOST_ASSERT(si.scope.size() == 0);
+	BOOST_ASSERT(si.owner_vars.size() == 0);
+	toplevel->finish(da, si);
 	da.finish();
 	stack_size = da.stack_size;
 }

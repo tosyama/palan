@@ -5,14 +5,22 @@ print(x.str ":" y.str);
 x,y = swap(x,y);
 print(x.str ":" y.str);
 
-object o1, o3;
+object o1, o3, o4;
 
-&o1 = funco(o1,o2.clone, &o3, o2); // 所有を渡したので、o3は無効.
-o2 = &o1; // 所有権を取られたので、o1は無効. o2=o1はコンパイルエラー
+o1<< = funco(o1,o2.clone, <<o3, *o2, io o4); // 所有を渡したので、o3は無効.
+					// 内部処理的にはo1の無効処理(null代入)は行わない。
+					// <<, *, ioは飾り。宣言をを意識させる+関数宣言後置の場合の推測に使用
+					// 式を書く場合は、&(ab+b), *(x+3)
+					// 式により発生したテンポラリオブジェクトは
+					// *の場合のみ関数実行後delete.
+					// *の引数はreturnできない(clone必要->無印を使うこと)。
+
+o2 = o1; // deep copy.
+o2 <<= o1; // 所有権を取られたので、o1は無効(null代入). 以降o2=o1はコンパイルエラー
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
 
-auto *o4 = o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
+auto *o4 = *o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
 
 x = func2(x, y);
 
@@ -36,14 +44,17 @@ int x, y swap(int sx, sy) {
 
 // object
 func
-object o2 funco(object *o1, &o2, &o3, o4)
+object o2 funco(object o1, o2<<, o3<<, *o4, io o5)
 {
-	// o1 は lval read only.
-	// o2はlval. deleteされない. read/write rvalはNG.
+	// o1 は rval input only.(clone would be created before func call and callee free it)
+	// o2はrvalだか 戻り値なので通常deleteされない. 
 	// o3はrval. deleteされる. read/write lval.clone or &lval ならok.
-	// o4はrval. deleteされる。暗黙でコピーが渡される。
-	// プリミティブ(int64等)には &は使えない。
-	
+	// o4はlval. deleteされない。 readonly。　clone直など名無しオブジェクトは渡せない
+	// (名無しオブジェクトのスコープ次第。Statement終わりまでなら渡せるはず)
+	// o5はlval. deleteされない。writable(非推奨)
+	// *渡しの時は別スレッドなどで途中で破棄されないよう、caller側でコンパイラが警告する。
+	// プリミティブ(int64等)には &*は使えない。
+
 	return ;	// returnはo2がrval
 }
 

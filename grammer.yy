@@ -21,6 +21,7 @@ int yylex();
 %token KW_CCALL
 %token KW_SYSCALL
 %token KW_RETURN
+%token DBL_LESS
 
 %right '='
 %left ',' 
@@ -45,8 +46,8 @@ return_def: /* empty */
 	| return_values
 	;
 
-return_types: TYPENAME
-	| return_types TYPENAME
+return_types: type_def
+	| return_types type_def
 	;
 
 return_values: return_value
@@ -54,7 +55,7 @@ return_values: return_value
 	| return_values ',' ID
 	;
 
-return_value: TYPENAME ID
+return_value: type_def ID
 	;
 
 parameter_def: /* empty */
@@ -63,18 +64,21 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' ID
+	| parameters ',' move_owner_suffix ID default_value
 	;
 
-parameter: TYPENAME ID
-	| TYPENAME ID '=' default_value
-	| ID '=' default_value
+parameter: type_def move_owner_suffix ID default_value
 	;
 
-default_value: ID
-	| INT
-	| UINT
-	| STR
+move_owner_suffix: /* empty */
+	| DBL_LESS
+	;
+
+default_value: /* empty */
+	| '=' ID
+	| '=' INT
+	| '=' UINT
+	| '=' STR
 	;
 
 ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
@@ -84,7 +88,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' '
 	;
 
 single_return: /* empty */
-	| TYPENAME
+	| type_def
 	;
 
 toplv_statement: basic_statement
@@ -142,13 +146,15 @@ arguments: argument
 	| arguments ',' argument
 	;
 
-argument: /* empty */ // ToDo: replace default
-	| expression
+argument: /* empty */
+	| move_owner_suffix expression
 	;
 
-lvals:  ID
-	| lvals ',' ID
+lvals: lval
+	| lvals ',' lval
 	;
+
+lval: ID move_owner_suffix;
 
 term: INT
 	| UINT
@@ -165,7 +171,7 @@ declarations: declaration
 	| declarations ',' declaration 
 	;
 
-declaration: TYPENAME ID
+declaration: type_def ID
 	;
 
 subdeclaration: ID
@@ -173,6 +179,22 @@ subdeclaration: ID
 
 return_stmt: KW_RETURN
 	| KW_RETURN expressions
+	;
+
+type_def: TYPENAME
+	| type_def array_def
+	| type_def '@'
+	;
+	
+array_def: '[' array_sizes ']'
+	;
+
+array_sizes: array_size
+	| array_sizes ',' array_size
+	;
+
+array_size: /* empty */
+	| INT | ID
 	;
 
 %%

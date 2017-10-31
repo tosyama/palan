@@ -2,12 +2,14 @@ PROGRAM=pac
 SRCS=palan.cpp \
 	models/PlnModule.cpp models/PlnFunction.cpp models/PlnBlock.cpp \
 	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnVariable.cpp \
-	models/PlnType.cpp \
+	models/PlnType.cpp models/PlnArray.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \
 	models/expressions/PlnDivOperation.cpp \
 	models/expressions/PlnAssignment.cpp \
+	models/expressions/PlnMoveOwnership.cpp \
+	models/expressions/PlnClone.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp\
@@ -15,7 +17,10 @@ SRCS=palan.cpp \
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators
-TEST = test/tester
+TEST=test/tester
+# workarround of mtrace hang with double free.
+MALLOC_CHECK_=1	
+#export MALLOC_CHECK_
 
 .SUFFIXES: .cpp .o
 

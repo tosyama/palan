@@ -16,7 +16,8 @@ enum PlnErrCode {
 	E_NumOfLRVariables,
 	E_NumOfRetValues,
 	E_NeedRetValues,
-	E_CouldnotOpenFile
+	E_CouldnotOpenFile,
+	E_CantUseMoveOwnership
 };
 
 enum PlnWarnCode {

@@ -21,6 +21,7 @@
 #include <iostream>
 #include "PlnModel.h"
 #include "PlnScopeStack.h"
+#include "models/PlnExpression.h"	// for sizeof(PlnValue)
 
 using std::string;
 using std::cerr;
@@ -39,6 +40,7 @@ class PlnLexer;
 #include "models/PlnStatement.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
+#include "models/PlnArray.h"
 #include "models/expressions/PlnFunctionCall.h"
 #include "models/expressions/PlnAddOperation.h"
 #include "models/expressions/PlnMulOperation.h"
@@ -79,6 +81,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token KW_CCALL	"'ccall'"
 %token KW_SYSCALL	"'syscall'"
 %token KW_RETURN	"'return'"
+%token DBL_LESS		"'<<'"
 
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
@@ -92,6 +95,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnVariable*>>	return_values
 %type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
+%type <bool>	move_owner_suffix
 %type <PlnValue*>	default_value
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
@@ -105,10 +109,13 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
 %type <vector<PlnValue>>	lvals
-%type <vector<PlnVariable*>>	declarations
-%type <PlnVariable*>	declaration
-%type <PlnVariable*>	subdeclaration
+%type <PlnValue>	lval
+%type <vector<PlnValue>>	declarations
+%type <PlnValue>	declaration
+%type <PlnValue>	subdeclaration
 %type <PlnReturnStmt*>	return_stmt
+%type <vector<PlnType*>>	type_def
+%type <vector<int>>	array_def
 
 %right '='
 %left ',' 
@@ -175,21 +182,19 @@ return_def: /* empty */ { }
 	}
 	;
 
-return_types: TYPENAME
+return_types: type_def
 	{
-		auto t = module.getType($1);
 		auto v = new PlnVariable();
 		v->name = "";
-		v->var_type = t;
+		v->var_type = move($1);
 		$$.push_back(v);
 	}
-	| return_types TYPENAME
+	| return_types type_def
 	{
 		$$ = move($1);
-		auto t = module.getType($2);
 		auto v = new PlnVariable();
 		v->name = "";
-		v->var_type = t;
+		v->var_type = move($2);
 		$$.push_back(v);
 	}
 	;
@@ -220,17 +225,15 @@ return_values: return_value
 			}
 		auto rv = new PlnVariable();
 		rv->name = $3;
-		rv->var_type = NULL;
 		$$.push_back(rv);
 	}
 	;
 
-return_value: TYPENAME ID
+return_value: type_def ID
 	{
-		PlnType* t = module.getType($1);
 		$$ = new PlnVariable();
 		$$->name = $2;
-		$$->var_type = t;
+		$$->var_type = move($1);
 	}
 	;
 
@@ -240,35 +243,24 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' ID
+	| parameters ',' move_owner_suffix ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		auto prm = f->addParam($3, NULL);
+		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
+		auto prm = f->addParam($4, NULL, pm);
 		if (!prm) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $4));
 			YYABORT;
 		}
 	}
 	;
 
-parameter: TYPENAME ID
+parameter: type_def ID move_owner_suffix default_value
 	{
-		PlnType* t = module.getType($1);
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, t);
-		if (!$$) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
-			YYABORT;
-		}
-	}
-
-	| TYPENAME ID '=' default_value
-	{
-		PlnType* t = module.getType($1);
-		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
-		PlnFunction* f = scopes.back().inf.function;
-		$$ = f->addParam($2, t, $4);
+		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
+		$$ = f->addParam($2, &$1, pm, $4);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -276,24 +268,29 @@ parameter: TYPENAME ID
 	}
 	;
 
-default_value: ID
+move_owner_suffix: /* empty */	{ $$ = false; }
+	| DBL_LESS { $$ = true; }
+	;
+
+default_value:	/* empty */	{ $$ = NULL; }
+	| '=' ID
 	{	
 		$$ = NULL; // TODO: get const value.
 	}
 
-	| INT
+	| '=' INT
 	{
-		$$ = new PlnValue($1);
+		$$ = new PlnValue($2);
 	}
 
-	| UINT
+	| '=' UINT
 	{
-		$$ = new PlnValue($1);
+		$$ = new PlnValue($2);
 	}
 
-	| STR
+	| '=' STR
 	{
-		$$ = new PlnValue(module.getReadOnlyData($1));
+		$$ = new PlnValue(module.getReadOnlyData($2));
 	}
 	;
 
@@ -526,33 +523,43 @@ argument: /* empty */
 		$$ = NULL;
 	}
 
-	| expression
+	| move_owner_suffix expression
 	{
-		$$ = $1;
+		$$ = $2;
 	}
 	;
 
-lvals:  ID
+lvals:  lval
+	{
+		$$.push_back($1);
+	}
+
+	| lvals ',' lval
+	{
+		$$ = move($1);
+		$$.push_back($3);
+	}
+	;
+
+lval:	ID move_owner_suffix
 	{
 		PlnVariable* v=CUR_BLOCK->getVariable($1);
-		if (v) $$.push_back(v);
-		else {
+		if (v) {
+			$$ = PlnValue(v);
+			if ($2) {
+				if (v->var_type.back()->data_type != DT_OBJECT_REF) {
+					error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
+					YYABORT;
+				}
+				$$.lval_type = LVL_MOVE;
+			} else {
+				$$.lval_type = LVL_COPY;
+			}
+		} else {
 			error(@$, PlnMessage::getErr(E_UndefinedVariable,$1));
 			YYABORT;
 		}
 	}
-
-	| lvals ',' ID
-	{
-		$$ = move($1);
-		PlnVariable* v=CUR_BLOCK->getVariable($3);
-		if (v) $$.push_back(v);
-		else {
-			error(@$, PlnMessage::getErr(E_UndefinedVariable,$3));
-			YYABORT;
-		}
-	}
-	;
 
 term: INT
 	{
@@ -619,23 +626,43 @@ declarations: declaration
 	}
 	;
 
-declaration: TYPENAME ID
+declaration: type_def ID move_owner_suffix
 	{
-		PlnType* t = module.getType($1);
-		$$ = CUR_BLOCK->declareVariable($2, t);
-		if (!$$) {
+		auto var = CUR_BLOCK->declareVariable($2, $1);
+		if (!var) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
+		}
+		$$ = PlnValue(var);
+		if ($3) {
+			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $2));
+				YYABORT;
+			}
+			$$.lval_type = LVL_MOVE;
+		} else {
+			$$.lval_type = LVL_COPY;
 		}
 	}
 	;
 
-subdeclaration: ID
+subdeclaration: ID move_owner_suffix
 	{
-		$$ = CUR_BLOCK->declareVariable($1);
-		if (!$$) {
+		vector<PlnType *> null_type;
+		auto var = CUR_BLOCK->declareVariable($1, null_type);
+		if (!var) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
+		}
+		$$ = PlnValue(var);
+		if ($2) {
+			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
+				YYABORT;
+			}
+			$$.lval_type = LVL_MOVE;
+		} else {
+			$$.lval_type = LVL_COPY;
 		}
 	}
 	;
@@ -664,6 +691,21 @@ return_stmt: KW_RETURN
 			error(@$, PlnMessage::getErr(E_NumOfRetValues));
 			YYABORT;
 		}
+	}
+	;
+
+type_def: TYPENAME	{ $$.push_back(module.getType($1)); }
+	| type_def array_def
+	{
+		$$ = move($1);
+		auto t = module.getFixedArrayType($$.back()->size, $2);
+		$$.push_back(t);
+	}
+	;
+
+array_def: '[' INT ']'
+	{
+		$$.push_back($2);
 	}
 	;
 

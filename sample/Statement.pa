@@ -8,20 +8,22 @@ while (i<10) {
 }
 
 // break / continue
-for:out (int i=0; i<10; ++i)
+for (int i=0; i<10; ++i) :out
 	for (int j=0; j<10; ++j) {
-		if (i==8 && j==5) break :out;
+		if (i==8 && j==5) break out;
 		print(i.str "," j.str "\n");
 	}
 
 int i;
-while:out (i<10) {
+while (i<10) :out
+{
 	++i;
- 	for (int j=0; j<10; ++j)
-		if (i==8 && j==5) continue :out ;
- }
+	for (int j=0; j<10; ++j)
+		if (i==8 && j==5) continue out ;
+}
 
-for(int i:1>>5) print(i.str);
+for(int i:1..5) print(i.str);
+for(int i:1<<5) print(i.str);
 
 int arr[10] = (1..10);
 for(int i: arr) print(i.str);

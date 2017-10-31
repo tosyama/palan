@@ -1,7 +1,8 @@
-/// PlnStatement model class definition.
+// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
+
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
 #include "PlnFunction.h"
@@ -12,6 +13,7 @@
 #include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 
 using std::endl;
 
@@ -35,17 +37,17 @@ PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	inf.block = block;
 }
 
-void PlnStatement::finish(PlnDataAllocator& da)
+void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	switch (type) {
 		case ST_EXPRSN:
 			inf.expression->finish(da);
 			break;
 		case ST_BLOCK:
-			inf.block->finish(da);
+			inf.block->finish(da, si);
 			break;
 		case ST_VARINIT:
-			inf.var_init->finish(da);
+			inf.var_init->finish(da, si);
 			break;
 	}
 }
@@ -60,7 +62,7 @@ void PlnStatement::dump(ostream& os, string indent)
 		case ST_VARINIT:
 			os << indent << "Initialize: ";
 			for (auto v: inf.var_init->vars)
-				os << v->name << " ";
+				os << v.inf.var->name << " ";
 			os << endl;
 			for (auto i: inf.var_init->initializer)
 				i->dump(os, indent+" ");
@@ -111,19 +113,22 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 	}
 }
 
-void PlnReturnStmt::finish(PlnDataAllocator& da)
+void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	int i=0, j=0;
 
 	BOOST_ASSERT(function->type == FT_PLN);
 	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), FT_PLN, true);
-	for (auto rt: function->return_vals)
-		dps[i]->data_type = rt->var_type->data_type;
+	vector<PlnVariable*> ret_vars;
+
+	int i=0, j=0;
+	for (auto rt: function->return_vals) {
+		dps[i]->data_type = rt->var_type.back()->data_type;
+		i++;
+	}
 	
+	i = 0;
 	for (auto e: expressions) {
 		for (auto &v: e->values) {
-			if (dps[i]->data_type == DT_UNKNOWN)
-				dps[i]->data_type = v.getType()->data_type;
 			e->data_places.push_back(dps[i]);
 			if (da.isAccumulator(dps[i])) {
 				late_pop_dp = dps[i];
@@ -134,7 +139,35 @@ void PlnReturnStmt::finish(PlnDataAllocator& da)
 		for(;j<i;++j) {
 			da.allocDp(dps[j]);
 		}
+
+		// ret_vars is just used checking requirement of free varialbes.
+		if (e->type == ET_VALUE
+				&& e->values[0].type == VL_VAR
+				&& (e->values[0].inf.var->ptr_type & PTR_OWNERSHIP))
+		{
+			ret_vars.push_back(e->values[0].inf.var);
+		}
 	}
+
+	// create free varialbe list.(variables in scope except returning)
+	if (si.owner_vars.size() > 0) {
+		bool do_free = false;
+		for (auto &i: si.owner_vars) {
+			bool do_ret = false;
+			for (auto rv: ret_vars)
+				if (rv == i.var) {
+					do_ret = true;
+					break;
+				}
+			if (!do_ret) {
+				to_free_vars.push_back(i.var);
+				do_free = true;
+			}
+		}
+		if (do_free)
+			da.memFreed();
+	}
+
 	da.returnedValues(dps, FT_PLN);
 }
 
@@ -151,6 +184,11 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 		e->gen(g);
 
 	PlnDataPlace* adp = NULL;
+
+	for (auto v: to_free_vars) {
+		auto ve = g.getPopEntity(v->place);
+		g.genMemFree(ve.get(), v->name, false);	
+	}
 
 	for (auto e: expressions)
 		for (auto dp: e->data_places)

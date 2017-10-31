@@ -9,6 +9,11 @@ enum PlnFncPrntType {
 	FP_MODULE
 };
 
+enum PlnPassingMethod {
+	FPM_COPY,
+	FPM_MOVEOWNER
+};
+
 class PlnFunction
 {
 public:
@@ -16,6 +21,7 @@ public:
 	int type;
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
+	PlnVarInit *retval_init;
 	union {
 		struct {
 			int id;
@@ -33,9 +39,9 @@ public:
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
 	void setRetValues(vector<PlnVariable*>& vars);
-	PlnParameter* addParam(string& pname, PlnType* ptype, PlnValue* defaultVal = NULL);
+	PlnParameter* addParam(string& pname, vector<PlnType*>* ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 
-	void finish(PlnDataAllocator& da);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 
 	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);

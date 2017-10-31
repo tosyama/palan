@@ -23,6 +23,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Return argument(s) can't be omitted at this function."; break;
 		case E_CouldnotOpenFile:
 			f = "Could not open file '%1%'."; break;
+		case E_CantUseMoveOwnership:
+			f = "Can not use '<<' for substantial variable '%1%'."; break;
 		default:
 			f = "Unknown error.";
 	}

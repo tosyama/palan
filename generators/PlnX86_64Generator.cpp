@@ -333,7 +333,7 @@ void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
 void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type == GA_REG && tgt->data.i == RAX);
-	PlnGenEntity work;
+
 	const char* div_str = oprnd(second);
 	if (second->alloc_type == GA_CODE) { 
 		div_str = r(R11, 8);
@@ -351,6 +351,63 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 		os << "	cqto"	<< endl;
 		os << "	idivq " << div_str << "	# " << comment << endl;
 	}
+}
+
+void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
+{
+	if (refs.size() == 1)
+		os << "	movq $0, " << oprnd(refs[0].get()) << endl;
+	else if (refs.size() >= 2) {
+		os << "	xorq %rax, %rax" << endl;
+		for (auto& r: refs)
+			os << "	movq %rax, " << oprnd(r.get()) << endl;
+	}
+}
+
+void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)
+{
+	os << "	movq $" << al_size << ", %rdi"	<< endl;
+	os << "	call malloc" << endl;
+	os << "	movq %rax, " << oprnd(ref);
+	
+	if (comment != "") os << "	# alloc " << comment;
+	os << endl;
+}
+
+void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
+{
+	int cpy_count;
+	const char* safix = "";
+	if (cp_size % 8 == 0) {
+		cpy_count = cp_size/8;
+		safix = "q";
+	} else if (cp_size % 4 == 0) {
+		cpy_count = cp_size/4;
+		safix = "l";
+	} else if (cp_size % 2 == 0) {
+		cpy_count = cp_size/2;
+		safix = "w";
+	} else {
+		cpy_count = cp_size;
+		safix = "b";
+	}
+
+	os << "	cld" << endl;
+	os << "	movq $" << cpy_count << ", %rcx"	<< endl;
+	os << "	rep movs" << safix << "	# " << comment << endl;
+}
+
+void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doNull)
+{
+	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
+	os << "	call free";
+
+	if (doNull) {
+		os << endl << "	movq $0, " << oprnd(ref);
+	}
+
+	if (comment != "") os << "	# free " << comment;
+	os << endl;
 }
 
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)

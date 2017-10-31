@@ -14,6 +14,8 @@ enum {
 
 class PlnX86_64DataAllocator: public PlnDataAllocator
 {
+	void destroyRegsByFuncCall();
+
 protected:
 	PlnDataPlace* createArgDp(int func_type, int index, bool is_callee);
 
@@ -22,6 +24,11 @@ public:
 
 	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type);
 	void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type);
+
+	void memAlloced();
+	void memFreed();
+	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src);
+	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src);
 
 	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
 	void releaseAccumulator(PlnDataPlace* dp);

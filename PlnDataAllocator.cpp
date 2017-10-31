@@ -252,7 +252,7 @@ void PlnDataAllocator::finish()
 
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
-	: status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
+	: type(DP_UNKNOWN), status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
 	 previous(NULL), save_place(NULL), size(size), data_type(data_type)
 {
 	static string emp="";

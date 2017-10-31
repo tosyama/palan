@@ -1,42 +1,45 @@
-ccall FILE* fopen() : null ->;	// for c language.
+ccall FILE* fopen()
+	! return==null;	// for c language.
 
 func int MaybeError(int a)
-	: -> int error, string msg
+	! int error, string msg
 {
 	// return -1 ; // ng
 
 	if (ok)
 		return 0;
 	else
-		return -> 100, msg;
-	
+		!return 100, msg;
+
 }
 
-int success = MaybeError(10) -> err;
+int success = MaybeError(10) !> err;
 
-->err(int error, string msg)
+!>err(int error, string msg)
 {
 //NG int a=success;
 // need to recover main returns if you will access.
 success = -1;
 }
 
-FILE* f=fopen("r", "string") -> operr;
-write(f, "data") ->ioerr;
-->ioerr();
+FILE* f=fopen("r", "string") !> operr;
+write(f, "data")!!;	//ignore errors;
 
 close(f);
-->operr() {
+
+!> operr() {
 	printf(stderr, "file open error!\n");
 	exit(1);
 }
 
-do_somthing() -> err1;
-do_somthing() -> err2;
+do_somthing() !> err1;
+do_somthing() !> err2;
 
-->	// allow the nest. nomal flow can't into this block.
-{
-	->err1() do_recover1();
-	->err2() do_recover2();
-	printf(stderr, "error!\n");	// can share the error logic.
+!{	// errorblock. nomal flow can't into this block.
+	byte[] *message;	// can use only premitve or reference (ownership val is invaild at err1/err2)
+	!>err1() { message = "error1" };
+	!>err2() { message = "error2" };
+	printf(stderr, "%s!\n", message);	// can share the error logic.
 }
+
+// unit test?

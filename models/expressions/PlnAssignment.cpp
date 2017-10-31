@@ -7,10 +7,13 @@
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
 #include <iostream>
+#include <boost/assert.hpp>
 #include "PlnAssignment.h"
 #include "../PlnVariable.h"
+#include "../PlnType.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnConstants.h"
 
 // PlnAssignment
 PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps)
@@ -19,17 +22,122 @@ PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& ex
 	values = move(lvals);
 }
 
+enum {	// AssignInf.type
+	AI_MCOPY,
+	AI_MOVE
+};
+
 void PlnAssignment::finish(PlnDataAllocator& da)
 {
-	int i=0;
+	int i=0, ei=0, ai=0;
 	for (auto e: expressions) {
 		for (auto v: e->values) {
 			if (i >= values.size()) break;
-			auto dp = values[i].inf.var->place;
-			e->data_places.push_back(dp);
+			BOOST_ASSERT(values[i].type == VL_VAR);
+
+			if (values[i].inf.var->ptr_type == NO_PTR) {
+				auto dp = values[i].inf.var->place;
+				e->data_places.push_back(dp);
+
+			} else {	// (ptr_type & PTR_REFERNCE)
+				BOOST_ASSERT(values[i].getType()->data_type == DT_OBJECT_REF);
+				BOOST_ASSERT(v.getType()->data_type == DT_OBJECT_REF);
+
+				union PlnAssignInf as_inf;
+				as_inf.inf.exp_ind = ei;
+				as_inf.inf.val_ind = i;
+
+				if (values[i].lval_type == LVL_COPY)  {
+					// Deep copy. if src is work objects, should be free after copied. 
+					as_inf.type = AI_MCOPY;
+					da.prepareMemCopyDps(as_inf.mcopy.dst, as_inf.mcopy.src);
+					e->data_places.push_back(as_inf.mcopy.src);
+
+					if (v.type == VL_WORK)
+						as_inf.mcopy.free_dp = new PlnDataPlace(8, DT_OBJECT_REF);
+					else
+						as_inf.mcopy.free_dp = NULL;
+
+					PlnType *t = values[i].getType();
+
+					if (t->name == "[]") {
+						int item_size = t->inf.fixedarray.item_size;
+						int asize = 0;
+						for (int i: *t->inf.fixedarray.sizes)
+							asize += i;
+						asize *= item_size;
+						as_inf.mcopy.cp_size = asize;
+
+					} else BOOST_ASSERT(false);
+
+				} else if (values[i].lval_type == LVL_MOVE)  {
+					// Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
+					as_inf.type = AI_MOVE;
+					as_inf.move.dst = values[i].inf.var->place;
+
+					if (v.type == VL_WORK) {
+						// work var
+						static string cmt = "save";
+						as_inf.move.src = new PlnDataPlace(8, DT_OBJECT_REF);
+						as_inf.move.src->comment = &cmt;
+						as_inf.move.do_clear = false; 
+
+					} else {
+						// normal var
+						BOOST_ASSERT(v.type == VL_VAR);
+						as_inf.move.src = v.inf.var->place;
+						as_inf.move.do_clear = true;
+					}
+
+					e->data_places.push_back(as_inf.move.src);
+
+				} else BOOST_ASSERT(false);
+
+				assign_inf.push_back(as_inf);
+			}
 			i++;
 		}
+
 		e->finish(da);
+
+		// for save returned reference.
+		for (int aii = ai; aii<assign_inf.size(); aii++) {
+			auto &as_inf = assign_inf[aii];
+			switch (as_inf.type) {
+				case AI_MCOPY: 
+					da.allocDp(as_inf.mcopy.src);	// would be released by memCopyed.
+					break;
+
+				case AI_MOVE:
+					if (!as_inf.move.do_clear) 
+						da.allocData(as_inf.move.src);
+					break;
+			}
+		}
+
+		// assign process
+		for (; ai<assign_inf.size(); ai++) {
+			auto& as_inf = assign_inf[ai];
+			switch(as_inf.type) {
+				case AI_MCOPY:
+					da.allocDp(as_inf.mcopy.dst);	// would be released by memCopyed.
+					if (as_inf.mcopy.free_dp) {
+						da.allocData(as_inf.mcopy.free_dp);
+						da.memCopyed(as_inf.mcopy.dst, as_inf.mcopy.src);
+						da.memFreed();
+						da.releaseData(as_inf.mcopy.free_dp);
+					} else 
+						da.memCopyed(as_inf.mcopy.dst, as_inf.mcopy.src);
+					break;
+				
+				case AI_MOVE:
+					da.memFreed();
+					if (!as_inf.move.do_clear)
+						da.releaseData(as_inf.move.src);
+					break;
+			}
+		}
+		ei++;
 	}
 }
 
@@ -43,9 +151,66 @@ void PlnAssignment::dump(ostream& os, string indent)
 		e->dump(os, indent+" ");	
 }
 
+static void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp);
+
 void PlnAssignment::gen(PlnGenerator& g)
 {
-	for (auto e: expressions)
-		e->gen(g);
+	int ai=0;
+	for (int i=0; i<expressions.size(); ++i) {
+		expressions[i]->gen(g);
+		vector<unique_ptr<PlnGenEntity>> clr_es;
+		while(ai < assign_inf.size() && assign_inf[ai].mcopy.exp_ind <= i) {
+			BOOST_ASSERT(i == ai);
+
+			if (assign_inf[ai].type == AI_MCOPY)
+				genMemoryCopy4Assign(g, assign_inf[ai], values[i].inf.var->place);
+
+			else if (assign_inf[ai].type == AI_MOVE) {
+				auto as_inf = assign_inf[ai].move;
+				auto dste = g.getPopEntity(as_inf.dst);
+				static string cmt = "lost ownership";
+				g.genMemFree(dste.get(), cmt, false);
+				auto srce = g.getPopEntity(as_inf.src);
+				g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+				if (as_inf.do_clear)
+					clr_es.push_back(g.getPopEntity(as_inf.src));
+
+			} else BOOST_ASSERT(false);
+
+			if (clr_es.size())
+				g.genNullClear(clr_es);
+
+			ai++;
+		}
+	}
 	PlnExpression::gen(g);
 }
+
+void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp)
+{
+	auto as_inf = as.mcopy;
+	auto cpy_dste = g.getPopEntity(as_inf.dst);
+	auto cpy_srce = g.getPopEntity(as_inf.src);
+
+	// save src(work object) for free
+	if (as_inf.free_dp) {
+		auto fe = g.getPopEntity(as_inf.free_dp);
+		g.genMove(fe.get(), cpy_srce.get(), *as_inf.src->comment + " -> save for free");
+	}
+
+	// get dest
+	auto ve = g.getPopEntity(var_dp);
+	g.genMove(cpy_dste.get(), ve.get(), *var_dp->comment + " -> " + *as_inf.dst->comment);
+
+	// copy
+	static string cmt = "deep copy";
+	g.genMemCopy(as_inf.cp_size, cmt);
+
+	// free work object
+	if (as_inf.free_dp) {
+		static string cmt = "work";
+		auto fe = g.getPopEntity(as_inf.free_dp);
+		g.genMemFree(fe.get(), cmt, false);
+	}
+}
+

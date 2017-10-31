@@ -1,0 +1,45 @@
+ccall int32 printf();
+ccall exit();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
+
+func int16[3] pb arr_func(int32 x, int32[10] pa)
+{
+	int32[5] a1;
+	{
+		int16[5] a2;
+		int16[3] a3;
+		return a3;
+	}
+	byte[10] a4;
+	return;
+}
+
+func int16[3] pb arr_func2(int32 x, int32[10] pa <<)
+{
+	int32[5] a1;
+}
+
+setenv("MALLOC_TRACE", "out/mtrace006", 1);
+mtrace();
+{
+// alloc only
+int32[10] a;
+int16[3] b, c;
+
+// d: copy of a, e: use return as is.
+int32[10] d = a;
+int16[3] e = arr_func(1, a);
+int16[3] f <<= e;
+
+b = arr_func(3, a);
+b <<= arr_func2(4, <<a);
+c = b;
+c <<= b;
+
+}
+muntrace();
+
+exit(0);
+
