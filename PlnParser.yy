@@ -119,6 +119,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 
 %right '='
 %left ',' 
+%left DBL_LESS
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -243,13 +244,13 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' move_owner_suffix ID
+	| parameters ',' ID move_owner_suffix
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
-		auto prm = f->addParam($4, NULL, pm);
+		PlnPassingMethod pm = $4 ? FPM_MOVEOWNER : FPM_COPY;
+		auto prm = f->addParam($3, NULL, pm);
 		if (!prm) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $4));
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
 			YYABORT;
 		}
 	}

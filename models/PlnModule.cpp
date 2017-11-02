@@ -50,10 +50,16 @@ PlnType* PlnModule::getFixedArrayType(int item_size, vector<int>& sizes)
 		}
 	}
 
+	int alloc_size = item_size;
+	for (int s: sizes)
+		alloc_size *= s;
+
 	auto t = new PlnType();
 	t->name = "[]";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
+	t->inf.obj.is_fixed_size = true;
+	t->inf.obj.alloc_size = alloc_size;
 	t->inf.fixedarray.sizes = new vector<int>(move(sizes));
 	t->inf.fixedarray.item_size = item_size;
 

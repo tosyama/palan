@@ -25,6 +25,7 @@ int yylex();
 
 %right '='
 %left ',' 
+%left DBL_LESS
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -64,10 +65,10 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' move_owner_suffix ID default_value
+	| parameters ',' ID move_owner_suffix default_value
 	;
 
-parameter: type_def move_owner_suffix ID default_value
+parameter: type_def ID move_owner_suffix default_value
 	;
 
 move_owner_suffix: /* empty */
@@ -154,7 +155,12 @@ lvals: lval
 	| lvals ',' lval
 	;
 
-lval: ID move_owner_suffix;
+lval: unary_expression move_owner_suffix
+	;
+
+unary_expression: ID
+	| unary_expression array_def
+	;
 
 term: INT
 	| UINT

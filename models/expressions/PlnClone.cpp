@@ -23,14 +23,9 @@ PlnClone::PlnClone(PlnExpression* src)
 	}
 
 	auto t = values[0].getType();
-	if (t->name == "[]") {
-		int item_size = t->inf.fixedarray.item_size;
-		int asize = 0;
-		for (int i: *t->inf.fixedarray.sizes)
-			asize += i;
-		asize *= item_size;
-		copy_size = asize;
-	} else
+	if (t->inf.obj.is_fixed_size)
+		copy_size = t->inf.obj.alloc_size;
+	else
 		BOOST_ASSERT(false);
 }
 

@@ -20,6 +20,7 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
+#include "../PlnConstants.h"
 
 using std::endl;
 using boost::format;
@@ -52,9 +53,8 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_t
 
 	if (var_type.size()>0){
 		v->var_type = move(var_type);
-		if (v->var_type.back()->name == "[]") {
+		if (v->var_type.back()->data_type == DT_OBJECT_REF)
 			v->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-		}
 		else v->ptr_type = NO_PTR;
 	} else {
 		v->var_type = variables.back()->var_type;

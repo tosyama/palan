@@ -92,15 +92,10 @@ void PlnVarInit::gen(PlnGenerator& g)
 		PlnVariable *v = val.inf.var;
 		if (v->ptr_type & PTR_OWNERSHIP)
 			if (!do_init) {
-				if (v->var_type.back()->name == "[]") {
-					auto t = v->var_type.back();
+				PlnType* t = v->var_type.back();
+				if (t->inf.obj.is_fixed_size) {
 					auto e = g.getPopEntity(v->place);
-					int item_size = t->inf.fixedarray.item_size;
-					int asize = 0;
-					for (int i: *t->inf.fixedarray.sizes)
-						asize += i;
-					asize *= item_size;
-					g.genMemAlloc(e.get(), asize, v->name);
+					g.genMemAlloc(e.get(), t->inf.obj.alloc_size, v->name);
 				} else {
 					BOOST_ASSERT(false);	// TODO: need to implement.
 				}

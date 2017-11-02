@@ -59,16 +59,9 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 						as_inf.mcopy.free_dp = NULL;
 
 					PlnType *t = values[i].getType();
-
-					if (t->name == "[]") {
-						int item_size = t->inf.fixedarray.item_size;
-						int asize = 0;
-						for (int i: *t->inf.fixedarray.sizes)
-							asize += i;
-						asize *= item_size;
-						as_inf.mcopy.cp_size = asize;
-
-					} else BOOST_ASSERT(false);
+					if (t->inf.obj.is_fixed_size) 
+						as_inf.mcopy.cp_size = t->inf.obj.alloc_size;
+					else BOOST_ASSERT(false);
 
 				} else if (values[i].lval_type == LVL_MOVE)  {
 					// Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
