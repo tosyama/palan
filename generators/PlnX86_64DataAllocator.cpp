@@ -257,3 +257,33 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 
 	step++;
 }
+
+PlnDataPlace* PlnX86_64DataAllocator::prepareObjBasePtr()
+{
+	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_REG;
+	dp->status = DS_ASSIGNED;
+
+	dp->data.reg.id = RBX;
+	dp->data.reg.offset = 0;
+
+	static string cmt = "base";
+	dp->comment = &cmt;
+
+	return dp;
+}
+
+PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
+{
+	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_REG;
+	dp->status = DS_ASSIGNED;
+
+	dp->data.reg.id = RDI;
+	dp->data.reg.offset = 0;
+
+	static string cmt = "index";
+	dp->comment = &cmt;
+
+	return dp;
+}

@@ -45,6 +45,7 @@ class PlnLexer;
 #include "models/expressions/PlnAddOperation.h"
 #include "models/expressions/PlnMulOperation.h"
 #include "models/expressions/PlnDivOperation.h"
+#include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnAssignment.h"
 #include "PlnMessage.h"
 #include "PlnConstants.h"
@@ -108,8 +109,9 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
-%type <vector<PlnValue>>	lvals
-%type <PlnValue>	lval
+%type <vector<PlnExpression*>>	lvals
+%type <PlnExpression*>	lval
+%type <PlnExpression*>	unary_expression;
 %type <vector<PlnValue>>	declarations
 %type <PlnValue>	declaration
 %type <PlnValue>	subdeclaration
@@ -542,25 +544,37 @@ lvals:  lval
 	}
 	;
 
-lval:	ID move_owner_suffix
+lval: unary_expression move_owner_suffix
 	{
-		PlnVariable* v=CUR_BLOCK->getVariable($1);
-		if (v) {
-			$$ = PlnValue(v);
-			if ($2) {
-				if (v->var_type.back()->data_type != DT_OBJECT_REF) {
-					error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
-					YYABORT;
-				}
-				$$.lval_type = LVL_MOVE;
-			} else {
-				$$.lval_type = LVL_COPY;
+		$$ = $1;
+		if ($2) {
+			auto var = $$->values[0].inf.var;
+			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, var->name));
+				YYABORT;
 			}
+			$$->values[0].lval_type = LVL_MOVE;
 		} else {
+			$$->values[0].lval_type = LVL_COPY;
+		}
+	}
+
+unary_expression: ID
+	{
+		PlnVariable* var = CUR_BLOCK->getVariable($1);
+		if (var) 
+			$$ = new PlnExpression(PlnValue(var));
+		else {
 			error(@$, PlnMessage::getErr(E_UndefinedVariable,$1));
 			YYABORT;
 		}
 	}
+
+	| unary_expression array_def
+	{
+		$$ = new PlnArrayItem($1, $2);
+	}
+	;
 
 term: INT
 	{

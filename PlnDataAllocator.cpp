@@ -121,7 +121,7 @@ void PlnDataAllocator::releaseData(PlnDataPlace* dp)
 		dp->save_place->release_step = step;
 	}
 
-	if (dp->size < 8) {
+	if (dp->size < 8 && dp->type == DP_STK_BP) {
 		auto parent_dp = data_stack[dp->data.stack.idx];
 		BOOST_ASSERT(parent_dp->type == DP_BYTES);
 		BOOST_ASSERT(parent_dp->status == DS_ASSIGNED_SOME);
@@ -191,6 +191,25 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 	}
 
 	return dps;
+}
+
+PlnDataPlace* PlnDataAllocator::getIndirectObjDp(int size, int data_type, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
+{
+	auto dp = new PlnDataPlace(size, data_type);
+	dp->type = DP_INDRCT_OBJ;
+	dp->status = DS_ASSIGNED;
+
+	dp->data.indirect.displacement = 0;
+	dp->data.indirect.base_id = base_dp->data.reg.id;
+	dp->data.indirect.index_id = index_dp->data.reg.id;
+
+	dp->alloc_step = step;
+	dp->release_step = step;
+	static string cmt = "indirect obj";
+	dp->comment = &cmt;
+	all.push_back(dp);
+
+	return dp;
 }
 
 PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)

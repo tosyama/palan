@@ -35,8 +35,11 @@ int16[3] f <<= e;
 
 b = arr_func(3, a);
 b <<= arr_func2(4, <<a);
+b[1] = 0;
+b[2] = 2;
 c = b;
 c <<= b;
+
 
 }
 muntrace();

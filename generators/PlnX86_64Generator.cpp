@@ -410,6 +410,16 @@ void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doN
 	os << endl;
 }
 
+static string* getAdressingStr(int displacement, int base_id, int index_id, int scale)
+{
+	string *str = new string(r(base_id));
+	string disp_s = displacement ? to_string(displacement) : "";
+	string ind_s = string(r(index_id)) + "," + to_string(scale);
+	*str = disp_s + "(" + *str + "," + ind_s + ")";
+
+	return str;
+}
+
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 {
 	BOOST_ASSERT(dp->data_type != DT_UNKNOWN);
@@ -434,6 +444,18 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->data.i = dp->data.reg.id;
+
+	} else if (dp->type == DP_INDRCT_OBJ) {
+		e->type = GE_STRING;
+		e->alloc_type = GA_MEM;
+		e->size = dp->size;
+		e->data_type = dp->data_type;
+		e->data.str = getAdressingStr(
+				dp->data.indirect.displacement,
+				dp->data.indirect.base_id,
+				dp->data.indirect.index_id,
+				dp->size
+			);
 
 	} else if (dp->type == DP_LIT_INT) {
 		e->type = GE_STRING;

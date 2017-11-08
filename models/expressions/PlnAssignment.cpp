@@ -16,10 +16,15 @@
 #include "../../PlnConstants.h"
 
 // PlnAssignment
-PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps)
-	: PlnExpression(ET_ASSIGN), expressions(move(exps))
+PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps)
+	: lvals(move(lvals)), PlnExpression(ET_ASSIGN), expressions(move(exps))
 {
-	values = move(lvals);
+	for (auto e: this->lvals) {
+		BOOST_ASSERT(e->values.size() == 1);
+		BOOST_ASSERT(e->type == ET_VALUE || e->type == ET_ARRAYITEM);
+		BOOST_ASSERT(e->values[0].type == VL_VAR);
+		values.push_back(e->values[0]);
+	}
 }
 
 enum {	// AssignInf.type
@@ -29,6 +34,9 @@ enum {	// AssignInf.type
 
 void PlnAssignment::finish(PlnDataAllocator& da)
 {
+	for (auto le: lvals)
+		le->finish(da);
+
 	int i=0, ei=0, ai=0;
 	for (auto e: expressions) {
 		for (auto v: e->values) {
@@ -148,6 +156,9 @@ static void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace
 
 void PlnAssignment::gen(PlnGenerator& g)
 {
+	for (auto e: lvals) 
+		e->gen(g);
+
 	int ai=0;
 	for (int i=0; i<expressions.size(); ++i) {
 		expressions[i]->gen(g);

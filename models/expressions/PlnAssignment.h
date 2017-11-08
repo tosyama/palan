@@ -37,7 +37,8 @@ union PlnAssignInf
 class PlnAssignment : public PlnExpression
 {
 public:
-	PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps);
+	PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps);
+	vector<PlnExpression*> lvals;
 	vector<PlnExpression*> expressions;
 	vector<PlnAssignInf> assign_inf;
 

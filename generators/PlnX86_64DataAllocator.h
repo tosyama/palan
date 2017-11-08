@@ -35,5 +35,9 @@ public:
 	bool isAccumulator(PlnDataPlace* dp);
 	PlnDataPlace* multiplied(PlnDataPlace* tgt);
 	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder);
+
+	// for array item
+	PlnDataPlace* prepareObjBasePtr();
+	PlnDataPlace* prepareObjIndexPtr();
 };
 

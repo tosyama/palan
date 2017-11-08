@@ -31,6 +31,8 @@ public:
 	vector<PlnDataPlace*> regs;
 	vector<PlnDataPlace*> all;
 
+	vector<PlnDataPlace*> release_stmt_end;
+
 	void reset();
 	PlnDataAllocator(int regnum);
 
@@ -58,6 +60,11 @@ public:
 	virtual PlnDataPlace* multiplied(PlnDataPlace* tgt) = 0;
 	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
 
+	// for array item
+	virtual PlnDataPlace* prepareObjBasePtr() = 0;
+	virtual PlnDataPlace* prepareObjIndexPtr() = 0;
+	virtual PlnDataPlace* getIndirectObjDp(int size, int data_type, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
+
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
 
@@ -71,6 +78,7 @@ enum {
 	DP_REG,
 	DP_BYTES,
 
+	DP_INDRCT_OBJ,
 	DP_LIT_INT,
 	DP_RO_DATA
 };
@@ -99,6 +107,7 @@ public:
 		struct {int32_t idx; int32_t offset;} stack;
 		struct {int32_t idx; int32_t offset;} bytes;
 		struct {int32_t id; int32_t offset;} reg;
+		struct {int32_t displacement; int16_t base_id; int16_t index_id; } indirect;
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		int index;
