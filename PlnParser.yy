@@ -591,15 +591,10 @@ term: INT
 		$$ = new PlnExpression(PlnValue(module.getReadOnlyData($1)));
 	}
 
-	| ID
+	| unary_expression
 	{
-		PlnVariable *v = CUR_BLOCK->getVariable($1);
-		if (v) $$ = new PlnExpression(PlnValue(v));
-		else {
-			error(@$, PlnMessage::getErr(E_UndefinedVariable, $1));
-			YYABORT;
-		}
-	} 
+		$$ = $1;
+	}
 
 	| '(' expression ')'
 	{

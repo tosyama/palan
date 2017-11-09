@@ -165,7 +165,7 @@ unary_expression: ID
 term: INT
 	| UINT
 	| STR
-	| ID
+	| unary_expression
 	| '(' expression ')'
 	;
 	

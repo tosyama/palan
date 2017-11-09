@@ -13,6 +13,7 @@
 #include "../PlnType.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnGenerator.h"
 
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<int> item_ind)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
@@ -46,9 +47,10 @@ void PlnArrayItem::finish(PlnDataAllocator& da)
 	values[0].inf.var->place = item_dp;
 	PlnExpression::finish(da);
 	
+	da.releaseData(base_dp);
+	da.releaseData(index_dp);
+	
 	da.release_stmt_end.push_back(item_dp);
-	da.release_stmt_end.push_back(base_dp);
-	da.release_stmt_end.push_back(index_dp);
 }
 
 void PlnArrayItem::gen(PlnGenerator& g)
@@ -59,7 +61,10 @@ void PlnArrayItem::gen(PlnGenerator& g)
 
 	// rval
 	if (data_places.size()) {
-		BOOST_ASSERT(false);
+		PlnDataPlace *item_dp = values[0].inf.var->place;
+		auto item_e = g.getPopEntity(item_dp);
+		auto dst_e = g.getPushEntity(data_places[0]);
+		g.genMove(dst_e.get(), item_e.get(), *item_dp->comment + " -> " + *data_places[0]->comment);
 	}
 }
 
