@@ -240,8 +240,19 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 	return dp;
 }
 
-void PlnDataAllocator::finish()
+void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &save_reg_dps)
 {
+	// Alloc register value save area.
+	save_regs = getRegsNeedSave();
+	for (int sr: save_regs) {
+		auto dp = new PlnDataPlace(8,DT_UINT);
+		dp->type = DP_STK_BP;
+		dp->data.stack.idx = data_stack.size();
+		dp->previous = NULL;
+		data_stack.push_back(dp);
+		save_reg_dps.push_back(dp);
+	}
+
 	int offset = 0;
 	// Set offset from base stack pointer.
 	for (auto dp: data_stack) {

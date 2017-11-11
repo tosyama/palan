@@ -18,6 +18,10 @@ public:
 	void genEntryFunc();
 	void genLocalVarArea(int size);
 	void genFreeLocalVarArea(int size);
+
+	void genSaveReg(int reg, PlnGenEntity* dst);
+	void genLoadReg(int reg, PlnGenEntity* src);
+
 	void genCCall(string& cfuncname);
 	void genSysCall(int id, const string& comment);
 	void genReturn();

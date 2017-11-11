@@ -19,6 +19,7 @@ func int16[3] pb arr_func(int32 x, int32[10] pa)
 func int16[3] pb arr_func2(int32 x, int32[10] pa <<)
 {
 	int32[5] a1;
+	pa[9] = 10;
 }
 
 func int32 x, y int32_func()

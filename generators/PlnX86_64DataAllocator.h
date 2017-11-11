@@ -18,6 +18,7 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 
 protected:
 	PlnDataPlace* createArgDp(int func_type, int index, bool is_callee);
+	vector<int> getRegsNeedSave();
 
 public:
 	PlnX86_64DataAllocator();

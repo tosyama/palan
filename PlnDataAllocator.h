@@ -22,6 +22,7 @@ protected:
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
+	virtual vector<int> getRegsNeedSave()=0;
 
 public:
 	int stack_size;
@@ -68,7 +69,7 @@ public:
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
 
-	void finish();
+	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
 };
 
 enum {

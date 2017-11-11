@@ -129,7 +129,7 @@ void PlnModule::finish(PlnDataAllocator& da)
 	BOOST_ASSERT(si.scope.size() == 0);
 	BOOST_ASSERT(si.owner_vars.size() == 0);
 	toplevel->finish(da, si);
-	da.finish();
+	da.finish(save_regs, save_reg_dps);
 	stack_size = da.stack_size;
 }
 
@@ -159,6 +159,10 @@ void PlnModule::gen(PlnGenerator &g)
 	g.genLabel(s);
 	g.genEntryFunc();
 	g.genLocalVarArea(stack_size);
+	for (int i=0; i<save_regs.size(); ++i) {
+		auto sav_e = g.getPopEntity(save_reg_dps[i]);
+		g.genSaveReg(save_regs[i], sav_e.get());
+	}
 	
 	toplevel->gen(g);
 

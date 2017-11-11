@@ -136,6 +136,17 @@ void PlnX86_64Generator::genFreeLocalVarArea(int size)
 	}
 }
 
+void PlnX86_64Generator::genSaveReg(int reg, PlnGenEntity* dst)
+{
+	os << "	movq " << r(reg) << ", " << oprnd(dst) << endl;
+}
+
+void PlnX86_64Generator::genLoadReg(int reg, PlnGenEntity* src)
+{
+	os << "	movq " << oprnd(src) << ", " << r(reg) << endl;
+}
+
+
 void PlnX86_64Generator::genCCall(string& cfuncname)
 {
 	os << "	xorq %rax, %rax" << endl;

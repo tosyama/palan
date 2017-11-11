@@ -90,8 +90,10 @@ PlnClone.o:  models/expressions/PlnClone.h \
 PlnArrayItem.o:  \
 	models/expressions/PlnArrayItem.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
+	models/expressions/../PlnType.h \
 	models/expressions/../../PlnDataAllocator.h \
-	models/expressions/../../PlnConstants.h
+	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnGenerator.h
 PlnX86_64Generator.o:  \
 	generators/../PlnModel.h generators/../PlnConstants.h \
 	generators/PlnX86_64DataAllocator.h generators/../PlnDataAllocator.h \

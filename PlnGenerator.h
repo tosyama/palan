@@ -54,6 +54,10 @@ public:
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
 	virtual void genFreeLocalVarArea(int size)=0;
+	
+	virtual void genSaveReg(int reg, PlnGenEntity* dst)=0;
+	virtual void genLoadReg(int reg, PlnGenEntity* src)=0;
+
 	virtual void genCCall(string& cfuncname)=0;
 	virtual void genSysCall(int id, const string& comment)=0;
 	virtual void genReturn()=0;

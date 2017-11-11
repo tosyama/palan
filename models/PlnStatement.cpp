@@ -202,6 +202,11 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	if (late_pop_dp)
 		g.getPopEntity(late_pop_dp);
 
+	for (int i; i<function->save_regs.size(); i++) {
+		auto e = g.getPopEntity(function->save_reg_dps[i]);
+		g.genLoadReg(function->save_regs[i], e.get());
+	}
+	
 	g.genFreeLocalVarArea(function->inf.pln.stack_size);
 	g.genReturn();
 }

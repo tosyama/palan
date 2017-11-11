@@ -22,6 +22,9 @@ public:
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
 	PlnVarInit *retval_init;
+	vector<int> save_regs;
+	vector<PlnDataPlace*> save_reg_dps;
+	
 	union {
 		struct {
 			int id;
