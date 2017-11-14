@@ -4,7 +4,7 @@ ccall exit();
 func int64 aa, ab
 	add(int64 a, b)
 {
-	aa,ab = a+1,b+2;
+	a+1,b+2 -> aa,ab;
 }
 
 int64 a = 1;
@@ -14,15 +14,18 @@ int64 h;
 int64 i,j = 0, 1-4;
 {
 	int64 k = 3;
-	e = -k;
+	-k -> e;
 }
-h = a+d;
-f = e-f+-d;
+
+a+d -> h;
+e-f+-d -> f;
+
 int64 k,l = add(5,6);
 int64 m = 1+(3+2*b)*c*4*5;
+
 printf("%d %d %d %d %d %d %d\n",
 		h, j, f, a+b+c, k, l, m*3);
-a,b,c = 1+2*c, 5/2*3%2, d/(-2)*5;
+1+2*c, 5/2*3%2, d/(-2)*5 -> a,b,c;
 printf("%d %d %d\n", a, b, c);
 
 exit(0);	// to flush buffer.

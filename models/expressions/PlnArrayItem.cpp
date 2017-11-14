@@ -28,7 +28,6 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<int> item_ind)
 	index_ex = new PlnExpression(PlnValue(int64_t(item_ind[0])));
 }
 
-
 void PlnArrayItem::finish(PlnDataAllocator& da)
 {
 	auto base_dp = da.prepareObjBasePtr();
@@ -49,8 +48,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da)
 	
 	da.releaseData(base_dp);
 	da.releaseData(index_dp);
-	
-	da.release_stmt_end.push_back(item_dp);
+	da.releaseData(item_dp);
 }
 
 void PlnArrayItem::gen(PlnGenerator& g)

@@ -22,10 +22,14 @@ int yylex();
 %token KW_SYSCALL
 %token KW_RETURN
 %token DBL_LESS
+%token DBL_GRTR
+%token DBL_ARROW
+%token ARROW
 
 %right '='
+%left ARROW DBL_ARROW
 %left ',' 
-%left DBL_LESS
+%left DBL_LESS DBL_GRTR
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -65,13 +69,17 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' ID move_owner_suffix default_value
+	| parameters ',' move_owner ID default_value
 	;
 
-parameter: type_def ID move_owner_suffix default_value
+parameter: type_def move_owner ID default_value
 	;
 
-move_owner_suffix: /* empty */
+move_owner: /* empty */
+	| DBL_GRTR
+	;
+
+take_owner: /* empty */
 	| DBL_LESS
 	;
 
@@ -121,7 +129,7 @@ statement: basic_statement
 	;
 
 st_expression: expression
-	| assignment
+	| assignments
 	;
 
 expressions: expression
@@ -135,7 +143,7 @@ expression:
 	| expression '*' expression
 	| expression '/' expression
 	| expression '%' expression
-	| '(' assignment ')'
+	| '(' assignments ')'
 	| '-' expression %prec UMINUS
 	| term
 	;
@@ -148,14 +156,14 @@ arguments: argument
 	;
 
 argument: /* empty */
-	| move_owner_suffix expression
+	| expression move_owner
 	;
 
-lvals: lval
-	| lvals ',' lval
+dst_vals: dst_val
+	| dst_vals ',' dst_val
 	;
 
-lval: unary_expression move_owner_suffix
+dst_val: move_owner unary_expression 
 	;
 
 unary_expression: ID
@@ -168,19 +176,27 @@ term: INT
 	| unary_expression
 	| '(' expression ')'
 	;
-	
-assignment: lvals '=' expressions
+
+assignments: assignment
+	| assignments arrow_ope dst_vals
+	;
+
+assignment: expressions arrow_ope dst_vals
 	;
 	
+arrow_ope: ARROW
+	| DBL_ARROW
+	;
+
 declarations: declaration
 	| declarations ',' subdeclaration 
 	| declarations ',' declaration 
 	;
 
-declaration: type_def ID
+declaration: type_def ID take_owner
 	;
 
-subdeclaration: ID
+subdeclaration: ID take_owner
 	;
 
 return_stmt: KW_RETURN

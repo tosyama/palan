@@ -83,6 +83,9 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token KW_SYSCALL	"'syscall'"
 %token KW_RETURN	"'return'"
 %token DBL_LESS		"'<<'"
+%token DBL_GRTR		"'>>'"
+%token DBL_ARROW	"'->>'"
+%token ARROW	"'->'"
 
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
@@ -96,7 +99,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<PlnVariable*>>	return_values
 %type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
-%type <bool>	move_owner_suffix
+%type <bool>	move_owner
+%type <bool>	take_owner
 %type <PlnValue*>	default_value
 %type <PlnBlock*>	block
 %type <vector<PlnStatement*>>	statements
@@ -105,12 +109,13 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnExpression*>	expression
 %type <PlnExpression*>	st_expression
 %type <PlnExpression*>	assignment
+%type <bool>	arrow_ope
 %type <PlnExpression*>	term
 %type <PlnExpression*>	func_call
 %type <vector<PlnExpression*>>	arguments
 %type <PlnExpression*>	argument
-%type <vector<PlnExpression*>>	lvals
-%type <PlnExpression*>	lval
+%type <vector<PlnExpression*>>	dst_vals
+%type <PlnExpression*>	dst_val
 %type <PlnExpression*>	unary_expression;
 %type <vector<PlnValue>>	declarations
 %type <PlnValue>	declaration
@@ -120,8 +125,9 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <vector<int>>	array_def
 
 %right '='
+%left ARROW DBL_ARROW
 %left ',' 
-%left DBL_LESS
+%left DBL_LESS DBL_GRTR
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -246,32 +252,36 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' ID move_owner_suffix
+	| parameters ',' move_owner ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		PlnPassingMethod pm = $4 ? FPM_MOVEOWNER : FPM_COPY;
-		auto prm = f->addParam($3, NULL, pm);
+		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
+		auto prm = f->addParam($4, NULL, pm);
 		if (!prm) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $4));
+			YYABORT;
+		}
+	}
+	;
+
+parameter: type_def move_owner ID default_value
+	{
+		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+		PlnFunction* f = scopes.back().inf.function;
+		PlnPassingMethod pm = $2 ? FPM_MOVEOWNER : FPM_COPY;
+		$$ = f->addParam($3, &$1, pm, $4);
+		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
 			YYABORT;
 		}
 	}
 	;
 
-parameter: type_def ID move_owner_suffix default_value
-	{
-		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
-		PlnFunction* f = scopes.back().inf.function;
-		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
-		$$ = f->addParam($2, &$1, pm, $4);
-		if (!$$) {
-			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
-			YYABORT;
-		}
-	}
+move_owner: /* empty */	{ $$ = false; }
+	| DBL_GRTR { $$ = true; }
 	;
 
-move_owner_suffix: /* empty */	{ $$ = false; }
+take_owner: /* empty */	{ $$ = false; }
 	| DBL_LESS { $$ = true; }
 	;
 
@@ -526,28 +536,29 @@ argument: /* empty */
 		$$ = NULL;
 	}
 
-	| move_owner_suffix expression
+	| expression move_owner
 	{
-		$$ = $2;
+		$$ = $1; 
 	}
 	;
 
-lvals:  lval
+dst_vals:  unary_expression
 	{
+		$1->values[0].lval_type = LVL_COPY;
 		$$.push_back($1);
 	}
 
-	| lvals ',' lval
+	| dst_vals ',' dst_val
 	{
 		$$ = move($1);
 		$$.push_back($3);
 	}
 	;
 
-lval: unary_expression move_owner_suffix
+dst_val: move_owner unary_expression 
 	{
-		$$ = $1;
-		if ($2) {
+		$$ = $2;
+		if ($1) {
 			auto var = $$->values[0].inf.var;
 			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
 				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, var->name));
@@ -602,20 +613,33 @@ term: INT
 	}
 	;
 
-assignment: lvals '=' expressions
+assignment: expressions arrow_ope dst_vals 
 	{
+		if ($2) {
+			auto var = $3.front()->values[0].inf.var;
+			if (var->var_type.back()->data_type != DT_OBJECT_REF) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, var->name));
+				YYABORT;
+			}
+			$3.front()->values[0].lval_type = LVL_MOVE;
+		}
+
 		int count=0;
-		for (auto e: $3)
+		for (auto e: $1)
 			count+=e->values.size();
 
-		if ($1.size() > count) {
+		if ($3.size() > count) {
 			error(@$, PlnMessage::getErr(E_NumOfLRVariables));
 			YYABORT;
-		} if ($1.size() > 1 && $1.size() < count) {
+		} if ($3.size() > 1 && $3.size() < count) {
 			warn(@$, PlnMessage::getWarn(W_NumOfLRVariables));
 		}
-		$$ = new PlnAssignment($1, $3);
+		$$ = new PlnAssignment($3, $1);
 	}
+	;
+
+arrow_ope: ARROW	{ $$ = false; }
+	| DBL_ARROW	{ $$ = true; }
 	;
 	
 declarations: declaration
@@ -636,7 +660,7 @@ declarations: declaration
 	}
 	;
 
-declaration: type_def ID move_owner_suffix
+declaration: type_def ID take_owner
 	{
 		auto var = CUR_BLOCK->declareVariable($2, $1);
 		if (!var) {
@@ -656,7 +680,7 @@ declaration: type_def ID move_owner_suffix
 	}
 	;
 
-subdeclaration: ID move_owner_suffix
+subdeclaration: ID take_owner
 	{
 		vector<PlnType *> null_type;
 		auto var = CUR_BLOCK->declareVariable($1, null_type);
