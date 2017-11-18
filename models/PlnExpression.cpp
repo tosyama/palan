@@ -119,6 +119,8 @@ bool PlnExpression::isLitNum(int& num_type)
 void PlnExpression::finish(PlnDataAllocator& da)
 {
 	val_place = values[0].getDataPlace(da);
+	if (data_places.size())
+		data_places[0]->pushSrc(val_place);
 }
 
 void PlnExpression::dump(ostream& os, string indent)

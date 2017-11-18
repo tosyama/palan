@@ -121,6 +121,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
+		r->data_places[0]->popSrc();
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
@@ -128,9 +129,14 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 		r->data_places.push_back(rdp);
 		r->finish(da);
 		da.allocData(rdp);	
+		rdp->popSrc();
 		da.releaseData(rdp);
 	}
+	ldp->popSrc();
 	da.releaseAccumulator(ldp);
+
+	if (data_places.size())
+		data_places[0]->pushSrc(ldp);
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
@@ -191,7 +197,10 @@ void PlnNegative::finish(PlnDataAllocator& da)
 	e->data_places.push_back(dp);
 	e->finish(da);
 	da.allocAccumulator(dp);
+	dp->popSrc();
 	da.releaseAccumulator(dp);
+	if (data_places.size())
+		data_places[0]->pushSrc(dp);
 }
 
 void PlnNegative::dump(ostream& os, string indent)

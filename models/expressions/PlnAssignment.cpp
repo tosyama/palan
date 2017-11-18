@@ -116,6 +116,9 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 			}
 		}
 
+		for (auto sdp: e->data_places)
+			sdp->popSrc();
+
 		// assign process
 		for (; ai<assign_inf.size(); ai++) {
 			auto& as_inf = assign_inf[ai];
@@ -138,6 +141,7 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 					break;
 			}
 		}
+
 		ei++;
 	}
 }

@@ -283,7 +283,8 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
-	 previous(NULL), save_place(NULL), size(size), data_type(data_type)
+	 previous(NULL), save_place(NULL), src_dp(NULL),
+	 size(size), data_type(data_type)
 {
 	static string emp="";
 	comment = &emp;
@@ -332,6 +333,18 @@ bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
 	}
 
 	return false;
+}
+
+void PlnDataPlace::pushSrc(PlnDataPlace* dp)
+{
+	BOOST_ASSERT(src_dp == NULL);
+	src_dp = dp;
+}
+
+void PlnDataPlace::popSrc()
+{
+	BOOST_ASSERT(src_dp);
+	src_dp = NULL;
 }
 
 int PlnDataPlace::allocable_size()

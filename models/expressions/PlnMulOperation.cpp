@@ -77,17 +77,22 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
+		r->data_places[0]->popSrc();
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.allocData(rdp);	
+		da.allocData(rdp);
+		r->data_places[0]->popSrc();
 		da.releaseData(rdp);
 	}
+	ldp->popSrc();
 	da.releaseAccumulator(ldp);
 	product = da.multiplied(ldp);
+	if (data_places.size())
+		data_places[0]->pushSrc(product);
 }
 
 void PlnMulOperation::dump(ostream& os, string indent)

@@ -116,11 +116,14 @@ public:
 
 	PlnDataPlace* previous;
 	PlnDataPlace* save_place;
+	PlnDataPlace* src_dp;
 	string* comment;
 
 	PlnDataPlace(int size, int data_type);
 	unsigned int getAllocBytesBits();
 	bool tryAllocBytes(PlnDataPlace* dp);
+	void pushSrc(PlnDataPlace* dp);
+	void popSrc();
 
 	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
 	int allocable_size();

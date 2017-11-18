@@ -83,6 +83,8 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 		++i;
 	}
 	da.funcCalled(arg_dps, function->return_vals, func_type);
+	for (auto dp: arg_dps)
+		dp->popSrc();
 
 	ret_dps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
 	i = 0;
@@ -99,6 +101,13 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 				free_dps.push_back(ret_dps[i]);
 		}
 	}
+
+	i=0;
+	for (auto dp: data_places) {
+		dp->pushSrc(ret_dps[i]);
+		i++;
+	}
+
 	if (free_dps.size()) da.memFreed();
 }
 
@@ -128,7 +137,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto dp: data_places) {
 				auto e = g.getPushEntity(dp);
 				auto re = g.getPopEntity(ret_dps[i]);
-				g.genMove(e.get(), re.get(), *ret_dps[i]->comment  +" -> " +*dp->comment);
+				g.genMove(e.get(), re.get(), ret_dps[i]->cmt()  +" -> " + dp->cmt());
 				i++;
 			}
 

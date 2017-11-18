@@ -265,6 +265,10 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	*quotient = regs[RAX];
 	*reminder = regs[RDX];
 
+	static string cmq = "%divq", cmr = "%divr";
+	(*quotient)->comment = &cmq;
+	(*reminder)->comment = &cmr;
+
 	step++;
 }
 

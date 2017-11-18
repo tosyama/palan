@@ -82,6 +82,8 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			i++;
 		}
 		ie->finish(da);
+		for (auto sdp: ie->data_places)
+			sdp->popSrc();
 	}
 }
 

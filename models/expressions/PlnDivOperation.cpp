@@ -105,17 +105,26 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
+		r->data_places.back()->popSrc();
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.allocData(rdp);	
+		da.allocData(rdp);
+		rdp->popSrc();
 		da.releaseData(rdp);
 	}
+	ldp->popSrc();
 	da.releaseAccumulator(ldp);
 	da.divided(&quotient, &remainder);
+
+	if (data_places.size()) {
+		data_places[0]->pushSrc(quotient);
+		if (data_places.size() >= 2)
+			data_places[1]->pushSrc(remainder);
+	}
 }
 
 void PlnDivOperation::dump(ostream& os, string indent)

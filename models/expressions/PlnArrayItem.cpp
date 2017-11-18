@@ -44,7 +44,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da)
 	auto item_dp = da.getIndirectObjDp(item_var->var_type.back()->size, DT_SINT, base_dp,index_dp);
 	item_dp->comment = &item_var->name;
 	values[0].inf.var->place = item_dp;
-	PlnExpression::finish(da);
+	PlnExpression::finish(da);	// pushSrc
 	
 	da.releaseData(base_dp);
 	da.releaseData(index_dp);
