@@ -30,6 +30,7 @@ public:
 	vector<PlnDataPlace*> data_stack;
 	vector<PlnDataPlace*> arg_stack;
 	vector<PlnDataPlace*> regs;
+	vector<PlnDataPlace*> sub_dbs;
 	vector<PlnDataPlace*> all;
 
 	vector<PlnDataPlace*> release_stmt_end;
@@ -64,10 +65,11 @@ public:
 	// for array item
 	virtual PlnDataPlace* prepareObjBasePtr() = 0;
 	virtual PlnDataPlace* prepareObjIndexPtr() = 0;
-	virtual PlnDataPlace* getIndirectObjDp(int size, int data_type, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
+	virtual void getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
 
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
+	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
 	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
 };
@@ -81,7 +83,9 @@ enum {
 
 	DP_INDRCT_OBJ,
 	DP_LIT_INT,
-	DP_RO_DATA
+	DP_RO_DATA,
+
+	DP_SUBDP
 };
 
 enum {
@@ -112,11 +116,12 @@ public:
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		int index;
+		PlnDataPlace *originalDp;
 	} data;
 
 	PlnDataPlace* previous;
 	PlnDataPlace* save_place;
-	PlnDataPlace* src_dp;
+	PlnDataPlace* src_place;
 	string* comment;
 
 	PlnDataPlace(int size, int data_type);

@@ -64,8 +64,8 @@ public:
 	virtual void genMainReturn()=0;
 	virtual void genStringData(int index, const string& str)=0;
 	virtual void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
-	virtual void genAdd(PlnGenEntity* tgt, PlnGenEntity* second)=0;
-	virtual void genSub(PlnGenEntity* tgt, PlnGenEntity* second)=0;
+	virtual void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
+	virtual void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genNegative(PlnGenEntity* tgt)=0;
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
@@ -74,6 +74,9 @@ public:
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)=0;
 	virtual void genMemFree(PlnGenEntity* ref, string& comment, bool doNull=true)=0;
 	virtual void genMemCopy(int cp_size, string& comment)=0;
+
+	void genLoadDp(PlnDataPlace* dp);
+	void genSaveSrc(PlnDataPlace* dp);
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);

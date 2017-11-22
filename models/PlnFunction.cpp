@@ -183,7 +183,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			for (auto p: parameters) {
 				auto le = g.getPopEntity(p->place);
 				auto re = g.getPopEntity(p->load_place);
-				g.genMove(le.get(), re.get(), string("param->") + p->name);
+				g.genMove(le.get(), re.get(), string("param -> ") + p->name);
 			}
 
 			if (retval_init) retval_init->gen(g);

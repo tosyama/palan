@@ -287,11 +287,11 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	os << endl;
 }
 
-void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
 	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
-		os << "	incq " << oprnd(tgt) << endl;
+		os << "	incq " << oprnd(tgt) << "	# " << comment << endl;
 		return;
 	}
 
@@ -302,14 +302,14 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second)
 		add_str = r(R11,8);
 	}
 		
-	os << "	addq " << add_str << ", " << oprnd(tgt) << endl;
+	os << "	addq " << add_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
 	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
-		os << "	decq " << oprnd(tgt) << endl;
+		os << "	decq " << oprnd(tgt) << "	# " << comment << endl;
 		return;
 	}
 
@@ -320,7 +320,7 @@ void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second)
 		sub_str = r(R11,8);
 	}
 
-	os << "	subq " << sub_str << ", " << oprnd(tgt) << endl;
+	os << "	subq " << sub_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
 void PlnX86_64Generator::genNegative(PlnGenEntity* tgt)

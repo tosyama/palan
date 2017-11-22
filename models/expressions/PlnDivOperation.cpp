@@ -121,9 +121,13 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 	da.divided(&quotient, &remainder);
 
 	if (data_places.size()) {
-		data_places[0]->pushSrc(quotient);
-		if (data_places.size() >= 2)
-			data_places[1]->pushSrc(remainder);
+		if (div_type == DV_DIV)  {
+			data_places[0]->pushSrc(quotient);
+			if (data_places.size() >= 2)
+				data_places[1]->pushSrc(remainder);
+		} else {	// DV_MOD
+			data_places[0]->pushSrc(remainder);
+		}
 	}
 }
 

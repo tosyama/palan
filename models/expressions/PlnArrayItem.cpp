@@ -23,6 +23,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<int> item_ind)
 	var->name = array_var->name + "[]";
 	var->var_type = array_var->var_type;
 	var->var_type.pop_back();
+	var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
 	values.push_back(PlnValue(var));
 
 	index_ex = new PlnExpression(PlnValue(int64_t(item_ind[0])));
@@ -41,9 +42,10 @@ void PlnArrayItem::finish(PlnDataAllocator& da)
 	da.allocDp(index_dp);
 
 	auto item_var = values[0].inf.var;
-	auto item_dp = da.getIndirectObjDp(item_var->var_type.back()->size, DT_SINT, base_dp,index_dp);
+	auto item_dp = values[0].inf.var->place;
+	da.getIndirectObjDp(item_dp, base_dp,index_dp);
 	item_dp->comment = &item_var->name;
-	values[0].inf.var->place = item_dp;
+
 	PlnExpression::finish(da);	// pushSrc
 	
 	da.releaseData(base_dp);

@@ -147,28 +147,26 @@ void PlnAddOperation::dump(ostream& os, string indent)
 	r->dump(os, indent+" ");
 }
 
-static string gen_cmt(bool is_add, PlnDataPlace* l, PlnDataPlace* r, PlnDataPlace* result)
-{
-	const char* ope = "+";
-	if (!is_add)
-		ope = "-";
-	
-	return l->cmt() + ope + r->cmt() + " -> " + result->cmt();
-}
-
 void PlnAddOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
-	r->gen(g);
+	auto ldp = l->data_places[0];
+	g.genLoadDp(ldp);
 
-	auto le = g.getPopEntity(l->data_places[0]);
-	auto re = g.getPopEntity(r->data_places[0]);
-	if (is_add) g.genAdd(le.get(), re.get());
-	else g.genSub(le.get(), re.get());
+	r->gen(g);
+	auto rdp = r->data_places[0];
+	g.genLoadDp(rdp);
+
+	auto le = g.getPopEntity(ldp);
+	auto re = g.getPopEntity(rdp);
+	if (is_add) g.genAdd(le.get(), re.get(), ldp->cmt() + " + " + rdp->cmt());
+	else g.genSub(le.get(), re.get(), ldp->cmt() + " - " + rdp->cmt());
 
 	if (data_places.size() > 0) {
 		auto rpe = g.getPushEntity(data_places[0]);
-		g.genMove(rpe.get(), le.get(), gen_cmt(is_add, l->data_places[0],r->data_places[0],data_places[0]));
+		g.genMove(rpe.get(), le.get(), ldp->cmt() + " -> " + data_places[0]->cmt() + " # old add");
+
+		g.genSaveSrc(data_places[0]);
 	}
 }
 

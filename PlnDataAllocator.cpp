@@ -22,10 +22,16 @@ void PlnDataAllocator::reset()
 {
 	all.insert(all.end(),data_stack.begin(),data_stack.end());
 	data_stack.resize(0);
+
 	all.insert(all.end(),arg_stack.begin(),arg_stack.end());
 	arg_stack.resize(0);
+
+	all.insert(all.end(),sub_dbs.begin(),sub_dbs.end());
+	sub_dbs.resize(0);
+
 	all.insert(all.end(),regs.begin(),regs.end());
 	for (auto& reg: regs) reg = NULL;
+
 	stack_size = 0;
 	step = 0;
 }
@@ -193,9 +199,8 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 	return dps;
 }
 
-PlnDataPlace* PlnDataAllocator::getIndirectObjDp(int size, int data_type, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
+void PlnDataAllocator::getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
 {
-	auto dp = new PlnDataPlace(size, data_type);
 	dp->type = DP_INDRCT_OBJ;
 	dp->status = DS_ASSIGNED;
 
@@ -208,8 +213,6 @@ PlnDataPlace* PlnDataAllocator::getIndirectObjDp(int size, int data_type, PlnDat
 	static string cmt = "indirect obj";
 	dp->comment = &cmt;
 	all.push_back(dp);
-
-	return dp;
 }
 
 PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)
@@ -238,6 +241,23 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 	dp->comment = &cmt;
 	all.push_back(dp);
 	return dp;
+}
+
+PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
+{
+	BOOST_ASSERT(dp->type != DP_SUBDP);
+
+	// indirect obj is already separated and not managed by data allocator.
+	if (dp->type == DP_INDRCT_OBJ)
+		return dp;
+
+	auto sub_dp = new PlnDataPlace(dp->size, dp->data_type);
+	sub_dp->type = DP_SUBDP;
+	sub_dp->data.originalDp = dp;
+	sub_dp->comment = dp->comment;
+
+	sub_dbs.push_back(sub_dp);
+	return sub_dp;
 }
 
 void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &save_reg_dps)
@@ -278,12 +298,19 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 	int stk_itm_num = data_stack.size() + arg_stack.size();
 	if (stk_itm_num & 0x1) stk_itm_num++;  // for 16byte align.
 	stack_size = stk_itm_num * 8;
+
+	// rewrite original data to sub.
+	for (auto sub_dp: sub_dbs) {
+		auto org_dp = sub_dp->data.originalDp;
+		sub_dp->type = org_dp->type;
+		sub_dp->data = org_dp->data;
+	}
 }
 
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
-	 previous(NULL), save_place(NULL), src_dp(NULL),
+	 previous(NULL), save_place(NULL), src_place(NULL),
 	 size(size), data_type(data_type)
 {
 	static string emp="";
@@ -337,14 +364,13 @@ bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
 
 void PlnDataPlace::pushSrc(PlnDataPlace* dp)
 {
-	BOOST_ASSERT(src_dp == NULL);
-	src_dp = dp;
+	BOOST_ASSERT(src_place == NULL);
+	src_place = dp;
 }
 
 void PlnDataPlace::popSrc()
 {
-	BOOST_ASSERT(src_dp);
-	src_dp = NULL;
+	BOOST_ASSERT(src_place);
 }
 
 int PlnDataPlace::allocable_size()

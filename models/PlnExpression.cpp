@@ -75,7 +75,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 		case VL_RO_DATA:
 			return da.getReadOnlyDp(inf.rod->index);
 		case VL_VAR:
-			return inf.var->place;
+			return da.getSeparatedDp(inf.var->place);
 	}
 	BOOST_ASSERT(false);
 }
@@ -166,9 +166,12 @@ void PlnExpression::gen(PlnGenerator& g)
 {
 	BOOST_ASSERT(data_places.size() <= 1);
 	if (data_places.size()) {
+		// TODO: oblsolute
 		auto re = g.getEntity(val_place);
 	 	auto le = g.getPushEntity(data_places[0]);
-		g.genMove(le.get(), re.get(), exp_cmt(values[0],data_places[0]));
+		g.genMove(le.get(), re.get(), exp_cmt(values[0],data_places[0]) + " # old exp");
+
+		g.genSaveSrc(data_places[0]);
 	}
 }
 

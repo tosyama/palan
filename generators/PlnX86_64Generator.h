@@ -28,8 +28,8 @@ public:
 	void genMainReturn();
 	void genStringData(int index, const string& str);
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
-	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second);
-	void genSub(PlnGenEntity* tgt, PlnGenEntity* second);
+	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
+	void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	void genNegative(PlnGenEntity* tgt);
 	void genMul(PlnGenEntity* tgt, PlnGenEntity* second);
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
