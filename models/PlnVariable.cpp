@@ -41,7 +41,6 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 						initializer[ii] = new PlnClone(e);
 						break;
 					case LVL_MOVE:
-						initializer[ii] = new PlnMoveOwnership(e);
 						break;
 					defalut:
 						BOOST_ASSERT(false);
@@ -83,7 +82,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		}
 		ie->finish(da);
 		for (auto sdp: ie->data_places)
-			sdp->popSrc();
+			da.popSrc(sdp);
 	}
 }
 
@@ -104,6 +103,17 @@ void PlnVarInit::gen(PlnGenerator& g)
 			}
 	}
 
-	for (auto i: initializer)
+	int vi = 0;
+	for (auto i: initializer) {
+		vector<unique_ptr<PlnGenEntity>> clr_es;
 		i->gen(g);
+		for (auto dp: i->data_places) {
+			g.genLoadDp(dp);
+			if (vars[vi].lval_type == LVL_MOVE)
+				clr_es.push_back(g.getEntity(dp->src_place));
+			vi++;
+		}
+		if (clr_es.size())
+			g.genNullClear(clr_es);
+	}
 }

@@ -120,7 +120,7 @@ void PlnExpression::finish(PlnDataAllocator& da)
 {
 	val_place = values[0].getDataPlace(da);
 	if (data_places.size())
-		data_places[0]->pushSrc(val_place);
+		da.pushSrc(data_places[0], val_place);
 }
 
 void PlnExpression::dump(ostream& os, string indent)
@@ -165,13 +165,7 @@ static string exp_cmt(PlnValue& v, PlnDataPlace* dp)
 void PlnExpression::gen(PlnGenerator& g)
 {
 	BOOST_ASSERT(data_places.size() <= 1);
-	if (data_places.size()) {
-		// TODO: oblsolute
-		auto re = g.getEntity(val_place);
-	 	auto le = g.getPushEntity(data_places[0]);
-		g.genMove(le.get(), re.get(), exp_cmt(values[0],data_places[0]) + " # old exp");
-
+	if (data_places.size())
 		g.genSaveSrc(data_places[0]);
-	}
 }
 

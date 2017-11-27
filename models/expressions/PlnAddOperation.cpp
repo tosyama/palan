@@ -121,7 +121,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
-		r->data_places[0]->popSrc();
+		da.popSrc(r->data_places[0]);
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
@@ -129,14 +129,18 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 		r->data_places.push_back(rdp);
 		r->finish(da);
 		da.allocData(rdp);	
-		rdp->popSrc();
+		da.popSrc(rdp);
 		da.releaseData(rdp);
 	}
-	ldp->popSrc();
+	da.popSrc(ldp);
 	da.releaseAccumulator(ldp);
 
-	if (data_places.size())
-		data_places[0]->pushSrc(ldp);
+	if (data_places.size()) {
+		PlnDataPlace* result_dp = new PlnDataPlace(8, l->getDataType());
+		da.allocAccumulator(result_dp);
+		da.pushSrc(data_places[0], result_dp);
+		da.releaseAccumulator(result_dp);
+	}
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
@@ -150,24 +154,21 @@ void PlnAddOperation::dump(ostream& os, string indent)
 void PlnAddOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
+	r->gen(g);
+
 	auto ldp = l->data_places[0];
+	auto rdp = r->data_places[0];
+
+	g.genLoadDp(rdp);
 	g.genLoadDp(ldp);
 
-	r->gen(g);
-	auto rdp = r->data_places[0];
-	g.genLoadDp(rdp);
-
-	auto le = g.getPopEntity(ldp);
-	auto re = g.getPopEntity(rdp);
+	auto re = g.getEntity(rdp);
+	auto le = g.getEntity(ldp);
 	if (is_add) g.genAdd(le.get(), re.get(), ldp->cmt() + " + " + rdp->cmt());
 	else g.genSub(le.get(), re.get(), ldp->cmt() + " - " + rdp->cmt());
 
-	if (data_places.size() > 0) {
-		auto rpe = g.getPushEntity(data_places[0]);
-		g.genMove(rpe.get(), le.get(), ldp->cmt() + " -> " + data_places[0]->cmt() + " # old add");
-
+	if (data_places.size() > 0)
 		g.genSaveSrc(data_places[0]);
-	}
 }
 
 // PlnNegative
@@ -195,10 +196,10 @@ void PlnNegative::finish(PlnDataAllocator& da)
 	e->data_places.push_back(dp);
 	e->finish(da);
 	da.allocAccumulator(dp);
-	dp->popSrc();
+	da.popSrc(dp);
 	da.releaseAccumulator(dp);
 	if (data_places.size())
-		data_places[0]->pushSrc(dp);
+		da.pushSrc(data_places[0], dp);
 }
 
 void PlnNegative::dump(ostream& os, string indent)
@@ -215,12 +216,12 @@ static string gen_n_cmt(PlnDataPlace* dp, PlnDataPlace* result)
 void PlnNegative::gen(PlnGenerator& g)
 {
 	e->gen(g);
+	auto dp = e->data_places[0];
 
-	auto ne = g.getPopEntity(e->data_places[0]);
+	g.genLoadDp(dp);
 	
-	g.genNegative(ne.get());
-	if (data_places.size() > 0) {
-		auto rpe = g.getPushEntity(data_places[0]);
-		g.genMove(rpe.get(), ne.get(), gen_n_cmt(e->data_places[0], data_places[0]));
-	}
+	auto ne = g.getEntity(dp);
+	g.genNegative(ne.get(), "-" + dp->cmt());
+	if (data_places.size() > 0)
+		g.genSaveSrc(data_places[0]);
 }

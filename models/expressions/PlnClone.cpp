@@ -39,13 +39,13 @@ void PlnClone::finish(PlnDataAllocator& da)
 
 	da.allocDp(cpy_src_dp);
 	da.allocDp(cpy_dst_dp);
-	cpy_dst_dp->pushSrc(clone_dp);
-	cpy_dst_dp->popSrc();
-	cpy_src_dp->popSrc();
+	da.pushSrc(cpy_dst_dp, clone_dp);
+	da.popSrc(cpy_dst_dp);
+	da.popSrc(cpy_src_dp);
 	da.memCopyed(cpy_dst_dp, cpy_src_dp);
 	da.releaseData(clone_dp);
 	if (data_places.size())
-		data_places[0]->pushSrc(clone_dp);
+		da.pushSrc(data_places[0], clone_dp);
 }
 
 void PlnClone::dump(ostream& os, string indent)

@@ -117,7 +117,7 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 		}
 
 		for (auto sdp: e->data_places)
-			sdp->popSrc();
+			da.popSrc(sdp);
 
 		for (; vi < vcnt; vi++)
 			lvals[vi]->finish(da);

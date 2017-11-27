@@ -204,7 +204,7 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 	dp->previous = pdp;
 	dp->alloc_step = step++;
 
-	static string cmt = "%work";
+	static string cmt = "%accm";
 	dp->comment = &cmt;
 
 	if (pdp && pdp->status != DS_RELEASED)
@@ -233,11 +233,13 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* tgt)
 	auto pdp = regs[regid];
 	BOOST_ASSERT(!pdp || pdp->status == DS_RELEASED);
 	auto dp = new PlnDataPlace(8,tgt->data_type);
+	static string cmt = "%mulp";
 	dp->type = DP_REG;
 	dp->status = DS_RELEASED;
 	dp->data.reg.id = regid;
 	dp->alloc_step = dp->release_step = step;
 	dp->previous = pdp;
+	dp->comment = &cmt;
 	regs[regid] = dp;
 	step++;
 	return dp;

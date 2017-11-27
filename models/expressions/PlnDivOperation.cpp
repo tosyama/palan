@@ -105,7 +105,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
-		r->data_places.back()->popSrc();
+		da.popSrc(r->data_places.back());
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
@@ -113,20 +113,20 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 		r->data_places.push_back(rdp);
 		r->finish(da);
 		da.allocData(rdp);
-		rdp->popSrc();
+		da.popSrc(rdp);
 		da.releaseData(rdp);
 	}
-	ldp->popSrc();
+	da.popSrc(ldp);
 	da.releaseAccumulator(ldp);
 	da.divided(&quotient, &remainder);
 
 	if (data_places.size()) {
 		if (div_type == DV_DIV)  {
-			data_places[0]->pushSrc(quotient);
+			da.pushSrc(data_places[0], quotient);
 			if (data_places.size() >= 2)
-				data_places[1]->pushSrc(remainder);
+				da.pushSrc(data_places[1], remainder);
 		} else {	// DV_MOD
-			data_places[0]->pushSrc(remainder);
+			da.pushSrc(data_places[0], remainder);
 		}
 	}
 }
@@ -143,26 +143,26 @@ void PlnDivOperation::gen(PlnGenerator& g)
 	l->gen(g);
 	r->gen(g);
 
-	auto le = g.getPopEntity(l->data_places[0]);
-	auto re = g.getPopEntity(r->data_places[0]);
+	auto ldp = l->data_places[0];
+	auto rdp = r->data_places[0];
 
-	string cmt=l->data_places[0]->cmt() + " / " + r->data_places[0]->cmt();
+	g.genLoadDp(rdp);
+	g.genLoadDp(ldp);
+
+	auto le = g.getEntity(l->data_places[0]);
+	auto re = g.getEntity(r->data_places[0]);
+
+	string cmt=ldp->cmt() + " / " + rdp->cmt();
 	g.genDiv(le.get(), re.get(), cmt);
 	
 	if (data_places.size() > 0) {
 		if (div_type == DV_DIV) {
-			auto rpe = g.getPushEntity(data_places[0]);
-			auto qe = g.getPopEntity(quotient);
-			g.genMove(rpe.get(), qe.get(), "");
-			if (data_places.size() > 1) {
-				auto rpe2 = g.getPushEntity(data_places[1]);
-				auto rme = g.getPopEntity(remainder);
-				g.genMove(rpe2.get(), rme.get(), "");
-			}
+			g.genSaveSrc(data_places[0]);
+			if (data_places.size() > 1)
+				g.genSaveSrc(data_places[1]);
+			
 		} else { // div_type == DT_MOD
-			auto rpe = g.getPushEntity(data_places[0]);
-			auto rme = g.getPopEntity(remainder);
-			g.genMove(rpe.get(), rme.get(), "");
+			g.genSaveSrc(data_places[0]);
 		}
 	}
 }

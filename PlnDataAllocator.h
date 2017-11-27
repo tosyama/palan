@@ -71,6 +71,9 @@ public:
 	PlnDataPlace* getReadOnlyDp(int index);
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
+	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp);
+	void popSrc(PlnDataPlace* dp);
+
 	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
 };
 
@@ -127,8 +130,6 @@ public:
 	PlnDataPlace(int size, int data_type);
 	unsigned int getAllocBytesBits();
 	bool tryAllocBytes(PlnDataPlace* dp);
-	void pushSrc(PlnDataPlace* dp);
-	void popSrc();
 
 	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
 	int allocable_size();

@@ -323,12 +323,12 @@ void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second, string 
 	os << "	subq " << sub_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genNegative(PlnGenEntity* tgt)
+void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)
 {
-	os << "	negq " << oprnd(tgt) << endl;
+	os << "	negq " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
 
@@ -338,7 +338,7 @@ void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
 		os << endl;
 		mul_str = r(R11,8);
 	}
-	os << "	imulq " << mul_str << ", " << oprnd(tgt) << endl;
+	os << "	imulq " << mul_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
 void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)

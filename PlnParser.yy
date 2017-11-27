@@ -539,6 +539,13 @@ argument: /* empty */
 	| expression move_owner
 	{
 		$$ = $1; 
+		if ($2) {
+			if ($$->values[0].type != VL_VAR) {
+				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, "non-variable"));
+				YYABORT;
+			}
+			$$->values[0].lval_type = LVL_MOVE;
+		}
 	}
 	;
 

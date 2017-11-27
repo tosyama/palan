@@ -30,8 +30,8 @@ public:
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
 	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
-	void genNegative(PlnGenEntity* tgt);
-	void genMul(PlnGenEntity* tgt, PlnGenEntity* second);
+	void genNegative(PlnGenEntity* tgt, string comment);
+	void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);

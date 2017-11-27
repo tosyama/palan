@@ -49,9 +49,6 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 			if (ptr_type & PTR_CLONE) {
 				auto clone_ex = new PlnClone(arguments[i]);
 				arguments[i] = clone_ex;
-			} else if(ptr_type & PTR_OWNERSHIP) {
-				auto mv_owner_ex = new PlnMoveOwnership(arguments[i]);
-				arguments[i] = mv_owner_ex;
 			}
 		}
 	}
@@ -82,9 +79,10 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 		da.allocDp(arg_dps[i]);
 		++i;
 	}
-	da.funcCalled(arg_dps, function->return_vals, func_type);
 	for (auto dp: arg_dps)
-		dp->popSrc();
+		da.popSrc(dp);
+
+	da.funcCalled(arg_dps, function->return_vals, func_type);
 
 	ret_dps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
 	i = 0;
@@ -104,7 +102,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 
 	i=0;
 	for (auto dp: data_places) {
-		dp->pushSrc(ret_dps[i]);
+		da.pushSrc(dp, ret_dps[i]);
 		i++;
 	}
 
@@ -129,17 +127,19 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments)
 				arg->gen(g);
 
-			for (auto dp: arg_dps)
-				g.getPopEntity(dp);
+			vector<unique_ptr<PlnGenEntity>> clr_es;
+			for (auto arg: arguments) {
+				auto dp = arg->data_places[0];
+				g.genLoadDp(dp);
+				if (arg->values[0].lval_type == LVL_MOVE)
+					clr_es.push_back(g.getEntity(dp->src_place));
+			}
+			if (clr_es.size())
+				g.genNullClear(clr_es);
 
 			g.genCCall(function->name);
-			int i=0;
-			for (auto dp: data_places) {
-				auto e = g.getPushEntity(dp);
-				auto re = g.getPopEntity(ret_dps[i]);
-				g.genMove(e.get(), re.get(), ret_dps[i]->cmt()  +" -> " + dp->cmt());
-				i++;
-			}
+			for (auto dp: data_places) 
+				g.genSaveSrc(dp);
 
 			for (auto fdp: free_dps) {
 				auto fe = g.getPopEntity(fdp);
@@ -154,7 +154,8 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) 
 				arg->gen(g);
 			for (auto arg: arguments)
-				g.getPopEntity(arg->data_places[0]);
+				g.genLoadDp(arg->data_places[0]);
+
 			g.genSysCall(function->inf.syscall.id, function->name);
 			break;
 		}
@@ -163,7 +164,8 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) 
 				arg->gen(g);
 			for (auto arg: arguments)
-				g.getPopEntity(arg->data_places[0]);
+				g.genLoadDp(arg->data_places[0]);
+
 			g.genCCall(function->name);
 			break;
 		}

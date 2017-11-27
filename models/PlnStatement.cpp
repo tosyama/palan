@@ -174,7 +174,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	da.returnedValues(dps, FT_PLN);
 	for(auto dp: dps)
-		dp->popSrc();
+		da.popSrc(dp);
 }
 
 void PlnReturnStmt::dump(ostream& os, string indent)

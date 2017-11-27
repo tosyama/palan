@@ -307,6 +307,31 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 	}
 }
 
+void PlnDataAllocator::pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp)
+{
+	BOOST_ASSERT(dp->src_place == NULL);
+	dp->src_place = src_dp;
+}
+
+void PlnDataAllocator::popSrc(PlnDataPlace* dp)
+{
+	BOOST_ASSERT(dp->src_place);
+	bool is_src_destroy = false;
+	bool is_dst_destroy = false;
+
+	// check src data would be destory.
+	if (dp->src_place->type == DP_REG) {
+		int regid = dp->src_place->data.reg.id;
+		if (regs[regid] != dp->src_place
+				&& !dp->save_place
+				&& !(regs[regid] == dp && dp->previous == dp->src_place)) {
+			std::cout << "id:" << regid << " would be destroy." << std::endl;
+			std::cout << "when " << dp->src_place->cmt() << " -> " << dp->cmt() << std::endl;
+		}
+	}
+	// check dst data would be destory.
+}
+
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
@@ -360,17 +385,6 @@ bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
 	}
 
 	return false;
-}
-
-void PlnDataPlace::pushSrc(PlnDataPlace* dp)
-{
-	BOOST_ASSERT(src_place == NULL);
-	src_place = dp;
-}
-
-void PlnDataPlace::popSrc()
-{
-	BOOST_ASSERT(src_place);
 }
 
 int PlnDataPlace::allocable_size()
