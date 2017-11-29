@@ -60,7 +60,7 @@ void PlnClone::gen(PlnGenerator& g)
 	static string cmt = "clone";
 	g.genMemAlloc(clone_e.get(), copy_size, cmt);
 	clone_src->gen(g);
-	g.getPopEntity(cpy_src_dp);
+	g.genLoadDp(cpy_src_dp);
 	auto cp_dst_e = g.getPopEntity(cpy_dst_dp);
 	g.genMove(cp_dst_e.get(), clone_e.get(), cmt + " -> " + *cpy_dst_dp->comment);
 	g.genMemCopy(copy_size, cmt);

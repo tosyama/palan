@@ -95,7 +95,7 @@ void PlnVarInit::gen(PlnGenerator& g)
 			if (!do_init) {
 				PlnType* t = v->var_type.back();
 				if (t->inf.obj.is_fixed_size) {
-					auto e = g.getPopEntity(v->place);
+					auto e = g.getEntity(v->place);
 					g.genMemAlloc(e.get(), t->inf.obj.alloc_size, v->name);
 				} else {
 					BOOST_ASSERT(false);	// TODO: need to implement.

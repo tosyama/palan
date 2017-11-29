@@ -170,23 +170,26 @@ void PlnAssignment::gen(PlnGenerator& g)
 		if (vcnt > lvals.size()) vcnt = lvals.size();
 
 		
-		for (int vii=vi; vii < vcnt; vii++)
-			lvals[vii]->gen(g);
 
 		expressions[i]->gen(g);
 
 		vector<unique_ptr<PlnGenEntity>> clr_es;
 		for (int di=0; vi < vcnt; vi++,di++) {
+			lvals[vi]->gen(g);
+			
 			if (ai < assign_inf.size() && assign_inf[ai].inf.val_ind == vi) {
 				if (assign_inf[ai].type == AI_MCOPY)
 					genMemoryCopy4Assign(g, assign_inf[ai], values[i].inf.var->place);
 
 				else if (assign_inf[ai].type == AI_MOVE) {
 					auto as_inf = assign_inf[ai].move;
+
+					g.genLoadDp(as_inf.src);
+
 					auto dste = g.getPopEntity(as_inf.dst);
 					static string cmt = "lost ownership";
 					g.genMemFree(dste.get(), cmt, false);
-					auto srce = g.getPopEntity(as_inf.src);
+					auto srce = g.getEntity(as_inf.src);
 					g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
 					if (as_inf.do_clear)
 						clr_es.push_back(g.getPopEntity(as_inf.src));
@@ -208,8 +211,10 @@ void PlnAssignment::gen(PlnGenerator& g)
 void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp)
 {
 	auto as_inf = as.mcopy;
-	auto cpy_dste = g.getPopEntity(as_inf.dst);
-	auto cpy_srce = g.getPopEntity(as_inf.src);
+	g.genLoadDp(as_inf.src);
+
+	auto cpy_dste = g.getEntity(as_inf.dst);
+	auto cpy_srce = g.getEntity(as_inf.src);
 
 	// save src(work object) for free
 	if (as_inf.free_dp) {

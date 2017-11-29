@@ -205,6 +205,8 @@ void PlnDataAllocator::getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 	dp->status = DS_ASSIGNED;
 
 	dp->data.indirect.displacement = 0;
+	dp->data.indirect.base_dp = base_dp;
+	dp->data.indirect.index_dp = index_dp;
 	dp->data.indirect.base_id = base_dp->data.reg.id;
 	dp->data.indirect.index_id = index_dp->data.reg.id;
 
@@ -321,14 +323,37 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 
 	// check src data would be destory.
 	if (dp->src_place->type == DP_REG) {
-		int regid = dp->src_place->data.reg.id;
-		if (regs[regid] != dp->src_place
+		int s_regid = dp->src_place->data.reg.id;
+		if (regs[s_regid] != dp->src_place
 				&& !dp->save_place
-				&& !(regs[regid] == dp && dp->previous == dp->src_place)) {
-			std::cout << "id:" << regid << " would be destroy." << std::endl;
-			std::cout << "when " << dp->src_place->cmt() << " -> " << dp->cmt() << std::endl;
+				&& !(regs[s_regid] == dp && dp->previous == dp->src_place)) {	// rax->rax
+			
+			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp
+					&& (!dp->previous || (dp->previous->release_step < dp->src_place->alloc_step))) {
+				// Accelerate moving to before destoroy if possible.
+				dp->save_place = dp;
+			} else {
+				allocSaveData(dp);
+			}
+		}
+	} else if (dp->src_place->type == DP_INDRCT_OBJ) {
+		auto base_dp = dp->src_place->data.indirect.base_dp;
+		int base_id = base_dp->data.reg.id;
+		auto index_dp = dp->src_place->data.indirect.index_dp;
+		int index_id = index_dp->data.reg.id;
+
+		if (!dp->save_place
+				&& (regs[base_id] != base_dp || regs[index_id] != index_dp)) {
+			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp) {
+				// Accelerate moving to before destoroy if possible.
+				dp->save_place = dp;
+			} else {
+				// TODO: assign save_place.
+				BOOST_ASSERT(false);
+			}
 		}
 	}
+
 	// check dst data would be destory.
 }
 

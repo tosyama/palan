@@ -115,7 +115,8 @@ public:
 		struct {int32_t idx; int32_t offset;} stack;
 		struct {int32_t idx; int32_t offset;} bytes;
 		struct {int32_t id; int32_t offset;} reg;
-		struct {int32_t displacement; int16_t base_id; int16_t index_id; } indirect;
+		struct {int32_t displacement; PlnDataPlace* base_dp; PlnDataPlace* index_dp;
+				int16_t base_id; int16_t index_id; } indirect;
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		int index;
