@@ -10,7 +10,6 @@
 #include <boost/assert.hpp>
 
 #include "PlnFunctionCall.h"
-#include "PlnMoveOwnership.h"
 #include "../PlnFunction.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"

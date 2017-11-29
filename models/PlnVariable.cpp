@@ -18,7 +18,6 @@
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "expressions/PlnClone.h"
-#include "expressions/PlnMoveOwnership.h"
 
 // PlnVarInit
 PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
