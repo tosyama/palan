@@ -10,13 +10,11 @@ union PlnAssignInf
 	int16_t	type;
 	struct {
 		int16_t	type;
-		int16_t exp_ind;
 		int16_t val_ind;
 	} inf;
 
 	struct {
 		int16_t	type;
-		int16_t exp_ind;
 		int16_t val_ind;
 
 		int32_t cp_size;
@@ -25,7 +23,6 @@ union PlnAssignInf
 	} mcopy;
 	struct {
 		int16_t	type;
-		int16_t exp_ind;
 		int16_t val_ind;
 
 		PlnDataPlace *src, *dst;
@@ -37,7 +34,8 @@ union PlnAssignInf
 class PlnAssignment : public PlnExpression
 {
 public:
-	PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps);
+	PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps);
+	vector<PlnExpression*> lvals;
 	vector<PlnExpression*> expressions;
 	vector<PlnAssignInf> assign_inf;
 

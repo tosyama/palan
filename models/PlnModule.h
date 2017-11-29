@@ -13,6 +13,9 @@ class PlnModule
 {
 public:
 	PlnBlock* toplevel;
+	vector<int> save_regs;
+	vector<PlnDataPlace*> save_reg_dps;
+
 	int stack_size;
 	vector<PlnFunction*> functions;
 	vector<PlnReadOnlyData*> readonlydata;

@@ -41,7 +41,6 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 						initializer[ii] = new PlnClone(e);
 						break;
 					case LVL_MOVE:
-						initializer[ii] = new PlnMoveOwnership(e);
 						break;
 					defalut:
 						BOOST_ASSERT(false);
@@ -82,6 +81,8 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			i++;
 		}
 		ie->finish(da);
+		for (auto sdp: ie->data_places)
+			da.popSrc(sdp);
 	}
 }
 
@@ -92,21 +93,27 @@ void PlnVarInit::gen(PlnGenerator& g)
 		PlnVariable *v = val.inf.var;
 		if (v->ptr_type & PTR_OWNERSHIP)
 			if (!do_init) {
-				if (v->var_type.back()->name == "[]") {
-					auto t = v->var_type.back();
-					auto e = g.getPopEntity(v->place);
-					int item_size = t->inf.fixedarray.item_size;
-					int asize = 0;
-					for (int i: *t->inf.fixedarray.sizes)
-						asize += i;
-					asize *= item_size;
-					g.genMemAlloc(e.get(), asize, v->name);
+				PlnType* t = v->var_type.back();
+				if (t->inf.obj.is_fixed_size) {
+					auto e = g.getEntity(v->place);
+					g.genMemAlloc(e.get(), t->inf.obj.alloc_size, v->name);
 				} else {
 					BOOST_ASSERT(false);	// TODO: need to implement.
 				}
 			}
 	}
 
-	for (auto i: initializer)
+	int vi = 0;
+	for (auto i: initializer) {
+		vector<unique_ptr<PlnGenEntity>> clr_es;
 		i->gen(g);
+		for (auto dp: i->data_places) {
+			g.genLoadDp(dp);
+			if (vars[vi].lval_type == LVL_MOVE)
+				clr_es.push_back(g.getEntity(dp->src_place));
+			vi++;
+		}
+		if (clr_es.size())
+			g.genNullClear(clr_es);
+	}
 }

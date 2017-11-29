@@ -23,14 +23,9 @@ PlnClone::PlnClone(PlnExpression* src)
 	}
 
 	auto t = values[0].getType();
-	if (t->name == "[]") {
-		int item_size = t->inf.fixedarray.item_size;
-		int asize = 0;
-		for (int i: *t->inf.fixedarray.sizes)
-			asize += i;
-		asize *= item_size;
-		copy_size = asize;
-	} else
+	if (t->inf.obj.is_fixed_size)
+		copy_size = t->inf.obj.alloc_size;
+	else
 		BOOST_ASSERT(false);
 }
 
@@ -44,8 +39,13 @@ void PlnClone::finish(PlnDataAllocator& da)
 
 	da.allocDp(cpy_src_dp);
 	da.allocDp(cpy_dst_dp);
+	da.pushSrc(cpy_dst_dp, clone_dp);
+	da.popSrc(cpy_dst_dp);
+	da.popSrc(cpy_src_dp);
 	da.memCopyed(cpy_dst_dp, cpy_src_dp);
 	da.releaseData(clone_dp);
+	if (data_places.size())
+		da.pushSrc(data_places[0], clone_dp);
 }
 
 void PlnClone::dump(ostream& os, string indent)
@@ -60,7 +60,7 @@ void PlnClone::gen(PlnGenerator& g)
 	static string cmt = "clone";
 	g.genMemAlloc(clone_e.get(), copy_size, cmt);
 	clone_src->gen(g);
-	g.getPopEntity(cpy_src_dp);
+	g.genLoadDp(cpy_src_dp);
 	auto cp_dst_e = g.getPopEntity(cpy_dst_dp);
 	g.genMove(cp_dst_e.get(), clone_e.get(), cmt + " -> " + *cpy_dst_dp->comment);
 	g.genMemCopy(copy_size, cmt);

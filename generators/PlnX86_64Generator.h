@@ -18,16 +18,20 @@ public:
 	void genEntryFunc();
 	void genLocalVarArea(int size);
 	void genFreeLocalVarArea(int size);
+
+	void genSaveReg(int reg, PlnGenEntity* dst);
+	void genLoadReg(int reg, PlnGenEntity* src);
+
 	void genCCall(string& cfuncname);
 	void genSysCall(int id, const string& comment);
 	void genReturn();
 	void genMainReturn();
 	void genStringData(int index, const string& str);
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
-	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second);
-	void genSub(PlnGenEntity* tgt, PlnGenEntity* second);
-	void genNegative(PlnGenEntity* tgt);
-	void genMul(PlnGenEntity* tgt, PlnGenEntity* second);
+	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
+	void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
+	void genNegative(PlnGenEntity* tgt, string comment);
+	void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);

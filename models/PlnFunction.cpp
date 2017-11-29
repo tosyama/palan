@@ -133,7 +133,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.pop_owner_vars(this);
 			si.pop_scope();
 
-			da.finish();
+			da.finish(save_regs, save_reg_dps);
 			inf.pln.stack_size = da.stack_size;
 		}
 	}
@@ -175,11 +175,15 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genLabel(name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
-			
+			for (int i=0; i<save_regs.size(); ++i) {
+				auto sav_e = g.getPopEntity(save_reg_dps[i]);
+				g.genSaveReg(save_regs[i], sav_e.get());
+			}
+ 
 			for (auto p: parameters) {
 				auto le = g.getPopEntity(p->place);
 				auto re = g.getPopEntity(p->load_place);
-				g.genMove(le.get(), re.get(), string("param->") + p->name);
+				g.genMove(le.get(), re.get(), string("param -> ") + p->name);
 			}
 
 			if (retval_init) retval_init->gen(g);

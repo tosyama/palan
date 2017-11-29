@@ -18,6 +18,7 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 
 protected:
 	PlnDataPlace* createArgDp(int func_type, int index, bool is_callee);
+	vector<int> getRegsNeedSave();
 
 public:
 	PlnX86_64DataAllocator();
@@ -35,5 +36,9 @@ public:
 	bool isAccumulator(PlnDataPlace* dp);
 	PlnDataPlace* multiplied(PlnDataPlace* tgt);
 	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder);
+
+	// for array item
+	PlnDataPlace* prepareObjBasePtr();
+	PlnDataPlace* prepareObjIndexPtr();
 };
 

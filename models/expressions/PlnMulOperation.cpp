@@ -77,17 +77,22 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
 		r->finish(da);
+		da.popSrc(r->data_places[0]);
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.allocData(rdp);	
+		da.allocData(rdp);
+		da.popSrc(r->data_places[0]);
 		da.releaseData(rdp);
 	}
+	da.popSrc(ldp);
 	da.releaseAccumulator(ldp);
 	product = da.multiplied(ldp);
+	if (data_places.size())
+		da.pushSrc(data_places[0], product);
 }
 
 void PlnMulOperation::dump(ostream& os, string indent)
@@ -101,16 +106,18 @@ void PlnMulOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
 	r->gen(g);
-	auto le = g.getPopEntity(l->data_places[0]);
-	auto re = g.getPopEntity(r->data_places[0]);
-	g.genMul(le.get(), re.get());
 
-	if (data_places.size() > 0) {
-		string cmt=l->data_places[0]->cmt() + "*" + r->data_places[0]->cmt()
-			+ "->" + data_places[0]->cmt();
-		auto rpe = g.getPushEntity(data_places[0]);
-		auto pe = g.getPopEntity(product);
-		g.genMove(rpe.get(), pe.get(), cmt);
-	}
+	auto ldp = l->data_places[0];
+	auto rdp = r->data_places[0];
+	
+	g.genLoadDp(rdp);
+	g.genLoadDp(ldp);
+
+	auto le = g.getEntity(ldp);
+	auto re = g.getEntity(rdp);
+	g.genMul(le.get(), re.get(), ldp->cmt() + " * " + rdp->cmt());
+
+	if (data_places.size() > 0)
+		g.genSaveSrc(data_places[0]);	// src_place : product
 }
 

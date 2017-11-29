@@ -16,10 +16,15 @@
 #include "../../PlnConstants.h"
 
 // PlnAssignment
-PlnAssignment::PlnAssignment(vector<PlnValue>& lvals, vector<PlnExpression*>& exps)
-	: PlnExpression(ET_ASSIGN), expressions(move(exps))
+PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps)
+	: lvals(move(lvals)), PlnExpression(ET_ASSIGN), expressions(move(exps))
 {
-	values = move(lvals);
+	for (auto e: this->lvals) {
+		BOOST_ASSERT(e->values.size() == 1);
+		BOOST_ASSERT(e->type == ET_VALUE || e->type == ET_ARRAYITEM);
+		BOOST_ASSERT(e->values[0].type == VL_VAR);
+		values.push_back(e->values[0]);
+	}
 }
 
 enum {	// AssignInf.type
@@ -29,14 +34,18 @@ enum {	// AssignInf.type
 
 void PlnAssignment::finish(PlnDataAllocator& da)
 {
-	int i=0, ei=0, ai=0;
+	int vi=0, i=0, ei=0, ai=0;
+	int vcnt=0;
 	for (auto e: expressions) {
+		vcnt += e->values.size();
+		if (vcnt > lvals.size()) vcnt = lvals.size();
+
 		for (auto v: e->values) {
 			if (i >= values.size()) break;
 			BOOST_ASSERT(values[i].type == VL_VAR);
 
 			if (values[i].inf.var->ptr_type == NO_PTR) {
-				auto dp = values[i].inf.var->place;
+				auto dp = values[i].getDataPlace(da);
 				e->data_places.push_back(dp);
 
 			} else {	// (ptr_type & PTR_REFERNCE)
@@ -44,7 +53,6 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 				BOOST_ASSERT(v.getType()->data_type == DT_OBJECT_REF);
 
 				union PlnAssignInf as_inf;
-				as_inf.inf.exp_ind = ei;
 				as_inf.inf.val_ind = i;
 
 				if (values[i].lval_type == LVL_COPY)  {
@@ -59,16 +67,9 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 						as_inf.mcopy.free_dp = NULL;
 
 					PlnType *t = values[i].getType();
-
-					if (t->name == "[]") {
-						int item_size = t->inf.fixedarray.item_size;
-						int asize = 0;
-						for (int i: *t->inf.fixedarray.sizes)
-							asize += i;
-						asize *= item_size;
-						as_inf.mcopy.cp_size = asize;
-
-					} else BOOST_ASSERT(false);
+					if (t->inf.obj.is_fixed_size) 
+						as_inf.mcopy.cp_size = t->inf.obj.alloc_size;
+					else BOOST_ASSERT(false);
 
 				} else if (values[i].lval_type == LVL_MOVE)  {
 					// Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
@@ -115,6 +116,12 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 			}
 		}
 
+		for (auto sdp: e->data_places)
+			da.popSrc(sdp);
+
+		for (; vi < vcnt; vi++)
+			lvals[vi]->finish(da);
+
 		// assign process
 		for (; ai<assign_inf.size(); ai++) {
 			auto& as_inf = assign_inf[ai];
@@ -137,6 +144,7 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 					break;
 			}
 		}
+
 		ei++;
 	}
 }
@@ -155,32 +163,46 @@ static void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace
 
 void PlnAssignment::gen(PlnGenerator& g)
 {
-	int ai=0;
+	int vi=0, ai=0;
+	int vcnt = 0;
 	for (int i=0; i<expressions.size(); ++i) {
+		vcnt += expressions[i]->values.size();
+		if (vcnt > lvals.size()) vcnt = lvals.size();
+
+		
+
 		expressions[i]->gen(g);
+
 		vector<unique_ptr<PlnGenEntity>> clr_es;
-		while(ai < assign_inf.size() && assign_inf[ai].mcopy.exp_ind <= i) {
-			BOOST_ASSERT(i == ai);
+		for (int di=0; vi < vcnt; vi++,di++) {
+			lvals[vi]->gen(g);
+			
+			if (ai < assign_inf.size() && assign_inf[ai].inf.val_ind == vi) {
+				if (assign_inf[ai].type == AI_MCOPY)
+					genMemoryCopy4Assign(g, assign_inf[ai], values[i].inf.var->place);
 
-			if (assign_inf[ai].type == AI_MCOPY)
-				genMemoryCopy4Assign(g, assign_inf[ai], values[i].inf.var->place);
+				else if (assign_inf[ai].type == AI_MOVE) {
+					auto as_inf = assign_inf[ai].move;
 
-			else if (assign_inf[ai].type == AI_MOVE) {
-				auto as_inf = assign_inf[ai].move;
-				auto dste = g.getPopEntity(as_inf.dst);
-				static string cmt = "lost ownership";
-				g.genMemFree(dste.get(), cmt, false);
-				auto srce = g.getPopEntity(as_inf.src);
-				g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
-				if (as_inf.do_clear)
-					clr_es.push_back(g.getPopEntity(as_inf.src));
+					g.genLoadDp(as_inf.src);
 
-			} else BOOST_ASSERT(false);
+					auto dste = g.getPopEntity(as_inf.dst);
+					static string cmt = "lost ownership";
+					g.genMemFree(dste.get(), cmt, false);
+					auto srce = g.getEntity(as_inf.src);
+					g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+					if (as_inf.do_clear)
+						clr_es.push_back(g.getPopEntity(as_inf.src));
 
-			if (clr_es.size())
-				g.genNullClear(clr_es);
+				} else BOOST_ASSERT(false);
 
-			ai++;
+				if (clr_es.size())
+					g.genNullClear(clr_es);
+
+				ai++;
+			} else {	// Normal copy
+				g.genLoadDp(expressions[i]->data_places[di]);
+			}
 		}
 	}
 	PlnExpression::gen(g);
@@ -189,8 +211,10 @@ void PlnAssignment::gen(PlnGenerator& g)
 void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp)
 {
 	auto as_inf = as.mcopy;
-	auto cpy_dste = g.getPopEntity(as_inf.dst);
-	auto cpy_srce = g.getPopEntity(as_inf.src);
+	g.genLoadDp(as_inf.src);
+
+	auto cpy_dste = g.getEntity(as_inf.dst);
+	auto cpy_srce = g.getEntity(as_inf.src);
 
 	// save src(work object) for free
 	if (as_inf.free_dp) {

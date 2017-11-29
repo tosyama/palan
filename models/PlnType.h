@@ -12,8 +12,15 @@ public:
 	int size;
 	union {
 		struct {
-			vector<int>* sizes;
+			bool is_fixed_size;
+			int alloc_size;
+		} obj;
+
+		struct {
+			bool is_fixed_size;
+			int alloc_size;
 			int item_size;
+			vector<int>* sizes;
 		} fixedarray;
 	} inf;
 

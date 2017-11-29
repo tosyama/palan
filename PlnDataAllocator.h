@@ -22,6 +22,7 @@ protected:
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
+	virtual vector<int> getRegsNeedSave()=0;
 
 public:
 	int stack_size;
@@ -29,7 +30,10 @@ public:
 	vector<PlnDataPlace*> data_stack;
 	vector<PlnDataPlace*> arg_stack;
 	vector<PlnDataPlace*> regs;
+	vector<PlnDataPlace*> sub_dbs;
 	vector<PlnDataPlace*> all;
+
+	vector<PlnDataPlace*> release_stmt_end;
 
 	void reset();
 	PlnDataAllocator(int regnum);
@@ -58,10 +62,19 @@ public:
 	virtual PlnDataPlace* multiplied(PlnDataPlace* tgt) = 0;
 	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
 
+	// for array item
+	virtual PlnDataPlace* prepareObjBasePtr() = 0;
+	virtual PlnDataPlace* prepareObjIndexPtr() = 0;
+	virtual void getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
+
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
+	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
-	void finish();
+	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp);
+	void popSrc(PlnDataPlace* dp);
+
+	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
 };
 
 enum {
@@ -71,8 +84,11 @@ enum {
 	DP_REG,
 	DP_BYTES,
 
+	DP_INDRCT_OBJ,
 	DP_LIT_INT,
-	DP_RO_DATA
+	DP_RO_DATA,
+
+	DP_SUBDP
 };
 
 enum {
@@ -99,13 +115,17 @@ public:
 		struct {int32_t idx; int32_t offset;} stack;
 		struct {int32_t idx; int32_t offset;} bytes;
 		struct {int32_t id; int32_t offset;} reg;
+		struct {int32_t displacement; PlnDataPlace* base_dp; PlnDataPlace* index_dp;
+				int16_t base_id; int16_t index_id; } indirect;
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		int index;
+		PlnDataPlace *originalDp;
 	} data;
 
 	PlnDataPlace* previous;
 	PlnDataPlace* save_place;
+	PlnDataPlace* src_place;
 	string* comment;
 
 	PlnDataPlace(int size, int data_type);

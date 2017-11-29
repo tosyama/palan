@@ -79,6 +79,16 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool
 	return dp;
 }
 
+vector<int> PlnX86_64DataAllocator::getRegsNeedSave()
+{
+	vector<int> save_regs;
+	static int regs4save[] = {RBX, R12, R13, R14, R15};
+	for (int r: regs4save)
+		if (regs[r])
+			save_regs.push_back(r);
+	return save_regs;
+}
+
 static bool checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 {
 	PlnDataPlace *curdp = root;
@@ -194,7 +204,7 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 	dp->previous = pdp;
 	dp->alloc_step = step++;
 
-	static string cmt = "%work";
+	static string cmt = "%accm";
 	dp->comment = &cmt;
 
 	if (pdp && pdp->status != DS_RELEASED)
@@ -223,11 +233,13 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* tgt)
 	auto pdp = regs[regid];
 	BOOST_ASSERT(!pdp || pdp->status == DS_RELEASED);
 	auto dp = new PlnDataPlace(8,tgt->data_type);
+	static string cmt = "%mulp";
 	dp->type = DP_REG;
 	dp->status = DS_RELEASED;
 	dp->data.reg.id = regid;
 	dp->alloc_step = dp->release_step = step;
 	dp->previous = pdp;
+	dp->comment = &cmt;
 	regs[regid] = dp;
 	step++;
 	return dp;
@@ -255,5 +267,39 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	*quotient = regs[RAX];
 	*reminder = regs[RDX];
 
+	static string cmq = "%divq", cmr = "%divr";
+	(*quotient)->comment = &cmq;
+	(*reminder)->comment = &cmr;
+
 	step++;
+}
+
+PlnDataPlace* PlnX86_64DataAllocator::prepareObjBasePtr()
+{
+	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_REG;
+	dp->status = DS_ASSIGNED;
+
+	dp->data.reg.id = RBX;
+	dp->data.reg.offset = 0;
+
+	static string cmt = "base";
+	dp->comment = &cmt;
+
+	return dp;
+}
+
+PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
+{
+	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_REG;
+	dp->status = DS_ASSIGNED;
+
+	dp->data.reg.id = RDI;
+	dp->data.reg.offset = 0;
+
+	static string cmt = "index";
+	dp->comment = &cmt;
+
+	return dp;
 }

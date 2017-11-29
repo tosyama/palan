@@ -136,6 +136,17 @@ void PlnX86_64Generator::genFreeLocalVarArea(int size)
 	}
 }
 
+void PlnX86_64Generator::genSaveReg(int reg, PlnGenEntity* dst)
+{
+	os << "	movq " << r(reg) << ", " << oprnd(dst) << endl;
+}
+
+void PlnX86_64Generator::genLoadReg(int reg, PlnGenEntity* src)
+{
+	os << "	movq " << oprnd(src) << ", " << r(reg) << endl;
+}
+
+
 void PlnX86_64Generator::genCCall(string& cfuncname)
 {
 	os << "	xorq %rax, %rax" << endl;
@@ -276,11 +287,11 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	os << endl;
 }
 
-void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
 	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
-		os << "	incq " << oprnd(tgt) << endl;
+		os << "	incq " << oprnd(tgt) << "	# " << comment << endl;
 		return;
 	}
 
@@ -291,14 +302,14 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second)
 		add_str = r(R11,8);
 	}
 		
-	os << "	addq " << add_str << ", " << oprnd(tgt) << endl;
+	os << "	addq " << add_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
 	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
-		os << "	decq " << oprnd(tgt) << endl;
+		os << "	decq " << oprnd(tgt) << "	# " << comment << endl;
 		return;
 	}
 
@@ -309,15 +320,15 @@ void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second)
 		sub_str = r(R11,8);
 	}
 
-	os << "	subq " << sub_str << ", " << oprnd(tgt) << endl;
+	os << "	subq " << sub_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genNegative(PlnGenEntity* tgt)
+void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)
 {
-	os << "	negq " << oprnd(tgt) << endl;
+	os << "	negq " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
+void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
 
@@ -327,7 +338,7 @@ void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second)
 		os << endl;
 		mul_str = r(R11,8);
 	}
-	os << "	imulq " << mul_str << ", " << oprnd(tgt) << endl;
+	os << "	imulq " << mul_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
 void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
@@ -410,6 +421,16 @@ void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doN
 	os << endl;
 }
 
+static string* getAdressingStr(int displacement, int base_id, int index_id, int scale)
+{
+	string *str = new string(r(base_id));
+	string disp_s = displacement ? to_string(displacement) : "";
+	string ind_s = string(r(index_id)) + "," + to_string(scale);
+	*str = disp_s + "(" + *str + "," + ind_s + ")";
+
+	return str;
+}
+
 unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 {
 	BOOST_ASSERT(dp->data_type != DT_UNKNOWN);
@@ -434,6 +455,18 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->data.i = dp->data.reg.id;
+
+	} else if (dp->type == DP_INDRCT_OBJ) {
+		e->type = GE_STRING;
+		e->alloc_type = GA_MEM;
+		e->size = dp->size;
+		e->data_type = dp->data_type;
+		e->data.str = getAdressingStr(
+				dp->data.indirect.displacement,
+				dp->data.indirect.base_id,
+				dp->data.indirect.index_id,
+				dp->size
+			);
 
 	} else if (dp->type == DP_LIT_INT) {
 		e->type = GE_STRING;

@@ -75,7 +75,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 		case VL_RO_DATA:
 			return da.getReadOnlyDp(inf.rod->index);
 		case VL_VAR:
-			return inf.var->place;
+			return da.getSeparatedDp(inf.var->place);
 	}
 	BOOST_ASSERT(false);
 }
@@ -119,6 +119,8 @@ bool PlnExpression::isLitNum(int& num_type)
 void PlnExpression::finish(PlnDataAllocator& da)
 {
 	val_place = values[0].getDataPlace(da);
+	if (data_places.size())
+		da.pushSrc(data_places[0], val_place);
 }
 
 void PlnExpression::dump(ostream& os, string indent)
@@ -163,10 +165,7 @@ static string exp_cmt(PlnValue& v, PlnDataPlace* dp)
 void PlnExpression::gen(PlnGenerator& g)
 {
 	BOOST_ASSERT(data_places.size() <= 1);
-	if (data_places.size()) {
-		auto re = g.getEntity(val_place);
-	 	auto le = g.getPushEntity(data_places[0]);
-		g.genMove(le.get(), re.get(), exp_cmt(values[0],data_places[0]));
-	}
+	if (data_places.size())
+		g.genSaveSrc(data_places[0]);
 }
 

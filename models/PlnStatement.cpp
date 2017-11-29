@@ -50,6 +50,10 @@ void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			inf.var_init->finish(da, si);
 			break;
 	}
+
+	for (auto dp: da.release_stmt_end) 
+		da.releaseData(dp);
+	da.release_stmt_end.resize(0);
 }
 
 void PlnStatement::dump(ostream& os, string indent)
@@ -169,6 +173,8 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 
 	da.returnedValues(dps, FT_PLN);
+	for(auto dp: dps)
+		da.popSrc(dp);
 }
 
 void PlnReturnStmt::dump(ostream& os, string indent)
@@ -192,12 +198,19 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 
 	for (auto e: expressions)
 		for (auto dp: e->data_places)
-			if (dp != late_pop_dp)
-				g.getPopEntity(dp);
+			if (dp != late_pop_dp) {
+				g.genLoadDp(dp);
+			}
 				
-	if (late_pop_dp)
-		g.getPopEntity(late_pop_dp);
+	if (late_pop_dp) {
+		g.genLoadDp(late_pop_dp);
+	}
 
+	for (int i; i<function->save_regs.size(); i++) {
+		auto e = g.getPopEntity(function->save_reg_dps[i]);
+		g.genLoadReg(function->save_regs[i], e.get());
+	}
+	
 	g.genFreeLocalVarArea(function->inf.pln.stack_size);
 	g.genReturn();
 }

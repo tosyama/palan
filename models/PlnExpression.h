@@ -16,7 +16,8 @@ enum PlnExprsnType {
 	ET_NEG,
 	ET_ASSIGN,
 	ET_MVOWN,
-	ET_CLONE
+	ET_CLONE,
+	ET_ARRAYITEM
 };
 
 class PlnExpression {

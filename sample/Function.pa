@@ -2,12 +2,12 @@ alias int=int32;
 
 auto x,y = pointadd(1,2,3,4);
 print(x.str ":" y.str);
-x,y = swap(x,y);
+swap(x,y) -> x, y;
 print(x.str ":" y.str);
 
 object o1, o3, o4;
 
-o1<< = funco(o1,o2.clone, <<o3, *o2, io o4); // 所有を渡したので、o3は無効.
+funco(o1,o2.clone, o3>>, *o2, io o4) ->> o1; // 所有を渡したので、o3は無効.
 					// 内部処理的にはo1の無効処理(null代入)は行わない。
 					// <<, *, ioは飾り。宣言をを意識させる+関数宣言後置の場合の推測に使用
 					// 式を書く場合は、&(ab+b), *(x+3)
@@ -15,14 +15,14 @@ o1<< = funco(o1,o2.clone, <<o3, *o2, io o4); // 所有を渡したので、o3は
 					// *の場合のみ関数実行後delete.
 					// *の引数はreturnできない(clone必要->無印を使うこと)。
 
-o2 = o1; // deep copy.
-o2 <<= o1; // 所有権を取られたので、o1は無効(null代入). 以降o2=o1はコンパイルエラー
+o1 -> o2; // deep copy.
+o1 ->> o2; // 所有権を取られたので、o1は無効(null代入). 以降o2=o1はコンパイルエラー
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
 
 auto *o4 = *o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
 
-x = func2(x, y);
+func2(x, y) -> x;
 
 // Policy: returnはrval, output用
 //	parameterは input / io用
@@ -30,21 +30,24 @@ x = func2(x, y);
 //	parameterのオブジェクト型(string等)は参照渡しのみ。
 
 // multi return
-func
-int x, int y pointadd(int sx, int sy int ax, int ay) {
+func pointadd(int sx, int sy int ax, int ay)
+	-> int x, int y
+{
 	x = sx + ax;
 	y = sy + ay;
 	return;
 }
 
 // simple swap
-int x, y swap(int sx, sy) {
+func swap(int sx, sy)
+	-> int x, y
+{
 	return sy, sx;
 }
 
 // object
-func
-object o2 funco(object o1, o2<<, o3<<, *o4, io o5)
+func funco(object o1, >>o2, >>o3, *o4, io o5)
+	-> object o2
 {
 	// o1 は rval input only.(clone would be created before func call and callee free it)
 	// o2はrvalだか 戻り値なので通常deleteされない. 
@@ -60,8 +63,7 @@ object o2 funco(object o1, o2<<, o3<<, *o4, io o5)
 
 // 戻り値とパラメータは重複して同じ名前を使うことができる。
 // 入出力の意図の記述とレジスタの共有ができる。
-func
-int a func2(int a, int b)
+func func2(int a, int b) -> int a
 {
 	a += b;
 }

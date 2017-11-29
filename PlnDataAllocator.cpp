@@ -22,10 +22,16 @@ void PlnDataAllocator::reset()
 {
 	all.insert(all.end(),data_stack.begin(),data_stack.end());
 	data_stack.resize(0);
+
 	all.insert(all.end(),arg_stack.begin(),arg_stack.end());
 	arg_stack.resize(0);
+
+	all.insert(all.end(),sub_dbs.begin(),sub_dbs.end());
+	sub_dbs.resize(0);
+
 	all.insert(all.end(),regs.begin(),regs.end());
 	for (auto& reg: regs) reg = NULL;
+
 	stack_size = 0;
 	step = 0;
 }
@@ -121,7 +127,7 @@ void PlnDataAllocator::releaseData(PlnDataPlace* dp)
 		dp->save_place->release_step = step;
 	}
 
-	if (dp->size < 8) {
+	if (dp->size < 8 && dp->type == DP_STK_BP) {
 		auto parent_dp = data_stack[dp->data.stack.idx];
 		BOOST_ASSERT(parent_dp->type == DP_BYTES);
 		BOOST_ASSERT(parent_dp->status == DS_ASSIGNED_SOME);
@@ -193,6 +199,24 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 	return dps;
 }
 
+void PlnDataAllocator::getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
+{
+	dp->type = DP_INDRCT_OBJ;
+	dp->status = DS_ASSIGNED;
+
+	dp->data.indirect.displacement = 0;
+	dp->data.indirect.base_dp = base_dp;
+	dp->data.indirect.index_dp = index_dp;
+	dp->data.indirect.base_id = base_dp->data.reg.id;
+	dp->data.indirect.index_id = index_dp->data.reg.id;
+
+	dp->alloc_step = step;
+	dp->release_step = step;
+	static string cmt = "indirect obj";
+	dp->comment = &cmt;
+	all.push_back(dp);
+}
+
 PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_SINT);
@@ -221,8 +245,36 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 	return dp;
 }
 
-void PlnDataAllocator::finish()
+PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
 {
+	BOOST_ASSERT(dp->type != DP_SUBDP);
+
+	// indirect obj is already separated and not managed by data allocator.
+	if (dp->type == DP_INDRCT_OBJ)
+		return dp;
+
+	auto sub_dp = new PlnDataPlace(dp->size, dp->data_type);
+	sub_dp->type = DP_SUBDP;
+	sub_dp->data.originalDp = dp;
+	sub_dp->comment = dp->comment;
+
+	sub_dbs.push_back(sub_dp);
+	return sub_dp;
+}
+
+void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &save_reg_dps)
+{
+	// Alloc register value save area.
+	save_regs = getRegsNeedSave();
+	for (int sr: save_regs) {
+		auto dp = new PlnDataPlace(8,DT_UINT);
+		dp->type = DP_STK_BP;
+		dp->data.stack.idx = data_stack.size();
+		dp->previous = NULL;
+		data_stack.push_back(dp);
+		save_reg_dps.push_back(dp);
+	}
+
 	int offset = 0;
 	// Set offset from base stack pointer.
 	for (auto dp: data_stack) {
@@ -248,12 +300,68 @@ void PlnDataAllocator::finish()
 	int stk_itm_num = data_stack.size() + arg_stack.size();
 	if (stk_itm_num & 0x1) stk_itm_num++;  // for 16byte align.
 	stack_size = stk_itm_num * 8;
+
+	// rewrite original data to sub.
+	for (auto sub_dp: sub_dbs) {
+		auto org_dp = sub_dp->data.originalDp;
+		sub_dp->type = org_dp->type;
+		sub_dp->data = org_dp->data;
+	}
+}
+
+void PlnDataAllocator::pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp)
+{
+	BOOST_ASSERT(dp->src_place == NULL);
+	dp->src_place = src_dp;
+}
+
+void PlnDataAllocator::popSrc(PlnDataPlace* dp)
+{
+	BOOST_ASSERT(dp->src_place);
+	bool is_src_destroy = false;
+	bool is_dst_destroy = false;
+
+	// check src data would be destory.
+	if (dp->src_place->type == DP_REG) {
+		int s_regid = dp->src_place->data.reg.id;
+		if (regs[s_regid] != dp->src_place
+				&& !dp->save_place
+				&& !(regs[s_regid] == dp && dp->previous == dp->src_place)) {	// rax->rax
+			
+			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp
+					&& (!dp->previous || (dp->previous->release_step < dp->src_place->alloc_step))) {
+				// Accelerate moving to before destoroy if possible.
+				dp->save_place = dp;
+			} else {
+				allocSaveData(dp);
+			}
+		}
+	} else if (dp->src_place->type == DP_INDRCT_OBJ) {
+		auto base_dp = dp->src_place->data.indirect.base_dp;
+		int base_id = base_dp->data.reg.id;
+		auto index_dp = dp->src_place->data.indirect.index_dp;
+		int index_id = index_dp->data.reg.id;
+
+		if (!dp->save_place
+				&& (regs[base_id] != base_dp || regs[index_id] != index_dp)) {
+			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp) {
+				// Accelerate moving to before destoroy if possible.
+				dp->save_place = dp;
+			} else {
+				// TODO: assign save_place.
+				BOOST_ASSERT(false);
+			}
+		}
+	}
+
+	// check dst data would be destory.
 }
 
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_ASSIGNED), accessCount(0), alloc_step(0), release_step(INT_MAX),
-	 previous(NULL), save_place(NULL), size(size), data_type(data_type)
+	 previous(NULL), save_place(NULL), src_place(NULL),
+	 size(size), data_type(data_type)
 {
 	static string emp="";
 	comment = &emp;

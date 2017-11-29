@@ -34,7 +34,10 @@ enum {
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
 	KW_RETURN	= PlnParser::token::KW_RETURN,
-	DBL_LESS	= PlnParser::token::DBL_LESS
+	DBL_LESS	= PlnParser::token::DBL_LESS,
+	DBL_GRTR	= PlnParser::token::DBL_GRTR,
+	ARROW		= PlnParser::token::ARROW,
+	DBL_ARROW	= PlnParser::token::DBL_ARROW
 };
 
 static string& unescape(string& str);
@@ -50,7 +53,10 @@ DIGIT_MIN	"-9223372036854775808"
 ID	[a-zA-Z_][0-9a-zA-Z_]*
 FUNC_ID	{ID}[ \t\n\r]*"("
 DBL_LESS	"<<"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"
+DBL_GRTR	">>"
+ARROW		"->"
+DBL_ARROW	"->>"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|">"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 
@@ -109,8 +115,17 @@ return	{ return KW_RETURN; }
 		lval.build<string>() = unescape(str);
 		return STR;
 	}
+{DBL_ARROW} {
+		return DBL_ARROW;
+	}
+{ARROW} {
+		return ARROW;
+	}
 {DBL_LESS}	{
 		return DBL_LESS;
+	}
+{DBL_GRTR}	{
+		return DBL_GRTR;
 	}
 {DELIMITER}	{ return yytext[0]; }
 [ \t]+		{ loc.step(); }
