@@ -342,12 +342,16 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 
 		if (!dp->save_place
 				&& (regs[base_id] != base_dp || regs[index_id] != index_dp)) {
-			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp) {
-				// Accelerate moving to before destoroy if possible.
+			auto pdp = dp->previous;
+			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp
+					&& (!pdp || (pdp == index_dp || pdp == base_dp)
+						|| (dp->previous->release_step < index_dp->alloc_step
+							&& dp->previous->release_step < base_dp->alloc_step))) {
+				// Accelerate moving before destoroy if possible.
 				dp->save_place = dp;
+
 			} else {
-				// TODO: assign save_place.
-				BOOST_ASSERT(false);
+				allocSaveData(dp);
 			}
 		}
 	}
