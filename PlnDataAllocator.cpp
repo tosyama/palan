@@ -199,7 +199,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 	return dps;
 }
 
-void PlnDataAllocator::getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
+void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
 {
 	dp->type = DP_INDRCT_OBJ;
 	dp->status = DS_ASSIGNED;
@@ -212,8 +212,6 @@ void PlnDataAllocator::getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 
 	dp->alloc_step = step;
 	dp->release_step = step;
-	static string cmt = "indirect obj";
-	dp->comment = &cmt;
 	all.push_back(dp);
 }
 

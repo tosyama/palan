@@ -65,7 +65,7 @@ public:
 	// for array item
 	virtual PlnDataPlace* prepareObjBasePtr() = 0;
 	virtual PlnDataPlace* prepareObjIndexPtr() = 0;
-	virtual void getIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
+	virtual void setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
 
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getReadOnlyDp(int index);
@@ -132,7 +132,7 @@ public:
 	unsigned int getAllocBytesBits();
 	bool tryAllocBytes(PlnDataPlace* dp);
 
-	string cmt() { return (!save_place) ? *comment : *comment + *save_place->comment; }
+	string cmt() { return *comment; }
 	int allocable_size();
 	void access();
 };

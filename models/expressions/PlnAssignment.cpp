@@ -169,8 +169,6 @@ void PlnAssignment::gen(PlnGenerator& g)
 		vcnt += expressions[i]->values.size();
 		if (vcnt > lvals.size()) vcnt = lvals.size();
 
-		
-
 		expressions[i]->gen(g);
 
 		vector<unique_ptr<PlnGenEntity>> clr_es;

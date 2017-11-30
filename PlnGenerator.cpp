@@ -15,9 +15,18 @@
 
 void PlnGenerator::genLoadDp(PlnDataPlace* dp)
 {
-	auto srce = getEntity(dp->save_place ? dp->save_place : dp->src_place);
+	PlnDataPlace *src_dp;
+	string src_cmt;
+	if (dp->save_place) {
+		src_dp = dp->save_place;
+		src_cmt = dp->src_place->cmt() + src_dp->cmt();
+	} else {
+		src_dp = dp->src_place;
+		src_cmt = src_dp->cmt();
+	}
+	auto srce = getEntity(src_dp);
 	auto dste = getEntity(dp);
-	genMove(dste.get(), srce.get(), dp->src_place->cmt() + " -> " + dp->cmt());
+	genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
 }
 
 void PlnGenerator::genSaveSrc(PlnDataPlace* dp)

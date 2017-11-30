@@ -74,6 +74,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			}
 		case VL_RO_DATA:
 			return da.getReadOnlyDp(inf.rod->index);
+
 		case VL_VAR:
 			return da.getSeparatedDp(inf.var->place);
 	}

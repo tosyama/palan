@@ -33,6 +33,8 @@ void PlnClone::finish(PlnDataAllocator& da)
 {
 	BOOST_ASSERT(data_places.size());
 	clone_dp = da.allocData(8, DT_OBJECT_REF);
+	static string cmt = "clone";
+	clone_dp->comment = &cmt;
 	da.memAlloced();
 	da.prepareMemCopyDps(cpy_dst_dp, cpy_src_dp);
 	clone_src->data_places.push_back(cpy_src_dp);
