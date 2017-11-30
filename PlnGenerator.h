@@ -79,7 +79,5 @@ public:
 	void genSaveSrc(PlnDataPlace* dp);
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
-	unique_ptr<PlnGenEntity> getPushEntity(PlnDataPlace* dp);
-	unique_ptr<PlnGenEntity> getPopEntity(PlnDataPlace* dp);
 };
 

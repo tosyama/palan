@@ -142,7 +142,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 				g.genSaveSrc(dp);
 
 			for (auto fdp: free_dps) {
-				auto fe = g.getPopEntity(fdp);
+				auto fe = g.getEntity(fdp);
 				static string cmt="unused return";
 				g.genMemFree(fe.get(), cmt, false);
 			}

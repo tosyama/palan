@@ -186,13 +186,14 @@ void PlnAssignment::gen(PlnGenerator& g)
 
 					g.genLoadDp(as_inf.src);
 
-					auto dste = g.getPopEntity(as_inf.dst);
+					auto dste = g.getEntity(as_inf.dst);
 					static string cmt = "lost ownership";
 					g.genMemFree(dste.get(), cmt, false);
 					auto srce = g.getEntity(as_inf.src);
 					g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+
 					if (as_inf.do_clear)
-						clr_es.push_back(g.getPopEntity(as_inf.src));
+						clr_es.push_back(g.getEntity(as_inf.src));
 
 				} else BOOST_ASSERT(false);
 
@@ -218,12 +219,12 @@ void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_d
 
 	// save src(work object) for free
 	if (as_inf.free_dp) {
-		auto fe = g.getPopEntity(as_inf.free_dp);
+		auto fe = g.getEntity(as_inf.free_dp);
 		g.genMove(fe.get(), cpy_srce.get(), *as_inf.src->comment + " -> save for free");
 	}
 
 	// get dest
-	auto ve = g.getPopEntity(var_dp);
+	auto ve = g.getEntity(var_dp);
 	g.genMove(cpy_dste.get(), ve.get(), *var_dp->comment + " -> " + *as_inf.dst->comment);
 
 	// copy
@@ -233,7 +234,7 @@ void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_d
 	// free work object
 	if (as_inf.free_dp) {
 		static string cmt = "work";
-		auto fe = g.getPopEntity(as_inf.free_dp);
+		auto fe = g.getEntity(as_inf.free_dp);
 		g.genMemFree(fe.get(), cmt, false);
 	}
 }

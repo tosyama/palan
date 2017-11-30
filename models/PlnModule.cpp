@@ -160,7 +160,7 @@ void PlnModule::gen(PlnGenerator &g)
 	g.genEntryFunc();
 	g.genLocalVarArea(stack_size);
 	for (int i=0; i<save_regs.size(); ++i) {
-		auto sav_e = g.getPopEntity(save_reg_dps[i]);
+		auto sav_e = g.getEntity(save_reg_dps[i]);
 		g.genSaveReg(save_regs[i], sav_e.get());
 	}
 	

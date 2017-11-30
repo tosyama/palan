@@ -31,6 +31,7 @@ PlnClone::PlnClone(PlnExpression* src)
 
 void PlnClone::finish(PlnDataAllocator& da)
 {
+	BOOST_ASSERT(data_places.size());
 	clone_dp = da.allocData(8, DT_OBJECT_REF);
 	da.memAlloced();
 	da.prepareMemCopyDps(cpy_dst_dp, cpy_src_dp);
@@ -44,8 +45,7 @@ void PlnClone::finish(PlnDataAllocator& da)
 	da.popSrc(cpy_src_dp);
 	da.memCopyed(cpy_dst_dp, cpy_src_dp);
 	da.releaseData(clone_dp);
-	if (data_places.size())
-		da.pushSrc(data_places[0], clone_dp);
+	da.pushSrc(data_places[0], clone_dp);
 }
 
 void PlnClone::dump(ostream& os, string indent)
@@ -61,10 +61,8 @@ void PlnClone::gen(PlnGenerator& g)
 	g.genMemAlloc(clone_e.get(), copy_size, cmt);
 	clone_src->gen(g);
 	g.genLoadDp(cpy_src_dp);
-	auto cp_dst_e = g.getPopEntity(cpy_dst_dp);
-	g.genMove(cp_dst_e.get(), clone_e.get(), cmt + " -> " + *cpy_dst_dp->comment);
+	g.genLoadDp(cpy_dst_dp);
 	g.genMemCopy(copy_size, cmt);
-	auto e = g.getPushEntity(data_places[0]);
-	g.genMove(e.get(), clone_e.get(), cmt + " -> " + *data_places[0]->comment);
+	g.genSaveSrc(data_places[0]);
 }
 

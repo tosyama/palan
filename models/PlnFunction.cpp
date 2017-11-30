@@ -176,13 +176,13 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
 			for (int i=0; i<save_regs.size(); ++i) {
-				auto sav_e = g.getPopEntity(save_reg_dps[i]);
+				auto sav_e = g.getEntity(save_reg_dps[i]);
 				g.genSaveReg(save_regs[i], sav_e.get());
 			}
  
 			for (auto p: parameters) {
-				auto le = g.getPopEntity(p->place);
-				auto re = g.getPopEntity(p->load_place);
+				auto le = g.getEntity(p->place);
+				auto re = g.getEntity(p->load_place);
 				g.genMove(le.get(), re.get(), string("param -> ") + p->name);
 			}
 

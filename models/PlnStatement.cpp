@@ -192,7 +192,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	PlnDataPlace* adp = NULL;
 
 	for (auto v: to_free_vars) {
-		auto ve = g.getPopEntity(v->place);
+		auto ve = g.getEntity(v->place);
 		g.genMemFree(ve.get(), v->name, false);	
 	}
 
@@ -207,7 +207,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	}
 
 	for (int i; i<function->save_regs.size(); i++) {
-		auto e = g.getPopEntity(function->save_reg_dps[i]);
+		auto e = g.getEntity(function->save_reg_dps[i]);
 		g.genLoadReg(function->save_regs[i], e.get());
 	}
 	
