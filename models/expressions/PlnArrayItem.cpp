@@ -15,9 +15,11 @@
 #include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
 
-PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<int> item_ind)
+PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
 {
+	BOOST_ASSERT(item_ind.size());
+
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 	var->name = array_var->name + "[]";
@@ -27,7 +29,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<int> item_ind)
 	var->place->comment = &var->name;
 	values.push_back(PlnValue(var));
 
-	index_ex = new PlnExpression(PlnValue(int64_t(item_ind[0])));
+	index_ex = item_ind[0];
 }
 
 void PlnArrayItem::finish(PlnDataAllocator& da)
@@ -35,15 +37,16 @@ void PlnArrayItem::finish(PlnDataAllocator& da)
 	auto base_dp = da.prepareObjBasePtr();
 	array_ex->data_places.push_back(base_dp);
 	array_ex->finish(da);
-	da.allocDp(base_dp);
 
 	auto index_dp = da.prepareObjIndexPtr();
 	index_ex->data_places.push_back(index_dp);
 	index_ex->finish(da);
-	da.allocDp(index_dp);
 
+	da.allocDp(base_dp);
 	da.popSrc(base_dp);
+	da.allocDp(index_dp);
 	da.popSrc(index_dp);
+
 	auto item_var = values[0].inf.var;
 	auto item_dp = values[0].inf.var->place;
 

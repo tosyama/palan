@@ -123,6 +123,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnReturnStmt*>	return_stmt
 %type <vector<PlnType*>>	type_def
 %type <vector<int>>	array_def
+%type <vector<PlnExpression*>>	array_item
 
 %right '='
 %left ARROW DBL_ARROW
@@ -588,7 +589,7 @@ unary_expression: ID
 		}
 	}
 
-	| unary_expression array_def
+	| unary_expression array_item
 	{
 		$$ = new PlnArrayItem($1, $2);
 	}
@@ -749,6 +750,13 @@ array_def: '[' INT ']'
 		$$.push_back($2);
 	}
 	;
+
+array_item: '[' expression ']'
+	{
+		$$.push_back($2);
+	}
+	;
+
 
 %%
 

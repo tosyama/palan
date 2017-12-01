@@ -10,7 +10,7 @@ class PlnArrayItem : public PlnExpression
 public:
 	PlnExpression* array_ex;
 	PlnExpression* index_ex;
-	PlnArrayItem(PlnExpression *array_ex, vector<int> item_ind);
+	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind);
 
 	void finish(PlnDataAllocator& da); // override;
 	void gen(PlnGenerator& g);	// override

@@ -167,7 +167,7 @@ dst_val: move_owner unary_expression
 	;
 
 unary_expression: ID
-	| unary_expression array_def
+	| unary_expression array_item
 	;
 
 term: INT
@@ -217,6 +217,16 @@ array_sizes: array_size
 
 array_size: /* empty */
 	| INT | ID
+	;
+
+array_item: '[' array_indexes ']'
+	;
+
+array_indexes: array_index
+	| array_indexes ',' array_index
+	;
+
+array_index: expression
 	;
 
 %%

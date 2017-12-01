@@ -48,19 +48,24 @@ int16[3] f <<= e;
 arr_func(3, a) -> b;
 arr_func2(4, a>>) ->> b;
 
-2 -> b[1];
-5 -> b[0];
-int32_func(b[1],b[0]-1) -> b[0], b[2];
+int16 ind = 1;
 
-int16 s = b[0] + 1;
+5 -> b[ind-1];	// b[0]=5
+2 -> b[ind];	// b[1]=2
 
-b ->> c;
+int32_func(b[1],b[0]-1) -> b[0], b[2];	// b[0]=3,  b[2]=4
+
+int16 s = b[0] + 1;	// s=4
+
+b ->> c;	// b=undefined, c[0]=3,c[1]=2,c[2]=4
 c -> o;
 s -> o[2];
-int32_func2(c[0],c[1]) -> o2[0];
+int32_func2(c[0],c[1]) -> o2[0];	// o2[0] = 5
+
+s + o2[s * 0] -> o2[c[0]-2];	// o2[1] = 9
 }
 muntrace();
 
-printf("%d %d %d %d\n", o[0], o[1], o[2], o2[0]);
+printf("%d %d %d %d %d\n", o[0], o[1], o[2], o2[0], o2[1]);
 exit(0);
 
