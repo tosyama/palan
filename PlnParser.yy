@@ -123,7 +123,9 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnReturnStmt*>	return_stmt
 %type <vector<PlnType*>>	type_def
 %type <vector<int>>	array_def
+%type <vector<int>>	array_sizes
 %type <vector<PlnExpression*>>	array_item
+%type <vector<PlnExpression*>>	array_indexes
 
 %right '='
 %left ARROW DBL_ARROW
@@ -745,18 +747,41 @@ type_def: TYPENAME	{ $$.push_back(module.getType($1)); }
 	}
 	;
 
-array_def: '[' INT ']'
+array_def: '[' array_sizes ']'
 	{
-		$$.push_back($2);
+		$$ = move($2);
 	}
 	;
 
-array_item: '[' expression ']'
+array_sizes: INT
 	{
-		$$.push_back($2);
+		$$.push_back($1);
+	}
+
+	| array_sizes ',' INT
+	{
+		$$ = move($1);
+		$$.push_back($3);
 	}
 	;
 
+array_item: '[' array_indexes ']'
+	{
+		$$ = move($2);
+	}
+	;
+
+array_indexes: expression
+	{
+		$$.push_back($1);
+	}
+
+	| array_indexes ',' expression
+	{
+		$$ = move($1);
+		$$.push_back($3);
+	}
+	;
 
 %%
 

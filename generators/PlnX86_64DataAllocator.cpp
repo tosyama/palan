@@ -208,8 +208,10 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 	dp->comment = &cmt;
 
 	if (pdp && pdp->status != DS_RELEASED)
-		if (!pdp->save_place) 
+		if (!pdp->save_place) {
 			allocSaveData(pdp);
+			// std::cout << "saved acc: " << pdp->save_place->data.stack.idx << " " << dp->cmt() << std::endl;
+		}	
 
 	regs[RAX] = dp;
 

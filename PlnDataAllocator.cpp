@@ -165,8 +165,9 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp)
 
 	dp->previous = pdp;
 	dp->alloc_step = step++;
-	if (pdp && pdp->status != DS_RELEASED)
+	if (pdp && pdp->status != DS_RELEASED) {
 		allocSaveData(pdp);
+	}
 }
 
 vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee)
@@ -332,6 +333,8 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 				dp->save_place = dp;
 			} else {
 				allocSaveData(dp);
+				// for debug
+				// std::cout << "saved push: " << dp->save_place->data.stack.idx << " " << dp->cmt() << std::endl;
 			}
 		}
 	} else if (dp->src_place->type == DP_INDRCT_OBJ) {
@@ -352,6 +355,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 
 			} else {
 				allocSaveData(dp);
+				std::cout << "saved push indy: " << dp->save_place->data.stack.idx << " " << dp->cmt() << std::endl;
 			}
 		}
 	}

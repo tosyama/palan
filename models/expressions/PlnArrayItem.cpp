@@ -9,11 +9,33 @@
 
 #include "boost/assert.hpp"
 #include "PlnArrayItem.h"
+#include "PlnMulOperation.h"
+#include "PlnAddOperation.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
+
+static PlnExpression* getIndexExpression(
+	int index, int offset,
+	vector<PlnExpression*> &item_ind,
+	vector<int> &arr_sizes)
+{
+	PlnExpression *ex = item_ind[index];
+	if (offset > 1) {
+		auto oex = new PlnExpression(PlnValue((int64_t)offset));
+		ex = PlnMulOperation::create(ex, oex);
+	}
+
+	if (item_ind.size() > (index+1)) {
+		int next_offset = offset * arr_sizes[index];
+		auto base_ex = getIndexExpression(index+1, next_offset, item_ind, arr_sizes);
+		ex = PlnAddOperation::create(base_ex, ex);
+	}
+
+	return ex;
+}
 
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
@@ -29,7 +51,9 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	var->place->comment = &var->name;
 	values.push_back(PlnValue(var));
 
-	index_ex = item_ind[0];
+	auto arr_sizes = array_var->var_type.back()->inf.fixedarray.sizes;
+	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
+	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
 }
 
 void PlnArrayItem::finish(PlnDataAllocator& da)
