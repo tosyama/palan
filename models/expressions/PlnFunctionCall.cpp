@@ -77,10 +77,12 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 
 		++i;
 	}
-	for (auto dp: arg_dps) {
+
+	for (auto dp: arg_dps)
 		da.allocDp(dp);
+	
+	for (auto dp: arg_dps)
 		da.popSrc(dp);
-	}
 
 	da.funcCalled(arg_dps, function->return_vals, func_type);
 

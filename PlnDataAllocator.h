@@ -20,6 +20,7 @@ protected:
 	int regnum;
 	int step;
 
+	void releasedBytesDpChiled(PlnDataPlace* dp);
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
 	virtual vector<int> getRegsNeedSave()=0;
@@ -41,7 +42,7 @@ public:
 	PlnDataPlace* allocData(int size, int data_type);
 	void allocData(PlnDataPlace* new_dp);
 
-	void allocSaveData(PlnDataPlace* dp);
+	void allocSaveData(PlnDataPlace* dp, int alloc_step, int release_step);
 	void releaseData(PlnDataPlace* dp);
 
 	void allocDp(PlnDataPlace *Dp);

@@ -36,7 +36,7 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 			regs[regid] = dp;
 			if (pdp && pdp->status != DS_RELEASED)
 				if (!pdp->save_place)  {
-					allocSaveData(pdp);
+					allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 				}
 		}
 	}
@@ -125,8 +125,11 @@ void PlnX86_64DataAllocator::funcCalled(
 
 void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type)
 {
-	if (ret_dps.size() >= 7)
-		allocSaveData(ret_dps[0]);	// for use RAX for store return data to stack
+	if (ret_dps.size() >= 7) {
+		auto adp = ret_dps[0];
+		allocSaveData(adp, adp->alloc_step, step);	// for use RAX for store return data to stack
+	}
+	
 
 	for (auto dp: ret_dps) {
 		dp->status = DS_RELEASED;
@@ -186,7 +189,7 @@ void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
 	regs[RCX] = dp;
 	if (pdp && pdp->status != DS_RELEASED)
 		if (!pdp->save_place)  {
-			allocSaveData(pdp);
+			allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 		}
 	step++;
 }
@@ -209,7 +212,7 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 
 	if (pdp && pdp->status != DS_RELEASED)
 		if (!pdp->save_place) {
-			allocSaveData(pdp);
+			allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 			// std::cout << "saved acc: " << pdp->save_place->data.stack.idx << " " << dp->cmt() << std::endl;
 		}	
 
@@ -263,7 +266,7 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 		regs[regid] = dp;
 		if (pdp && pdp->status != DS_RELEASED)
 			if (!pdp->save_place)  {
-				allocSaveData(pdp);
+				allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 			}
 	}
 	*quotient = regs[RAX];
