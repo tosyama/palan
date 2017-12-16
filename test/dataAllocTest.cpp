@@ -91,3 +91,69 @@ TEST_CASE("Mixed bytes allocation jtest.", "[allocate]")
 	CHECK(dp7->data.stack.offset == -12);	
 }
 
+
+TEST_CASE("Data source and save management.", "[allocate]")
+{
+	// [Design Memo]
+	// pushSrc: Allocate source data if needed.
+	// popSrc: Release source data and allocate destination data if needed.
+
+	// src: keep, dst: keep  ->  move when popSrc.
+	// src: keep, dst: destory  ->  move when popSrc.
+	// src: destroy, dst: keep -> move when pushSrc by allocating and setting dst to save_place.
+	// src: destroy, dst: destory -> alloc save_place and save src when pushSrc.
+	//								load from save_place and release when popSrc.
+
+	// Pattern
+	// src: Reg(work/get return), dst Reg(work/param/set return)
+	// src: Stack(variable), dst Reg(work/param)
+	// src: Stack(variable), dst Stack(variable)
+	
+	PlnX86_64DataAllocator x64allocator;
+	PlnDataAllocator& da = x64allocator;
+
+	int push_step, pop_step;
+
+	// src(Reg(accumlateor)): keep, dst(Reg): keep
+	auto dp_ac_src = da.allocAccumulator(NULL);
+	auto dp_ac_dst = da.prepareAccumulator();
+
+	push_step = da.step;
+	da.pushSrc(dp_ac_dst, dp_ac_src);
+	CHECK(dp_ac_src->alloc_step <= push_step);
+	CHECK(dp_ac_src->release_step > 999999);
+	CHECK(dp_ac_src->status == DS_ASSIGNED);
+
+	pop_step = da.step;
+	da.popSrc(dp_ac_dst);
+
+	// exchage data when pop.
+	CHECK(dp_ac_src->alloc_step <= push_step);
+	CHECK(dp_ac_src->release_step == pop_step);
+	CHECK(dp_ac_src->status == DS_RELEASED);
+	
+	CHECK(dp_ac_dst->status == DS_ASSIGNED);
+	CHECK(dp_ac_dst->save_place == NULL);
+	CHECK(dp_ac_dst->alloc_step == pop_step);
+
+	da.releaseData(dp_ac_dst);
+
+//--- 
+	vector<PlnParameter*> params(3);
+	vector<PlnVariable*> rets(1);
+
+	auto dpv4 = da.allocData(4, DT_SINT);
+	auto dp_prms = da.prepareArgDps(rets.size(), params.size(), FT_PLN, false);
+	
+	da.pushSrc(dp_prms[0], dpv4);
+	da.popSrc(dp_prms[0]);
+
+	for (auto dp: dp_prms)
+		da.allocDp(dp);
+
+	da.funcCalled(dp_prms, rets, FT_PLN);
+
+	vector<int> save_regs;
+	vector<PlnDataPlace*> save_reg_dps;
+	da.finish(save_regs, save_reg_dps);
+}

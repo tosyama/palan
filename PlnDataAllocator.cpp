@@ -162,6 +162,7 @@ void PlnDataAllocator::releasedBytesDpChiled(PlnDataPlace* dp)
 
 void PlnDataAllocator::releaseData(PlnDataPlace* dp)
 {
+	BOOST_ASSERT(dp->status != DS_RELEASED);
 	dp->status = DS_RELEASED;
 	dp->release_step = step;
 	if (dp->save_place) {
@@ -176,7 +177,7 @@ void PlnDataAllocator::releaseData(PlnDataPlace* dp)
 	step++;
 }
 
-void PlnDataAllocator::allocDp(PlnDataPlace *dp)
+void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 {
 	PlnDataPlace *pdp;
 	if (dp->type == DP_REG) {
@@ -199,11 +200,14 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp)
 	} else
 		BOOST_ASSERT(false);
 
+	dp->status = DS_ASSIGNED;
 	dp->previous = pdp;
-	dp->alloc_step = step++;
+	dp->alloc_step = step;
 	if (pdp && pdp->status != DS_RELEASED) {
 		allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 	}
+
+	if (proceed_step) step++;
 }
 
 vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee)
@@ -344,12 +348,12 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 	}
 }
 
-void PlnDataAllocator::pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp)
+void PlnDataAllocator::pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp,  bool release_src_pop)
 {
 	BOOST_ASSERT(dp->src_place == NULL);
 	dp->src_place = src_dp;
-	dp->src_place->alloc_step = step;
-	dp->src_place->release_step = INT_MAX;
+	dp->push_src_step = step;
+	dp->release_src_pop = release_src_pop;
 	step++;
 }
 
@@ -400,18 +404,20 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 		}
 	}
 
-	// check dst data would be destory.
+	// Assign dst if ready.
+	if (dp->status == DS_READY_ASSIGN) {
+		allocDp(dp, false);
+	}
+
+	// updated save & src place status;
 	if (dp->save_place) {
 		if (dp->save_place != src_place) {
-			dp->save_place->alloc_step = src_place->release_step = src_place->alloc_step;
+			dp->save_place->alloc_step = dp->push_src_step;
 			dp->save_place->release_step = step;
 			dp->save_place->status = DS_RELEASED;
-			src_place->status = DS_RELEASED;
-		} else {
-			src_place->release_step = src_place->alloc_step;
-			src_place->status = DS_RELEASED;
-		}
-	} else {
+		} 
+	} 
+	if (dp->release_src_pop) {
 		src_place->release_step = step;
 		src_place->status = DS_RELEASED;
 	} 

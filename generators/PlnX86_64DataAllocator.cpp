@@ -194,6 +194,21 @@ void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
 	step++;
 }
 
+PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator()
+{
+	auto dp = new PlnDataPlace(8, DT_SINT);
+	dp->type = DP_REG;
+
+	dp->status = DS_READY_ASSIGN;
+	dp->data.reg.id = RAX;
+	dp->data.reg.offset = 0;
+
+	static string cmt = "%accm";
+	dp->comment = &cmt;
+
+	return dp;
+}
+
 PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 {
 	auto dp = new_dp ? new_dp : new PlnDataPlace(8, DT_SINT);

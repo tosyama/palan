@@ -18,7 +18,6 @@ class PlnDataAllocator
 {
 protected:
 	int regnum;
-	int step;
 
 	void releasedBytesDpChiled(PlnDataPlace* dp);
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
@@ -26,6 +25,7 @@ protected:
 	virtual vector<int> getRegsNeedSave()=0;
 
 public:
+	int step;
 	int stack_size;
 
 	vector<PlnDataPlace*> data_stack;
@@ -45,7 +45,7 @@ public:
 	void allocSaveData(PlnDataPlace* dp, int alloc_step, int release_step);
 	void releaseData(PlnDataPlace* dp);
 
-	void allocDp(PlnDataPlace *Dp);
+	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
 	vector<PlnDataPlace*> prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee);
 	vector<PlnDataPlace*> prepareRetValDps(int ret_num, int func_type, bool is_callee);
 	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
@@ -57,6 +57,7 @@ public:
 	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) = 0;
 	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) = 0;
 
+	virtual PlnDataPlace* prepareAccumulator() = 0;
 	virtual PlnDataPlace* allocAccumulator(PlnDataPlace* dp) = 0;
 	virtual void releaseAccumulator(PlnDataPlace* dp) = 0;
 	virtual bool isAccumulator(PlnDataPlace* dp) = 0;
@@ -72,7 +73,8 @@ public:
 	PlnDataPlace* getReadOnlyDp(int index);
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
-	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp);
+	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
+	
 	void popSrc(PlnDataPlace* dp);
 
 	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
@@ -97,6 +99,7 @@ enum {
 	DS_CALLEE_PAR,
 	DS_ASSIGNED,
 	DS_ASSIGNED_SOME,
+	DS_READY_ASSIGN
 };
 
 class PlnDataPlace
@@ -111,6 +114,8 @@ public:
 
 	int32_t alloc_step;
 	int32_t release_step;
+	int32_t push_src_step;
+	bool release_src_pop;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
