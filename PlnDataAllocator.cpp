@@ -220,6 +220,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, 
 		auto dp = createArgDp(func_type, i, is_callee);
 		static string cmt="arg";
 		dp->comment = &cmt;
+		dp->status = DS_READY_ASSIGN;
 		dps.push_back(dp);
 	}
 
@@ -370,14 +371,17 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 				&& !dp->save_place
 				&& !(regs[s_regid] == dp && dp->previous == src_place)) {	// rax->rax
 			
-			if (dp->type == DP_REG && regs[dp->data.reg.id] == dp
-					&& (!dp->previous || (dp->previous->release_step < src_place->alloc_step))) {
-				// Accelerate moving to before destoroy if possible.
-				dp->save_place = dp;
-				if (dp->alloc_step > src_place->alloc_step)
-					dp->alloc_step = src_place->alloc_step;
-			} else {
+			std::cout << "Avoid data broken.: ";
+			if (dp->type == DP_REG) {
+				auto top_dp = regs[dp->data.reg.id];
+				if (top_dp != dp && canAlloc(top_dp, dp->push_src_step, step)) {
+					std::cout << "by change timing1." << std::endl;
+					dp->save_place = dp;
+				}	
+			}
+			if (!dp->save_place) {
 				allocSaveData(dp, src_place->alloc_step, step);
+				std::cout << "by save to memory." << dp->save_place << std::endl;
 			}
 		}
 	} else if (src_place->type == DP_INDRCT_OBJ) {
@@ -411,16 +415,24 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 
 	// updated save & src place status;
 	if (dp->save_place) {
-		if (dp->save_place != src_place) {
+		if (dp->save_place == dp) {
+			if (dp->alloc_step > dp->push_src_step)
+				dp->alloc_step = dp->push_src_step;
+		} else {
 			dp->save_place->alloc_step = dp->push_src_step;
 			dp->save_place->release_step = step;
 			dp->save_place->status = DS_RELEASED;
 		} 
 	} 
+
 	if (dp->release_src_pop) {
-		src_place->release_step = step;
+		if (dp == dp->save_place)
+			src_place->release_step = dp->push_src_step;
+		else
+			src_place->release_step = step;
 		src_place->status = DS_RELEASED;
 	} 
+	
 	step++;
 }
 

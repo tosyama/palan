@@ -74,7 +74,6 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool
 			dp->data.stack.offset = ind*8;
 		}
 	}
-	dp->status = DS_ASSIGNED;
 
 	return dp;
 }
@@ -228,7 +227,6 @@ PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
 	if (pdp && pdp->status != DS_RELEASED)
 		if (!pdp->save_place) {
 			allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
-			// std::cout << "saved acc: " << pdp->save_place->data.stack.idx << " " << dp->cmt() << std::endl;
 		}	
 
 	regs[RAX] = dp;

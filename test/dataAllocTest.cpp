@@ -99,9 +99,9 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	// popSrc: Release source data and allocate destination data if needed.
 
 	// src: keep, dst: keep  ->  move when popSrc.
-	// src: keep, dst: destory  ->  move when popSrc.
+	// src: keep, dst: destroy  ->  move when popSrc.
 	// src: destroy, dst: keep -> move when pushSrc by allocating and setting dst to save_place.
-	// src: destroy, dst: destory -> alloc save_place and save src when pushSrc.
+	// src: destroy, dst: destroy -> alloc save_place and save src when pushSrc.
 	//								load from save_place and release when popSrc.
 
 	// Pattern
@@ -115,28 +115,88 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	int push_step, pop_step;
 
 	// src(Reg(accumlateor)): keep, dst(Reg): keep
-	auto dp_ac_src = da.allocAccumulator(NULL);
-	auto dp_ac_dst = da.prepareAccumulator();
+	{
+		auto dp_ac_src = da.allocAccumulator(NULL);
+		auto dp_ac_dst = da.prepareAccumulator();
 
-	push_step = da.step;
-	da.pushSrc(dp_ac_dst, dp_ac_src);
-	CHECK(dp_ac_src->alloc_step <= push_step);
-	CHECK(dp_ac_src->release_step > 999999);
-	CHECK(dp_ac_src->status == DS_ASSIGNED);
+		push_step = da.step;
+		da.pushSrc(dp_ac_dst, dp_ac_src);
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step > 999999);
+		CHECK(dp_ac_src->status == DS_ASSIGNED);
+		CHECK(dp_ac_dst->status != DS_ASSIGNED);
 
-	pop_step = da.step;
-	da.popSrc(dp_ac_dst);
+		pop_step = da.step;
+		da.popSrc(dp_ac_dst);
 
-	// exchage data when pop.
-	CHECK(dp_ac_src->alloc_step <= push_step);
-	CHECK(dp_ac_src->release_step == pop_step);
-	CHECK(dp_ac_src->status == DS_RELEASED);
-	
-	CHECK(dp_ac_dst->status == DS_ASSIGNED);
-	CHECK(dp_ac_dst->save_place == NULL);
-	CHECK(dp_ac_dst->alloc_step == pop_step);
+		// exchage data when pop.
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step == pop_step);
+		CHECK(dp_ac_src->status == DS_RELEASED);
 
-	da.releaseData(dp_ac_dst);
+		CHECK(dp_ac_dst->status == DS_ASSIGNED);
+		CHECK(dp_ac_dst->save_place == NULL);
+		CHECK(dp_ac_dst->alloc_step == pop_step);
+
+		da.releaseData(dp_ac_dst);
+	}
+
+	// src(Reg): keep, dst(Reg): destroy
+	{
+		auto dp_ac_src = da.allocAccumulator(NULL);
+		auto dst_arg1 = da.prepareArgDps(0, 1, FT_PLN, false);
+
+		push_step = da.step;
+		da.pushSrc(dst_arg1[0], dp_ac_src);
+
+		// destory
+		auto dst_arg2 = da.prepareArgDps(0, 1, FT_PLN, false);
+		da.allocDp(dst_arg2[0]);
+		da.releaseData(dst_arg2[0]);
+
+		pop_step = da.step;
+		da.popSrc(dst_arg1[0]);
+
+		// exchage data when pop.
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step == pop_step);
+		CHECK(dp_ac_src->status == DS_RELEASED);
+
+		CHECK(dst_arg2[0]->status == DS_RELEASED);
+		CHECK(dst_arg2[0]->alloc_step > push_step);
+		CHECK(dst_arg2[0]->release_step < pop_step);
+
+		CHECK(dst_arg1[0]->status == DS_ASSIGNED);
+		CHECK(dst_arg1[0]->save_place == NULL);
+		CHECK(dst_arg1[0]->alloc_step == pop_step);
+
+		da.releaseData(dst_arg1[0]);
+	}
+
+	// src(Reg): destory, dst(Reg): keep
+	{
+		auto dp_ac_src = da.allocAccumulator(NULL);
+		auto dst_arg = da.prepareArgDps(0, 1, FT_PLN, false);
+
+		push_step = da.step;
+		da.pushSrc(dst_arg[0], dp_ac_src);
+
+		auto dp_ac_src2 = da.allocAccumulator(NULL);
+		da.releaseData(dp_ac_src2);
+
+		pop_step = da.step;
+		da.popSrc(dst_arg[0]);
+
+		// exchage data when push.
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step == push_step);
+		CHECK(dp_ac_src->status == DS_RELEASED);
+
+		CHECK(dst_arg[0]->status == DS_ASSIGNED);
+		CHECK(dst_arg[0]->save_place == dst_arg[0]);
+		CHECK(dst_arg[0]->alloc_step == push_step);
+		da.releaseData(dst_arg[0]);
+	}
 
 //--- 
 	vector<PlnParameter*> params(3);
