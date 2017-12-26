@@ -193,9 +193,9 @@ void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
 	step++;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator()
+PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type)
 {
-	auto dp = new PlnDataPlace(8, DT_SINT);
+	auto dp = new PlnDataPlace(8, data_type);
 	dp->type = DP_REG;
 
 	dp->status = DS_READY_ASSIGN;

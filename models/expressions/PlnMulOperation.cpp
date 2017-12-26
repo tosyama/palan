@@ -69,10 +69,9 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 void PlnMulOperation::finish(PlnDataAllocator& da)
 {
 	// l => RAX
-	PlnDataPlace* ldp = new PlnDataPlace(8, l->getDataType());
+	auto ldp = da.prepareAccumulator(l->getDataType());
 	l->data_places.push_back(ldp);
 	l->finish(da);
-	da.allocAccumulator(ldp);
 
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
@@ -89,8 +88,10 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 		da.releaseData(rdp);
 	}
 	da.popSrc(ldp);
+
 	da.releaseAccumulator(ldp);
 	product = da.multiplied(ldp);
+
 	if (data_places.size())
 		da.pushSrc(data_places[0], product);
 }

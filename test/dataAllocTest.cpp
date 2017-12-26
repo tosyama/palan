@@ -117,7 +117,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	// src(Reg(accumlateor)): keep, dst(Reg): keep
 	{
 		auto dp_ac_src = da.allocAccumulator(NULL);
-		auto dp_ac_dst = da.prepareAccumulator();
+		auto dp_ac_dst = da.prepareAccumulator(DT_SINT);
 
 		push_step = da.step;
 		da.pushSrc(dp_ac_dst, dp_ac_src);

@@ -57,7 +57,7 @@ public:
 	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) = 0;
 	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) = 0;
 
-	virtual PlnDataPlace* prepareAccumulator() = 0;
+	virtual PlnDataPlace* prepareAccumulator(int data_type) = 0;
 	virtual PlnDataPlace* allocAccumulator(PlnDataPlace* dp) = 0;
 	virtual void releaseAccumulator(PlnDataPlace* dp) = 0;
 	virtual bool isAccumulator(PlnDataPlace* dp) = 0;

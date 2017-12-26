@@ -113,15 +113,16 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 void PlnAddOperation::finish(PlnDataAllocator& da)
 {
 	// l => RAX
-	PlnDataPlace* ldp = new PlnDataPlace(8, l->getDataType());
+	auto ldp = da.prepareAccumulator(l->getDataType());
 	l->data_places.push_back(ldp);
 	l->finish(da);
-	da.allocAccumulator(ldp);
 
 	if (r->type == ET_VALUE) {
-		r->data_places.push_back(r->values[0].getDataPlace(da));
+		auto rdp = r->values[0].getDataPlace(da);
+		r->data_places.push_back(rdp);
 		r->finish(da);
-		da.popSrc(r->data_places[0]);
+		da.popSrc(rdp);
+		da.releaseData(rdp);
 	} else {
 		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
 		static string cmt="(temp)";
@@ -138,8 +139,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	if (data_places.size()) {
 		PlnDataPlace* result_dp = new PlnDataPlace(8, l->getDataType());
 		da.allocAccumulator(result_dp);
-		da.pushSrc(data_places[0], result_dp);
-		da.releaseAccumulator(result_dp);
+		da.pushSrc(data_places[0], result_dp, true);
 	}
 }
 
@@ -192,14 +192,16 @@ PlnNegative::PlnNegative(PlnExpression* e)
 
 void PlnNegative::finish(PlnDataAllocator& da)
 {
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_SINT);
+	auto dp = da.prepareAccumulator(DT_SINT);
 	e->data_places.push_back(dp);
 	e->finish(da);
-	da.allocAccumulator(dp);
 	da.popSrc(dp);
-	da.releaseAccumulator(dp);
+
 	if (data_places.size())
-		da.pushSrc(data_places[0], dp);
+		da.pushSrc(data_places[0], dp, true);
+	else
+		da.releaseAccumulator(dp);
+		
 }
 
 void PlnNegative::dump(ostream& os, string indent)
@@ -217,7 +219,6 @@ void PlnNegative::gen(PlnGenerator& g)
 {
 	e->gen(g);
 	auto dp = e->data_places[0];
-
 	g.genLoadDp(dp);
 	
 	auto ne = g.getEntity(dp);

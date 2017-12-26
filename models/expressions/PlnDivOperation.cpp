@@ -97,10 +97,9 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 void PlnDivOperation::finish(PlnDataAllocator& da)
 {
 	// l => RAX
-	PlnDataPlace* ldp = new PlnDataPlace(8, l->getDataType());
+	auto ldp = da.prepareAccumulator(l->getDataType());
 	l->data_places.push_back(ldp);
 	l->finish(da);
-	da.allocAccumulator(ldp);
 
 	if (r->type == ET_VALUE) {
 		r->data_places.push_back(r->values[0].getDataPlace(da));
