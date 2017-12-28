@@ -61,6 +61,7 @@ public:
 	virtual PlnDataPlace* allocAccumulator(PlnDataPlace* dp) = 0;
 	virtual void releaseAccumulator(PlnDataPlace* dp) = 0;
 	virtual bool isAccumulator(PlnDataPlace* dp) = 0;
+	virtual PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) = 0;
 	virtual PlnDataPlace* multiplied(PlnDataPlace* tgt) = 0;
 	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
 

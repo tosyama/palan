@@ -244,6 +244,14 @@ bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
 	return dp->type == DP_REG && dp->data.reg.id == RAX;
 }
 
+PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp)
+{
+	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
+	BOOST_ASSERT(rdp->status == DS_ASSIGNED);
+	releaseData(rdp);
+	return ldp;
+}
+
 PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* tgt)
 {
 	BOOST_ASSERT(tgt->type == DP_REG);

@@ -112,34 +112,34 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 
 void PlnAddOperation::finish(PlnDataAllocator& da)
 {
+	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	auto ldp = da.prepareAccumulator(l->getDataType());
-	l->data_places.push_back(ldp);
-	l->finish(da);
+	ldp = da.prepareAccumulator(l->getDataType());
 
 	if (r->type == ET_VALUE) {
-		auto rdp = r->values[0].getDataPlace(da);
-		r->data_places.push_back(rdp);
-		r->finish(da);
-		da.popSrc(rdp);
-		da.releaseData(rdp);
+		rdp = r->values[0].getDataPlace(da);
 	} else {
-		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
+		rdp = new PlnDataPlace(8, r->getDataType());
+		rdp->type = DP_STK_BP;
+		rdp->status = DS_READY_ASSIGN;
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
-		r->data_places.push_back(rdp);
-		r->finish(da);
-		da.allocData(rdp);	
-		da.popSrc(rdp);
-		da.releaseData(rdp);
 	}
-	da.popSrc(ldp);
-	da.releaseAccumulator(ldp);
 
+	l->data_places.push_back(ldp);
+	l->finish(da);
+	
+	r->data_places.push_back(rdp);
+	r->finish(da);
+
+	da.popSrc(rdp);
+	da.popSrc(ldp);
+
+	auto result_dp = da.added(ldp, rdp);
 	if (data_places.size()) {
-		PlnDataPlace* result_dp = new PlnDataPlace(8, l->getDataType());
-		da.allocAccumulator(result_dp);
 		da.pushSrc(data_places[0], result_dp, true);
+	} else {
+		da.releaseData(result_dp);
 	}
 }
 
@@ -200,7 +200,7 @@ void PlnNegative::finish(PlnDataAllocator& da)
 	if (data_places.size())
 		da.pushSrc(data_places[0], dp, true);
 	else
-		da.releaseAccumulator(dp);
+		da.releaseData(dp);
 		
 }
 

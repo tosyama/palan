@@ -192,10 +192,14 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 		pdp = arg_stack[idx];
 		arg_stack[idx] = dp;
 
-	} else if (dp->type == DP_STK_BP
-			&& dp->data.stack.offset >= 16) {
+	} else if (dp->type == DP_STK_BP) {
 		pdp = NULL;
-		all.push_back(dp);
+		if (dp->data.stack.offset >= 16) {
+			// argument: TODO: undepend ABI
+			all.push_back(dp);
+		} else {
+			allocDataWithDetail(dp, step, INT_MAX);
+		}
 
 	} else
 		BOOST_ASSERT(false);

@@ -35,6 +35,7 @@ public:
 	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
 	void releaseAccumulator(PlnDataPlace* dp);
 	bool isAccumulator(PlnDataPlace* dp);
+	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp);
 	PlnDataPlace* multiplied(PlnDataPlace* tgt);
 	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder);
 
