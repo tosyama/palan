@@ -208,37 +208,6 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type)
 	return dp;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
-{
-	auto dp = new_dp ? new_dp : new PlnDataPlace(8, DT_SINT);
-	auto pdp = regs[RAX];
-	dp->type = DP_REG;
-	dp->status = DS_ASSIGNED;
-
-	dp->data.reg.id = RAX;
-	dp->data.reg.offset = 0;
-
-	dp->previous = pdp;
-	dp->alloc_step = step++;
-
-	static string cmt = "%accm";
-	dp->comment = &cmt;
-
-	if (pdp && pdp->status != DS_RELEASED)
-		if (!pdp->save_place) {
-			allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
-		}	
-
-	regs[RAX] = dp;
-
-	return dp;
-}
-
-void PlnX86_64DataAllocator::releaseAccumulator(PlnDataPlace* dp)
-{
-	releaseData(dp);
-}
-
 bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
 {
 	return dp->type == DP_REG && dp->data.reg.id == RAX;

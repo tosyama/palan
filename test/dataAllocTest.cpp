@@ -116,7 +116,8 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg(accumlateor)): keep, dst(Reg): keep
 	{
-		auto dp_ac_src = da.allocAccumulator(NULL);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src);
 		auto dp_ac_dst = da.prepareAccumulator(DT_SINT);
 
 		push_step = da.step;
@@ -143,7 +144,8 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg): keep, dst(Reg): destroy
 	{
-		auto dp_ac_src = da.allocAccumulator(NULL);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src);
 		auto dst_arg1 = da.prepareArgDps(0, 1, FT_PLN, false);
 
 		push_step = da.step;
@@ -175,13 +177,15 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg): destory, dst(Reg): keep
 	{
-		auto dp_ac_src = da.allocAccumulator(NULL);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src);
 		auto dst_arg = da.prepareArgDps(0, 1, FT_PLN, false);
 
 		push_step = da.step;
 		da.pushSrc(dst_arg[0], dp_ac_src);
 
-		auto dp_ac_src2 = da.allocAccumulator(NULL);
+		auto dp_ac_src2 = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src2);
 		da.releaseData(dp_ac_src2);
 
 		pop_step = da.step;

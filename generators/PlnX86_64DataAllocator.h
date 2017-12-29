@@ -32,8 +32,6 @@ public:
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src);
 
 	PlnDataPlace* prepareAccumulator(int data_type); 
-	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
-	void releaseAccumulator(PlnDataPlace* dp);
 	bool isAccumulator(PlnDataPlace* dp);
 	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp);
 	PlnDataPlace* multiplied(PlnDataPlace* tgt);

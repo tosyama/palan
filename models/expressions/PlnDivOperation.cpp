@@ -116,7 +116,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 		da.releaseData(rdp);
 	}
 	da.popSrc(ldp);
-	da.releaseAccumulator(ldp);
+	da.releaseData(ldp);
 	da.divided(&quotient, &remainder);
 
 	if (data_places.size()) {

@@ -89,7 +89,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 	}
 	da.popSrc(ldp);
 
-	da.releaseAccumulator(ldp);
+	da.releaseData(ldp);
 	product = da.multiplied(ldp);
 
 	if (data_places.size())
