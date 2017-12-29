@@ -34,7 +34,7 @@ public:
 	PlnDataPlace* prepareAccumulator(int data_type); 
 	bool isAccumulator(PlnDataPlace* dp);
 	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp);
-	PlnDataPlace* multiplied(PlnDataPlace* tgt);
+	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp);
 	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder);
 
 	// for array item

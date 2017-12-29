@@ -68,32 +68,35 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 
 void PlnMulOperation::finish(PlnDataAllocator& da)
 {
+	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	auto ldp = da.prepareAccumulator(l->getDataType());
+	ldp = da.prepareAccumulator(l->getDataType());
+
+	if (r->type == ET_VALUE) {
+		rdp = r->values[0].getDataPlace(da);
+	} else {
+		rdp = new PlnDataPlace(8, r->getDataType());
+		rdp->type = DP_STK_BP;
+		rdp->status = DS_READY_ASSIGN;
+		static string cmt="(temp)";
+		rdp->comment = &cmt;
+	}
+
 	l->data_places.push_back(ldp);
 	l->finish(da);
 
-	if (r->type == ET_VALUE) {
-		r->data_places.push_back(r->values[0].getDataPlace(da));
-		r->finish(da);
-		da.popSrc(r->data_places[0]);
-	} else {
-		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
-		static string cmt="(temp)";
-		rdp->comment = &cmt;
-		r->data_places.push_back(rdp);
-		r->finish(da);
-		da.allocData(rdp);
-		da.popSrc(r->data_places[0]);
-		da.releaseData(rdp);
-	}
+	r->data_places.push_back(rdp);
+	r->finish(da);
+
+	da.popSrc(r->data_places[0]);
 	da.popSrc(ldp);
 
-	da.releaseData(ldp);
-	product = da.multiplied(ldp);
+	auto product = da.multiplied(ldp, rdp);
 
 	if (data_places.size())
 		da.pushSrc(data_places[0], product);
+	else
+		da.releaseData(product);
 }
 
 void PlnMulOperation::dump(ostream& os, string indent)

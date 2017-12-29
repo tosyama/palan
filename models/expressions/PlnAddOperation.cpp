@@ -136,11 +136,10 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	da.popSrc(ldp);
 
 	auto result_dp = da.added(ldp, rdp);
-	if (data_places.size()) {
+	if (data_places.size())
 		da.pushSrc(data_places[0], result_dp, true);
-	} else {
+	else
 		da.releaseData(result_dp);
-	}
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
