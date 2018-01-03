@@ -61,7 +61,7 @@ public:
 	virtual bool isAccumulator(PlnDataPlace* dp) = 0;
 	virtual PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) = 0;
 	virtual PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp) = 0;
-	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder) = 0;
+	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp) = 0;
 
 	// for array item
 	virtual PlnDataPlace* prepareObjBasePtr() = 0;

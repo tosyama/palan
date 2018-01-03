@@ -88,7 +88,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 	r->data_places.push_back(rdp);
 	r->finish(da);
 
-	da.popSrc(r->data_places[0]);
+	da.popSrc(rdp);
 	da.popSrc(ldp);
 
 	auto product = da.multiplied(ldp, rdp);

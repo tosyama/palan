@@ -96,38 +96,46 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 
 void PlnDivOperation::finish(PlnDataAllocator& da)
 {
+	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	auto ldp = da.prepareAccumulator(l->getDataType());
-	l->data_places.push_back(ldp);
-	l->finish(da);
+	ldp = da.prepareAccumulator(l->getDataType());
 
 	if (r->type == ET_VALUE) {
-		r->data_places.push_back(r->values[0].getDataPlace(da));
-		r->finish(da);
-		da.popSrc(r->data_places.back());
+		rdp = r->values[0].getDataPlace(da);
 	} else {
-		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
+		rdp = new PlnDataPlace(8, r->getDataType());
+		rdp->type = DP_STK_BP;
+		rdp->status = DS_READY_ASSIGN;
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
-		r->data_places.push_back(rdp);
-		r->finish(da);
-		da.allocData(rdp);
-		da.popSrc(rdp);
-		da.releaseData(rdp);
 	}
+
+	l->data_places.push_back(ldp);
+	l->finish(da);
+	
+	r->data_places.push_back(rdp);
+	r->finish(da);
+	
+	da.popSrc(rdp);
 	da.popSrc(ldp);
-	da.releaseData(ldp);
-	da.divided(&quotient, &remainder);
+	da.divided(&quotient, &remainder, ldp, rdp);
 
 	if (data_places.size()) {
 		if (div_type == DV_DIV)  {
 			da.pushSrc(data_places[0], quotient);
 			if (data_places.size() >= 2)
 				da.pushSrc(data_places[1], remainder);
+			else
+				da.releaseData(remainder);
 		} else {	// DV_MOD
+			da.releaseData(quotient);
 			da.pushSrc(data_places[0], remainder);
 		}
+	} else {
+		da.releaseData(quotient);
+		da.releaseData(remainder);
 	}
+
 }
 
 void PlnDivOperation::dump(ostream& os, string indent)

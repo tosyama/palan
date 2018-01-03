@@ -230,31 +230,23 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	step++;
 }
 
-void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder)
+void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp)
 {
-	BOOST_ASSERT(regs[RAX]->status==DS_RELEASED);
+	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
+	BOOST_ASSERT(rdp->status == DS_ASSIGNED);
+	releaseData(rdp);
 
-	for (auto regid: {RAX, RDX}) {
-		auto pdp = regs[regid];
-		auto dp = new PlnDataPlace(8,DT_SINT);
-		// TODO: reconsider DT_SINT/DT_UINT
-		dp->type = DP_REG;
-		dp->status = DS_RELEASED;
-		dp->data.reg.id = regid;
-		dp->alloc_step = dp->release_step = step;
-		dp->previous = pdp;
-		regs[regid] = dp;
-		if (pdp && pdp->status != DS_RELEASED)
-			if (!pdp->save_place)  {
-				allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
-			}
-	}
-	*quotient = regs[RAX];
-	*reminder = regs[RDX];
+	int regid = RDX;
+	auto pdp = regs[regid];
+	auto dp = new PlnDataPlace(8,ldp->data_type);
+	dp->type = DP_REG;
+	dp->data.reg.id = regid;
+	allocDp(dp, false);
 
-	static string cmq = "%divq", cmr = "%divr";
-	(*quotient)->comment = &cmq;
-	(*reminder)->comment = &cmr;
+	*quotient = ldp;
+	*reminder = dp;
+	static string cmt = "%divr";
+	(*reminder)->comment = &cmt;
 
 	step++;
 }
