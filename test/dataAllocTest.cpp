@@ -1,4 +1,6 @@
+#include <iostream>
 #include "testBase.h"
+
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../PlnConstants.h"
 
@@ -116,9 +118,9 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg(accumlateor)): keep, dst(Reg): keep
 	{
+		auto dp_ac_dst = da.prepareAccumulator(DT_SINT);
 		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
 		da.allocDp(dp_ac_src);
-		auto dp_ac_dst = da.prepareAccumulator(DT_SINT);
 
 		push_step = da.step;
 		da.pushSrc(dp_ac_dst, dp_ac_src);
@@ -133,6 +135,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 		// exchage data when pop.
 		CHECK(dp_ac_src->alloc_step <= push_step);
 		CHECK(dp_ac_src->release_step == pop_step);
+		CHECK(dp_ac_src->save_place == NULL);
 		CHECK(dp_ac_src->status == DS_RELEASED);
 
 		CHECK(dp_ac_dst->status == DS_ASSIGNED);
@@ -201,7 +204,6 @@ TEST_CASE("Data source and save management.", "[allocate]")
 		CHECK(dst_arg[0]->alloc_step == push_step);
 		da.releaseData(dst_arg[0]);
 	}
-
 //--- 
 	vector<PlnParameter*> params(3);
 	vector<PlnVariable*> rets(1);

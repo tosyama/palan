@@ -11,6 +11,8 @@
 #include "PlnDataAllocator.h"
 #include "PlnConstants.h"
 
+using namespace std;
+
 PlnDataAllocator::PlnDataAllocator(int regnum)
 	: regnum(regnum)
 {
@@ -179,21 +181,19 @@ void PlnDataAllocator::releaseData(PlnDataPlace* dp)
 
 void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 {
-	PlnDataPlace *pdp;
 	if (dp->type == DP_REG) {
 		int regid = dp->data.reg.id;
-		pdp = regs[regid];
+		dp->previous = regs[regid];
 		regs[regid] = dp;
 
 	} else if (dp->type == DP_STK_SP) {
 		int idx = dp->data.stack.idx;
 		while (arg_stack.size() <= idx) 
 			arg_stack.push_back(NULL);
-		pdp = arg_stack[idx];
+		dp->previous = arg_stack[idx];
 		arg_stack[idx] = dp;
 
 	} else if (dp->type == DP_STK_BP) {
-		pdp = NULL;
 		if (dp->data.stack.offset >= 16) {
 			// argument: TODO: undepend ABI
 			all.push_back(dp);
@@ -205,7 +205,7 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 		BOOST_ASSERT(false);
 
 	dp->status = DS_ASSIGNED;
-	dp->previous = pdp;
+	auto pdp = dp->previous;
 	dp->alloc_step = step;
 	if (pdp && pdp->status != DS_RELEASED) {
 		allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
@@ -371,22 +371,15 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 	// check src data would be destory.
 	if (src_place->type == DP_REG) {
 		int s_regid = src_place->data.reg.id;
-		if (regs[s_regid] != src_place
-				&& !dp->save_place
-				&& !(regs[s_regid] == dp && dp->previous == src_place)) {	// rax->rax
-			
-			std::cout << "Avoid data broken.: ";
+		if (regs[s_regid] != src_place && !dp->save_place) {
 			if (dp->type == DP_REG) {
 				auto top_dp = regs[dp->data.reg.id];
 				if (top_dp != dp && canAlloc(top_dp, dp->push_src_step, step)) {
-					std::cout << "by change timing1." << std::endl;
 					dp->save_place = dp;
-				}	
+				}
 			}
-			if (!dp->save_place) {
+			if (!dp->save_place)
 				allocSaveData(dp, src_place->alloc_step, step);
-				std::cout << "by save to memory." << dp->save_place << std::endl;
-			}
 		}
 	} else if (src_place->type == DP_INDRCT_OBJ) {
 		auto base_dp = src_place->data.indirect.base_dp;
@@ -412,6 +405,14 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 		}
 	}
 
+	if (dp->release_src_pop) {
+		if (dp == dp->save_place)
+			src_place->release_step = dp->push_src_step;
+		else
+			src_place->release_step = step;
+		src_place->status = DS_RELEASED;
+	}
+	
 	// Assign dst if ready.
 	if (dp->status == DS_READY_ASSIGN) {
 		allocDp(dp, false);
@@ -429,14 +430,6 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 		} 
 	} 
 
-	if (dp->release_src_pop) {
-		if (dp == dp->save_place)
-			src_place->release_step = dp->push_src_step;
-		else
-			src_place->release_step = step;
-		src_place->status = DS_RELEASED;
-	} 
-	
 	step++;
 }
 
