@@ -23,6 +23,7 @@ protected:
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
 	virtual vector<int> getRegsNeedSave()=0;
+	bool isDestroyed(PlnDataPlace* dp);
 
 public:
 	int step;
@@ -94,6 +95,7 @@ enum {
 };
 
 enum {
+	DS_UNKNOWN,
 	DS_RELEASED,
 	DS_CALLEE_PAR,
 	DS_ASSIGNED,

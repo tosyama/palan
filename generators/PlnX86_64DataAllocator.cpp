@@ -216,7 +216,8 @@ bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
 PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp)
 {
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
-	BOOST_ASSERT(rdp->status == DS_ASSIGNED);
+	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
+		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
 	releaseData(rdp);
 	releaseData(ldp);
 	auto result = prepareAccumulator(ldp->data_type);
@@ -227,7 +228,8 @@ PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp
 PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp)
 {
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
-	BOOST_ASSERT(rdp->status == DS_ASSIGNED);
+	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
+		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
 	releaseData(rdp);
 	return ldp;
 	step++;
@@ -236,7 +238,8 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp)
 {
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
-	BOOST_ASSERT(rdp->status == DS_ASSIGNED);
+	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
+		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
 	releaseData(rdp);
 
 	int regid = RDX;
