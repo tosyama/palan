@@ -1,7 +1,7 @@
 /// x86-64 (Linux) data allocation management class declaration.
 ///
 /// @file	PlnX86_64DataAllocator.h
-/// @copyright	2017- YAMAGUCHI Toshinobu
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu
 
 #include "../PlnDataAllocator.h"
 
@@ -31,11 +31,11 @@ public:
 	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src);
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src);
 
-	PlnDataPlace* allocAccumulator(PlnDataPlace* dp);
-	void releaseAccumulator(PlnDataPlace* dp);
+	PlnDataPlace* prepareAccumulator(int data_type); 
 	bool isAccumulator(PlnDataPlace* dp);
-	PlnDataPlace* multiplied(PlnDataPlace* tgt);
-	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder);
+	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp);
+	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp);
+	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp);
 
 	// for array item
 	PlnDataPlace* prepareObjBasePtr();

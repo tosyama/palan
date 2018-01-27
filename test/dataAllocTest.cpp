@@ -1,4 +1,6 @@
+#include <iostream>
 #include "testBase.h"
+
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../PlnConstants.h"
 
@@ -91,3 +93,133 @@ TEST_CASE("Mixed bytes allocation jtest.", "[allocate]")
 	CHECK(dp7->data.stack.offset == -12);	
 }
 
+
+TEST_CASE("Data source and save management.", "[allocate]")
+{
+	// [Design Memo]
+	// pushSrc: Allocate source data if needed.
+	// popSrc: Release source data and allocate destination data if needed.
+
+	// src: keep, dst: keep  ->  move when popSrc.
+	// src: keep, dst: destroy  ->  move when popSrc.
+	// src: destroy, dst: keep -> move when pushSrc by allocating and setting dst to save_place.
+	// src: destroy, dst: destroy -> alloc save_place and save src when pushSrc.
+	//								load from save_place and release when popSrc.
+
+	// Pattern
+	// src: Reg(work/get return), dst Reg(work/param/set return)
+	// src: Stack(variable), dst Reg(work/param)
+	// src: Stack(variable), dst Stack(variable)
+	
+	PlnX86_64DataAllocator x64allocator;
+	PlnDataAllocator& da = x64allocator;
+
+	int push_step, pop_step;
+
+	// src(Reg(accumlateor)): keep, dst(Reg): keep
+	{
+		auto dp_ac_dst = da.prepareAccumulator(DT_SINT);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src);
+
+		push_step = da.step;
+		da.pushSrc(dp_ac_dst, dp_ac_src);
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step > 999999);
+		CHECK(dp_ac_src->status == DS_ASSIGNED);
+		CHECK(dp_ac_dst->status != DS_ASSIGNED);
+
+		pop_step = da.step;
+		da.popSrc(dp_ac_dst);
+
+		// exchage data when pop.
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step == pop_step);
+		CHECK(dp_ac_src->save_place == NULL);
+		CHECK(dp_ac_src->status == DS_RELEASED);
+
+		CHECK(dp_ac_dst->status == DS_ASSIGNED);
+		CHECK(dp_ac_dst->save_place == NULL);
+		CHECK(dp_ac_dst->alloc_step == pop_step);
+
+		da.releaseData(dp_ac_dst);
+	}
+
+	// src(Reg): keep, dst(Reg): destroy
+	{
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src);
+		auto dst_arg1 = da.prepareArgDps(0, 1, FT_PLN, false);
+
+		push_step = da.step;
+		da.pushSrc(dst_arg1[0], dp_ac_src);
+
+		// destory
+		auto dst_arg2 = da.prepareArgDps(0, 1, FT_PLN, false);
+		da.allocDp(dst_arg2[0]);
+		da.releaseData(dst_arg2[0]);
+
+		pop_step = da.step;
+		da.popSrc(dst_arg1[0]);
+
+		// exchage data when pop.
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step == pop_step);
+		CHECK(dp_ac_src->status == DS_RELEASED);
+
+		CHECK(dst_arg2[0]->status == DS_RELEASED);
+		CHECK(dst_arg2[0]->alloc_step > push_step);
+		CHECK(dst_arg2[0]->release_step < pop_step);
+
+		CHECK(dst_arg1[0]->status == DS_ASSIGNED);
+		CHECK(dst_arg1[0]->save_place == NULL);
+		CHECK(dst_arg1[0]->alloc_step == pop_step);
+
+		da.releaseData(dst_arg1[0]);
+	}
+
+	// src(Reg): destory, dst(Reg): keep
+	{
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src);
+		auto dst_arg = da.prepareArgDps(0, 1, FT_PLN, false);
+
+		push_step = da.step;
+		da.pushSrc(dst_arg[0], dp_ac_src);
+
+		auto dp_ac_src2 = da.prepareAccumulator(DT_SINT);
+		da.allocDp(dp_ac_src2);
+		da.releaseData(dp_ac_src2);
+
+		pop_step = da.step;
+		da.popSrc(dst_arg[0]);
+
+		// exchage data when push.
+		CHECK(dp_ac_src->alloc_step <= push_step);
+		CHECK(dp_ac_src->release_step == push_step);
+		CHECK(dp_ac_src->status == DS_RELEASED);
+
+		CHECK(dst_arg[0]->status == DS_ASSIGNED);
+		CHECK(dst_arg[0]->save_place == dst_arg[0]);
+		CHECK(dst_arg[0]->alloc_step == push_step);
+		da.releaseData(dst_arg[0]);
+	}
+//--- 
+	vector<PlnParameter*> params(3);
+	vector<PlnVariable*> rets(1);
+
+	auto dpv4 = da.allocData(4, DT_SINT);
+	auto dp_prms = da.prepareArgDps(rets.size(), params.size(), FT_PLN, false);
+	
+	da.pushSrc(dp_prms[0], dpv4);
+	da.popSrc(dp_prms[0]);
+
+	for (auto dp: dp_prms)
+		da.allocDp(dp);
+
+	da.funcCalled(dp_prms, rets, FT_PLN);
+
+	vector<int> save_regs;
+	vector<PlnDataPlace*> save_reg_dps;
+	da.finish(save_regs, save_reg_dps);
+}

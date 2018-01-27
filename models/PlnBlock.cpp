@@ -123,7 +123,7 @@ void PlnBlock::gen(PlnGenerator& g)
 		vector<unique_ptr<PlnGenEntity>> refs;
 		for (auto v: variables) 
 			if (v->ptr_type & PTR_REFERENCE) 
-				refs.push_back(g.getPopEntity(v->place));
+				refs.push_back(g.getEntity(v->place));
 
 		g.genNullClear(refs);
 	}
@@ -143,7 +143,7 @@ void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)
 {
 	for (auto v: variables) 
 		if (v->ptr_type & PTR_OWNERSHIP) {
-			auto e = g.getPopEntity(v->place);
+			auto e = g.getEntity(v->place);
 			g.genMemFree(e.get(), v->name, false);
 		}
 }

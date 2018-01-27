@@ -15,9 +15,18 @@
 
 void PlnGenerator::genLoadDp(PlnDataPlace* dp)
 {
-	auto srce = getEntity(dp->save_place ? dp->save_place : dp->src_place);
+	PlnDataPlace *src_dp;
+	string src_cmt;
+	if (dp->save_place) {
+		src_dp = dp->save_place;
+		src_cmt = dp->src_place->cmt() + src_dp->cmt();
+	} else {
+		src_dp = dp->src_place;
+		src_cmt = src_dp->cmt();
+	}
+	auto srce = getEntity(src_dp);
 	auto dste = getEntity(dp);
-	genMove(dste.get(), srce.get(), dp->src_place->cmt() + " -> " + dp->cmt());
+	genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
 }
 
 void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
@@ -31,23 +40,3 @@ void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
 		genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + " for save");
 	}
 }
-
-unique_ptr<PlnGenEntity> PlnGenerator::getPushEntity(PlnDataPlace* dp)
-{
-	if (dp->save_place) {
-		return getEntity(dp->save_place);
-	} else
-		return getEntity(dp);
-}
-
-unique_ptr<PlnGenEntity> PlnGenerator::getPopEntity(PlnDataPlace* dp)
-{
-	auto e = getEntity(dp);
-	if (dp->save_place) {
-		auto se = getEntity(dp->save_place);
-		string cmt = string("load ") + *dp->comment + " from " + *dp->save_place->comment;
-		genMove(e.get(), se.get(), cmt);
-	}
-	return getEntity(dp);
-}
-

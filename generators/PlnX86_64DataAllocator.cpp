@@ -36,7 +36,7 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 			regs[regid] = dp;
 			if (pdp && pdp->status != DS_RELEASED)
 				if (!pdp->save_place)  {
-					allocSaveData(pdp);
+					allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 				}
 		}
 	}
@@ -74,7 +74,6 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool
 			dp->data.stack.offset = ind*8;
 		}
 	}
-	dp->status = DS_ASSIGNED;
 
 	return dp;
 }
@@ -125,8 +124,11 @@ void PlnX86_64DataAllocator::funcCalled(
 
 void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type)
 {
-	if (ret_dps.size() >= 7)
-		allocSaveData(ret_dps[0]);	// for use RAX for store return data to stack
+	if (ret_dps.size() >= 7) {
+		auto adp = ret_dps[0];
+		allocSaveData(adp, adp->alloc_step, step);	// for use RAX for store return data to stack
+	}
+	
 
 	for (auto dp: ret_dps) {
 		dp->status = DS_RELEASED;
@@ -186,39 +188,24 @@ void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
 	regs[RCX] = dp;
 	if (pdp && pdp->status != DS_RELEASED)
 		if (!pdp->save_place)  {
-			allocSaveData(pdp);
+			allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
 		}
 	step++;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::allocAccumulator(PlnDataPlace* new_dp)
+PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type)
 {
-	auto dp = new_dp ? new_dp : new PlnDataPlace(8, DT_SINT);
-	auto pdp = regs[RAX];
+	auto dp = new PlnDataPlace(8, data_type);
 	dp->type = DP_REG;
-	dp->status = DS_ASSIGNED;
 
+	dp->status = DS_READY_ASSIGN;
 	dp->data.reg.id = RAX;
 	dp->data.reg.offset = 0;
-
-	dp->previous = pdp;
-	dp->alloc_step = step++;
 
 	static string cmt = "%accm";
 	dp->comment = &cmt;
 
-	if (pdp && pdp->status != DS_RELEASED)
-		if (!pdp->save_place) 
-			allocSaveData(pdp);
-
-	regs[RAX] = dp;
-
 	return dp;
-}
-
-void PlnX86_64DataAllocator::releaseAccumulator(PlnDataPlace* dp)
-{
-	releaseData(dp);
 }
 
 bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
@@ -226,50 +213,46 @@ bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
 	return dp->type == DP_REG && dp->data.reg.id == RAX;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* tgt)
+PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp)
 {
-	BOOST_ASSERT(tgt->type == DP_REG);
-	auto regid = tgt->data.reg.id;
-	auto pdp = regs[regid];
-	BOOST_ASSERT(!pdp || pdp->status == DS_RELEASED);
-	auto dp = new PlnDataPlace(8,tgt->data_type);
-	static string cmt = "%mulp";
-	dp->type = DP_REG;
-	dp->status = DS_RELEASED;
-	dp->data.reg.id = regid;
-	dp->alloc_step = dp->release_step = step;
-	dp->previous = pdp;
-	dp->comment = &cmt;
-	regs[regid] = dp;
-	step++;
-	return dp;
+	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
+	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
+		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
+	releaseData(rdp);
+	releaseData(ldp);
+	auto result = prepareAccumulator(ldp->data_type);
+	allocDp(result);
+	return result;
 }
 
-void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder)
+PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp)
 {
-	BOOST_ASSERT(regs[RAX]->status==DS_RELEASED);
+	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
+	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
+		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
+	releaseData(rdp);
+	return ldp;
+	step++;
+}
 
-	for (auto regid: {RAX, RDX}) {
-		auto pdp = regs[regid];
-		auto dp = new PlnDataPlace(8,DT_SINT);
-		// TODO: reconsider DT_SINT/DT_UINT
-		dp->type = DP_REG;
-		dp->status = DS_RELEASED;
-		dp->data.reg.id = regid;
-		dp->alloc_step = dp->release_step = step;
-		dp->previous = pdp;
-		regs[regid] = dp;
-		if (pdp && pdp->status != DS_RELEASED)
-			if (!pdp->save_place)  {
-				allocSaveData(pdp);
-			}
-	}
-	*quotient = regs[RAX];
-	*reminder = regs[RDX];
+void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp)
+{
+	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
+	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
+		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
+	releaseData(rdp);
 
-	static string cmq = "%divq", cmr = "%divr";
-	(*quotient)->comment = &cmq;
-	(*reminder)->comment = &cmr;
+	int regid = RDX;
+	auto pdp = regs[regid];
+	auto dp = new PlnDataPlace(8,ldp->data_type);
+	dp->type = DP_REG;
+	dp->data.reg.id = regid;
+	allocDp(dp, false);
+
+	*quotient = ldp;
+	*reminder = dp;
+	static string cmt = "%divr";
+	(*reminder)->comment = &cmt;
 
 	step++;
 }

@@ -112,35 +112,34 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 
 void PlnAddOperation::finish(PlnDataAllocator& da)
 {
+	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	PlnDataPlace* ldp = new PlnDataPlace(8, l->getDataType());
-	l->data_places.push_back(ldp);
-	l->finish(da);
-	da.allocAccumulator(ldp);
+	ldp = da.prepareAccumulator(l->getDataType());
 
 	if (r->type == ET_VALUE) {
-		r->data_places.push_back(r->values[0].getDataPlace(da));
-		r->finish(da);
-		da.popSrc(r->data_places[0]);
+		rdp = r->values[0].getDataPlace(da);
 	} else {
-		PlnDataPlace* rdp = new PlnDataPlace(8, r->getDataType());
+		rdp = new PlnDataPlace(8, r->getDataType());
+		rdp->type = DP_STK_BP;
+		rdp->status = DS_READY_ASSIGN;
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
-		r->data_places.push_back(rdp);
-		r->finish(da);
-		da.allocData(rdp);	
-		da.popSrc(rdp);
-		da.releaseData(rdp);
 	}
-	da.popSrc(ldp);
-	da.releaseAccumulator(ldp);
 
-	if (data_places.size()) {
-		PlnDataPlace* result_dp = new PlnDataPlace(8, l->getDataType());
-		da.allocAccumulator(result_dp);
-		da.pushSrc(data_places[0], result_dp);
-		da.releaseAccumulator(result_dp);
-	}
+	l->data_places.push_back(ldp);
+	l->finish(da);
+	
+	r->data_places.push_back(rdp);
+	r->finish(da);
+
+	da.popSrc(rdp);
+	da.popSrc(ldp);
+
+	auto result_dp = da.added(ldp, rdp);
+	if (data_places.size())
+		da.pushSrc(data_places[0], result_dp, true);
+	else
+		da.releaseData(result_dp);
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
@@ -192,14 +191,16 @@ PlnNegative::PlnNegative(PlnExpression* e)
 
 void PlnNegative::finish(PlnDataAllocator& da)
 {
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_SINT);
+	auto dp = da.prepareAccumulator(DT_SINT);
 	e->data_places.push_back(dp);
 	e->finish(da);
-	da.allocAccumulator(dp);
 	da.popSrc(dp);
-	da.releaseAccumulator(dp);
+
 	if (data_places.size())
-		da.pushSrc(data_places[0], dp);
+		da.pushSrc(data_places[0], dp, true);
+	else
+		da.releaseData(dp);
+		
 }
 
 void PlnNegative::dump(ostream& os, string indent)
@@ -217,7 +218,6 @@ void PlnNegative::gen(PlnGenerator& g)
 {
 	e->gen(g);
 	auto dp = e->data_places[0];
-
 	g.genLoadDp(dp);
 	
 	auto ne = g.getEntity(dp);

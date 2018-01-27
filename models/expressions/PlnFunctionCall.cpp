@@ -77,10 +77,9 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 
 		++i;
 	}
-	for (auto dp: arg_dps) {
-		da.allocDp(dp);
+
+	for (auto dp: arg_dps)
 		da.popSrc(dp);
-	}
 
 	da.funcCalled(arg_dps, function->return_vals, func_type);
 
@@ -142,7 +141,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 				g.genSaveSrc(dp);
 
 			for (auto fdp: free_dps) {
-				auto fe = g.getPopEntity(fdp);
+				auto fe = g.getEntity(fdp);
 				static string cmt="unused return";
 				g.genMemFree(fe.get(), cmt, false);
 			}

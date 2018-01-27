@@ -74,6 +74,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			}
 		case VL_RO_DATA:
 			return da.getReadOnlyDp(inf.rod->index);
+
 		case VL_VAR:
 			return da.getSeparatedDp(inf.var->place);
 	}
@@ -118,7 +119,8 @@ bool PlnExpression::isLitNum(int& num_type)
 
 void PlnExpression::finish(PlnDataAllocator& da)
 {
-	val_place = values[0].getDataPlace(da);
+	if (!val_place)
+		val_place = values[0].getDataPlace(da);
 	if (data_places.size())
 		da.pushSrc(data_places[0], val_place);
 }
