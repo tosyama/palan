@@ -183,46 +183,31 @@ void PlnAssignment::dump(ostream& os, string indent)
 		e->dump(os, indent+" ");	
 }
 
-static void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp);
+static void genDeepCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp);
+static void genMoveOwner4Assign(PlnGenerator &g, PlnAssignInf &as);
 
 void PlnAssignment::gen(PlnGenerator& g)
 {
 	int vi=0;
 	int vcnt = 0;
-	for (int i=0; i<expressions.size(); ++i) {
-		vcnt += expressions[i]->values.size();
+	for (auto e: expressions) {
+		vcnt += e->values.size();
 		if (vcnt > lvals.size()) vcnt = lvals.size();
 
-		expressions[i]->gen(g);
+		e->gen(g);
 
 		for (int di=0; vi < vcnt; vi++, di++) {
 			lvals[vi]->gen(g);
 		
 			switch (assign_inf[vi].type) {
 				case AI_PRIMITIVE:
-					g.genLoadDp(expressions[i]->data_places[di]);
+					g.genLoadDp(e->data_places[di]);
 					break;
 				case AI_MCOPY:
-					genMemoryCopy4Assign(g, assign_inf[vi], values[vi].inf.var->place);
+					genDeepCopy4Assign(g, assign_inf[vi], values[vi].inf.var->place);
 					break;
 				case AI_MOVE:
-				{
-					auto as_inf = assign_inf[vi].move;
-
-					g.genLoadDp(as_inf.src);
-
-					auto dste = g.getEntity(as_inf.dst);
-					static string cmt = "lost ownership";
-					g.genMemFree(dste.get(), cmt, false);
-					auto srce = g.getEntity(as_inf.src);
-					g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
-
-					if (as_inf.do_clear) {
-						vector<unique_ptr<PlnGenEntity>> clr_es;
-						clr_es.push_back(g.getEntity(as_inf.src));
-						g.genNullClear(clr_es);
-					}
-				}
+					genMoveOwner4Assign(g, assign_inf[vi]);
 					break;
 				default:
 					BOOST_ASSERT(false);
@@ -232,7 +217,7 @@ void PlnAssignment::gen(PlnGenerator& g)
 	PlnExpression::gen(g);
 }
 
-void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp)
+void genDeepCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp)
 {
 	auto as_inf = as.mcopy;
 	g.genLoadDp(as_inf.src);
@@ -262,3 +247,21 @@ void genMemoryCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_d
 	}
 }
 
+void genMoveOwner4Assign(PlnGenerator &g, PlnAssignInf &as)
+{
+	auto as_inf = as.move;
+
+	g.genLoadDp(as_inf.src);
+
+	auto dste = g.getEntity(as_inf.dst);
+	static string cmt = "lost ownership";
+	g.genMemFree(dste.get(), cmt, false);
+	auto srce = g.getEntity(as_inf.src);
+	g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+
+	if (as_inf.do_clear) {
+		vector<unique_ptr<PlnGenEntity>> clr_es;
+		clr_es.push_back(g.getEntity(as_inf.src));
+		g.genNullClear(clr_es);
+	}
+}
