@@ -5,7 +5,7 @@
 /// is created from this definition file by bison.
 ///
 /// @file	PlnParser.yy
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 %skeleton "lalr1.cc"
 %require "3.0.4"
@@ -166,18 +166,22 @@ module: /* empty */
 	}
 	;
 
-function_definition: KW_FUNC return_def FUNC_ID
+function_definition: KW_FUNC FUNC_ID
 		{
-			PlnFunction* f = new PlnFunction(FT_PLN, $3);
+			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->setParent(&module);
-			f->setRetValues($2);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		parameter_def ')' block
+		parameter_def ')' ARROW return_def 
+		{
+			BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
+			PlnFunction* f = scopes.back().inf.function;
+			f->setRetValues($7);
+		}
+		block
 	{
-		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		$$ = scopes.back().inf.function;
-		$$->implement = $7;
+		$$->implement = $9;
 		scopes.pop_back();
 	}
 ;
