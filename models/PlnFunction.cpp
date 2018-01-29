@@ -41,7 +41,14 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype)
 
 	for (auto p: parameters)
 		if (p->name == rname) {
-			// TODO	: check type
+			if (!rtype) 
+				rtype = &return_vals.back()->var_type;
+			if (p->var_type.size() != rtype->size())
+				return NULL;
+
+			for (int i=0; i<rtype->size(); i++)
+				if (p->var_type[i] != (*rtype)[i])
+					return NULL;
 			return_vals.push_back(p);
 			return p;
 		}
