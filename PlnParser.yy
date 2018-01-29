@@ -94,10 +94,6 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnStatement*>	basic_statement
 %type <PlnBlock*>	toplv_block
 %type <vector<PlnStatement*>>	toplv_statements
-%type <vector<PlnVariable*>>	return_def
-%type <vector<PlnVariable*>>	return_types
-%type <vector<PlnVariable*>>	return_values
-%type <PlnVariable*>	return_value
 %type <PlnParameter*>	parameter
 %type <bool>	move_owner
 %type <bool>	take_owner
@@ -172,84 +168,54 @@ function_definition: KW_FUNC FUNC_ID
 			f->setParent(&module);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		parameter_def ')' ARROW return_def 
-		{
-			BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
-			PlnFunction* f = scopes.back().inf.function;
-			f->setRetValues($7);
-		}
-		block
+		parameter_def ')' ARROW return_def block
 	{
 		$$ = scopes.back().inf.function;
-		$$->implement = $9;
+		$$->implement = $8;
 		scopes.pop_back();
 	}
 ;
 
-return_def: /* empty */ { }
+return_def: /* empty */
 	| return_types
-	{
-		$$ = move($1);
-	}
-
 	| return_values
-	{
-		$$ = move($1);
-	}
 	;
 
 return_types: type_def
 	{
-		auto v = new PlnVariable();
-		v->name = "";
-		v->var_type = move($1);
-		$$.push_back(v);
+		PlnFunction* f = scopes.back().inf.function;
+		string s = "";
+		auto v = f->addRetValue(s, &$1);
 	}
 	| return_types type_def
 	{
-		$$ = move($1);
-		auto v = new PlnVariable();
-		v->name = "";
-		v->var_type = move($2);
-		$$.push_back(v);
+		PlnFunction* f = scopes.back().inf.function;
+		string s = "";
+		auto v = f->addRetValue(s, &$2);
 	}
 	;
 
 return_values: return_value
-	{
-		$$.push_back($1);
-	}
-
 	| return_values ',' return_value
-	{
-		$$ = move($1);
-		for (auto v: $$)
-			if (v->name == $3->name) {
-				error(@$, PlnMessage::getErr(E_DuplicateVarName, $3->name));
-				delete $3;
-				YYABORT;
-			}
-		$$.push_back($3);
-	}
 	| return_values ',' ID
 	{
-		$$ = move($1);
-		for (auto v: $$)
-			if (v->name == $3) {
-				error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
-				YYABORT;
-			}
-		auto rv = new PlnVariable();
-		rv->name = $3;
-		$$.push_back(rv);
+		PlnFunction* f = scopes.back().inf.function;
+		auto v = f->addRetValue($3, NULL);
+		if (!v) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
+			YYABORT;
+		}
 	}
 	;
 
 return_value: type_def ID
 	{
-		$$ = new PlnVariable();
-		$$->name = $2;
-		$$->var_type = move($1);
+		PlnFunction* f = scopes.back().inf.function;
+		auto v = f->addRetValue($2, &$1);
+		if (!v) {
+			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
+			YYABORT;
+		}
 	}
 	;
 
