@@ -51,8 +51,11 @@ return_def: /* empty */
 	| ARROW return_values
 	;
 
-return_types: type_def
-	| return_types type_def
+return_types: return_type
+	| return_types return_type
+	;
+
+return_type: type_def
 	;
 
 return_values: return_value

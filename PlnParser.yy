@@ -181,17 +181,15 @@ return_def: /* empty */
 	| return_values
 	;
 
-return_types: type_def
+return_types: return_type
+	| return_types return_type
+	;
+
+return_type: type_def
 	{
 		PlnFunction* f = scopes.back().inf.function;
 		string s = "";
 		auto v = f->addRetValue(s, &$1);
-	}
-	| return_types type_def
-	{
-		PlnFunction* f = scopes.back().inf.function;
-		string s = "";
-		auto v = f->addRetValue(s, &$2);
 	}
 	;
 
