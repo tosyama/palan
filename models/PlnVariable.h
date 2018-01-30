@@ -18,9 +18,6 @@ public:
 	string name;
 	PlnDataPlace* place;
 	int ptr_type;
-	union {
-		int index;
-	} inf;
 };
 
 class PlnParameter : public PlnVariable {
@@ -32,12 +29,12 @@ public:
 // Variable initialization
 class PlnVarInit {
 public:
+	PlnVarInit();
 	PlnVarInit(vector<PlnValue>& vars);
 	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*>& inits);
 
 	vector<PlnValue> vars;
 	vector<PlnExpression*> initializer;
-	PlnBlock* parent;
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

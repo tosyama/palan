@@ -28,7 +28,6 @@ PlnStatement::PlnStatement(PlnVarInit* var_init, PlnBlock* parent)
 	: type(ST_VARINIT), parent(parent)
 {
 	inf.var_init = var_init;
-	var_init->parent = parent;
 }
 
 PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)

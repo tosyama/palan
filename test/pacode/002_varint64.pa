@@ -1,8 +1,8 @@
 ccall int64 printf();
 ccall exit();
 
-func int64 aa, ab
-	add(int64 a, b)
+func add(int64 a, b)
+	-> int64 aa, ab
 {
 	int64 c = 2;
 	a+c-1,b+2 -> aa,ab;

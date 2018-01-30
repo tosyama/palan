@@ -43,16 +43,19 @@ module: /* empty */
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC return_def FUNC_ID parameter_def ')' block
+function_definition: KW_FUNC FUNC_ID parameter_def ')' return_def block
 	;
 
 return_def: /* empty */
-	| return_types
-	| return_values
+	| ARROW return_types
+	| ARROW return_values
 	;
 
-return_types: type_def
-	| return_types type_def
+return_types: return_type
+	| return_types return_type
+	;
+
+return_type: type_def
 	;
 
 return_values: return_value

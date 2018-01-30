@@ -20,6 +20,10 @@
 #include "expressions/PlnClone.h"
 
 // PlnVarInit
+PlnVarInit::PlnVarInit()
+{
+}
+
 PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
 {
 }

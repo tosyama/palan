@@ -24,7 +24,7 @@ using std::endl;
 using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
-	: type(func_type), name(func_name), retval_init(NULL), implement(NULL)
+	: type(func_type), name(func_name), retval_init(new PlnVarInit()), implement(NULL)
 {
 }
 
@@ -34,27 +34,45 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 	parent.module = parent_mod;
 }
 
-void PlnFunction::setRetValues(vector<PlnVariable*>& vars)
+PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype)
 {
-	return_vals = move(vars);
-	vector<PlnType*> t;
-	for (auto rv: return_vals) {
-		if (rv->var_type.size()) t = rv->var_type;
-		else rv->var_type = t;
+	for (auto r: return_vals)
+		if (r->name != "" && r->name == rname) return NULL;
 
-		auto t = rv->var_type.back();
-		if (t->data_type == DT_OBJECT_REF) {
-			rv->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-		} else {
-			rv->ptr_type = NO_PTR;
+	for (auto p: parameters)
+		if (p->name == rname) {
+			if (!rtype) 
+				rtype = &return_vals.back()->var_type;
+			if (p->var_type.size() != rtype->size())
+				return NULL;
+
+			for (int i=0; i<rtype->size(); i++)
+				if (p->var_type[i] != (*rtype)[i])
+					return NULL;
+			return_vals.push_back(p);
+			return p;
 		}
+
+	auto ret_var = new PlnVariable();
+	ret_var->name = rname;
+	ret_var->var_type = rtype ? move(*rtype) : return_vals.back()->var_type;
+
+	auto t = ret_var->var_type.back();
+	if (t->data_type == DT_OBJECT_REF) {
+		ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
+	} else {
+		ret_var->ptr_type = NO_PTR;
 	}
+
+	if (rname == "") ret_var->place = NULL;
+	else retval_init->vars.push_back(PlnValue(ret_var));
+	return_vals.push_back(ret_var);
+
+	return ret_var;
 }
 
 PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnPassingMethod pass_method, PlnValue* defaultVal)
 {
-	for (auto rv: return_vals)
-		if (rv->name == pname) return NULL;
 	for (auto p: parameters)
 		if (p->name == pname) return NULL;
 
@@ -84,13 +102,6 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (implement) {
 			si.push_scope(this);
 
-			// Allocate stack space for return value if needed.
-			vector<PlnValue> rets;
-			for (auto r: return_vals) {
-				if (r->name == "") r->place = NULL;
-				else rets.push_back(PlnValue(r));
-			}
-
 			// Allocate stack space for parameters.
 			auto dps = da.prepareArgDps(return_vals.size(), parameters.size(), FT_PLN, true);
 			int i=0;
@@ -106,13 +117,9 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 				if (p->ptr_type & PTR_OWNERSHIP)
 					si.push_owner_var(p);
-				// TODO: delete from rets if exists.
 			}
 
-			if (rets.size()) {
-				retval_init = new PlnVarInit(rets);
-				retval_init->finish(da, si);
-			}
+			retval_init->finish(da, si);
 
 			// Insert return statement to end of function if needed.
 			if (implement->statements.size() == 0 || implement->statements.back()->type != ST_RETURN) {
@@ -123,12 +130,10 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			implement->finish(da, si);
 
-			for (auto r: return_vals) {
-				if (r->place)
-					da.releaseData(r->place);
-			}
 			for (auto p: parameters)
 				da.releaseData(p->place);
+			for (auto r: retval_init->vars)
+				da.releaseData(r.inf.var->place);
 
 			si.pop_owner_vars(this);
 			si.pop_scope();
@@ -186,7 +191,8 @@ void PlnFunction::gen(PlnGenerator &g)
 				g.genMove(le.get(), re.get(), string("param -> ") + p->name);
 			}
 
-			if (retval_init) retval_init->gen(g);
+			retval_init->gen(g);
+
 			// TODO: if malloc failed.
 			
 			implement->gen(g);
