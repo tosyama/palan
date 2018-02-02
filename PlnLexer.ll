@@ -6,7 +6,7 @@
 /// from this definition file by flex.
 ///
 /// @file	PlnLexer.ll
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <algorithm>
 #include "PlnParser.hpp"
@@ -34,6 +34,7 @@ enum {
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
 	KW_RETURN	= PlnParser::token::KW_RETURN,
+	KW_WHILE	= PlnParser::token::KW_WHILE,
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
@@ -91,6 +92,7 @@ ccall	{ return KW_CCALL; }
 syscall	{ return KW_SYSCALL; }
 func	{ return KW_FUNC; }
 return	{ return KW_RETURN; }
+while[ \t\n\r]*"(" { return KW_WHILE; }
 {FUNC_ID}	{
 		string s = yytext;
 		for (auto& c: s)
