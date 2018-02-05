@@ -38,6 +38,7 @@ class PlnLexer;
 #include "models/PlnFunction.h"
 #include "models/PlnBlock.h"
 #include "models/PlnStatement.h"
+#include "models/PlnLoopStatement.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
 #include "models/PlnArray.h"
@@ -392,7 +393,7 @@ block: '{'
 
 while_statement: KW_WHILE st_expression ')' block
 	{
-		$$ = new PlnStatement($4, CUR_BLOCK);
+		$$ = new PlnWhileStatement($2, $4, CUR_BLOCK);
 	}
 	;
 

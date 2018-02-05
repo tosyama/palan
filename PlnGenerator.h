@@ -51,6 +51,7 @@ public:
 	virtual void genSecText()=0;
 	virtual void genEntryPoint(const string& entryname)=0;
 	virtual void genLabel(const string& label)=0;
+	virtual void genJumpLabel(int id) = 0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
 	virtual void genFreeLocalVarArea(int size)=0;
@@ -69,6 +70,7 @@ public:
 	virtual void genNegative(PlnGenEntity* tgt, string comment)=0;
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
+	virtual void genCmp(PlnGenEntity* first, PlnGenEntity* second, string comment)=0;
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)=0;

@@ -14,6 +14,7 @@ enum PlnExprsnType {
 	ET_MUL,
 	ET_DIV,
 	ET_NEG,
+	ET_CMP,
 	ET_ASSIGN,
 	ET_MVOWN,
 	ET_CLONE,

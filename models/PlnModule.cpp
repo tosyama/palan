@@ -25,6 +25,7 @@ PlnModule::PlnModule()
 	types = PlnType::getBasicTypes();
 	toplevel = new PlnBlock();
 	stack_size = 0;
+	max_jmp_id = -1;
 }
 
 PlnType* PlnModule::getType(const string& type_name)
@@ -104,6 +105,11 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 	return NULL;
 }
 
+int PlnModule::getJumpID()
+{
+	return ++max_jmp_id;
+}
+
 PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 {
 	for (auto d: readonlydata)
@@ -122,11 +128,14 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
 void PlnModule::finish(PlnDataAllocator& da)
 {
 	PlnScopeInfo si;
+	si.scope.push_back(PlnScopeItem(this));
+	
 	for (auto f: functions) {
 		f->finish(da, si);
 		da.reset();
 	}
-	BOOST_ASSERT(si.scope.size() == 0);
+
+	BOOST_ASSERT(si.scope.size() == 1);
 	BOOST_ASSERT(si.owner_vars.size() == 0);
 	toplevel->finish(da, si);
 	da.finish(save_regs, save_reg_dps);

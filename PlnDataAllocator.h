@@ -35,8 +35,6 @@ public:
 	vector<PlnDataPlace*> sub_dbs;
 	vector<PlnDataPlace*> all;
 
-	vector<PlnDataPlace*> release_stmt_end;
-
 	void reset();
 	PlnDataAllocator(int regnum);
 

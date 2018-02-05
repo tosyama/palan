@@ -37,6 +37,10 @@ PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/../PlnConstants.h
 PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
 	models/../PlnDataAllocator.h
+PlnLoopStatement.o:  models/PlnLoopStatement.h \
+	models/PlnStatement.h models/../PlnModel.h models/PlnModule.h \
+	models/PlnExpression.h models/PlnBlock.h models/../PlnScopeStack.h \
+	models/../PlnGenerator.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
@@ -66,6 +70,12 @@ PlnDivOperation.o:  \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnConstants.h models/expressions/../PlnType.h
+PlnCmpOperation.o:  \
+	models/expressions/PlnCmpOperation.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h
 PlnAssignment.o:  \
 	models/expressions/PlnAssignment.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
@@ -81,7 +91,8 @@ PlnClone.o:  models/expressions/PlnClone.h \
 	models/expressions/../../PlnGenerator.h
 PlnArrayItem.o:  \
 	models/expressions/PlnArrayItem.h models/expressions/../PlnExpression.h \
-	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
+	models/expressions/../../PlnModel.h models/expressions/PlnMulOperation.h \
+	models/expressions/PlnAddOperation.h models/expressions/../PlnVariable.h \
 	models/expressions/../PlnType.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnConstants.h \
@@ -100,8 +111,9 @@ PlnGenerator.o:  PlnModel.h PlnDataAllocator.h \
 	PlnGenerator.h
 PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
-	models/PlnStatement.h models/PlnType.h models/PlnVariable.h \
-	models/PlnArray.h models/expressions/PlnFunctionCall.h \
+	models/PlnStatement.h models/PlnLoopStatement.h models/PlnType.h \
+	models/PlnVariable.h models/PlnArray.h \
+	models/expressions/PlnFunctionCall.h \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h models/expressions/PlnArrayItem.h \

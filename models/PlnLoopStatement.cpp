@@ -1,0 +1,55 @@
+/// Loop statement model classes definition.
+///
+/// @file	PlnSLooptatement.cpp
+/// @copyright	2018 YAMAGUCHI Toshinobu 
+
+#include "PlnLoopStatement.h"
+#include "PlnModule.h"
+#include "PlnBlock.h"
+#include "../PlnScopeStack.h"
+#include "../PlnGenerator.h"
+#include "expressions/PlnCmpOperation.h"
+
+#include "boost/assert.hpp"
+
+PlnWhileStatement::PlnWhileStatement
+	(PlnExpression* condition, PlnBlock* block, PlnBlock* parent)
+	: cond_dp(NULL), jmp_start_id(0), jmp_end_id(0)
+{
+	type = ST_WHILE;
+	inf.block = block;
+	this->parent = parent;
+
+	if (condition->type != ET_CMP) {
+		PlnCmpOperation *co = new PlnCmpOperation(new PlnExpression(uint64_t(0)), condition, CMP_NE);
+		this->condition = co;
+	}
+}
+
+void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	BOOST_ASSERT(si.scope[0].type == SC_MODULE);
+	PlnModule* m = si.scope[0].inf.module;
+
+	jmp_start_id = m->getJumpID();
+	jmp_end_id = m->getJumpID();
+
+	condition->finish(da);
+	inf.block->finish(da, si);
+}
+
+void PlnWhileStatement::dump(ostream& os, string indent)
+{
+	os << indent << "While: " << endl;
+	condition->dump(os, indent+" ");
+	inf.block->dump(os, indent+" ");
+}
+
+void PlnWhileStatement::gen(PlnGenerator& g)
+{
+
+	g.genJumpLabel(jmp_start_id);
+	condition->gen(g);
+	inf.block->gen(g);
+	g.genJumpLabel(jmp_end_id);
+}

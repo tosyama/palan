@@ -114,6 +114,11 @@ void PlnX86_64Generator::genLabel(const string& label)
 	else os << label << ":" << endl;
 }
 
+void PlnX86_64Generator::genJumpLabel(int id)
+{
+	os << ".L" << id << ":" << endl;
+}
+
 void PlnX86_64Generator::genEntryFunc()
 {
 	os << "	pushq %rbp" << endl;
@@ -362,6 +367,13 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 		os << "	cqto"	<< endl;
 		os << "	idivq " << div_str << "	# " << comment << endl;
 	}
+}
+
+void PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, string comment)
+{
+	const char* safix = "";
+	os << "	cmp" << safix << " " << oprnd(first) << ", " << oprnd(second) ;
+	os << "	# " << comment << endl;
 }
 
 void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
