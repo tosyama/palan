@@ -119,6 +119,22 @@ void PlnX86_64Generator::genJumpLabel(int id)
 	os << ".L" << id << ":" << endl;
 }
 
+void PlnX86_64Generator::genJump(int id)
+{
+	os << "	jmp .L" << id << endl;
+}
+
+void PlnX86_64Generator::genFalseJump(int id, int cmp_type)
+{
+	switch (cmp_type) {
+		case CMP_NE:
+			os << "	je .L" << id << endl;
+			break;
+		defalt:
+			BOOST_ASSERT(false);
+	}
+}
+
 void PlnX86_64Generator::genEntryFunc()
 {
 	os << "	pushq %rbp" << endl;
@@ -369,11 +385,40 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 	}
 }
 
-void PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, string comment)
+int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)
 {
+	if ((first->alloc_type != GA_CODE && second->alloc_type == GA_CODE) 
+			|| (first->alloc_type == GA_MEM && second->alloc_type != GA_MEM)) {
+		auto tmp = first;
+		first = second;
+		second = tmp;
+		// TODO: change direction of cmp_type.
+	}
+	BOOST_ASSERT(second->alloc_type != GA_CODE);
+
+	const char* f_str = oprnd(first);
+	if (first->alloc_type == GA_MEM) {
+		moveMemToReg(first, R11);
+		os << endl;
+		f_str = r(R11, 8);
+	}
+
 	const char* safix = "";
-	os << "	cmp" << safix << " " << oprnd(first) << ", " << oprnd(second) ;
+	if (second->alloc_type == GA_MEM) {
+		switch (second->size) {
+			case 1: safix = "b"; break;
+			case 2: safix = "w"; break;
+			case 4: safix = "l"; break;
+			case 8: safix = "q"; break;
+			default:
+				BOOST_ASSERT(false);
+		}
+	}
+
+	os << "	cmp" << safix << " " << f_str << ", " << oprnd(second) ;
 	os << "	# " << comment << endl;
+
+	return cmp_type;
 }
 
 void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)

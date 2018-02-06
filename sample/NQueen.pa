@@ -16,13 +16,13 @@ int count queen(int[#,#] *board, x, y)
 	count = 0;
 	for (int xx: 1 << x-1)
 		if (board[xx,y]) return;
-		
+
 	for (int xx,yy: 1<<x-1, 1<<y-1)
 		if (board[xx,yy]) return;
 
 	for (int xx,yy: 1<<x-1, y+1>>n)
 		if (board[xx,yy]) return;
-	
+
 	board[x,y] = 1;
 	if (x == n) count++;
 	else

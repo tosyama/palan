@@ -15,7 +15,9 @@ public:
 	void genSecText();
 	void genEntryPoint(const string& entryname);
 	void genLabel(const string& label);
+	void genJump(int id);
 	void genJumpLabel(int id);
+	void genFalseJump(int id, int cmp_type);
 	void genEntryFunc();
 	void genLocalVarArea(int size);
 	void genFreeLocalVarArea(int size);
@@ -34,7 +36,7 @@ public:
 	void genNegative(PlnGenEntity* tgt, string comment);
 	void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
-	void genCmp(PlnGenEntity* first, PlnGenEntity* second, string comment);
+	int genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment);
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);
 	void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment);

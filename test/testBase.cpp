@@ -2,6 +2,9 @@
 
 #include <iostream>
 #include <fstream>
+#include <thread>
+#include <future>
+#include <csignal>
 #ifdef __GNUC__
 	#include <ext/stdio_sync_filebuf.h>    
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
@@ -70,7 +73,8 @@ string build(string srcf)
 	return "success";
 }
 
-string exec(string srcf)
+
+string exec_worker(string srcf)
 {
 	string cmd = "out/" + srcf;
 	FILE* p = popen(cmd.c_str(),"r");
@@ -89,6 +93,27 @@ string exec(string srcf)
 	if (ret) return "return:" + to_string(ret);
 
 	return result_str;
+}
+
+string exec(string srcf)
+{
+	string result_str;
+	auto f = async(launch::async, exec_worker, srcf);
+	auto result = f.wait_for(chrono::seconds(1));
+	if (result == future_status::timeout) {
+		// time out and try killing process.
+		char pid_str[10];
+		string cmd = "pidof -s " + srcf;
+		FILE *outf = popen(cmd.c_str(), "r");
+		fgets(pid_str, 10, outf);
+		pclose(outf);
+		if (pid_str[0]) {
+			pid_t pid = strtoul(pid_str, NULL, 10);
+			kill(pid, SIGKILL);
+		}
+		return "killed by timeout(1sec):" + srcf;
+	}
+	return f.get();
 }
 
 string mcheck(string tracef)

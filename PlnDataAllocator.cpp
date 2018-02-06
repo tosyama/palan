@@ -299,6 +299,8 @@ PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
 
 	auto sub_dp = new PlnDataPlace(dp->size, dp->data_type);
 	sub_dp->type = DP_SUBDP;
+	sub_dp->data_type = dp->data_type;
+	sub_dp->size = dp->size;
 	sub_dp->data.originalDp = dp;
 	sub_dp->comment = dp->comment;
 

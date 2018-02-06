@@ -6,10 +6,10 @@ OBJS = $(filter-out ../objs/palan.o, $(wildcard ../objs/*.o))
 
 $(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa
 	@echo link $(PROGRAM).
-	@$(CXX) -o $(PROGRAM) $(filter %.o, $^)
+	@$(CXX) -o $(PROGRAM) $(filter %.o, $^) -pthread
 
 .cpp.o:
-	$(CXX) -std=c++11 -c -g $<
+	$(CXX) -std=c++11 -c -g $< -pthread
 
 test:
 	@mkdir -p out

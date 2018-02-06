@@ -12,7 +12,7 @@
 #include "boost/assert.hpp"
 
 PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType cmp_type)
-	:l(l), r(r), cmp_type(cmp_type), PlnExpression(ET_CMP)
+	:l(l), r(r), cmp_type(cmp_type), gen_cmp_type(-1), PlnExpression(ET_CMP)
 {
 }
 
@@ -72,6 +72,12 @@ void PlnCmpOperation::gen(PlnGenerator& g)
 	auto re = g.getEntity(rdp);
 	auto le = g.getEntity(ldp);
 
-	g.genCmp(le.get(), re.get(), ldp->cmt() + " == " + rdp->cmt());
+	gen_cmp_type = g.genCmp(le.get(), re.get(), cmp_type, ldp->cmt() + " == " + rdp->cmt());
 }
 
+int PlnCmpOperation::getCmpType()
+{
+	// use after gen.
+	BOOST_ASSERT(gen_cmp_type != -1);
+	return gen_cmp_type;
+}

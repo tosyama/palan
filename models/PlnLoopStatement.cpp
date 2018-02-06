@@ -21,9 +21,9 @@ PlnWhileStatement::PlnWhileStatement
 	this->parent = parent;
 
 	if (condition->type != ET_CMP) {
-		PlnCmpOperation *co = new PlnCmpOperation(new PlnExpression(uint64_t(0)), condition, CMP_NE);
-		this->condition = co;
-	}
+		this->condition = new PlnCmpOperation(new PlnExpression(uint64_t(0)), condition, CMP_NE);
+	} else
+		this->condition = static_cast<PlnCmpOperation*>(condition);
 }
 
 void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -47,9 +47,10 @@ void PlnWhileStatement::dump(ostream& os, string indent)
 
 void PlnWhileStatement::gen(PlnGenerator& g)
 {
-
 	g.genJumpLabel(jmp_start_id);
 	condition->gen(g);
+	g.genFalseJump(jmp_end_id, condition->getCmpType());
 	inf.block->gen(g);
+	g.genJump(jmp_start_id);
 	g.genJumpLabel(jmp_end_id);
 }
