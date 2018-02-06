@@ -1,4 +1,4 @@
-// PlnStatement model class definition.
+/// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
 /// @copyright	2017 YAMAGUCHI Toshinobu 
@@ -49,10 +49,6 @@ void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			inf.var_init->finish(da, si);
 			break;
 	}
-
-	for (auto dp: da.release_stmt_end) 
-		da.releaseData(dp);
-	da.release_stmt_end.resize(0);
 }
 
 void PlnStatement::dump(ostream& os, string indent)

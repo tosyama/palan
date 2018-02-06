@@ -1,10 +1,10 @@
 /// Add operation model class definition.
 ///
-/// PlnAddOperation calculate addtion and subtraction.
+/// PlnAddOperation calculate addition and subtraction.
 /// e.g.) a + b / a - b
 ///
 /// @file	PlnAddOperation.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 

@@ -1,8 +1,8 @@
 /// PlnStatement model class declaration.
 ///
 /// @file	PlnStatement.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
-
+/// @copyright	2017 YAMAGUCHI Toshinobu 
+#pragma once
 #include "../PlnModel.h"
 
 // Statement: Expression | Block
@@ -10,7 +10,8 @@ enum PlnStmtType {
 	ST_EXPRSN,
 	ST_VARINIT,
 	ST_BLOCK,
-	ST_RETURN
+	ST_RETURN,
+	ST_WHILE
 };
 
 class PlnStatement {
@@ -43,8 +44,8 @@ public:
 
 	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);
 
-	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
-	void dump(ostream& os, string indent="");
-	void gen(PlnGenerator& g);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si); // override
+	void dump(ostream& os, string indent=""); // override
+	void gen(PlnGenerator& g); // override
 };
 

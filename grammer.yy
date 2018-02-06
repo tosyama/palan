@@ -21,6 +21,7 @@ int yylex();
 %token KW_CCALL
 %token KW_SYSCALL
 %token KW_RETURN
+%token KW_WHILE
 %token DBL_LESS
 %token DBL_GRTR
 %token DBL_ARROW
@@ -110,6 +111,7 @@ toplv_statement: basic_statement
 basic_statement: st_expression ';'
 	| declarations ';'
 	| declarations '=' expression ';'
+	| while_statement
 	;
 	
 toplv_block: '{' toplv_statements '}'
@@ -120,6 +122,9 @@ toplv_statements:	/* empty */
 	;
 
 block: '{' statements '}'
+	;
+
+while_statement: KW_WHILE '(' st_expression ')' block
 	;
 
 statements:	/* empty */ { }

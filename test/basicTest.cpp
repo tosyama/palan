@@ -32,5 +32,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3 2 4 5 9 3");
 	CHECK(mcheck("mtrace006") == "+19 -19");
+
+	testcode = "007_whiletest";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "9876543210");
 }
 

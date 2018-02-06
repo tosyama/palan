@@ -15,6 +15,7 @@ public:
 	PlnBlock* toplevel;
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
+	int max_jmp_id;
 
 	int stack_size;
 	vector<PlnFunction*> functions;
@@ -27,6 +28,7 @@ public:
 	PlnType* getType(const string& type_name);
 	PlnType* getFixedArrayType(int item_size, vector<int>& sizes);
 	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
+	int getJumpID();
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
 	void finish(PlnDataAllocator& da);

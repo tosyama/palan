@@ -24,3 +24,8 @@ enum {
 	FT_UNKNOWN	/// Unkown function type. Not initialized.
 };
 
+// Comparison type.
+enum PlnCmpType {
+	CMP_NE
+};
+

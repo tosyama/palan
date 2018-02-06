@@ -38,6 +38,7 @@ class PlnLexer;
 #include "models/PlnFunction.h"
 #include "models/PlnBlock.h"
 #include "models/PlnStatement.h"
+#include "models/PlnLoopStatement.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
 #include "models/PlnArray.h"
@@ -82,6 +83,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token KW_CCALL	"'ccall'"
 %token KW_SYSCALL	"'syscall'"
 %token KW_RETURN	"'return'"
+%token KW_WHILE	"'while'"
 %token DBL_LESS		"'<<'"
 %token DBL_GRTR		"'>>'"
 %token DBL_ARROW	"'->>'"
@@ -99,6 +101,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <bool>	take_owner
 %type <PlnValue*>	default_value
 %type <PlnBlock*>	block
+%type <PlnStatement*> while_statement
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
 %type <vector<PlnExpression*>>	expressions
@@ -336,6 +339,10 @@ basic_statement: st_expression ';'
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
 		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
 	}
+	| while_statement
+	{
+		$$ = $1;
+	}
 	;
 	
 toplv_block: '{'
@@ -381,6 +388,12 @@ block: '{'
 		$$ = CUR_BLOCK;
 		$$->statements = move($3);
 		scopes.pop_back();
+	}
+	;
+
+while_statement: KW_WHILE st_expression ')' block
+	{
+		$$ = new PlnWhileStatement($2, $4, CUR_BLOCK);
 	}
 	;
 
