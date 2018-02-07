@@ -83,6 +83,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token KW_SYSCALL	"'syscall'"
 %token KW_RETURN	"'return'"
 %token KW_WHILE	"'while'"
+%token KW_IF	"'if'"
+%token KW_ELSE	"'else'"
 %token DBL_LESS		"'<<'"
 %token DBL_GRTR		"'>>'"
 %token DBL_ARROW	"'->>'"
@@ -101,6 +103,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnValue*>	default_value
 %type <PlnBlock*>	block
 %type <PlnStatement*> while_statement
+%type <PlnStatement*> if_statement
+%type <PlnStatement*> else_statement
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
 %type <vector<PlnExpression*>>	expressions
@@ -342,6 +346,10 @@ basic_statement: st_expression ';'
 	{
 		$$ = $1;
 	}
+	| if_statement
+	{
+		$$ = $1;
+	}
 	;
 	
 toplv_block: '{'
@@ -393,6 +401,22 @@ block: '{'
 while_statement: KW_WHILE st_expression block
 	{
 		$$ = new PlnWhileStatement($2, $3, CUR_BLOCK);
+	}
+	;
+
+if_statement: KW_IF st_expression block else_statement
+	{
+		$$ = new PlnStatement($3, CUR_BLOCK);
+	}
+
+else_statement: KW_ELSE block
+	{
+		$$ = new PlnStatement($2, CUR_BLOCK);
+	}
+
+	| KW_ELSE if_statement
+	{
+		$$ = $2;
 	}
 	;
 

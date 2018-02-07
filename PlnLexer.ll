@@ -34,6 +34,8 @@ enum {
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
 	KW_RETURN	= PlnParser::token::KW_RETURN,
 	KW_WHILE	= PlnParser::token::KW_WHILE,
+	KW_IF		= PlnParser::token::KW_IF,
+	KW_ELSE		= PlnParser::token::KW_ELSE,
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
@@ -91,6 +93,8 @@ syscall	{ return KW_SYSCALL; }
 func	{ return KW_FUNC; }
 return	{ return KW_RETURN; }
 while	{ return KW_WHILE; }
+if		{ return KW_IF; }
+else	{ return KW_ELSE; }
 {ID}	{
 		string id = yytext;
 		if (std::binary_search(typenames.begin(), typenames.end(), id)) {

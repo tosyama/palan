@@ -1,0 +1,14 @@
+ccall int32 printf();
+ccall exit();
+
+int32 i = 1;
+
+if i {
+	printf("if");
+} else if i {
+	printf("else if");
+} else {
+	printf("else");
+}
+
+exit(0);
