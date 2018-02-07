@@ -16,7 +16,6 @@ int yylex();
 %token STR
 %token ID
 %token TYPENAME
-%token FUNC_ID
 %token KW_FUNC
 %token KW_CCALL
 %token KW_SYSCALL
@@ -44,7 +43,7 @@ module: /* empty */
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC FUNC_ID parameter_def ')' return_def block
+function_definition: KW_FUNC ID '(' parameter_def ')' return_def block
 	;
 
 return_def: /* empty */
@@ -94,10 +93,10 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
+ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';'
 	;
 
 single_return: /* empty */
@@ -124,7 +123,7 @@ toplv_statements:	/* empty */
 block: '{' statements '}'
 	;
 
-while_statement: KW_WHILE '(' st_expression ')' block
+while_statement: KW_WHILE st_expression block
 	;
 
 statements:	/* empty */ { }
@@ -156,7 +155,7 @@ expression:
 	| term
 	;
 
-func_call: FUNC_ID arguments ')'
+func_call: ID '(' arguments ')'
 	;
 
 arguments: argument

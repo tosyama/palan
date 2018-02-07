@@ -78,7 +78,6 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	TYPENAME	"type name"
-%token <string>	FUNC_ID	"function name"
 %token KW_FUNC	"'func'"
 %token KW_CCALL	"'ccall'"
 %token KW_SYSCALL	"'syscall'"
@@ -165,7 +164,7 @@ module: /* empty */
 	}
 	;
 
-function_definition: KW_FUNC FUNC_ID
+function_definition: KW_FUNC ID '('
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->setParent(&module);
@@ -174,7 +173,7 @@ function_definition: KW_FUNC FUNC_ID
 		parameter_def ')' ARROW return_def block
 	{
 		$$ = scopes.back().inf.function;
-		$$->implement = $8;
+		$$->implement = $9;
 		scopes.pop_back();
 	}
 ;
@@ -281,7 +280,7 @@ default_value:	/* empty */	{ $$ = NULL; }
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
+ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_C, $3);
 		f->setParent(&module);
@@ -289,7 +288,7 @@ ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_SYS, $5);
 		f->inf.syscall.id = $2;
@@ -391,9 +390,9 @@ block: '{'
 	}
 	;
 
-while_statement: KW_WHILE st_expression ')' block
+while_statement: KW_WHILE st_expression block
 	{
-		$$ = new PlnWhileStatement($2, $4, CUR_BLOCK);
+		$$ = new PlnWhileStatement($2, $3, CUR_BLOCK);
 	}
 	;
 
@@ -491,11 +490,11 @@ expression:
 	}
 	;
 
-func_call: FUNC_ID arguments ')'
+func_call: ID '(' arguments ')'
 	{
-		PlnFunction* f = module.getFunc($1, $2);
+		PlnFunction* f = module.getFunc($1, $3);
 		if (f) {
-			$$ = new PlnFunctionCall(f, $2);
+			$$ = new PlnFunctionCall(f, $3);
 		} else {
 			error(@$, PlnMessage::getErr(E_UndefinedFunction, $1));
 			YYABORT;
