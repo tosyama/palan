@@ -60,6 +60,8 @@ void PlnCmpOperation::dump(ostream& os, string indent)
 
 void PlnCmpOperation::gen(PlnGenerator& g)
 {
+	if (isConst()) return;
+
 	l->gen(g);
 	r->gen(g);
 
@@ -73,6 +75,47 @@ void PlnCmpOperation::gen(PlnGenerator& g)
 	auto le = g.getEntity(ldp);
 
 	gen_cmp_type = g.genCmp(le.get(), re.get(), cmp_type, ldp->cmt() + " == " + rdp->cmt());
+}
+
+template <typename LT, typename RT>
+int static_comp(LT lval, RT rval, int cmp_type)
+{
+	bool result;
+	switch (cmp_type) {
+		case CMP_EQ: result = (lval == rval); break;
+		case CMP_NE: result = (lval != rval); break;
+		default:
+			BOOST_ASSERT(false);
+	}
+	return  result ? CMP_CONST_TRUE : CMP_CONST_FALSE;
+}
+
+bool PlnCmpOperation::isConst()
+{
+	if (l->type != ET_VALUE || r->type != ET_VALUE)
+		return false;
+
+	int lval_t = l->values[0].type;
+	int rval_t = r->values[0].type;
+	auto lval = l->values[0].inf;
+	auto rval = r->values[0].inf;
+
+	if (lval_t == VL_LIT_INT8 && rval_t == VL_LIT_INT8)
+		gen_cmp_type = static_comp(lval.intValue, rval.intValue, cmp_type);
+
+	else if (lval_t == VL_LIT_INT8 && rval_t == VL_LIT_UINT8)
+		gen_cmp_type = static_comp(lval.intValue, rval.uintValue, cmp_type);
+
+	else if (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_INT8)
+		gen_cmp_type = static_comp(lval.uintValue, rval.intValue, cmp_type);
+
+	else if (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_UINT8)
+		gen_cmp_type = static_comp(lval.uintValue, rval.uintValue, cmp_type);
+
+	else
+		return false;
+
+	return true;
 }
 
 int PlnCmpOperation::getCmpType()

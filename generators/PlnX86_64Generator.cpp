@@ -133,6 +133,9 @@ void PlnX86_64Generator::genJump(int id, string comment)
 void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 {
 	switch (cmp_type) {
+		case CMP_EQ:
+			os << "	jne .L" << id;
+			break;
 		case CMP_NE:
 			os << "	je .L" << id;
 			break;

@@ -42,7 +42,7 @@ func queen(int[#,] >> board, x, y)
 	} else {
 		for yy: n>>1 {
 			int c;
-			queen(board>>, x+1, yy) ->> board, c;
+			board ->> queen(x+1, yy) ->> board, c;
 			c +-> count;
 		}
 	}

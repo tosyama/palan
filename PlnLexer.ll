@@ -36,6 +36,8 @@ enum {
 	KW_WHILE	= PlnParser::token::KW_WHILE,
 	KW_IF		= PlnParser::token::KW_IF,
 	KW_ELSE		= PlnParser::token::KW_ELSE,
+	OPE_EQ		= PlnParser::token::OPE_EQ,
+	OPE_NE		= PlnParser::token::OPE_NE,
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
@@ -95,6 +97,8 @@ return	{ return KW_RETURN; }
 while	{ return KW_WHILE; }
 if		{ return KW_IF; }
 else	{ return KW_ELSE; }
+"=="	{ return OPE_EQ; }
+"!="	{ return OPE_NE; }
 {ID}	{
 		string id = yytext;
 		if (std::binary_search(typenames.begin(), typenames.end(), id)) {

@@ -10,6 +10,7 @@ class PlnCmpOperation : public PlnExpression
 {
 	PlnCmpType cmp_type;
 	int gen_cmp_type;
+
 public:
 	PlnExpression* l;
 	PlnExpression* r;
@@ -18,6 +19,7 @@ public:
 	void finish(PlnDataAllocator& da);	// override
 	void dump(ostream& os, string indent="");	// override
 	void gen(PlnGenerator& g);	// override
+	bool isConst();
 	int getCmpType();
 };
 

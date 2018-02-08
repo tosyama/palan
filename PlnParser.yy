@@ -49,6 +49,7 @@ class PlnLexer;
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnAssignment.h"
+#include "models/expressions/PlnCmpOperation.h"
 #include "PlnMessage.h"
 #include "PlnConstants.h"
 
@@ -79,17 +80,19 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	TYPENAME	"type name"
-%token KW_FUNC	"'func'"
-%token KW_CCALL	"'ccall'"
-%token KW_SYSCALL	"'syscall'"
-%token KW_RETURN	"'return'"
-%token KW_WHILE	"'while'"
-%token KW_IF	"'if'"
-%token KW_ELSE	"'else'"
-%token DBL_LESS		"'<<'"
-%token DBL_GRTR		"'>>'"
-%token DBL_ARROW	"'->>'"
-%token ARROW	"'->'"
+%token KW_FUNC	"func"
+%token KW_CCALL	"ccall"
+%token KW_SYSCALL	"syscall"
+%token KW_RETURN	"return"
+%token KW_WHILE	"while"
+%token KW_IF	"if"
+%token KW_ELSE	"else"
+%token OPE_EQ	"=="
+%token OPE_NE	"!="
+%token DBL_LESS		"<<"
+%token DBL_GRTR		">>"
+%token DBL_ARROW	"->>"
+%token ARROW	"->"
 
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
@@ -134,6 +137,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %left ARROW DBL_ARROW
 %left ',' 
 %left DBL_LESS DBL_GRTR
+%left OPE_EQ OPE_NE
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -502,6 +506,16 @@ expression:
 	| expression '%' expression
 	{
 		$$ = PlnDivOperation::create_mod($1, $3);
+	}
+
+	| expression OPE_EQ expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_EQ);
+	}
+
+	| expression OPE_NE expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_NE);
 	}
 
 	| '(' assignment ')'

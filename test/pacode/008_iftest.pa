@@ -1,20 +1,27 @@
 ccall int32 printf();
 ccall exit();
 
-func elif(int32 i, j)
+func elif(int32 i)
 {
-	if i {
+	if i == 0 {
 		printf("[if]");
-	} else if j {
+	} else if i == 1 {
 		printf("[elif]");
 	} else {
 		printf("[else]");
 	}
 }
 
-elif(1,0);
-elif(1,1);
-elif(0,1);
-elif(0,0);
+elif(0);
+elif(1);
+elif(2);
+
+if 1 {
+	printf("[true]");
+}
+
+if 0 {
+	printf("[false]");
+}
 
 exit(0);

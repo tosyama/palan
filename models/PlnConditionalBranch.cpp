@@ -20,10 +20,11 @@ PlnIfStatement::PlnIfStatement
 	inf.block = block;
 	this->parent = parent;
 
-	if (condition->type != ET_CMP) {
-		this->condition = new PlnCmpOperation(new PlnExpression(uint64_t(0)), condition, CMP_NE);
-	} else
+	if (condition->type == ET_CMP) {
 		this->condition = static_cast<PlnCmpOperation*>(condition);
+	} else {
+		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
+	}
 }
 
 void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -60,7 +61,14 @@ void PlnIfStatement::dump(ostream& os, string indent)
 void PlnIfStatement::gen(PlnGenerator& g)
 {
 	condition->gen(g);
-	g.genFalseJump(jmp_next_id, condition->getCmpType(), "if");
+	int cmp_type = condition->getCmpType();
+	if (cmp_type == CMP_CONST_TRUE) 
+		g.comment(" if true");	// 	do nothing.
+	else if (cmp_type == CMP_CONST_FALSE)
+		g.genJump(jmp_next_id, "if false");
+	else
+		g.genFalseJump(jmp_next_id, condition->getCmpType(), "if");
+
 	inf.block->gen(g);
 
 	if (next) {

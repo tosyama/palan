@@ -26,6 +26,9 @@ enum {
 
 // Comparison type.
 enum PlnCmpType {
-	CMP_NE
+	CMP_EQ,
+	CMP_NE,
+	CMP_CONST_TRUE,
+	CMP_CONST_FALSE
 };
 

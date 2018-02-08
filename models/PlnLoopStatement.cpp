@@ -21,7 +21,7 @@ PlnWhileStatement::PlnWhileStatement
 	this->parent = parent;
 
 	if (condition->type != ET_CMP) {
-		this->condition = new PlnCmpOperation(new PlnExpression(uint64_t(0)), condition, CMP_NE);
+		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
 	} else
 		this->condition = static_cast<PlnCmpOperation*>(condition);
 }
