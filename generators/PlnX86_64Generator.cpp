@@ -114,25 +114,34 @@ void PlnX86_64Generator::genLabel(const string& label)
 	else os << label << ":" << endl;
 }
 
-void PlnX86_64Generator::genJumpLabel(int id)
+void PlnX86_64Generator::genJumpLabel(int id, string comment)
 {
-	os << ".L" << id << ":" << endl;
+	os << ".L" << id << ":";
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
 }
 
-void PlnX86_64Generator::genJump(int id)
+void PlnX86_64Generator::genJump(int id, string comment)
 {
-	os << "	jmp .L" << id << endl;
+	os << "	jmp .L" << id;
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
 }
 
-void PlnX86_64Generator::genFalseJump(int id, int cmp_type)
+void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 {
 	switch (cmp_type) {
 		case CMP_NE:
-			os << "	je .L" << id << endl;
+			os << "	je .L" << id;
 			break;
 		defalt:
 			BOOST_ASSERT(false);
 	}
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
 }
 
 void PlnX86_64Generator::genEntryFunc()

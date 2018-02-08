@@ -15,9 +15,9 @@ public:
 	void genSecText();
 	void genEntryPoint(const string& entryname);
 	void genLabel(const string& label);
-	void genJump(int id);
-	void genJumpLabel(int id);
-	void genFalseJump(int id, int cmp_type);
+	void genJumpLabel(int id, string comment);
+	void genJump(int id, string comment);
+	void genFalseJump(int id, int cmp_type, string comment);
 	void genEntryFunc();
 	void genLocalVarArea(int size);
 	void genFreeLocalVarArea(int size);

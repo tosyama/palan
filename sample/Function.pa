@@ -5,6 +5,15 @@ print(x.str ":" y.str);
 swap(x,y) -> x, y;
 print(x.str ":" y.str);
 
+// コールチェイン(仮) 戻り値(expresion)と引数の前半の方が一致すれば
+// 関数を->でつなげれらる。
+
+string str1, str2 = "1\t2\t3", "3,4,5";
+string[] tmp = split(str1, "\t");
+join(tmp1, ",") -> str1;
+// こうかける↓
+str1 -> split("\t") -> join(",") -> str1;
+
 object o1, o3, o4;
 
 funco(o1,o2.clone, o3>>, *o2, io o4) ->> o1; // 所有を渡したので、o3は無効.
@@ -16,7 +25,7 @@ funco(o1,o2.clone, o3>>, *o2, io o4) ->> o1; // 所有を渡したので、o3は
 					// *の引数はreturnできない(clone必要->無印を使うこと)。
 
 o1 -> o2; // deep copy.
-o1 ->> o2; // 所有権を取られたので、o1は無効(null代入). 以降o2=o1はコンパイルエラー
+o1 ->> o2; // 所有権を取られたので、o1は無効(null代入). 以降o1->o2はコンパイルエラー
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
 

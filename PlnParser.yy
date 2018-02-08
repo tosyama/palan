@@ -39,6 +39,7 @@ class PlnLexer;
 #include "models/PlnBlock.h"
 #include "models/PlnStatement.h"
 #include "models/PlnLoopStatement.h"
+#include "models/PlnConditionalBranch.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
 #include "models/PlnArray.h"
@@ -174,17 +175,17 @@ function_definition: KW_FUNC ID '('
 			f->setParent(&module);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		parameter_def ')' ARROW return_def block
+		parameter_def ')' return_def block
 	{
 		$$ = scopes.back().inf.function;
-		$$->implement = $9;
+		$$->implement = $8;
 		scopes.pop_back();
 	}
 ;
 
 return_def: /* empty */
-	| return_types
-	| return_values
+	| ARROW return_types
+	| ARROW return_values
 	;
 
 return_types: return_type
@@ -406,10 +407,15 @@ while_statement: KW_WHILE st_expression block
 
 if_statement: KW_IF st_expression block else_statement
 	{
-		$$ = new PlnStatement($3, CUR_BLOCK);
+		$$ = new PlnIfStatement($2, $3, $4, CUR_BLOCK);
 	}
 
-else_statement: KW_ELSE block
+else_statement: /* empty */
+	{
+		$$ = NULL;
+	}
+	
+	| KW_ELSE block
 	{
 		$$ = new PlnStatement($2, CUR_BLOCK);
 	}

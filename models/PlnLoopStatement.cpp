@@ -1,6 +1,6 @@
 /// Loop statement model classes definition.
 ///
-/// @file	PlnSLooptatement.cpp
+/// @file	PlnLoopStatement.cpp
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include "PlnLoopStatement.h"
@@ -47,10 +47,10 @@ void PlnWhileStatement::dump(ostream& os, string indent)
 
 void PlnWhileStatement::gen(PlnGenerator& g)
 {
-	g.genJumpLabel(jmp_start_id);
+	g.genJumpLabel(jmp_start_id, "while");
 	condition->gen(g);
-	g.genFalseJump(jmp_end_id, condition->getCmpType());
+	g.genFalseJump(jmp_end_id, condition->getCmpType(), "");
 	inf.block->gen(g);
-	g.genJump(jmp_start_id);
-	g.genJumpLabel(jmp_end_id);
+	g.genJump(jmp_start_id, "");
+	g.genJumpLabel(jmp_end_id, "end while");
 }

@@ -51,9 +51,9 @@ public:
 	virtual void genSecText()=0;
 	virtual void genEntryPoint(const string& entryname)=0;
 	virtual void genLabel(const string& label)=0;
-	virtual void genJumpLabel(int id) = 0;
-	virtual void genJump(int id) = 0;
-	virtual void genFalseJump(int id, int cmp_type) = 0;
+	virtual void genJumpLabel(int id, string comment) = 0;
+	virtual void genJump(int id, string comment) = 0;
+	virtual void genFalseJump(int id, int cmp_type, string comment) = 0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
 	virtual void genFreeLocalVarArea(int size)=0;
