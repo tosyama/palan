@@ -12,6 +12,7 @@ using namespace std;
 // Basic types
 static bool is_initialzed_type = false;
 static vector<PlnType*> basic_types;
+static PlnType* byte_type = NULL;
 static PlnType* int_type = NULL;
 static PlnType* uint_type = NULL;
 static PlnType* ro_cstr_type = NULL;
@@ -29,6 +30,7 @@ static void initBasicTypes()
 	t->data_type = DT_UINT;
 	t->size = 1;
 	basic_types.push_back(t);
+	byte_type = t;
 
 	t = new PlnType();
 	t->name = "int16";
@@ -88,6 +90,12 @@ vector<PlnType*> PlnType::getBasicTypes()
 {
 	if (!is_initialzed_type) initBasicTypes();
 	return basic_types;
+}
+
+PlnType* PlnType::getByte()
+{
+	BOOST_ASSERT(byte_type != NULL);
+	return byte_type;
 }
 
 PlnType* PlnType::getSint()

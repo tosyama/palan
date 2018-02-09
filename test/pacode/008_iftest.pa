@@ -24,4 +24,10 @@ if 0 {
 	printf("[false]");
 }
 
+int64 i = 3;
+int32 b = 2;
+if i==b==0 {
+	printf("%d", b);
+}
+
 exit(0);

@@ -39,6 +39,6 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "008_iftest";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "[if][elif][else][true]");
+	REQUIRE(exec(testcode) == "[if][elif][else][true]2");
 }
 

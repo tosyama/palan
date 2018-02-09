@@ -67,7 +67,7 @@ void PlnIfStatement::gen(PlnGenerator& g)
 	else if (cmp_type == CMP_CONST_FALSE)
 		g.genJump(jmp_next_id, "if false");
 	else
-		g.genFalseJump(jmp_next_id, condition->getCmpType(), "if");
+		g.genFalseJump(jmp_next_id, cmp_type, "if");
 
 	inf.block->gen(g);
 

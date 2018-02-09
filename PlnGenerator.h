@@ -73,6 +73,7 @@ public:
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual int genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)=0;
+	virtual int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment)=0;
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)=0;

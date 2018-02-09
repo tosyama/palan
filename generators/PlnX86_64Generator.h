@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class declaration.
 ///
 /// @file	PlnX86_64Generator.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include "../PlnGenerator.h"
 
@@ -37,6 +37,7 @@ public:
 	void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment);
 	int genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment);
+	int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment);
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs);
 	void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment);

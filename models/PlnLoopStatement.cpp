@@ -49,7 +49,16 @@ void PlnWhileStatement::gen(PlnGenerator& g)
 {
 	g.genJumpLabel(jmp_start_id, "while");
 	condition->gen(g);
-	g.genFalseJump(jmp_end_id, condition->getCmpType(), "");
+
+	int cmp_type = condition->getCmpType();
+
+	if (cmp_type == CMP_CONST_TRUE) 
+		;	// 	do nothing.
+	else if (cmp_type == CMP_CONST_FALSE)
+		g.genJump(jmp_end_id, "");
+	else
+		g.genFalseJump(jmp_end_id, cmp_type, "");
+
 	inf.block->gen(g);
 	g.genJump(jmp_start_id, "");
 	g.genJumpLabel(jmp_end_id, "end while");

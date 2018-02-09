@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class definition.
 ///
 /// @file	PlnX86_64Generator.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -400,7 +400,9 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)
 {
 	if ((first->alloc_type != GA_CODE && second->alloc_type == GA_CODE) 
-			|| (first->alloc_type == GA_MEM && second->alloc_type != GA_MEM)) {
+			|| (first->alloc_type == GA_MEM && second->alloc_type != GA_MEM)
+			|| (first->alloc_type == GA_MEM && second->alloc_type == GA_MEM
+				&& first->size > second->size)) {
 		auto tmp = first;
 		first = second;
 		second = tmp;
@@ -412,7 +414,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 	if (first->alloc_type == GA_MEM) {
 		moveMemToReg(first, R11);
 		os << endl;
-		f_str = r(R11, 8);
+		f_str = r(R11, second->size);
 	}
 
 	const char* safix = "";
@@ -431,6 +433,29 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 	os << "	# " << comment << endl;
 
 	return cmp_type;
+}
+
+int PlnX86_64Generator::genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment)
+{
+	BOOST_ASSERT(tgt->alloc_type == GA_REG);
+	BOOST_ASSERT(tgt->size == 8);
+
+	const char* byte_reg = r(tgt->data.i, 1);
+	switch (cmp_type) {
+		case CMP_EQ:
+			os << "	sete " << byte_reg;
+			break;
+		case CMP_NE:
+			os << "	setne " << byte_reg;
+			break;
+		defalt:
+			BOOST_ASSERT(false);
+	}
+	if (comment != "")
+		os << "		# " << comment;
+	
+	os << endl;
+	os << "	movzbq " << byte_reg << ", " << oprnd(tgt) << endl;
 }
 
 void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)

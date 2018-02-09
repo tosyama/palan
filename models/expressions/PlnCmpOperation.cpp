@@ -9,16 +9,31 @@
 #include "PlnCmpOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../PlnType.h"
+
 #include "boost/assert.hpp"
 
 PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType cmp_type)
-	:l(l), r(r), cmp_type(cmp_type), gen_cmp_type(-1), PlnExpression(ET_CMP)
+	:result_dp(NULL), l(l), r(r), cmp_type(cmp_type), gen_cmp_type(-1), PlnExpression(ET_CMP)
 {
+	PlnValue v;
+	v.type = VL_WORK;
+	v.lval_type = NO_LVL;
+	v.inf.wk_type = PlnType::getSint();
+	values.push_back(v);
 }
 
 void PlnCmpOperation::finish(PlnDataAllocator& da)
 {
-	BOOST_ASSERT(data_places.size() == 0);	// not implemented return case.
+	BOOST_ASSERT(data_places.size() <= 1);
+
+	if (isConst()) {
+		if (data_places.size()) {
+			result_dp = da.getLiteralIntDp(gen_cmp_type==CMP_CONST_TRUE?1:0);
+			da.pushSrc(data_places[0], result_dp, true);
+		}
+		return;
+	}
 
 	bool alloc_acm = false;
 	PlnDataPlace *ldp, *rdp;
@@ -49,6 +64,15 @@ void PlnCmpOperation::finish(PlnDataAllocator& da)
 
 	da.popSrc(rdp);
 	da.popSrc(ldp);
+
+	da.releaseData(rdp);
+	da.releaseData(ldp);
+
+	if (data_places.size()) {
+		result_dp = da.prepareAccumulator(ldp->data_type);
+		da.allocDp(result_dp);
+		da.pushSrc(data_places[0], result_dp, true);
+	}
 }
 
 void PlnCmpOperation::dump(ostream& os, string indent)
@@ -60,7 +84,12 @@ void PlnCmpOperation::dump(ostream& os, string indent)
 
 void PlnCmpOperation::gen(PlnGenerator& g)
 {
-	if (isConst()) return;
+	if (gen_cmp_type == CMP_CONST_TRUE
+			|| gen_cmp_type == CMP_CONST_FALSE) {
+		if (data_places.size())
+			g.genSaveSrc(data_places[0]);
+		return;
+	}
 
 	l->gen(g);
 	r->gen(g);
@@ -75,10 +104,16 @@ void PlnCmpOperation::gen(PlnGenerator& g)
 	auto le = g.getEntity(ldp);
 
 	gen_cmp_type = g.genCmp(le.get(), re.get(), cmp_type, ldp->cmt() + " == " + rdp->cmt());
+
+	if (data_places.size()) {
+		auto e = g.getEntity(result_dp);
+		g.genMoveCmpFlag(e.get(), gen_cmp_type, "cmpflg -> " + result_dp->cmt());
+		g.genSaveSrc(data_places[0]);
+	}
 }
 
-template <typename LT, typename RT>
-int static_comp(LT lval, RT rval, int cmp_type)
+template <typename T>
+int static_comp(T lval, T rval, int cmp_type)
 {
 	bool result;
 	switch (cmp_type) {
@@ -100,14 +135,9 @@ bool PlnCmpOperation::isConst()
 	auto lval = l->values[0].inf;
 	auto rval = r->values[0].inf;
 
-	if (lval_t == VL_LIT_INT8 && rval_t == VL_LIT_INT8)
+	if ((lval_t == VL_LIT_INT8 && (rval_t == VL_LIT_INT8 || rval_t == VL_LIT_UINT8))
+			|| (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_INT8))
 		gen_cmp_type = static_comp(lval.intValue, rval.intValue, cmp_type);
-
-	else if (lval_t == VL_LIT_INT8 && rval_t == VL_LIT_UINT8)
-		gen_cmp_type = static_comp(lval.intValue, rval.uintValue, cmp_type);
-
-	else if (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_INT8)
-		gen_cmp_type = static_comp(lval.uintValue, rval.intValue, cmp_type);
 
 	else if (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_UINT8)
 		gen_cmp_type = static_comp(lval.uintValue, rval.uintValue, cmp_type);

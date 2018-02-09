@@ -12,6 +12,7 @@ class PlnCmpOperation : public PlnExpression
 	int gen_cmp_type;
 
 public:
+	PlnDataPlace* result_dp;
 	PlnExpression* l;
 	PlnExpression* r;
 
