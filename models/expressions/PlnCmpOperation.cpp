@@ -119,6 +119,10 @@ int static_comp(T lval, T rval, int cmp_type)
 	switch (cmp_type) {
 		case CMP_EQ: result = (lval == rval); break;
 		case CMP_NE: result = (lval != rval); break;
+		case CMP_L: result = (lval < rval); break;
+		case CMP_G: result = (lval > rval); break;
+		case CMP_LE: result = (lval <= rval); break;
+		case CMP_GE: result = (lval >= rval); break;
 		default:
 			BOOST_ASSERT(false);
 	}
@@ -150,7 +154,7 @@ bool PlnCmpOperation::isConst()
 
 int PlnCmpOperation::getCmpType()
 {
-	// use after gen.
+	// must use this method after gen.
 	BOOST_ASSERT(gen_cmp_type != -1);
 	return gen_cmp_type;
 }

@@ -132,16 +132,24 @@ void PlnX86_64Generator::genJump(int id, string comment)
 
 void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 {
+	const char* jcmd;
 	switch (cmp_type) {
-		case CMP_EQ:
-			os << "	jne .L" << id;
+		case CMP_EQ: jcmd = "jne"; break;
+		case CMP_NE: jcmd = "je"; break;
+		case CMP_L: jcmd = "jge"; break;
+		case CMP_G: jcmd = "jle"; break;
+		case CMP_LE: jcmd = "jg"; break;
+		case CMP_GE: jcmd = "jl"; break;
+		case CMP_B: jcmd = "jae"; break;
+		case CMP_A: jcmd = "jbe"; break;
+		case CMP_BE: jcmd = "ja"; break;
+		case CMP_AE: jcmd = "jb"; break;
 			break;
-		case CMP_NE:
-			os << "	je .L" << id;
-			break;
+
 		defalt:
 			BOOST_ASSERT(false);
 	}
+	os << "	" << jcmd << " .L" << id;
 	if (comment != "")
 		os << "		# " << comment;
 	os << endl;
@@ -399,27 +407,42 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 
 int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)
 {
-	if ((first->alloc_type != GA_CODE && second->alloc_type == GA_CODE) 
-			|| (first->alloc_type == GA_MEM && second->alloc_type != GA_MEM)
-			|| (first->alloc_type == GA_MEM && second->alloc_type == GA_MEM
-				&& first->size > second->size)) {
-		auto tmp = first;
-		first = second;
-		second = tmp;
-		// TODO: change direction of cmp_type.
+	if ((second->alloc_type != GA_CODE && first->alloc_type == GA_CODE) 
+			|| (second->alloc_type == GA_MEM && first->alloc_type != GA_MEM)
+			|| (second->alloc_type == GA_MEM && first->alloc_type == GA_MEM
+				&& second->size > first->size)) {
+		// swap
+		auto tmp = second;
+		second = first;
+		first = tmp;
+		switch (cmp_type) {
+			case CMP_L: cmp_type = CMP_GE; break;
+			case CMP_G: cmp_type = CMP_LE; break;
+			case CMP_LE: cmp_type = CMP_G; break;
+			case CMP_GE: cmp_type = CMP_L; break;
+		}
 	}
-	BOOST_ASSERT(second->alloc_type != GA_CODE);
 
-	const char* f_str = oprnd(first);
-	if (first->alloc_type == GA_MEM) {
-		moveMemToReg(first, R11);
+	if (first->data_type == DT_UINT && second->data_type == DT_UINT) {
+		switch (cmp_type) {
+			case CMP_L: cmp_type = CMP_B; break;
+			case CMP_G: cmp_type = CMP_A; break;
+			case CMP_LE: cmp_type = CMP_BE; break;
+			case CMP_GE: cmp_type = CMP_AE; break;
+		}
+	}
+	BOOST_ASSERT(first->alloc_type != GA_CODE);
+
+	const char* f_str = oprnd(second);
+	if (second->alloc_type == GA_MEM) {
+		moveMemToReg(second, R11);
 		os << endl;
-		f_str = r(R11, second->size);
+		f_str = r(R11, first->size);
 	}
 
 	const char* safix = "";
-	if (second->alloc_type == GA_MEM) {
-		switch (second->size) {
+	if (first->alloc_type == GA_MEM) {
+		switch (first->size) {
 			case 1: safix = "b"; break;
 			case 2: safix = "w"; break;
 			case 4: safix = "l"; break;
@@ -429,7 +452,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		}
 	}
 
-	os << "	cmp" << safix << " " << f_str << ", " << oprnd(second) ;
+	os << "	cmp" << safix << " " << f_str << ", " << oprnd(first) ;
 	os << "	# " << comment << endl;
 
 	return cmp_type;

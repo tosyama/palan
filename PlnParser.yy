@@ -89,6 +89,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token KW_ELSE	"else"
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
+%token OPE_LE	"<="
+%token OPE_GE	">="
 %token DBL_LESS		"<<"
 %token DBL_GRTR		">>"
 %token DBL_ARROW	"->>"
@@ -138,6 +140,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %left ',' 
 %left DBL_LESS DBL_GRTR
 %left OPE_EQ OPE_NE
+%left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -516,6 +519,26 @@ expression:
 	| expression OPE_NE expression
 	{
 		$$ = new PlnCmpOperation($1, $3, CMP_NE);
+	}
+
+	| expression '<' expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_L);
+	}
+
+	| expression '>' expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_G);
+	}
+
+	| expression OPE_LE expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_LE);
+	}
+
+	| expression OPE_GE expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_GE);
 	}
 
 	| '(' assignment ')'

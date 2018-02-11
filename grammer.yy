@@ -25,6 +25,8 @@ int yylex();
 %token KW_ELSE
 %token OPE_EQ
 %token OPE_NE
+%token OPE_LE
+%token OPE_GE
 %token DBL_LESS
 %token DBL_GRTR
 %token DBL_ARROW
@@ -35,6 +37,7 @@ int yylex();
 %left ',' 
 %left DBL_LESS DBL_GRTR
 %left OPE_EQ OPE_NE
+%left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -166,6 +169,10 @@ expression:
 	| expression '%' expression
 	| expression OPE_EQ expression
 	| expression OPE_NE expression
+	| expression '<' expression
+	| expression '>' expression
+	| expression OPE_LE expression
+	| expression OPE_GE expression
 	| '(' assignments ')'
 	| '-' expression %prec UMINUS
 	| term

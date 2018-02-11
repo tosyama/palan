@@ -28,6 +28,14 @@ enum {
 enum PlnCmpType {
 	CMP_EQ,
 	CMP_NE,
+	CMP_L,
+	CMP_G,
+	CMP_LE,
+	CMP_GE,
+	CMP_A,
+	CMP_B,
+	CMP_AE,
+	CMP_BE,
 	CMP_CONST_TRUE,
 	CMP_CONST_FALSE
 };
