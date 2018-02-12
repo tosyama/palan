@@ -42,6 +42,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da)
 		ldp = l->values[0].getDataPlace(da);
 	} else {
 		ldp = da.prepareAccumulator(l->getDataType());
+		alloc_acm = true;
 	}
 
 	if (r->type == ET_VALUE) {

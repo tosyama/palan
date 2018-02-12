@@ -7,6 +7,8 @@ func elif(int32 i)
 		printf("[if]");
 	} else if i == 1 {
 		printf("[elif]");
+	} else if 2 >= i {
+		printf("[elif2]");
 	} else {
 		printf("[else]");
 	}
@@ -15,14 +17,10 @@ func elif(int32 i)
 elif(0);
 elif(1);
 elif(2);
+elif(3);
 
-if 1 {
-	printf("[true]");
-}
-
-if 0 {
-	printf("[false]");
-}
+if 1 { printf("[true]"); }
+if 0 { printf("[false]"); }
 
 printf("\n");
 
@@ -41,11 +39,22 @@ while i < 3 {
 }
 
 printf("\n");
-sbyte sb = -1;
 byte b = 255;
 
-if sb > 1 { printf("[ss]"); }
 if b > 1 { printf("[us]"); }
 if b > 1u { printf("[uu]"); }
 
+if b <= 1 { printf("[us]"); }
+if b <= 1u { printf("[uu]"); }
+
+if b+1 > b-1 { printf(">"); }
+
+1->i;
+
+if i<=2==1 { printf("t"); }
+else { printf("f"); }
+if 1>=2<1 { printf("t"); }
+else { printf("f"); }
+
+printf("%d%d%d",i<1,i<2,b<=1u);
 exit(0);

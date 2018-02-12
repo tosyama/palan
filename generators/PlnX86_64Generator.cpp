@@ -416,10 +416,10 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		second = first;
 		first = tmp;
 		switch (cmp_type) {
-			case CMP_L: cmp_type = CMP_GE; break;
-			case CMP_G: cmp_type = CMP_LE; break;
-			case CMP_LE: cmp_type = CMP_G; break;
-			case CMP_GE: cmp_type = CMP_L; break;
+			case CMP_L: cmp_type = CMP_G; break;
+			case CMP_G: cmp_type = CMP_L; break;
+			case CMP_LE: cmp_type = CMP_GE; break;
+			case CMP_GE: cmp_type = CMP_LE; break;
 		}
 	}
 
@@ -433,12 +433,15 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 	}
 	BOOST_ASSERT(first->alloc_type != GA_CODE);
 
-	const char* f_str = oprnd(second);
-	if (second->alloc_type == GA_MEM) {
+	const char* s_str;
+	if (second->alloc_type == GA_REG) {
+		s_str = r(second->data.i, first->size);
+	} else if (second->alloc_type == GA_MEM) {
 		moveMemToReg(second, R11);
 		os << endl;
-		f_str = r(R11, first->size);
-	}
+		s_str = r(R11, first->size);
+	} else
+		s_str = oprnd(second);
 
 	const char* safix = "";
 	if (first->alloc_type == GA_MEM) {
@@ -452,7 +455,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		}
 	}
 
-	os << "	cmp" << safix << " " << f_str << ", " << oprnd(first) ;
+	os << "	cmp" << safix << " " << s_str << ", " << oprnd(first) ;
 	os << "	# " << comment << endl;
 
 	return cmp_type;
@@ -464,18 +467,24 @@ int PlnX86_64Generator::genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string c
 	BOOST_ASSERT(tgt->size == 8);
 
 	const char* byte_reg = r(tgt->data.i, 1);
-	switch (cmp_type) {
-		case CMP_EQ:
-			os << "	sete " << byte_reg;
-			break;
-		case CMP_NE:
-			os << "	setne " << byte_reg;
-			break;
-		defalt:
-			BOOST_ASSERT(false);
-	}
+	const char* setcmd =
+		cmp_type == CMP_EQ ? "sete":
+		cmp_type == CMP_NE ? "setne":
+		cmp_type == CMP_L ? "setl":
+		cmp_type == CMP_G ? "setg":
+		cmp_type == CMP_LE ? "setle":
+		cmp_type == CMP_GE ? "setge":
+		cmp_type == CMP_B ? "setb":
+		cmp_type == CMP_A ? "seta":
+		cmp_type == CMP_BE ? "setbe":
+		cmp_type == CMP_AE ? "setae":
+		NULL;
+
+	BOOST_ASSERT(setcmd);
+	
+	os << "	" << setcmd << " " << byte_reg;
 	if (comment != "")
-		os << "		# " << comment;
+		os << "	# " << comment;
 	
 	os << endl;
 	os << "	movzbq " << byte_reg << ", " << oprnd(tgt) << endl;
