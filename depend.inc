@@ -40,7 +40,14 @@ PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
 PlnLoopStatement.o:  models/PlnLoopStatement.h \
 	models/PlnStatement.h models/../PlnModel.h models/PlnModule.h \
 	models/PlnExpression.h models/PlnBlock.h models/../PlnScopeStack.h \
-	models/../PlnGenerator.h
+	models/../PlnGenerator.h models/expressions/PlnCmpOperation.h \
+	models/expressions/../../PlnConstants.h
+PlnConditionalBranch.o:  \
+	models/PlnConditionalBranch.h models/PlnStatement.h models/../PlnModel.h \
+	models/PlnModule.h models/PlnExpression.h models/PlnBlock.h \
+	models/../PlnScopeStack.h models/../PlnGenerator.h \
+	models/expressions/PlnCmpOperation.h \
+	models/expressions/../../PlnConstants.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
@@ -74,6 +81,7 @@ PlnCmpOperation.o:  \
 	models/expressions/PlnCmpOperation.h \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h
 PlnAssignment.o:  \

@@ -6,28 +6,46 @@ int n;
 scanf("%d", &n);
 
 int[#n,n] board = 0;
-int count = queen(borad, 0, n);
+int count;
+queen(borad>>, 0, n) ->> board, count ;
+
 printf("answer: %d", count);
 
-int count queen(int[#,#] *board, x, y)
+func queen(int[#,] >> board, x, y)
+	-> board, int count
 {
 	assert(board.size[0] == borad.size[1]);
 	int n = borad.size[0];
-	count = 0;
-	for (int xx: 1 << x-1)
-		if (board[xx,y]) return;
+	0 -> count;
 
-	for (int xx,yy: 1<<x-1, 1<<y-1)
-		if (board[xx,yy]) return;
+	for xx: x-1>>1 {
+		if board[xx, y] {
+			return;
+		}
+	}
 
-	for (int xx,yy: 1<<x-1, y+1>>n)
-		if (board[xx,yy]) return;
+	for xx: x-1>>1, y: y-1>>1 {
+		if board[xx, yy] {
+			return;
+		}
+	}
 
-	board[x,y] = 1;
-	if (x == n) count++;
-	else
-		for (int yy: 1<<n)
-			count += queen(board, x+1, yy);
+	for xx: x-1>>1, yy: y+1..n {
+		if board[xx, yy] {
+			return;
+		}
+	}
 
-	board[x,y] = 0;
+	1 -> board[x, y];
+	if x == n {
+		++count;
+	} else {
+		for yy: n>>1 {
+			int c;
+			board ->> queen(x+1, yy) ->> board, c;
+			c +-> count;
+		}
+	}
+
+	0 -> board[x,y];
 }

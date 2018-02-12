@@ -16,12 +16,17 @@ int yylex();
 %token STR
 %token ID
 %token TYPENAME
-%token FUNC_ID
 %token KW_FUNC
 %token KW_CCALL
 %token KW_SYSCALL
 %token KW_RETURN
 %token KW_WHILE
+%token KW_IF
+%token KW_ELSE
+%token OPE_EQ
+%token OPE_NE
+%token OPE_LE
+%token OPE_GE
 %token DBL_LESS
 %token DBL_GRTR
 %token DBL_ARROW
@@ -31,6 +36,8 @@ int yylex();
 %left ARROW DBL_ARROW
 %left ',' 
 %left DBL_LESS DBL_GRTR
+%left OPE_EQ OPE_NE
+%left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -44,7 +51,7 @@ module: /* empty */
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC FUNC_ID parameter_def ')' return_def block
+function_definition: KW_FUNC ID '(' parameter_def ')' return_def block
 	;
 
 return_def: /* empty */
@@ -94,10 +101,10 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
+ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';'
 	;
 
 single_return: /* empty */
@@ -112,6 +119,7 @@ basic_statement: st_expression ';'
 	| declarations ';'
 	| declarations '=' expression ';'
 	| while_statement
+	| if_statement
 	;
 	
 toplv_block: '{' toplv_statements '}'
@@ -124,7 +132,15 @@ toplv_statements:	/* empty */
 block: '{' statements '}'
 	;
 
-while_statement: KW_WHILE '(' st_expression ')' block
+while_statement: KW_WHILE st_expression block
+	;
+
+if_statement: KW_IF st_expression block else_statement
+	;
+
+else_statement:	/* empty */
+	| KW_ELSE block
+	| KW_ELSE if_statement
 	;
 
 statements:	/* empty */ { }
@@ -151,12 +167,18 @@ expression:
 	| expression '*' expression
 	| expression '/' expression
 	| expression '%' expression
+	| expression OPE_EQ expression
+	| expression OPE_NE expression
+	| expression '<' expression
+	| expression '>' expression
+	| expression OPE_LE expression
+	| expression OPE_GE expression
 	| '(' assignments ')'
 	| '-' expression %prec UMINUS
 	| term
 	;
 
-func_call: FUNC_ID arguments ')'
+func_call: ID '(' arguments ')'
 	;
 
 arguments: argument

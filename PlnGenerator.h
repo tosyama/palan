@@ -51,9 +51,9 @@ public:
 	virtual void genSecText()=0;
 	virtual void genEntryPoint(const string& entryname)=0;
 	virtual void genLabel(const string& label)=0;
-	virtual void genJumpLabel(int id) = 0;
-	virtual void genJump(int id) = 0;
-	virtual void genFalseJump(int id, int cmp_type) = 0;
+	virtual void genJumpLabel(int id, string comment) = 0;
+	virtual void genJump(int id, string comment) = 0;
+	virtual void genFalseJump(int id, int cmp_type, string comment) = 0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
 	virtual void genFreeLocalVarArea(int size)=0;
@@ -73,6 +73,7 @@ public:
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual int genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)=0;
+	virtual int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment)=0;
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)=0;

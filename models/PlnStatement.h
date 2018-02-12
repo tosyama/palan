@@ -11,7 +11,8 @@ enum PlnStmtType {
 	ST_VARINIT,
 	ST_BLOCK,
 	ST_RETURN,
-	ST_WHILE
+	ST_WHILE,
+	ST_IF
 };
 
 class PlnStatement {

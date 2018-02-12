@@ -25,6 +25,7 @@ public:
 	} inf;
 
 	static vector<PlnType*> getBasicTypes();
+	static PlnType* getByte();
 	static PlnType* getSint();
 	static PlnType* getUint();
 	static PlnType* getReadOnlyCStr();

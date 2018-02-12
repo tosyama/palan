@@ -29,12 +29,17 @@ enum {
 	STR			= PlnParser::token::STR,
 	ID			= PlnParser::token::ID,
 	TYPENAME	= PlnParser::token::TYPENAME,
-	FUNC_ID		= PlnParser::token::FUNC_ID,
 	KW_FUNC		= PlnParser::token::KW_FUNC,
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
 	KW_RETURN	= PlnParser::token::KW_RETURN,
 	KW_WHILE	= PlnParser::token::KW_WHILE,
+	KW_IF		= PlnParser::token::KW_IF,
+	KW_ELSE		= PlnParser::token::KW_ELSE,
+	OPE_EQ		= PlnParser::token::OPE_EQ,
+	OPE_NE		= PlnParser::token::OPE_NE,
+	OPE_LE		= PlnParser::token::OPE_LE,
+	OPE_GE		= PlnParser::token::OPE_GE,
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
@@ -52,12 +57,11 @@ DIGIT	[0-9]+
 UDIGIT	[0-9]+"u"
 DIGIT_MIN	"-9223372036854775808"
 ID	[a-zA-Z_][0-9a-zA-Z_]*
-FUNC_ID	{ID}[ \t\n\r]*"("
 DBL_LESS	"<<"
 DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|">"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 
@@ -92,17 +96,13 @@ ccall	{ return KW_CCALL; }
 syscall	{ return KW_SYSCALL; }
 func	{ return KW_FUNC; }
 return	{ return KW_RETURN; }
-while[ \t\n\r]*"(" { return KW_WHILE; }
-{FUNC_ID}	{
-		string s = yytext;
-		for (auto& c: s)
-			if (c==' ' || c=='\t' || c=='\n' || c=='\r' || c=='(') {
-				c = '\0';
-				break;
-			}
-		lval.build<string>() = s.c_str();
-		return FUNC_ID;
-	}
+while	{ return KW_WHILE; }
+if		{ return KW_IF; }
+else	{ return KW_ELSE; }
+"=="	{ return OPE_EQ; }
+"!="	{ return OPE_NE; }
+"<="	{ return OPE_LE; }
+">="	{ return OPE_GE; }
 {ID}	{
 		string id = yytext;
 		if (std::binary_search(typenames.begin(), typenames.end(), id)) {

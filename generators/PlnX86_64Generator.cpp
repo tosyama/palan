@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class definition.
 ///
 /// @file	PlnX86_64Generator.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -114,25 +114,45 @@ void PlnX86_64Generator::genLabel(const string& label)
 	else os << label << ":" << endl;
 }
 
-void PlnX86_64Generator::genJumpLabel(int id)
+void PlnX86_64Generator::genJumpLabel(int id, string comment)
 {
-	os << ".L" << id << ":" << endl;
+	os << ".L" << id << ":";
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
 }
 
-void PlnX86_64Generator::genJump(int id)
+void PlnX86_64Generator::genJump(int id, string comment)
 {
-	os << "	jmp .L" << id << endl;
+	os << "	jmp .L" << id;
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
 }
 
-void PlnX86_64Generator::genFalseJump(int id, int cmp_type)
+void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 {
+	const char* jcmd;
 	switch (cmp_type) {
-		case CMP_NE:
-			os << "	je .L" << id << endl;
+		case CMP_EQ: jcmd = "jne"; break;
+		case CMP_NE: jcmd = "je"; break;
+		case CMP_L: jcmd = "jge"; break;
+		case CMP_G: jcmd = "jle"; break;
+		case CMP_LE: jcmd = "jg"; break;
+		case CMP_GE: jcmd = "jl"; break;
+		case CMP_B: jcmd = "jae"; break;
+		case CMP_A: jcmd = "jbe"; break;
+		case CMP_BE: jcmd = "ja"; break;
+		case CMP_AE: jcmd = "jb"; break;
 			break;
+
 		defalt:
 			BOOST_ASSERT(false);
 	}
+	os << "	" << jcmd << " .L" << id;
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
 }
 
 void PlnX86_64Generator::genEntryFunc()
@@ -387,25 +407,45 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string 
 
 int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)
 {
-	if ((first->alloc_type != GA_CODE && second->alloc_type == GA_CODE) 
-			|| (first->alloc_type == GA_MEM && second->alloc_type != GA_MEM)) {
-		auto tmp = first;
-		first = second;
-		second = tmp;
-		// TODO: change direction of cmp_type.
+	if ((second->alloc_type != GA_CODE && first->alloc_type == GA_CODE) 
+			|| (second->alloc_type == GA_MEM && first->alloc_type != GA_MEM)
+			|| (second->alloc_type == GA_MEM && first->alloc_type == GA_MEM
+				&& second->size > first->size)) {
+		// swap
+		auto tmp = second;
+		second = first;
+		first = tmp;
+		switch (cmp_type) {
+			case CMP_L: cmp_type = CMP_G; break;
+			case CMP_G: cmp_type = CMP_L; break;
+			case CMP_LE: cmp_type = CMP_GE; break;
+			case CMP_GE: cmp_type = CMP_LE; break;
+		}
 	}
-	BOOST_ASSERT(second->alloc_type != GA_CODE);
 
-	const char* f_str = oprnd(first);
-	if (first->alloc_type == GA_MEM) {
-		moveMemToReg(first, R11);
-		os << endl;
-		f_str = r(R11, 8);
+	if (first->data_type == DT_UINT && second->data_type == DT_UINT) {
+		switch (cmp_type) {
+			case CMP_L: cmp_type = CMP_B; break;
+			case CMP_G: cmp_type = CMP_A; break;
+			case CMP_LE: cmp_type = CMP_BE; break;
+			case CMP_GE: cmp_type = CMP_AE; break;
+		}
 	}
+	BOOST_ASSERT(first->alloc_type != GA_CODE);
+
+	const char* s_str;
+	if (second->alloc_type == GA_REG) {
+		s_str = r(second->data.i, first->size);
+	} else if (second->alloc_type == GA_MEM) {
+		moveMemToReg(second, R11);
+		os << endl;
+		s_str = r(R11, first->size);
+	} else
+		s_str = oprnd(second);
 
 	const char* safix = "";
-	if (second->alloc_type == GA_MEM) {
-		switch (second->size) {
+	if (first->alloc_type == GA_MEM) {
+		switch (first->size) {
 			case 1: safix = "b"; break;
 			case 2: safix = "w"; break;
 			case 4: safix = "l"; break;
@@ -415,10 +455,39 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		}
 	}
 
-	os << "	cmp" << safix << " " << f_str << ", " << oprnd(second) ;
+	os << "	cmp" << safix << " " << s_str << ", " << oprnd(first) ;
 	os << "	# " << comment << endl;
 
 	return cmp_type;
+}
+
+int PlnX86_64Generator::genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment)
+{
+	BOOST_ASSERT(tgt->alloc_type == GA_REG);
+	BOOST_ASSERT(tgt->size == 8);
+
+	const char* byte_reg = r(tgt->data.i, 1);
+	const char* setcmd =
+		cmp_type == CMP_EQ ? "sete":
+		cmp_type == CMP_NE ? "setne":
+		cmp_type == CMP_L ? "setl":
+		cmp_type == CMP_G ? "setg":
+		cmp_type == CMP_LE ? "setle":
+		cmp_type == CMP_GE ? "setge":
+		cmp_type == CMP_B ? "setb":
+		cmp_type == CMP_A ? "seta":
+		cmp_type == CMP_BE ? "setbe":
+		cmp_type == CMP_AE ? "setae":
+		NULL;
+
+	BOOST_ASSERT(setcmd);
+	
+	os << "	" << setcmd << " " << byte_reg;
+	if (comment != "")
+		os << "	# " << comment;
+	
+	os << endl;
+	os << "	movzbq " << byte_reg << ", " << oprnd(tgt) << endl;
 }
 
 void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)

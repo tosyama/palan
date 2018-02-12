@@ -1,6 +1,6 @@
 /// Loop statement model classes definition.
 ///
-/// @file	PlnSLooptatement.cpp
+/// @file	PlnLoopStatement.cpp
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include "PlnLoopStatement.h"
@@ -21,7 +21,7 @@ PlnWhileStatement::PlnWhileStatement
 	this->parent = parent;
 
 	if (condition->type != ET_CMP) {
-		this->condition = new PlnCmpOperation(new PlnExpression(uint64_t(0)), condition, CMP_NE);
+		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
 	} else
 		this->condition = static_cast<PlnCmpOperation*>(condition);
 }
@@ -47,10 +47,19 @@ void PlnWhileStatement::dump(ostream& os, string indent)
 
 void PlnWhileStatement::gen(PlnGenerator& g)
 {
-	g.genJumpLabel(jmp_start_id);
+	g.genJumpLabel(jmp_start_id, "while");
 	condition->gen(g);
-	g.genFalseJump(jmp_end_id, condition->getCmpType());
+
+	int cmp_type = condition->getCmpType();
+
+	if (cmp_type == CMP_CONST_TRUE) 
+		;	// 	do nothing.
+	else if (cmp_type == CMP_CONST_FALSE)
+		g.genJump(jmp_end_id, "");
+	else
+		g.genFalseJump(jmp_end_id, cmp_type, "");
+
 	inf.block->gen(g);
-	g.genJump(jmp_start_id);
-	g.genJumpLabel(jmp_end_id);
+	g.genJump(jmp_start_id, "");
+	g.genJumpLabel(jmp_end_id, "end while");
 }

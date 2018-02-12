@@ -39,6 +39,7 @@ class PlnLexer;
 #include "models/PlnBlock.h"
 #include "models/PlnStatement.h"
 #include "models/PlnLoopStatement.h"
+#include "models/PlnConditionalBranch.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
 #include "models/PlnArray.h"
@@ -48,6 +49,7 @@ class PlnLexer;
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnAssignment.h"
+#include "models/expressions/PlnCmpOperation.h"
 #include "PlnMessage.h"
 #include "PlnConstants.h"
 
@@ -78,16 +80,21 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	TYPENAME	"type name"
-%token <string>	FUNC_ID	"function name"
-%token KW_FUNC	"'func'"
-%token KW_CCALL	"'ccall'"
-%token KW_SYSCALL	"'syscall'"
-%token KW_RETURN	"'return'"
-%token KW_WHILE	"'while'"
-%token DBL_LESS		"'<<'"
-%token DBL_GRTR		"'>>'"
-%token DBL_ARROW	"'->>'"
-%token ARROW	"'->'"
+%token KW_FUNC	"func"
+%token KW_CCALL	"ccall"
+%token KW_SYSCALL	"syscall"
+%token KW_RETURN	"return"
+%token KW_WHILE	"while"
+%token KW_IF	"if"
+%token KW_ELSE	"else"
+%token OPE_EQ	"=="
+%token OPE_NE	"!="
+%token OPE_LE	"<="
+%token OPE_GE	">="
+%token DBL_LESS		"<<"
+%token DBL_GRTR		">>"
+%token DBL_ARROW	"->>"
+%token ARROW	"->"
 
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
@@ -102,6 +109,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnValue*>	default_value
 %type <PlnBlock*>	block
 %type <PlnStatement*> while_statement
+%type <PlnStatement*> if_statement
+%type <PlnStatement*> else_statement
 %type <vector<PlnStatement*>>	statements
 %type <PlnStatement*>	statement
 %type <vector<PlnExpression*>>	expressions
@@ -130,6 +139,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %left ARROW DBL_ARROW
 %left ',' 
 %left DBL_LESS DBL_GRTR
+%left OPE_EQ OPE_NE
+%left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
 %left UMINUS
@@ -165,13 +176,13 @@ module: /* empty */
 	}
 	;
 
-function_definition: KW_FUNC FUNC_ID
+function_definition: KW_FUNC ID '('
 		{
 			PlnFunction* f = new PlnFunction(FT_PLN, $2);
 			f->setParent(&module);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		parameter_def ')' ARROW return_def block
+		parameter_def ')' return_def block
 	{
 		$$ = scopes.back().inf.function;
 		$$->implement = $8;
@@ -180,8 +191,8 @@ function_definition: KW_FUNC FUNC_ID
 ;
 
 return_def: /* empty */
-	| return_types
-	| return_values
+	| ARROW return_types
+	| ARROW return_values
 	;
 
 return_types: return_type
@@ -281,7 +292,7 @@ default_value:	/* empty */	{ $$ = NULL; }
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
+ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_C, $3);
 		f->setParent(&module);
@@ -289,7 +300,7 @@ ccall_declaration: KW_CCALL single_return FUNC_ID parameter_def ')' ';'
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_SYS, $5);
 		f->inf.syscall.id = $2;
@@ -343,6 +354,10 @@ basic_statement: st_expression ';'
 	{
 		$$ = $1;
 	}
+	| if_statement
+	{
+		$$ = $1;
+	}
 	;
 	
 toplv_block: '{'
@@ -391,9 +406,30 @@ block: '{'
 	}
 	;
 
-while_statement: KW_WHILE st_expression ')' block
+while_statement: KW_WHILE st_expression block
 	{
-		$$ = new PlnWhileStatement($2, $4, CUR_BLOCK);
+		$$ = new PlnWhileStatement($2, $3, CUR_BLOCK);
+	}
+	;
+
+if_statement: KW_IF st_expression block else_statement
+	{
+		$$ = new PlnIfStatement($2, $3, $4, CUR_BLOCK);
+	}
+
+else_statement: /* empty */
+	{
+		$$ = NULL;
+	}
+	
+	| KW_ELSE block
+	{
+		$$ = new PlnStatement($2, CUR_BLOCK);
+	}
+
+	| KW_ELSE if_statement
+	{
+		$$ = $2;
 	}
 	;
 
@@ -475,6 +511,36 @@ expression:
 		$$ = PlnDivOperation::create_mod($1, $3);
 	}
 
+	| expression OPE_EQ expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_EQ);
+	}
+
+	| expression OPE_NE expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_NE);
+	}
+
+	| expression '<' expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_L);
+	}
+
+	| expression '>' expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_G);
+	}
+
+	| expression OPE_LE expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_LE);
+	}
+
+	| expression OPE_GE expression
+	{
+		$$ = new PlnCmpOperation($1, $3, CMP_GE);
+	}
+
 	| '(' assignment ')'
 	{
 		$$ = $2;
@@ -491,11 +557,11 @@ expression:
 	}
 	;
 
-func_call: FUNC_ID arguments ')'
+func_call: ID '(' arguments ')'
 	{
-		PlnFunction* f = module.getFunc($1, $2);
+		PlnFunction* f = module.getFunc($1, $3);
 		if (f) {
-			$$ = new PlnFunctionCall(f, $2);
+			$$ = new PlnFunctionCall(f, $3);
 		} else {
 			error(@$, PlnMessage::getErr(E_UndefinedFunction, $1));
 			YYABORT;
