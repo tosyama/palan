@@ -99,6 +99,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %type <PlnFunction*>	function_definition
 %type <PlnFunction*>	ccall_declaration
 %type <PlnFunction*>	syscall_definition
+%type <vector<PlnType*>>	single_return
 %type <PlnStatement*>	toplv_statement
 %type <PlnStatement*>	basic_statement
 %type <PlnBlock*>	toplv_block
@@ -158,7 +159,7 @@ module: /* empty */
 
 	| module function_definition
 	{
-		module.functions.push_back($2);
+		// module.functions.push_back($2);
 	}
 
 	| module ccall_declaration
@@ -182,10 +183,15 @@ function_definition: KW_FUNC ID '('
 			f->setParent(&module);
 			scopes.push_back(PlnScopeItem(f));
 		}
-		parameter_def ')' return_def block
+		parameter_def ')' return_def
+		{
+			PlnFunction* f = scopes.back().inf.function;
+			module.functions.push_back(f);
+		}
+		block
 	{
 		$$ = scopes.back().inf.function;
-		$$->implement = $8;
+		$$->implement = $9;
 		scopes.pop_back();
 	}
 ;
@@ -296,6 +302,9 @@ ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 	{
 		PlnFunction* f = new PlnFunction(FT_C, $3);
 		f->setParent(&module);
+		string name = "";
+		if ($2.size())
+			f->addRetValue(name, &$2);
 		$$ = f;
 	}
 	;
@@ -305,12 +314,18 @@ syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';
 		PlnFunction* f = new PlnFunction(FT_SYS, $5);
 		f->inf.syscall.id = $2;
 		f->setParent(&module);
+		string name = "";
+		if ($4.size())
+			f->addRetValue(name, &$4);
 		$$ = f;
 	}
 	;
 
-single_return: /* empty */
+single_return:  { }
 	| TYPENAME
+	{
+		$$.push_back(module.getType($1));
+	}
 	;
 
 toplv_statement: basic_statement
