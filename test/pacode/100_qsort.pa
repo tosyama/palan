@@ -1,0 +1,61 @@
+ccall int32 printf();
+ccall exit();
+
+func show(int16[10] data, int32 n)
+{
+	int32 i=0;
+	while i<10 {
+		printf(" %d",data[i]);
+		i+1 -> i;
+	}
+	printf("\n");
+}
+
+func quicksort(int16[10] >>data, int32 left, int32 right)
+	-> int16[10] data
+{
+	int32 i, mid;
+	int32 temp;
+
+	if left >= right {
+		return;
+	}
+
+	left -> mid;
+	left+1 -> i;
+	while i<=right {
+		if data[i] < data[left] {
+			mid+1 -> mid;
+			data[mid] -> temp;
+			data[i] -> data[mid];
+			temp -> data[i];
+		}
+		i+1 -> i;
+	}
+	data[left] -> temp;
+	data[mid] -> data[left];
+	temp -> data[mid];
+
+	quicksort(data>>, left, mid-1) ->> data;
+	quicksort(data>>, mid+1, right) ->> data;
+}
+
+// start
+int16[10] data;
+int32 i=0;
+
+// init data.
+while i<10 {
+	i*13 % 9 -> data[i];
+	i+1 -> i;
+}
+
+// sort
+printf("before:");
+show(data, 10);
+quicksort(data>>, 0, 9) ->> data;
+printf("after:");
+show(data, 10);
+
+// flush stdout.
+exit(0);
