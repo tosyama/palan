@@ -56,15 +56,15 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
 }
 
-void PlnArrayItem::finish(PlnDataAllocator& da)
+void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	auto base_dp = da.prepareObjBasePtr();
 	array_ex->data_places.push_back(base_dp);
-	array_ex->finish(da);
+	array_ex->finish(da, si);
 
 	auto index_dp = da.prepareObjIndexPtr();
 	index_ex->data_places.push_back(index_dp);
-	index_ex->finish(da);
+	index_ex->finish(da, si);
 
 	da.allocDp(base_dp);
 	da.popSrc(base_dp);
@@ -76,7 +76,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da)
 
 	da.setIndirectObjDp(item_dp, base_dp,index_dp);
 
-	PlnExpression::finish(da);	// pushSrc
+	PlnExpression::finish(da, si);	// pushSrc
 	
 	da.releaseData(base_dp);
 	da.releaseData(index_dp);

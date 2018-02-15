@@ -29,7 +29,7 @@ PlnClone::PlnClone(PlnExpression* src)
 		BOOST_ASSERT(false);
 }
 
-void PlnClone::finish(PlnDataAllocator& da)
+void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size());
 	clone_dp = da.allocData(8, DT_OBJECT_REF);
@@ -38,7 +38,7 @@ void PlnClone::finish(PlnDataAllocator& da)
 	da.memAlloced();
 	da.prepareMemCopyDps(cpy_dst_dp, cpy_src_dp);
 	clone_src->data_places.push_back(cpy_src_dp);
-	clone_src->finish(da);
+	clone_src->finish(da, si);
 
 	da.allocDp(cpy_src_dp);
 	da.allocDp(cpy_dst_dp);

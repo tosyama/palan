@@ -83,7 +83,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			ie->data_places.push_back(vars[i].inf.var->place);
 			i++;
 		}
-		ie->finish(da);
+		ie->finish(da, si);
 		for (auto sdp: ie->data_places)
 			da.popSrc(sdp);
 	}

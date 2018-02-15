@@ -117,7 +117,7 @@ bool PlnExpression::isLitNum(int& num_type)
 	return false;
 }
 
-void PlnExpression::finish(PlnDataAllocator& da)
+void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	if (!val_place)
 		val_place = values[0].getDataPlace(da);

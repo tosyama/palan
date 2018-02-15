@@ -66,7 +66,7 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	values.push_back(v);
 }
 
-void PlnMulOperation::finish(PlnDataAllocator& da)
+void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
@@ -83,10 +83,10 @@ void PlnMulOperation::finish(PlnDataAllocator& da)
 	}
 
 	l->data_places.push_back(ldp);
-	l->finish(da);
+	l->finish(da, si);
 
 	r->data_places.push_back(rdp);
-	r->finish(da);
+	r->finish(da, si);
 
 	da.popSrc(rdp);
 	da.popSrc(ldp);

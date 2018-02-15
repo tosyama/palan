@@ -34,7 +34,7 @@ void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	jmp_start_id = m->getJumpID();
 	jmp_end_id = m->getJumpID();
 
-	condition->finish(da);
+	condition->finish(da, si);
 	inf.block->finish(da, si);
 }
 

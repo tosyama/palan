@@ -101,7 +101,7 @@ inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, union PlnAssignInf* 
 	}
 }
 
-void PlnAssignment::finish(PlnDataAllocator& da)
+void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	int vcnt=0;
 	int vi=0;
@@ -119,7 +119,7 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 			vcnt++;
 		}
 
-		e->finish(da);
+		e->finish(da, si);
 
 		// for save returned reference.
 		for (int i=vi; i<vcnt; i++) {
@@ -139,7 +139,7 @@ void PlnAssignment::finish(PlnDataAllocator& da)
 		}
 
 		for (int i=vi; i<vcnt; i++)
-			lvals[i]->finish(da);
+			lvals[i]->finish(da, si);
 
 		for (auto sdp: e->data_places)
 			da.popSrc(sdp);

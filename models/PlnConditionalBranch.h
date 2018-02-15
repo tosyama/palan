@@ -16,9 +16,9 @@ public:
 
 	PlnIfStatement(PlnExpression* condition, PlnBlock* block, PlnStatement* next, PlnBlock* parent);
 
-	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// override
-	void dump(ostream& os, string indent=""); // override
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 
 

@@ -40,7 +40,7 @@ void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	switch (type) {
 		case ST_EXPRSN:
-			inf.expression->finish(da);
+			inf.expression->finish(da, si);
 			break;
 		case ST_BLOCK:
 			inf.block->finish(da, si);
@@ -134,7 +134,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			}
 			++i;
 		}
-		e->finish(da);
+		e->finish(da, si);
 		for(;j<i;++j) {
 			da.allocDp(dps[j]);
 		}

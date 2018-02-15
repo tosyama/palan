@@ -110,7 +110,7 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	values.push_back(v);
 }
 
-void PlnAddOperation::finish(PlnDataAllocator& da)
+void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
@@ -127,10 +127,10 @@ void PlnAddOperation::finish(PlnDataAllocator& da)
 	}
 
 	l->data_places.push_back(ldp);
-	l->finish(da);
+	l->finish(da, si);
 	
 	r->data_places.push_back(rdp);
-	r->finish(da);
+	r->finish(da, si);
 
 	da.popSrc(rdp);
 	da.popSrc(ldp);
@@ -189,11 +189,11 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	values.push_back(v);
 }
 
-void PlnNegative::finish(PlnDataAllocator& da)
+void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	auto dp = da.prepareAccumulator(DT_SINT);
 	e->data_places.push_back(dp);
-	e->finish(da);
+	e->finish(da, si);
 	da.popSrc(dp);
 
 	if (data_places.size())

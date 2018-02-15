@@ -16,9 +16,9 @@ public:
 	static PlnExpression* create(PlnExpression* l, PlnExpression* r);
 	static PlnExpression* create_sub(PlnExpression* l, PlnExpression* r);
 	
-	void finish(PlnDataAllocator& da);	// override
-	void dump(ostream& os, string indent="");	// override
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 
 class PlnNegative : public PlnExpression
@@ -28,8 +28,8 @@ public:
 	static PlnExpression* create(PlnExpression* exp);
 	PlnNegative(PlnExpression* e);
 
-	void finish(PlnDataAllocator& da);	// override
-	void dump(ostream& os, string indent="");	// override
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 

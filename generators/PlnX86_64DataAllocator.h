@@ -17,28 +17,28 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 	void destroyRegsByFuncCall();
 
 protected:
-	PlnDataPlace* createArgDp(int func_type, int index, bool is_callee);
-	vector<int> getRegsNeedSave();
+	PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) override;
+	vector<int> getRegsNeedSave() override;
 
 public:
 	PlnX86_64DataAllocator();
 
-	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type);
-	void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type);
+	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) override;
+	void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type) override;
 
-	void memAlloced();
-	void memFreed();
-	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src);
-	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src);
+	void memAlloced() override;
+	void memFreed() override;
+	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) override;
+	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) override;
 
-	PlnDataPlace* prepareAccumulator(int data_type); 
-	bool isAccumulator(PlnDataPlace* dp);
-	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp);
-	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp);
-	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp);
+	PlnDataPlace* prepareAccumulator(int data_type) override;
+	bool isAccumulator(PlnDataPlace* dp) override;
+	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) override;
+	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp) override;
+	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp) override;
 
 	// for array item
-	PlnDataPlace* prepareObjBasePtr();
-	PlnDataPlace* prepareObjIndexPtr();
+	PlnDataPlace* prepareObjBasePtr() override;
+	PlnDataPlace* prepareObjIndexPtr() override;
 };
 

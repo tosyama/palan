@@ -1,7 +1,7 @@
 /// Interface of assembly generator class.
 ///
 /// @file	PlnGenerator.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <memory>
 
