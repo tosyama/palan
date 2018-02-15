@@ -121,8 +121,9 @@ void PlnAndOperation::gen(PlnGenerator& g)
 
 		} else {
 			r->gen(g);
+			rcmp_type = r->getCmpType();
 			auto e = g.getEntity(result_dp);
-			g.genMoveCmpFlag(e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+			g.genMoveCmpFlag(e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
 		}
 	}
 
