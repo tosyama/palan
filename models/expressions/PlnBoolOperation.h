@@ -10,7 +10,9 @@ class PlnCmpOperation;
 class PlnAndOperation : public PlnExpression
 {
 public:
-	PlnDataPlace* result_dp;
+	int jmp_end_id;
+	int lcmp_type, rcmp_type;
+	PlnDataPlace* result_dp, *rconst_dp;
 	PlnCmpOperation* l;
 	PlnCmpOperation* r;
 

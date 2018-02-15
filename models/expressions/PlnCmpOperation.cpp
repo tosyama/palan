@@ -156,7 +156,5 @@ bool PlnCmpOperation::isConst()
 
 int PlnCmpOperation::getCmpType()
 {
-	// must use this method after gen.
-	BOOST_ASSERT(gen_cmp_type != -1);
 	return gen_cmp_type;
 }
