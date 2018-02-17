@@ -8,10 +8,10 @@
 
 class PlnCmpOperation : public PlnExpression
 {
+public:
 	PlnCmpType cmp_type;
 	int gen_cmp_type;
 
-public:
 	PlnDataPlace* result_dp;
 	PlnExpression* l;
 	PlnExpression* r;

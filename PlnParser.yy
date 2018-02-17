@@ -149,7 +149,7 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
-%left UMINUS
+%left UMINUS '!'
 
 %start module	
 
@@ -560,11 +560,12 @@ expression:
 
 	| expression OPE_AND expression
 	{
-		$$ = new PlnAndOperation($1, $3);
+		$$ = new PlnBoolOperation($1, $3, ET_AND);
 	}
 
 	| expression OPE_OR expression
 	{
+		$$ = new PlnBoolOperation($1, $3, ET_OR);
 	}
 
 	| '(' assignment ')'
@@ -575,6 +576,11 @@ expression:
 	| '-' expression %prec UMINUS
 	{
 		$$ = PlnNegative::create($2);
+	}
+
+	| '!' expression
+	{
+		$$ = PlnBoolOperation::getNot($2);
 	}
 	
 	| term

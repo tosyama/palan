@@ -44,7 +44,7 @@ int yylex();
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
-%left UMINUS
+%left UMINUS '!'
 
 %start module	
 %%
@@ -181,6 +181,7 @@ expression:
 	| expression OPE_OR expression
 	| '(' assignments ')'
 	| '-' expression %prec UMINUS
+	| '!' expression
 	| term
 	;
 

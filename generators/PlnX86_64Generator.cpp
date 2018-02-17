@@ -130,6 +130,31 @@ void PlnX86_64Generator::genJump(int id, string comment)
 	os << endl;
 }
 
+void PlnX86_64Generator::genTrueJump(int id, int cmp_type, string comment)
+{
+	const char* jcmd;
+	switch (cmp_type) {
+		case CMP_EQ: jcmd = "je"; break;
+		case CMP_NE: jcmd = "jne"; break;
+		case CMP_L: jcmd = "jl"; break;
+		case CMP_G: jcmd = "jg"; break;
+		case CMP_LE: jcmd = "jle"; break;
+		case CMP_GE: jcmd = "jge"; break;
+		case CMP_B: jcmd = "jb"; break;
+		case CMP_A: jcmd = "ja"; break;
+		case CMP_BE: jcmd = "jbe"; break;
+		case CMP_AE: jcmd = "jae"; break;
+			break;
+
+		defalt:
+			BOOST_ASSERT(false);
+	}
+	os << "	" << jcmd << " .L" << id;
+	if (comment != "")
+		os << "		# " << comment;
+	os << endl;
+}
+
 void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 {
 	const char* jcmd;

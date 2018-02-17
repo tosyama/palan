@@ -41,7 +41,12 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "[if][elif][elif2][else][true]\n"
 							"0!=<<=1==<=>=2!=>>=\n"
-							"[uu][us]>tt010\n"
-							"abttdtfDfDtttd");
+							"[uu][us]>tt010");
+
+	testcode = "009_booltest";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "abttdtfDfDtttd\n"
+							"aaabbbcctdtdftdtd\n"
+							"101010");
 }
 

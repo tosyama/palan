@@ -17,6 +17,7 @@ public:
 	void genLabel(const string& label) override;
 	void genJumpLabel(int id, string comment) override;
 	void genJump(int id, string comment) override;
+	void genTrueJump(int id, int cmp_type, string comment) override;
 	void genFalseJump(int id, int cmp_type, string comment) override;
 	void genEntryFunc() override;
 	void genLocalVarArea(int size) override;
