@@ -18,7 +18,7 @@ func arr_func(int32 x, int32[10] pa)
 }
 
 func arr_func2(int32 x, int32[10] >> pa)
-	-> int16[3] pb
+	-> int16[3] pb, int32 x
 {
 	int32[5] a1;
 	10 -> pa[9];
@@ -36,6 +36,7 @@ func int32_func2(int32 i, j) -> int32
 }
 
 int16[3] o, o2;
+int16[1] o3;
 setenv("MALLOC_TRACE", "out/mtrace006", 1);
 mtrace();
 {
@@ -47,9 +48,11 @@ int16[3] b, c;
 int32[10] d = a;
 int16[3] e = arr_func(1, a);
 int16[3] f <<= e;
+int32 xx = 10;
 
 arr_func(3, a) -> b;
-arr_func2(4, a>>) ->> b;
+arr_func2(4, a>>) ->> b, xx;
+xx -> o3[0];
 
 int16 ind = 1;
 
@@ -63,6 +66,7 @@ int16 s = b[0] + 1;	// s=4
 b ->> c;	// b=undefined, c[0]=3,c[1]=2,c[2]=4
 c -> o;
 s -> o[2];
+
 int32_func2(c[0],c[1]) -> o2[0];	// o2[0] = 5
 
 s + o2[s * 0] -> o2[c[0]-2];	// o2[1] = 9
@@ -79,13 +83,14 @@ int16[3,4,2] a3;
 6->a2[s,s];
 
 a2 -> b2;
-
-a2[s,0]+s -> a3[s+1,3,b2[0,s-1]]; // a3[2,3,1]=3
+// a2[1,0]:2+1 -> a3[1+1:2,3,b2[0,0]:1] = 3  
+a2[s,0]+s -> a3[s+1,3,b2[0,s-1]];
 a3[2,3,1] -> o2[2];
 
 }
 muntrace();
 
-printf("%d %d %d %d %d %d\n", o[0], o[1], o[2], o2[0], o2[1], o2[2]);
+
+printf("%d %d %d %d %d %d %d\n", o[0], o[1], o[2], o2[0], o2[1], o2[2], o3[0]);
 exit(0);
 

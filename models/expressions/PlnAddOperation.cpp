@@ -122,7 +122,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		rdp = new PlnDataPlace(8, r->getDataType());
 		rdp->type = DP_STK_BP;
 		rdp->status = DS_READY_ASSIGN;
-		static string cmt="(temp)";
+		static string cmt="(temp@add)";
 		rdp->comment = &cmt;
 	}
 

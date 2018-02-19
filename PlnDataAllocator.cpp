@@ -97,10 +97,14 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 
 	// size < 8
 	int free_index = -1;
+	PlnDataPlace* aft_dp; 
+
 	for (int i=0; i<stack_size; ++i) {
-		if (free_index < 0 && data_stack[i]->status == DS_RELEASED) 
+		aft_dp = data_stack[i]; 
+		if (canAlloc(aft_dp, alloc_step, release_step)) {
 			free_index = i;
-			
+		}
+		
 		else if (data_stack[i]->status == DS_ASSIGNED_SOME
 				&& data_stack[i]->tryAllocBytes(dp)) {
 			dp->data.bytes.idx = i;
@@ -110,18 +114,25 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 
 	// Create new DP_BYTES data place.
 	auto dp_ctnr = new PlnDataPlace(8, DT_UNKNOWN);
+	static string cmt = "bytes";
 	dp_ctnr->type = DP_BYTES;
 	dp_ctnr->data.bytesData = new vector<PlnDataPlace *>();
 	dp_ctnr->status = DS_ASSIGNED_SOME;
 	dp_ctnr->alloc_step = alloc_step;
 	dp_ctnr->release_step = release_step;
+	dp_ctnr->comment = &cmt;
 	dp_ctnr->data.bytesData->push_back(dp);
 	dp->data.bytes.offset = 0;
 
 	if (free_index >= 0) {
 		dp->data.bytes.idx = free_index;
-		dp_ctnr->previous = data_stack[free_index];
-		data_stack[free_index] = dp_ctnr;
+		if (aft_dp) {
+			dp_ctnr->previous = aft_dp->previous;
+			aft_dp->previous = dp_ctnr;
+		} else {
+			dp_ctnr->previous = data_stack[free_index];
+			data_stack[free_index] = dp_ctnr;
+		}
 	} else {
 		dp->data.bytes.idx = stack_size;
 		dp_ctnr->previous = NULL;

@@ -82,7 +82,8 @@ inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, union PlnAssignInf* 
 {
 	if (dst_val.inf.var->ptr_type == NO_PTR) {
 		as_inf->type = AI_PRIMITIVE;
-		return dst_val.getDataPlace(da);
+		as_inf->inf.dp = dst_val.getDataPlace(da);
+		return as_inf->inf.dp;
 
 	} else {	// (ptr_type & PTR_REFERNCE)
 		BOOST_ASSERT(dst_val.getType()->data_type == DT_OBJECT_REF);
@@ -141,17 +142,16 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		for (int i=vi; i<vcnt; i++)
 			lvals[i]->finish(da, si);
 
-		for (auto sdp: e->data_places)
-			da.popSrc(sdp);
-
 		// assign process
 		for (int i=vi; i<vcnt; i++) {
 			auto& as_inf = assign_inf[i];
 			switch(as_inf.type) {
 				case AI_PRIMITIVE:
+					da.popSrc(as_inf.inf.dp);
 					break;
 
 				case AI_MCOPY:
+					da.popSrc(as_inf.mcopy.src);
 					da.allocDp(as_inf.mcopy.dst);	// would be released by memCopyed.
 					if (as_inf.mcopy.free_dp) {
 						da.allocData(as_inf.mcopy.free_dp);
@@ -163,6 +163,7 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 					break;
 				
 				case AI_MOVE:
+					da.popSrc(as_inf.move.src);
 					da.memFreed();
 					if (!as_inf.move.do_clear)
 						da.releaseData(as_inf.move.src);
@@ -201,7 +202,7 @@ void PlnAssignment::gen(PlnGenerator& g)
 		
 			switch (assign_inf[vi].type) {
 				case AI_PRIMITIVE:
-					g.genLoadDp(e->data_places[di]);
+					g.genLoadDp(assign_inf[vi].inf.dp);
 					break;
 				case AI_MCOPY:
 					genDeepCopy4Assign(g, assign_inf[vi], values[vi].inf.var->place);
