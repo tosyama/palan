@@ -40,6 +40,8 @@ enum {
 	OPE_NE		= PlnParser::token::OPE_NE,
 	OPE_LE		= PlnParser::token::OPE_LE,
 	OPE_GE		= PlnParser::token::OPE_GE,
+	OPE_AND		= PlnParser::token::OPE_AND,
+	OPE_OR		= PlnParser::token::OPE_OR,
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
@@ -61,7 +63,7 @@ DBL_LESS	"<<"
 DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 
@@ -103,6 +105,8 @@ else	{ return KW_ELSE; }
 "!="	{ return OPE_NE; }
 "<="	{ return OPE_LE; }
 ">="	{ return OPE_GE; }
+"&&"	{ return OPE_AND; }
+"||"	{ return OPE_OR; }
 {ID}	{
 		string id = yytext;
 		if (std::binary_search(typenames.begin(), typenames.end(), id)) {

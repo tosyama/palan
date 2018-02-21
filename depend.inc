@@ -83,7 +83,14 @@ PlnCmpOperation.o:  \
 	models/expressions/../../PlnModel.h \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnDataAllocator.h \
-	models/expressions/../../PlnGenerator.h
+	models/expressions/../../PlnGenerator.h models/expressions/../PlnType.h
+PlnBoolOperation.o:  \
+	models/expressions/PlnBoolOperation.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h models/expressions/PlnCmpOperation.h \
+	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h models/expressions/../PlnType.h
 PlnAssignment.o:  \
 	models/expressions/PlnAssignment.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
@@ -119,15 +126,16 @@ PlnGenerator.o:  PlnModel.h PlnDataAllocator.h \
 	PlnGenerator.h
 PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
-	models/PlnStatement.h models/PlnLoopStatement.h models/PlnType.h \
-	models/PlnVariable.h models/PlnArray.h \
-	models/expressions/PlnFunctionCall.h \
+	models/PlnStatement.h models/PlnLoopStatement.h \
+	models/PlnConditionalBranch.h models/PlnType.h models/PlnVariable.h \
+	models/PlnArray.h models/expressions/PlnFunctionCall.h \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h models/expressions/PlnArrayItem.h \
-	models/expressions/PlnAssignment.h PlnMessage.h PlnConstants.h \
-	PlnParser.hpp PlnScopeStack.h stack.hh location.hh position.hh \
-	PlnLexer.h
+	models/expressions/PlnAssignment.h models/expressions/PlnCmpOperation.h \
+	models/expressions/../../PlnConstants.h \
+	models/expressions/PlnBoolOperation.h PlnMessage.h PlnParser.hpp \
+	PlnScopeStack.h stack.hh location.hh position.hh PlnLexer.h
 PlnLexer.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
 	models/PlnExpression.h stack.hh location.hh position.hh PlnLexer.h
 PlnMessage.o:  PlnMessage.h

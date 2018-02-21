@@ -19,7 +19,6 @@ class PlnDataAllocator
 protected:
 	int regnum;
 
-	void releasedBytesDpChiled(PlnDataPlace* dp);
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
 	virtual vector<int> getRegsNeedSave()=0;
@@ -118,7 +117,7 @@ public:
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
-		struct {int32_t idx; int32_t offset;} bytes;
+		struct {int32_t idx; int32_t offset; PlnDataPlace* parent_dp; } bytes;
 		struct {int32_t id; int32_t offset;} reg;
 		struct {int32_t displacement; PlnDataPlace* base_dp; PlnDataPlace* index_dp;
 				int16_t base_id; int16_t index_id; } indirect;
@@ -134,10 +133,10 @@ public:
 	string* comment;
 
 	PlnDataPlace(int size, int data_type);
-	unsigned int getAllocBytesBits();
+	unsigned int getAllocBytesBits(int alloc_step, int release_step);
 	bool tryAllocBytes(PlnDataPlace* dp);
 
 	string cmt() { return *comment; }
-	int allocable_size();
+	void updateBytesDpStatus();
 	void access();
 };

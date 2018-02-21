@@ -32,7 +32,7 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	BOOST_ASSERT(si.scope[0].type == SC_MODULE);
 	PlnModule* m = si.scope[0].inf.module;
 
-	condition->finish(da);
+	condition->finish(da, si);
 	inf.block->finish(da, si);
 	if (next) {
 		jmp_next_id = m->getJumpID();

@@ -94,7 +94,7 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 		values.push_back(v);
 }
 
-void PlnDivOperation::finish(PlnDataAllocator& da)
+void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
@@ -111,10 +111,10 @@ void PlnDivOperation::finish(PlnDataAllocator& da)
 	}
 
 	l->data_places.push_back(ldp);
-	l->finish(da);
+	l->finish(da, si);
 	
 	r->data_places.push_back(rdp);
-	r->finish(da);
+	r->finish(da, si);
 	
 	da.popSrc(rdp);
 	da.popSrc(ldp);

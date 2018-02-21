@@ -55,6 +55,6 @@ if i<=2==1 { printf("t"); }
 else { printf("f"); }
 if 1>=2<1 { printf("t"); }
 else { printf("f"); }
+printf("%d%d%d\n",i<1,i<2,b<=1u);
 
-printf("%d%d%d",i<1,i<2,b<=1u);
 exit(0);

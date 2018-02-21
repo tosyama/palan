@@ -17,9 +17,9 @@ public:
 
 	PlnClone(PlnExpression* src);
 	
-	void finish(PlnDataAllocator& da);
-	void dump(ostream& os, string indent="");
-	void gen(PlnGenerator& g);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 
 

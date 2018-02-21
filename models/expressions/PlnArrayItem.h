@@ -12,6 +12,6 @@ public:
 	PlnExpression* index_ex;
 	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind);
 
-	void finish(PlnDataAllocator& da); // override;
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void gen(PlnGenerator& g) override;
 };

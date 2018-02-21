@@ -4,7 +4,7 @@
 /// depend on command-line options.
 ///
 /// @file	palan.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string/join.hpp>

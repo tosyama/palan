@@ -18,8 +18,8 @@ public:
 
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
 
-	void finish(PlnDataAllocator& da);	// override
-	void dump(ostream& os, string indent="");	// override
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 

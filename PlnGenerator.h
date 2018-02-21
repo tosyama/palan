@@ -1,7 +1,7 @@
 /// Interface of assembly generator class.
 ///
 /// @file	PlnGenerator.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <memory>
 
@@ -53,6 +53,7 @@ public:
 	virtual void genLabel(const string& label)=0;
 	virtual void genJumpLabel(int id, string comment) = 0;
 	virtual void genJump(int id, string comment) = 0;
+	virtual void genTrueJump(int id, int cmp_type, string comment) = 0;
 	virtual void genFalseJump(int id, int cmp_type, string comment) = 0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;

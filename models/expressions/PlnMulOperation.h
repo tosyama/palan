@@ -13,8 +13,8 @@ public:
 	PlnMulOperation(PlnExpression* l, PlnExpression* r);
 	static PlnExpression* create(PlnExpression* l, PlnExpression* r);
 	
-	void finish(PlnDataAllocator& da);	// override
-	void dump(ostream& os, string indent="");	// override
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 

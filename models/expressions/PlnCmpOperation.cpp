@@ -9,6 +9,7 @@
 #include "PlnCmpOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnConstants.h"
 #include "../PlnType.h"
 
 #include "boost/assert.hpp"
@@ -23,7 +24,7 @@ PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType 
 	values.push_back(v);
 }
 
-void PlnCmpOperation::finish(PlnDataAllocator& da)
+void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() <= 1);
 
@@ -58,10 +59,10 @@ void PlnCmpOperation::finish(PlnDataAllocator& da)
 	}
 
 	l->data_places.push_back(ldp);
-	l->finish(da);
+	l->finish(da, si);
 	
 	r->data_places.push_back(rdp);
-	r->finish(da);
+	r->finish(da, si);
 
 	da.popSrc(rdp);
 	da.popSrc(ldp);
@@ -70,7 +71,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da)
 	da.releaseData(ldp);
 
 	if (data_places.size()) {
-		result_dp = da.prepareAccumulator(ldp->data_type);
+		result_dp = da.prepareAccumulator(DT_SINT);
 		da.allocDp(result_dp);
 		da.pushSrc(data_places[0], result_dp, true);
 	}
@@ -155,7 +156,5 @@ bool PlnCmpOperation::isConst()
 
 int PlnCmpOperation::getCmpType()
 {
-	// must use this method after gen.
-	BOOST_ASSERT(gen_cmp_type != -1);
 	return gen_cmp_type;
 }

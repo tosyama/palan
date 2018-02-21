@@ -53,7 +53,7 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	}
 }
 
-void PlnFunctionCall::finish(PlnDataAllocator& da)
+void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	int func_type = function->type;
 	arg_dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
@@ -73,7 +73,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da)
 		}
 
 		a->data_places.push_back(arg_dps[i]);
-		a->finish(da);
+		a->finish(da, si);
 
 		++i;
 	}

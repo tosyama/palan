@@ -50,6 +50,7 @@ class PlnLexer;
 #include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnCmpOperation.h"
+#include "models/expressions/PlnBoolOperation.h"
 #include "PlnMessage.h"
 #include "PlnConstants.h"
 
@@ -91,6 +92,8 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %token OPE_NE	"!="
 %token OPE_LE	"<="
 %token OPE_GE	">="
+%token OPE_AND	"&&"
+%token OPE_OR	"||"
 %token DBL_LESS		"<<"
 %token DBL_GRTR		">>"
 %token DBL_ARROW	"->>"
@@ -139,12 +142,14 @@ static void warn(const PlnParser::location_type& l, const string& m);
 %right '='
 %left ARROW DBL_ARROW
 %left ',' 
+%left OPE_OR
+%left OPE_AND
 %left DBL_LESS DBL_GRTR
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%'
-%left UMINUS
+%left UMINUS '!'
 
 %start module	
 
@@ -157,10 +162,7 @@ module: /* empty */
 		scopes.push_back(PlnScopeItem(module.toplevel));
 	}
 
-	| module function_definition
-	{
-		// module.functions.push_back($2);
-	}
+	| module function_definition /* empty */
 
 	| module ccall_declaration
 	{
@@ -556,6 +558,16 @@ expression:
 		$$ = new PlnCmpOperation($1, $3, CMP_GE);
 	}
 
+	| expression OPE_AND expression
+	{
+		$$ = new PlnBoolOperation($1, $3, ET_AND);
+	}
+
+	| expression OPE_OR expression
+	{
+		$$ = new PlnBoolOperation($1, $3, ET_OR);
+	}
+
 	| '(' assignment ')'
 	{
 		$$ = $2;
@@ -564,6 +576,11 @@ expression:
 	| '-' expression %prec UMINUS
 	{
 		$$ = PlnNegative::create($2);
+	}
+
+	| '!' expression
+	{
+		$$ = PlnBoolOperation::getNot($2);
 	}
 	
 	| term

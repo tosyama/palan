@@ -10,6 +10,7 @@ union PlnAssignInf
 	int16_t	type;
 	struct {
 		int16_t	type;
+		PlnDataPlace *dp;
 	} inf;
 
 	struct {
@@ -36,8 +37,8 @@ public:
 	vector<PlnExpression*> expressions;
 	vector<PlnAssignInf> assign_inf;
 
-	void finish(PlnDataAllocator& da);	// override
-	void dump(ostream& os, string indent="");	// override
-	void gen(PlnGenerator& g);	// override
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void dump(ostream& os, string indent="") override;
+	void gen(PlnGenerator& g) override;
 };
 

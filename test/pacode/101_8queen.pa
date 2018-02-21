@@ -1,0 +1,66 @@
+ccall int32 printf();
+ccall exit();
+
+func initBoard(byte[8,8] >>board)
+	-> byte[8,8] board
+{
+	int32 x,y = 0,0;
+	while y<8 {
+		while x<8 {
+			0->board[y, x];
+			x+1->x;
+		}
+		y+1->y;
+	}
+}
+
+func queen(byte[8,8] >>board, int32 x, y)
+	-> byte[8,8] board, int32 count
+{
+	0 -> count;
+	int64 xx,yy;
+
+	x-1 -> xx;
+	while xx >= 0 {
+		if board[y, xx] { return; }
+		xx-1 -> xx;
+	}
+
+	x-1, y-1 -> xx, yy;
+	while xx >= 0 && yy >= 0 {
+		if board[yy, xx] { return; }
+		xx-1, yy-1 -> xx, yy;
+	}
+
+	x-1, y+1 -> xx, yy;
+	while xx >= 0 && yy < 8 {
+		if board[yy, xx] { return; }
+		xx-1, yy+1 -> xx, yy;
+	}
+
+	if x >= 0 { 1 -> board[y, x]; }
+
+	if x == 7 {
+		count+1 -> count;
+	} else {
+		0 -> yy;
+		while yy < 8 {
+			int32 cnt;
+			queen(board>>, x+1, yy)->>board, cnt;
+			cnt + count -> count;
+			yy+1 -> yy;
+		}
+	}
+
+	if x >= 0 { 0 -> board[y, x]; }
+}
+
+int32 count;
+byte[8,8] board;
+initBoard(board>>)->>board;
+
+queen(board>>, -1, -1)->>board, count;
+
+printf("answer: %d\n", count);
+exit(0);
+
