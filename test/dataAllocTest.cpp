@@ -1,4 +1,5 @@
 #include <iostream>
+#include <climits>
 #include "testBase.h"
 
 #include "../generators/PlnX86_64DataAllocator.h"
@@ -61,7 +62,88 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	CHECK(allocator.stack_size == 80);
 }
 
-TEST_CASE("Mixed bytes allocation jtest.", "[allocate]")
+TEST_CASE("Mixed bytes dateplace allocate unit test.", "[allocate]")
+{
+	PlnDataPlace dp_ctnr(8, DT_UNKNOWN);
+	vector<PlnDataPlace*> bdps;
+	dp_ctnr.type = DP_BYTES;
+	dp_ctnr.data.bytesData = &bdps;
+	dp_ctnr.status = DS_ASSIGNED_SOME;
+	dp_ctnr.alloc_step = INT_MAX;
+	dp_ctnr.release_step = 0;
+
+	PlnDataPlace dp1(4, DT_SINT);
+	dp1.alloc_step = 1;
+	dp1.release_step = INT_MAX;
+	dp1.status = DS_ASSIGNED;
+
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp1) == true);
+	REQUIRE(bdps.size() == 1);
+	REQUIRE(bdps[0] == &dp1);
+
+	PlnDataPlace dp2(4, DT_SINT);
+	dp2.alloc_step = 5;
+	dp2.release_step = INT_MAX;
+	dp2.status = DS_ASSIGNED;
+
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp2) == true);
+	REQUIRE(bdps.size() == 2);
+
+	// failed to alloc because all bytes using.
+	PlnDataPlace dp3(2, DT_SINT);
+	dp3.alloc_step = 1;
+	dp3.release_step = INT_MAX;
+	dp3.status = DS_ASSIGNED;
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp3) == false);
+	REQUIRE(bdps.size() == 2);
+
+	// release dp1
+	dp1.release_step = 10;
+	dp1.status = DS_RELEASED;
+
+	// try again but will fail because steps overlaped.
+	dp3.alloc_step = 10;
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp3) == false);
+	REQUIRE(bdps.size() == 2);
+
+	// try again
+	dp3.alloc_step = 11;
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp3) == true);
+	REQUIRE(bdps.size() == 3);
+
+	// alloc another 2bytes
+	PlnDataPlace dp4(2, DT_SINT);
+	dp4.alloc_step = 10;
+	dp4.release_step = INT_MAX;
+	dp4.status = DS_ASSIGNED;
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp4) == false);
+	dp4.alloc_step = 11;
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp4) == true);
+	REQUIRE(bdps.size() == 4);
+
+	// alloc past.
+	PlnDataPlace dp5(1, DT_SINT);
+	dp5.alloc_step = 2;
+	dp5.release_step = 4;
+	dp5.status = DS_RELEASED;
+	REQUIRE(dp_ctnr.tryAllocBytes(&dp5) == true);
+	REQUIRE(bdps.size() == 5);
+
+	// release all
+	dp2.release_step = 12;
+	dp2.status = DS_RELEASED;
+	dp3.release_step = 15;
+	dp3.status = DS_RELEASED;
+	dp4.release_step = 14;
+	dp4.status = DS_RELEASED;
+
+	dp_ctnr.updateBytesDpStatus();	
+	REQUIRE(dp_ctnr.status == DS_RELEASED);
+	REQUIRE(dp_ctnr.alloc_step == 1);
+	REQUIRE(dp_ctnr.release_step == 15);
+}
+
+TEST_CASE("Mixed bytes allocation test.", "[allocate]")
 {
 	PlnX86_64DataAllocator x64allocator;
 	PlnDataAllocator& allocator = x64allocator;
@@ -92,7 +174,6 @@ TEST_CASE("Mixed bytes allocation jtest.", "[allocate]")
 	CHECK(dp6->data.stack.offset == -6);	
 	CHECK(dp7->data.stack.offset == -12);	
 }
-
 
 TEST_CASE("Data source and save management.", "[allocate]")
 {

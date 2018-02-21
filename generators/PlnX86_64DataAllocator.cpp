@@ -1,7 +1,7 @@
 /// x86-64 (Linux) data place management class definition.
 ///
 /// @file	PlnX86_64DataAllocator.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu
+/// @copyright	2017 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <cstddef>
