@@ -23,7 +23,7 @@ PlnWhileStatement::PlnWhileStatement
 	if (condition->type != ET_CMP) {
 		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
 	} else
-		this->condition = static_cast<PlnCmpOperation*>(condition);
+		this->condition = static_cast<PlnCmpExpression*>(condition);
 }
 
 void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)

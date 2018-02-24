@@ -6,7 +6,6 @@
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include "PlnBoolOperation.h"
-#include "PlnCmpOperation.h"
 #include "../PlnType.h"
 #include "../PlnModule.h"
 #include "../../PlnDataAllocator.h"
@@ -18,8 +17,8 @@
 
 // PlnBoolOperation
 PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type)
-	: PlnExpression(type), jmp_end_id(-1), lcmp_type(-1),
-		result_dp(NULL), rconst_dp(NULL)
+	: PlnCmpExpression(type), jmp_end_id(-1),
+		result_dp(NULL), zero_dp(NULL)
 {
 	PlnValue v;
 	v.type = VL_WORK;
@@ -40,63 +39,23 @@ PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsn
 	}
 }
 
-void PlnBoolOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+inline void initConstType(PlnExprsnType type, int& definite_const, int& proxy_const)
 {
-	// Current implementation expect return a result.
-	BOOST_ASSERT(data_places.size()==1);
-
-	PlnModule* m = si.scope[0].inf.module;
-
-	int lskip_const, lthrogh_const;
-	int lskip_value;
 	switch (type) {
 		case ET_AND:
-			lskip_const = CMP_CONST_FALSE;
-			lthrogh_const = CMP_CONST_TRUE;
-			lskip_value = 0;
+			definite_const = CMP_CONST_FALSE;
+			proxy_const = CMP_CONST_TRUE;
 			break;
 		case ET_OR:
-			lskip_const = CMP_CONST_TRUE;
-			lthrogh_const = CMP_CONST_FALSE;
-			lskip_value = 1;
+			definite_const = CMP_CONST_TRUE;
+			proxy_const = CMP_CONST_FALSE;
 			break;
-		default:
-			BOOST_ASSERT(false);
 	}
+}
 
-	l->finish(da, si);
-	lcmp_type = l->getCmpType();
-	if (lcmp_type == lskip_const) {
-		if (data_places.size()) {
-			result_dp = da.getLiteralIntDp(lskip_value);
-			da.pushSrc(data_places[0], result_dp, true);
-		}
-		return;
-	}
-
-	if (lcmp_type != lthrogh_const) {
-		jmp_end_id = m->getJumpID();
-	}
-
-	r->finish(da, si);
-	rcmp_type = r->getCmpType();
-
-	bool is_rconst = (rcmp_type == CMP_CONST_TRUE || rcmp_type == CMP_CONST_FALSE);
-	if (lcmp_type == lthrogh_const && is_rconst) {
-		result_dp = da.getLiteralIntDp(rcmp_type == CMP_CONST_TRUE ? 1 : 0);
-		da.pushSrc(data_places[0], result_dp, true);
-		return;
-	}
-
-	if (is_rconst) {
-		rconst_dp = da.getLiteralIntDp(rcmp_type == CMP_CONST_TRUE ? 1 : 0);
-	}
-
-	if (data_places.size()) {
-		result_dp = da.prepareAccumulator(DT_SINT);
-		da.allocDp(result_dp);
-		da.pushSrc(data_places[0], result_dp, true);
-	}
+inline int getConstValue(int const_type) {
+	BOOST_ASSERT(const_type == CMP_CONST_TRUE || const_type ==  CMP_CONST_FALSE);
+	return const_type == CMP_CONST_TRUE ? 1 : 0;
 }
 
 void PlnBoolOperation::dump(ostream& os, string indent)
@@ -110,66 +69,153 @@ void PlnBoolOperation::dump(ostream& os, string indent)
 	r->dump(os, indent+" ");
 }
 
+
+// Case 1) l:definite_const, r:- -> definite_const
+// Case 2) l:proxy_const, r:definite_const -> definite_const
+// Case 3) l:proxy_const, r:proxy_const -> proxy_const
+// Case 4) l:proxy_const, r:cmp -> r:cmp 
+// Case 5) l:cmp, r:definite_const -> definite_const
+// Case 6) l:cmp, r:proxy_const -> l:cmp
+// Case 7) l:cmp = r:cmp -> cmp = r:cmp
+// Case 8-1) l:cmp == ne r:cmp != ne -> cmp = ne
+// Case 8-2) l:cmp != ne r:cmp == ne -> cmp = ne
+// Case 8-3) l:cmp != ne r:cmp != ne -> cmp = ne
+void PlnBoolOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	int definite_const, proxy_const;
+	initConstType(type, definite_const, proxy_const);
+
+	l->finish(da, si);
+	r->finish(da, si);
+	int lcmp_type = l->getCmpType();
+	int rcmp_type = r->getCmpType();
+	if (lcmp_type == definite_const || rcmp_type == definite_const) {
+		// Case 1,2,5)
+		gen_cmp_type = definite_const;
+		if (data_places.size()) {
+			result_dp = da.getLiteralIntDp(getConstValue(definite_const));
+			da.pushSrc(data_places[0], result_dp, true);
+		}
+		return;
+
+	} else if (lcmp_type == proxy_const) {
+		if (rcmp_type == proxy_const) {
+			// Case 3)
+			gen_cmp_type = proxy_const;
+			if (data_places.size()) {
+				result_dp = da.getLiteralIntDp(getConstValue(proxy_const));
+				da.pushSrc(data_places[0], result_dp, true);
+				return;
+			}
+		}
+
+		// Case 4)
+		if (data_places.size()) {
+			result_dp = da.prepareAccumulator(DT_SINT);
+			da.allocDp(result_dp);
+			da.pushSrc(data_places[0], result_dp, true);
+			return;
+		}
+
+	} else {
+		if (rcmp_type == proxy_const) {
+			// Case 6)
+			if (data_places.size()) {
+				result_dp = da.prepareAccumulator(DT_SINT);
+				da.allocDp(result_dp);
+				da.pushSrc(data_places[0], result_dp, true);
+				return;
+			}
+		} else {
+			// Case 7,8
+			PlnModule* m = si.scope[0].inf.module;
+			jmp_end_id = m->getJumpID();
+			result_dp = da.prepareAccumulator(DT_SINT);
+			da.allocDp(result_dp);
+			zero_dp = da.getLiteralIntDp(0);
+			if (data_places.size()) {
+				da.pushSrc(data_places[0], result_dp, true);
+			} else {
+				da.releaseData(result_dp);
+			}
+		}
+	}
+}
+
 void PlnBoolOperation::gen(PlnGenerator& g)
 {
-	bool do_eval_r = true;
-	int lskip_const, lthrogh_const;
-	switch (type) {
-		case ET_AND:
-			lskip_const = CMP_CONST_FALSE;
-			lthrogh_const = CMP_CONST_TRUE;
-			break;
-		case ET_OR:
-			lskip_const = CMP_CONST_TRUE;
-			lthrogh_const = CMP_CONST_FALSE;
-			break;
-		default:
-			BOOST_ASSERT(false);
-	}
+	int definite_const, proxy_const;
+	initConstType(type, definite_const, proxy_const);
 
-	if (lcmp_type == lskip_const) {
-		do_eval_r = false;
+	l->gen(g);
+	int lcmp_type = l->getCmpType();
+	if (gen_cmp_type == definite_const) {
+		// Case 1,2,5)
 		// Constant value is already set to src of data_place[0].
-	} else if (lcmp_type == lthrogh_const) {
-		// Result is as right expression.
-	} else {
-		// Skip right expression if result is false.
-		l->gen(g);
-		lcmp_type = l->getCmpType();
-		auto e = g.getEntity(result_dp);
-		g.genMoveCmpFlag(e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
-		if (type == ET_AND)
-			g.genFalseJump(jmp_end_id, lcmp_type, "&&");
-		else // ET_OR
-			g.genTrueJump(jmp_end_id, lcmp_type, "||");
-	}
+		if (data_places.size())
+			g.genSaveSrc(data_places[0]);
 
-	if (do_eval_r) {
-		if (rcmp_type == CMP_CONST_TRUE || rcmp_type == CMP_CONST_FALSE) {
-			if (lcmp_type == lthrogh_const) {
-				// Constant value is already set to src of data_place[0].
+	} else if (lcmp_type == proxy_const) {
+		// Case 3,4)
+		r->gen(g);
+		gen_cmp_type = r->getCmpType();
+
+		if (data_places.size()) {
+			if (gen_cmp_type == proxy_const) {
+				// Case 3
+				// Constant value is already set to result_dp in finish().
 
 			} else {
-				// Set constant value.
-				BOOST_ASSERT(rconst_dp);
-				auto const_e = g.getEntity(rconst_dp);
-				auto result_e = g.getEntity(result_dp);
-				g.genMove(result_e.get(), const_e.get(), "");
+				// Case 4
+				auto e = g.getEntity(result_dp);
+				g.genMoveCmpFlag(e.get(), gen_cmp_type, "cmpflg -> " + result_dp->cmt());
+			}
+			g.genSaveSrc(data_places[0]);
+		}
+
+	} else {
+		int rcmp_type = r->getCmpType();
+		if (rcmp_type == proxy_const) {
+			// Case 6)
+			gen_cmp_type = lcmp_type;
+			if (data_places.size()) {
+				auto e = g.getEntity(result_dp);
+				g.genMoveCmpFlag(e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+				g.genSaveSrc(data_places[0]);
 			}
 
 		} else {
+			// Case 7,8)
+			auto result_e = g.getEntity(result_dp);
+			g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+
+			if (type == ET_AND) g.genFalseJump(jmp_end_id, lcmp_type, "&&");
+			else g.genTrueJump(jmp_end_id, lcmp_type, "||");
+
 			r->gen(g);
 			rcmp_type = r->getCmpType();
-			auto e = g.getEntity(result_dp);
-			g.genMoveCmpFlag(e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
+			if (lcmp_type == rcmp_type) {
+				// Case 7)
+				gen_cmp_type = lcmp_type;
+				if (data_places.size())
+					g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
+				g.genJumpLabel(jmp_end_id, type==ET_AND ? "end &&" : "end ||");
+
+			} else {
+				// Case 8-1,8-2,8-3)
+				g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
+
+				auto ze = g.getEntity(zero_dp);
+				g.genJumpLabel(jmp_end_id, type==ET_AND ? "end &&" : "end ||");
+				gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+				BOOST_ASSERT(gen_cmp_type == CMP_NE);
+				if (data_places.size())
+					g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+			}
+
+			if (data_places.size())
+				g.genSaveSrc(data_places[0]);
 		}
-	}
-
-	if (jmp_end_id >= 0)
-		g.genJumpLabel(jmp_end_id, type==ET_AND ? "end &&" : "end ||");
-
-	if (data_places.size()) {
-		g.genSaveSrc(data_places[0]);
 	}
 }
 
