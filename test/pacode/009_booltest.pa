@@ -34,6 +34,11 @@ if bool_t() && bool_f() { printf("d"); } else { printf("D"); }
 if bool_f() && bool_t() { printf("d"); } else { printf("D"); }
 if bool_t() && bool_t() && bool_t(){ printf("d"); }
 
+10->b;
+if b && b<i { printf("e"); }
+if b>i && b>i { printf("e"); }
+if b>=i && b==0 { printf("e"); }
+
 printf("\n");
 // OR test
 if 0 || 0 { printf("a"); }
@@ -54,6 +59,11 @@ if bool_t() || bool_t() { printf("d"); }
 if bool_t() || bool_f() { printf("d"); } else { printf("D"); }
 if bool_f() || bool_t() { printf("d"); } else { printf("D"); }
 if bool_t() || bool_f() || bool_t() { printf("d"); }
+
+10->b;
+if b || b<i { printf("e"); }
+if b>i || b>i { printf("e"); }
+if b<=i || b==0 { printf("e"); }
 
 printf("\n");
 

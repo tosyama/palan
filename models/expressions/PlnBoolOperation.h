@@ -8,7 +8,7 @@
 class PlnBoolOperation : public PlnCmpExpression
 {
 protected:
-	int jmp_end_id;
+	int jmp_l_id, jmp_r_id;
 	PlnDataPlace *result_dp, *zero_dp;
 	PlnCmpOperation *l, *r;
 public:

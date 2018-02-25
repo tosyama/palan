@@ -17,7 +17,7 @@
 
 // PlnBoolOperation
 PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type)
-	: PlnCmpExpression(type), jmp_end_id(-1),
+	: PlnCmpExpression(type), jmp_l_id(-1), jmp_r_id(-1),
 		result_dp(NULL), zero_dp(NULL)
 {
 	PlnValue v;
@@ -129,7 +129,8 @@ void PlnBoolOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		} else {
 			// Case 7,8
 			PlnModule* m = si.scope[0].inf.module;
-			jmp_end_id = m->getJumpID();
+			jmp_l_id = m->getJumpID();
+			jmp_r_id = m->getJumpID();
 			result_dp = da.prepareAccumulator(DT_SINT);
 			da.allocDp(result_dp);
 			zero_dp = da.getLiteralIntDp(0);
@@ -187,28 +188,48 @@ void PlnBoolOperation::gen(PlnGenerator& g)
 		} else {
 			// Case 7,8)
 			auto result_e = g.getEntity(result_dp);
-			g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
 
-			if (type == ET_AND) g.genFalseJump(jmp_end_id, lcmp_type, "&&");
-			else g.genTrueJump(jmp_end_id, lcmp_type, "||");
+			if (type == ET_AND) g.genFalseJump(jmp_l_id, lcmp_type, "&&");
+			else g.genTrueJump(jmp_l_id, lcmp_type, "||");
 
 			r->gen(g);
 			rcmp_type = r->getCmpType();
 			if (lcmp_type == rcmp_type) {
 				// Case 7)
 				gen_cmp_type = lcmp_type;
+				g.genJumpLabel(jmp_l_id, type==ET_AND ? "end &&" : "end ||");
 				if (data_places.size())
 					g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
-				g.genJumpLabel(jmp_end_id, type==ET_AND ? "end &&" : "end ||");
 
 			} else {
 				// Case 8-1,8-2,8-3)
-				g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
-
 				auto ze = g.getEntity(zero_dp);
-				g.genJumpLabel(jmp_end_id, type==ET_AND ? "end &&" : "end ||");
-				gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+
+				if (lcmp_type == CMP_NE) {
+					// 8-1
+					g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
+					gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+					g.genJumpLabel(jmp_l_id, type==ET_AND ? "end &&" : "end ||");
+
+				} else if (rcmp_type == CMP_NE) {
+					// 8-2
+					g.genJump(jmp_r_id, "");
+					g.genJumpLabel(jmp_l_id, "");
+					g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+					gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+					g.genJumpLabel(jmp_r_id, type==ET_AND ? "end &&" : "end ||");
+
+				} else {
+					// 8-3
+					g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
+					g.genJump(jmp_r_id, "");
+					g.genJumpLabel(jmp_l_id, "");
+					g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+					g.genJumpLabel(jmp_r_id, type==ET_AND ? "end &&" : "end ||");
+					gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+				}
 				BOOST_ASSERT(gen_cmp_type == CMP_NE);
+
 				if (data_places.size())
 					g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
 			}
