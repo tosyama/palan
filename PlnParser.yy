@@ -49,7 +49,6 @@ class PlnLexer;
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnAssignment.h"
-#include "models/expressions/PlnCmpOperation.h"
 #include "models/expressions/PlnBoolOperation.h"
 #include "PlnMessage.h"
 #include "PlnConstants.h"

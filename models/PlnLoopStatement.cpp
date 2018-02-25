@@ -20,10 +20,12 @@ PlnWhileStatement::PlnWhileStatement
 	inf.block = block;
 	this->parent = parent;
 
-	if (condition->type != ET_CMP) {
+	if (condition->type == ET_CMP
+		 || condition->type == ET_AND || condition->type == ET_OR) {
+		this->condition = static_cast<PlnCmpExpression*>(condition);
+	} else {
 		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
-	} else
-		this->condition = static_cast<PlnCmpOperation*>(condition);
+	}
 }
 
 void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)

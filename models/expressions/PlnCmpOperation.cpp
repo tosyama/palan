@@ -15,7 +15,7 @@
 #include "boost/assert.hpp"
 
 PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType cmp_type)
-	:result_dp(NULL), l(l), r(r), cmp_type(cmp_type), gen_cmp_type(-1), PlnExpression(ET_CMP)
+	:result_dp(NULL), l(l), r(r), cmp_type(cmp_type), PlnCmpExpression(ET_CMP)
 {
 	PlnValue v;
 	v.type = VL_WORK;
@@ -152,9 +152,4 @@ bool PlnCmpOperation::isConst()
 		return false;
 
 	return true;
-}
-
-int PlnCmpOperation::getCmpType()
-{
-	return gen_cmp_type;
 }

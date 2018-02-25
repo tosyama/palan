@@ -5,11 +5,11 @@
 
 #include "PlnStatement.h"
 
-class PlnCmpOperation;
+class PlnCmpExpression;
 class PlnIfStatement : public PlnStatement
 {
 public:
-	PlnCmpOperation* condition;
+	PlnCmpExpression* condition;
 	int jmp_next_id, jmp_end_id;
 	PlnDataPlace* cond_dp;
 	PlnStatement* next;

@@ -3,16 +3,13 @@
 /// @file	PlnBoolOperation.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
-#include "../PlnExpression.h"
+#include "PlnCmpOperation.h"
 
-class PlnCmpOperation;
-
-class PlnBoolOperation : public PlnExpression
+class PlnBoolOperation : public PlnCmpExpression
 {
 protected:
-	int jmp_end_id;
-	int lcmp_type, rcmp_type;
-	PlnDataPlace *result_dp, *rconst_dp;
+	int jmp_l_id, jmp_r_id;
+	PlnDataPlace *result_dp, *zero_dp;
 	PlnCmpOperation *l, *r;
 public:
 	PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
