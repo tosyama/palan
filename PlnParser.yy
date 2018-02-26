@@ -838,8 +838,8 @@ array_sizes: INT
 
 	| array_sizes ',' INT
 	{
-		$$ = move($1);
 		$$.push_back($3);
+		$$.insert($$.end(),$1.begin(),$1.end()); 
 	}
 	;
 
@@ -856,8 +856,8 @@ array_indexes: expression
 
 	| array_indexes ',' expression
 	{
-		$$ = move($1);
 		$$.push_back($3);
+		$$.insert($$.end(),$1.begin(),$1.end()); 
 	}
 	;
 
