@@ -48,6 +48,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abttdtfDfDtttde\n"
 							"100\n"
 							"aaabbbcctdtdftdtdee\n"
+							"110\n"
 							"101010");
 }
 
