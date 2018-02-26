@@ -40,6 +40,11 @@ if b>i && b>i { printf("e"); }
 if b>=i && b==0 { printf("e"); }
 
 printf("\n");
+
+printf("%d", b>=i && b>5 && b>i);
+printf("%d", b>=i && b>(i+15) && b>i);
+printf("%d\n", b>=i && b>5 && b<i);
+
 // OR test
 if 0 || 0 { printf("a"); }
 if 1 || 0 { printf("a"); }

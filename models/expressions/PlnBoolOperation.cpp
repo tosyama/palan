@@ -231,7 +231,7 @@ void PlnBoolOperation::gen(PlnGenerator& g)
 				BOOST_ASSERT(gen_cmp_type == CMP_NE);
 
 				if (data_places.size())
-					g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
+					g.genMoveCmpFlag(result_e.get(), CMP_NE, "cmpflg -> " + result_dp->cmt());
 			}
 
 			if (data_places.size())
