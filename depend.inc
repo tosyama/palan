@@ -31,8 +31,9 @@ PlnExpression.o:  models/PlnExpression.h \
 PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
 	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
-	models/../PlnDataAllocator.h models/../PlnGenerator.h \
-	models/../PlnScopeStack.h models/expressions/PlnClone.h
+	models/PlnHeapAllocator.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h models/../PlnScopeStack.h \
+	models/expressions/PlnClone.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/../PlnConstants.h
 PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
@@ -48,6 +49,10 @@ PlnConditionalBranch.o:  \
 	models/../PlnScopeStack.h models/../PlnGenerator.h \
 	models/expressions/PlnCmpOperation.h \
 	models/expressions/../../PlnConstants.h
+PlnHeapAllocator.o:  models/PlnHeapAllocator.h \
+	models/PlnExpression.h models/../PlnModel.h models/PlnType.h \
+	models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnConstants.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
@@ -86,11 +91,14 @@ PlnCmpOperation.o:  \
 	models/expressions/../../PlnGenerator.h models/expressions/../PlnType.h
 PlnBoolOperation.o:  \
 	models/expressions/PlnBoolOperation.h \
+	models/expressions/PlnCmpOperation.h \
 	models/expressions/../PlnExpression.h \
-	models/expressions/../../PlnModel.h models/expressions/PlnCmpOperation.h \
-	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnConstants.h models/expressions/../PlnType.h \
+	models/expressions/../PlnModule.h \
 	models/expressions/../../PlnDataAllocator.h \
-	models/expressions/../../PlnGenerator.h models/expressions/../PlnType.h
+	models/expressions/../../PlnGenerator.h \
+	models/expressions/../../PlnScopeStack.h
 PlnAssignment.o:  \
 	models/expressions/PlnAssignment.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
@@ -132,9 +140,9 @@ PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h models/expressions/PlnArrayItem.h \
-	models/expressions/PlnAssignment.h models/expressions/PlnCmpOperation.h \
-	models/expressions/../../PlnConstants.h \
-	models/expressions/PlnBoolOperation.h PlnMessage.h PlnParser.hpp \
+	models/expressions/PlnAssignment.h models/expressions/PlnBoolOperation.h \
+	models/expressions/PlnCmpOperation.h \
+	models/expressions/../../PlnConstants.h PlnMessage.h PlnParser.hpp \
 	PlnScopeStack.h stack.hh location.hh position.hh PlnLexer.h
 PlnLexer.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
 	models/PlnExpression.h stack.hh location.hh position.hh PlnLexer.h

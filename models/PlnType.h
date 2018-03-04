@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 

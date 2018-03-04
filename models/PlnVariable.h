@@ -26,6 +26,8 @@ public:
 	PlnDataPlace* load_place;
 };
 
+class PlnHeapAllocator;
+
 // Variable initialization
 class PlnVarInit {
 public:
@@ -35,6 +37,9 @@ public:
 
 	vector<PlnValue> vars;
 	vector<PlnExpression*> initializer;
+	vector<PlnHeapAllocator*> allocators;
+
+	void addVar(PlnValue var);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
