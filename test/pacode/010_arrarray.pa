@@ -1,1 +1,14 @@
-int32[3][5] aa;
+ccall int32 printf();
+ccall exit();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
+
+setenv("MALLOC_TRACE", "out/mtrace010", 1);
+mtrace();
+{
+	int32[3][5,2] aa1;
+	int32[2,3][4] aa2;
+}
+muntrace();
+exit(0);

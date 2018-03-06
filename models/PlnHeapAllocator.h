@@ -9,8 +9,8 @@ class PlnHeapAllocator : public PlnExpression
 {
 public:
 	PlnHeapAllocator();
-	static PlnHeapAllocator* createHeapAllocation(
-		vector<PlnType*> &var_type
-	);
+
+	static PlnHeapAllocator* createHeapAllocation(vector<PlnType*> &var_type);
+	static PlnHeapAllocator* createHeapFree(vector<PlnType*> &var_type);
 };
 

@@ -22,6 +22,7 @@ public:
 			int item_size;
 			vector<int>* sizes;
 		} fixedarray;
+
 	} inf;
 
 	static vector<PlnType*> getBasicTypes();
@@ -29,4 +30,6 @@ public:
 	static PlnType* getSint();
 	static PlnType* getUint();
 	static PlnType* getReadOnlyCStr();
+	static PlnType* getObject();
+	static PlnType* getRawArray();
 };

@@ -51,8 +51,12 @@ PlnConditionalBranch.o:  \
 	models/expressions/../../PlnConstants.h
 PlnHeapAllocator.o:  models/PlnHeapAllocator.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnType.h \
-	models/../PlnDataAllocator.h models/../PlnGenerator.h \
-	models/../PlnConstants.h
+	models/PlnBlock.h models/PlnStatement.h models/PlnVariable.h \
+	models/PlnLoopStatement.h models/expressions/PlnArrayItem.h \
+	models/expressions/PlnAssignment.h models/expressions/PlnCmpOperation.h \
+	models/expressions/../../PlnConstants.h \
+	models/expressions/PlnAddOperation.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
