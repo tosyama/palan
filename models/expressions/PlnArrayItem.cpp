@@ -38,23 +38,33 @@ static PlnExpression* getIndexExpression(
 }
 
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind)
+	: PlnArrayItem(array_ex, item_ind, array_ex->values[0].inf.var->var_type)
+{
+}
+
+// Can be any array type.
+PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind,
+	vector<PlnType*> arr_type)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
 {
 	BOOST_ASSERT(item_ind.size());
+	BOOST_ASSERT(array_ex->type == ET_VALUE);
+	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
 
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 	var->name = array_var->name + "[]";
-	var->var_type = array_var->var_type;
+	var->var_type = arr_type;
 	var->var_type.pop_back();
 	var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
 	var->place->comment = &var->name;
 	values.push_back(PlnValue(var));
 
-	auto arr_sizes = array_var->var_type.back()->inf.fixedarray.sizes;
+	auto arr_sizes = arr_type.back()->inf.fixedarray.sizes;
 	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
 	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
 }
+
 
 void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {

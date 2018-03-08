@@ -1,11 +1,10 @@
 /// Block model class definition.
 ///
-/// Block model manage list of statement and
-/// local variables.
+/// Block model manage list of statements and local variables.
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
@@ -17,6 +16,7 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnArray.h"
+#include "PlnHeapAllocator.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -51,7 +51,7 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_t
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 
-	if (var_type.size()>0){
+	if (var_type.size() > 0) {
 		v->var_type = move(var_type);
 		if (v->var_type.back()->data_type == DT_OBJECT_REF)
 			v->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
@@ -62,6 +62,11 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_t
 	}
 
 	variables.push_back(v);
+
+	if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
+		auto h_free = PlnHeapAllocator::createHeapFree(v);
+		freers.push_back(h_free);
+	}
 
 	return v;
 }
@@ -93,12 +98,12 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto s: statements)
 		s->finish(da, si);
 	
-	for (auto v: variables) {
+	for (auto freer: freers)
+		freer->finish(da, si);
+	
+	for (auto v: variables)
 		da.releaseData(v->place);
-		if (v->ptr_type & PTR_OWNERSHIP) {
-			da.memFreed();
-		}
-	}
+	
 	si.pop_owner_vars(this);
 	si.pop_scope();
 }
@@ -135,16 +140,8 @@ void PlnBlock::gen(PlnGenerator& g)
 
 	// TODO?: check condition: need not call this after jump statement.
 	// Note: "return statement" frees vars insted of block when function end.
-	if (parent_block) genFreeOwnershipVars(g);
+	for (auto freer: freers)
+		freer->gen(g);
+
 	g.comment("}");
 }
-
-void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)
-{
-	for (auto v: variables) 
-		if (v->ptr_type & PTR_OWNERSHIP) {
-			auto e = g.getEntity(v->place);
-			g.genMemFree(e.get(), v->name, false);
-		}
-}
-
