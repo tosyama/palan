@@ -19,8 +19,9 @@ SRCS=palan.cpp \
 	models/expressions/PlnArrayItem.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
-	PlnDataAllocator.cpp PlnGenerator.cpp\
-	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
+	PlnDataAllocator.cpp PlnGenerator.cpp \
+	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp \
+	PlnBuildTreeHelper.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators

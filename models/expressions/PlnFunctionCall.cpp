@@ -21,6 +21,9 @@
 
 using std::endl;
 
+static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
+static bool is_init_ifunc = false;
+
 // PlnFunctionCall
 PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	: PlnExpression(ET_FUNCCALL),
@@ -172,3 +175,29 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			BOOST_ASSERT(false);
 	}
 }
+
+static void initInternalFunctions()
+{
+	PlnFunction* f;
+	string ret_name = "";
+
+	f = new PlnFunction(FT_C, "malloc");
+	vector<PlnType*> ret_type = { PlnType::getObject() };
+	f->addRetValue(ret_name, &ret_type);
+	internalFuncs[IFUNC_FREE] = f;
+
+	f = new PlnFunction(FT_C, "free");
+	internalFuncs[IFUNC_FREE] = f;
+}
+
+PlnFunction* PlnFunctionCall::getInternalFunc(PlnInternalFuncType func_type)
+{
+	BOOST_ASSERT(func_type < IFUNC_NUM);
+	if (!is_init_ifunc) {
+		initInternalFunctions();
+		is_init_ifunc = true;
+	}
+
+	return internalFuncs[func_type];
+}
+
