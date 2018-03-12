@@ -29,42 +29,34 @@ PlnHeapAllocator::PlnHeapAllocator()
 class PlnArrayHeapAllocator : public PlnHeapAllocator
 {
 public:
-	PlnDataPlace *ret_dp;
-	PlnVariable *arr_var;
-	vector<PlnType*> var_type;
 	PlnBlock* block;
 
-	PlnArrayHeapAllocator(vector<PlnType*> &var_type);
+	PlnArrayHeapAllocator(PlnValue var_val);
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void dump(ostream& os, string indent="") override;
 	void gen(PlnGenerator& g) override;
 };
 
-PlnArrayHeapAllocator::PlnArrayHeapAllocator(vector<PlnType*> &var_type)
-	: ret_dp(NULL), var_type(var_type), block(NULL)
+PlnArrayHeapAllocator::PlnArrayHeapAllocator(PlnValue var_val)
 {
-	// setup return value info.
-	PlnValue v;
-	v.type = VL_WORK;
-	v.lval_type = NO_LVL;
-	v.inf.wk_type = var_type.back();
-	values.push_back(v);
+	BOOST_ASSERT(var_val.type == VL_VAR);
+	vector<PlnType*> var_type = var_val.inf.var->var_type;
 
 	BOOST_ASSERT(var_type.size() >= 2);
 	vector<PlnType*> item_type = var_type;
 	item_type.pop_back();
 
-	if (item_type.back()->data_type != DT_OBJECT_REF)
+	auto arr_inf = &var_type.back()->inf.fixedarray;
+	block = new PlnBlock();
+
+	BOOST_ASSERT(arr_inf->is_fixed_size);
+	palan::malloc(block, var_val.inf.var, arr_inf->alloc_size);
+
+	if (item_type.back()->data_type != DT_OBJECT_REF) {
 		return;
+	}
 
 	// Construct model tree for allocate array member.
-	
-	BOOST_ASSERT(item_type.back()->inf.obj.is_fixed_size);
-	arr_var = new PlnVariable();
-	arr_var->name = "__arr";
-	arr_var->var_type = var_type;
-	arr_var->var_type.back() = PlnType::getRawArray();
-	block = new PlnBlock();
 
 	// {
 	//  uint64 __cnt = 0;
@@ -73,9 +65,7 @@ PlnArrayHeapAllocator::PlnArrayHeapAllocator(vector<PlnType*> &var_type)
 	{	// while __cnt < item_num {
 		PlnCmpOperation *cmp_op;
 		{
-			uint64_t item_num = 1;
-			for (int sz: *var_type.back()->inf.fixedarray.sizes)
-				item_num = item_num * sz;
+			uint64_t item_num = arr_inf->alloc_size / arr_inf->item_size;
 
 			auto cnt_ex = new PlnExpression(cnt_var);
 			auto n_ex = new PlnExpression((uint64_t) item_num);
@@ -85,19 +75,30 @@ PlnArrayHeapAllocator::PlnArrayHeapAllocator(vector<PlnType*> &var_type)
 		auto wblock = new PlnBlock();
 		auto whl = new PlnWhileStatement(cmp_op, wblock, block);
 
-		// allocated address -> __arr[__cnt];
+		// ? __item;
+		PlnVariable *item_var;
 		{
-			PlnHeapAllocator* h_alloc = createHeapAllocation(item_type);
-			BOOST_ASSERT(h_alloc);
+			static string item_name = "__item";
+			auto item_var_type = item_type;
+			item_var = wblock->declareVariable(item_name, item_var_type);
+			vector<PlnValue> vars = {item_var};
 
-			vector<PlnExpression*> lvals, exps, inds;
-			auto arr_ex = new PlnExpression(arr_var);
+			wblock->statements.push_back(new PlnStatement(new PlnVarInit(vars), wblock));
+		}
+
+		// __item -> __arr[__cnt];
+		{
+			auto arr_ex = new PlnExpression(var_val);
 			auto cnt_ex = new PlnExpression(cnt_var);
-			inds.push_back(cnt_ex);
-			auto arr_item = new PlnArrayItem(arr_ex, inds);
+			vector<PlnExpression*> inds = { cnt_ex };
 
-			lvals.push_back(arr_item);
-			exps.push_back(h_alloc);
+			vector<PlnType*> arr_type = var_type;
+			arr_type.back() = PlnType::getRawArray(); // [,,..] => [?]
+
+			auto arr_item = new PlnArrayItem(arr_ex, inds, arr_type);
+			vector<PlnExpression*> lvals = { arr_item };
+			
+			vector<PlnExpression*> exps = { new PlnExpression(item_var) };
 			auto assign = new PlnAssignment(lvals, exps);
 			wblock->statements.push_back(new PlnStatement(assign, wblock));
 		}
@@ -113,22 +114,8 @@ PlnArrayHeapAllocator::PlnArrayHeapAllocator(vector<PlnType*> &var_type)
 
 void PlnArrayHeapAllocator::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	BOOST_ASSERT(data_places.size());
-	auto ainf = &var_type.back()->inf.fixedarray;
-
-	BOOST_ASSERT(ainf->is_fixed_size);
-	da.memAlloced();
-	if (block) {
-		arr_var->place = da.allocData(8, DT_OBJECT_REF);
-		arr_var->place->comment = &arr_var->name;
-		ret_dp = arr_var->place;	
-		block->finish(da, si);
-	} else {
-		ret_dp = da.prepareAccumulator(DT_OBJECT_REF);
-		da.allocDp(ret_dp);
-	}
-	da.pushSrc(data_places[0], ret_dp);
-
+	BOOST_ASSERT(block);
+	block->finish(da, si);
 }
 
 void PlnArrayHeapAllocator::dump(ostream& os, string indent)
@@ -138,14 +125,10 @@ void PlnArrayHeapAllocator::dump(ostream& os, string indent)
 
 void PlnArrayHeapAllocator::gen(PlnGenerator& g)
 {
-	auto ainf = &var_type.back()->inf.fixedarray;
-
-	auto e = g.getEntity(ret_dp);
-	g.genMemAlloc(e.get(), ainf->alloc_size, "alloc array");
-	if (block) block->gen(g);
-	g.genSaveSrc(data_places[0]);
+	block->gen(g);
 }
 
+// PlnArrayHeapFreer
 class PlnArrayHeapFreer : public PlnHeapAllocator
 {
 public:
@@ -195,6 +178,7 @@ PlnArrayHeapFreer::PlnArrayHeapFreer(PlnVariable* var)
 
 			// If the block is child, the block will create HeapFree for varialbes.
 			// So, the moved array item will free when exit block.
+			// Block will create Freer of child itrms.
 			auto wblock = new PlnBlock();
 			wblock->setParent(block);
 			{
@@ -215,7 +199,7 @@ PlnArrayHeapFreer::PlnArrayHeapFreer(PlnVariable* var)
 
 				vector<PlnExpression*> inis;
 				inis.push_back(arr_item);
-				wblock->statements.push_back(new PlnStatement(new PlnVarInit(vars, inis), block));
+				wblock->statements.push_back(new PlnStatement(new PlnVarInit(vars, inis), wblock));
 
 				// __cnt+1 -> __cnt;
 				palan::incrementUInt(wblock, cnt_var, 1);
@@ -248,11 +232,11 @@ void PlnArrayHeapFreer::gen(PlnGenerator& g)
 	block->gen(g);
 }
 
-PlnHeapAllocator* PlnHeapAllocator::createHeapAllocation(vector<PlnType*> &var_type)
+PlnHeapAllocator* PlnHeapAllocator::createHeapAllocation(PlnValue var_val)
 {
-	PlnType* vt = var_type.back();
+	PlnType* vt = var_val.inf.var->var_type.back();
 	if (vt->name == "[]") {
-		return new PlnArrayHeapAllocator(var_type);
+		return new PlnArrayHeapAllocator(var_val);
 	}
 
 	return NULL;	

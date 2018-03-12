@@ -30,7 +30,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
 	for (auto v: this->vars) {
 		BOOST_ASSERT(v.type == VL_VAR);
 		PlnHeapAllocator* a;
-		a = PlnHeapAllocator::createHeapAllocation(v.inf.var->var_type);
+		a = PlnHeapAllocator::createHeapAllocation(v);
 		allocators.push_back(a);
 	}
 }
@@ -75,7 +75,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 void PlnVarInit::addVar(PlnValue var) {
 	vars.push_back(var);
 	PlnHeapAllocator* a;
-	a = PlnHeapAllocator::createHeapAllocation(var.inf.var->var_type);
+	a = PlnHeapAllocator::createHeapAllocation(var);
 	allocators.push_back(a);
 }
 
@@ -94,11 +94,8 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.push_owner_var(v);
 		}
 
-		if (auto a = allocators[i]) {
-			a->data_places.push_back(val.getDataPlace(da));
+		if (auto a = allocators[i])
 			a->finish(da, si);
-			da.popSrc(a->data_places[0]);
-		}
 
 		++i;
 	}
@@ -123,10 +120,9 @@ void PlnVarInit::gen(PlnGenerator& g)
 	int i=0;
 	for (auto val: vars) {
 		PlnVariable *v = val.inf.var;
-		if (auto a = allocators[i]) {
+		if (auto a = allocators[i])
 			a->gen(g);
-			g.genLoadDp(a->data_places[0]);
-		}
+		
 		i++;
 	}
 
