@@ -17,6 +17,7 @@ public:
 	vector<PlnType*> var_type;
 	string name;
 	PlnDataPlace* place;
+	PlnVariable* container;
 	int ptr_type;
 };
 

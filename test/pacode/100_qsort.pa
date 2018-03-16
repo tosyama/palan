@@ -1,7 +1,7 @@
 ccall int32 printf();
 ccall exit();
 
-func show(int16[10] data, int32 n)
+func show(int16[10] data)
 {
 	int32 i=0;
 	while i<10 {
@@ -52,10 +52,10 @@ while i<10 {
 
 // sort
 printf("before:");
-show(data, 10);
+show(data);
 quicksort(data>>, 0, 9) ->> data;
 printf("after:");
-show(data, 10);
+show(data);
 
 // flush stdout.
 exit(0);

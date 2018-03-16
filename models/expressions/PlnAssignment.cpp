@@ -14,6 +14,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnScopeStack.h"
 
 // PlnAssignment
 PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps)
@@ -54,7 +55,7 @@ inline union PlnAssignInf getDeepCopyAssignInf(PlnDataAllocator& da, PlnValue& d
 	return as_inf;
 }
 
-inline union PlnAssignInf getMoveOwnerAssignInf(PlnValue& dst_val, PlnValue& src_val)
+inline union PlnAssignInf getMoveOwnerAssignInf(PlnScopeInfo& si, PlnValue& dst_val, PlnValue& src_val)
 {
 	union PlnAssignInf as_inf;
 
@@ -66,19 +67,19 @@ inline union PlnAssignInf getMoveOwnerAssignInf(PlnValue& dst_val, PlnValue& src
 		static string cmt = "save";
 		as_inf.move.src = new PlnDataPlace(8, DT_OBJECT_REF);
 		as_inf.move.src->comment = &cmt;
-		as_inf.move.do_clear_src = false; 
+		as_inf.move.do_clear_var = NULL; 
 
 	} else {
 		// normal var
 		BOOST_ASSERT(src_val.type == VL_VAR);
 		as_inf.move.src = src_val.inf.var->place;
-		as_inf.move.do_clear_src = true;
+		as_inf.move.do_clear_var = src_val.inf.var;
 	}
 
 	return as_inf;
 }
 
-inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, union PlnAssignInf* as_inf, PlnValue& dst_val, PlnValue& src_val)
+inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, PlnScopeInfo& si, union PlnAssignInf* as_inf, PlnValue& dst_val, PlnValue& src_val)
 {
 	if (dst_val.inf.var->ptr_type == NO_PTR) {
 		as_inf->type = AI_PRIMITIVE;
@@ -89,7 +90,7 @@ inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, union PlnAssignInf* 
 	
 	// (ptr_type & PTR_REFERNCE)
 	BOOST_ASSERT(dst_val.getType()->data_type == DT_OBJECT_REF);
-//	BOOST_ASSERT(src_val.getType()->data_type == DT_OBJECT_REF);
+	BOOST_ASSERT(src_val.getType()->data_type == DT_OBJECT_REF);
 
 	PlnDataPlace *ret_dp;
 	switch (dst_val.lval_type) {
@@ -99,7 +100,7 @@ inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, union PlnAssignInf* 
 			break;
 
 		case LVL_MOVE: // Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
-			*as_inf = getMoveOwnerAssignInf(dst_val, src_val);
+			*as_inf = getMoveOwnerAssignInf(si, dst_val, src_val);
 			ret_dp = as_inf->move.src;
 			break;
 
@@ -125,7 +126,7 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			BOOST_ASSERT(dst_val.type == VL_VAR);
 
 			union PlnAssignInf as_inf;
-			auto dst_dp = prepareAssignInf(da, &as_inf, dst_val, src_val);
+			auto dst_dp = prepareAssignInf(da, si, &as_inf, dst_val, src_val);
 			e->data_places.push_back(dst_dp);
 			assign_inf.push_back(as_inf);
 
@@ -145,8 +146,8 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 					break;
 
 				case AI_MOVE:
-					if (!as_inf.move.do_clear_src) 
-						da.allocData(as_inf.move.src);
+					if (!as_inf.move.do_clear_var) 
+						da.allocData(as_inf.move.src); // for save work.
 					break;
 			}
 		}
@@ -177,8 +178,14 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				case AI_MOVE:
 					da.popSrc(as_inf.move.src);
 					da.memFreed();
-					if (!as_inf.move.do_clear_src)
+
+					if (auto var = as_inf.move.do_clear_var) {
+						if (si.exists_current(var))
+							si.set_lifetime(var, VLT_FREED);
+					} else {
 						da.releaseData(as_inf.move.src);
+					}
+
 					break;
 			}
 		}
@@ -197,7 +204,7 @@ void PlnAssignment::dump(ostream& os, string indent)
 }
 
 static void genDeepCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp);
-static void genMoveOwner4Assign(PlnGenerator &g, PlnAssignInf &as);
+static void genMoveOwner4Assign(PlnGenerator &g, PlnExpression *lval_ex, PlnAssignInf &as);
 
 void PlnAssignment::gen(PlnGenerator& g)
 {
@@ -210,17 +217,20 @@ void PlnAssignment::gen(PlnGenerator& g)
 		e->gen(g);
 
 		for (int di=0; vi < vcnt; vi++, di++) {
-			lvals[vi]->gen(g);
 		
 			switch (assign_inf[vi].type) {
 				case AI_PRIMITIVE:
+					lvals[vi]->gen(g);
 					g.genLoadDp(assign_inf[vi].inf.dp);
 					break;
+
 				case AI_MCOPY:
+					lvals[vi]->gen(g);
 					genDeepCopy4Assign(g, assign_inf[vi], values[vi].inf.var->place);
 					break;
+
 				case AI_MOVE:
-					genMoveOwner4Assign(g, assign_inf[vi]);
+					genMoveOwner4Assign(g, lvals[vi], assign_inf[vi]);
 					break;
 				default:
 					BOOST_ASSERT(false);
@@ -260,19 +270,22 @@ void genDeepCopy4Assign(PlnGenerator &g, PlnAssignInf &as, PlnDataPlace *var_dp)
 	}
 }
 
-void genMoveOwner4Assign(PlnGenerator &g, PlnAssignInf &as)
+void genMoveOwner4Assign(PlnGenerator &g, PlnExpression *lval_ex, PlnAssignInf &as)
 {
 	auto as_inf = as.move;
 
 	g.genLoadDp(as_inf.src);
 
+	lval_ex->gen(g);
 	auto dste = g.getEntity(as_inf.dst);
 	static string cmt = "lost ownership";
 	g.genMemFree(dste.get(), cmt, false);
+
+	lval_ex->gen(g);
 	auto srce = g.getEntity(as_inf.src);
 	g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
 
-	if (as_inf.do_clear_src) {
+	if (as_inf.do_clear_var) {
 		vector<unique_ptr<PlnGenEntity>> clr_es;
 		clr_es.push_back(g.getEntity(as_inf.src));
 		g.genNullClear(clr_es);

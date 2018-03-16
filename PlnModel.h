@@ -35,7 +35,7 @@ class PlnVariable;
 	class PlnParameter;
 
 class PlnReadOnlyData;
-class PlnArray;
+class PlnArrayItem;
 class PlnDataAllocator;
 class PlnDataPlace;
 

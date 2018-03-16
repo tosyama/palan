@@ -97,20 +97,31 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (auto a = allocators[i])
 			a->finish(da, si);
 
+		if (v->ptr_type & PTR_OWNERSHIP) {
+			si.set_lifetime(v, VLT_ALLOCED);
+		}
+
 		++i;
 	}
 
 	// initialze.
 	i=0;
 	for (auto ie: initializer) {
+		int j=i;
 		for (auto ev: ie->values) {
 			if (i >= vars.size()) break;
 			ie->data_places.push_back(vars[i].inf.var->place);
 			i++;
 		}
 		ie->finish(da, si);
-		for (auto sdp: ie->data_places)
+		for (auto sdp: ie->data_places) {
 			da.popSrc(sdp);
+			auto v = vars[j].inf.var;
+			if (v->ptr_type & PTR_OWNERSHIP) {
+				si.set_lifetime(v, VLT_INITED);
+			}
+			j++;
+		}
 	}
 }
 

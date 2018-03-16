@@ -25,6 +25,10 @@ public:
 		PlnFunction *function;
 		PlnBlock *block;
 	} inf;
+	bool operator==(const PlnScopeItem &si) const
+	{
+		return (type == si.type && inf.block == si.inf.block);
+	}
 };
 
 typedef std::vector<PlnScopeItem>	PlnScopeStack;
@@ -37,12 +41,21 @@ inline PlnFunction* searchFunction(PlnScopeStack& ss)
 }
 
 // use for finishing
+enum PlnVarLifetime {
+	VLT_UNKNOWN,
+	VLT_ALLOCED,
+	VLT_INITED,
+	VLT_FREED
+};
+
 class PlnScopeVarInfo {
 public:	
 	PlnVariable* var;
 	PlnScopeItem scope;
 
-	PlnScopeVarInfo(PlnVariable* v, PlnScopeItem s) :var(v), scope(s) { };
+	PlnVarLifetime lifetime;
+	PlnScopeVarInfo(PlnVariable* v, PlnScopeItem s)
+		:var(v), scope(s), lifetime(VLT_UNKNOWN) { };
 };
 
 class PlnScopeInfo {
@@ -65,4 +78,8 @@ public:
 			else ++it;
 		}
 	}
+
+	bool exists_current(PlnVariable* v);
+	void set_lifetime(PlnVariable* v, PlnVarLifetime lt);
+	PlnVarLifetime get_lifetime(PlnVariable* v);
 };

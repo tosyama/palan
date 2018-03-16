@@ -43,30 +43,27 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type)
+PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
 	
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
+	v->container = NULL;
 
 	if (var_type.size() > 0) {
 		v->var_type = move(var_type);
-		if (v->var_type.back()->data_type == DT_OBJECT_REF)
-			v->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-		else v->ptr_type = NO_PTR;
+		if (v->var_type.back()->data_type == DT_OBJECT_REF) {
+			v->ptr_type = is_owner ? PTR_REFERENCE | PTR_OWNERSHIP
+							: PTR_REFERENCE;
+		} else v->ptr_type = NO_PTR;
 	} else {
 		v->var_type = variables.back()->var_type;
 		v->ptr_type = variables.back()->ptr_type;
 	}
 
 	variables.push_back(v);
-
-	if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
-		auto h_free = PlnHeapAllocator::createHeapFree(v);
-		freers.push_back(h_free);
-	}
 
 	return v;
 }
@@ -98,11 +95,17 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto s: statements)
 		s->finish(da, si);
 	
-	for (auto freer: freers)
-		freer->finish(da, si);
-	
-	for (auto v: variables)
+	for (auto v: variables) {
+		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
+			auto lt = si.get_lifetime(v);
+			if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+				auto h_free = PlnHeapAllocator::createHeapFree(v);
+				h_free->finish(da, si);
+				freers.push_back(h_free);
+			}
+		}
 		da.releaseData(v->place);
+	}
 	
 	si.pop_owner_vars(this);
 	si.pop_scope();

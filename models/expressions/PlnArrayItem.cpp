@@ -16,6 +16,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnConstants.h"
 
 static PlnExpression* getIndexExpression(
 	int index, int offset,
@@ -58,13 +59,19 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	var->var_type.pop_back();
 	var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
 	var->place->comment = &var->name;
+	if (var->var_type.back()->data_type == DT_OBJECT_REF) {
+		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
+	} else {
+		var->ptr_type = NO_PTR;
+	}
+	var->container = array_var;
+
 	values.push_back(PlnValue(var));
 
 	auto arr_sizes = arr_type.back()->inf.fixedarray.sizes;
 	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
 	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
 }
-
 
 void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
