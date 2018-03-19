@@ -68,6 +68,8 @@ public:
 	virtual void genMainReturn()=0;
 	virtual void genStringData(int index, const string& str)=0;
 	virtual void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
+	virtual void genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
+
 	virtual void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genNegative(PlnGenEntity* tgt, string comment)=0;

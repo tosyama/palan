@@ -55,7 +55,7 @@ inline union PlnAssignInf getDeepCopyAssignInf(PlnDataAllocator& da, PlnValue& d
 	return as_inf;
 }
 
-inline union PlnAssignInf getMoveOwnerAssignInf(PlnScopeInfo& si, PlnValue& dst_val, PlnValue& src_val)
+inline union PlnAssignInf getMoveOwnerAssignInf(PlnDataAllocator& da, PlnScopeInfo& si, PlnValue& dst_val, PlnValue& src_val)
 {
 	union PlnAssignInf as_inf;
 
@@ -68,12 +68,23 @@ inline union PlnAssignInf getMoveOwnerAssignInf(PlnScopeInfo& si, PlnValue& dst_
 		as_inf.move.src = new PlnDataPlace(8, DT_OBJECT_REF);
 		as_inf.move.src->comment = &cmt;
 		as_inf.move.do_clear_var = NULL; 
+		as_inf.move.save_indirect = NULL;
 
 	} else {
 		// normal var
 		BOOST_ASSERT(src_val.type == VL_VAR);
 		as_inf.move.src = src_val.inf.var->place;
 		as_inf.move.do_clear_var = src_val.inf.var;
+		if (dst_val.inf.var->ptr_type & PTR_INDIRECT_ACCESS) {
+			auto save_dp = new PlnDataPlace(8, DT_OBJECT_REF);
+			auto base_dp = da.prepareObjBasePtr();
+
+			da.setIndirectObjDp(save_dp, base_dp, NULL);
+			as_inf.move.save_indirect = save_dp;
+
+		} else {
+			as_inf.move.save_indirect = NULL;
+		}
 	}
 
 	return as_inf;
@@ -100,7 +111,7 @@ inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, PlnScopeInfo& si, un
 			break;
 
 		case LVL_MOVE: // Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
-			*as_inf = getMoveOwnerAssignInf(si, dst_val, src_val);
+			*as_inf = getMoveOwnerAssignInf(da, si, dst_val, src_val);
 			ret_dp = as_inf->move.src;
 			break;
 
@@ -177,7 +188,13 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				
 				case AI_MOVE:
 					da.popSrc(as_inf.move.src);
-					da.memFreed();
+					if (as_inf.move.save_indirect) {
+						da.allocDp(as_inf.move.save_indirect->data.indirect.base_dp);
+						da.memFreed();
+						da.releaseData(as_inf.move.save_indirect->data.indirect.base_dp);
+					} else {
+						da.memFreed();
+					}
 
 					if (auto var = as_inf.move.do_clear_var) {
 						if (si.exists_current(var))
@@ -278,12 +295,27 @@ void genMoveOwner4Assign(PlnGenerator &g, PlnExpression *lval_ex, PlnAssignInf &
 
 	lval_ex->gen(g);
 	auto dste = g.getEntity(as_inf.dst);
-	static string cmt = "lost ownership";
-	g.genMemFree(dste.get(), cmt, false);
-
-	lval_ex->gen(g);
 	auto srce = g.getEntity(as_inf.src);
-	g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+
+	// Free losted owner variable.
+	static string cmt = "lost ownership";
+	if (as_inf.save_indirect) {
+		// TODO: Use genLoadDp.
+		auto savei_base_e = g.getEntity(as_inf.save_indirect->data.indirect.base_dp);
+		g.genLoadAddress(savei_base_e.get(), dste.get(), "save address of " + as_inf.dst->cmt());
+
+		auto savei_e = g.getEntity(as_inf.save_indirect);
+		g.genMemFree(savei_e.get(), cmt, false);
+
+		// assign value.
+		g.genMove(savei_e.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+
+	} else {
+		g.genMemFree(dste.get(), cmt, false);
+
+		// assign value.
+		g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
+	}
 
 	if (as_inf.do_clear_var) {
 		vector<unique_ptr<PlnGenEntity>> clr_es;

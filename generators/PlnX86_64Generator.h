@@ -32,6 +32,8 @@ public:
 	void genMainReturn() override;
 	void genStringData(int index, const string& str) override;
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment) override;
+	void genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
+
 	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
 	void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
 	void genNegative(PlnGenEntity* tgt, string comment) override;

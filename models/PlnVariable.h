@@ -9,7 +9,8 @@ enum {
 	NO_PTR = 0,
 	PTR_REFERENCE = 1,
 	PTR_OWNERSHIP = 2,
-	PTR_CLONE = 4, 
+	PTR_INDIRECT_ACCESS = 4,	// for class member / array item.
+	PTR_CLONE = 8	// for parameter
 };
 
 class PlnVariable {
