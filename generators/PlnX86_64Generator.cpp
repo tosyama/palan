@@ -574,7 +574,7 @@ void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
 	os << "	rep movs" << safix << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doNull)
+void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string comment, bool doNull)
 {
 	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
 	os << "	call free";

@@ -85,6 +85,13 @@ inline union PlnAssignInf getMoveOwnerAssignInf(PlnDataAllocator& da, PlnScopeIn
 		} else {
 			as_inf.move.save_indirect = NULL;
 		}
+
+		auto lt = si.get_lifetime(dst_val.inf.var);
+		if (lt == VLT_ALLOCED || lt == VLT_INITED)
+			as_inf.move.do_free_dst = true;
+		else
+			as_inf.move.do_free_dst = false;
+
 	}
 
 	return as_inf;
@@ -203,6 +210,10 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 						da.releaseData(as_inf.move.src);
 					}
 
+					auto dst_var = values[i].inf.var;
+					if (si.exists_current(dst_var))
+						si.set_lifetime(dst_var, VLT_INITED);
+
 					break;
 			}
 		}
@@ -298,8 +309,8 @@ void genMoveOwner4Assign(PlnGenerator &g, PlnExpression *lval_ex, PlnAssignInf &
 	auto srce = g.getEntity(as_inf.src);
 
 	// Free losted owner variable.
-	static string cmt = "lost ownership";
-	if (as_inf.save_indirect) {
+	static string cmt = "lost ownership ";
+	if (as_inf.save_indirect && as_inf.do_free_dst) {
 		// TODO: Use genLoadDp.
 		auto savei_base_e = g.getEntity(as_inf.save_indirect->data.indirect.base_dp);
 		g.genLoadAddress(savei_base_e.get(), dste.get(), "save address of " + as_inf.dst->cmt());
@@ -311,7 +322,8 @@ void genMoveOwner4Assign(PlnGenerator &g, PlnExpression *lval_ex, PlnAssignInf &
 		g.genMove(savei_e.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
 
 	} else {
-		g.genMemFree(dste.get(), cmt, false);
+		if (as_inf.do_free_dst)
+			g.genMemFree(dste.get(), cmt + as_inf.dst->cmt(), false);
 
 		// assign value.
 		g.genMove(dste.get(), srce.get(), *as_inf.src->comment + " -> " + *as_inf.dst->comment);
