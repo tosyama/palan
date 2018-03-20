@@ -253,7 +253,10 @@ void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 	dp->data.indirect.base_dp = base_dp;
 	dp->data.indirect.index_dp = index_dp;
 	dp->data.indirect.base_id = base_dp->data.reg.id;
-	dp->data.indirect.index_id = index_dp->data.reg.id;
+	if (index_dp)
+		dp->data.indirect.index_id = index_dp->data.reg.id;
+	else 
+		dp->data.indirect.index_id = -1;
 
 	dp->alloc_step = step;
 	dp->release_step = step;

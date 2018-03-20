@@ -72,6 +72,10 @@ if b<=i || b==0 { printf("e"); }
 
 printf("\n");
 
+printf("%d", b>=i || b>5 || b>i);
+printf("%d", b<=i || b>(i+15) || b>i);
+printf("%d\n", b<=i || b<5 || b<i);
+
 // NOT
 int16 s0, s1 = 0, 1;
 printf("%d%d",!0,!1);

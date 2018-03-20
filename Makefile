@@ -7,6 +7,7 @@ SRCS=palan.cpp \
 	models/PlnType.cpp models/PlnArray.cpp \
 	models/PlnLoopStatement.cpp \
 	models/PlnConditionalBranch.cpp \
+	models/PlnHeapAllocator.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \
@@ -18,8 +19,9 @@ SRCS=palan.cpp \
 	models/expressions/PlnArrayItem.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
-	PlnDataAllocator.cpp PlnGenerator.cpp\
-	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp
+	PlnDataAllocator.cpp PlnGenerator.cpp \
+	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp \
+	PlnBuildTreeHelper.cpp PlnScopeStack.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators

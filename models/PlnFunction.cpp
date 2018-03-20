@@ -65,7 +65,7 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype)
 	}
 
 	if (rname == "") ret_var->place = NULL;
-	else retval_init->vars.push_back(PlnValue(ret_var));
+	else retval_init->addVar(PlnValue(ret_var));
 	return_vals.push_back(ret_var);
 
 	return ret_var;

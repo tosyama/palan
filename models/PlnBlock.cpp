@@ -1,11 +1,10 @@
 /// Block model class definition.
 ///
-/// Block model manage list of statement and
-/// local variables.
+/// Block model manage list of statements and local variables.
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
@@ -17,6 +16,7 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnArray.h"
+#include "PlnHeapAllocator.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -43,19 +43,21 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type)
+PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
 	
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
+	v->container = NULL;
 
-	if (var_type.size()>0){
+	if (var_type.size() > 0) {
 		v->var_type = move(var_type);
-		if (v->var_type.back()->data_type == DT_OBJECT_REF)
-			v->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-		else v->ptr_type = NO_PTR;
+		if (v->var_type.back()->data_type == DT_OBJECT_REF) {
+			v->ptr_type = is_owner ? PTR_REFERENCE | PTR_OWNERSHIP
+							: PTR_REFERENCE;
+		} else v->ptr_type = NO_PTR;
 	} else {
 		v->var_type = variables.back()->var_type;
 		v->ptr_type = variables.back()->ptr_type;
@@ -94,11 +96,17 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		s->finish(da, si);
 	
 	for (auto v: variables) {
-		da.releaseData(v->place);
-		if (v->ptr_type & PTR_OWNERSHIP) {
-			da.memFreed();
+		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
+			auto lt = si.get_lifetime(v);
+			if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+				auto h_free = PlnHeapAllocator::createHeapFree(v);
+				h_free->finish(da, si);
+				freers.push_back(h_free);
+			}
 		}
+		da.releaseData(v->place);
 	}
+	
 	si.pop_owner_vars(this);
 	si.pop_scope();
 }
@@ -135,16 +143,8 @@ void PlnBlock::gen(PlnGenerator& g)
 
 	// TODO?: check condition: need not call this after jump statement.
 	// Note: "return statement" frees vars insted of block when function end.
-	if (parent_block) genFreeOwnershipVars(g);
+	for (auto freer: freers)
+		freer->gen(g);
+
 	g.comment("}");
 }
-
-void PlnBlock::genFreeOwnershipVars(PlnGenerator& g)
-{
-	for (auto v: variables) 
-		if (v->ptr_type & PTR_OWNERSHIP) {
-			auto e = g.getEntity(v->place);
-			g.genMemFree(e.get(), v->name, false);
-		}
-}
-

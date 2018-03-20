@@ -1,7 +1,7 @@
 /// All model classes declaration.
 ///
 /// @file	PlnModel.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #pragma once
 
@@ -35,7 +35,7 @@ class PlnVariable;
 	class PlnParameter;
 
 class PlnReadOnlyData;
-class PlnArray;
+class PlnArrayItem;
 class PlnDataAllocator;
 class PlnDataPlace;
 

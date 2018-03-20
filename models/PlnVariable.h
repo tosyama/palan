@@ -9,7 +9,8 @@ enum {
 	NO_PTR = 0,
 	PTR_REFERENCE = 1,
 	PTR_OWNERSHIP = 2,
-	PTR_CLONE = 4, 
+	PTR_INDIRECT_ACCESS = 4,	// for class member / array item.
+	PTR_CLONE = 8	// for parameter
 };
 
 class PlnVariable {
@@ -17,6 +18,7 @@ public:
 	vector<PlnType*> var_type;
 	string name;
 	PlnDataPlace* place;
+	PlnVariable* container;
 	int ptr_type;
 };
 
@@ -25,6 +27,8 @@ public:
 	PlnValue* dflt_value;
 	PlnDataPlace* load_place;
 };
+
+class PlnHeapAllocator;
 
 // Variable initialization
 class PlnVarInit {
@@ -35,6 +39,9 @@ public:
 
 	vector<PlnValue> vars;
 	vector<PlnExpression*> initializer;
+	vector<PlnHeapAllocator*> allocators;
+
+	void addVar(PlnValue var);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

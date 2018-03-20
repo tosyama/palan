@@ -750,7 +750,7 @@ declarations: declaration
 
 declaration: type_def ID take_owner
 	{
-		auto var = CUR_BLOCK->declareVariable($2, $1);
+		auto var = CUR_BLOCK->declareVariable($2, $1, true);
 		if (!var) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -771,7 +771,7 @@ declaration: type_def ID take_owner
 subdeclaration: ID take_owner
 	{
 		vector<PlnType *> null_type;
-		auto var = CUR_BLOCK->declareVariable($1, null_type);
+		auto var = CUR_BLOCK->declareVariable($1, null_type, true);
 		if (!var) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $1));
 			YYABORT;
@@ -838,8 +838,8 @@ array_sizes: INT
 
 	| array_sizes ',' INT
 	{
-		$$ = move($1);
 		$$.push_back($3);
+		$$.insert($$.end(),$1.begin(),$1.end()); 
 	}
 	;
 
@@ -856,8 +856,8 @@ array_indexes: expression
 
 	| array_indexes ',' expression
 	{
-		$$ = move($1);
 		$$.push_back($3);
+		$$.insert($$.end(),$1.begin(),$1.end()); 
 	}
 	;
 

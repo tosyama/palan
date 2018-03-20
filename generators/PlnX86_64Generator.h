@@ -32,6 +32,8 @@ public:
 	void genMainReturn() override;
 	void genStringData(int index, const string& str) override;
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment) override;
+	void genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
+
 	void genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
 	void genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
 	void genNegative(PlnGenEntity* tgt, string comment) override;
@@ -41,8 +43,8 @@ public:
 	int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment) override;
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) override;
-	void genMemAlloc(PlnGenEntity* ref, int al_size, string& comment) override;
-	void genMemFree(PlnGenEntity* ref, string& comment, bool doNull = true) override;
+	void genMemAlloc(PlnGenEntity* ref, int al_size, string comment) override;
+	void genMemFree(PlnGenEntity* ref, string comment, bool doNull = true) override;
 	void genMemCopy(int cp_size, string& comment) override;
 
 	unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp) override;

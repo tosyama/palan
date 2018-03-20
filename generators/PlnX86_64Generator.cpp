@@ -353,6 +353,21 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	os << endl;
 }
 
+void PlnX86_64Generator::genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
+{
+	BOOST_ASSERT(src->alloc_type == GA_MEM);
+	BOOST_ASSERT(dst->size == 8);
+	int regid = R11;
+	if (dst->alloc_type == GA_REG) {
+		regid = dst->data.i;
+	}
+	os << "	lea " << oprnd(src) << ", " << r(regid, 8) << "	# " << comment << endl;
+
+	if (dst->alloc_type == GA_MEM) {
+		os << "	movq " << r(regid, 8) << ", " << oprnd(dst) << endl;
+	}
+}
+
 void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
@@ -526,14 +541,14 @@ void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
 	}
 }
 
-void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string& comment)
+void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string comment)
 {
 	os << "	movq $" << al_size << ", %rdi"	<< endl;
-	os << "	call malloc" << endl;
-	os << "	movq %rax, " << oprnd(ref);
-	
-	if (comment != "") os << "	# alloc " << comment;
+	os << "	call malloc";
+	if (comment != "") os << "	# " << comment;
 	os << endl;
+	if (strcmp(oprnd(ref), "%rax"))
+		os << "	movq %rax, " << oprnd(ref) << endl;
 }
 
 void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
@@ -559,7 +574,7 @@ void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
 	os << "	rep movs" << safix << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string& comment, bool doNull)
+void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string comment, bool doNull)
 {
 	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
 	os << "	call free";
@@ -576,8 +591,12 @@ static string* getAdressingStr(int displacement, int base_id, int index_id, int 
 {
 	string *str = new string(r(base_id));
 	string disp_s = displacement ? to_string(displacement) : "";
-	string ind_s = string(r(index_id)) + "," + to_string(scale);
-	*str = disp_s + "(" + *str + "," + ind_s + ")";
+	if (index_id > 0) {
+		string ind_s = string(r(index_id)) + "," + to_string(scale);
+		*str = disp_s + "(" + *str + "," + ind_s + ")";
+	} else {
+		*str = disp_s + "(" + *str + ")";
+	}
 
 	return str;
 }

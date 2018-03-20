@@ -16,6 +16,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnConstants.h"
 
 static PlnExpression* getIndexExpression(
 	int index, int offset,
@@ -38,20 +39,38 @@ static PlnExpression* getIndexExpression(
 }
 
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind)
+	: PlnArrayItem(array_ex, item_ind, array_ex->values[0].inf.var->var_type)
+{
+}
+
+// Can be any array type.
+PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind,
+	vector<PlnType*> arr_type)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
 {
 	BOOST_ASSERT(item_ind.size());
+	BOOST_ASSERT(array_ex->type == ET_VALUE);
+	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
 
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 	var->name = array_var->name + "[]";
-	var->var_type = array_var->var_type;
+	var->var_type = arr_type;
 	var->var_type.pop_back();
+	// TODO: Move place init to finish.
+	// Note: why here now? -> prepareAssignInf(NO_PTR case) will clash.
 	var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
 	var->place->comment = &var->name;
+	if (var->var_type.back()->data_type == DT_OBJECT_REF) {
+		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
+	} else {
+		var->ptr_type = NO_PTR;
+	}
+	var->container = array_var;
+
 	values.push_back(PlnValue(var));
 
-	auto arr_sizes = array_var->var_type.back()->inf.fixedarray.sizes;
+	auto arr_sizes = arr_type.back()->inf.fixedarray.sizes;
 	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
 	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
 }

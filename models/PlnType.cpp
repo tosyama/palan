@@ -16,6 +16,8 @@ static PlnType* byte_type = NULL;
 static PlnType* int_type = NULL;
 static PlnType* uint_type = NULL;
 static PlnType* ro_cstr_type = NULL;
+static PlnType* object_type = NULL;
+static PlnType* raw_array_type = NULL;
 
 static void initBasicTypes()
 {
@@ -78,10 +80,23 @@ static void initBasicTypes()
 	ro_cstr_type = t;
 
 	t = new PlnType();
-	t->name = "[]";
+	t->name = "object";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	basic_types.push_back(t);
+	object_type = t;
+
+	t = new PlnType();
+	t->name = "[?]";
+	t->data_type = DT_OBJECT_REF;
+	t->size = 8;
+	t->inf.fixedarray.is_fixed_size = false;
+	t->inf.fixedarray.alloc_size = 0;
+	t->inf.fixedarray.item_size = 0;
+	t->inf.fixedarray.sizes = new vector<int>();
+	t->inf.fixedarray.sizes->push_back(0);
+	basic_types.push_back(t);
+	raw_array_type = t;
 
 	is_initialzed_type = true;
 }
@@ -94,24 +109,30 @@ vector<PlnType*> PlnType::getBasicTypes()
 
 PlnType* PlnType::getByte()
 {
-	BOOST_ASSERT(byte_type != NULL);
 	return byte_type;
 }
 
 PlnType* PlnType::getSint()
 {
-	BOOST_ASSERT(int_type != NULL);
 	return int_type;
 }
 
 PlnType* PlnType::getUint()
 {
-	BOOST_ASSERT(uint_type != NULL);
 	return uint_type;
 }
 
 PlnType* PlnType::getReadOnlyCStr()
 {
-	BOOST_ASSERT(ro_cstr_type != NULL);
 	return ro_cstr_type;
+}
+
+PlnType* PlnType::getObject()
+{
+	return object_type;
+}
+
+PlnType* PlnType::getRawArray()
+{
+	return raw_array_type;
 }

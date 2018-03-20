@@ -22,9 +22,11 @@ union PlnAssignInf
 	} mcopy;
 	struct {
 		int16_t	type;
-		bool do_clear;
+		bool do_free_dst;
 
+		PlnVariable* do_clear_var;
 		PlnDataPlace *src, *dst;
+		PlnDataPlace *save_indirect;
 	} move;
 };
 

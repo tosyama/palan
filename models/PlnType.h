@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -22,6 +22,7 @@ public:
 			int item_size;
 			vector<int>* sizes;
 		} fixedarray;
+
 	} inf;
 
 	static vector<PlnType*> getBasicTypes();
@@ -29,4 +30,6 @@ public:
 	static PlnType* getSint();
 	static PlnType* getUint();
 	static PlnType* getReadOnlyCStr();
+	static PlnType* getObject();
+	static PlnType* getRawArray();
 };

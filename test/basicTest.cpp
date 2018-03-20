@@ -48,6 +48,12 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abttdtfDfDtttde\n"
 							"100\n"
 							"aaabbbcctdtdftdtdee\n"
+							"110\n"
 							"101010");
+
+	testcode = "010_arrarray";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "");
+	CHECK(mcheck("mtrace010") == "+33 -33");
 }
 
