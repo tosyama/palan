@@ -109,8 +109,8 @@ int main(int argc, char* argv[])
 				PlnLexer	lexer;
 				lexer.set_filename(fname);
 				lexer.switch_streams(&f, &cout);
-				PlnModule module;
 
+				PlnModule module;
 				PlnScopeStack	scopes;
 				PlnParser parser(lexer, module, scopes);
 				int res = parser.parse();
