@@ -1,6 +1,8 @@
 Palan Hacking Guide & Design Memo
 ===================
 
+ver 0.0.0
+
 Code Structure
 --------------
 *palan.cpp*  
@@ -34,7 +36,7 @@ Code Structure
 	Asm files and execution files will be created under /test/out.
 
 */sample*  
-	A note the idea of palan language for the future.
+	Notes the idea of palan language for the future.
 	Don't use for reference.
 
 Generating Files
@@ -81,12 +83,12 @@ Palan Model Tree<a name="PMT"></a>
 ----------------
 Palan model tree represents palan code structure to compile.
 The tree is built by PlnParser. Most models has finish() and gen().
-The model which have children calls such children's methods recursively.  
-The finish() finishes the model by doing such as allocating stack area to use.  
+The model which have children calls the children's methods recursively.  
+The finish() finishes the model. Simulate allocation free stack or register by using Data allocator.  
 The gen() generates assembly code of the model to output stream.  
 Note: dump() is deprecated.
 
-* Typical model
+* Typical models:  
 	1. PlnModule - Root of model tree. It includes function definitions and top level block.
 	2. PlnFunction - Function definition. Generally, stack/register management is reset by each function.
 	3. PlnStatement - An unit to generate assembly code. There is not any passing data directly between statements.
@@ -97,28 +99,74 @@ Note: dump() is deprecated.
 
 Expression Model
 ----------------
-PlnExpression is base class of all models that are returning values.
+PlnExpression is base class of the model that has returning values.
 Expression class has members *values* and *data_places*.
-They are used for passing data between expressions.
+They are used to exchange data between expressions.
 
 The *values* are information of returning values.
-It includes information of value type (e.g. literal integer/variable) and lval type.
-The lval type is not NO_LVL, the expression is left value (destination). The lval type indicate method of assign like copy or move then.
+It includes value type (e.g. literal integer/variable) and lval type.
+If lval type is not NO_LVL, the expression is left value.
+The lval type indicate following method of assignment.  
+
+* LVL_COPY - Assign by memory data copy.
+* LVL_MOVE - Move ownership. Assign by memory address copy. Source variable is cleared null.
+* LVL_REF - Assign by memory address copy.
+
 And *values* also have actual value of literal or pointer for variable objects in *inf* union member.
 Generally, *values* are set up in constructor of the model.
 
 The *data_places* manage place and timing of passing data such as register.
-Palent expression should set child's data_places before call finish().
-Child expression should set source data place by using PlnDataAllocator::pushSrc() in finish().
-Parent expression should call PlnDataAllocator::popSrc().
-PlnDataAllocator adjusts timing or assigns temporary memory on stack if needed.
+Parent expression set child's data_places before call finish().
+Child expression set source data place to own data_places with PlnDataAllocator::pushSrc() in finish().
 
 Variable Model
 --------------
+PlnVariable represents variable. Not only local variable, also represents indirect object such as array item.
+The member *ptr_type* is the flags that indicate following characteristics.
 
-Data Place
-----------
+* NO_PTR - Numeric variable.
+* PTR_REFERENCE - Variable to keep memory address.
+* PTR_OWNERSHIP - Variable that has ownership for indicating address.
+* PTR_INDIRECT_ACCESS - Variable that indirect address. e.g.) array item.
+* PTR_CLONE - The parameter which need to be clone.
 
-Scope Item
-----------
+The member *place* is data place of the variable.
+However, use alias data place for general use by call getDataPlace() of expression class.
+
+Data Allocator
+--------------
+PlnDataAllocator(da) manage usage of stack memory and registers.
+Each model create appropriate PlnDataPlace(dp) and simulate data operation
+using da in their finish(). dp should be created each operation,
+because dp has it's active term information.
+
+Use da.allocData() to get dp for allocated stack data.
+New dp self or use da.prepare~() to get not allocated dp.
+da.allocDp() allocate such dp.
+Use da.releaseData() to release data outed the scope.
+Use da.funcCalled() to simulate function call.
+
+To exchange data between expressions, use da.pushSrc() and da.popSrc().
+da will assign automatically stack space for save if it predict that the using register would destroyed.
+
+Scope Information
+-----------------
+PlnScopeInfo(si) manage current scope and variables that has ownership during finish().
+Owner variables have their lifetime status.
+Each model update the lifetime status when update by si.set_lifetime().
+Following lifetime status are available currently.
+
+* VLT_UNKOWN - Decleared but is not allocated memory.
+* VLT_ALLOCED - Allocated memory. not initialized.
+* VLT_INITED - Stored meaningful data.
+* VLT_FREED - Losted ownership and cleared already. Don't need to free.
+
+Generator
+---------
+PlnGenerator(g) output assembly.
+Each model output it's assembly by using g.gen~() in gen() method.
+PlnGenEntity is require to call many of g.gen~(). 
+Entities have environment dependent assembly information.
+g.getEntity() create the entity from dp.
+Howeverr, g.genSaveSrc() and g.genLoadDp() can be used at the timing of da.pushSrc() and da.popSrc().
 
