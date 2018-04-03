@@ -93,13 +93,14 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto item_var = values[0].inf.var;
 	auto item_dp = values[0].inf.var->place;
 
-	da.setIndirectObjDp(item_dp, base_dp,index_dp);
+	da.setIndirectObjDp(item_dp, base_dp, index_dp);
 
 	PlnExpression::finish(da, si);	// pushSrc
 	
 	da.releaseData(base_dp);
 	da.releaseData(index_dp);
-	da.releaseData(item_dp);
+	if (!data_places.size())
+		da.releaseData(item_dp);
 }
 
 void PlnArrayItem::gen(PlnGenerator& g)

@@ -71,7 +71,6 @@ public:
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
 	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
-	
 	void popSrc(PlnDataPlace* dp);
 
 	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);

@@ -1,0 +1,33 @@
+ccall int32 printf();
+ccall exit();
+
+// Primitive assignment.
+int32 p1, p2, p3, p4;
+1, 2u -> p1, p2;
+p1, p2 -> p3, p4;
+
+printf("%d %d %d %d\n", p1, p2, p3, p4);
+
+// Work value assignment.
+p1+p2, p2+2 -> p2, p3;	// Note: Currently, p3 of p3+3 is 
+						// used after updated value. But spec would be change in future.
+printf("%d %d", p2, p3);
+
+p3 / 2 -> p1, p4;
+printf(" %d %d\n", p1, p4);
+
+func intfunc(int16 a, b) -> int16 c, d
+{ a+b -> c; a-b -> d; }
+
+intfunc(p1, p2) -> p3, p4;
+
+printf("%d %d\n", p3, p4);
+
+// Object copy(single layer)
+int16[3] a1, a2, a3, a4;
+9 -> a1[2];
+a1 -> a2;
+
+// Object move
+
+exit(0);	// to flush buffer.

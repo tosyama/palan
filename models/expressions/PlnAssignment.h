@@ -5,6 +5,10 @@
 
 #include "../PlnExpression.h"
 
+class PlnHeapAllocator;
+
+class PlnAssignItem;
+
 union PlnAssignInf
 {
 	int16_t	type;
@@ -20,15 +24,22 @@ union PlnAssignInf
 		PlnDataPlace *src, *dst;
 		PlnDataPlace *free_dp;
 	} mcopy;
+
 	struct {
 		int16_t	type;
-		bool do_free_dst;
 
+		PlnHeapAllocator* free_dst;
 		PlnVariable* do_clear_var;
 		PlnDataPlace *src, *dst;
 		PlnDataPlace *save_indirect;
 	} move;
+
+	struct {
+		int16_t type;
+		PlnAssignItem* ai;
+	} item;
 };
+
 
 // Assignment: lvals Expression
 class PlnAssignment : public PlnExpression
@@ -38,6 +49,7 @@ public:
 	vector<PlnExpression*> lvals;
 	vector<PlnExpression*> expressions;
 	vector<PlnAssignInf> assign_inf;
+	vector<PlnAssignItem*> assgin_items;
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void dump(ostream& os, string indent="") override;
