@@ -160,7 +160,7 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 	static string scmt = "copy src";
 
 	dst = new PlnDataPlace(8, DT_OBJECT_REF);
-	dst->status = DS_ASSIGNED;
+	dst->status = DS_READY_ASSIGN;
 	dst->data.reg.id = RDI;
 	dst->data.reg.offset = 0;
 	dst->type = DP_REG;
@@ -168,7 +168,7 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 
 	src = new PlnDataPlace(8, DT_OBJECT_REF);
 	src->type = DP_REG;
-	src->status = DS_ASSIGNED;
+	src->status = DS_READY_ASSIGN;
 	src->data.reg.id = RSI;
 	src->data.reg.offset = 0;
 	src->comment = &scmt;

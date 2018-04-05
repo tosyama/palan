@@ -23,6 +23,7 @@ class PlnDstItem {
 public:
 	virtual bool ready() { return false; }	// Temporary.
 
+	virtual bool isMoveOwnership() { return false; }
 	virtual PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) { return NULL; }
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void gen(PlnGenerator& g) { }
@@ -58,13 +59,65 @@ public:
 	}
 };
 
+// PlnDstCopyObjectItem
+class PlnDstCopyObjectItem : public PlnDstItem
+{
+	PlnExpression *dst_ex;
+	PlnDataPlace *cp_src_dp, *cp_dst_dp;
+	int copy_size;
+
+public:
+	PlnDstCopyObjectItem(PlnExpression* ex)
+			: dst_ex(ex), cp_src_dp(NULL), cp_dst_dp(NULL) {
+		BOOST_ASSERT(ex->values.size() == 1);
+		BOOST_ASSERT(ex->values[0].type == VL_VAR);
+		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+		PlnType *t = ex->values[0].getType();
+		if (t->inf.obj.is_fixed_size) {
+			copy_size = t->inf.obj.alloc_size;
+		} else BOOST_ASSERT(false);
+	}
+
+	bool ready() override { return true; }
+
+	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
+		BOOST_ASSERT(!cp_src_dp);
+
+		da.prepareMemCopyDps(cp_dst_dp, cp_src_dp);
+		return cp_src_dp;
+	}
+
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
+		dst_ex->data_places.push_back(cp_dst_dp);
+		dst_ex->finish(da, si);
+		BOOST_ASSERT(cp_src_dp && cp_dst_dp);
+		da.popSrc(cp_src_dp);
+		da.popSrc(cp_dst_dp);
+		da.memCopyed(cp_dst_dp, cp_src_dp);
+	}
+
+	void gen(PlnGenerator& g) override {
+		dst_ex->gen(g);
+		g.genLoadDp(cp_src_dp);
+		g.genLoadDp(cp_dst_dp);
+
+		static string cmt = "deep copy";
+		g.genMemCopy(copy_size, cmt);
+	}
+};
+
 PlnDstItem* createDstItem(PlnExpression* ex)
 {
 	if (ex->type == ET_VALUE) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		PlnType* t = ex->values[0].inf.var->var_type.back();
-		if (t->data_type != DT_OBJECT_REF) {
+		if (t->data_type == DT_OBJECT_REF) {
+			auto lval_type = ex->values[0].lval_type;
+			if (lval_type == LVL_COPY) {
+				return new PlnDstCopyObjectItem(ex);
+			}
+		} else {
 			return new PlnDstPrimitiveItem(ex);
 		}
 	} 
@@ -84,7 +137,6 @@ public:
 	virtual void genS(PlnGenerator& g) { }
 	virtual void genD(PlnGenerator& g) { }
 };
-
 
 // PlnAssignPrimitiveItem
 // Src value don't need to clear.
@@ -124,38 +176,93 @@ public:
 };
 
 // PlnAssignWorkValsItem
-// Src that return multiple work values expression.
-// The work valuses don't need to clear.
+// Src item returns multiple work values expression.
+// The work valuses don't need to be cleared.
 // Only case need to free is after object was copied.
 class PlnAssignWorkValsItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
-	vector<PlnDstItem*> dst_items;
+	struct DstInf {PlnDstItem* item; PlnDataPlace* cp_obj_dp; };
+	vector<DstInf> dsts;
+	vector<PlnDataPlace*> for_free_dps;
+
 public:
 	PlnAssignWorkValsItem(PlnExpression* ex) : src_ex(ex) {
 	}
 
 	bool ready() override {
-		for(auto di: dst_items)
-			if (!di->ready()) return false;
+		for(auto di: dsts)
+			if (!di.item->ready()) return false;
 		return true;
 	};
 
 	void addDstEx(PlnExpression* ex) override {
 		BOOST_ASSERT(ex->values.size() == 1);
-		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		dst_items.push_back(createDstItem(ex));
+		auto v = ex->values[0];
+
+		BOOST_ASSERT(v.type == VL_VAR);
+
+		dsts.push_back( {createDstItem(ex), NULL} );
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		for (auto dst_item: dst_items)
-			src_ex->data_places.push_back(dst_item->getInputDataPlace(da));
+		int i=0;
+		for (auto &di: dsts) {
+			auto v = src_ex->values[i];
+			if (v.getType()->data_type == DT_OBJECT_REF && !di.item->isMoveOwnership()) {
+				static string cmt = "save src";
+				PlnDataPlace *cp_src_dp = new PlnDataPlace(8, DT_OBJECT_REF);
+				cp_src_dp->type = DP_STK_BP;
+				cp_src_dp->data.stack.offset = 0;
+				cp_src_dp->status = DS_READY_ASSIGN;
+				cp_src_dp->comment = &cmt;
+				di.cp_obj_dp = cp_src_dp;
+
+				src_ex->data_places.push_back(cp_src_dp);
+				da.pushSrc(di.item->getInputDataPlace(da), cp_src_dp, false);
+
+			} else {
+				src_ex->data_places.push_back(di.item->getInputDataPlace(da));
+			}
+			i++;
+		}
+
+		for (; i<src_ex->values.size(); i++) {
+			auto v = src_ex->values[i];
+			if (v.getType()->data_type == DT_OBJECT_REF) {
+				PlnDataPlace *for_free_dp = new PlnDataPlace(8, DT_OBJECT_REF);
+				for_free_dp->type = DP_STK_BP;
+				for_free_dp->data.stack.offset = 0;
+				for_free_dp->status = DS_READY_ASSIGN;
+				for_free_dps.push_back(for_free_dp);
+
+				src_ex->data_places.push_back(for_free_dp);
+				
+			} else {
+				src_ex->data_places.push_back(NULL);
+			}
+		}
+
 		src_ex->finish(da, si);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		for (auto dst_item: dst_items)
-			dst_item->finish(da, si);
+		for (auto &di: dsts) {
+			if (di.cp_obj_dp) {
+				da.popSrc(di.cp_obj_dp);
+				di.item->finish(da, si);
+				da.memFreed();
+				da.releaseData(di.cp_obj_dp);
+			} else {
+				di.item->finish(da, si);
+			}
+		}
+
+		for (auto dp: for_free_dps) {
+			da.popSrc(dp);
+			da.memFreed();
+			da.releaseData(dp);
+		}
 	}
 
 	void genS(PlnGenerator& g) override {
@@ -163,8 +270,22 @@ public:
 	}
 
 	void genD(PlnGenerator& g) override {
-		for (auto dst_item: dst_items)
-			dst_item->gen(g);
+		for (auto di: dsts) {
+			if (di.cp_obj_dp) {
+				g.genLoadDp(di.cp_obj_dp);
+				di.item->gen(g);
+				auto fe = g.getEntity(di.cp_obj_dp);
+				g.genMemFree(fe.get(), di.cp_obj_dp->cmt(), false);
+
+			} else { 
+				di.item->gen(g);
+			}
+		}
+
+		for (auto dp: for_free_dps) {
+			auto fe = g.getEntity(dp);
+			g.genMemFree(fe.get(), dp->cmt(), false);
+		}
 	}
 };
 
@@ -407,7 +528,6 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 					case AI_PRIMITIVE:
 						break;
 					case AI_MCOPY: 
-						da.allocDp(as_inf.mcopy.src);	// would be released by memCopyed.
 						break;
 
 					case AI_MOVE:

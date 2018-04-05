@@ -123,7 +123,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size()) {
 		if (div_type == DV_DIV)  {
 			da.pushSrc(data_places[0], quotient);
-			if (data_places.size() >= 2)
+			if (data_places.size() >= 2 && data_places[1] != NULL)
 				da.pushSrc(data_places[1], remainder);
 			else
 				da.releaseData(remainder);
