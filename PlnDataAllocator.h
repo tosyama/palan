@@ -37,6 +37,7 @@ public:
 	void reset();
 	PlnDataAllocator(int regnum);
 
+	PlnDataPlace* prepareLocalVar(int size, int data_type);
 	PlnDataPlace* allocData(int size, int data_type);
 	void allocData(PlnDataPlace* new_dp);
 

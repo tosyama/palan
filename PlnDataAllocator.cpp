@@ -139,6 +139,16 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 	}
 }
 
+PlnDataPlace* PlnDataAllocator::prepareLocalVar(int size, int data_type)
+{
+	PlnDataPlace* new_dp = new PlnDataPlace(size, data_type);
+	new_dp->type = DP_STK_BP;
+	new_dp->data.stack.offset = 0;
+	new_dp->status = DS_READY_ASSIGN;
+
+	return new_dp;
+}
+
 PlnDataPlace* PlnDataAllocator::allocData(int size, int data_type)
 {
 	PlnDataPlace* new_dp = new PlnDataPlace(size, data_type);

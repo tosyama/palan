@@ -51,9 +51,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	} else if (!alloc_acm) {
 		rdp = da.prepareAccumulator(r->getDataType());
 	} else {
-		rdp = new PlnDataPlace(8, r->getDataType());
-		rdp->type = DP_STK_BP;
-		rdp->status = DS_READY_ASSIGN;
+		rdp = da.prepareLocalVar(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 	}

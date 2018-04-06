@@ -103,10 +103,8 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
 	} else {
-		rdp = new PlnDataPlace(8, r->getDataType());
-		rdp->type = DP_STK_BP;
-		rdp->status = DS_READY_ASSIGN;
 		static string cmt="(temp)";
+		rdp = da.prepareLocalVar(8, r->getDataType());
 		rdp->comment = &cmt;
 	}
 

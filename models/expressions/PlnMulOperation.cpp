@@ -35,6 +35,7 @@ PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
 			PlnExpression *t;
 			t = l; l = r; r = t;
 		}
+
 	} else if (l->type == ET_MUL) {
 		PlnMulOperation* ml = static_cast<PlnMulOperation*>(l);
 		if (ml->r->isLitNum(l_num_type) && r->isLitNum(r_num_type)) {
@@ -74,12 +75,12 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
+
 	} else {
-		rdp = new PlnDataPlace(8, r->getDataType());
-		rdp->type = DP_STK_BP;
-		rdp->status = DS_READY_ASSIGN;
+		rdp = da.prepareLocalVar(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
+
 	}
 
 	l->data_places.push_back(ldp);

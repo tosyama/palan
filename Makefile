@@ -17,6 +17,7 @@ SRCS=palan.cpp \
 	models/expressions/PlnAssignment.cpp \
 	models/expressions/PlnClone.cpp \
 	models/expressions/PlnArrayItem.cpp \
+	models/expressions/assignitem/PlnAssignItem.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp \
@@ -24,7 +25,7 @@ SRCS=palan.cpp \
 	PlnBuildTreeHelper.cpp PlnScopeStack.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
-VPATH=.:objs:models:models/expressions:generators
+VPATH=.:objs:models:models/expressions:generators:models/expressions/assignitem
 TEST=test/tester
 # Workarround of mtrace hang with double free.
 MALLOC_CHECK_=1	

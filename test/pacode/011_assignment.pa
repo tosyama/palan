@@ -29,5 +29,6 @@ int16[3] a1, a2, a3, a4;
 a1 -> a2;
 
 // Object move
+a1 ->> a3;
 
 exit(0);	// to flush buffer.
