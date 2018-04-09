@@ -10,10 +10,11 @@ class PlnDstPrimitiveItem : public PlnDstItem {
 public:
 	PlnDstPrimitiveItem(PlnExpression* ex) : dst_ex(ex), dst_dp(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].inf.var->ptr_type == NO_PTR);
 	}
 
 	bool ready() override { return true; }
+
+	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 
 	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
@@ -22,13 +23,13 @@ public:
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		BOOST_ASSERT(dst_dp->src_place);
-		da.popSrc(dst_dp);
 		dst_ex->finish(da, si);
+		da.popSrc(dst_dp);
 	}
 
 	void gen(PlnGenerator& g) override {
-		g.genLoadDp(dst_dp);
 		dst_ex->gen(g);
+		g.genLoadDp(dst_dp);
 	}
 };
 

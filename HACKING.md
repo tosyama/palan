@@ -104,13 +104,13 @@ Expression class has members *values* and *data_places*.
 They are used to exchange data between expressions.
 
 The *values* are information of returning values.
-It includes value type (e.g. literal integer/variable) and lval_type.
-If lval_type is not NO_LVL, the expression is destination of assignment.
-The lval_type indicate following method of assignment.  
+It includes value type (e.g. literal integer/variable) and asgn_type.
+If asgn_type is not NO_LVL, the expression is destination of assignment.
+The asgn_type indicate following method of assignment.  
 
-* LVL_COPY - Assign by coping memory data.
-* LVL_MOVE - Move ownership. Assign by coping memory address. Source variable is cleared null.
-* LVL_REF - Assign by copying memory address.
+* ASGN_COPY - Assign by coping memory data.
+* ASGN_MOVE - Move ownership. Assign by coping memory address. Source variable is cleared null.
+* ASGN_COPY_REF - Assign by copying memory address.
 
 And *values* also have actual value of literal or pointer for variable objects in *inf* union member.
 Generally, *values* are set up at constructor of the model.

@@ -133,7 +133,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) {
 				auto dp = arg->data_places[0];
 				g.genLoadDp(dp);
-				if (arg->values[0].lval_type == LVL_MOVE)
+				if (arg->values[0].asgn_type == ASGN_MOVE)
 					clr_es.push_back(g.getEntity(dp->src_place));
 			}
 			if (clr_es.size())

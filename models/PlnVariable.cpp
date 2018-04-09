@@ -53,11 +53,11 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 		if (e->type == ET_VALUE && e->values[0].type == VL_VAR) {
 			auto src_var = e->values[0].inf.var;
 			if (src_var->ptr_type & PTR_REFERENCE) {
-				switch(this->vars[val_num].lval_type) {
-					case LVL_COPY:
+				switch(this->vars[val_num].asgn_type) {
+					case ASGN_COPY:
 						initializer[ii] = new PlnClone(e);
 						break;
-					case LVL_MOVE:
+					case ASGN_MOVE:
 						break;
 					defalut:
 						BOOST_ASSERT(false);
@@ -143,7 +143,7 @@ void PlnVarInit::gen(PlnGenerator& g)
 		i->gen(g);
 		for (auto dp: i->data_places) {
 			g.genLoadDp(dp);
-			if (vars[vi].lval_type == LVL_MOVE)
+			if (vars[vi].asgn_type == ASGN_MOVE)
 				clr_es.push_back(g.getEntity(dp->src_place));
 			vi++;
 		}

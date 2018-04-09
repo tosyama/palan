@@ -22,7 +22,7 @@ PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsn
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.lval_type = NO_LVL;
+	v.asgn_type = NO_ASGN;
 	v.inf.wk_type = PlnType::getSint();
 	values.push_back(v);
 

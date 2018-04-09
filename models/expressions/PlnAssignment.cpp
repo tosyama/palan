@@ -151,18 +151,18 @@ inline PlnDataPlace* prepareAssignInf(PlnDataAllocator& da, PlnScopeInfo& si, un
 	BOOST_ASSERT(src_val.getType()->data_type == DT_OBJECT_REF);
 
 	PlnDataPlace *ret_dp;
-	switch (dst_val.lval_type) {
-		case LVL_COPY:
+	switch (dst_val.asgn_type) {
+		case ASGN_COPY:
 			*as_inf = getDeepCopyAssignInf(da, dst_val, src_val);
 			ret_dp = as_inf->mcopy.src;
 			break;
 
-		case LVL_MOVE: // Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
+		case ASGN_MOVE: // Move ownership: Free dst var -> Copy address(src->dst) -> Clear src (if not work var)
 			*as_inf = getMoveOwnerAssignInf(da, si, dst_val, src_val);
 			ret_dp = as_inf->move.src;
 			break;
 
-		case LVL_REF:
+		case ASGN_COPY_REF:
 			as_inf->type = AI_PRIMITIVE;
 			as_inf->inf.dp = dst_val.getDataPlace(da);
 			ret_dp = as_inf->inf.dp;

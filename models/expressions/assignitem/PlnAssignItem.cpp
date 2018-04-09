@@ -23,7 +23,7 @@ class PlnDstItem {
 public:
 	virtual bool ready() { return false; }	// Temporary.
 
-	virtual bool isMoveOwnership() { return false; }
+	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
 	virtual PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) { return NULL; }
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void gen(PlnGenerator& g) { }
@@ -44,7 +44,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 			return new PlnAssignPrimitiveItem(ex);
 		}
 		if (v.type == VL_VAR) {
-			int dt = ex->values[0].inf.var->var_type.back()->data_type;
+			int dt = ex->values[0].getType()->data_type;
 			if (dt == DT_SINT || dt == DT_UINT) {
 				return new PlnAssignPrimitiveItem(ex);
 
@@ -89,18 +89,29 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 	if (ex->type == ET_VALUE) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		PlnType* t = ex->values[0].inf.var->var_type.back();
+		PlnType* t = ex->values[0].getType();
 		if (t->data_type == DT_OBJECT_REF) {
-			auto lval_type = ex->values[0].lval_type;
-			if (lval_type == LVL_COPY) {
+			auto asgn_type = ex->values[0].asgn_type;
+			if (asgn_type == ASGN_COPY) {
 				return new PlnDstCopyObjectItem(ex);
-			} else if (lval_type == LVL_MOVE) {
+			} else if (asgn_type == ASGN_MOVE) {
 				return new PlnDstMoveObjectItem(ex);
+			} else if (asgn_type == ASGN_COPY_REF) {
+				return new PlnDstPrimitiveItem(ex);
 			}
 		} else {
 			return new PlnDstPrimitiveItem(ex);
 		}
 	} 
+
+	if (ex->type == ET_ARRAYITEM) {
+		BOOST_ASSERT(ex->values.size() == 1);
+		BOOST_ASSERT(ex->values[0].type == VL_VAR);
+		int dt = ex->values[0].getType()->data_type;
+		if (dt == DT_SINT || dt == DT_UINT) {
+			return new PlnDstPrimitiveItem(ex);
+		}
+	}
 
 	return new PlnDstItem();
 }

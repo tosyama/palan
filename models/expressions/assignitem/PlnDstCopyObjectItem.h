@@ -23,6 +23,8 @@ public:
 
 	bool ready() override { return true; }
 
+	PlnAsgnType getAssginType() override { return ASGN_COPY; }
+
 	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
 		BOOST_ASSERT(!cp_src_dp);
 

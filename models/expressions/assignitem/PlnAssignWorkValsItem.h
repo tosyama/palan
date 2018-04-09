@@ -39,7 +39,7 @@ public:
 		int i=0;
 		for (auto &di: dsts) {
 			auto v = src_ex->values[i];
-			if (v.getType()->data_type == DT_OBJECT_REF && !di.item->isMoveOwnership()) {
+			if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
 				static string cmt = "save src";
 				PlnDataPlace *cp_src_dp = da.prepareLocalVar(8, DT_OBJECT_REF);
 				cp_src_dp->comment = &cmt;

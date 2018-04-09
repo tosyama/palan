@@ -80,7 +80,7 @@ PlnArrayHeapAllocator::PlnArrayHeapAllocator(PlnValue var_val)
 		// __item ->> __arr[__cnt];
 		{
 			auto arr_item = palan::rawArrayItem(var_val.inf.var, cnt_var);
-			arr_item->values[0].lval_type = LVL_MOVE;
+			arr_item->values[0].asgn_type = ASGN_MOVE;
 			vector<PlnExpression*> lvals = { arr_item };
 			vector<PlnExpression*> exps = { new PlnExpression(item_var) };
 
@@ -157,7 +157,7 @@ PlnArrayHeapFreer::PlnArrayHeapFreer(PlnVariable* var)
 				auto item_var_type = item_type;
 				auto item_var = wblock->declareVariable(item_name, item_var_type, true);
 				vector<PlnValue> vars = { item_var };
-				vars[0].lval_type = LVL_MOVE;
+				vars[0].asgn_type = ASGN_MOVE;
 
 				auto arr_item = palan::rawArrayItem(arr_var, cnt_var);
 				vector<PlnExpression*> inis = { arr_item };

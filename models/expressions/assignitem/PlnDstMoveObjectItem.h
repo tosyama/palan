@@ -21,7 +21,7 @@ public:
 
 	bool ready() override { return true; }
 
-	bool isMoveOwnership() override { return true; }
+	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
 	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
