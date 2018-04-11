@@ -20,12 +20,6 @@ public:
 	PlnAssignWorkValsItem(PlnExpression* ex) : src_ex(ex) {
 	}
 
-	bool ready() override {
-		for(auto di: dsts)
-			if (!di.item->ready()) return false;
-		return true;
-	};
-
 	void addDstEx(PlnExpression* ex) override {
 		BOOST_ASSERT(ex->values.size() == 1);
 		auto v = ex->values[0];

@@ -1,6 +1,7 @@
 /// Assignment Item class definition.
 ///
-/// Need to free before move ownership.
+/// Single Dst object value need to be free
+///	before move ownership.
 ///
 /// @file	PlnDstMoveObjectItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
@@ -12,14 +13,13 @@ class PlnDstMoveObjectItem : public PlnDstItem
 	PlnHeapAllocator *freer;
 
 public:
-	PlnDstMoveObjectItem(PlnExpression* ex) : dst_ex(ex), dst_dp(NULL) {
+	PlnDstMoveObjectItem(PlnExpression* ex)
+			: dst_ex(ex), dst_dp(NULL), freer(NULL)
+	{
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
-		freer = PlnHeapAllocator::createHeapFree(ex->values[0].inf.var);
 	}
-
-	bool ready() override { return true; }
 
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
@@ -29,16 +29,22 @@ public:
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		freer->finish(da, si);
+		dst_ex->finish(da, si);
+		auto var = dst_ex->values[0].inf.var;
+		auto lt = si.get_lifetime(var);
+		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+			freer = PlnHeapAllocator::createHeapFree(var);
+			freer->finish(da, si);
+		}
 		BOOST_ASSERT(dst_dp->src_place);
 		da.popSrc(dst_dp);
-		dst_ex->finish(da, si);
 	}
 
 	void gen(PlnGenerator& g) override {
-		freer->gen(g);
-		g.genLoadDp(dst_dp);
 		dst_ex->gen(g);
+		if (freer)
+			freer->gen(g);
+		g.genLoadDp(dst_dp);
 	}
 };
 

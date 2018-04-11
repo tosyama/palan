@@ -26,11 +26,14 @@ printf("%d %d\n", p3, p4);
 // Object copy(single layer)
 int16[3] a1, a2, a3, a4;
 9 -> a1[2];
+// object copy
 a1 -> a2;
 a1[2] -> p1;
+a1[2] -> a2[3];
 
 // Object move
 a1 ->> a3;
 
+printf("%d %d %d %d\n", a3[2], a2[2], a2[3], a1);
 
 exit(0);	// to flush buffer.

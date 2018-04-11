@@ -8,8 +8,8 @@
 // PlnAssignItem
 class PlnAssignItem {
 public:
-	virtual bool ready() { return false; }	// Temporary.
 	virtual void addDstEx(PlnExpression* ex) { }
+
 	virtual void finishS(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void finishD(PlnDataAllocator& da, PlnScopeInfo& si) { }
 	virtual void genS(PlnGenerator& g) { }

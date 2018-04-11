@@ -13,8 +13,6 @@ public:
 	PlnAssignPrimitiveItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
 	}
 	
-	bool ready() override { return dst_item->ready(); };
-
 	void addDstEx(PlnExpression* ex) override {
 		BOOST_ASSERT(dst_item == NULL);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);

@@ -1,5 +1,9 @@
 /// Assignment Item class definition.
 ///
+/// Dst value don't need to be free.
+/// Target: Integer variable(direct/indirect),
+///         Refernce copy.
+///
 /// @file	PlnDstPrimitiveItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
@@ -11,8 +15,6 @@ public:
 	PlnDstPrimitiveItem(PlnExpression* ex) : dst_ex(ex), dst_dp(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 	}
-
-	bool ready() override { return true; }
 
 	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 

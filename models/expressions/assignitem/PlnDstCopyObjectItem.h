@@ -1,5 +1,8 @@
 /// Assignment Item class definition.
 ///
+/// A single Dst variables of object reference (not indirect access).
+/// for deep copy. 
+///
 /// @file	PlnDstCopyObjectItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
@@ -20,8 +23,6 @@ public:
 			copy_size = t->inf.obj.alloc_size;
 		} else BOOST_ASSERT(false);
 	}
-
-	bool ready() override { return true; }
 
 	PlnAsgnType getAssginType() override { return ASGN_COPY; }
 

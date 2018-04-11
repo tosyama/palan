@@ -19,8 +19,6 @@ public:
 
 	}
 	
-	bool ready() override { return dst_item->ready(); };
-
 	void addDstEx(PlnExpression* ex) override {
 		BOOST_ASSERT(dst_item == NULL);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
@@ -36,6 +34,12 @@ public:
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		dst_item->finish(da, si);
+		if (dst_item->getAssginType() == ASGN_MOVE) {
+			// Mark as freed variable.
+			auto var = src_ex->values[0].inf.var;
+			if (si.exists_current(var))
+				si.set_lifetime(var, VLT_FREED);
+		}
 	}
 
 	void genS(PlnGenerator& g) override {

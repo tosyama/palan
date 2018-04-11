@@ -149,7 +149,8 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/PlnAssignObjectRefItem.h \
 	models/expressions/assignitem/PlnDstPrimitiveItem.h \
 	models/expressions/assignitem/PlnDstCopyObjectItem.h \
-	models/expressions/assignitem/PlnDstMoveObjectItem.h
+	models/expressions/assignitem/PlnDstMoveObjectItem.h \
+	models/expressions/assignitem/PlnDstMoveIndirectObjItem.h
 PlnX86_64Generator.o:  \
 	generators/../PlnModel.h generators/../PlnConstants.h \
 	generators/PlnX86_64DataAllocator.h generators/../PlnDataAllocator.h \

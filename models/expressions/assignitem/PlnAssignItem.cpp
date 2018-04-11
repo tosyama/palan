@@ -21,8 +21,6 @@
 // PlnDstItem
 class PlnDstItem {
 public:
-	virtual bool ready() { return false; }	// Temporary.
-
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
 	virtual PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) { return NULL; }
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
@@ -76,13 +74,23 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		return new PlnAssignWorkValsItem(ex);
 	}
 
+	if (ex->type == ET_ARRAYITEM) {
+		BOOST_ASSERT(ex->values.size() == 1);
+		PlnValue v = ex->values[0];
+		int dt = ex->values[0].getType()->data_type;
+		if (dt == DT_SINT || dt == DT_UINT) {
+			return new PlnAssignPrimitiveItem(ex);
+		}
+	}
+
+	BOOST_ASSERT(false);
 	return new PlnAssignItem();
 }
-
 
 #include "PlnDstPrimitiveItem.h"
 #include "PlnDstCopyObjectItem.h"
 #include "PlnDstMoveObjectItem.h"
+#include "PlnDstMoveIndirectObjItem.h"
 
 PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 {
@@ -110,9 +118,16 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 		int dt = ex->values[0].getType()->data_type;
 		if (dt == DT_SINT || dt == DT_UINT) {
 			return new PlnDstPrimitiveItem(ex);
+
+		} else if (dt == DT_OBJECT_REF) {
+			int at = ex->values[0].asgn_type;
+			if (at == ASGN_MOVE) {
+				return new PlnDstMoveIndirectObjItem(ex);
+			}
 		}
 	}
 
+	BOOST_ASSERT(false);
 	return new PlnDstItem();
 }
 
