@@ -1,7 +1,7 @@
 /// Expression model class declaration.
 ///
 /// @file	PlnExpression.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #pragma once
 #include "../PlnModel.h"
@@ -18,7 +18,6 @@ enum PlnExprsnType {
 	ET_AND,
 	ET_OR,
 	ET_ASSIGN,
-	ET_MVOWN,
 	ET_CLONE,
 	ET_ARRAYITEM,
 	ET_HP_ALLOC
@@ -51,17 +50,17 @@ enum PlnValType {
 	VL_WORK
 };
 
-enum PlnLValType {
-	NO_LVL,
-	LVL_COPY,
-	LVL_MOVE,
-	LVL_REF
+enum PlnAsgnType {
+	NO_ASGN,
+	ASGN_COPY,
+	ASGN_MOVE,
+	ASGN_COPY_REF
 };
 
 class PlnValue {
 public:
 	PlnValType type;
-	PlnLValType lval_type;
+	PlnAsgnType asgn_type;
 	union {
 		int index;
 		int64_t intValue;

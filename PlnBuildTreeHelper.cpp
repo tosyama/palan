@@ -50,7 +50,7 @@ void incrementUInt(PlnBlock* block, PlnVariable *var, uint64_t i)
 void malloc(PlnBlock* block, PlnVariable* var, uint64_t alloc_size)
 {
 	PlnValue var_val(var);
-	var_val.lval_type = LVL_REF;
+	var_val.asgn_type = ASGN_COPY_REF;
 	auto var_ex = new PlnExpression(var_val);
 	vector<PlnExpression*> lvals = { var_ex };
 
@@ -74,7 +74,7 @@ void free(PlnBlock* block, PlnVariable* var)
 PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index)
 {
 	PlnValue var_val(var);
-	var_val.lval_type = LVL_REF;
+	var_val.asgn_type = ASGN_COPY_REF;
 	auto arr_ex = new PlnExpression(var_val);
 	auto index_ex = new PlnExpression(index);
 	vector<PlnExpression*> inds = { index_ex };

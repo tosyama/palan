@@ -19,7 +19,7 @@ PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType 
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.lval_type = NO_LVL;
+	v.asgn_type = NO_ASGN;
 	v.inf.wk_type = PlnType::getSint();
 	values.push_back(v);
 }
@@ -51,9 +51,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	} else if (!alloc_acm) {
 		rdp = da.prepareAccumulator(r->getDataType());
 	} else {
-		rdp = new PlnDataPlace(8, r->getDataType());
-		rdp->type = DP_STK_BP;
-		rdp->status = DS_READY_ASSIGN;
+		rdp = da.prepareLocalVar(8, r->getDataType());
 		static string cmt="(temp)";
 		rdp->comment = &cmt;
 	}

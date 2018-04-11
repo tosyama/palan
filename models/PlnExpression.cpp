@@ -21,25 +21,25 @@ using boost::adaptors::reverse;
 
 // PlnValue
 PlnValue::PlnValue(int64_t intValue)
-	: type(VL_LIT_INT8), lval_type(NO_LVL)
+	: type(VL_LIT_INT8), asgn_type(NO_ASGN)
 {
 	inf.intValue = intValue;
 }
 
 PlnValue::PlnValue(uint64_t uintValue)
-	: type(VL_LIT_UINT8), lval_type(NO_LVL)
+	: type(VL_LIT_UINT8), asgn_type(NO_ASGN)
 {
 	inf.uintValue = uintValue;
 }
 
 PlnValue::PlnValue(PlnReadOnlyData* rod)
-	: type(VL_RO_DATA), lval_type(NO_LVL)
+	: type(VL_RO_DATA), asgn_type(NO_ASGN)
 {
 	inf.rod = rod;
 }
 
 PlnValue::PlnValue(PlnVariable* var)
-	: type(VL_VAR), lval_type(NO_LVL)
+	: type(VL_VAR), asgn_type(NO_ASGN)
 {
 	inf.var = var;
 }

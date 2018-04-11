@@ -40,7 +40,7 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	clone_src->data_places.push_back(cpy_src_dp);
 	clone_src->finish(da, si);
 
-	da.allocDp(cpy_src_dp);
+//	da.allocDp(cpy_src_dp);
 	da.allocDp(cpy_dst_dp);
 	da.pushSrc(cpy_dst_dp, clone_dp, false);
 	da.popSrc(cpy_dst_dp);

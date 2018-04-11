@@ -37,6 +37,7 @@ public:
 	void reset();
 	PlnDataAllocator(int regnum);
 
+	PlnDataPlace* prepareLocalVar(int size, int data_type);
 	PlnDataPlace* allocData(int size, int data_type);
 	void allocData(PlnDataPlace* new_dp);
 
@@ -71,7 +72,6 @@ public:
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
 	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
-	
 	void popSrc(PlnDataPlace* dp);
 
 	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);

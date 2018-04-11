@@ -625,14 +625,14 @@ argument: /* empty */
 				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, "non-variable"));
 				YYABORT;
 			}
-			$$->values[0].lval_type = LVL_MOVE;
+			$$->values[0].asgn_type = ASGN_MOVE;
 		}
 	}
 	;
 
 dst_vals:  unary_expression
 	{
-		$1->values[0].lval_type = LVL_COPY;
+		$1->values[0].asgn_type = ASGN_COPY;
 		$$.push_back($1);
 	}
 
@@ -652,9 +652,9 @@ dst_val: move_owner unary_expression
 				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, var->name));
 				YYABORT;
 			}
-			$$->values[0].lval_type = LVL_MOVE;
+			$$->values[0].asgn_type = ASGN_MOVE;
 		} else {
-			$$->values[0].lval_type = LVL_COPY;
+			$$->values[0].asgn_type = ASGN_COPY;
 		}
 	}
 
@@ -709,7 +709,7 @@ assignment: expressions arrow_ope dst_vals
 				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, var->name));
 				YYABORT;
 			}
-			$3.front()->values[0].lval_type = LVL_MOVE;
+			$3.front()->values[0].asgn_type = ASGN_MOVE;
 		}
 
 		int count=0;
@@ -761,9 +761,9 @@ declaration: type_def ID take_owner
 				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $2));
 				YYABORT;
 			}
-			$$.lval_type = LVL_MOVE;
+			$$.asgn_type = ASGN_MOVE;
 		} else {
-			$$.lval_type = LVL_COPY;
+			$$.asgn_type = ASGN_COPY;
 		}
 	}
 	;
@@ -782,9 +782,9 @@ subdeclaration: ID take_owner
 				error(@$, PlnMessage::getErr(E_CantUseMoveOwnership, $1));
 				YYABORT;
 			}
-			$$.lval_type = LVL_MOVE;
+			$$.asgn_type = ASGN_MOVE;
 		} else {
-			$$.lval_type = LVL_COPY;
+			$$.asgn_type = ASGN_COPY;
 		}
 	}
 	;
