@@ -11,13 +11,15 @@ enum PlnFncPrntType {
 
 enum PlnPassingMethod {
 	FPM_COPY,
-	FPM_MOVEOWNER
+	FPM_MOVEOWNER,
+	FPM_REF
 };
 
 class PlnFunction
 {
 public:
 	string name;
+	string asm_name;
 	int type;
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;

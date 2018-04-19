@@ -197,7 +197,7 @@ PlnHeapAllocator* PlnHeapAllocator::createHeapAllocation(PlnValue var_val)
 	auto var = var_val.inf.var;
 	PlnType* vt = var->var_type.back();
 	if (var->ptr_type & PTR_OWNERSHIP) {
-		if (vt->name == "[]") {
+		if (vt->name.back() == ']') {
 			return new PlnArrayHeapAllocator(var_val);
 		}
 	}
@@ -209,7 +209,7 @@ PlnHeapAllocator* PlnHeapAllocator::createHeapFree(PlnVariable* var)
 {
 	PlnType* vt = var->var_type.back();
 	if (var->ptr_type & PTR_OWNERSHIP) {
-		if (vt->name == "[]") {
+		if (vt->name.back() == ']') {
 			return new PlnArrayHeapFreer(var);
 		}
 	}

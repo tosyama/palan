@@ -18,8 +18,10 @@ public:
 	vector<PlnType*> var_type;
 	string name;
 	PlnDataPlace* place;
-	PlnVariable* container;
+	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
 	int ptr_type;
+
+	static PlnVariable* getTempVariable(PlnDataAllocator& da, vector<PlnType*>&type, PlnDataPlace* dp);
 };
 
 class PlnParameter : public PlnVariable {

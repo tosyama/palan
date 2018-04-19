@@ -139,7 +139,8 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			if (clr_es.size())
 				g.genNullClear(clr_es);
 
-			g.genCCall(function->name);
+			g.genCCall(function->asm_name);
+
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);
 
@@ -158,7 +159,8 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments)
 				g.genLoadDp(arg->data_places[0]);
 
-			g.genSysCall(function->inf.syscall.id, function->name);
+			g.genSysCall(function->inf.syscall.id, function->asm_name);
+
 			break;
 		}
 		case FT_C:
@@ -168,7 +170,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments)
 				g.genLoadDp(arg->data_places[0]);
 
-			g.genCCall(function->name);
+			g.genCCall(function->asm_name);
 			break;
 		}
 		default:
@@ -182,11 +184,13 @@ static void initInternalFunctions()
 	string ret_name = "";
 
 	f = new PlnFunction(FT_C, "malloc");
+	f->asm_name = f->name;
 	vector<PlnType*> ret_type = { PlnType::getObject() };
 	f->addRetValue(ret_name, &ret_type);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "free");
+	f->asm_name = f->name;
 	internalFuncs[IFUNC_FREE] = f;
 }
 

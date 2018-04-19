@@ -820,7 +820,7 @@ type_def: TYPENAME	{ $$.push_back(module.getType($1)); }
 	| type_def array_def
 	{
 		$$ = move($1);
-		auto t = module.getFixedArrayType($$.back()->size, $2);
+		auto t = module.getFixedArrayType($$, $2);
 		$$.push_back(t);
 	}
 	;

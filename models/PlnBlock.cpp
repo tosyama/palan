@@ -99,9 +99,21 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
 			auto lt = si.get_lifetime(v);
 			if (lt == VLT_ALLOCED || lt == VLT_INITED) {
-				auto h_free = PlnHeapAllocator::createHeapFree(v);
-				h_free->finish(da, si);
-				freers.push_back(h_free);
+				// new freer
+				PlnFreer* freer = v->var_type.back()->freer;
+				if (freer) {
+					PlnExpression* free_var = freer->getFreeEx(new PlnExpression(v));
+					free_var->finish(da, si);
+					free_vars.push_back(free_var);
+/*					PlnFreerCall* free_call = freer->getCaller();
+					free_call->setFreeDp(da.getSeparatedDp(v->place));
+					free_call->finish(da);
+					free_calls.push_back(free_call); */
+				} else {
+					auto h_free = PlnHeapAllocator::createHeapFree(v);
+					h_free->finish(da, si);
+					freers.push_back(h_free);
+				}
 			}
 		}
 		da.releaseData(v->place);
@@ -143,8 +155,14 @@ void PlnBlock::gen(PlnGenerator& g)
 
 	// TODO?: check condition: need not call this after jump statement.
 	// Note: "return statement" frees vars insted of block when function end.
-	for (auto freer: freers)
+	for (auto freer: freers) {
+		g.comment("old freer");
 		freer->gen(g);
+	}
+	// new free.
+	for (auto free_var: free_vars) {
+		free_var->gen(g);
+	}
 
 	g.comment("}");
 }

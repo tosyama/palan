@@ -8,15 +8,20 @@
 
 #include <algorithm>
 #include <boost/assert.hpp>
+#include <boost/algorithm/string.hpp>
 #include "PlnModule.h"
 #include "PlnBlock.h"
 #include "PlnFunction.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnStatement.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
+#include "../PlnBuildTreeHelper.h"
+#include "expressions/PlnFunctionCall.h"
+#include "expressions/PlnArrayItem.h"
 
 using namespace std;
 
@@ -35,34 +40,123 @@ PlnType* PlnModule::getType(const string& type_name)
 	return (t != types.end()) ? *t : NULL; 
 }
 
-PlnType* PlnModule::getFixedArrayType(int item_size, vector<int>& sizes)
-{
-	for (auto t: fixedarray_types) {
-		auto as = t->inf.fixedarray.sizes;
-		if (item_size == t->inf.fixedarray.item_size && sizes.size() == as->size()) {
-			bool found = true;
-			for (int i=0; i<sizes.size(); ++i) {
-				if (sizes[i] != (*as)[i]) {
-					found = false;
-					break;
-				}
-			}
-			if (found) return t;
-		}
+class PlnSingleOjectFreer : public PlnFreer {
+public:
+	PlnExpression* getFreeEx(PlnExpression* free_var) override {
+		PlnFunction *free_func = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
+		vector<PlnExpression*> args = { free_var };
+		PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
+		
+		return free_call;
 	}
+};
+
+string getFreeFuncName(PlnType *t)
+{
+
+	string fname = t->name;
+	boost::replace_all(fname, "_", "__");
+	boost::replace_all(fname, "[", "A_");
+	boost::replace_all(fname, "]", "_");
+	boost::replace_all(fname, ",", "_");
+	fname = "_fr_" + fname;
+	return fname;
+}
+
+PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type)
+{
+	PlnType* t = arr_type.back();
+	PlnType* it = arr_type[arr_type.size()-2];
+	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
+
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	string s1 = "p1";
+	f->addParam(s1, &arr_type, FPM_REF, NULL);
+
+	f->implement = new PlnBlock();
+	f->implement->setParent(f);
+
+	// add free code.
+	PlnVariable* i = palan::declareUInt(f->implement, "i", 0);
+	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
+	{
+		BOOST_ASSERT(it->freer);
+		PlnExpression* arr_item = palan::rawArrayItem(f->parameters[0], i);
+		PlnExpression* free_item = it->freer->getFreeEx(arr_item);
+		wblock->statements.push_back(new PlnStatement(free_item, wblock));
+
+		palan::incrementUInt(wblock, i, 1);
+	}
+
+	palan::free(f->implement, f->parameters[0]);
+
+	return f;
+}
+
+class PlnSingleParamFreer : public PlnFreer
+{
+	PlnFunction *free_func;
+
+public:
+	PlnSingleParamFreer(PlnFunction *f)
+		: free_func(f) {
+	}
+
+	PlnExpression* getFreeEx(PlnExpression* free_var) override {
+		vector<PlnExpression*> args = { free_var };
+		PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
+		
+		return free_call;
+	}
+};
+
+PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes)
+{
+	PlnType* it = item_type.back();
+	int item_size = it->size;
+	string name = "]";
+	for (int s: sizes) {
+		name = "," + to_string(s) + name;
+	}
+	name.front() = '[';
+	name = it->name + name;
+
+	for (auto t: fixedarray_types) 
+		if (name == t->name) return t;
 
 	int alloc_size = item_size;
 	for (int s: sizes)
 		alloc_size *= s;
 
 	auto t = new PlnType();
-	t->name = "[]";
+	t->name = name;
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	t->inf.obj.is_fixed_size = true;
 	t->inf.obj.alloc_size = alloc_size;
 	t->inf.fixedarray.sizes = new vector<int>(move(sizes));
 	t->inf.fixedarray.item_size = item_size;
+
+	// set freer
+	if (it->data_type != DT_OBJECT_REF) {
+		t->freer = new PlnSingleOjectFreer();
+	} else {
+		string fname = getFreeFuncName(t);
+		PlnFunction* free_func = NULL;
+		for (auto f: functions) {
+			if (f->name == fname) {
+				free_func = f;
+				break;
+			}
+		}
+		if (!free_func) {
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			free_func = createObjArrayFreeFunc(fname, type_def);
+			functions.push_back(free_func);
+		}
+		t->freer = new PlnSingleParamFreer(free_func);
+	}
 
 	fixedarray_types.push_back(t);
 

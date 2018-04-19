@@ -85,8 +85,11 @@ PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnP
 	if (t->data_type == DT_OBJECT_REF) {
 		if (pass_method == FPM_MOVEOWNER) 
 			param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-		else // FMP_COPY
+		else if (pass_method == FPM_COPY) // FMP_COPY
 			param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE;
+		else // FMP_REF
+			param->ptr_type = PTR_REFERENCE;
+
 	} else {
 		param->ptr_type = NO_PTR;
 	}
@@ -98,6 +101,7 @@ PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnP
 
 void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	asm_name = name;
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
 			si.push_scope(this);
@@ -176,8 +180,7 @@ void PlnFunction::gen(PlnGenerator &g)
 	switch (type) {
 		case FT_PLN:
 		{
-			g.genEntryPoint(name);
-			g.genLabel(name);
+			g.genLabel(asm_name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
 			for (int i=0; i<save_regs.size(); ++i) {

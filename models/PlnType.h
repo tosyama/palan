@@ -5,6 +5,11 @@
 
 #include "../PlnModel.h"
 
+class PlnFreer {
+public:
+	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
+};
+
 class PlnType {
 public:
 	int	data_type;
@@ -24,6 +29,10 @@ public:
 		} fixedarray;
 
 	} inf;
+
+	PlnFreer *freer;
+
+	PlnType();
 
 	static vector<PlnType*> getBasicTypes();
 	static PlnType* getByte();

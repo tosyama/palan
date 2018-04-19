@@ -19,6 +19,10 @@ static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
 static PlnType* raw_array_type = NULL;
 
+PlnType::PlnType() : freer(NULL)
+{
+}
+
 static void initBasicTypes()
 {
 	PlnType* t = new PlnType();

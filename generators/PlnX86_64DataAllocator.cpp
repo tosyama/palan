@@ -103,6 +103,7 @@ static bool checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 void PlnX86_64DataAllocator::funcCalled(
 	vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type)
 {
+	// TODO: use pupSrc().
 	for (auto dp: args) {
 		dp->status = DS_RELEASED;
 		dp->release_step = step;
@@ -124,6 +125,7 @@ void PlnX86_64DataAllocator::funcCalled(
 
 void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type)
 {
+	// TODO: use pupSrc().
 	if (ret_dps.size() >= 7) {
 		auto adp = ret_dps[0];
 		allocSaveData(adp, adp->alloc_step, step);	// for use RAX for store return data to stack
@@ -141,6 +143,7 @@ void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int 
 
 	step++;
 }
+	// TODO: use pupSrc().
 
 void PlnX86_64DataAllocator::memAlloced()
 {
