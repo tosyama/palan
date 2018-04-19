@@ -8,6 +8,7 @@
 class PlnFreer {
 public:
 	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
+	static PlnExpression* getFreeEx(PlnVariable* var);
 };
 
 class PlnType {

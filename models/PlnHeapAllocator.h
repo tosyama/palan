@@ -11,6 +11,5 @@ public:
 	PlnHeapAllocator();
 
 	static PlnHeapAllocator* createHeapAllocation(PlnValue var_val);
-	static PlnHeapAllocator* createHeapFree(PlnVariable* var);
 };
 

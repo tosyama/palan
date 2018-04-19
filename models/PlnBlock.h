@@ -6,12 +6,10 @@
 #include "../PlnModel.h"
 
 // Block: Statements
-class PlnHeapAllocator;
 class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
 	vector<PlnVariable*> variables;
-	vector<PlnHeapAllocator*> freers;
 	vector<PlnExpression*> free_vars;
 	PlnFunction* parent_func;
 	PlnBlock* parent_block;

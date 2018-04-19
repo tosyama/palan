@@ -9,10 +9,11 @@ class PlnDstMoveIndirectObjItem: public PlnDstItem
 	PlnDataPlace *dst_dp;
 	PlnVariable *save_var;
 	PlnHeapAllocator *freer;
+	PlnExpression *free_ex;
 
 public:
 	PlnDstMoveIndirectObjItem(PlnExpression* ex)
-			: dst_ex(ex), dst_dp(NULL), save_var(NULL), freer(NULL) {
+			: dst_ex(ex), dst_dp(NULL), save_var(NULL), freer(NULL), free_ex(NULL) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & (PTR_REFERENCE | PTR_INDIRECT_ACCESS));
@@ -37,13 +38,13 @@ public:
 			save_var->place = da.prepareLocalVar(8, DT_OBJECT_REF);
 			save_var->container = NULL;
 			save_var->ptr_type = PTR_REFERENCE;
-			freer = PlnHeapAllocator::createHeapFree(save_var);
+			free_ex = PlnFreer::getFreeEx(save_var);
 			da.pushSrc(save_var->place, dst_ex->values[0].getDataPlace(da));
 			da.popSrc(save_var->place);
 		}
 		da.popSrc(dst_dp);
-		if (freer)
-			freer->finish(da, si);
+		if (free_ex)
+			free_ex->finish(da, si);
 		if (save_var)
 			da.releaseData(save_var->place);
 	}
@@ -54,8 +55,8 @@ public:
 			g.genLoadDp(save_var->place);
 		g.genLoadDp(dst_dp);
 
-		if (freer)
-			freer->gen(g);
+		if (free_ex)
+			free_ex->gen(g);
 	}
 };
 

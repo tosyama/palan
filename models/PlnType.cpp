@@ -5,6 +5,8 @@
 
 #include <boost/assert.hpp>
 #include "PlnType.h"
+#include "PlnVariable.h"
+#include "PlnExpression.h"
 #include "../PlnConstants.h"
 
 using namespace std;
@@ -19,6 +21,15 @@ static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
 static PlnType* raw_array_type = NULL;
 
+// PlnFreer
+PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
+{
+	PlnFreer* freer = var->var_type.back()->freer;
+	BOOST_ASSERT(freer);
+	return freer->getFreeEx(new PlnExpression(var));
+}
+
+// PlnType
 PlnType::PlnType() : freer(NULL)
 {
 }
