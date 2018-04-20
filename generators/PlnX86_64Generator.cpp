@@ -574,19 +574,6 @@ void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
 	os << "	rep movs" << safix << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string comment, bool doNull)
-{
-	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
-	os << "	call free";
-
-	if (doNull) {
-		os << endl << "	movq $0, " << oprnd(ref);
-	}
-
-	if (comment != "") os << "	# free " << comment;
-	os << endl;
-}
-
 static string* getAdressingStr(int displacement, int base_id, int index_id, int scale)
 {
 	string *str = new string(r(base_id));

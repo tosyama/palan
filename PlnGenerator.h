@@ -80,7 +80,6 @@ public:
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string comment)=0;
-	virtual void genMemFree(PlnGenEntity* ref, string comment, bool doNull=true)=0;
 	virtual void genMemCopy(int cp_size, string& comment)=0;
 
 	void genLoadDp(PlnDataPlace* dp);

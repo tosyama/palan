@@ -6,8 +6,10 @@ palan.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
 PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnFunction.h models/PlnType.h models/PlnVariable.h \
-	models/../PlnDataAllocator.h models/../PlnGenerator.h \
-	models/../PlnScopeStack.h models/../PlnConstants.h
+	models/PlnStatement.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h models/../PlnScopeStack.h \
+	models/../PlnConstants.h models/../PlnBuildTreeHelper.h \
+	models/expressions/PlnFunctionCall.h models/expressions/PlnArrayItem.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
@@ -34,9 +36,9 @@ PlnVariable.o:  models/PlnFunction.h \
 	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
 	models/PlnHeapAllocator.h models/../PlnDataAllocator.h \
 	models/../PlnGenerator.h models/../PlnScopeStack.h \
-	models/expressions/PlnClone.h
+	models/../PlnConstants.h models/expressions/PlnClone.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
-	models/../PlnConstants.h
+	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
 PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
 	models/../PlnDataAllocator.h
 PlnLoopStatement.o:  models/PlnLoopStatement.h \
@@ -114,7 +116,6 @@ PlnAssignment.o:  \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnScopeStack.h \
-	models/expressions/../PlnHeapAllocator.h \
 	models/expressions/PlnDivOperation.h \
 	models/expressions/assignitem/PlnAssignItem.h
 PlnClone.o:  models/expressions/PlnClone.h \

@@ -23,7 +23,8 @@ PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsn
 	PlnValue v;
 	v.type = VL_WORK;
 	v.asgn_type = NO_ASGN;
-	v.inf.wk_type = PlnType::getSint();
+	v.inf.wk_type = new vector<PlnType*>();
+	v.inf.wk_type->push_back(PlnType::getSint());
 	values.push_back(v);
 
 	if (l->type != ET_CMP) {

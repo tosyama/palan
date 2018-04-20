@@ -86,7 +86,8 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = isUnsigned ? PlnType::getUint() : PlnType::getSint();
+	v.inf.wk_type = new vector<PlnType*>();
+	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
 	if (div_type == DV_DIV) {
 		values.push_back(v);
 		values.push_back(v);	// for remainder

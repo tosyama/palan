@@ -63,7 +63,8 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = isUnsigned ? PlnType::getUint() : PlnType::getSint();
+	v.inf.wk_type = new vector<PlnType*>();
+	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
 	values.push_back(v);
 }
 

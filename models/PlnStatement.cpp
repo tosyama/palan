@@ -135,9 +135,6 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			++i;
 		}
 		e->finish(da, si);
-		for(;j<i;++j) {
-			da.allocDp(dps[j]);
-		}
 
 		// ret_vars is just used checking requirement of free varialbes.
 		if (e->type == ET_VALUE
@@ -148,9 +145,8 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		}
 	}
 
-	// create free varialbe list.(variables in scope except returning)
+	// Create free varialbe expression.(variables in scope except returning)
 	if (si.owner_vars.size() > 0) {
-		bool do_free = false;
 		for (auto &i: si.owner_vars) {
 			bool do_ret = false;
 			for (auto rv: ret_vars)
@@ -159,15 +155,14 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 					break;
 				}
 			if (!do_ret) {
-				to_free_vars.push_back(i.var);
-				do_free = true;
+				PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
+				free_vars.push_back(free_ex);
 			}
 		}
-		if (do_free)
-			da.memFreed();
 	}
+	for (auto free_var: free_vars)
+		free_var->finish(da, si);
 
-	da.returnedValues(dps, FT_PLN);
 	for(auto dp: dps)
 		da.popSrc(dp);
 }
@@ -186,10 +181,8 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 
 	PlnDataPlace* adp = NULL;
 
-	for (auto v: to_free_vars) {
-		auto ve = g.getEntity(v->place);
-		g.genMemFree(ve.get(), v->name, false);	
-	}
+	for (auto free_var: free_vars)
+		free_var->gen(g);
 
 	for (auto e: expressions)
 		for (auto dp: e->data_places)

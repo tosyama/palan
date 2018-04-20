@@ -40,7 +40,7 @@ class PlnReturnStmt : public PlnStatement
 public:
 	PlnFunction *function;
 	vector<PlnExpression*> expressions;
-	vector<PlnVariable*> to_free_vars;
+	vector<PlnExpression*> free_vars;
 	PlnDataPlace *late_pop_dp;
 
 	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);

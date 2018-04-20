@@ -67,7 +67,7 @@ public:
 		uint64_t uintValue;
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
-		PlnType* wk_type;
+		vector<PlnType*> *wk_type;
 	} inf;
 
 	PlnValue() {};

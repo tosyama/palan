@@ -4,7 +4,7 @@
 /// The work valuses don't need to be cleared.
 /// Exist two cases need to free.
 /// 1) After object was copied.
-/// 2) Didn't assign any variable.
+/// 2) Didn't assign any variable. (not impemented)
 ///
 /// @file	PlnAssignWorkValsItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
@@ -12,12 +12,13 @@
 class PlnAssignWorkValsItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
-	struct DstInf {PlnDstItem* item; PlnDataPlace* cp_obj_dp; };
+	struct DstInf {PlnDstItem* item; PlnVariable* save_src_var; PlnExpression* free_ex; };
 	vector<DstInf> dsts;
-	vector<PlnDataPlace*> for_free_dps;
 
 public:
 	PlnAssignWorkValsItem(PlnExpression* ex) : src_ex(ex) {
+		auto v = src_ex->values[0];
+		BOOST_ASSERT(v.type == VL_WORK);
 	}
 
 	void addDstEx(PlnExpression* ex) override {
@@ -34,13 +35,11 @@ public:
 		for (auto &di: dsts) {
 			auto v = src_ex->values[i];
 			if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
-				static string cmt = "save src";
-				PlnDataPlace *cp_src_dp = da.prepareLocalVar(8, DT_OBJECT_REF);
-				cp_src_dp->comment = &cmt;
-				di.cp_obj_dp = cp_src_dp;
+				di.save_src_var = PlnVariable::createTempVar(da, *v.inf.wk_type, "save src");
+				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);
 
-				src_ex->data_places.push_back(cp_src_dp);
-				da.pushSrc(di.item->getInputDataPlace(da), cp_src_dp, false);
+				src_ex->data_places.push_back(di.save_src_var->place);
+				da.pushSrc(di.item->getInputDataPlace(da), di.save_src_var->place, false);
 
 			} else {
 				src_ex->data_places.push_back(di.item->getInputDataPlace(da));
@@ -49,37 +48,22 @@ public:
 		}
 
 		for (; i<src_ex->values.size(); i++) {
-			auto v = src_ex->values[i];
-			if (v.getType()->data_type == DT_OBJECT_REF) {
-				PlnDataPlace *for_free_dp = da.prepareLocalVar(8, DT_OBJECT_REF);
-				for_free_dps.push_back(for_free_dp);
-
-				src_ex->data_places.push_back(for_free_dp);
-				
-			} else {
-				src_ex->data_places.push_back(NULL);
-			}
-		}
+			BOOST_ASSERT(false);	// not impemented
+		} 
 
 		src_ex->finish(da, si);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		for (auto &di: dsts) {
-			if (di.cp_obj_dp) {
-				da.popSrc(di.cp_obj_dp);
+			if (di.save_src_var) {	// ASGN_COPY
+				da.popSrc(di.save_src_var->place);
 				di.item->finish(da, si);
-				da.memFreed();
-				da.releaseData(di.cp_obj_dp);
+				di.free_ex->finish(da, si);
+				da.releaseData(di.save_src_var->place);
 			} else {
 				di.item->finish(da, si);
 			}
-		}
-
-		for (auto dp: for_free_dps) {
-			da.popSrc(dp);
-			da.memFreed();
-			da.releaseData(dp);
 		}
 	}
 
@@ -89,20 +73,14 @@ public:
 
 	void genD(PlnGenerator& g) override {
 		for (auto di: dsts) {
-			if (di.cp_obj_dp) {
-				g.genLoadDp(di.cp_obj_dp);
+			if (di.save_src_var) {	// ASGN_COPY
+				g.genLoadDp(di.save_src_var->place);
 				di.item->gen(g);
-				auto fe = g.getEntity(di.cp_obj_dp);
-				g.genMemFree(fe.get(), di.cp_obj_dp->cmt(), false);
+				di.free_ex->gen(g);
 
 			} else { 
 				di.item->gen(g);
 			}
-		}
-
-		for (auto dp: for_free_dps) {
-			auto fe = g.getEntity(dp);
-			g.genMemFree(fe.get(), dp->cmt(), false);
 		}
 	}
 };

@@ -32,12 +32,7 @@ public:
 		auto var = dst_ex->values[0].inf.var;
 		auto lt = si.get_lifetime(var);
 		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
-			save_var = new PlnVariable();
-			save_var->var_type = var->var_type;
-			save_var->name = var->name + "(save)";
-			save_var->place = da.prepareLocalVar(8, DT_OBJECT_REF);
-			save_var->container = NULL;
-			save_var->ptr_type = PTR_REFERENCE;
+			save_var = PlnVariable::createTempVar(da, var->var_type, var->name + "(save)");
 			free_ex = PlnFreer::getFreeEx(save_var);
 			da.pushSrc(save_var->place, dst_ex->values[0].getDataPlace(da));
 			da.popSrc(save_var->place);

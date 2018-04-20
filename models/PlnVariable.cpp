@@ -18,6 +18,7 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
+#include "../PlnConstants.h"
 #include "expressions/PlnClone.h"
 
 // PlnVarInit
@@ -151,3 +152,19 @@ void PlnVarInit::gen(PlnGenerator& g)
 			g.genNullClear(clr_es);
 	}
 }
+
+PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name)
+{
+	auto var = new PlnVariable();
+	var->var_type = var_type;
+	var->name = name;
+	PlnType *t = var_type.back();
+	var->place = da.prepareLocalVar(t->size, t->data_type);
+	var->place->comment = &var->name;
+	var->container = NULL;
+	var->ptr_type = (t->data_type == DT_OBJECT_REF) ?
+			PTR_REFERENCE : NO_PTR;
+
+	return var;
+}
+

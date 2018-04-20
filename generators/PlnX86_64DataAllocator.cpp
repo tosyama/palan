@@ -123,35 +123,7 @@ void PlnX86_64DataAllocator::funcCalled(
 	step++;
 }
 
-void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type)
-{
-	// TODO: use pupSrc().
-	if (ret_dps.size() >= 7) {
-		auto adp = ret_dps[0];
-		allocSaveData(adp, adp->alloc_step, step);	// for use RAX for store return data to stack
-	}
-	
-
-	for (auto dp: ret_dps) {
-		dp->status = DS_RELEASED;
-		dp->release_step = step;
-
-		// check invalid state.
-		if (dp->type == DP_REG) 
-			BOOST_ASSERT(!checkExistsActiveDP(regs[dp->data.reg.id], dp));
-	}
-
-	step++;
-}
-	// TODO: use pupSrc().
-
 void PlnX86_64DataAllocator::memAlloced()
-{
-	destroyRegsByFuncCall();
-	step++;
-}
-
-void PlnX86_64DataAllocator::memFreed()
 {
 	destroyRegsByFuncCall();
 	step++;

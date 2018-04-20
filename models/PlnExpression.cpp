@@ -56,7 +56,7 @@ PlnType* PlnValue::getType()
 		case VL_VAR:
 			return inf.var->var_type.back();
 		case VL_WORK:
-			return inf.wk_type;
+			return inf.wk_type->back();
 	}
 	BOOST_ASSERT(false);
 }

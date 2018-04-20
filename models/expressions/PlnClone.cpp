@@ -18,7 +18,8 @@ PlnClone::PlnClone(PlnExpression* src)
 		PlnValue val;
 		val.type = VL_WORK;
 		// TODO: lval_type?
-		val.inf.wk_type = sval.getType();
+		val.inf.wk_type = new vector<PlnType*>();
+		val.inf.wk_type->push_back(sval.getType());
 		values.push_back(val);
 	}
 

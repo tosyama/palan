@@ -56,7 +56,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
 		BOOST_ASSERT(v.type == VL_WORK);
-		PlnType* t = ex->values[0].inf.wk_type;
+		PlnType* t = ex->values[0].inf.wk_type->back();
 		BOOST_ASSERT(t->data_type != DT_OBJECT_REF);
 
 		return new PlnAssignPrimitiveItem(ex);
