@@ -30,10 +30,11 @@ public:
 	PlnDataPlace* load_place;
 };
 
-class PlnHeapAllocator;
-
 // Variable initialization
 class PlnVarInit {
+	struct VarInitInf {PlnVariable* var; PlnExpression* alloc_ex; };
+	vector<VarInitInf> varinits;
+
 public:
 	PlnVarInit();
 	PlnVarInit(vector<PlnValue>& vars);
@@ -41,7 +42,6 @@ public:
 
 	vector<PlnValue> vars;
 	vector<PlnExpression*> initializer;
-	vector<PlnHeapAllocator*> allocators;
 
 	void addVar(PlnValue var);
 

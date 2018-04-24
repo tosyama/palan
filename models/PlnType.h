@@ -5,6 +5,12 @@
 
 #include "../PlnModel.h"
 
+class PlnAllocator {
+public:
+	virtual PlnExpression* getAllocEx() = 0;
+	static PlnExpression* getAllocEx(PlnVariable* var);
+};
+
 class PlnFreer {
 public:
 	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
@@ -31,6 +37,7 @@ public:
 
 	} inf;
 
+	PlnAllocator *allocator;
 	PlnFreer *freer;
 
 	PlnType();

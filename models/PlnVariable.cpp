@@ -14,7 +14,6 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnArray.h"
-#include "PlnHeapAllocator.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -30,9 +29,12 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
 {
 	for (auto v: this->vars) {
 		BOOST_ASSERT(v.type == VL_VAR);
-		PlnHeapAllocator* a;
-		a = PlnHeapAllocator::createHeapAllocation(v);
-		allocators.push_back(a);
+
+		varinits.push_back({v.inf.var, NULL});
+		PlnType *t = v.inf.var->var_type.back();
+		if (t->allocator) {
+			varinits.back().alloc_ex = t->allocator->getAllocEx();
+		}
 	}
 }
 
@@ -43,7 +45,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 
 	for (auto v: this->vars) {
 		BOOST_ASSERT(v.type == VL_VAR);
-		allocators.push_back(NULL);
+		varinits.push_back({v.inf.var, NULL});
 	}
 
 	int val_num = 0;
@@ -73,11 +75,19 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 
 }
 
+// for Use only init return value at PlnFunciton.
 void PlnVarInit::addVar(PlnValue var) {
 	vars.push_back(var);
-	PlnHeapAllocator* a;
-	a = PlnHeapAllocator::createHeapAllocation(var);
-	allocators.push_back(a);
+
+	if (var.inf.var->ptr_type & PTR_OWNERSHIP) {
+		varinits.push_back({var.inf.var, NULL});
+		PlnType *t = var.inf.var->var_type.back();
+		if (t->allocator) {
+			varinits.back().alloc_ex = t->allocator->getAllocEx();
+		}
+	} else {
+		varinits.push_back({var.inf.var, NULL});
+	}
 }
 
 void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -95,8 +105,12 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.push_owner_var(v);
 		}
 
-		if (auto a = allocators[i])
-			a->finish(da, si);
+		if (auto ex = varinits[i].alloc_ex) {
+			PlnDataPlace* dp = val.getDataPlace(da);
+			ex->data_places.push_back(dp);
+			ex->finish(da, si);
+			da.popSrc(dp);
+		}
 
 		if (v->ptr_type & PTR_OWNERSHIP) {
 			si.set_lifetime(v, VLT_ALLOCED);
@@ -132,8 +146,10 @@ void PlnVarInit::gen(PlnGenerator& g)
 	int i=0;
 	for (auto val: vars) {
 		PlnVariable *v = val.inf.var;
-		if (auto a = allocators[i])
-			a->gen(g);
+		if (auto ex = varinits[i].alloc_ex) {
+			ex->gen(g);
+			g.genLoadDp(ex->data_places[0]);
+		}
 		
 		i++;
 	}

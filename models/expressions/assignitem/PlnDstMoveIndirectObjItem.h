@@ -8,12 +8,11 @@ class PlnDstMoveIndirectObjItem: public PlnDstItem
 	PlnExpression *dst_ex;
 	PlnDataPlace *dst_dp;
 	PlnVariable *save_var;
-	PlnHeapAllocator *freer;
 	PlnExpression *free_ex;
 
 public:
 	PlnDstMoveIndirectObjItem(PlnExpression* ex)
-			: dst_ex(ex), dst_dp(NULL), save_var(NULL), freer(NULL), free_ex(NULL) {
+			: dst_ex(ex), dst_dp(NULL), save_var(NULL), free_ex(NULL) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & (PTR_REFERENCE | PTR_INDIRECT_ACCESS));

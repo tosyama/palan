@@ -34,7 +34,7 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 	parent.module = parent_mod;
 }
 
-PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype)
+PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype, bool do_init)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname) return NULL;
@@ -59,13 +59,21 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype)
 
 	auto t = ret_var->var_type.back();
 	if (t->data_type == DT_OBJECT_REF) {
-		ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
+		if (do_init)
+			ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
+		else	
+			ret_var->ptr_type = PTR_REFERENCE;
 	} else {
 		ret_var->ptr_type = NO_PTR;
 	}
 
-	if (rname == "") ret_var->place = NULL;
-	else retval_init->addVar(PlnValue(ret_var));
+	if (rname == "")
+		ret_var->place = NULL;
+	else {
+		PlnValue val(ret_var);
+		retval_init->addVar(val);
+	}
+
 	return_vals.push_back(ret_var);
 
 	return ret_var;

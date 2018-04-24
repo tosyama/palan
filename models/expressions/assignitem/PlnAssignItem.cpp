@@ -14,7 +14,6 @@
 #include "../../../PlnGenerator.h"
 #include "../../../PlnConstants.h"
 #include "../../../PlnScopeStack.h"
-#include "../../PlnHeapAllocator.h"
 #include "../PlnDivOperation.h"
 #include "PlnAssignItem.h"
 
@@ -123,6 +122,8 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 			int at = ex->values[0].asgn_type;
 			if (at == ASGN_MOVE) {
 				return new PlnDstMoveIndirectObjItem(ex);
+			} else if (at == ASGN_COPY_REF) {
+				return new PlnDstPrimitiveItem(ex);
 			}
 		}
 	}

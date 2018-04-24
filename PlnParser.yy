@@ -210,7 +210,7 @@ return_type: type_def
 	{
 		PlnFunction* f = scopes.back().inf.function;
 		string s = "";
-		auto v = f->addRetValue(s, &$1);
+		auto v = f->addRetValue(s, &$1, true);
 	}
 	;
 
@@ -219,7 +219,7 @@ return_values: return_value
 	| return_values ',' ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		auto v = f->addRetValue($3, NULL);
+		auto v = f->addRetValue($3, NULL, true);
 		if (!v) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
 			YYABORT;
@@ -230,7 +230,7 @@ return_values: return_value
 return_value: type_def ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		auto v = f->addRetValue($2, &$1);
+		auto v = f->addRetValue($2, &$1, true);
 		if (!v) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -305,7 +305,7 @@ ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 		f->setParent(&module);
 		string name = "";
 		if ($2.size())
-			f->addRetValue(name, &$2);
+			f->addRetValue(name, &$2, false);
 		$$ = f;
 	}
 	;
@@ -317,7 +317,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';
 		f->setParent(&module);
 		string name = "";
 		if ($4.size())
-			f->addRetValue(name, &$4);
+			f->addRetValue(name, &$4, false);
 		$$ = f;
 	}
 	;

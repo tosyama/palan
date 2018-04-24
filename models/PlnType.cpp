@@ -21,6 +21,14 @@ static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
 static PlnType* raw_array_type = NULL;
 
+// PlnAllocator
+PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
+{
+	PlnAllocator* allocator= var->var_type.back()->allocator;
+	BOOST_ASSERT(allocator);
+	return allocator->getAllocEx();
+}
+
 // PlnFreer
 PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 {
@@ -30,7 +38,8 @@ PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 }
 
 // PlnType
-PlnType::PlnType() : freer(NULL)
+PlnType::PlnType()
+	: allocator(NULL), freer(NULL)
 {
 }
 

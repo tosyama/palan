@@ -16,7 +16,7 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnArray.h"
-#include "PlnHeapAllocator.h"
+#include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
