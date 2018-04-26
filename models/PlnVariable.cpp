@@ -21,19 +21,20 @@
 #include "expressions/PlnClone.h"
 
 // PlnVarInit
-PlnVarInit::PlnVarInit()
-{
-}
-
-PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
+PlnVarInit::PlnVarInit(vector<PlnValue>& vars)
+	: vars(move(vars))
 {
 	for (auto v: this->vars) {
 		BOOST_ASSERT(v.type == VL_VAR);
 
-		varinits.push_back({v.inf.var, NULL});
-		PlnType *t = v.inf.var->var_type.back();
-		if (t->allocator) {
-			varinits.back().alloc_ex = t->allocator->getAllocEx();
+		if (v.inf.var->ptr_type & PTR_OWNERSHIP) {
+			varinits.push_back({v.inf.var, NULL});
+			PlnType *t = v.inf.var->var_type.back();
+			if (t->allocator) {
+				varinits.back().alloc_ex = t->allocator->getAllocEx();
+			}
+		} else {
+			varinits.push_back({v.inf.var, NULL});
 		}
 	}
 }
@@ -73,21 +74,6 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
 	// compiler must assure all variables have initializer.
 	BOOST_ASSERT(val_num >= vars.size());
 
-}
-
-// for Use only init return value at PlnFunciton.
-void PlnVarInit::addVar(PlnValue var) {
-	vars.push_back(var);
-
-	if (var.inf.var->ptr_type & PTR_OWNERSHIP) {
-		varinits.push_back({var.inf.var, NULL});
-		PlnType *t = var.inf.var->var_type.back();
-		if (t->allocator) {
-			varinits.back().alloc_ex = t->allocator->getAllocEx();
-		}
-	} else {
-		varinits.push_back({var.inf.var, NULL});
-	}
 }
 
 void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)

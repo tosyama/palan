@@ -1,6 +1,6 @@
 /// Variable model class declaration.
 ///
-/// @file	PlnVariable.cpp
+/// @file	PlnVariable.h
 /// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
@@ -24,10 +24,15 @@ public:
 	static PlnVariable* createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name);
 };
 
+enum {
+	PRT_PARAM = 1,
+	PRT_RETVAL = 2
+};
+
 class PlnParameter : public PlnVariable {
 public:
 	PlnValue* dflt_value;
-	PlnDataPlace* load_place;
+	int param_type;
 };
 
 // Variable initialization
@@ -36,14 +41,11 @@ class PlnVarInit {
 	vector<VarInitInf> varinits;
 
 public:
-	PlnVarInit();
 	PlnVarInit(vector<PlnValue>& vars);
 	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*>& inits);
 
 	vector<PlnValue> vars;
 	vector<PlnExpression*> initializer;
-
-	void addVar(PlnValue var);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
