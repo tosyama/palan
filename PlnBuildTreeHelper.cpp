@@ -28,7 +28,7 @@ PlnVariable* declareUInt(PlnBlock* block, string name, uint64_t init_i)
 	vector<PlnValue> vars = { var };
 
 	vector<PlnExpression*> inis = { new PlnExpression(init_i) };
-	block->statements.push_back(new PlnStatement(new PlnVarInit(vars, inis), block));
+	block->statements.push_back(new PlnStatement(new PlnVarInit(vars, &inis), block));
 
 	return var;
 }

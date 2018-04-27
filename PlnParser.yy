@@ -364,7 +364,7 @@ basic_statement: st_expression ';'
 		}
 
 		BOOST_ASSERT(scopes.back().type == SC_BLOCK);
-		$$ = new PlnStatement(new PlnVarInit($1, $3), CUR_BLOCK);
+		$$ = new PlnStatement(new PlnVarInit($1, &$3), CUR_BLOCK);
 	}
 	| while_statement
 	{

@@ -35,17 +35,16 @@ public:
 	int param_type;
 };
 
+class PlnAssignItem;
+
 // Variable initialization
 class PlnVarInit {
 	struct VarInitInf {PlnVariable* var; PlnExpression* alloc_ex; };
 	vector<VarInitInf> varinits;
+	vector<PlnAssignItem*> assgin_items;
 
 public:
-	PlnVarInit(vector<PlnValue>& vars);
-	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*>& inits);
-
-	vector<PlnValue> vars;
-	vector<PlnExpression*> initializer;
+	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits=NULL);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

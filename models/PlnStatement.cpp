@@ -60,11 +60,7 @@ void PlnStatement::dump(ostream& os, string indent)
 
 		case ST_VARINIT:
 			os << indent << "Initialize: ";
-			for (auto v: inf.var_init->vars)
-				os << v.inf.var->name << " ";
 			os << endl;
-			for (auto i: inf.var_init->initializer)
-				i->dump(os, indent+" ");
 			break;
 
 		case ST_BLOCK:

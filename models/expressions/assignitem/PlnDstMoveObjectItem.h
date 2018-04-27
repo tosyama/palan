@@ -39,6 +39,7 @@ public:
 
 		BOOST_ASSERT(dst_dp->src_place);
 		da.popSrc(dst_dp);
+		si.set_lifetime(var, VLT_INITED);
 	}
 
 	void gen(PlnGenerator& g) override {
