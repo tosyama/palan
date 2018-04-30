@@ -4,7 +4,7 @@
 /// Module includes function definitions.
 ///
 /// @file	PlnModule.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <algorithm>
 #include <boost/assert.hpp>
@@ -223,6 +223,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 	if (it->data_type != DT_OBJECT_REF) {
 		t->allocator = new PlnSingleOjectAllocator(alloc_size);
 		t->freer = new PlnSingleOjectFreer();
+
 	} else {
 		// allocator
 		{

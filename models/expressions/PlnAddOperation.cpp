@@ -138,7 +138,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size())
 		da.pushSrc(data_places[0], result_dp, true);
 	else
-		da.releaseData(result_dp);
+		da.releaseDp(result_dp);
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
@@ -199,7 +199,7 @@ void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size())
 		da.pushSrc(data_places[0], dp, true);
 	else
-		da.releaseData(dp);
+		da.releaseDp(dp);
 		
 }
 

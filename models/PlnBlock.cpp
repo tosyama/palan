@@ -104,7 +104,7 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				free_vars.push_back(free_var);
 			}
 		}
-		da.releaseData(v->place);
+		da.releaseDp(v->place);
 	}
 	
 	si.pop_owner_vars(this);

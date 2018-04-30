@@ -98,7 +98,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size())
 		da.pushSrc(data_places[0], product);
 	else
-		da.releaseData(product);
+		da.releaseDp(product);
 }
 
 void PlnMulOperation::dump(ostream& os, string indent)

@@ -49,7 +49,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
 {
 	BOOST_ASSERT(item_ind.size());
-	BOOST_ASSERT(array_ex->type == ET_VALUE);
+	//BOOST_ASSERT(array_ex->type == ET_VALUE);
 	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
 
 	auto var = new PlnVariable();
@@ -57,14 +57,10 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	var->name = array_var->name + "[]";
 	var->var_type = arr_type;
 	var->var_type.pop_back();
-	// TODO: Move place init to finish.
-	// Note: why here now? -> prepareAssignInf(NO_PTR case) will clash.
-	var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
-	var->place->comment = &var->name;
 	if (var->var_type.back()->data_type == DT_OBJECT_REF) {
 		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
 	} else {
-		var->ptr_type = NO_PTR;
+		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
 	}
 	var->container = array_var;
 
@@ -77,6 +73,13 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 
 void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	auto item_var = values[0].inf.var;
+	// PlnValue::getDataPlace may alloc dp.
+	if (!item_var->place) {
+		item_var->place = new PlnDataPlace(item_var->var_type.back()->size, item_var->var_type.back()->data_type);
+		item_var->place->comment = &item_var->name;
+	}
+
 	auto base_dp = da.prepareObjBasePtr();
 	array_ex->data_places.push_back(base_dp);
 	array_ex->finish(da, si);
@@ -85,22 +88,17 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	index_ex->data_places.push_back(index_dp);
 	index_ex->finish(da, si);
 
-	da.allocDp(base_dp);
 	da.popSrc(base_dp);
-	da.allocDp(index_dp);
 	da.popSrc(index_dp);
 
-	auto item_var = values[0].inf.var;
-	auto item_dp = values[0].inf.var->place;
+	auto item_dp = item_var->place;
 
 	da.setIndirectObjDp(item_dp, base_dp, index_dp);
 
-	PlnExpression::finish(da, si);	// pushSrc
-	
-	da.releaseData(base_dp);
-	da.releaseData(index_dp);
-	if (!data_places.size())
-		da.releaseData(item_dp);
+	if (data_places.size()) {
+		da.pushSrc(data_places[0], item_dp);
+	} else
+		da.releaseDp(item_dp);
 }
 
 void PlnArrayItem::gen(PlnGenerator& g)

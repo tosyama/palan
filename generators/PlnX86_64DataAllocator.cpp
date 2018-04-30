@@ -151,8 +151,8 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 
 void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
 {
-	releaseData(dst);
-	releaseData(src);
+	releaseDp(dst);
+	releaseDp(src);
 
 	PlnDataPlace* pdp = regs[RCX];
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
@@ -193,8 +193,8 @@ PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
-	releaseData(rdp);
-	releaseData(ldp);
+	releaseDp(rdp);
+	releaseDp(ldp);
 	auto result = prepareAccumulator(ldp->data_type);
 	allocDp(result);
 	return result;
@@ -205,7 +205,7 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
-	releaseData(rdp);
+	releaseDp(rdp);
 	return ldp;
 	step++;
 }
@@ -215,7 +215,7 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
-	releaseData(rdp);
+	releaseDp(rdp);
 
 	int regid = RDX;
 	auto pdp = regs[regid];
@@ -236,7 +236,7 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjBasePtr()
 {
 	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_REG;
-	dp->status = DS_ASSIGNED;
+	dp->status = DS_READY_ASSIGN;
 
 	dp->data.reg.id = RBX;
 	dp->data.reg.offset = 0;
@@ -251,7 +251,7 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
 {
 	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_REG;
-	dp->status = DS_ASSIGNED;
+	dp->status = DS_READY_ASSIGN;
 
 	dp->data.reg.id = RDI;
 	dp->data.reg.offset = 0;

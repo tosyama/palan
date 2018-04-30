@@ -66,8 +66,8 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	da.popSrc(rdp);
 	da.popSrc(ldp);
 
-	da.releaseData(rdp);
-	da.releaseData(ldp);
+	da.releaseDp(rdp);
+	da.releaseDp(ldp);
 
 	if (data_places.size()) {
 		result_dp = da.prepareAccumulator(DT_SINT);

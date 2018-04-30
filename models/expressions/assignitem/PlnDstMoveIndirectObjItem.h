@@ -40,7 +40,7 @@ public:
 		if (free_ex)
 			free_ex->finish(da, si);
 		if (save_var)
-			da.releaseData(save_var->place);
+			da.releaseDp(save_var->place);
 	}
 
 	void gen(PlnGenerator& g) override {

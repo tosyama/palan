@@ -139,7 +139,7 @@ void PlnBoolOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size()) {
 		da.pushSrc(data_places[0], result_dp, true);
 	} else {
-		da.releaseData(result_dp);
+		da.releaseDp(result_dp);
 	}
 }
 

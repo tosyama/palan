@@ -60,7 +60,7 @@ public:
 				da.popSrc(di.save_src_var->place);
 				di.item->finish(da, si);
 				di.free_ex->finish(da, si);
-				da.releaseData(di.save_src_var->place);
+				da.releaseDp(di.save_src_var->place);
 			} else {
 				di.item->finish(da, si);
 			}

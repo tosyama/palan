@@ -6,11 +6,11 @@
 #include "../PlnModel.h"
 
 enum {
-	NO_PTR = 0,
-	PTR_REFERENCE = 1,
-	PTR_OWNERSHIP = 2,
-	PTR_INDIRECT_ACCESS = 4,	// for class member / array item.
-	PTR_CLONE = 8	// for parameter
+	NO_PTR = 1,
+	PTR_REFERENCE = 2,
+	PTR_OWNERSHIP = 4,
+	PTR_INDIRECT_ACCESS = 8,	// for class member / array item.
+	PTR_CLONE = 16	// for parameter
 };
 
 class PlnVariable {

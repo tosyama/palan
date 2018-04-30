@@ -125,14 +125,14 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			if (data_places.size() >= 2 && data_places[1] != NULL)
 				da.pushSrc(data_places[1], remainder);
 			else
-				da.releaseData(remainder);
+				da.releaseDp(remainder);
 		} else {	// DV_MOD
-			da.releaseData(quotient);
+			da.releaseDp(quotient);
 			da.pushSrc(data_places[0], remainder);
 		}
 	} else {
-		da.releaseData(quotient);
-		da.releaseData(remainder);
+		da.releaseDp(quotient);
+		da.releaseDp(remainder);
 	}
 
 }

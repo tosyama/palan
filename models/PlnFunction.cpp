@@ -174,7 +174,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			// Release parameters & return values.
 			for (auto v: for_release) 
-				da.releaseData(v->place);
+				da.releaseDp(v->place);
 
 			si.pop_owner_vars(this);
 			si.pop_scope();

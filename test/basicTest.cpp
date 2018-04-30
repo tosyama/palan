@@ -53,7 +53,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "1");
 	CHECK(mcheck("mtrace010") == "+33 -33");
 
 	testcode = "011_assignment";

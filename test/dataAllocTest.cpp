@@ -15,7 +15,7 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 
 	PlnDataPlace* dp2=allocator.allocData(8, DT_SINT);
 	REQUIRE(allocator.data_stack.size() == 2);
-	allocator.releaseData(dp2);
+	allocator.releaseDp(dp2);
 
 	PlnDataPlace* dp3=allocator.allocData(8, DT_SINT);
 	REQUIRE(allocator.data_stack.size() == 2);
@@ -157,7 +157,7 @@ TEST_CASE("Mixed bytes allocation test.", "[allocate]")
 	REQUIRE(allocator.data_stack.size() == 2);
 
 	auto dp5=allocator.allocData(1, DT_SINT);
-	allocator.releaseData(dp2);
+	allocator.releaseDp(dp2);
 	auto dp6=allocator.allocData(2, DT_SINT);
 	auto dp7=allocator.allocData(4, DT_SINT);
 
@@ -221,9 +221,9 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 		CHECK(dp_ac_dst->status == DS_ASSIGNED);
 		CHECK(dp_ac_dst->save_place == NULL);
-		CHECK(dp_ac_dst->alloc_step == pop_step);
+		CHECK(dp_ac_dst->alloc_step == (pop_step+1));
 
-		da.releaseData(dp_ac_dst);
+		da.releaseDp(dp_ac_dst);
 	}
 
 	// src(Reg): keep, dst(Reg): destroy
@@ -238,7 +238,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 		// destory
 		auto dst_arg2 = da.prepareArgDps(0, 1, FT_PLN, false);
 		da.allocDp(dst_arg2[0]);
-		da.releaseData(dst_arg2[0]);
+		da.releaseDp(dst_arg2[0]);
 
 		pop_step = da.step;
 		da.popSrc(dst_arg1[0]);
@@ -254,9 +254,9 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 		CHECK(dst_arg1[0]->status == DS_ASSIGNED);
 		CHECK(dst_arg1[0]->save_place == NULL);
-		CHECK(dst_arg1[0]->alloc_step == pop_step);
+		CHECK(dst_arg1[0]->alloc_step == (pop_step+1));
 
-		da.releaseData(dst_arg1[0]);
+		da.releaseDp(dst_arg1[0]);
 	}
 
 	// src(Reg): destory, dst(Reg): keep
@@ -270,7 +270,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 		auto dp_ac_src2 = da.prepareAccumulator(DT_SINT);
 		da.allocDp(dp_ac_src2);
-		da.releaseData(dp_ac_src2);
+		da.releaseDp(dp_ac_src2);
 
 		pop_step = da.step;
 		da.popSrc(dst_arg[0]);
@@ -283,7 +283,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 		CHECK(dst_arg[0]->status == DS_ASSIGNED);
 		CHECK(dst_arg[0]->save_place == dst_arg[0]);
 		CHECK(dst_arg[0]->alloc_step == push_step);
-		da.releaseData(dst_arg[0]);
+		da.releaseDp(dst_arg[0]);
 	}
 //--- 
 	vector<PlnParameter*> params(3);

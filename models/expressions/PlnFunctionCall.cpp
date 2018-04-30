@@ -118,7 +118,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		free_ex->finish(da, si);
 
 	for (auto free_var: free_vars)
-		da.releaseData(free_var->place);
+		da.releaseDp(free_var->place);
 
 }
 
