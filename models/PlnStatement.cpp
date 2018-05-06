@@ -195,7 +195,6 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 		g.genLoadReg(function->save_regs[i], e.get());
 	}
 	
-	g.genFreeLocalVarArea(function->inf.pln.stack_size);
 	g.genReturn();
 }
 

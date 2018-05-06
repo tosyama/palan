@@ -21,7 +21,6 @@ public:
 	void genFalseJump(int id, int cmp_type, string comment) override;
 	void genEntryFunc() override;
 	void genLocalVarArea(int size) override;
-	void genFreeLocalVarArea(int size) override;
 
 	void genSaveReg(int reg, PlnGenEntity* dst) override;
 	void genLoadReg(int reg, PlnGenEntity* src) override;

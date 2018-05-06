@@ -12,7 +12,10 @@
 class PlnAssignWorkValsItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
-	struct DstInf {PlnDstItem* item; PlnVariable* save_src_var; PlnExpression* free_ex; };
+	struct DstInf {
+		PlnDstItem* item;
+		PlnVariable* save_src_var;
+		PlnExpression* copy_src_ex, *free_ex; };
 	vector<DstInf> dsts;
 
 public:
@@ -27,7 +30,7 @@ public:
 
 		BOOST_ASSERT(v.type == VL_VAR);
 
-		dsts.push_back( {PlnDstItem::createDstItem(ex), NULL} );
+		dsts.push_back( {PlnDstItem::createDstItem(ex), NULL, NULL, NULL} );
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -39,10 +42,12 @@ public:
 				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);
 
 				src_ex->data_places.push_back(di.save_src_var->place);
-				da.pushSrc(di.item->getInputDataPlace(da), di.save_src_var->place, false);
+
+				di.copy_src_ex = new PlnExpression(di.save_src_var);
+				di.item->setSrcEx(da, di.copy_src_ex);
 
 			} else {
-				src_ex->data_places.push_back(di.item->getInputDataPlace(da));
+				di.item->setSrcEx(da, src_ex);
 			}
 			i++;
 		}
@@ -58,6 +63,7 @@ public:
 		for (auto &di: dsts) {
 			if (di.save_src_var) {	// ASGN_COPY
 				da.popSrc(di.save_src_var->place);
+				di.copy_src_ex->finish(da, si);
 				di.item->finish(da, si);
 				di.free_ex->finish(da, si);
 				da.releaseDp(di.save_src_var->place);

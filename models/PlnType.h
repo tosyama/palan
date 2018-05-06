@@ -17,6 +17,11 @@ public:
 	static PlnExpression* getFreeEx(PlnVariable* var);
 };
 
+class PlnCopyer {
+public:
+	virtual PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) = 0;
+};
+
 class PlnType {
 public:
 	int	data_type;
@@ -39,6 +44,7 @@ public:
 
 	PlnAllocator *allocator;
 	PlnFreer *freer;
+	PlnCopyer *copyer;
 
 	PlnType();
 

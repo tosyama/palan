@@ -10,7 +10,7 @@ PlnModule.o:  models/PlnModule.h \
 	models/../PlnGenerator.h models/../PlnScopeStack.h \
 	models/../PlnConstants.h models/../PlnBuildTreeHelper.h \
 	models/expressions/PlnFunctionCall.h models/expressions/PlnArrayItem.h \
-	models/expressions/PlnAssignment.h
+	models/expressions/PlnAssignment.h models/expressions/PlnMemCopy.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
@@ -36,7 +36,8 @@ PlnVariable.o:  models/PlnFunction.h \
 	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h \
-	models/expressions/PlnClone.h
+	models/expressions/PlnClone.h \
+	models/expressions/assignitem/PlnAssignItem.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
 PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
@@ -133,6 +134,7 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/../../../PlnConstants.h \
 	models/expressions/assignitem/../../../PlnScopeStack.h \
 	models/expressions/assignitem/../PlnDivOperation.h \
+	models/expressions/assignitem/../PlnMemCopy.h \
 	models/expressions/assignitem/PlnAssignItem.h \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \
 	models/expressions/assignitem/PlnAssignWorkValsItem.h \

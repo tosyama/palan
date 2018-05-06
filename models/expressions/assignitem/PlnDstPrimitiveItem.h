@@ -18,9 +18,9 @@ public:
 
 	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 
-	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
+	void setSrcEx(PlnDataAllocator &da, PlnExpression *src_ex) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
-		return dst_dp;
+		src_ex->data_places.push_back(dst_dp);
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {

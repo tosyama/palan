@@ -21,7 +21,7 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		src_ex->data_places.push_back(dst_item->getInputDataPlace(da));
+		dst_item->setSrcEx(da, src_ex);
 		src_ex->finish(da, si);
 	}
 

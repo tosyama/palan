@@ -15,13 +15,14 @@
 #include "../../../PlnConstants.h"
 #include "../../../PlnScopeStack.h"
 #include "../PlnDivOperation.h"
+#include "../PlnMemCopy.h"
 #include "PlnAssignItem.h"
 
 // PlnDstItem
 class PlnDstItem {
 public:
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
-	virtual PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) { return NULL; }
+	virtual void setSrcEx(PlnDataAllocator &da, PlnExpression *src_ex) = 0;
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void gen(PlnGenerator& g) { }
 
@@ -83,7 +84,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 	}
 
 	BOOST_ASSERT(false);
-	return new PlnAssignItem();
+// return new PlnAssignItem();
 }
 
 #include "PlnDstPrimitiveItem.h"
@@ -129,6 +130,6 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 	}
 
 	BOOST_ASSERT(false);
-	return new PlnDstItem();
+//	return new PlnDstItem();
 }
 

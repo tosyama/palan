@@ -23,6 +23,7 @@
 #include "expressions/PlnFunctionCall.h"
 #include "expressions/PlnArrayItem.h"
 #include "expressions/PlnAssignment.h"
+#include "expressions/PlnMemCopy.h"
 
 using namespace std;
 
@@ -65,6 +66,16 @@ public:
 		PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
 		
 		return free_call;
+	}
+};
+
+class PlnSingleOjectCopyer : public PlnCopyer {
+public:
+	uint64_t len;
+	PlnSingleOjectCopyer(uint64_t len) : len(len) { }
+	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
+		PlnMemCopy *mcopy = new PlnMemCopy(dst_var, src_var, new PlnExpression(len));
+		return mcopy;
 	}
 };
 
@@ -223,6 +234,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 	if (it->data_type != DT_OBJECT_REF) {
 		t->allocator = new PlnSingleOjectAllocator(alloc_size);
 		t->freer = new PlnSingleOjectFreer();
+		t->copyer = new PlnSingleOjectCopyer(alloc_size);
 
 	} else {
 		// allocator

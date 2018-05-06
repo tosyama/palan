@@ -195,13 +195,6 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 	}
 }
 
-void PlnX86_64Generator::genFreeLocalVarArea(int size)
-{
-	if (size) {
-		os << "	addq $" << size << ", %rsp" << endl;
-	}
-}
-
 void PlnX86_64Generator::genSaveReg(int reg, PlnGenEntity* dst)
 {
 	os << "	movq " << r(reg) << ", " << oprnd(dst) << endl;
@@ -227,8 +220,7 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 
 void PlnX86_64Generator::genReturn()
 {
-	os << "	movq %rbp, %rsp" << endl;
-	os << "	popq %rbp" << endl;
+	os << "	leave" << endl;
 	os << "	ret" << endl;
 }
 

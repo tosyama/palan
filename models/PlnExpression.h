@@ -20,7 +20,7 @@ enum PlnExprsnType {
 	ET_ASSIGN,
 	ET_CLONE,
 	ET_ARRAYITEM,
-	ET_HP_ALLOC
+	ET_MCOPY
 };
 
 class PlnExpression {

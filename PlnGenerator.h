@@ -57,7 +57,6 @@ public:
 	virtual void genFalseJump(int id, int cmp_type, string comment) = 0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
-	virtual void genFreeLocalVarArea(int size)=0;
 	
 	virtual void genSaveReg(int reg, PlnGenEntity* dst)=0;
 	virtual void genLoadReg(int reg, PlnGenEntity* src)=0;
