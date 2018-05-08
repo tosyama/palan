@@ -81,24 +81,24 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 
 	auto base_dp = da.prepareObjBasePtr();
-	array_ex->data_places.push_back(base_dp);
-	array_ex->finish(da, si);
+	array_ex->data_places.push_back(base_dp); array_ex->finish(da, si);
 
 	auto index_dp = da.prepareObjIndexPtr();
 	index_ex->data_places.push_back(index_dp);
 	index_ex->finish(da, si);
 
-	da.popSrc(base_dp);
-	da.popSrc(index_dp);
-
 	auto item_dp = item_var->place;
-
 	da.setIndirectObjDp(item_dp, base_dp, index_dp);
-
+	
+	// need for assignment except no data_place.
+//	da.popSrc(base_dp);
+//	da.popSrc(index_dp);
+	
 	if (data_places.size()) {
 		da.pushSrc(data_places[0], item_dp);
-	} else
+	} else {
 		da.releaseDp(item_dp);
+	}
 }
 
 void PlnArrayItem::gen(PlnGenerator& g)
@@ -107,11 +107,12 @@ void PlnArrayItem::gen(PlnGenerator& g)
 	array_ex->gen(g);
 	index_ex->gen(g);
 	
-	g.genLoadDp(array_ex->data_places[0]);
-	g.genLoadDp(index_ex->data_places[0]);
+//	g.genLoadDp(array_ex->data_places[0]);
+//	g.genLoadDp(index_ex->data_places[0]);
 
 	// rval
-	if (data_places.size()) 
+	if (data_places.size()) {
 		g.genSaveSrc(data_places[0]);
+	}
 }
 

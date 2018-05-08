@@ -199,8 +199,10 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 	dp->status = DS_ASSIGNED;
 	auto pdp = dp->previous;
 	dp->alloc_step = step;
-	if (pdp && pdp->status != DS_RELEASED) {
+	if (pdp && pdp->status != DS_RELEASED
+			&& !pdp->save_place) {
 		allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
+		pdp->save_place->comment = new string("(savex)");
 	}
 
 	if (proceed_step) step++;
@@ -416,13 +418,13 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 	}
 }
 
-bool tryAccelerateAlloc(PlnDataPlace *dp, int al_step)
+bool tryAccelerateAlloc(PlnDataAllocator&da, PlnDataPlace *dp, int push_step)
 {
 	if (dp->type == DP_REG) {
 		if (dp->status == DS_ASSIGNED || dp->status == DS_RELEASED) {
-			if (dp->alloc_step <= al_step) return true;
-			if (!dp->previous || dp->previous->release_step < al_step) {
-				dp->alloc_step = al_step;
+			if (dp->alloc_step <= push_step) return true;
+			if (!dp->previous || dp->previous->release_step < push_step) {
+				dp->alloc_step = push_step;
 				return true;
 			}
 		} else
@@ -437,6 +439,15 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 	auto src_place = dp->src_place;
 	bool is_src_destroyed = isDestroyed(src_place);
 
+	if (src_place->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = src_place->data.indirect.base_dp) {
+			popSrc(base_dp);
+		}
+		if (auto index_dp = src_place->data.indirect.index_dp) {
+			popSrc(index_dp);
+		}
+	}
+
 	// Release source if flag on.
 	if (dp->release_src_pop) {
 		releaseDp(src_place);
@@ -446,12 +457,22 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 	if (dp->status == DS_READY_ASSIGN) {
 		allocDp(dp, false);
 	}
+
+	if (dp->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = dp->data.indirect.base_dp) {
+			popSrc(base_dp);
+		}
+		if (auto index_dp = dp->data.indirect.index_dp) {
+			popSrc(index_dp);
+		}
+	}
+
 	// check src data would be destory.
 	if (!dp->save_place) {
 		if (is_src_destroyed) {
-			if (tryAccelerateAlloc(dp, dp->push_src_step))
+			if (tryAccelerateAlloc(*this, dp, dp->push_src_step))
 				dp->save_place = dp;
-			else
+			else 
 				allocSaveData(dp, src_place->alloc_step, step);
 		}
 	}

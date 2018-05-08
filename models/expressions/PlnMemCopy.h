@@ -7,10 +7,11 @@
 
 class PlnMemCopy : public PlnExpression {
 public:
+	bool do_src;
 	PlnExpression *dst_ex, *src_ex, *len_ex;
 	PlnDataPlace *cp_dst_dp, *cp_src_dp;
 	PlnMemCopy(PlnExpression *dst, PlnExpression *src, PlnExpression *len)
-		: dst_ex(dst), src_ex(src), len_ex(len), PlnExpression(ET_MCOPY)
+		: do_src(false), dst_ex(dst), src_ex(src), len_ex(len), PlnExpression(ET_MCOPY)
 	{ 
 		BOOST_ASSERT(len_ex->type == ET_VALUE);
 		BOOST_ASSERT(len_ex->values[0].type == VL_LIT_UINT8);
@@ -21,6 +22,7 @@ public:
 
 		src_ex->data_places.push_back(cp_src_dp);
 		if (!cp_src_dp->src_place) {
+			do_src = true;
 			src_ex->finish(da, si);
 		}
 
@@ -32,14 +34,15 @@ public:
 	}
 
 	void gen(PlnGenerator& g) override {
-		g.comment("== start new copy==");
+		if (do_src) {
+			src_ex->gen(g);
+		}
 		dst_ex->gen(g);
 		g.genLoadDp(cp_src_dp);
 		g.genLoadDp(cp_dst_dp);
 
 		int copy_size = len_ex->values[0].inf.uintValue;
 
-		static string cmt = "== new deep copy";
 		g.genMemCopy(copy_size, cmt);
 	}
 };

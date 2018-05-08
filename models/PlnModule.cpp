@@ -156,6 +156,18 @@ string getFreeFuncName(PlnType *t)
 	return fname;
 }
 
+string getCopyFuncName(PlnType *t)
+{
+	string fname = t->name;
+	boost::replace_all(fname, "_", "__");
+	boost::replace_all(fname, "[", "A_");
+	boost::replace_all(fname, "]", "_");
+	boost::replace_all(fname, ",", "_");
+	fname = "_cpy_" + fname;
+
+	return fname;
+}
+
 PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type)
 {
 	PlnType* t = arr_type.back();
@@ -182,6 +194,38 @@ PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type
 	}
 
 	palan::free(f->implement, f->parameters[0]);
+
+	return f;
+}
+
+PlnFunction* createObjArrayCopyFunc(string func_name, vector<PlnType*> &arr_type)
+{
+	PlnType* t = arr_type.back();
+	PlnType* it = arr_type[arr_type.size()-2];
+	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
+
+	vector<PlnType*> src_arr_type = arr_type;
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	string s1 = "p1", s2 = "p2";
+	f->addParam(s1, &arr_type, FPM_REF, NULL);
+	f->addParam(s2, &src_arr_type, FPM_REF, NULL);
+
+	f->implement = new PlnBlock();
+	f->implement->setParent(f);
+
+	// Add copy code.
+	PlnVariable* i = palan::declareUInt(f->implement, "i", 0);
+	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
+	{
+		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0], i);
+		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1], i);
+		if (it->copyer) {
+			PlnExpression* copy_item = it->copyer->getCopyEx(dst_arr_item, src_arr_item);
+			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
+		}
+
+		palan::incrementUInt(wblock, i, 1);
+	}
 
 	return f;
 }
@@ -274,6 +318,24 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 				functions.push_back(free_func);
 			}
 			t->freer = new PlnSingleParamFreer(free_func);
+		}
+
+		// copyer
+		{
+			string fname = getCopyFuncName(t);
+			PlnFunction* copy_func = NULL;
+			for (auto f: functions) {
+				if (f->name == fname) {
+					copy_func = f;
+					break;
+				}
+			}
+			if (!copy_func) {
+				vector<PlnType*> type_def = item_type;
+				type_def.push_back(t);
+				copy_func = createObjArrayCopyFunc(fname, type_def);
+				functions.push_back(copy_func);
+			}
 		}
 	}
 
