@@ -4,6 +4,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 {
 	string testcode;
 
+	testcode = "000_temp";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "");
+
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8 1263\n"

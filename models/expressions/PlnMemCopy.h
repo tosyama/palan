@@ -43,6 +43,7 @@ public:
 
 		int copy_size = len_ex->values[0].inf.uintValue;
 
+		static string cmt = "deep copy";
 		g.genMemCopy(copy_size, cmt);
 	}
 };

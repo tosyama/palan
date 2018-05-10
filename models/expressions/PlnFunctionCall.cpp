@@ -143,10 +143,13 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			vector<unique_ptr<PlnGenEntity>> clr_es;
 			for (auto arg: arguments) {
 				auto dp = arg->data_places[0];
-				g.genLoadDp(dp);
+				g.genLoadDp(dp, false);
 				if (arg->values[0].asgn_type == ASGN_MOVE)
 					clr_es.push_back(g.getEntity(dp->src_place));
 			}
+			for (auto arg: arguments)
+				g.genSaveDp(arg->data_places[0]);
+
 			if (clr_es.size())
 				g.genNullClear(clr_es);
 
@@ -165,7 +168,9 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) 
 				arg->gen(g);
 			for (auto arg: arguments)
-				g.genLoadDp(arg->data_places[0]);
+				g.genLoadDp(arg->data_places[0], false);
+			for (auto arg: arguments)
+				g.genSaveDp(arg->data_places[0]);
 
 			g.genSysCall(function->inf.syscall.id, function->asm_name);
 
@@ -176,7 +181,9 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) 
 				arg->gen(g);
 			for (auto arg: arguments)
-				g.genLoadDp(arg->data_places[0]);
+				g.genLoadDp(arg->data_places[0], false);
+			for (auto arg: arguments)
+				g.genSaveDp(arg->data_places[0]);
 
 			g.genCCall(function->asm_name);
 			break;

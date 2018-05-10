@@ -41,7 +41,6 @@ public:
 	PlnFunction *function;
 	vector<PlnExpression*> expressions;
 	vector<PlnExpression*> free_vars;
-	PlnDataPlace *late_pop_dp;
 
 	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);
 

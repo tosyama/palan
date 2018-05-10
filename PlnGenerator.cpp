@@ -13,36 +13,34 @@
 #include "PlnDataAllocator.h"
 #include "PlnGenerator.h"
 
-void PlnGenerator::genLoadDp(PlnDataPlace* dp)
+static void preLoadDp(PlnGenerator &g, PlnDataPlace *dp)
+{
+	if (dp->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = dp->data.indirect.base_dp) {
+			g.genLoadDp(base_dp);
+		}
+		if (auto index_dp = dp->data.indirect.index_dp) {
+			g.genLoadDp(index_dp);
+		}
+	}
+}
+
+void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 {
 	PlnDataPlace *src_dp;
 	string src_cmt;
 	if (dp->save_place) {
+		if (!load_save) return;
 		src_dp = dp->save_place;
 		src_cmt = dp->src_place->cmt() + src_dp->cmt();
 	} else {
 		src_dp = dp->src_place;
-
-		if (src_dp->type == DP_INDRCT_OBJ) {
-			if (auto base_dp = src_dp->data.indirect.base_dp) {
-				genLoadDp(base_dp);
-			}
-			if (auto index_dp = src_dp->data.indirect.index_dp) {
-				genLoadDp(index_dp);
-			}
-		}
+		preLoadDp(*this, src_dp);
 
 		src_cmt = src_dp->cmt();
 	}
 
-	if (dp->type == DP_INDRCT_OBJ) {
-		if (auto base_dp = dp->data.indirect.base_dp) {
-			genLoadDp(base_dp);
-		}
-		if (auto index_dp = dp->data.indirect.index_dp) {
-			genLoadDp(index_dp);
-		}
-	}
+	preLoadDp(*this, dp);
 
 	auto srce = getEntity(src_dp);
 	auto dste = getEntity(dp);
@@ -55,18 +53,28 @@ void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
 	if (savdp) {
 		auto src_dp = dp->src_place;
 
-		if (src_dp->type == DP_INDRCT_OBJ) {
-			if (auto base_dp = src_dp->data.indirect.base_dp) {
-				genLoadDp(base_dp);
-			}
-			if (auto index_dp = src_dp->data.indirect.index_dp) {
-				genLoadDp(index_dp);
-			}
-		}
+		preLoadDp(*this, src_dp);
+
 		auto srcdp = dp->src_place;
 		BOOST_ASSERT(srcdp);
 		auto save = getEntity(savdp);
 		auto srce = getEntity(srcdp);
 		genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + " for save");
+	}
+}
+
+void PlnGenerator::genSaveDp(PlnDataPlace* dp) {
+	if (dp->save_place) {
+		PlnDataPlace *src_dp;
+		string src_cmt;
+
+		src_dp = dp->save_place;
+		src_cmt = dp->src_place->cmt() + src_dp->cmt();
+
+		preLoadDp(*this, dp);
+
+		auto srce = getEntity(src_dp);
+		auto dste = getEntity(dp);
+		genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
 	}
 }

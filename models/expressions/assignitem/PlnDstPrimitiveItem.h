@@ -27,6 +27,7 @@ public:
 		BOOST_ASSERT(dst_dp->src_place);
 		dst_ex->finish(da, si);
 		da.popSrc(dst_dp);
+		da.releaseDp(dst_dp);
 	}
 
 	void gen(PlnGenerator& g) override {

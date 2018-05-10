@@ -96,7 +96,6 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 	type = ST_RETURN;
 	this->parent = parent;
 	function = parent->parent_func;
-	late_pop_dp = NULL;
 	
 	expressions = move(retexp);
 
@@ -125,9 +124,6 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto e: expressions) {
 		for (auto &v: e->values) {
 			e->data_places.push_back(dps[i]);
-			if (da.isAccumulator(dps[i])) {
-				late_pop_dp = dps[i];
-			}
 			++i;
 		}
 		e->finish(da, si);
@@ -159,8 +155,12 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto free_var: free_vars)
 		free_var->finish(da, si);
 
-	for(auto dp: dps)
+	for(auto dp: dps) {
 		da.popSrc(dp);
+	}
+	for(auto dp: dps) {
+		da.releaseDp(dp);
+	}
 }
 
 void PlnReturnStmt::dump(ostream& os, string indent)
@@ -182,13 +182,11 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 
 	for (auto e: expressions)
 		for (auto dp: e->data_places)
-			if (dp != late_pop_dp) {
-				g.genLoadDp(dp);
-			}
+				g.genLoadDp(dp, false);
 				
-	if (late_pop_dp) {
-		g.genLoadDp(late_pop_dp);
-	}
+	for (auto e: expressions)
+		for (auto dp: e->data_places)
+			g.genSaveDp(dp);
 
 	for (int i; i<function->save_regs.size(); i++) {
 		auto e = g.getEntity(function->save_reg_dps[i]);

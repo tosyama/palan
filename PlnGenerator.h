@@ -81,8 +81,9 @@ public:
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string comment)=0;
 	virtual void genMemCopy(int cp_size, string& comment)=0;
 
-	void genLoadDp(PlnDataPlace* dp);
+	void genLoadDp(PlnDataPlace* dp, bool load_save=true);
 	void genSaveSrc(PlnDataPlace* dp);
+	void genSaveDp(PlnDataPlace* dp);
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 };

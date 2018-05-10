@@ -257,6 +257,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 		static string cmt="return";
 		auto dp = createArgDp(func_type, i, is_callee);
 		dp->comment = &cmt;
+		dp->status = DS_READY_ASSIGN;
 		dps.push_back(dp);
 	}
 
@@ -406,6 +407,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 			int base_id = base_dp->data.reg.id;
 			auto index_dp = dp->data.indirect.index_dp;
 			int index_id = index_dp->data.reg.id;
+
 			return regs[base_id] != base_dp || regs[index_id] != index_dp;
 		}
 		case DP_RO_DATA:
@@ -418,11 +420,13 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 	}
 }
 
-bool tryAccelerateAlloc(PlnDataAllocator&da, PlnDataPlace *dp, int push_step)
+bool tryAccelerateAlloc(PlnDataPlace *dp, int push_step)
 {
 	if (dp->type == DP_REG) {
 		if (dp->status == DS_ASSIGNED || dp->status == DS_RELEASED) {
 			if (dp->alloc_step <= push_step) return true;
+
+			// if alloc_step > push_step
 			if (!dp->previous || dp->previous->release_step < push_step) {
 				dp->alloc_step = push_step;
 				return true;
@@ -433,46 +437,63 @@ bool tryAccelerateAlloc(PlnDataAllocator&da, PlnDataPlace *dp, int push_step)
 	return false;
 }
 
+static void prePopSrc(PlnDataAllocator& da, PlnDataPlace *dp)
+{
+	if (dp->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = dp->data.indirect.base_dp) {
+			da.popSrc(base_dp);
+		}
+		if (auto index_dp = dp->data.indirect.index_dp) {
+			da.popSrc(index_dp);
+		}
+	}
+}
+
+void updateReleaseStep(PlnDataPlace *dp, int new_release_step)
+{
+	BOOST_ASSERT(dp->status == DS_RELEASED);
+	BOOST_ASSERT(dp->alloc_step <= new_release_step);
+	dp->release_step = new_release_step;
+	if (dp->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = dp->data.indirect.base_dp) {
+			base_dp->alloc_step = base_dp->release_step = new_release_step;
+		}
+		if (auto index_dp = dp->data.indirect.index_dp) {
+			index_dp->alloc_step = index_dp->release_step = new_release_step;
+		}
+	}
+}
+
 void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 {
 	BOOST_ASSERT(dp->src_place);
 	auto src_place = dp->src_place;
-	bool is_src_destroyed = isDestroyed(src_place);
 
-	if (src_place->type == DP_INDRCT_OBJ) {
-		if (auto base_dp = src_place->data.indirect.base_dp) {
-			popSrc(base_dp);
-		}
-		if (auto index_dp = src_place->data.indirect.index_dp) {
-			popSrc(index_dp);
-		}
-	}
+	prePopSrc(*this, src_place);
 
 	// Release source if flag on.
 	if (dp->release_src_pop) {
 		releaseDp(src_place);
 	}
 
+	prePopSrc(*this, dp);
+
+	bool is_src_destroyed = isDestroyed(src_place);
+
 	// Assign dst data place if ready.
 	if (dp->status == DS_READY_ASSIGN) {
 		allocDp(dp, false);
 	}
 
-	if (dp->type == DP_INDRCT_OBJ) {
-		if (auto base_dp = dp->data.indirect.base_dp) {
-			popSrc(base_dp);
-		}
-		if (auto index_dp = dp->data.indirect.index_dp) {
-			popSrc(index_dp);
-		}
-	}
-
 	// check src data would be destory.
 	if (!dp->save_place) {
 		if (is_src_destroyed) {
-			if (tryAccelerateAlloc(*this, dp, dp->push_src_step))
+			if (tryAccelerateAlloc(dp, dp->push_src_step)) {
+				if (dp->release_src_pop) {
+					updateReleaseStep(src_place, dp->push_src_step);
+				}
 				dp->save_place = dp;
-			else 
+			} else 
 				allocSaveData(dp, src_place->alloc_step, step);
 		}
 	}
