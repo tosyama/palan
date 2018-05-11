@@ -59,12 +59,13 @@ void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
 		BOOST_ASSERT(srcdp);
 		auto save = getEntity(savdp);
 		auto srce = getEntity(srcdp);
-		genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + " for save");
+		string opt_cmt = (savdp == dp) ? " (accelerate)" : " for save";
+		genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
 	}
 }
 
 void PlnGenerator::genSaveDp(PlnDataPlace* dp) {
-	if (dp->save_place) {
+	if (dp->save_place && dp != dp->save_place) {
 		PlnDataPlace *src_dp;
 		string src_cmt;
 

@@ -206,8 +206,10 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
 	releaseDp(rdp);
-	return ldp;
-	step++;
+	releaseDp(ldp);
+	auto result = prepareAccumulator(ldp->data_type);
+	allocDp(result);
+	return result;
 }
 
 void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp)
