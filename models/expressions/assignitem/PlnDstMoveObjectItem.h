@@ -23,7 +23,7 @@ public:
 
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
-	void setSrcEx(PlnDataAllocator &da, PlnExpression *src_ex) override {
+	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
 		src_ex->data_places.push_back(dst_dp);
 	}

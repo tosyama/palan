@@ -44,7 +44,9 @@ void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 
 	auto srce = getEntity(src_dp);
 	auto dste = getEntity(dp);
-	genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
+	if (dp->load_address) genLoadAddress(dste.get(), srce.get(), "address of " + src_cmt + " -> " + dp->cmt());
+	else
+		genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
 }
 
 void PlnGenerator::genSaveSrc(PlnDataPlace* dp)

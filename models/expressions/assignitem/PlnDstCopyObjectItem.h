@@ -11,8 +11,7 @@ class PlnDstCopyObjectItem : public PlnDstItem
 	PlnExpression *dst_ex, *cpy_ex;
 
 public:
-	PlnDstCopyObjectItem(PlnExpression* ex)
-			: dst_ex(ex), cpy_ex(NULL) {
+	PlnDstCopyObjectItem(PlnExpression* ex) : dst_ex(ex), cpy_ex(NULL) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
@@ -20,7 +19,7 @@ public:
 
 	PlnAsgnType getAssginType() override { return ASGN_COPY; }
 
-	void setSrcEx(PlnDataAllocator &da, PlnExpression *src_ex) override {
+	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		PlnType *t = dst_ex->values[0].getType();
 		auto copyer = t->copyer;
 		cpy_ex = copyer->getCopyEx(dst_ex, src_ex);

@@ -139,6 +139,7 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \
 	models/expressions/assignitem/PlnAssignWorkValsItem.h \
 	models/expressions/assignitem/PlnAssignObjectRefItem.h \
+	models/expressions/assignitem/PlnAssignIndirectObjItem.h \
 	models/expressions/assignitem/PlnDstPrimitiveItem.h \
 	models/expressions/assignitem/PlnDstCopyObjectItem.h \
 	models/expressions/assignitem/PlnDstMoveObjectItem.h \

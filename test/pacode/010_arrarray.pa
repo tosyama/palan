@@ -5,18 +5,32 @@ ccall mtrace();
 ccall muntrace();
 
 setenv("MALLOC_TRACE", "out/mtrace010", 1);
-int32 i;
-
+int32 i,j,k,l;
+int32[5] c;
 mtrace();
 
 {
-	int32[4][3] aa1;
-	int32[5][2,3][4] aa2;
+	int32[4][3] a1;
+	int32[5][2,3][4] b1, b2;
 
-	1->aa1[2][3];
-	aa1[2][3]->i;
+	1 -> a1[2][3];
+	a1[2][3] -> i;
+
+	2 -> b1[2][1,2][3];
+	b1[2][1,2][3]->j;
+
+	a1[2][3] -> b1[2][1,2][3];
+	b1[2][a1[2][3],2][3] -> k;
+
+	b1 -> b2;
+	b2[2][1,2][3]->l;
+
+	b1[2][1,2] -> c;
+	b1 ->> b2;
+	c ->> b2[2][1,1];
 }
 
 muntrace();
-printf("%d\n", i);
+printf("%d %d %d %d\n", i,j,k,l);
+
 exit(0);

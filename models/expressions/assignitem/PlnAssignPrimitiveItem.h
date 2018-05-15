@@ -21,7 +21,7 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->setSrcEx(da, src_ex);
+		dst_item->setSrcEx(da, si, src_ex);
 		src_ex->finish(da, si);
 	}
 
