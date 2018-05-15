@@ -25,7 +25,6 @@ public:
 
 	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) override;
 
-	void memAlloced() override;
 	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) override;
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) override;
 

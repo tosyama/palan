@@ -1,21 +1,21 @@
 /// Assignment Item class definition.
 ///
-/// A single Src variables of object reference (not indirect access).
+/// A single Src variables of indirect object reference.
 /// Need to clear reference to null after move ownership. 
 ///
-/// @file	PlnAssignObjectRefItem.h
+/// @file	PlnAssignIndirectObjItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
-class PlnAssignObjectRefItem : public PlnAssignItem
+class PlnAssignIndirectObjItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
 	PlnDstItem* dst_item;
 
 public:
-	PlnAssignObjectRefItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
+	PlnAssignIndirectObjItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
-		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
+		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS);
 
 	}
 	
@@ -28,8 +28,14 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->setSrcEx(da, si, src_ex);
-		src_ex->finish(da, si);
+		if (dst_item->getAssginType() == ASGN_COPY) {
+			dst_item->setSrcEx(da, si, src_ex);
+			if (src_ex->data_places.size()) {
+				src_ex->finish(da, si);
+			}
+		} else {
+			BOOST_ASSERT(false);
+		}
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {

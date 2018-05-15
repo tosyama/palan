@@ -62,7 +62,10 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	} else {
 		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
 	}
-	var->container = array_var;
+	if (array_var->container)
+		var->container = array_var->container;
+	else
+		var->container = array_var;
 
 	values.push_back(PlnValue(var));
 
@@ -81,7 +84,8 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 
 	auto base_dp = da.prepareObjBasePtr();
-	array_ex->data_places.push_back(base_dp); array_ex->finish(da, si);
+	array_ex->data_places.push_back(base_dp);
+	array_ex->finish(da, si);
 
 	auto index_dp = da.prepareObjIndexPtr();
 	index_ex->data_places.push_back(index_dp);

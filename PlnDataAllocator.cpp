@@ -403,12 +403,15 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 		}
 		case DP_INDRCT_OBJ:
 		{
-			auto base_dp = dp->data.indirect.base_dp;
-			int base_id = base_dp->data.reg.id;
-			auto index_dp = dp->data.indirect.index_dp;
-			int index_id = index_dp->data.reg.id;
-
-			return regs[base_id] != base_dp || regs[index_id] != index_dp;
+			if (auto base_dp = dp->data.indirect.base_dp) {
+				int base_id = base_dp->data.reg.id;
+				if (regs[base_id] != base_dp) return true;
+			}
+			if (auto index_dp = dp->data.indirect.index_dp) {
+				int index_id = index_dp->data.reg.id;
+				if (regs[index_id] != index_dp) return true;
+			}
+			return false;
 		}
 		case DP_RO_DATA:
 		case DP_LIT_INT:
@@ -517,7 +520,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_UNKNOWN), accessCount(0), alloc_step(0), release_step(INT_MAX),
 	 previous(NULL), save_place(NULL), src_place(NULL),
-	 size(size), data_type(data_type)
+	 size(size), data_type(data_type), release_src_pop(true), load_address(false)
 {
 	static string emp="";
 	comment = &emp;

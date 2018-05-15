@@ -22,7 +22,7 @@
 class PlnDstItem {
 public:
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
-	virtual void setSrcEx(PlnDataAllocator &da, PlnExpression *src_ex) = 0;
+	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void gen(PlnGenerator& g) { }
 
@@ -33,6 +33,7 @@ public:
 #include "PlnAssignPrimitiveItem.h"
 #include "PlnAssignWorkValsItem.h"
 #include "PlnAssignObjectRefItem.h"
+#include "PlnAssignIndirectObjItem.h"
 
 PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 {
@@ -80,6 +81,8 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		int dt = ex->values[0].getType()->data_type;
 		if (dt == DT_SINT || dt == DT_UINT) {
 			return new PlnAssignPrimitiveItem(ex);
+		} else if (dt == DT_OBJECT_REF) {
+			return new PlnAssignIndirectObjItem(ex);
 		}
 	}
 

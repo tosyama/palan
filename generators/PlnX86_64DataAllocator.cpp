@@ -123,12 +123,6 @@ void PlnX86_64DataAllocator::funcCalled(
 	step++;
 }
 
-void PlnX86_64DataAllocator::memAlloced()
-{
-	destroyRegsByFuncCall();
-	step++;
-}
-
 void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src)
 {
 	static string dcmt = "copy dst";

@@ -112,6 +112,7 @@ PlnAssignment.o:  \
 PlnClone.o:  models/expressions/PlnClone.h \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnType.h \
+	models/expressions/../PlnVariable.h \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h
@@ -139,6 +140,7 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \
 	models/expressions/assignitem/PlnAssignWorkValsItem.h \
 	models/expressions/assignitem/PlnAssignObjectRefItem.h \
+	models/expressions/assignitem/PlnAssignIndirectObjItem.h \
 	models/expressions/assignitem/PlnDstPrimitiveItem.h \
 	models/expressions/assignitem/PlnDstCopyObjectItem.h \
 	models/expressions/assignitem/PlnDstMoveObjectItem.h \

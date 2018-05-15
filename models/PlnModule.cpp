@@ -42,10 +42,10 @@ PlnType* PlnModule::getType(const string& type_name)
 	return (t != types.end()) ? *t : NULL; 
 }
 
-class PlnSingleOjectAllocator : public PlnAllocator {
+class PlnSingleObjectAllocator : public PlnAllocator {
 	uint64_t alloc_size;
 public:
-	PlnSingleOjectAllocator(uint64_t alloc_size)
+	PlnSingleObjectAllocator(uint64_t alloc_size)
 		: alloc_size(alloc_size) {
 	}
 
@@ -58,7 +58,7 @@ public:
 	}
 };
 
-class PlnSingleOjectFreer : public PlnFreer {
+class PlnSingleObjectFreer : public PlnFreer {
 public:
 	PlnExpression* getFreeEx(PlnExpression* free_var) override {
 		PlnFunction *free_func = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
@@ -69,11 +69,11 @@ public:
 	}
 };
 
-class PlnSingleOjectCopyer : public PlnCopyer {
+class PlnSingleObjectCopyer : public PlnCopyer {
 public:
 	uint64_t len;
-	PlnSingleOjectCopyer(uint64_t len) : len(len) { }
-	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
+	PlnSingleObjectCopyer(uint64_t len) : len(len) { }
+	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) override {
 		PlnMemCopy *mcopy = new PlnMemCopy(dst_var, src_var, new PlnExpression(len));
 		return mcopy;
 	}
@@ -247,6 +247,23 @@ public:
 	}
 };
 
+class PlnTwoParamsCopyer : public PlnCopyer
+{
+	PlnFunction *copy_func;
+
+public:
+	PlnTwoParamsCopyer(PlnFunction *f)
+		: copy_func(f) {
+	}
+
+	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) override {
+		vector<PlnExpression*> args = { dst_var, src_var };
+		PlnFunctionCall *free_call = new PlnFunctionCall(copy_func, args);
+		
+		return free_call;
+	}
+};
+
 PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes)
 {
 	PlnType* it = item_type.back();
@@ -276,9 +293,9 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 
 	// set allocator & freer.
 	if (it->data_type != DT_OBJECT_REF) {
-		t->allocator = new PlnSingleOjectAllocator(alloc_size);
-		t->freer = new PlnSingleOjectFreer();
-		t->copyer = new PlnSingleOjectCopyer(alloc_size);
+		t->allocator = new PlnSingleObjectAllocator(alloc_size);
+		t->freer = new PlnSingleObjectFreer();
+		t->copyer = new PlnSingleObjectCopyer(alloc_size);
 
 	} else {
 		// allocator
@@ -336,6 +353,8 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 				copy_func = createObjArrayCopyFunc(fname, type_def);
 				functions.push_back(copy_func);
 			}
+			t->copyer = new PlnTwoParamsCopyer(copy_func);
+			
 		}
 	}
 

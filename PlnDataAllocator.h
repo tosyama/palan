@@ -49,7 +49,6 @@ public:
 	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
 
 	// Process register data may be breaken by this process.
-	virtual void memAlloced() = 0;
 	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) = 0;
 	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) = 0;
 
@@ -111,6 +110,7 @@ public:
 	int32_t release_step;
 	int32_t push_src_step;
 	bool release_src_pop;
+	bool load_address;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;

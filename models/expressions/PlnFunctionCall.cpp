@@ -26,9 +26,7 @@ static bool is_init_ifunc = false;
 
 // PlnFunctionCall
 PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
-	: PlnExpression(ET_FUNCCALL),
-	function(f),
-	arguments(move(args))
+	: PlnExpression(ET_FUNCCALL), function(f), arguments(move(args))
 {
 	// arg == void
 	if (arguments.size() == 1 && arguments[0]==NULL && f->parameters.size() == 0) 
@@ -113,6 +111,9 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.pushSrc(dp, ret_dps[i]);
 		i++;
 	}
+	for (auto free_var: free_vars) {
+		da.popSrc(free_var->place);
+	}
 
 	for (auto free_ex: free_exs)
 		free_ex->finish(da, si);
@@ -157,6 +158,9 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);
+
+			for (auto free_var: free_vars)
+				g.genLoadDp(free_var->place);
 
 			for (auto free_ex: free_exs)
 				free_ex->gen(g);

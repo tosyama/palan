@@ -44,10 +44,10 @@ public:
 				src_ex->data_places.push_back(di.save_src_var->place);
 
 				di.copy_src_ex = new PlnExpression(di.save_src_var);
-				di.item->setSrcEx(da, di.copy_src_ex);
+				di.item->setSrcEx(da, si, di.copy_src_ex);
 
 			} else {
-				di.item->setSrcEx(da, src_ex);
+				di.item->setSrcEx(da, si, src_ex);
 			}
 			i++;
 		}
