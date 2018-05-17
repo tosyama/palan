@@ -15,6 +15,7 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnStatement.h"
+#include "PlnConditionalBranch.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -181,9 +182,14 @@ PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
 
-	// add free code.
-	PlnVariable* i = palan::declareUInt(f->implement, "i", 0);
-	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
+	// Return if object address is 0.
+	auto ifblock = new PlnBlock();
+	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]), ifblock, NULL, f->implement);
+	f->implement->statements.push_back(if_obj);
+
+	// Add free code.
+	PlnVariable* i = palan::declareUInt(ifblock, "i", 0);
+	PlnBlock* wblock = palan::whileLess(ifblock, i, item_num);
 	{
 		BOOST_ASSERT(it->freer);
 		PlnExpression* arr_item = palan::rawArrayItem(f->parameters[0], i);
@@ -193,7 +199,7 @@ PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type
 		palan::incrementUInt(wblock, i, 1);
 	}
 
-	palan::free(f->implement, f->parameters[0]);
+	palan::free(ifblock, f->parameters[0]);
 
 	return f;
 }
