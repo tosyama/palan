@@ -126,6 +126,8 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 			int at = ex->values[0].asgn_type;
 			if (at == ASGN_MOVE) {
 				return new PlnDstMoveIndirectObjItem(ex);
+			} else if (at == ASGN_COPY) {
+				return new PlnDstCopyObjectItem(ex);
 			} else if (at == ASGN_COPY_REF) {
 				return new PlnDstPrimitiveItem(ex);
 			}

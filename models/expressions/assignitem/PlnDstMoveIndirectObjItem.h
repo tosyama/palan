@@ -66,6 +66,7 @@ public:
 			// move src to dst
 			da.pushSrc(dst_dp->data.indirect.base_dp, addr_var->place, false);
 			da.popSrc(dst_dp);
+			da.releaseDp(dst_dp);
 
 			// execute free.	
 			free_ex->finish(da, si);
@@ -83,8 +84,13 @@ public:
 		if (addr_var) {
 			dst_ex->gen(g);
 			g.genLoadDp(addr_var->place);
+
+			g.genSaveSrc(free_dp->data.indirect.base_dp);
 			g.genLoadDp(save4free_var->place);
+			
+			g.genSaveSrc(dst_dp->data.indirect.base_dp);
 			g.genLoadDp(dst_dp);
+
 			free_ex->gen(g);
 
 		} else {
