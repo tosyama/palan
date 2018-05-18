@@ -5,12 +5,10 @@ palan.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
 	generators/../PlnGenerator.h
 PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
-	models/PlnFunction.h models/PlnType.h models/PlnVariable.h \
-	models/PlnStatement.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h models/../PlnScopeStack.h \
-	models/../PlnConstants.h models/../PlnBuildTreeHelper.h \
-	models/expressions/PlnFunctionCall.h models/expressions/PlnArrayItem.h \
-	models/expressions/PlnAssignment.h models/expressions/PlnMemCopy.h
+	models/PlnFunction.h models/PlnVariable.h models/PlnStatement.h \
+	models/PlnArray.h models/PlnGeneralObject.h models/PlnType.h \
+	models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h models/../PlnConstants.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
@@ -40,8 +38,17 @@ PlnVariable.o:  models/PlnFunction.h \
 	models/expressions/assignitem/PlnAssignItem.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
-PlnArray.o:  models/PlnArray.h models/../PlnModel.h \
-	models/../PlnDataAllocator.h
+PlnArray.o:  models/../PlnConstants.h \
+	models/../PlnBuildTreeHelper.h models/../PlnModel.h models/PlnArray.h \
+	models/PlnBlock.h models/PlnType.h models/PlnFunction.h \
+	models/PlnStatement.h models/PlnVariable.h models/PlnConditionalBranch.h \
+	models/expressions/PlnArrayItem.h models/expressions/../PlnExpression.h \
+	models/expressions/PlnAssignment.h
+PlnGeneralObject.o:  models/../PlnConstants.h \
+	models/PlnGeneralObject.h models/../PlnModel.h models/PlnType.h \
+	models/expressions/PlnFunctionCall.h \
+	models/expressions/../PlnExpression.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h models/expressions/PlnMemCopy.h
 PlnLoopStatement.o:  models/PlnLoopStatement.h \
 	models/PlnStatement.h models/../PlnModel.h models/PlnModule.h \
 	models/PlnExpression.h models/PlnBlock.h models/../PlnScopeStack.h \

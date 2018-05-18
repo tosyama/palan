@@ -160,3 +160,16 @@ PlnType* PlnType::getRawArray()
 {
 	return raw_array_type;
 }
+
+string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
+{
+	string name = "]";
+	for (int s: sizes) {
+		name = "," + to_string(s) + name;
+	}
+	name.front() = '[';
+	name = item_type->name + name;
+
+	return name;
+}
+

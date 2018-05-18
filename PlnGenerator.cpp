@@ -16,12 +16,13 @@
 static void preLoadDp(PlnGenerator &g, PlnDataPlace *dp)
 {
 	if (dp->type == DP_INDRCT_OBJ) {
-		if (auto base_dp = dp->data.indirect.base_dp) {
-			g.genLoadDp(base_dp);
-		}
-		if (auto index_dp = dp->data.indirect.index_dp) {
-			g.genLoadDp(index_dp);
-		}
+		auto base_dp = dp->data.indirect.base_dp;
+		auto index_dp = dp->data.indirect.index_dp;
+
+		if (base_dp) g.genLoadDp(base_dp, false);
+		if (index_dp) g.genLoadDp(index_dp, false);
+		if (base_dp) g.genSaveDp(base_dp);
+		if (index_dp) g.genSaveDp(index_dp);
 	}
 }
 

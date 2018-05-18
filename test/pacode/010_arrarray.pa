@@ -4,7 +4,7 @@ ccall setenv();
 ccall mtrace();
 ccall muntrace();
 
-func arrarr_set(int32[4][3] >>a) -> int32[4][3] a
+func set_arrarr(int32[4][3] >>a) -> int32[4][3] a
 {
 	int32 i, j;
 
@@ -19,8 +19,7 @@ func arrarr_set(int32[4][3] >>a) -> int32[4][3] a
 	}
 }
 
-func arrarr_inc(int32[4][3] a)
-	-> int32[4][3] b
+func inc_arrarr(int32[4][3] a) -> int32[4][3] b
 {
 	int32 i, j;
 
@@ -35,25 +34,8 @@ func arrarr_inc(int32[4][3] a)
 	}
 }
 
-setenv("MALLOC_TRACE", "out/mtrace010", 1);
-int32[5] o;
-
-mtrace();
+func set_arrarr2(int32[5][2,3][4] >>a) -> int32[5][2,3][4] a
 {
-	int32[4][3] a1;
-
-	arrarr_set(a1>>) ->> a1;
-
-	int32[4][3] a2 = arrarr_inc(a1);
-	int32[4][3] a3 <<= arrarr_inc(a2);
-
-	a1[2][3] -> o[0];
-	a2[2][3] -> o[1];
-	a3[2][3] -> o[2];
-
-	int32[5][2,3][4] b1, b2, b4;
-	int32[5] c;
-	int32[5][2,3] d;
 	int32 i, j, k, l;
 
 	0 -> i;
@@ -61,16 +43,69 @@ mtrace();
 		0 -> j;
 		while j<2 {
 			0 -> k;
+			while k<3 {
+				0 -> l;
+				while l<5 {
+					i*1000+j*100+k*10+l -> a[i][j,k][l];
+					l+1 -> l;
+				}
+				k+1 -> k;
+			}
 			j+1 -> j;
 		}
 		i+1 -> i;
 	}
+}
 
-	int32[5][2,3][4] b3 <<= b4;
+int32[9] o;
+
+setenv("MALLOC_TRACE", "out/mtrace010", 1);
+mtrace();
+{
+	int32[4][3] a1;
+
+	set_arrarr(a1>>) ->> a1;
+
+	int32[4][3] a2 = inc_arrarr(a1);
+	int32[4][3] a3 <<= inc_arrarr(a2);
+
+	a1[2][3] -> o[0];
+	a2[2][3] -> o[1];
+	a3[2][3] -> o[2];
+
+	int32[5][2,3][4] b1, b2;
+	int32[5][2,3] c;
+	int32[5] d;
+
+	set_arrarr2(b1>>) ->> b1;
+	b1[3][1,2][4] -> o[3];
+	b1[0][1,2][3] + b1[2][0,1][2] -> o[4];
+
+	b1[1] -> c;
+	c[1,1][0] -> o[5];
+
+	{
+		int32 i=0;
+		while i<5 { i->d[i]; i+1->i; }
+	}
+
+	d -> c[d[0],d[1]];
+	c -> b1[d[1]];
+	b1 -> b2;
+	b2[1][d[0],1][2] -> o[6];
+
+	b1[0] -> b2[1];
+	b2[1][0,1][2] -> o[7];
+
+	d ->> c[1,2];
+	c ->> b1[2];
+	b1 ->> b2;
+	b2[2][1,2][3] -> o[8];
 }
 
 muntrace();
 
-printf("%d %d %d", o[0], o[1], o[2]);
+printf("%d %d %d %d %d %d %d %d %d",
+		o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], o[8]);
 
 exit(0);

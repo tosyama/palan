@@ -1,30 +1,24 @@
 /// Module model class definition.
 ///
 /// Module is root of model tree.
-/// Module includes function definitions.
+/// Module includes function definitions and top level code.
 ///
 /// @file	PlnModule.cpp
 /// @copyright	2017 YAMAGUCHI Toshinobu 
 
-#include <algorithm>
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
 #include "PlnModule.h"
 #include "PlnBlock.h"
 #include "PlnFunction.h"
-#include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnStatement.h"
-#include "PlnConditionalBranch.h"
+#include "PlnArray.h"
+#include "PlnGeneralObject.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
-#include "../PlnBuildTreeHelper.h"
-#include "expressions/PlnFunctionCall.h"
-#include "expressions/PlnArrayItem.h"
-#include "expressions/PlnAssignment.h"
-#include "expressions/PlnMemCopy.h"
 
 using namespace std;
 
@@ -43,247 +37,31 @@ PlnType* PlnModule::getType(const string& type_name)
 	return (t != types.end()) ? *t : NULL; 
 }
 
-class PlnSingleObjectAllocator : public PlnAllocator {
-	uint64_t alloc_size;
-public:
-	PlnSingleObjectAllocator(uint64_t alloc_size)
-		: alloc_size(alloc_size) {
-	}
-
-	PlnExpression* getAllocEx() override {
-		PlnFunction *alloc_func = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
-		vector<PlnExpression*> args = { new PlnExpression(alloc_size) };
-		PlnFunctionCall *alloc_call = new PlnFunctionCall(alloc_func, args);
-
-		return alloc_call;
-	}
-};
-
-class PlnSingleObjectFreer : public PlnFreer {
-public:
-	PlnExpression* getFreeEx(PlnExpression* free_var) override {
-		PlnFunction *free_func = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
-		vector<PlnExpression*> args = { free_var };
-		PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
-		
-		return free_call;
-	}
-};
-
-class PlnSingleObjectCopyer : public PlnCopyer {
-public:
-	uint64_t len;
-	PlnSingleObjectCopyer(uint64_t len) : len(len) { }
-	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) override {
-		PlnMemCopy *mcopy = new PlnMemCopy(dst_var, src_var, new PlnExpression(len));
-		return mcopy;
-	}
-};
-
-string getAllocFuncName(PlnType *t)
+string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
 {
-
-	string fname = t->name;
+	string ret_name, arg_name;
+	for (auto t: ret_types)
+		ret_name += "_" + t->name;
+	for (auto t: arg_types)
+		arg_name += "_" + t->name;
 	boost::replace_all(fname, "_", "__");
+
+	fname = "_" + fname + ret_name + + "_" +arg_name;
 	boost::replace_all(fname, "[", "A_");
 	boost::replace_all(fname, "]", "_");
 	boost::replace_all(fname, ",", "_");
-	fname = "_new_" + fname;
 	return fname;
 }
-
-PlnFunction* createObjArrayAllocFunc(string func_name, vector<PlnType*> &arr_type)
-{
-	PlnType* t = arr_type.back();
-	PlnType* it = arr_type[arr_type.size()-2];
-	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
-
-	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
-	string s1 = "p1";
-	PlnVariable* ret_var = f->addRetValue(s1, &arr_type, false);
-
-	f->implement = new PlnBlock();
-	f->implement->setParent(f);
-	
-	palan::malloc(f->implement, ret_var, t->inf.obj.alloc_size);
-
-	// add alloc code.
-	PlnVariable* i = palan::declareUInt(f->implement, "i", 0);
-	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
-	{
-		BOOST_ASSERT(it->allocator);
-		PlnExpression* arr_item = palan::rawArrayItem(ret_var, i);
-		arr_item->values[0].asgn_type = ASGN_COPY_REF;
-		vector<PlnExpression*> lvals = { arr_item };
-		PlnExpression* alloc_ex = it->allocator->getAllocEx();
-		vector<PlnExpression*> exps = { alloc_ex };
-
-		auto assign = new PlnAssignment(lvals, exps);
-		wblock->statements.push_back(new PlnStatement(assign, wblock));
-
-		palan::incrementUInt(wblock, i, 1);
-	}
-
-	return f;
-}
-
-class PlnNoParamAllocator: public PlnAllocator
-{
-	PlnFunction *alloc_func;
-
-public:
-	PlnNoParamAllocator(PlnFunction *f)
-		: alloc_func(f) {
-	}
-
-	PlnExpression* getAllocEx() override {
-		vector<PlnExpression*> args;
-		PlnFunctionCall *alloc_call = new PlnFunctionCall(alloc_func, args);
-		
-		return alloc_call;
-	}
-};
-
-string getFreeFuncName(PlnType *t)
-{
-
-	string fname = t->name;
-	boost::replace_all(fname, "_", "__");
-	boost::replace_all(fname, "[", "A_");
-	boost::replace_all(fname, "]", "_");
-	boost::replace_all(fname, ",", "_");
-	fname = "_del_" + fname;
-
-	return fname;
-}
-
-string getCopyFuncName(PlnType *t)
-{
-	string fname = t->name;
-	boost::replace_all(fname, "_", "__");
-	boost::replace_all(fname, "[", "A_");
-	boost::replace_all(fname, "]", "_");
-	boost::replace_all(fname, ",", "_");
-	fname = "_cpy_" + fname;
-
-	return fname;
-}
-
-PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type)
-{
-	PlnType* t = arr_type.back();
-	PlnType* it = arr_type[arr_type.size()-2];
-	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
-
-	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
-	string s1 = "p1";
-	f->addParam(s1, &arr_type, FPM_REF, NULL);
-
-	f->implement = new PlnBlock();
-	f->implement->setParent(f);
-
-	// Return if object address is 0.
-	auto ifblock = new PlnBlock();
-	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]), ifblock, NULL, f->implement);
-	f->implement->statements.push_back(if_obj);
-
-	// Add free code.
-	PlnVariable* i = palan::declareUInt(ifblock, "i", 0);
-	PlnBlock* wblock = palan::whileLess(ifblock, i, item_num);
-	{
-		BOOST_ASSERT(it->freer);
-		PlnExpression* arr_item = palan::rawArrayItem(f->parameters[0], i);
-		PlnExpression* free_item = it->freer->getFreeEx(arr_item);
-		wblock->statements.push_back(new PlnStatement(free_item, wblock));
-
-		palan::incrementUInt(wblock, i, 1);
-	}
-
-	palan::free(ifblock, f->parameters[0]);
-
-	return f;
-}
-
-PlnFunction* createObjArrayCopyFunc(string func_name, vector<PlnType*> &arr_type)
-{
-	PlnType* t = arr_type.back();
-	PlnType* it = arr_type[arr_type.size()-2];
-	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
-
-	vector<PlnType*> src_arr_type = arr_type;
-	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
-	string s1 = "p1", s2 = "p2";
-	f->addParam(s1, &arr_type, FPM_REF, NULL);
-	f->addParam(s2, &src_arr_type, FPM_REF, NULL);
-
-	f->implement = new PlnBlock();
-	f->implement->setParent(f);
-
-	// Add copy code.
-	PlnVariable* i = palan::declareUInt(f->implement, "i", 0);
-	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
-	{
-		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0], i);
-		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1], i);
-		if (it->copyer) {
-			PlnExpression* copy_item = it->copyer->getCopyEx(dst_arr_item, src_arr_item);
-			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
-		}
-
-		palan::incrementUInt(wblock, i, 1);
-	}
-
-	return f;
-}
-
-class PlnSingleParamFreer : public PlnFreer
-{
-	PlnFunction *free_func;
-
-public:
-	PlnSingleParamFreer(PlnFunction *f)
-		: free_func(f) {
-	}
-
-	PlnExpression* getFreeEx(PlnExpression* free_var) override {
-		vector<PlnExpression*> args = { free_var };
-		PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
-		
-		return free_call;
-	}
-};
-
-class PlnTwoParamsCopyer : public PlnCopyer
-{
-	PlnFunction *copy_func;
-
-public:
-	PlnTwoParamsCopyer(PlnFunction *f)
-		: copy_func(f) {
-	}
-
-	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) override {
-		vector<PlnExpression*> args = { dst_var, src_var };
-		PlnFunctionCall *free_call = new PlnFunctionCall(copy_func, args);
-		
-		return free_call;
-	}
-};
 
 PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes)
 {
 	PlnType* it = item_type.back();
-	int item_size = it->size;
-	string name = "]";
-	for (int s: sizes) {
-		name = "," + to_string(s) + name;
-	}
-	name.front() = '[';
-	name = it->name + name;
 
-	for (auto t: fixedarray_types) 
+	string name = PlnType::getFixedArrayName(it, sizes);
+	for (auto t: types) 
 		if (name == t->name) return t;
 
+	int item_size = it->size;
 	int alloc_size = item_size;
 	for (int s: sizes)
 		alloc_size *= s;
@@ -306,7 +84,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 	} else {
 		// allocator
 		{
-			string fname = getAllocFuncName(t);
+			string fname = createFuncName("new", {t}, {});
 			PlnFunction* alloc_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
@@ -317,7 +95,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 			if (!alloc_func) {
 				vector<PlnType*> type_def = item_type;
 				type_def.push_back(t);
-				alloc_func = createObjArrayAllocFunc(fname, type_def);
+				alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
 				functions.push_back(alloc_func);
 			}
 
@@ -326,7 +104,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 
 		// freer
 		{
-			string fname = getFreeFuncName(t);
+			string fname = createFuncName("del", {}, {t});
 			PlnFunction* free_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
@@ -337,7 +115,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 			if (!free_func) {
 				vector<PlnType*> type_def = item_type;
 				type_def.push_back(t);
-				free_func = createObjArrayFreeFunc(fname, type_def);
+				free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
 				functions.push_back(free_func);
 			}
 			t->freer = new PlnSingleParamFreer(free_func);
@@ -345,7 +123,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 
 		// copyer
 		{
-			string fname = getCopyFuncName(t);
+			string fname = createFuncName("cpy", {}, {t,t});
 			PlnFunction* copy_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
@@ -356,7 +134,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 			if (!copy_func) {
 				vector<PlnType*> type_def = item_type;
 				type_def.push_back(t);
-				copy_func = createObjArrayCopyFunc(fname, type_def);
+				copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
 				functions.push_back(copy_func);
 			}
 			t->copyer = new PlnTwoParamsCopyer(copy_func);
@@ -364,7 +142,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 		}
 	}
 
-	fixedarray_types.push_back(t);
+	types.push_back(t);
 
 	return t;
 }
@@ -476,5 +254,5 @@ void PlnModule::gen(PlnGenerator &g)
 	toplevel->gen(g);
 
 	g.genMainReturn();
-}	
+}
 

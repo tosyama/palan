@@ -21,7 +21,6 @@ public:
 	vector<PlnFunction*> functions;
 	vector<PlnReadOnlyData*> readonlydata;
 	vector<PlnType*> types;
-	vector<PlnType*> fixedarray_types;
 
 	PlnModule();
 
