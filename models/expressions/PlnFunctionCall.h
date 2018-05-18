@@ -20,7 +20,8 @@ public:
 	vector<PlnDataPlace*> arg_dps;
 	vector<int> clone_size;
 	vector<PlnDataPlace*> ret_dps;
-	vector<PlnDataPlace*> free_dps;
+	vector<PlnVariable*> free_vars;
+	vector<PlnExpression*> free_exs;
 
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
 

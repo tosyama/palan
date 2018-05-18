@@ -14,15 +14,15 @@
 #include "../../../PlnGenerator.h"
 #include "../../../PlnConstants.h"
 #include "../../../PlnScopeStack.h"
-#include "../../PlnHeapAllocator.h"
 #include "../PlnDivOperation.h"
+#include "../PlnMemCopy.h"
 #include "PlnAssignItem.h"
 
 // PlnDstItem
 class PlnDstItem {
 public:
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
-	virtual PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) { return NULL; }
+	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void gen(PlnGenerator& g) { }
 
@@ -33,6 +33,7 @@ public:
 #include "PlnAssignPrimitiveItem.h"
 #include "PlnAssignWorkValsItem.h"
 #include "PlnAssignObjectRefItem.h"
+#include "PlnAssignIndirectObjItem.h"
 
 PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 {
@@ -56,7 +57,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
 		BOOST_ASSERT(v.type == VL_WORK);
-		PlnType* t = ex->values[0].inf.wk_type;
+		PlnType* t = ex->values[0].inf.wk_type->back();
 		BOOST_ASSERT(t->data_type != DT_OBJECT_REF);
 
 		return new PlnAssignPrimitiveItem(ex);
@@ -80,11 +81,13 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		int dt = ex->values[0].getType()->data_type;
 		if (dt == DT_SINT || dt == DT_UINT) {
 			return new PlnAssignPrimitiveItem(ex);
+		} else if (dt == DT_OBJECT_REF) {
+			return new PlnAssignIndirectObjItem(ex);
 		}
 	}
 
 	BOOST_ASSERT(false);
-	return new PlnAssignItem();
+// return new PlnAssignItem();
 }
 
 #include "PlnDstPrimitiveItem.h"
@@ -123,11 +126,15 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 			int at = ex->values[0].asgn_type;
 			if (at == ASGN_MOVE) {
 				return new PlnDstMoveIndirectObjItem(ex);
+			} else if (at == ASGN_COPY) {
+				return new PlnDstCopyObjectItem(ex);
+			} else if (at == ASGN_COPY_REF) {
+				return new PlnDstPrimitiveItem(ex);
 			}
 		}
 	}
 
 	BOOST_ASSERT(false);
-	return new PlnDstItem();
+//	return new PlnDstItem();
 }
 

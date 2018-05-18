@@ -1,10 +1,14 @@
 /// Array model class declaration.
 ///
 /// @file	PlnArray.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
 class PlnArray
 {
+public:
+	static PlnFunction* createObjArrayAllocFunc(string func_name, vector<PlnType*> &arr_type);
+	static PlnFunction* createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type);
+	static PlnFunction* createObjArrayCopyFunc(string func_name, vector<PlnType*> &arr_type);
 };

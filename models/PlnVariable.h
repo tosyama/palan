@@ -1,16 +1,16 @@
 /// Variable model class declaration.
 ///
-/// @file	PlnVariable.cpp
+/// @file	PlnVariable.h
 /// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
 enum {
-	NO_PTR = 0,
-	PTR_REFERENCE = 1,
-	PTR_OWNERSHIP = 2,
-	PTR_INDIRECT_ACCESS = 4,	// for class member / array item.
-	PTR_CLONE = 8	// for parameter
+	NO_PTR = 1,
+	PTR_REFERENCE = 2,
+	PTR_OWNERSHIP = 4,
+	PTR_INDIRECT_ACCESS = 8,	// for class member / array item.
+	PTR_CLONE = 16	// for parameter
 };
 
 class PlnVariable {
@@ -18,30 +18,33 @@ public:
 	vector<PlnType*> var_type;
 	string name;
 	PlnDataPlace* place;
-	PlnVariable* container;
+	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
 	int ptr_type;
+
+	static PlnVariable* createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name);
+};
+
+enum {
+	PRT_PARAM = 1,
+	PRT_RETVAL = 2
 };
 
 class PlnParameter : public PlnVariable {
 public:
 	PlnValue* dflt_value;
-	PlnDataPlace* load_place;
+	int param_type;
 };
 
-class PlnHeapAllocator;
+class PlnAssignItem;
 
 // Variable initialization
 class PlnVarInit {
+	struct VarInitInf {PlnVariable* var; PlnExpression* alloc_ex; };
+	vector<VarInitInf> varinits;
+	vector<PlnAssignItem*> assgin_items;
+
 public:
-	PlnVarInit();
-	PlnVarInit(vector<PlnValue>& vars);
-	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*>& inits);
-
-	vector<PlnValue> vars;
-	vector<PlnExpression*> initializer;
-	vector<PlnHeapAllocator*> allocators;
-
-	void addVar(PlnValue var);
+	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits=NULL);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

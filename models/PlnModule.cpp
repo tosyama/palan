@@ -1,18 +1,20 @@
 /// Module model class definition.
 ///
 /// Module is root of model tree.
-/// Module includes function definitions.
+/// Module includes function definitions and top level code.
 ///
 /// @file	PlnModule.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
-#include <algorithm>
 #include <boost/assert.hpp>
+#include <boost/algorithm/string.hpp>
 #include "PlnModule.h"
 #include "PlnBlock.h"
 #include "PlnFunction.h"
-#include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnStatement.h"
+#include "PlnArray.h"
+#include "PlnGeneralObject.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -35,28 +37,37 @@ PlnType* PlnModule::getType(const string& type_name)
 	return (t != types.end()) ? *t : NULL; 
 }
 
-PlnType* PlnModule::getFixedArrayType(int item_size, vector<int>& sizes)
+string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
 {
-	for (auto t: fixedarray_types) {
-		auto as = t->inf.fixedarray.sizes;
-		if (item_size == t->inf.fixedarray.item_size && sizes.size() == as->size()) {
-			bool found = true;
-			for (int i=0; i<sizes.size(); ++i) {
-				if (sizes[i] != (*as)[i]) {
-					found = false;
-					break;
-				}
-			}
-			if (found) return t;
-		}
-	}
+	string ret_name, arg_name;
+	for (auto t: ret_types)
+		ret_name += "_" + t->name;
+	for (auto t: arg_types)
+		arg_name += "_" + t->name;
+	boost::replace_all(fname, "_", "__");
 
+	fname = "_" + fname + ret_name + + "_" +arg_name;
+	boost::replace_all(fname, "[", "A_");
+	boost::replace_all(fname, "]", "_");
+	boost::replace_all(fname, ",", "_");
+	return fname;
+}
+
+PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes)
+{
+	PlnType* it = item_type.back();
+
+	string name = PlnType::getFixedArrayName(it, sizes);
+	for (auto t: types) 
+		if (name == t->name) return t;
+
+	int item_size = it->size;
 	int alloc_size = item_size;
 	for (int s: sizes)
 		alloc_size *= s;
 
 	auto t = new PlnType();
-	t->name = "[]";
+	t->name = name;
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	t->inf.obj.is_fixed_size = true;
@@ -64,7 +75,74 @@ PlnType* PlnModule::getFixedArrayType(int item_size, vector<int>& sizes)
 	t->inf.fixedarray.sizes = new vector<int>(move(sizes));
 	t->inf.fixedarray.item_size = item_size;
 
-	fixedarray_types.push_back(t);
+	// set allocator & freer.
+	if (it->data_type != DT_OBJECT_REF) {
+		t->allocator = new PlnSingleObjectAllocator(alloc_size);
+		t->freer = new PlnSingleObjectFreer();
+		t->copyer = new PlnSingleObjectCopyer(alloc_size);
+
+	} else {
+		// allocator
+		{
+			string fname = createFuncName("new", {t}, {});
+			PlnFunction* alloc_func = NULL;
+			for (auto f: functions) {
+				if (f->name == fname) {
+					alloc_func = f;
+					break;
+				}
+			}
+			if (!alloc_func) {
+				vector<PlnType*> type_def = item_type;
+				type_def.push_back(t);
+				alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
+				functions.push_back(alloc_func);
+			}
+
+			t->allocator = new PlnNoParamAllocator(alloc_func);
+		}
+
+		// freer
+		{
+			string fname = createFuncName("del", {}, {t});
+			PlnFunction* free_func = NULL;
+			for (auto f: functions) {
+				if (f->name == fname) {
+					free_func = f;
+					break;
+				}
+			}
+			if (!free_func) {
+				vector<PlnType*> type_def = item_type;
+				type_def.push_back(t);
+				free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
+				functions.push_back(free_func);
+			}
+			t->freer = new PlnSingleParamFreer(free_func);
+		}
+
+		// copyer
+		{
+			string fname = createFuncName("cpy", {}, {t,t});
+			PlnFunction* copy_func = NULL;
+			for (auto f: functions) {
+				if (f->name == fname) {
+					copy_func = f;
+					break;
+				}
+			}
+			if (!copy_func) {
+				vector<PlnType*> type_def = item_type;
+				type_def.push_back(t);
+				copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
+				functions.push_back(copy_func);
+			}
+			t->copyer = new PlnTwoParamsCopyer(copy_func);
+			
+		}
+	}
+
+	types.push_back(t);
 
 	return t;
 }
@@ -176,5 +254,5 @@ void PlnModule::gen(PlnGenerator &g)
 	toplevel->gen(g);
 
 	g.genMainReturn();
-}	
+}
 

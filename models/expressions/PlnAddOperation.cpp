@@ -106,7 +106,8 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = isUnsigned ? PlnType::getUint() : PlnType::getSint();
+	v.inf.wk_type = new vector<PlnType*>();
+	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
 	values.push_back(v);
 }
 
@@ -137,7 +138,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size())
 		da.pushSrc(data_places[0], result_dp, true);
 	else
-		da.releaseData(result_dp);
+		da.releaseDp(result_dp);
 }
 
 void PlnAddOperation::dump(ostream& os, string indent)
@@ -183,7 +184,8 @@ PlnNegative::PlnNegative(PlnExpression* e)
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = e->values[0].getType();
+	v.inf.wk_type = new vector<PlnType*>();
+	v.inf.wk_type->push_back(e->values[0].getType());
 	values.push_back(v);
 }
 
@@ -197,7 +199,7 @@ void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size())
 		da.pushSrc(data_places[0], dp, true);
 	else
-		da.releaseData(dp);
+		da.releaseDp(dp);
 		
 }
 

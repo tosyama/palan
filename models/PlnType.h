@@ -5,6 +5,23 @@
 
 #include "../PlnModel.h"
 
+class PlnAllocator {
+public:
+	virtual PlnExpression* getAllocEx() = 0;
+	static PlnExpression* getAllocEx(PlnVariable* var);
+};
+
+class PlnFreer {
+public:
+	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
+	static PlnExpression* getFreeEx(PlnVariable* var);
+};
+
+class PlnCopyer {
+public:
+	virtual PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) = 0;
+};
+
 class PlnType {
 public:
 	int	data_type;
@@ -25,6 +42,12 @@ public:
 
 	} inf;
 
+	PlnAllocator *allocator;
+	PlnFreer *freer;
+	PlnCopyer *copyer;
+
+	PlnType();
+
 	static vector<PlnType*> getBasicTypes();
 	static PlnType* getByte();
 	static PlnType* getSint();
@@ -32,4 +55,6 @@ public:
 	static PlnType* getReadOnlyCStr();
 	static PlnType* getObject();
 	static PlnType* getRawArray();
+
+	static string getFixedArrayName(PlnType* item_type, vector<int>& sizes);
 };

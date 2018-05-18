@@ -171,23 +171,6 @@ void PlnDataAllocator::allocSaveData(PlnDataPlace* dp, int alloc_step, int relea
 	dp->save_place->comment = &cmt;
 }
 
-void PlnDataAllocator::releaseData(PlnDataPlace* dp)
-{
-	BOOST_ASSERT(dp->status != DS_RELEASED);
-	dp->status = DS_RELEASED;
-	dp->release_step = step;
-	if (dp->save_place) {
-		dp->save_place->status = DS_RELEASED;
-		dp->save_place->release_step = step;
-	}
-
-	if (dp->size < 8 && dp->type == DP_STK_BP) {
-		dp->data.bytes.parent_dp->updateBytesDpStatus();
-	}
-
-	step++;
-}
-
 void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 {
 	if (dp->type == DP_REG) {
@@ -216,11 +199,37 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 	dp->status = DS_ASSIGNED;
 	auto pdp = dp->previous;
 	dp->alloc_step = step;
-	if (pdp && pdp->status != DS_RELEASED) {
+	if (pdp && pdp->status != DS_RELEASED
+			&& !pdp->save_place) {
 		allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
+		pdp->save_place->comment = new string("(savex)");
 	}
 
 	if (proceed_step) step++;
+}
+
+void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
+{
+	BOOST_ASSERT(dp->status != DS_RELEASED);
+	dp->status = DS_RELEASED;
+	dp->release_step = step;
+	if (dp->save_place) {
+		dp->save_place->status = DS_RELEASED;
+		dp->save_place->release_step = step;
+	}
+
+	if (dp->size < 8 && dp->type == DP_STK_BP) {
+		dp->data.bytes.parent_dp->updateBytesDpStatus();
+	} else if (dp->type == DP_INDRCT_OBJ) {
+		if (auto bdp = dp->data.indirect.base_dp) {
+			releaseDp(bdp);
+		}
+		if (auto idp = dp->data.indirect.index_dp) {
+			releaseDp(idp);
+		}
+	}
+
+	step++;
 }
 
 vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee)
@@ -248,6 +257,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_t
 		static string cmt="return";
 		auto dp = createArgDp(func_type, i, is_callee);
 		dp->comment = &cmt;
+		dp->status = DS_READY_ASSIGN;
 		dps.push_back(dp);
 	}
 
@@ -393,11 +403,15 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 		}
 		case DP_INDRCT_OBJ:
 		{
-			auto base_dp = dp->data.indirect.base_dp;
-			int base_id = base_dp->data.reg.id;
-			auto index_dp = dp->data.indirect.index_dp;
-			int index_id = index_dp->data.reg.id;
-			return regs[base_id] != base_dp || regs[index_id] != index_dp;
+			if (auto base_dp = dp->data.indirect.base_dp) {
+				int base_id = base_dp->data.reg.id;
+				if (regs[base_id] != base_dp) return true;
+			}
+			if (auto index_dp = dp->data.indirect.index_dp) {
+				int index_id = index_dp->data.reg.id;
+				if (regs[index_id] != index_dp) return true;
+			}
+			return false;
 		}
 		case DP_RO_DATA:
 		case DP_LIT_INT:
@@ -409,13 +423,15 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 	}
 }
 
-bool tryAccelerateAlloc(PlnDataPlace *dp, int al_step)
+bool tryAccelerateAlloc(PlnDataPlace *dp, int push_step)
 {
 	if (dp->type == DP_REG) {
 		if (dp->status == DS_ASSIGNED || dp->status == DS_RELEASED) {
-			if (dp->alloc_step <= al_step) return true;
-			if (!dp->previous || dp->previous->release_step < al_step) {
-				dp->alloc_step = al_step;
+			if (dp->alloc_step <= push_step) return true;
+
+			// if alloc_step > push_step
+			if (!dp->previous || dp->previous->release_step < push_step) {
+				dp->alloc_step = push_step;
 				return true;
 			}
 		} else
@@ -424,28 +440,63 @@ bool tryAccelerateAlloc(PlnDataPlace *dp, int al_step)
 	return false;
 }
 
+static void prePopSrc(PlnDataAllocator& da, PlnDataPlace *dp)
+{
+	if (dp->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = dp->data.indirect.base_dp) {
+			da.popSrc(base_dp);
+		}
+		if (auto index_dp = dp->data.indirect.index_dp) {
+			da.popSrc(index_dp);
+		}
+	}
+}
+
+void updateReleaseStep(PlnDataPlace *dp, int new_release_step)
+{
+	BOOST_ASSERT(dp->status == DS_RELEASED);
+	BOOST_ASSERT(dp->alloc_step <= new_release_step);
+	dp->release_step = new_release_step;
+	if (dp->type == DP_INDRCT_OBJ) {
+		if (auto base_dp = dp->data.indirect.base_dp) {
+			base_dp->alloc_step = base_dp->release_step = new_release_step;
+		}
+		if (auto index_dp = dp->data.indirect.index_dp) {
+			index_dp->alloc_step = index_dp->release_step = new_release_step;
+		}
+	}
+}
+
 void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 {
 	BOOST_ASSERT(dp->src_place);
 	auto src_place = dp->src_place;
-	bool is_src_destroyed = isDestroyed(src_place);
+
+	prePopSrc(*this, src_place);
 
 	// Release source if flag on.
 	if (dp->release_src_pop) {
-		src_place->release_step = step;
-		src_place->status = DS_RELEASED;
+		releaseDp(src_place);
 	}
+
+	prePopSrc(*this, dp);
+
+	bool is_src_destroyed = isDestroyed(src_place);
 
 	// Assign dst data place if ready.
 	if (dp->status == DS_READY_ASSIGN) {
 		allocDp(dp, false);
 	}
+
 	// check src data would be destory.
 	if (!dp->save_place) {
 		if (is_src_destroyed) {
-			if (tryAccelerateAlloc(dp, dp->push_src_step))
+			if (tryAccelerateAlloc(dp, dp->push_src_step)) {
+				if (dp->release_src_pop) {
+					updateReleaseStep(src_place, dp->push_src_step);
+				}
 				dp->save_place = dp;
-			else
+			} else 
 				allocSaveData(dp, src_place->alloc_step, step);
 		}
 	}
@@ -469,7 +520,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_UNKNOWN), accessCount(0), alloc_step(0), release_step(INT_MAX),
 	 previous(NULL), save_place(NULL), src_place(NULL),
-	 size(size), data_type(data_type)
+	 size(size), data_type(data_type), release_src_pop(true), load_address(false)
 {
 	static string emp="";
 	comment = &emp;

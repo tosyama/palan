@@ -10,11 +10,11 @@ class PlnDstMoveObjectItem : public PlnDstItem
 {
 	PlnExpression *dst_ex;
 	PlnDataPlace *dst_dp;
-	PlnHeapAllocator *freer;
+	PlnExpression *free_ex;
 
 public:
 	PlnDstMoveObjectItem(PlnExpression* ex)
-			: dst_ex(ex), dst_dp(NULL), freer(NULL)
+			: dst_ex(ex), dst_dp(NULL), free_ex(NULL)
 	{
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
@@ -23,9 +23,9 @@ public:
 
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
-	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
+	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
-		return dst_dp;
+		src_ex->data_places.push_back(dst_dp);
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -33,17 +33,19 @@ public:
 		auto var = dst_ex->values[0].inf.var;
 		auto lt = si.get_lifetime(var);
 		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
-			freer = PlnHeapAllocator::createHeapFree(var);
-			freer->finish(da, si);
+			free_ex = PlnFreer::getFreeEx(var);
+			free_ex->finish(da, si);
 		}
+
 		BOOST_ASSERT(dst_dp->src_place);
 		da.popSrc(dst_dp);
+		si.set_lifetime(var, VLT_INITED);
 	}
 
 	void gen(PlnGenerator& g) override {
 		dst_ex->gen(g);
-		if (freer)
-			freer->gen(g);
+		if (free_ex)
+			free_ex->gen(g);
 		g.genLoadDp(dst_dp);
 	}
 };

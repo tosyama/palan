@@ -18,15 +18,16 @@ public:
 
 	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 
-	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
+	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo &si, PlnExpression *src_ex) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
-		return dst_dp;
+		src_ex->data_places.push_back(dst_dp);
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		BOOST_ASSERT(dst_dp->src_place);
 		dst_ex->finish(da, si);
 		da.popSrc(dst_dp);
+		da.releaseDp(dst_dp);
 	}
 
 	void gen(PlnGenerator& g) override {

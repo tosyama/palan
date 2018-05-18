@@ -57,7 +57,6 @@ public:
 	virtual void genFalseJump(int id, int cmp_type, string comment) = 0;
 	virtual void genEntryFunc() = 0;
 	virtual void genLocalVarArea(int size)=0;
-	virtual void genFreeLocalVarArea(int size)=0;
 	
 	virtual void genSaveReg(int reg, PlnGenEntity* dst)=0;
 	virtual void genLoadReg(int reg, PlnGenEntity* src)=0;
@@ -80,11 +79,11 @@ public:
 	
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemAlloc(PlnGenEntity* ref, int al_size, string comment)=0;
-	virtual void genMemFree(PlnGenEntity* ref, string comment, bool doNull=true)=0;
 	virtual void genMemCopy(int cp_size, string& comment)=0;
 
-	void genLoadDp(PlnDataPlace* dp);
+	void genLoadDp(PlnDataPlace* dp, bool load_save=true);
 	void genSaveSrc(PlnDataPlace* dp);
+	void genSaveDp(PlnDataPlace* dp);
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
 };

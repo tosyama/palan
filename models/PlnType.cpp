@@ -5,6 +5,8 @@
 
 #include <boost/assert.hpp>
 #include "PlnType.h"
+#include "PlnVariable.h"
+#include "PlnExpression.h"
 #include "../PlnConstants.h"
 
 using namespace std;
@@ -18,6 +20,28 @@ static PlnType* uint_type = NULL;
 static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
 static PlnType* raw_array_type = NULL;
+
+// PlnAllocator
+PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
+{
+	PlnAllocator* allocator= var->var_type.back()->allocator;
+	BOOST_ASSERT(allocator);
+	return allocator->getAllocEx();
+}
+
+// PlnFreer
+PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
+{
+	PlnFreer* freer = var->var_type.back()->freer;
+	BOOST_ASSERT(freer);
+	return freer->getFreeEx(new PlnExpression(var));
+}
+
+// PlnType
+PlnType::PlnType()
+	: allocator(NULL), freer(NULL)
+{
+}
 
 static void initBasicTypes()
 {
@@ -136,3 +160,16 @@ PlnType* PlnType::getRawArray()
 {
 	return raw_array_type;
 }
+
+string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
+{
+	string name = "]";
+	for (int s: sizes) {
+		name = "," + to_string(s) + name;
+	}
+	name.front() = '[';
+	name = item_type->name + name;
+
+	return name;
+}
+

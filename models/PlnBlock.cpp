@@ -16,7 +16,7 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnArray.h"
-#include "PlnHeapAllocator.h"
+#include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -99,12 +99,12 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
 			auto lt = si.get_lifetime(v);
 			if (lt == VLT_ALLOCED || lt == VLT_INITED) {
-				auto h_free = PlnHeapAllocator::createHeapFree(v);
-				h_free->finish(da, si);
-				freers.push_back(h_free);
+				PlnExpression* free_var = PlnFreer::getFreeEx(v);
+				free_var->finish(da, si);
+				free_vars.push_back(free_var);
 			}
 		}
-		da.releaseData(v->place);
+		da.releaseDp(v->place);
 	}
 	
 	si.pop_owner_vars(this);
@@ -143,8 +143,9 @@ void PlnBlock::gen(PlnGenerator& g)
 
 	// TODO?: check condition: need not call this after jump statement.
 	// Note: "return statement" frees vars insted of block when function end.
-	for (auto freer: freers)
-		freer->gen(g);
+	for (auto free_var: free_vars) {
+		free_var->gen(g);
+	}
 
 	g.comment("}");
 }

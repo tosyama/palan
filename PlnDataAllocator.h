@@ -40,19 +40,15 @@ public:
 	PlnDataPlace* prepareLocalVar(int size, int data_type);
 	PlnDataPlace* allocData(int size, int data_type);
 	void allocData(PlnDataPlace* new_dp);
-
 	void allocSaveData(PlnDataPlace* dp, int alloc_step, int release_step);
-	void releaseData(PlnDataPlace* dp);
 
 	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
+	void releaseDp(PlnDataPlace* dp);
 	vector<PlnDataPlace*> prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee);
 	vector<PlnDataPlace*> prepareRetValDps(int ret_num, int func_type, bool is_callee);
 	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
-	virtual void returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type) = 0;
 
 	// Process register data may be breaken by this process.
-	virtual void memAlloced() = 0;
-	virtual void memFreed() = 0;
 	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) = 0;
 	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) = 0;
 
@@ -114,6 +110,7 @@ public:
 	int32_t release_step;
 	int32_t push_src_step;
 	bool release_src_pop;
+	bool load_address;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;

@@ -56,7 +56,7 @@ PlnType* PlnValue::getType()
 		case VL_VAR:
 			return inf.var->var_type.back();
 		case VL_WORK:
-			return inf.wk_type;
+			return inf.wk_type->back();
 	}
 	BOOST_ASSERT(false);
 }
@@ -76,7 +76,15 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getReadOnlyDp(inf.rod->index);
 
 		case VL_VAR:
-			return da.getSeparatedDp(inf.var->place);
+			PlnVariable *var = inf.var;
+			if (var->ptr_type & PTR_INDIRECT_ACCESS) {
+				if (!var->place) {
+					var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
+					var->place->comment = &var->name;
+				}
+				return var->place;
+			} else
+				return da.getSeparatedDp(inf.var->place);
 	}
 	BOOST_ASSERT(false);
 }

@@ -21,12 +21,11 @@ public:
 	vector<PlnFunction*> functions;
 	vector<PlnReadOnlyData*> readonlydata;
 	vector<PlnType*> types;
-	vector<PlnType*> fixedarray_types;
 
 	PlnModule();
 
 	PlnType* getType(const string& type_name);
-	PlnType* getFixedArrayType(int item_size, vector<int>& sizes);
+	PlnType* getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes);
 	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
 	int getJumpID();
 	PlnReadOnlyData* getReadOnlyData(string &str);

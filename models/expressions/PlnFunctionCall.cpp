@@ -26,9 +26,7 @@ static bool is_init_ifunc = false;
 
 // PlnFunctionCall
 PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
-	: PlnExpression(ET_FUNCCALL),
-	function(f),
-	arguments(move(args))
+	: PlnExpression(ET_FUNCCALL), function(f), arguments(move(args))
 {
 	// arg == void
 	if (arguments.size() == 1 && arguments[0]==NULL && f->parameters.size() == 0) 
@@ -40,7 +38,7 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	for (auto rv: f->return_vals) {
 		PlnValue val;
 		val.type = VL_WORK;
-		val.inf.wk_type = rv->var_type.back();
+		val.inf.wk_type = new vector<PlnType*>(rv->var_type);
 		values.push_back(val);
 	}
 
@@ -95,10 +93,16 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	
 	for (i=0; i<ret_dps.size(); ++i) {
 		da.allocDp(ret_dps[i]);
-		da.releaseData(ret_dps[i]);
 		if (i >= data_places.size()) {
-			if (function->return_vals[i]->ptr_type & PTR_OWNERSHIP)
-				free_dps.push_back(ret_dps[i]);
+			if (function->return_vals[i]->ptr_type & PTR_OWNERSHIP) {
+				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i]->var_type, "ret" + std::to_string(i));
+				PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
+
+				free_vars.push_back(tmp_var);
+				free_exs.push_back(free_ex);
+				
+				da.pushSrc(tmp_var->place, ret_dps[i]);
+			}
 		}
 	}
 
@@ -107,8 +111,16 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.pushSrc(dp, ret_dps[i]);
 		i++;
 	}
+	for (auto free_var: free_vars) {
+		da.popSrc(free_var->place);
+	}
 
-	if (free_dps.size()) da.memFreed();
+	for (auto free_ex: free_exs)
+		free_ex->finish(da, si);
+
+	for (auto free_var: free_vars)
+		da.releaseDp(free_var->place);
+
 }
 
 void PlnFunctionCall:: dump(ostream& os, string indent)
@@ -132,22 +144,26 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			vector<unique_ptr<PlnGenEntity>> clr_es;
 			for (auto arg: arguments) {
 				auto dp = arg->data_places[0];
-				g.genLoadDp(dp);
+				g.genLoadDp(dp, false);
 				if (arg->values[0].asgn_type == ASGN_MOVE)
 					clr_es.push_back(g.getEntity(dp->src_place));
 			}
+			for (auto arg: arguments)
+				g.genSaveDp(arg->data_places[0]);
+
 			if (clr_es.size())
 				g.genNullClear(clr_es);
 
-			g.genCCall(function->name);
+			g.genCCall(function->asm_name);
+
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);
 
-			for (auto fdp: free_dps) {
-				auto fe = g.getEntity(fdp);
-				static string cmt="unused return";
-				g.genMemFree(fe.get(), cmt, false);
-			}
+			for (auto free_var: free_vars)
+				g.genLoadDp(free_var->place);
+
+			for (auto free_ex: free_exs)
+				free_ex->gen(g);
 
 			break;
 		}
@@ -156,9 +172,12 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) 
 				arg->gen(g);
 			for (auto arg: arguments)
-				g.genLoadDp(arg->data_places[0]);
+				g.genLoadDp(arg->data_places[0], false);
+			for (auto arg: arguments)
+				g.genSaveDp(arg->data_places[0]);
 
-			g.genSysCall(function->inf.syscall.id, function->name);
+			g.genSysCall(function->inf.syscall.id, function->asm_name);
+
 			break;
 		}
 		case FT_C:
@@ -166,9 +185,11 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) 
 				arg->gen(g);
 			for (auto arg: arguments)
-				g.genLoadDp(arg->data_places[0]);
+				g.genLoadDp(arg->data_places[0], false);
+			for (auto arg: arguments)
+				g.genSaveDp(arg->data_places[0]);
 
-			g.genCCall(function->name);
+			g.genCCall(function->asm_name);
 			break;
 		}
 		default:
@@ -182,11 +203,13 @@ static void initInternalFunctions()
 	string ret_name = "";
 
 	f = new PlnFunction(FT_C, "malloc");
+	f->asm_name = f->name;
 	vector<PlnType*> ret_type = { PlnType::getObject() };
-	f->addRetValue(ret_name, &ret_type);
+	f->addRetValue(ret_name, &ret_type, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "free");
+	f->asm_name = f->name;
 	internalFuncs[IFUNC_FREE] = f;
 }
 

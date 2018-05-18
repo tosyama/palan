@@ -195,13 +195,6 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 	}
 }
 
-void PlnX86_64Generator::genFreeLocalVarArea(int size)
-{
-	if (size) {
-		os << "	addq $" << size << ", %rsp" << endl;
-	}
-}
-
 void PlnX86_64Generator::genSaveReg(int reg, PlnGenEntity* dst)
 {
 	os << "	movq " << r(reg) << ", " << oprnd(dst) << endl;
@@ -227,8 +220,7 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 
 void PlnX86_64Generator::genReturn()
 {
-	os << "	movq %rbp, %rsp" << endl;
-	os << "	popq %rbp" << endl;
+	os << "	leave" << endl;
 	os << "	ret" << endl;
 }
 
@@ -572,19 +564,6 @@ void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
 	os << "	cld" << endl;
 	os << "	movq $" << cpy_count << ", %rcx"	<< endl;
 	os << "	rep movs" << safix << "	# " << comment << endl;
-}
-
-void PlnX86_64Generator::genMemFree(PlnGenEntity* ref, string comment, bool doNull)
-{
-	os << "	movq " << oprnd(ref) << ", %rdi"	<< endl;
-	os << "	call free";
-
-	if (doNull) {
-		os << endl << "	movq $0, " << oprnd(ref);
-	}
-
-	if (comment != "") os << "	# free " << comment;
-	os << endl;
 }
 
 static string* getAdressingStr(int displacement, int base_id, int index_id, int scale)

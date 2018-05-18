@@ -7,12 +7,16 @@ class PlnDstMoveIndirectObjItem: public PlnDstItem
 {
 	PlnExpression *dst_ex;
 	PlnDataPlace *dst_dp;
-	PlnVariable *save_var;
-	PlnHeapAllocator *freer;
+
+	PlnVariable *addr_var;
+	PlnVariable *save4free_var;
+	PlnDataPlace *free_dp;
+	PlnExpression *free_ex;
 
 public:
 	PlnDstMoveIndirectObjItem(PlnExpression* ex)
-			: dst_ex(ex), dst_dp(NULL), save_var(NULL), freer(NULL) {
+		: dst_ex(ex), dst_dp(NULL), addr_var(NULL), save4free_var(NULL), free_dp(NULL), free_ex(NULL)
+	{
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & (PTR_REFERENCE | PTR_INDIRECT_ACCESS));
@@ -20,42 +24,79 @@ public:
 
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
-	PlnDataPlace* getInputDataPlace(PlnDataAllocator& da) override {
-		dst_dp = dst_ex->values[0].getDataPlace(da);
-		return dst_dp;
+	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
+		auto lt = si.get_lifetime(dst_ex->values[0].inf.var);
+		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+			// set destination address to save place.
+			vector<PlnType*> t = dst_ex->values[0].inf.var->var_type;
+			addr_var = PlnVariable::createTempVar(da, t, "(save addr)");
+			addr_var->place->load_address = true;
+			dst_ex->data_places.push_back(addr_var->place);
+			
+			// for free.
+			save4free_var = PlnVariable::createTempVar(da, t, "(save for free)");
+			free_ex = PlnFreer::getFreeEx(save4free_var);
+
+			free_dp = new PlnDataPlace(8, DT_OBJECT_REF);
+			free_dp->comment = &addr_var->name;
+			da.setIndirectObjDp(free_dp, da.prepareObjBasePtr(), NULL);
+
+			// for receiving value from src.
+			dst_dp = new PlnDataPlace(8, DT_OBJECT_REF);
+			dst_dp->comment = &addr_var->name;
+			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL);
+			src_ex->data_places.push_back(dst_dp);
+
+		} else {
+			dst_dp = dst_ex->values[0].getDataPlace(da);
+			src_ex->data_places.push_back(dst_dp);
+		}
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		BOOST_ASSERT(dst_dp);
-		dst_ex->finish(da, si);
-		auto var = dst_ex->values[0].inf.var;
-		auto lt = si.get_lifetime(var);
-		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
-			save_var = new PlnVariable();
-			save_var->var_type = var->var_type;
-			save_var->name = var->name + "(save)";
-			save_var->place = da.prepareLocalVar(8, DT_OBJECT_REF);
-			save_var->container = NULL;
-			save_var->ptr_type = PTR_REFERENCE;
-			freer = PlnHeapAllocator::createHeapFree(save_var);
-			da.pushSrc(save_var->place, dst_ex->values[0].getDataPlace(da));
-			da.popSrc(save_var->place);
+		if (addr_var) {
+			dst_ex->finish(da, si);	
+			da.popSrc(addr_var->place); // save addr.
+			
+			// save old dst for free.
+			da.pushSrc(free_dp->data.indirect.base_dp, addr_var->place, false);
+			da.pushSrc(save4free_var->place, free_dp);
+			da.popSrc(save4free_var->place);
+		
+			// move src to dst
+			da.pushSrc(dst_dp->data.indirect.base_dp, addr_var->place, false);
+			da.popSrc(dst_dp);
+			da.releaseDp(dst_dp);
+
+			// execute free.	
+			free_ex->finish(da, si);
+
+			da.releaseDp(save4free_var->place);
+			da.releaseDp(addr_var->place);
+			
+		} else {
+			dst_ex->finish(da, si);
+			da.popSrc(dst_dp);
 		}
-		da.popSrc(dst_dp);
-		if (freer)
-			freer->finish(da, si);
-		if (save_var)
-			da.releaseData(save_var->place);
 	}
 
 	void gen(PlnGenerator& g) override {
-		dst_ex->gen(g);
-		if (save_var)
-			g.genLoadDp(save_var->place);
-		g.genLoadDp(dst_dp);
+		if (addr_var) {
+			dst_ex->gen(g);
+			g.genLoadDp(addr_var->place);
 
-		if (freer)
-			freer->gen(g);
+			g.genSaveSrc(free_dp->data.indirect.base_dp);
+			g.genLoadDp(save4free_var->place);
+			
+			g.genSaveSrc(dst_dp->data.indirect.base_dp);
+			g.genLoadDp(dst_dp);
+
+			free_ex->gen(g);
+
+		} else {
+			dst_ex->gen(g);
+			g.genLoadDp(dst_dp);
+		}
 	}
 };
 

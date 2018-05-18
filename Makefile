@@ -4,10 +4,9 @@ PROGRAM=pac
 SRCS=palan.cpp \
 	models/PlnModule.cpp models/PlnFunction.cpp models/PlnBlock.cpp \
 	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnVariable.cpp \
-	models/PlnType.cpp models/PlnArray.cpp \
+	models/PlnType.cpp models/PlnArray.cpp models/PlnGeneralObject.cpp \
 	models/PlnLoopStatement.cpp \
 	models/PlnConditionalBranch.cpp \
-	models/PlnHeapAllocator.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \

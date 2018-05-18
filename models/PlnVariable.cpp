@@ -14,140 +14,116 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnArray.h"
-#include "PlnHeapAllocator.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
+#include "../PlnConstants.h"
 #include "expressions/PlnClone.h"
+#include "expressions/assignitem/PlnAssignItem.h"
 
 // PlnVarInit
-PlnVarInit::PlnVarInit()
+static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* ex)
 {
-}
-
-PlnVarInit::PlnVarInit(vector<PlnValue>& vars) : vars(move(vars))
-{
-	for (auto v: this->vars) {
-		BOOST_ASSERT(v.type == VL_VAR);
-		PlnHeapAllocator* a;
-		a = PlnHeapAllocator::createHeapAllocation(v);
-		allocators.push_back(a);
-	}
-}
-
-PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> &inits)
-	: vars(move(vars)), initializer(move(inits))
-{
-	BOOST_ASSERT(initializer.size()); // Should use another constractor.
-
-	for (auto v: this->vars) {
-		BOOST_ASSERT(v.type == VL_VAR);
-		allocators.push_back(NULL);
+	if (val.asgn_type == ASGN_COPY) {
+		PlnVariable* v = val.inf.var;
+		if (v->ptr_type & PTR_OWNERSHIP && ex->type == ET_FUNCCALL) {
+			val.asgn_type = ASGN_MOVE;
+		}
 	}
 
-	int val_num = 0;
-	int ii = 0;
+	return new PlnExpression(val);
+}
 
-	for (auto e: initializer) {
-		// insert clone/move owner exp when init by variable.
-		if (e->type == ET_VALUE && e->values[0].type == VL_VAR) {
-			auto src_var = e->values[0].inf.var;
-			if (src_var->ptr_type & PTR_REFERENCE) {
-				switch(this->vars[val_num].asgn_type) {
-					case ASGN_COPY:
-						initializer[ii] = new PlnClone(e);
-						break;
-					case ASGN_MOVE:
-						break;
-					defalut:
-						BOOST_ASSERT(false);
-				} 
+PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
+{
+	int var_i=0;
+	if (inits)
+		for (auto ex: *inits) {
+			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
+			for (int i=0; i<ex->values.size(); ++i) {
+				if (var_i < vars.size()) {
+					// Note: vars'asgn_type is possible to update in this call. 
+					auto var_ex = createVarExpression(vars[var_i], ex);
+					ai->addDstEx(var_ex);
+					++var_i;
+				}
+			}
+			assgin_items.push_back(ai);
+		}
+
+	for (int i=0; i < vars.size(); ++i) {
+		PlnVariable* v = vars[i].inf.var;
+		PlnExpression* alloc_ex = NULL;
+		if (v->ptr_type & PTR_OWNERSHIP) {
+			if (i >= var_i || vars[i].asgn_type == ASGN_COPY) {
+				alloc_ex = PlnAllocator::getAllocEx(v);
 			}
 		}
-		++ii;
-		val_num += e->values.size();	// for assertion
+		varinits.push_back({v, alloc_ex});
 	}
-	// compiler must assure all variables have initializer.
-	BOOST_ASSERT(val_num >= vars.size());
-
-}
-
-void PlnVarInit::addVar(PlnValue var) {
-	vars.push_back(var);
-	PlnHeapAllocator* a;
-	a = PlnHeapAllocator::createHeapAllocation(var);
-	allocators.push_back(a);
 }
 
 void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	bool do_init = (initializer.size() > 0);
-
 	// alloc memory.
 	int i=0;
-	for (auto val: vars) {
-		PlnVariable *v = val.inf.var;
-		auto tp = v->var_type.back();
-		v->place = da.allocData(tp->size, tp->data_type);
+	for (auto vi: varinits) {
+		PlnVariable *v = vi.var;
+		auto t = v->var_type.back();
+		v->place = da.allocData(t->size, t->data_type);
 		v->place->comment = &v->name;
 		if (v->ptr_type & PTR_OWNERSHIP) {
 			si.push_owner_var(v);
 		}
 
-		if (auto a = allocators[i])
-			a->finish(da, si);
-
-		if (v->ptr_type & PTR_OWNERSHIP) {
-			si.set_lifetime(v, VLT_ALLOCED);
+		if (auto ex = varinits[i].alloc_ex) {
+			PlnDataPlace* dp = da.getSeparatedDp(v->place);
+			ex->data_places.push_back(dp);
+			ex->finish(da, si);
+			da.popSrc(dp);
+			if (v->ptr_type & PTR_OWNERSHIP) {
+				si.set_lifetime(v, VLT_ALLOCED);
+			}
 		}
 
 		++i;
 	}
 
 	// initialze.
-	i=0;
-	for (auto ie: initializer) {
-		int j=i;
-		for (auto ev: ie->values) {
-			if (i >= vars.size()) break;
-			ie->data_places.push_back(vars[i].inf.var->place);
-			i++;
-		}
-		ie->finish(da, si);
-		for (auto sdp: ie->data_places) {
-			da.popSrc(sdp);
-			auto v = vars[j].inf.var;
-			if (v->ptr_type & PTR_OWNERSHIP) {
-				si.set_lifetime(v, VLT_INITED);
-			}
-			j++;
-		}
+	for (auto ai: assgin_items) {
+		ai->finishS(da, si);
+		ai->finishD(da, si);
 	}
 }
 
 void PlnVarInit::gen(PlnGenerator& g)
 {
-	bool do_init = initializer.size()>0;
-	int i=0;
-	for (auto val: vars) {
-		PlnVariable *v = val.inf.var;
-		if (auto a = allocators[i])
-			a->gen(g);
-		
-		i++;
+	for (auto vi: varinits) {
+		PlnVariable *v = vi.var;
+		if (auto ex = vi.alloc_ex) {
+			ex->gen(g);
+			g.genLoadDp(ex->data_places[0]);
+		}
 	}
 
-	int vi = 0;
-	for (auto i: initializer) {
-		vector<unique_ptr<PlnGenEntity>> clr_es;
-		i->gen(g);
-		for (auto dp: i->data_places) {
-			g.genLoadDp(dp);
-			if (vars[vi].asgn_type == ASGN_MOVE)
-				clr_es.push_back(g.getEntity(dp->src_place));
-			vi++;
-		}
-		if (clr_es.size())
-			g.genNullClear(clr_es);
+	for (auto ai: assgin_items) {
+		ai->genS(g);
+		ai->genD(g);
 	}
 }
+
+PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name)
+{
+	auto var = new PlnVariable();
+	var->var_type = var_type;
+	var->name = name;
+	PlnType *t = var_type.back();
+	var->place = da.prepareLocalVar(t->size, t->data_type);
+	var->place->comment = &var->name;
+	var->container = NULL;
+	var->ptr_type = (t->data_type == DT_OBJECT_REF) ?
+			PTR_REFERENCE : NO_PTR;
+
+	return var;
+}
+

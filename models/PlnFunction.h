@@ -11,13 +11,15 @@ enum PlnFncPrntType {
 
 enum PlnPassingMethod {
 	FPM_COPY,
-	FPM_MOVEOWNER
+	FPM_MOVEOWNER,
+	FPM_REF
 };
 
 class PlnFunction
 {
 public:
 	string name;
+	string asm_name;
 	int type;
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
@@ -42,7 +44,7 @@ public:
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
 	void setRetValues(vector<PlnVariable*>& vars);
-	PlnVariable* addRetValue(string& rname, vector<PlnType*>* rtype);
+	PlnVariable* addRetValue(string& rname, vector<PlnType*>* rtype, bool do_init);
 	PlnParameter* addParam(string& pname, vector<PlnType*>* ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);

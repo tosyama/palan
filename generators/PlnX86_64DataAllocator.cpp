@@ -103,6 +103,7 @@ static bool checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 void PlnX86_64DataAllocator::funcCalled(
 	vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type)
 {
+	// TODO: use pupSrc().
 	for (auto dp: args) {
 		dp->status = DS_RELEASED;
 		dp->release_step = step;
@@ -118,38 +119,6 @@ void PlnX86_64DataAllocator::funcCalled(
 			BOOST_ASSERT(!checkExistsActiveDP(arg_stack[dp->data.stack.idx], dp));
 	}
 
-	destroyRegsByFuncCall();
-	step++;
-}
-
-void PlnX86_64DataAllocator::returnedValues(vector<PlnDataPlace*>& ret_dps, int func_type)
-{
-	if (ret_dps.size() >= 7) {
-		auto adp = ret_dps[0];
-		allocSaveData(adp, adp->alloc_step, step);	// for use RAX for store return data to stack
-	}
-	
-
-	for (auto dp: ret_dps) {
-		dp->status = DS_RELEASED;
-		dp->release_step = step;
-
-		// check invalid state.
-		if (dp->type == DP_REG) 
-			BOOST_ASSERT(!checkExistsActiveDP(regs[dp->data.reg.id], dp));
-	}
-
-	step++;
-}
-
-void PlnX86_64DataAllocator::memAlloced()
-{
-	destroyRegsByFuncCall();
-	step++;
-}
-
-void PlnX86_64DataAllocator::memFreed()
-{
 	destroyRegsByFuncCall();
 	step++;
 }
@@ -176,8 +145,8 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 
 void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
 {
-	releaseData(dst);
-	releaseData(src);
+	releaseDp(dst);
+	releaseDp(src);
 
 	PlnDataPlace* pdp = regs[RCX];
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
@@ -218,8 +187,8 @@ PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
-	releaseData(rdp);
-	releaseData(ldp);
+	releaseDp(rdp);
+	releaseDp(ldp);
 	auto result = prepareAccumulator(ldp->data_type);
 	allocDp(result);
 	return result;
@@ -230,9 +199,11 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
-	releaseData(rdp);
-	return ldp;
-	step++;
+	releaseDp(rdp);
+	releaseDp(ldp);
+	auto result = prepareAccumulator(ldp->data_type);
+	allocDp(result);
+	return result;
 }
 
 void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp)
@@ -240,7 +211,7 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
-	releaseData(rdp);
+	releaseDp(rdp);
 
 	int regid = RDX;
 	auto pdp = regs[regid];
@@ -261,7 +232,7 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjBasePtr()
 {
 	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_REG;
-	dp->status = DS_ASSIGNED;
+	dp->status = DS_READY_ASSIGN;
 
 	dp->data.reg.id = RBX;
 	dp->data.reg.offset = 0;
@@ -276,7 +247,7 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
 {
 	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_REG;
-	dp->status = DS_ASSIGNED;
+	dp->status = DS_READY_ASSIGN;
 
 	dp->data.reg.id = RDI;
 	dp->data.reg.offset = 0;

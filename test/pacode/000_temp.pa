@@ -1,0 +1,10 @@
+ccall int32 printf();
+ccall exit();
+
+// use for temporaly test.
+func test(int32 a) -> int32 int32
+{
+	return a+2, a*3;
+}
+
+exit(0);

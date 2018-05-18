@@ -21,7 +21,6 @@ public:
 	void genFalseJump(int id, int cmp_type, string comment) override;
 	void genEntryFunc() override;
 	void genLocalVarArea(int size) override;
-	void genFreeLocalVarArea(int size) override;
 
 	void genSaveReg(int reg, PlnGenEntity* dst) override;
 	void genLoadReg(int reg, PlnGenEntity* src) override;
@@ -44,7 +43,6 @@ public:
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) override;
 	void genMemAlloc(PlnGenEntity* ref, int al_size, string comment) override;
-	void genMemFree(PlnGenEntity* ref, string comment, bool doNull = true) override;
 	void genMemCopy(int cp_size, string& comment) override;
 
 	unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp) override;
