@@ -11,34 +11,39 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	PlnDataAllocator& allocator = x64allocator;
 
 	PlnDataPlace* dp1=allocator.allocData(8, DT_SINT);
-	REQUIRE(allocator.data_stack.size() == 1);
+	REQUIRE(allocator.data_stack.size() == 1);	// stack[dp1]
 
 	PlnDataPlace* dp2=allocator.allocData(8, DT_SINT);
-	REQUIRE(allocator.data_stack.size() == 2);
-	allocator.releaseDp(dp2);
+	REQUIRE(allocator.data_stack.size() == 2);	// stack[dp1 dp2]
+	allocator.releaseDp(dp2);	// stack[dp1, *]	
 
 	PlnDataPlace* dp3=allocator.allocData(8, DT_SINT);
-	REQUIRE(allocator.data_stack.size() == 2);
+	REQUIRE(allocator.data_stack.size() == 2);	// stack[dp1 dp3]
 
 	vector<PlnParameter*> params(6);
+	vector<int> adtypes = { DT_SINT, DT_SINT, DT_SINT, DT_SINT, DT_SINT, DT_SINT };
 	vector<PlnVariable*> rets;
-	auto dps1 = allocator.prepareArgDps(rets.size(), params.size(), FT_SYS, false);
+	vector<int> rdtypes = { };
+
+	auto dps1 = allocator.prepareArgDps(FT_SYS, rdtypes, adtypes, false);
 	for (auto dp: dps1)
 		allocator.allocDp(dp);
 	REQUIRE(dps1.size() == 6);
-	REQUIRE(allocator.data_stack.size() == 2);
+	REQUIRE(allocator.data_stack.size() == 2);	// stack[dp1 dp3]
 	REQUIRE(allocator.arg_stack.size() == 0);
 
 	rets.resize(2);
+	rdtypes = { DT_SINT, DT_SINT };
 	params.resize(7);
-	auto dps2 = allocator.prepareArgDps(rets.size(), params.size(), FT_PLN, false);
+	adtypes.push_back( DT_SINT );
+	auto dps2 = allocator.prepareArgDps(FT_PLN, rdtypes, adtypes, false);
 	for (auto dp: dps2)
-		allocator.allocDp(dp);
+		allocator.allocDp(dp);	// stack[dp dp3 dp1save1 .. dp1save6 dp2arg1]	// ap1arg4 is not save
 	REQUIRE(dps2.size() == 7);
-	REQUIRE(allocator.data_stack.size() == 6);
-	REQUIRE(allocator.arg_stack.size() == 2);
+	REQUIRE(allocator.data_stack.size() == 7);
+	REQUIRE(allocator.arg_stack.size() == 1);
 	allocator.funcCalled(dps2, rets, FT_PLN);
-	REQUIRE(allocator.regs[RSI] == dps2[0]);
+	REQUIRE(allocator.regs[RDI] == dps2[0]);
 	REQUIRE(dps2[0]->status==DS_RELEASED);
 	REQUIRE(dps2[6]->status==DS_RELEASED);
 
@@ -54,11 +59,10 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	CHECK(dp1->data.stack.offset == -8);	
 	CHECK(dp2->data.stack.offset == -16);	
 	CHECK(dp3->data.stack.offset == -16);	
-	CHECK(dps2[5]->data.stack.offset == 0);	
-	CHECK(dps2[6]->data.stack.offset == 8);	
-	CHECK(dps1[0]->save_place->data.stack.offset == -56);	
-	CHECK(dps1[1]->save_place->data.stack.offset == -24);	
-	CHECK(dps1[5]->save_place->data.stack.offset == -48);	
+	CHECK(dps2[6]->data.stack.offset == 0);	
+	CHECK(dps1[0]->save_place->data.stack.offset == -24);	
+	CHECK(dps1[1]->save_place->data.stack.offset == -32);	
+	CHECK(dps1[5]->save_place->data.stack.offset == -56);	
 	CHECK(allocator.stack_size == 80);
 }
 
@@ -230,13 +234,13 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	{
 		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
 		da.allocDp(dp_ac_src);
-		auto dst_arg1 = da.prepareArgDps(0, 1, FT_PLN, false);
+		auto dst_arg1 = da.prepareArgDps(FT_PLN, {}, {DT_SINT}, false);
 
 		push_step = da.step;
 		da.pushSrc(dst_arg1[0], dp_ac_src);
 
 		// destory
-		auto dst_arg2 = da.prepareArgDps(0, 1, FT_PLN, false);
+		auto dst_arg2 = da.prepareArgDps(FT_PLN, {}, {DT_SINT}, false);
 		da.allocDp(dst_arg2[0]);
 		da.releaseDp(dst_arg2[0]);
 
@@ -263,7 +267,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	{
 		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
 		da.allocDp(dp_ac_src);
-		auto dst_arg = da.prepareArgDps(0, 1, FT_PLN, false);
+		auto dst_arg = da.prepareArgDps(FT_PLN, {}, {DT_SINT}, false);
 
 		push_step = da.step;
 		da.pushSrc(dst_arg[0], dp_ac_src);
@@ -290,7 +294,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	vector<PlnVariable*> rets(1);
 
 	auto dpv4 = da.allocData(4, DT_SINT);
-	auto dp_prms = da.prepareArgDps(rets.size(), params.size(), FT_PLN, false);
+	auto dp_prms = da.prepareArgDps(FT_PLN, {DT_SINT}, {DT_SINT,DT_SINT,DT_SINT}, false);
 	
 	da.pushSrc(dp_prms[0], dpv4);
 	da.popSrc(dp_prms[0]);

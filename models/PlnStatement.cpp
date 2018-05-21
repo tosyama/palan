@@ -111,7 +111,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 
 	BOOST_ASSERT(function->type == FT_PLN);
-	vector<PlnDataPlace*> dps = da.prepareRetValDps(function->return_vals.size(), FT_PLN, true);
+	vector<PlnDataPlace*> dps = da.prepareRetValDps(FT_PLN, function->ret_dtypes, function->arg_dtypes, true);
 	vector<PlnVariable*> ret_vars;
 
 	int i=0, j=0;

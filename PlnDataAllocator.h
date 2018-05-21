@@ -20,7 +20,8 @@ protected:
 	int regnum;
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
-	virtual PlnDataPlace* createArgDp(int func_type, int index, bool is_callee) = 0;
+	virtual PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
+	virtual PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
 	virtual vector<int> getRegsNeedSave()=0;
 	bool isDestroyed(PlnDataPlace* dp);
 
@@ -44,8 +45,8 @@ public:
 
 	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
 	void releaseDp(PlnDataPlace* dp);
-	vector<PlnDataPlace*> prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee);
-	vector<PlnDataPlace*> prepareRetValDps(int ret_num, int func_type, bool is_callee);
+	vector<PlnDataPlace*> prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee);
+	vector<PlnDataPlace*> prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee);
 	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
 
 	// Process register data may be breaken by this process.

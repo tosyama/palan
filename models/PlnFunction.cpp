@@ -49,8 +49,11 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype, bo
 			for (int i=0; i<rtype->size(); i++)
 				if (p->var_type[i] != (*rtype)[i])
 					return NULL;
-			return_vals.push_back(p);
 			p->param_type = PRT_PARAM | PRT_RETVAL;
+
+			return_vals.push_back(p);
+			ret_dtypes.push_back(p->var_type.back()->data_type);
+
 			return p;
 		}
 
@@ -73,6 +76,8 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype, bo
 		ret_var->place = NULL;
 
 	return_vals.push_back(ret_var);
+	ret_dtypes.push_back(t->data_type);
+
 
 	return ret_var;
 }
@@ -102,6 +107,7 @@ PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnP
 	}
 
 	parameters.push_back(param);
+	arg_dtypes.push_back(t->data_type);
 
 	return	param;
 }
@@ -115,11 +121,10 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			// Allocate arguments place.
 			int i=0;
-			auto arg_dps = da.prepareArgDps(return_vals.size(), parameters.size(), FT_PLN, true);
+			auto arg_dps = da.prepareArgDps(FT_PLN, ret_dtypes, arg_dtypes, true);
 			BOOST_ASSERT(arg_dps.size() == parameters.size());
 			for (auto p: parameters) {
 				arg_dps[i]->data_type = p->var_type.back()->data_type;
-				arg_dps[i]->size = p->var_type.back()->size;
 				da.allocDp(arg_dps[i]);
 				++i;
 			}

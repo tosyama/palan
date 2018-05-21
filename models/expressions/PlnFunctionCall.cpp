@@ -57,7 +57,11 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	int func_type = function->type;
-	arg_dps = da.prepareArgDps(function->return_vals.size(), arguments.size(), func_type, false);
+	vector<int> arg_dtypes;
+	for (auto a: arguments) {
+		arg_dtypes.push_back(a->values[0].getType()->data_type);
+	}
+	arg_dps = da.prepareArgDps(func_type, function->ret_dtypes, arg_dtypes, false);
 
 	int i = 0;
 	for (auto p: function->parameters) {
@@ -84,7 +88,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	da.funcCalled(arg_dps, function->return_vals, func_type);
 
-	ret_dps = da.prepareRetValDps(function->return_vals.size(), func_type, false);
+	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
 	i = 0;
 	for (auto r: function->return_vals) {
 		ret_dps[i]->data_type = r->var_type.back()->data_type;
