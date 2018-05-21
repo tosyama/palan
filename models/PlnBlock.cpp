@@ -111,18 +111,6 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	si.pop_scope();
 }
 
-void PlnBlock::dump(ostream& os, string indent)
-{
-	os << indent << "Block: " << statements.size() << endl;
-	for (auto v: variables)
-		os << format("%1% Variable: %2% %3%(%4%)")
-				% indent % v->var_type.back()->name % v->name 
-				% v->place->data.stack.offset << endl;
-
-	for (auto s: statements)
-		s->dump(os, indent+" ");
-}
-
 void PlnBlock::gen(PlnGenerator& g)
 {
 	g.comment("{");

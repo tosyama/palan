@@ -133,30 +133,6 @@ void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.pushSrc(data_places[0], val_place);
 }
 
-void PlnExpression::dump(ostream& os, string indent)
-{
-	if (type == ET_VALUE) {
-		for (auto &value: values)
-		switch (value.type) {
-			case VL_LIT_INT8:
-				os << indent << "Int literal: " << value.inf.intValue << endl;
-				break;
-			case VL_LIT_UINT8:
-				os << indent << "Uint literal: " << value.inf.intValue << endl;
-				break;
-			case VL_VAR:
-				os << indent << "Variable: " << value.inf.var->name << endl;
-				break;
-			case VL_RO_DATA:
-				os << indent << "String literal: " << value.inf.rod->name.size() << endl;
-				break;
-			default:
-				BOOST_ASSERT(false);
-		}
-	} else 
-		os << indent << "Expression: " << type << endl;
-}
-
 static string exp_cmt(PlnValue& v, PlnDataPlace* dp)
 {
 	switch (v.type) {

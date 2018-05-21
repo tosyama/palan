@@ -50,15 +50,6 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 }
 
-void PlnIfStatement::dump(ostream& os, string indent)
-{
-	os << indent << "If: " << endl;
-	condition->dump(os, indent+" ");
-	inf.block->dump(os, indent+" ");
-	if (next)
-		next->dump(os, indent+" ");
-}
-
 void PlnIfStatement::gen(PlnGenerator& g)
 {
 	condition->gen(g);

@@ -50,16 +50,6 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
-void PlnAssignment::dump(ostream& os, string indent)
-{
-	os << indent << "Assign:";
-	for (auto lv: values)
-		os << " " << lv.inf.var->name;
-	os << endl;
-	for (auto e: expressions)
-		e->dump(os, indent+" ");	
-}
-
 void PlnAssignment::gen(PlnGenerator& g)
 {
 	for (auto ai: assgin_items) {

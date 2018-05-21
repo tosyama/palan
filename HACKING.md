@@ -86,7 +86,6 @@ The tree is built by PlnParser. Most models has finish() and gen().
 The model which have children calls the children's methods recursively.  
 The finish() finishes the model. Simulate allocation of stack or register by using data allocator.  
 The gen() generates assembly code of the model to output stream.  
-Note: dump() is deprecated.
 
 ### Typical models:  
 1. PlnModule - Root of model tree. It includes function definitions, type definition and top level block.

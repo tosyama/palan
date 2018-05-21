@@ -137,13 +137,6 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 }
 
-void PlnDivOperation::dump(ostream& os, string indent)
-{
-	os << indent << (div_type==DV_DIV ? "DIV" : "MOD") << endl;
-	l->dump(os, indent+" ");
-	r->dump(os, indent+" ");
-}
-
 void PlnDivOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);

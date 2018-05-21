@@ -13,8 +13,8 @@ protected:
 	PlnCmpOperation *l, *r;
 public:
 	PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
+
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
-	void dump(ostream& os, string indent="") override;
 	void gen(PlnGenerator& g) override;
 
 	static PlnExpression* getNot(PlnExpression *e);

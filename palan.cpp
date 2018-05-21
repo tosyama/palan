@@ -42,7 +42,6 @@ int main(int argc, char* argv[])
 	po::options_description opt("Options");
 	po::positional_options_description p_opt;
 	po::variables_map vm;
-	bool do_dump = false;
 	bool do_asm = true;
 	bool do_compile = false;
 	bool do_link = false;
@@ -51,7 +50,6 @@ int main(int argc, char* argv[])
 
 	opt.add_options()
 		("help,h", "Display this help")
-		("dump,d", "Dump semantic tree")
 		("compile,c", "Compile and create object file")
 		("output,o", po::value<string>(), "Output executable file")
 		("input-file", po::value<vector<string>>(), "Input file");
@@ -81,16 +79,8 @@ int main(int argc, char* argv[])
 		out_file = vm["output"].as<string>();
 	}
 
-	if (vm.count("dump")) {
+	if (vm.count("compile")) {
 		//TODO: error when set with -o option.
-		do_dump = true;
-		do_asm = false;
-		do_compile = false;
-		do_link = false;
-
-	} else if (vm.count("compile")) {
-		//TODO: error when set with -o option.
-		do_dump = false;
 		do_asm = false;
 		do_compile = true;
 		do_link = false;
@@ -118,8 +108,6 @@ int main(int argc, char* argv[])
 				if (res) return res;	// parse error
 				PlnX86_64DataAllocator allocator;
 				module.finish(allocator);
-
-				if (do_dump) module.dump(cout);
 
 				if (do_asm) {
 						PlnX86_64Generator generator(cout);

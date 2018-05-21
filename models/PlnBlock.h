@@ -22,6 +22,5 @@ public:
 	PlnVariable* getVariable(string& var_name);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
-	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };

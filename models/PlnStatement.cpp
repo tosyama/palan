@@ -51,27 +51,6 @@ void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
-void PlnStatement::dump(ostream& os, string indent)
-{
-	switch (type) {
-		case ST_EXPRSN:
-			inf.expression->dump(os, indent);
-			break;
-
-		case ST_VARINIT:
-			os << indent << "Initialize: ";
-			os << endl;
-			break;
-
-		case ST_BLOCK:
-			inf.block->dump(os, indent);
-			break;
-
-		default:
-			os << indent << "Unknown type" << endl;
-	}
-}
-
 void PlnStatement::gen(PlnGenerator& g)
 {
 	switch (type) {
@@ -161,13 +140,6 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for(auto dp: dps) {
 		da.releaseDp(dp);
 	}
-}
-
-void PlnReturnStmt::dump(ostream& os, string indent)
-{
-	os << indent << "Return: " << endl;
-	for (auto e: expressions)
-		e->dump(os, indent+" ");
 }
 
 void PlnReturnStmt::gen(PlnGenerator& g)

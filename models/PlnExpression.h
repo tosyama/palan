@@ -37,7 +37,6 @@ public:
 	bool isLitNum(int& num_type);
 
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si);
-	virtual void dump(ostream& os, string indent="");
 	virtual void gen(PlnGenerator& g);
 };
 

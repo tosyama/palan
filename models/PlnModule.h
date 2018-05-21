@@ -3,7 +3,6 @@
 /// @file	PlnModule.h
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include "PlnExpression.h"
@@ -31,8 +30,6 @@ public:
 	PlnReadOnlyData* getReadOnlyData(string &str);
 
 	void finish(PlnDataAllocator& da);
-
-	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 

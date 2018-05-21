@@ -48,8 +48,6 @@ public:
 	PlnParameter* addParam(string& pname, vector<PlnType*>* ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
-
-	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 

@@ -76,13 +76,6 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
-void PlnCmpOperation::dump(ostream& os, string indent)
-{
-	os << indent << "CMP" << endl;
-	l->dump(os, indent+" ");
-	r->dump(os, indent+" ");
-}
-
 void PlnCmpOperation::gen(PlnGenerator& g)
 {
 	if (gen_cmp_type == CMP_CONST_TRUE

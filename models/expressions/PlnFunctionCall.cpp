@@ -127,16 +127,6 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 }
 
-void PlnFunctionCall:: dump(ostream& os, string indent)
-{
-	os << indent << "FunctionCall: " << function->name << endl;
-	os << indent << " Arguments: " << arguments.size() << endl;
-	for (auto a: arguments) {
-		if (a) a->dump(os, indent + "  ");
-		else os << indent + "  NULL" << endl;
-	}
-}
-
 void PlnFunctionCall::gen(PlnGenerator &g)
 {
 	switch (function->type) {

@@ -190,33 +190,6 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
-void PlnFunction::dump(ostream& os, string indent)
-{
-	os << indent << "Function: " << name << endl;
-	os << indent << " Type: " << type << endl;
-	os << indent << " Returns: " << return_vals.size() << endl;
-	os << indent << " Paramaters: " << parameters.size() << endl;
-	switch (type) {
-		case FT_PLN: 
-			if (implement) {
-				os << indent << " Stack size: " << inf.pln.stack_size << endl;
-				for (auto r: return_vals) {
-					os << indent << " RetValue: " << r->var_type.back()->name << " " << r->name;
-					if (r->place)
-						os << "(" << r->place->data.stack.offset << ")" << endl;
-					else
-						os << "(NULL)" << endl;
-				}
-				for (auto p: parameters)
-					os << indent << " Paramater: " << p->var_type.back()->name << " " << p->name
-						<< "(" << p->place->data.stack.offset << ")" << endl;
-				implement->dump(os, indent+" ");
-
-			} else os << indent << " No Implementation" << endl;
-		break;
-	}
-}
-
 void PlnFunction::gen(PlnGenerator &g)
 {
 	switch (type) {
