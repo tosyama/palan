@@ -24,6 +24,7 @@ public:
 	vector<PlnParameter*> parameters;
 	vector<PlnVariable*> return_vals;
 	PlnVarInit *retval_init;
+	vector<int> ret_dtypes, arg_dtypes;
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
 	
@@ -43,7 +44,6 @@ public:
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
-	void setRetValues(vector<PlnVariable*>& vars);
 	PlnVariable* addRetValue(string& rname, vector<PlnType*>* rtype, bool do_init);
 	PlnParameter* addParam(string& pname, vector<PlnType*>* ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 

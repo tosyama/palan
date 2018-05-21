@@ -232,14 +232,13 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 	step++;
 }
 
-vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, int func_type, bool is_callee)
+vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee)
 {
-	int param_ind = ret_num > 0 ? ret_num : 1;
-	int end_ind = param_ind + arg_num;
+	int arg_num = arg_dtypes.size();
 
 	vector<PlnDataPlace*> dps;
-	for (int i=param_ind; i<end_ind; ++i) {
-		auto dp = createArgDp(func_type, i, is_callee);
+	for (int i=0; i<arg_num; ++i) {
+		auto dp = createArgDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
 		static string cmt="arg";
 		dp->comment = &cmt;
 		dp->status = DS_READY_ASSIGN;
@@ -249,13 +248,14 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int ret_num, int arg_num, 
 	return dps;
 }
 
-vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int ret_num, int func_type, bool is_callee)
+vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee)
 {
+	int ret_num = ret_dtypes.size();
 	vector<PlnDataPlace*> dps;
 
 	for (int i=0; i<ret_num; ++i) {
 		static string cmt="return";
-		auto dp = createArgDp(func_type, i, is_callee);
+		auto dp = createReturnDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
 		dp->comment = &cmt;
 		dp->status = DS_READY_ASSIGN;
 		dps.push_back(dp);

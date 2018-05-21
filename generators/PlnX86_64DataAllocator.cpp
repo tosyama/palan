@@ -14,9 +14,9 @@
 #include "PlnX86_64DataAllocator.h"
 
 using namespace std;
-static const int ARG_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9 };
+static const int ARG_TBL[] = { RDI, RSI, RDX, RCX, R8, R9 };
 static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
-static const int SYSARG_TBL[] = { RAX, RDI, RSI, RDX, R10, R8, R9 };
+static const int SYSARG_TBL[] = { RDI, RSI, RDX, R10, R8, R9 };
 
 PlnX86_64DataAllocator::PlnX86_64DataAllocator()
 	: PlnDataAllocator(16)
@@ -42,11 +42,12 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 	}
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool is_callee)
+PlnDataPlace* PlnX86_64DataAllocator::createArgDp
+	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
 
-	if (index <= 6) {
+	if (index <= 5) {
 		int regid;
 		if (func_type == FT_PLN || func_type == FT_C)
 			regid = ARG_TBL[index];
@@ -58,9 +59,49 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp(int func_type, int index, bool
 		dp->type = DP_REG;
 		dp->data.reg.id = regid;
 		dp->data.reg.offset = 0;
-	} else {	// index >= 6
+	} else {	// index >= 5
 		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = index-7;
+		int ind = index-6;
+
+		if (is_callee) {
+			dp->type = DP_STK_BP;
+			dp->data.stack.idx = ind;
+			dp->data.stack.offset = ind*8+16;
+
+		} else {
+			dp->type = DP_STK_SP;
+
+			dp->data.stack.idx = ind;
+			dp->data.stack.offset = ind*8;
+		}
+	}
+
+	return dp;
+}
+
+PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
+	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
+{
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+
+	if (index <= 5) {
+		int regid;
+		if (ret_dtypes.size() == 1) {
+			BOOST_ASSERT(index == 0);
+			regid = RAX;
+		} else if (func_type == FT_PLN || func_type == FT_C)
+			regid = ARG_TBL[index];
+		else if (func_type == FT_SYS)
+			regid = SYSARG_TBL[index];
+		else
+			BOOST_ASSERT(false);
+
+		dp->type = DP_REG;
+		dp->data.reg.id = regid;
+		dp->data.reg.offset = 0;
+	} else {	// index >= 5
+		BOOST_ASSERT(func_type != FT_SYS);
+		int ind = index-6;
 
 		if (is_callee) {
 			dp->type = DP_STK_BP;
