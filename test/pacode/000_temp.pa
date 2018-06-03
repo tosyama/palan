@@ -12,6 +12,5 @@ func test(int32 a, b) -> int32 A, B
 
 int32 A,B = test(1,2);
 test(11,12);
-test();
 
 exit(0);

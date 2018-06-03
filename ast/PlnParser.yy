@@ -42,11 +42,6 @@ class PlnLexer;
 int yylex(	palan::PlnParser::semantic_type* yylval,
 			palan::PlnParser::location_type* location,
 			PlnLexer& lexer);
-
-namespace palan {
-static void warn(const PlnParser::location_type& l, const string& m);
-}
-
 }
 
 %locations
@@ -794,12 +789,22 @@ namespace palan
 
 void PlnParser::error(const location_type& l, const string& m)
 {
-	cerr << "error: " << l << ": " << m << endl;
-}
-
-void warn(const PlnParser::location_type& l, const string& m)
-{
-	cerr << "warning: " << l << ": " << m << endl;
+	json err = {
+		{"msg", m},
+		{"loc",
+			{"begin",
+				{"f",*l.begin.filename},
+				{"l",l.begin.line},
+				{"c",l.begin.column}
+			},
+			{"end",
+				{"f",*l.end.filename},
+				{"l",l.end.line},
+				{"c",l.end.column}
+			}
+		}
+	};
+	ast["errs"].push_back(err);
 }
 
 } // namespace
