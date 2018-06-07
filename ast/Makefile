@@ -6,7 +6,6 @@ VPATH=.:objs:..
 $(PROGRAM): $(OBJS)
 	@echo link $(PROGRAM).
 	@$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
-	./$(PROGRAM) ../test/pacode/000_temp.pa -o test.json
 .cpp.o:
 	@mkdir -p objs
 	$(CXX) -std=c++11 -c -g $< -o objs/$@

@@ -195,6 +195,7 @@ void PlnFunction::gen(PlnGenerator &g)
 	switch (type) {
 		case FT_PLN:
 		{
+			if (!implement) return;
 			g.genLabel(asm_name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		

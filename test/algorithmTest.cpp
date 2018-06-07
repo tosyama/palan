@@ -1,6 +1,6 @@
 #include "testBase.h"
 
-TEST_CASE("basic algorithm code example.", "[algorithm]")
+TEST_CASE("basic algorithm code example.", "[algorithm][.]")
 {
 	string testcode;
 

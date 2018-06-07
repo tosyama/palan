@@ -12,9 +12,10 @@
 
 #include "../PlnParser.hpp"
 #include "../PlnLexer.h"
-#include "../models/PlnModule.h"
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../generators/PlnX86_64Generator.h"
+#include "../models/PlnModule.h"
+#include "../PlnModelTreeBuilder.h"
 
 using namespace palan;
 
@@ -32,7 +33,28 @@ int clean()
 
 string build(string srcf)
 {
-	ifstream f;
+	string ast_cmd = "../ast/pat pacode/" + srcf + ".pa -o out/"+srcf+".json";
+	int ret = system(ast_cmd.c_str());
+	if (ret) return "parser exec err:"+srcf;
+
+	PlnModule *module;
+	{
+		ifstream jf;
+		jf.open("out/" + srcf + ".json");
+		if (!jf)
+			return "file open err:" + srcf + ".json";
+		json j = json::parse(jf);
+		if (j["errs"].is_array()) {
+			json &err = j["errs"][0];
+			return "line:" + to_string(err["loc"]["begin"]["l"].get<int>())
+				+ "-" + to_string(err["loc"]["end"]["l"].get<int>())
+				+ " parse err:" + err["msg"].get<string>();
+		}
+		PlnModelTreeBuilder modelTreeBuilder;
+		module = modelTreeBuilder.buildModule(j["ast"]);
+	}
+
+/*	ifstream f;
 	f.open("pacode/" + srcf + ".pa");
 	if (!f) return "file open err:" + srcf;
 
@@ -45,18 +67,19 @@ string build(string srcf)
 
 	PlnScopeStack	scopes;
 	PlnParser parser(lexer, module, scopes);
-	int ret = parser.parse();
+	ret = parser.parse();
 	if (ret) return "parse err:"+srcf;
+	*/
 
 	// compile
 	PlnX86_64DataAllocator allocator;
-	module.finish(allocator);
+	module->finish(allocator);
 	string asmf = "out/" + srcf + ".s";
 	ofstream as_output;
 	as_output.open(asmf, ios::out);
 
 	PlnX86_64Generator generator(as_output);
-	module.gen(generator);
+	module->gen(generator);
 
 	as_output.close();
 

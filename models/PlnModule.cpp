@@ -188,7 +188,7 @@ int PlnModule::getJumpID()
 	return ++max_jmp_id;
 }
 
-PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
+PlnReadOnlyData* PlnModule::getReadOnlyData(const string &str)
 {
 	for (auto d: readonlydata)
 		if (d->type == RO_LIT_STR && d->name == str)

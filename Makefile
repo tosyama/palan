@@ -21,7 +21,8 @@ SRCS=palan.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp \
 	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp \
-	PlnBuildTreeHelper.cpp PlnScopeStack.cpp
+	PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
+	PlnModelTreeBuilder.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators:models/expressions/assignitem
@@ -48,7 +49,7 @@ PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
 $(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
 	@$(MAKE) -C test
-$(AST): ast/*.cpp ast/*.yy ast/*.h
+$(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll
 	@$(MAKE) -C ast
 depend: $(SRCS)
 	-@ $(RM) depend.inc

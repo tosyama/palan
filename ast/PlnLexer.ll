@@ -74,7 +74,7 @@ COMMENT1	\/\/[^\n]*\n
 	loc.step();
 %}
 
-{COMMENT1}	{ loc.lines(); }
+{COMMENT1}	{ loc.lines(); loc.step(); }
 {UDIGIT}	{
 			lval.build<uint64_t>() = std::stoull(yytext);
 			return UINT;
@@ -135,7 +135,7 @@ else	{ return KW_ELSE; }
 	}
 {DELIMITER}	{ return yytext[0]; }
 [ \t]+		{ loc.step(); }
-\r\n|\r|\n	{ loc.lines(); }
+\r\n|\r|\n	{ loc.lines(); loc.step(); }
 .	{
 		cerr << "Lexer: Unrecognized char \"" << yytext[0] << "\"" << endl;
 		loc.step();

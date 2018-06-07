@@ -1,7 +1,7 @@
 /// Module model class declaration.
 ///
 /// @file	PlnModule.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
 #include <string>
 #include <vector>
@@ -27,7 +27,7 @@ public:
 	PlnType* getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes);
 	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
 	int getJumpID();
-	PlnReadOnlyData* getReadOnlyData(string &str);
+	PlnReadOnlyData* getReadOnlyData(const string &str);
 
 	void finish(PlnDataAllocator& da);
 	void gen(PlnGenerator& g);

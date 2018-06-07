@@ -1,9 +1,9 @@
 /// Helper functions for building model tree directly.
 ///
-/// @file	PlnBuildTreeHelper.cpp
+/// @file	PlnTreeBuildHelper.cpp
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
-#include "PlnBuildTreeHelper.h"
+#include "PlnTreeBuildHelper.h"
 #include "models/PlnType.h"
 #include "models/PlnBlock.h"
 #include "models/PlnExpression.h"

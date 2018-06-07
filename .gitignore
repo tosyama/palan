@@ -11,6 +11,7 @@ location.hh
 position.hh
 stack.hh
 pac
+pat
 test/tester
 test/out
 

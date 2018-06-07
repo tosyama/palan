@@ -9,6 +9,7 @@ ver 0.0.0
 Root
 ----
 * ast\* - AST model
+* errs	- Error message list
 
 AST
 ---
@@ -18,19 +19,19 @@ AST
 
 Function Prototype
 ------------------
-* func-type\* - Function type string: "palan" "ccall" "sys-call"
+* func-type\* - Function type string: "palan" "ccall" "syscall"
 	1. palan - Palan function prototype
 		* name\* - Function name string
 		* params\* - Parameter list
 		* rets\* - Return value list
 	2. ccall - C function prototype
 		* name\* - Function name string
-		* ret-type\* - Return value type string
+		* ret-type - Return value type string
 		* params\* - Parameter list
-	3. sys-call - System call prototype
+	3. syscall - System call prototype
 		* id\* - Integer to set %rax
 		* name\* - System call name string
-		* ret-type\* - Return value type string
+		* ret-type - Return value type string
 		* params\* - Parameter list
 
 Function
@@ -136,3 +137,7 @@ Variable Declaration
 * var-type\# - Variable type list
 * move - Move ownership flag boolean
 
+Argument
+--------
+* exp\* - Argument expression
+* move - Move ownership flag boolean

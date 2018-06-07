@@ -39,7 +39,7 @@ PlnVariable.o:  models/PlnFunction.h \
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
 PlnArray.o:  models/../PlnConstants.h \
-	models/../PlnBuildTreeHelper.h models/../PlnModel.h models/PlnArray.h \
+	models/../PlnTreeBuildHelper.h models/../PlnModel.h models/PlnArray.h \
 	models/PlnBlock.h models/PlnType.h models/PlnFunction.h \
 	models/PlnStatement.h models/PlnVariable.h models/PlnConditionalBranch.h \
 	models/expressions/PlnArrayItem.h models/expressions/../PlnExpression.h \
@@ -179,7 +179,7 @@ PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
 PlnLexer.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
 	models/PlnExpression.h stack.hh location.hh position.hh PlnLexer.h
 PlnMessage.o:  PlnMessage.h
-PlnBuildTreeHelper.o:  PlnBuildTreeHelper.h \
+PlnTreeBuildHelper.o:  PlnTreeBuildHelper.h \
 	PlnModel.h models/PlnType.h models/PlnBlock.h models/PlnExpression.h \
 	models/PlnStatement.h models/PlnVariable.h models/PlnLoopStatement.h \
 	models/expressions/PlnAddOperation.h models/expressions/PlnArrayItem.h \
@@ -188,3 +188,8 @@ PlnBuildTreeHelper.o:  PlnBuildTreeHelper.h \
 	models/expressions/PlnFunctionCall.h
 PlnScopeStack.o:  PlnModel.h models/PlnVariable.h \
 	PlnScopeStack.h
+PlnModelTreeBuilder.o:  PlnModel.h \
+	PlnModelTreeBuilder.h libs/json/single_include/nlohmann/json.hpp \
+	PlnScopeStack.h PlnConstants.h models/PlnType.h models/PlnModule.h \
+	models/PlnExpression.h models/PlnFunction.h models/PlnBlock.h \
+	models/PlnStatement.h models/expressions/PlnFunctionCall.h

@@ -280,8 +280,9 @@ ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 			{"func-type", "ccall"},
 			{"name", $3},
 			{"params", $5},
-			{"ret-type", $2},
 		};
+		if ($2 != "")
+			ccall["ret-type"] = move($2);
 		$$ = move(ccall);
 	}
 	;
@@ -292,9 +293,10 @@ syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';
 			{"func-type","syscall"},
 			{"id",$2},
 			{"name",$5},
-			{"ret-type",$4},
 			{"params", $7}	
 		};
+		if ($4 != "")
+			syscall["ret-type"] = move($4);
 		$$ = move(syscall);
 	}
 	;
@@ -792,15 +794,20 @@ void PlnParser::error(const location_type& l, const string& m)
 	json err = {
 		{"msg", m},
 		{"loc",
-			{"begin",
-				{"f",*l.begin.filename},
-				{"l",l.begin.line},
-				{"c",l.begin.column}
-			},
-			{"end",
-				{"f",*l.end.filename},
-				{"l",l.end.line},
-				{"c",l.end.column}
+			{
+				{"begin", {
+							  {"f",*l.begin.filename},
+							  {"l",l.begin.line},
+							  {"c",l.begin.column}
+						  }
+				},
+				{"end",
+					{
+						{"f",*l.end.filename},
+						{"l",l.end.line},
+						{"c",l.end.column}
+					}
+				}
 			}
 		}
 	};

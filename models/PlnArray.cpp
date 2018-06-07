@@ -6,7 +6,7 @@
 #include <boost/assert.hpp>
 
 #include "../PlnConstants.h"
-#include "../PlnBuildTreeHelper.h"
+#include "../PlnTreeBuildHelper.h"
 #include "PlnArray.h"
 #include "PlnBlock.h"
 #include "PlnType.h"
