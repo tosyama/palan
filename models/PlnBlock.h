@@ -18,8 +18,8 @@ public:
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 
-	PlnVariable* declareVariable(string& var_name, vector<PlnType*>& var_types, bool is_owner);
-	PlnVariable* getVariable(string& var_name);
+	PlnVariable* declareVariable(const string& var_name, vector<PlnType*>& var_types, bool is_owner);
+	PlnVariable* getVariable(const string& var_name);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

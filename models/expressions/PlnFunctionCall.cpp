@@ -199,7 +199,7 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "malloc");
 	f->asm_name = f->name;
 	vector<PlnType*> ret_type = { PlnType::getObject() };
-	f->addRetValue(ret_name, &ret_type, false);
+	f->addRetValue(ret_name, ret_type, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "free");

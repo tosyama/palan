@@ -4,16 +4,13 @@ ccall exit();
 // use for temporaly test.
 func test(int32 a, b) -> int32 A, B
 {
+	a+b -> A;
+	{
+		int16 z = 0;
+	}
 }
 
-// {
-//	a+b -> A;
-//	{
-//		int16 z;
-//	}
-// }
-
-//int32 A,B = test(1,2);
+int32 A,B = test(1,2);
 
 printf("%d", 333);
 

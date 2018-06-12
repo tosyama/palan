@@ -34,20 +34,20 @@ void PlnFunction::setParent(PlnModule* parent_mod)
 	parent.module = parent_mod;
 }
 
-PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype, bool do_init)
+PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname) return NULL;
 
 	for (auto p: parameters)
 		if (p->name == rname) {
-			if (!rtype) 
-				rtype = &return_vals.back()->var_type;
-			if (p->var_type.size() != rtype->size())
+			if (!rtype.size()) 
+				rtype = return_vals.back()->var_type;
+			if (p->var_type.size() != rtype.size())
 				return NULL;
 
-			for (int i=0; i<rtype->size(); i++)
-				if (p->var_type[i] != (*rtype)[i])
+			for (int i=0; i<rtype.size(); i++)
+				if (p->var_type[i] != rtype[i])
 					return NULL;
 			p->param_type = PRT_PARAM | PRT_RETVAL;
 
@@ -59,7 +59,7 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype, bo
 
 	auto ret_var = new PlnParameter();
 	ret_var->name = rname;
-	ret_var->var_type = rtype ? move(*rtype) : return_vals.back()->var_type;
+	ret_var->var_type = rtype.size() ? move(rtype) : return_vals.back()->var_type;
 	ret_var->param_type = PRT_RETVAL;
 
 	auto t = ret_var->var_type.back();
@@ -82,14 +82,14 @@ PlnVariable* PlnFunction::addRetValue(string& rname, vector<PlnType*>* rtype, bo
 	return ret_var;
 }
 
-PlnParameter* PlnFunction::addParam(string& pname, vector<PlnType*> *ptype, PlnPassingMethod pass_method, PlnValue* defaultVal)
+PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnValue* defaultVal)
 {
 	for (auto p: parameters)
 		if (p->name == pname) return NULL;
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type = ptype ? move(*ptype) : parameters.back()->var_type;
+	param->var_type = ptype.size() ? move(ptype) : parameters.back()->var_type;
 	param->dflt_value = defaultVal;
 	param->param_type = PRT_PARAM;
 

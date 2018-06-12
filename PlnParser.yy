@@ -210,7 +210,7 @@ return_type: type_def
 	{
 		PlnFunction* f = scopes.back().inf.function;
 		string s = "";
-		auto v = f->addRetValue(s, &$1, true);
+		auto v = f->addRetValue(s, $1, true);
 	}
 	;
 
@@ -219,7 +219,8 @@ return_values: return_value
 	| return_values ',' ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		auto v = f->addRetValue($3, NULL, true);
+		vector<PlnType*> notype;
+		auto v = f->addRetValue($3, notype, true);
 		if (!v) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
 			YYABORT;
@@ -230,7 +231,7 @@ return_values: return_value
 return_value: type_def ID
 	{
 		PlnFunction* f = scopes.back().inf.function;
-		auto v = f->addRetValue($2, &$1, true);
+		auto v = f->addRetValue($2, $1, true);
 		if (!v) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $2));
 			YYABORT;
@@ -248,7 +249,8 @@ parameters: parameter
 	{
 		PlnFunction* f = scopes.back().inf.function;
 		PlnPassingMethod pm = $3 ? FPM_MOVEOWNER : FPM_COPY;
-		auto prm = f->addParam($4, NULL, pm);
+		vector<PlnType*> var_type;
+		auto prm = f->addParam($4, var_type, pm);
 		if (!prm) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $4));
 			YYABORT;
@@ -261,7 +263,7 @@ parameter: type_def move_owner ID default_value
 		BOOST_ASSERT(scopes.back().type == SC_FUNCTION);
 		PlnFunction* f = scopes.back().inf.function;
 		PlnPassingMethod pm = $2 ? FPM_MOVEOWNER : FPM_COPY;
-		$$ = f->addParam($3, &$1, pm, $4);
+		$$ = f->addParam($3, $1, pm, $4);
 		if (!$$) {
 			error(@$, PlnMessage::getErr(E_DuplicateVarName, $3));
 			YYABORT;
@@ -305,7 +307,7 @@ ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 		f->setParent(&module);
 		string name = "";
 		if ($2.size())
-			f->addRetValue(name, &$2, false);
+			f->addRetValue(name, $2, false);
 		$$ = f;
 	}
 	;
@@ -317,7 +319,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';
 		f->setParent(&module);
 		string name = "";
 		if ($4.size())
-			f->addRetValue(name, &$4, false);
+			f->addRetValue(name, $4, false);
 		$$ = f;
 	}
 	;

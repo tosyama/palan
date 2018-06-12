@@ -92,7 +92,7 @@ Expression
 ----------
 * exp-type\* - Expression type string:
 	"lit-int" "lit-uint" "lit-str" "var"
-	"var-init" "asgn" "func-call" 
+	"asgn" "func-call" 
 	birary operator ("+" "-" "*" "/" "%" "==" "!=" "<" ">" "<=" ">=" "&&" "||")
 	unary operator ("uminus" "not")
 	1. lit-int - Integer(64bit) literal
@@ -104,19 +104,16 @@ Expression
 	4. var - Variable expression
 		* base-var\* - Base variable name string
 		* opes - Modified operator list
-	5. var-init - Variable declaration
-		* vars\* - Variable declaration list
-		* inits - Variable initialize expression list
-	6. asgn - Assignment expression
+	5. asgn - Assignment expression
 		* src-exps\* - Source expression list
 		* dst-vals\* - Destination value list
-	7. func-call - Function call expression
+	6. func-call - Function call expression
 		* func-name\* - Function name to call
 		* args\* - Argument list
-	8. binary operator
+	7. binary operator
 		* lval\* -	Left value expression
 		* rval\* -	Right value expression
-	9. unary operator
+	8. unary operator
 		* val\* -	Value expression
 
 Destination Value

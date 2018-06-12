@@ -127,7 +127,8 @@ module: /* empty */
 		json proto = {
 			{"func-type", $2["func-type"]},
 			{"name", $2["name"]},
-			{"params", $2["params"]}	
+			{"params", $2["params"]},
+			{"rets", $2["rets"]}	
 		};
 
 		ast["ast"]["protos"].push_back(move(proto));

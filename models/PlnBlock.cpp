@@ -43,7 +43,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type, bool is_owner)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>& var_type, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -68,7 +68,7 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_t
 	return v;
 }
 
-PlnVariable* PlnBlock::getVariable(string& var_name)
+PlnVariable* PlnBlock::getVariable(const string& var_name)
 {
 	PlnBlock* b = this;
 	for(;;) {
