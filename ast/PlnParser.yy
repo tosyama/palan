@@ -115,8 +115,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 module: /* empty */
 	{
 		vector<string> default_types = {
-			"byte", "int16", "int32", "int64",
-			"ubyte", "uint16", "uint32", "uint64",
+			"sbyte", "int16", "int32", "int64",
+			"byte", "uint16", "uint32", "uint64",
 		};
 		for (auto& type_name: default_types)
 			lexer.push_typename(type_name);
@@ -781,7 +781,7 @@ array_indexes: expression
 	| array_indexes ',' expression
 	{
 		$$ = move($1);
-		$$.push_back(move($1));
+		$$.push_back(move($3));
 	}
 	;
 

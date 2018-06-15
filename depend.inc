@@ -192,4 +192,11 @@ PlnModelTreeBuilder.o:  PlnModel.h \
 	PlnModelTreeBuilder.h libs/json/single_include/nlohmann/json.hpp \
 	PlnScopeStack.h PlnConstants.h models/PlnType.h models/PlnModule.h \
 	models/PlnExpression.h models/PlnFunction.h models/PlnBlock.h \
-	models/PlnStatement.h models/expressions/PlnFunctionCall.h
+	models/PlnStatement.h models/PlnVariable.h models/PlnLoopStatement.h \
+	models/PlnConditionalBranch.h models/expressions/PlnAssignment.h \
+	models/expressions/PlnFunctionCall.h \
+	models/expressions/PlnAddOperation.h \
+	models/expressions/PlnMulOperation.h \
+	models/expressions/PlnDivOperation.h \
+	models/expressions/PlnBoolOperation.h \
+	models/expressions/PlnCmpOperation.h models/expressions/PlnArrayItem.h

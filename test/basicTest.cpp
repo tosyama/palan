@@ -7,7 +7,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "333");
-/*
+	REQUIRE(mcheck("mtrace000") == "+1 -1");
+
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8 1263\n"
@@ -66,6 +67,5 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"3 5 2 1\n"
 							"5 -1\n"
 							"9 9 9 0");
-	*/
 }
 

@@ -15,9 +15,15 @@
 #include "models/PlnStatement.h"
 #include "models/PlnExpression.h"
 #include "models/PlnVariable.h"
+#include "models/PlnLoopStatement.h"
+#include "models/PlnConditionalBranch.h"
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnFunctionCall.h"
 #include "models/expressions/PlnAddOperation.h"
+#include "models/expressions/PlnMulOperation.h"
+#include "models/expressions/PlnDivOperation.h"
+#include "models/expressions/PlnBoolOperation.h"
+#include "models/expressions/PlnArrayItem.h"
 
 #define CUR_BLOCK	scope.back().inf.block
 #define CUR_MODULE	scope.front().inf.module
@@ -28,7 +34,7 @@ PlnModelTreeBuilder::PlnModelTreeBuilder()
 
 static void registerPrototype(PlnModule& module, json& proto);
 static void buildFunction(json& func, PlnScopeStack &scope);
-static void buildBlock(PlnBlock& block, json& stmts, PlnScopeStack &scope);
+static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope);
 
 PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 {
@@ -53,8 +59,7 @@ PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 	}
 
 	if (ast["stmts"].is_array()) {
-		scope.push_back(module->toplevel);
-		buildBlock(*module->toplevel, ast["stmts"], scope);
+		module->toplevel = buildBlock(ast["stmts"], scope);
 	}
 
 	return module;
@@ -66,6 +71,12 @@ static vector<PlnType*> getVarType(PlnModule& module, json& var_type)
 	for (auto& vt: var_type) {
 		string type_name = vt["name"];
 		if (type_name == "[]") {
+			BOOST_ASSERT(vt["sizes"].is_array());
+			vector<int> sizes;
+			for (json& i: vt["sizes"])
+				sizes.push_back(i);
+			PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
+			ret_vt.push_back(arr_t);
 		} else {
 			ret_vt.push_back(module.getType(type_name));
 		}
@@ -154,26 +165,39 @@ void buildFunction(json& func, PlnScopeStack &scope)
 
 	PlnFunction* f = CUR_MODULE->getFunc(func["name"], param_types, ret_types);
 	BOOST_ASSERT(f);
-	auto b = new PlnBlock();
-	f->implement = b;
-	b->setParent(f);
 	scope.push_back(f);
-	buildBlock(*b, func["impl"]["stmts"], scope);
+	f->implement = buildBlock(func["impl"]["stmts"], scope);
 	scope.pop_back();
 }
 
 static PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope);
-void buildBlock(PlnBlock& block, json& stmts, PlnScopeStack &scope)
+PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope)
 {
-	scope.push_back(&block);
+	PlnBlock* block = new PlnBlock();
+	switch (scope.back().type) {
+		case SC_MODULE: break;
+		case SC_FUNCTION:
+			block->setParent(scope.back().inf.function);
+			break;
+		case SC_BLOCK:
+			block->setParent(CUR_BLOCK);
+			break;
+	}
+
+	scope.push_back(block);
 	for (json& stmt: stmts) {
-		block.statements.push_back(buildStatement(stmt, scope));
+		block->statements.push_back(buildStatement(stmt, scope));
 	}
 	scope.pop_back();
+	return block;
 }
 
 static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
 static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
+static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
+static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope);
+static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope);
+
 PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope)
 {
 	string type = stmt["stmt-type"];
@@ -182,13 +206,20 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope)
 		return new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
 
 	} else if (type == "block") {
-		PlnBlock *block = new PlnBlock();
-		block->setParent(CUR_BLOCK);
-		buildBlock(*block, stmt["block"]["stmts"], scope);
+		PlnBlock *block = buildBlock(stmt["block"]["stmts"], scope);
 		return new PlnStatement(block, CUR_BLOCK);
 
 	} else if (type == "var-init") {
 		return new PlnStatement(buildVarInit(stmt, scope), CUR_BLOCK);
+
+	} else if (type == "return") {
+		return buildReturn(stmt, scope);
+
+	} else if (type == "while") {
+		return buildWhile(stmt, scope);
+
+	} else if (type == "if") {
+		return buildIf(stmt, scope);
 
 	} else {
 		BOOST_ASSERT(false);
@@ -223,10 +254,46 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		return new PlnVarInit(vars);
 }
 
+PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
+{
+	vector<PlnExpression *> ret_vals;
+	if (ret["ret-vals"].is_array())
+		for (json& ret_val: ret["ret-vals"])
+			ret_vals.push_back(buildExpression(ret_val, scope));
+	
+	return new PlnReturnStmt(ret_vals, CUR_BLOCK);
+}
+
+PlnStatement* buildWhile(json& whl, PlnScopeStack& scope)
+{
+	PlnExpression* cond = buildExpression(whl["cond"], scope);
+	PlnBlock* block = buildBlock(whl["block"]["stmts"], scope);
+	return new PlnWhileStatement(cond, block, CUR_BLOCK);
+}
+
+PlnStatement* buildIf(json& ifels, PlnScopeStack& scope)
+{
+	PlnExpression* cond = buildExpression(ifels["cond"], scope);
+	PlnBlock* ifblock = buildBlock(ifels["block"]["stmts"], scope);
+	PlnStatement* else_stmt = NULL;
+	if (ifels["else"].is_object()) {
+		else_stmt = buildStatement(ifels["else"], scope);
+	}
+
+	return new PlnIfStatement(cond, ifblock, else_stmt, CUR_BLOCK);
+}
+
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
 static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
 static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
 static PlnExpression* buildAddOperation(json& add, PlnScopeStack &scope);
+static PlnExpression* buildSubOperation(json& sub, PlnScopeStack &scope);
+static PlnExpression* buildMulOperation(json& mul, PlnScopeStack &scope);
+static PlnExpression* buildDivOperation(json& div, PlnScopeStack &scope);
+static PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope);
+static PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope);
+static PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope);
+static PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope);
 
 PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
@@ -248,18 +315,49 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		return buildFuncCall(exp, scope);
 	} else if (type == "+") {
 		return buildAddOperation(exp, scope);
+	} else if (type == "-") {
+		return buildSubOperation(exp, scope);
+	} else if (type == "*") {
+		return buildMulOperation(exp, scope);
+	} else if (type == "/") {
+		return buildDivOperation(exp, scope);
+	} else if (type == "%") {
+		return buildModOperation(exp, scope);
+	} else if (type == "==") {
+		return buildCmpOperation(exp, CMP_EQ, scope);
+	} else if (type == "!=") {
+		return buildCmpOperation(exp, CMP_NE, scope);
+	} else if (type == "<") {
+		return buildCmpOperation(exp, CMP_L, scope);
+	} else if (type == ">") {
+		return buildCmpOperation(exp, CMP_G, scope);
+	} else if (type == "<=") {
+		return buildCmpOperation(exp, CMP_LE, scope);
+	} else if (type == ">=") {
+		return buildCmpOperation(exp, CMP_GE, scope);
+	} else if (type == "&&") {
+		return buildBoolOperation(exp, ET_AND, scope);
+	} else if (type == "||") {
+		return buildBoolOperation(exp, ET_OR, scope);
+	} else if (type == "uminus") {
+		return buildNegativeOperation(exp, scope);
+	} else if (type == "not") {
+		return PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
 	} else {
-		// BOOST_ASSERT(false);
-		return new PlnExpression(uint64_t(99));
+		BOOST_ASSERT(false);
 	}
 }
 
 PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 {
 	vector<PlnExpression*> args;
-	for (auto& arg: fcall["args"])
+	for (auto& arg: fcall["args"]) {
 		args.push_back(buildExpression(arg["exp"], scope));
-		// TODO: check move.
+		if (arg["move"].is_boolean() && arg["move"] == true) {
+			BOOST_ASSERT(args.back()->values[0].type == VL_VAR);
+			args.back()->values[0].asgn_type = ASGN_MOVE;
+		}
+	}
 
 	PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], args);
 	if (f) {
@@ -297,10 +395,20 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 	PlnVariable* pvar = CUR_BLOCK->getVariable(var["base-var"]);
 	BOOST_ASSERT(pvar);
 
+	PlnExpression *var_exp = new PlnExpression(pvar);
+
 	if (var["opes"].is_array()) {
-		BOOST_ASSERT(false);
+		for (json& ope: var["opes"]) {
+			if (ope["ope-type"]=="index") {
+				BOOST_ASSERT(ope["indexes"].is_array());
+				vector<PlnExpression*> indexes;
+				for (json& exp: ope["indexes"])
+					indexes.push_back(buildExpression(exp, scope));
+				var_exp = new PlnArrayItem(var_exp, indexes);
+			}
+		}
 	}
-	return new  PlnExpression(pvar);
+	return var_exp;
 }
 
 PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
@@ -321,3 +429,52 @@ PlnExpression* buildAddOperation(json& add, PlnScopeStack &scope)
 	PlnExpression *r = buildExpression(add["rval"], scope);
 	return PlnAddOperation::create(l, r);
 }
+
+PlnExpression* buildSubOperation(json& sub, PlnScopeStack &scope)
+{
+	PlnExpression *l = buildExpression(sub["lval"], scope);
+	PlnExpression *r = buildExpression(sub["rval"], scope);
+	return PlnAddOperation::create_sub(l, r);
+}
+
+PlnExpression* buildMulOperation(json& mul, PlnScopeStack &scope)
+{
+	PlnExpression *l = buildExpression(mul["lval"], scope);
+	PlnExpression *r = buildExpression(mul["rval"], scope);
+	return PlnMulOperation::create(l, r);
+}
+
+PlnExpression* buildDivOperation(json& div, PlnScopeStack &scope)
+{
+	PlnExpression *l = buildExpression(div["lval"], scope);
+	PlnExpression *r = buildExpression(div["rval"], scope);
+	return PlnDivOperation::create(l, r);
+}
+
+PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope)
+{
+	PlnExpression *l = buildExpression(mod["lval"], scope);
+	PlnExpression *r = buildExpression(mod["rval"], scope);
+	return PlnDivOperation::create_mod(l, r);
+}
+
+PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope)
+{
+	PlnExpression *e = buildExpression(neg["val"], scope);
+	return PlnNegative::create(e);
+}
+
+PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope)
+{
+	PlnExpression *l = buildExpression(cmp["lval"], scope);
+	PlnExpression *r = buildExpression(cmp["rval"], scope);
+	return new PlnCmpOperation(l, r, type);
+}
+
+PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope)
+{
+	PlnExpression *l = buildExpression(bl["lval"], scope);
+	PlnExpression *r = buildExpression(bl["rval"], scope);
+	return new PlnBoolOperation(l, r, type);
+}
+

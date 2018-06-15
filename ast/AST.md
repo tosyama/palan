@@ -126,7 +126,7 @@ Modified Operator
 -----------------
 * ope-type\* - Operator type string: "index"
 	1. index - Numerical index
-		* indexes - Index integer list
+		* indexes - Index expression list
 
 Variable Declaration
 --------------------
