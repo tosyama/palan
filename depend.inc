@@ -1,8 +1,8 @@
-palan.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
-	models/PlnExpression.h stack.hh location.hh position.hh PlnLexer.h \
-	models/PlnModule.h PlnMessage.h generators/PlnX86_64DataAllocator.h \
+palan.o:  models/PlnModule.h models/PlnExpression.h \
+	models/../PlnModel.h PlnMessage.h generators/PlnX86_64DataAllocator.h \
 	generators/../PlnDataAllocator.h generators/PlnX86_64Generator.h \
-	generators/../PlnGenerator.h
+	generators/../PlnGenerator.h PlnModelTreeBuilder.h \
+	libs/json/single_include/nlohmann/json.hpp
 PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnFunction.h models/PlnVariable.h models/PlnStatement.h \
@@ -164,20 +164,6 @@ PlnDataAllocator.o:  PlnDataAllocator.h \
 	PlnConstants.h
 PlnGenerator.o:  PlnModel.h PlnDataAllocator.h \
 	PlnGenerator.h
-PlnParser.o:  models/PlnModule.h models/PlnExpression.h \
-	models/../PlnModel.h models/PlnFunction.h models/PlnBlock.h \
-	models/PlnStatement.h models/PlnLoopStatement.h \
-	models/PlnConditionalBranch.h models/PlnType.h models/PlnVariable.h \
-	models/PlnArray.h models/expressions/PlnFunctionCall.h \
-	models/expressions/PlnAddOperation.h \
-	models/expressions/PlnMulOperation.h \
-	models/expressions/PlnDivOperation.h models/expressions/PlnArrayItem.h \
-	models/expressions/PlnAssignment.h models/expressions/PlnBoolOperation.h \
-	models/expressions/PlnCmpOperation.h \
-	models/expressions/../../PlnConstants.h PlnMessage.h PlnParser.hpp \
-	PlnScopeStack.h stack.hh location.hh position.hh PlnLexer.h
-PlnLexer.o:  PlnParser.hpp PlnModel.h PlnScopeStack.h \
-	models/PlnExpression.h stack.hh location.hh position.hh PlnLexer.h
 PlnMessage.o:  PlnMessage.h
 PlnTreeBuildHelper.o:  PlnTreeBuildHelper.h \
 	PlnModel.h models/PlnType.h models/PlnBlock.h models/PlnExpression.h \

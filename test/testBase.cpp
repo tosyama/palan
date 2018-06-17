@@ -10,14 +10,10 @@
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
 
-#include "../PlnParser.hpp"
-#include "../PlnLexer.h"
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../generators/PlnX86_64Generator.h"
 #include "../models/PlnModule.h"
 #include "../PlnModelTreeBuilder.h"
-
-using namespace palan;
 
 TEST_CASE ("Hello World", "[basic]")
 {

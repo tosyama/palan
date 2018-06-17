@@ -20,8 +20,7 @@ SRCS=palan.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp \
-	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp \
-	PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
+	PlnMessage.cpp PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
 	PlnModelTreeBuilder.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
@@ -41,12 +40,6 @@ $(PROGRAM): $(OBJS)	$(TEST)
 .cpp.o:
 	@mkdir -p objs
 	$(CXX) -std=c++11 -c -g $< -o objs/$@
-PlnParser.cpp: PlnParser.yy
-	bison -o $@ $<
-PlnParser.hpp: PlnParser.yy
-	bison -o PlnParser.cpp -r all --report-file=bison.log $<
-PlnLexer.cpp: PlnLexer.ll
-	flex -o $@ $<
 $(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
 	@$(MAKE) -C test
 $(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll

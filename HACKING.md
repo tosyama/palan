@@ -9,12 +9,20 @@ Code Structure
 	Main function of palan CUI compiler.
 	You can start reading code from here.
 
-*PlnParser.yy*  
-	The parser build palan model tree directly from palan code.
-	Note: It may be changed to building AST in the future.
+*/ast/palnast.cpp*
+	Main function of palan paser CUI.
 
-*PlnLexer.ll*  
+*/ast/AST.md*  
+	Json AST specification.
+
+*/ast/PlnParser.yy*  
+	The parser build json AST.
+
+*/ast/PlnLexer.ll*  
 	Lexical analyser.
+
+*PlnModelTreeBuilder*
+	Build palan model tree form json AST.
 
 *PlnDataAllocator.cpp*  
 	Provide the mechanism of allcating varibles to stack and register.
@@ -42,42 +50,35 @@ Code Structure
 Generating Files
 ----------------
 pac - Palan compiler. To display help, type "./pac -h".  
+ast/pat - Palan json AST generator. To display help, type "./pat -h".  
 test/tester - Auto test program using Catch C++ testing framework.  
 
 Main Logic
 ----------
-1. Create Lexer and set input stream of palan code.  
+1. Get json AST with "pat" command.
 ```
-PlnLexer	lexer;
-lexer.set_filename(fname);
-lexer.switch_streams(&f, &cout);
+	json j;
+	string cmd =  cmd_dir + "pat \"" + fname + "\"";
+	...
+	j = json::parse(pat_output);
 ```
-2. Create Parser with Lexer, empty Module and ScopeStack.
-	* Lexer - Input palan code.
-	* Module - Output object that is root of model tree.
-	* ScopeStack - Work object. Manage current block level during parsing.
+2. build a model tree from json.
 ```
-PlnModule module;
-PlnScopeStack	scopes;
-PlnParser parser(lexer, module, scopes);
+	PlnModule *module = modelTreeBuilder.buildModule(j["ast"]);
 ```
-3. Parse and build a model tree.
-```
-int res = parser.parse();
-```
-4. Finishing model tree with Data allocator, and set up passing data between models.
+3. Finishing model tree with Data allocator, and set up passing data between models.
 	* Data Allocator - Provide allocation data method register and stack.
 ```
 PlnX86_64DataAllocator allocator;
 module.finish(allocator);
 ```
-5. Generate assembly data from model tree with Generator.
+4. Generate assembly data from model tree with Generator.
 	* Generator - Generate environment dependent assembly code.
 ```
 PlnX86_64Generator generator(cout);
 module.gen(generator);
 ```
-6. Assemble and link with "as" and "ld" command.
+5. Assemble and link with "as" and "ld" command.
 
 Palan Model Tree<a name="PMT"></a>
 ----------------

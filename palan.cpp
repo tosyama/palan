@@ -15,8 +15,6 @@
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
 
-#include "PlnParser.hpp"
-#include "PlnLexer.h"
 #include "models/PlnModule.h"
 #include "PlnMessage.h"
 #include "generators/PlnX86_64DataAllocator.h"
@@ -31,7 +29,6 @@ using std::ifstream;
 using std::istream;
 using std::stringstream;
 using boost::algorithm::join;
-using palan::PlnParser;
 
 namespace po = boost::program_options;
 
