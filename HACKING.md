@@ -9,19 +9,19 @@ Code Structure
 	Main function of palan CUI compiler.
 	You can start reading code from here.
 
-*/ast/palnast.cpp*
+*/ast/palnast.cpp*  
 	Main function of palan paser CUI.
 
 */ast/AST.md*  
 	Json AST specification.
 
 */ast/PlnParser.yy*  
-	The parser build json AST.
+	The parser generate json AST.
 
 */ast/PlnLexer.ll*  
 	Lexical analyser.
 
-*PlnModelTreeBuilder*
+*PlnModelTreeBuilder*  
 	Build palan model tree form json AST.
 
 *PlnDataAllocator.cpp*  
@@ -62,7 +62,7 @@ Main Logic
 	...
 	j = json::parse(pat_output);
 ```
-2. build a model tree from json.
+2. Build a model tree from json.
 ```
 	PlnModule *module = modelTreeBuilder.buildModule(j["ast"]);
 ```
