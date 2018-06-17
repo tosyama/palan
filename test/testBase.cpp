@@ -33,7 +33,7 @@ int clean()
 
 string build(string srcf)
 {
-	string ast_cmd = "../ast/pat pacode/" + srcf + ".pa -o out/"+srcf+".json";
+	string ast_cmd = "../pat pacode/" + srcf + ".pa -o out/"+srcf+".json";
 	int ret = system(ast_cmd.c_str());
 	if (ret) return "parser exec err:"+srcf;
 
@@ -53,23 +53,6 @@ string build(string srcf)
 		PlnModelTreeBuilder modelTreeBuilder;
 		module = modelTreeBuilder.buildModule(j["ast"]);
 	}
-
-/*	ifstream f;
-	f.open("pacode/" + srcf + ".pa");
-	if (!f) return "file open err:" + srcf;
-
-	// parse
-	PlnLexer	lexer;
-	lexer.set_filename(srcf);
-	lexer.switch_streams(&f, &cout);
-
-	PlnModule module;
-
-	PlnScopeStack	scopes;
-	PlnParser parser(lexer, module, scopes);
-	ret = parser.parse();
-	if (ret) return "parse err:"+srcf;
-	*/
 
 	// compile
 	PlnX86_64DataAllocator allocator;
