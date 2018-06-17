@@ -43,7 +43,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_type, bool is_owner)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>& var_type, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -68,7 +68,7 @@ PlnVariable* PlnBlock::declareVariable(string& var_name, vector<PlnType*>& var_t
 	return v;
 }
 
-PlnVariable* PlnBlock::getVariable(string& var_name)
+PlnVariable* PlnBlock::getVariable(const string& var_name)
 {
 	PlnBlock* b = this;
 	for(;;) {
@@ -109,18 +109,6 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	
 	si.pop_owner_vars(this);
 	si.pop_scope();
-}
-
-void PlnBlock::dump(ostream& os, string indent)
-{
-	os << indent << "Block: " << statements.size() << endl;
-	for (auto v: variables)
-		os << format("%1% Variable: %2% %3%(%4%)")
-				% indent % v->var_type.back()->name % v->name 
-				% v->place->data.stack.offset << endl;
-
-	for (auto s: statements)
-		s->dump(os, indent+" ");
 }
 
 void PlnBlock::gen(PlnGenerator& g)

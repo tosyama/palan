@@ -44,12 +44,10 @@ public:
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
-	PlnVariable* addRetValue(string& rname, vector<PlnType*>* rtype, bool do_init);
-	PlnParameter* addParam(string& pname, vector<PlnType*>* ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
+	PlnVariable* addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init);
+	PlnParameter* addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
-
-	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 

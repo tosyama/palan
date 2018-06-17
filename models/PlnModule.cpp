@@ -183,12 +183,39 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 	return NULL;
 }
 
+PlnFunction* PlnModule::getFunc(const string& func_name, vector<string>& param_types, vector<string>& ret_types)
+{
+	for (auto f: functions) {
+		if (f->name == func_name
+				&& f->parameters.size() == param_types.size()
+				&& f->return_vals.size() == ret_types.size()) {
+			for (int i; i<param_types.size(); i++) {
+				string& pt_name = f->parameters[i]->var_type.back()->name;
+				if (pt_name != param_types[i]) {
+					goto next;
+				}
+			}
+
+			for (int i; i<ret_types.size(); i++) {
+				string& rt_name = f->return_vals[i]->var_type.back()->name;
+				if (rt_name != ret_types[i]) {
+					goto next;
+				}
+			}
+			return f;
+		}
+next:	;
+	}
+	
+	return NULL;
+}
+
 int PlnModule::getJumpID()
 {
 	return ++max_jmp_id;
 }
 
-PlnReadOnlyData* PlnModule::getReadOnlyData(string &str)
+PlnReadOnlyData* PlnModule::getReadOnlyData(const string &str)
 {
 	for (auto d: readonlydata)
 		if (d->type == RO_LIT_STR && d->name == str)
@@ -218,17 +245,6 @@ void PlnModule::finish(PlnDataAllocator& da)
 	toplevel->finish(da, si);
 	da.finish(save_regs, save_reg_dps);
 	stack_size = da.stack_size;
-}
-
-void PlnModule::dump(ostream& os, string indent)
-{
-	os << indent << "Module: " << endl;
-	os << indent << " Readonly Data: " << readonlydata.size() << endl;
-	os << indent << " Functions: " << functions.size() << endl;
-	for (auto f: functions)
-		f->dump(os, indent+"  ");
-	os << indent << " Top Level Code: " << endl;
-	toplevel->dump(os, indent+ "  "); 
 }
 
 void PlnModule::gen(PlnGenerator &g)

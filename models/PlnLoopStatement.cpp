@@ -40,13 +40,6 @@ void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	inf.block->finish(da, si);
 }
 
-void PlnWhileStatement::dump(ostream& os, string indent)
-{
-	os << indent << "While: " << endl;
-	condition->dump(os, indent+" ");
-	inf.block->dump(os, indent+" ");
-}
-
 void PlnWhileStatement::gen(PlnGenerator& g)
 {
 	g.genJumpLabel(jmp_start_id, "while");

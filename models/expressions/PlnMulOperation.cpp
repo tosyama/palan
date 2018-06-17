@@ -101,13 +101,6 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.releaseDp(product);
 }
 
-void PlnMulOperation::dump(ostream& os, string indent)
-{
-	os << indent << "MUL" << endl;
-	l->dump(os, indent+" ");
-	r->dump(os, indent+" ");
-}
-
 void PlnMulOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);

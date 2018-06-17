@@ -17,7 +17,6 @@ public:
 	static PlnExpression* create_sub(PlnExpression* l, PlnExpression* r);
 	
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
-	void dump(ostream& os, string indent="") override;
 	void gen(PlnGenerator& g) override;
 };
 
@@ -29,7 +28,6 @@ public:
 	PlnNegative(PlnExpression* e);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
-	void dump(ostream& os, string indent="") override;
 	void gen(PlnGenerator& g) override;
 };
 

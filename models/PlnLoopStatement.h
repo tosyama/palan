@@ -16,7 +16,6 @@ public:
 	PlnWhileStatement(PlnExpression* condition, PlnBlock* block, PlnBlock* parent);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
-	void dump(ostream& os, string indent="") override;
 	void gen(PlnGenerator& g) override;
 };
 

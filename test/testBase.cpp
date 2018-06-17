@@ -10,13 +10,10 @@
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
 
-#include "../PlnParser.hpp"
-#include "../PlnLexer.h"
-#include "../models/PlnModule.h"
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../generators/PlnX86_64Generator.h"
-
-using namespace palan;
+#include "../models/PlnModule.h"
+#include "../PlnModelTreeBuilder.h"
 
 TEST_CASE ("Hello World", "[basic]")
 {
@@ -32,31 +29,36 @@ int clean()
 
 string build(string srcf)
 {
-	ifstream f;
-	f.open("pacode/" + srcf + ".pa");
-	if (!f) return "file open err:" + srcf;
+	string ast_cmd = "../pat pacode/" + srcf + ".pa -o out/"+srcf+".json";
+	int ret = system(ast_cmd.c_str());
+	if (ret) return "parser exec err:"+srcf;
 
-	// parse
-	PlnLexer	lexer;
-	lexer.set_filename(srcf);
-	lexer.switch_streams(&f, &cout);
-
-	PlnModule module;
-
-	PlnScopeStack	scopes;
-	PlnParser parser(lexer, module, scopes);
-	int ret = parser.parse();
-	if (ret) return "parse err:"+srcf;
+	PlnModule *module;
+	{
+		ifstream jf;
+		jf.open("out/" + srcf + ".json");
+		if (!jf)
+			return "file open err:" + srcf + ".json";
+		json j = json::parse(jf);
+		if (j["errs"].is_array()) {
+			json &err = j["errs"][0];
+			return "line:" + to_string(err["loc"]["begin"]["l"].get<int>())
+				+ "-" + to_string(err["loc"]["end"]["l"].get<int>())
+				+ " parse err:" + err["msg"].get<string>();
+		}
+		PlnModelTreeBuilder modelTreeBuilder;
+		module = modelTreeBuilder.buildModule(j["ast"]);
+	}
 
 	// compile
 	PlnX86_64DataAllocator allocator;
-	module.finish(allocator);
+	module->finish(allocator);
 	string asmf = "out/" + srcf + ".s";
 	ofstream as_output;
 	as_output.open(asmf, ios::out);
 
 	PlnX86_64Generator generator(as_output);
-	module.gen(generator);
+	module->gen(generator);
 
 	as_output.close();
 

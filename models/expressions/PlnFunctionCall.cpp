@@ -127,16 +127,6 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 }
 
-void PlnFunctionCall:: dump(ostream& os, string indent)
-{
-	os << indent << "FunctionCall: " << function->name << endl;
-	os << indent << " Arguments: " << arguments.size() << endl;
-	for (auto a: arguments) {
-		if (a) a->dump(os, indent + "  ");
-		else os << indent + "  NULL" << endl;
-	}
-}
-
 void PlnFunctionCall::gen(PlnGenerator &g)
 {
 	switch (function->type) {
@@ -209,7 +199,7 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "malloc");
 	f->asm_name = f->name;
 	vector<PlnType*> ret_type = { PlnType::getObject() };
-	f->addRetValue(ret_name, &ret_type, false);
+	f->addRetValue(ret_name, ret_type, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "free");

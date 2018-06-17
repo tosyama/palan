@@ -15,24 +15,24 @@
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
 
-#include "PlnParser.hpp"
-#include "PlnLexer.h"
 #include "models/PlnModule.h"
 #include "PlnMessage.h"
 #include "generators/PlnX86_64DataAllocator.h"
 #include "generators/PlnX86_64Generator.h"
+#include "PlnModelTreeBuilder.h"
 
 using std::cout;
 using std::cerr;
 using std::endl;
 using std::exception;
 using std::ifstream;
+using std::istream;
 using std::stringstream;
 using boost::algorithm::join;
-using palan::PlnParser;
 
 namespace po = boost::program_options;
 
+static string getDirName(string fpath);
 static string getFileName(string& fpath);
 static string getExtention(string& fpath);
 
@@ -42,16 +42,15 @@ int main(int argc, char* argv[])
 	po::options_description opt("Options");
 	po::positional_options_description p_opt;
 	po::variables_map vm;
-	bool do_dump = false;
 	bool do_asm = true;
 	bool do_compile = false;
 	bool do_link = false;
 	string out_file;
 	vector<string> object_files;
+	string cmd_dir = getDirName(argv[0]);
 
 	opt.add_options()
 		("help,h", "Display this help")
-		("dump,d", "Dump semantic tree")
 		("compile,c", "Compile and create object file")
 		("output,o", po::value<string>(), "Output executable file")
 		("input-file", po::value<vector<string>>(), "Input file");
@@ -81,16 +80,8 @@ int main(int argc, char* argv[])
 		out_file = vm["output"].as<string>();
 	}
 
-	if (vm.count("dump")) {
+	if (vm.count("compile")) {
 		//TODO: error when set with -o option.
-		do_dump = true;
-		do_asm = false;
-		do_compile = false;
-		do_link = false;
-
-	} else if (vm.count("compile")) {
-		//TODO: error when set with -o option.
-		do_dump = false;
 		do_asm = false;
 		do_compile = true;
 		do_link = false;
@@ -101,53 +92,60 @@ int main(int argc, char* argv[])
 
 		for (string& fname: files) {
 			if (getExtention(fname) == "o") continue;
-			
-			ifstream f;
-			f.open(fname);
 
-			if (f) {
-				PlnLexer	lexer;
-				lexer.set_filename(fname);
-				lexer.switch_streams(&f, &cout);
+			PlnModule *module;
+			{
+				FILE* outf;
+				json j;
+				string cmd =  cmd_dir + "pat \"" + fname + "\"";
+				outf = popen(cmd.c_str(), "r");
+				if (outf) {
+					popen_filebuf p_buf(outf);
+					istream pat_output(&p_buf);
+					j = json::parse(pat_output);
 
-				PlnModule module;
-				PlnScopeStack	scopes;
-				PlnParser parser(lexer, module, scopes);
-				int res = parser.parse();
+					int ret = pclose (outf);
 
-				if (res) return res;	// parse error
-				PlnX86_64DataAllocator allocator;
-				module.finish(allocator);
-
-				if (do_dump) module.dump(cout);
-
-				if (do_asm) {
-						PlnX86_64Generator generator(cout);
-						module.gen(generator);
-				} 
-
-				if (do_compile) {
-					FILE* as;
-					string obj_file = getFileName(fname) + ".o";
-					string cmd = "as -o \"" + obj_file + "\"" ;
-
-					as = popen(cmd.c_str(), "w");
-					popen_filebuf p_buf(as);
-					ostream as_input(&p_buf);
-
-					PlnX86_64Generator generator(as_input);
-					module.gen(generator);
-					
-					int ret = pclose(as);
 					// TODO: error message
 					if (ret) return ret;
-
-					object_files.push_back(obj_file);
+				} else {
+					BOOST_ASSERT(false);
 				}
-			} else {
-				string msg(PlnMessage::getErr(E_CouldnotOpenFile, fname));
-				cerr << "error: " << msg << endl;
-				return -1;
+				if (j["errs"].is_array()) {
+					json &err = j["errs"][0];
+					cerr << "line:" << err["loc"]["begIn"]["l"]
+						<< "-" << err["loc"]["end"]["l"]
+						<< " parse err:" << err["msg"] << endl;
+				}
+				PlnModelTreeBuilder modelTreeBuilder;
+				module = modelTreeBuilder.buildModule(j["ast"]);
+			}
+
+			PlnX86_64DataAllocator allocator;
+			module->finish(allocator);
+
+			if (do_asm) {
+				PlnX86_64Generator generator(cout);
+				module->gen(generator);
+			} 
+
+			if (do_compile) {
+				FILE* as;
+				string obj_file = getFileName(fname) + ".o";
+				string cmd = "as -o \"" + obj_file + "\"" ;
+
+				as = popen(cmd.c_str(), "w");
+				popen_filebuf p_buf(as);
+				ostream as_input(&p_buf);
+
+				PlnX86_64Generator generator(as_input);
+				module->gen(generator);
+
+				int ret = pclose(as);
+				// TODO: error message
+				if (ret) return ret;
+
+				object_files.push_back(obj_file);
 			}
 		}
 	} 
@@ -166,17 +164,23 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-static string getFileName(string& fpath)
+string getDirName(string fpath)
 {
-	int path_i = fpath.find_last_of("\\")+1;
+	int path_i = fpath.find_last_of("/\\")+1;
+	return fpath.substr(0, path_i);
+}
+
+string getFileName(string& fpath)
+{
+	int path_i = fpath.find_last_of("/\\")+1;
 	int ext_i = fpath.find_last_of(".");
 	if (ext_i < path_i) ext_i = fpath.length();
 	return fpath.substr(path_i, ext_i-path_i);
 }
 
-static string getExtention(string& fpath)
+string getExtention(string& fpath)
 {
-	int path_i = fpath.find_last_of("\\")+1;
+	int path_i = fpath.find_last_of("/\\")+1;
 	int ext_i = fpath.find_last_of(".");
 	if (ext_i < path_i) return "";
 	return fpath.substr(ext_i);

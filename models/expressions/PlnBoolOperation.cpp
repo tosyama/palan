@@ -59,17 +59,6 @@ inline int getConstValue(int const_type) {
 	return const_type == CMP_CONST_TRUE ? 1 : 0;
 }
 
-void PlnBoolOperation::dump(ostream& os, string indent)
-{
-	if (type == ET_AND)
-		os << indent << "AND" << endl;
-	else
-		os << indent << "OR" << endl;
-
-	l->dump(os, indent+" ");
-	r->dump(os, indent+" ");
-}
-
 // Case 1) l:definite_const, r:- -> definite_const
 // Case 2) l:proxy_const, r:definite_const -> definite_const
 // Case 3) l:proxy_const, r:proxy_const -> proxy_const

@@ -20,11 +20,12 @@ SRCS=palan.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp \
-	PlnParser.cpp PlnLexer.cpp PlnMessage.cpp \
-	PlnBuildTreeHelper.cpp PlnScopeStack.cpp
+	PlnMessage.cpp PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
+	PlnModelTreeBuilder.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators:models/expressions/assignitem
+AST=ast/pat
 TEST=test/tester
 # Workarround of mtrace hang with double free.
 MALLOC_CHECK_=1	
@@ -39,14 +40,10 @@ $(PROGRAM): $(OBJS)	$(TEST)
 .cpp.o:
 	@mkdir -p objs
 	$(CXX) -std=c++11 -c -g $< -o objs/$@
-PlnParser.cpp: PlnParser.yy
-	bison -o $@ $<
-PlnParser.hpp: PlnParser.yy
-	bison -o PlnParser.cpp -r all --report-file=bison.log $<
-PlnLexer.cpp: PlnLexer.ll
-	flex -o $@ $<
-$(TEST): $(OBJS) test/*.cpp test/pacode/*
+$(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
 	@$(MAKE) -C test
+$(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll
+	@$(MAKE) -C ast
 depend: $(SRCS)
 	-@ $(RM) depend.inc
 	-@ for i in $^; do $(CXX) -std=c++11 -MM $$i \

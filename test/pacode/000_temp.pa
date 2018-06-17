@@ -1,14 +1,24 @@
 ccall int32 printf();
 ccall exit();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
 
-// use for temporaly test.
-func test(int32 a, b, c, d, e, f, g, h)
-	-> int32 A, B, C, D, E, F, G, H
+
+setenv("MALLOC_TRACE", "out/mtrace000", 1);
+
+mtrace();
 {
+	// alloc only
+	int32[10] a;
+	arr_func2(a>>);
 }
+muntrace();
 
-
-int32 A,B,C,D,E,F,G,H = test(1,2,3,4,5,6,7,8);
-test(11,12,13,14,15,16,17,18);
+printf("%d", 333);
 
 exit(0);
+
+func arr_func2(int32[10] >> pa)
+{
+}

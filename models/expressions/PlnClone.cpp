@@ -41,12 +41,6 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	da.pushSrc(data_places[0], clone_var->place);
 }
 
-void PlnClone::dump(ostream& os, string indent)
-{
-	os << indent << "Clone:" << endl;
-	clone_src->dump(os, indent+" ");
-}
-
 void PlnClone::gen(PlnGenerator& g)
 {
 	alloc_ex->gen(g);

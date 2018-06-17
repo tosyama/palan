@@ -2,10 +2,11 @@ PROGRAM = tester
 TESTOBJS = testMain.o testBase.o basicTest.o dataAllocTest.o \
 		algorithmTest.o
 OBJS = $(filter-out ../objs/palan.o, $(wildcard ../objs/*.o))
+AST = ../ast/pat
 
 .SUFFIXES: .cpp .o
 
-$(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa
+$(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa $(AST)
 	@echo link $(PROGRAM).
 	@$(CXX) -o $(PROGRAM) $(filter %.o, $^) -pthread
 

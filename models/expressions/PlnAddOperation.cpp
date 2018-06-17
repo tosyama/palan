@@ -141,14 +141,6 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.releaseDp(result_dp);
 }
 
-void PlnAddOperation::dump(ostream& os, string indent)
-{
-	if (is_add) os << indent << "ADD" << endl;
-	else os << indent << "SUB" << endl;
-	l->dump(os, indent+" ");
-	r->dump(os, indent+" ");
-}
-
 void PlnAddOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
@@ -201,12 +193,6 @@ void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	else
 		da.releaseDp(dp);
 		
-}
-
-void PlnNegative::dump(ostream& os, string indent)
-{
-	os << indent << "Negative:" << endl;
-	e->dump(os, indent+" ");
 }
 
 static string gen_n_cmt(PlnDataPlace* dp, PlnDataPlace* result)

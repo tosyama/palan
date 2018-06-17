@@ -1,9 +1,8 @@
 /// Module model class declaration.
 ///
 /// @file	PlnModule.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017 YAMAGUCHI Toshinobu 
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include "PlnExpression.h"
@@ -27,12 +26,11 @@ public:
 	PlnType* getType(const string& type_name);
 	PlnType* getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes);
 	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
+	PlnFunction* getFunc(const string& func_name, vector<string>& param_types, vector<string>& ret_types);
 	int getJumpID();
-	PlnReadOnlyData* getReadOnlyData(string &str);
+	PlnReadOnlyData* getReadOnlyData(const string &str);
 
 	void finish(PlnDataAllocator& da);
-
-	void dump(ostream& os, string indent="");
 	void gen(PlnGenerator& g);
 };
 

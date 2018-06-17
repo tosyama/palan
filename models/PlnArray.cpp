@@ -6,7 +6,7 @@
 #include <boost/assert.hpp>
 
 #include "../PlnConstants.h"
-#include "../PlnBuildTreeHelper.h"
+#include "../PlnTreeBuildHelper.h"
 #include "PlnArray.h"
 #include "PlnBlock.h"
 #include "PlnType.h"
@@ -25,7 +25,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, vector<PlnType*
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "p1";
-	PlnVariable* ret_var = f->addRetValue(s1, &arr_type, false);
+	PlnVariable* ret_var = f->addRetValue(s1, arr_type, false);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
@@ -60,7 +60,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, vector<PlnType*>
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "p1";
-	f->addParam(s1, &arr_type, FPM_REF, NULL);
+	f->addParam(s1, arr_type, FPM_REF, NULL);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
@@ -96,8 +96,8 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, vector<PlnType*>
 	vector<PlnType*> src_arr_type = arr_type;
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "p1", s2 = "p2";
-	f->addParam(s1, &arr_type, FPM_REF, NULL);
-	f->addParam(s2, &src_arr_type, FPM_REF, NULL);
+	f->addParam(s1, arr_type, FPM_REF, NULL);
+	f->addParam(s2, src_arr_type, FPM_REF, NULL);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
