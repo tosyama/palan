@@ -33,6 +33,8 @@ class PlnLexer;
 %code top
 {
 #include <boost/assert.hpp>
+#define LOC(J, L) J["loc"] = { lexer.cur_fid, (int)L.begin.line, (int)L.begin.column, (int)L.end.line, (int)L.end.column }
+#define LOC_BE(J, B, E) J["loc"] = { lexer.cur_fid, (int)B.begin.line, (int)B.begin.column, (int)E.end.line, (int)E.end.column }
 }
 
 %code
@@ -128,7 +130,8 @@ module: /* empty */
 			{"func-type", $2["func-type"]},
 			{"name", $2["name"]},
 			{"params", $2["params"]},
-			{"rets", $2["rets"]}	
+			{"rets", $2["rets"]},
+			{"loc", $2["loc"]}
 		};
 
 		ast["ast"]["protos"].push_back(move(proto));
@@ -160,6 +163,7 @@ function_definition: KW_FUNC ID '(' parameter_def ')' return_def block
 			{"impl", move($7)}
 		};
 		$$ = move(func);
+		LOC_BE($$, @$, @6);
 	}
 	;
 
@@ -242,6 +246,8 @@ parameters: parameter { $$.push_back($1); }
 		};
 		if ($3)
 			prm["move"] = true;
+		LOC_BE(prm, @3, @4);
+
 		$$.push_back(move(prm));
 	}
 	;
@@ -257,6 +263,7 @@ parameter: type_def move_owner ID default_value
 		if (!$4.is_null())
 			prm["default-val"] = move($4);
 		$$ = move(prm);
+		LOC($$, @$);
 	}
 	;
 
@@ -285,6 +292,7 @@ ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 		if ($2 != "")
 			ccall["ret-type"] = move($2);
 		$$ = move(ccall);
+		LOC($$, @$);
 	}
 	;
 
@@ -299,6 +307,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';
 		if ($4 != "")
 			syscall["ret-type"] = move($4);
 		$$ = move(syscall);
+		LOC($$, @$);
 	}
 	;
 
@@ -316,6 +325,7 @@ statement: st_expression ';'
 			{"exp", move($1)}
 		};
 		$$ = move(stmt);
+		LOC($$, @$);
 	}
 	| declarations ';'
 	{
@@ -324,6 +334,7 @@ statement: st_expression ';'
 			{"vars", move($1)},
 		};
 		$$ = move(stmt);
+		LOC($$, @$);
 	}
 	| declarations '=' expressions ';'
 	{
@@ -333,10 +344,12 @@ statement: st_expression ';'
 			{"inits", move($3)},
 		};
 		$$ = move(stmt);
+		LOC($$, @$);
 	}
 	| return_stmt ';'
 	{
 		$$ = move($1);
+		LOC($$, @$);
 	}
 	| block
 	{
@@ -345,6 +358,7 @@ statement: st_expression ';'
 			{"block",  move($1) }
 		};
 		$$ = move(stmt);
+		LOC($$, @$);
 	}
 	| while_statement
 	{
@@ -362,6 +376,7 @@ block: '{' statements '}'
 			{"stmts", move($2)}
 		};
 		$$ = move(block);
+		LOC($$, @$);
 	}
 	;
 
@@ -373,6 +388,7 @@ while_statement: KW_WHILE st_expression block
 			{"block", $3}
 		};
 		$$ = move(whl);
+		LOC_BE($$, @$, @2);
 	}
 	;
 
@@ -386,6 +402,7 @@ if_statement: KW_IF st_expression block else_statement
 		if (!$4.is_null())
 			ifs["else"] = move($4);
 		$$ = move(ifs);
+		LOC($$, @1);
 	}
 
 else_statement: /* empty */
@@ -399,11 +416,14 @@ else_statement: /* empty */
 			{"block",  move($2) }
 		};
 		$$ = move(stmt);
+		LOC($$, @1);
 	}
 
 	| KW_ELSE if_statement
 	{
 		$$ = move($2);
+		$$["loc"][1] = @1.begin.line;
+		$$["loc"][2] = @1.begin.column;
 	}
 	;
 
@@ -447,78 +467,91 @@ expression:
 	{
 		json ope { {"exp-type", "+"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression '-' expression
 	{
 		json ope { {"exp-type", "-"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression '*' expression
 	{
 		json ope { {"exp-type", "*"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression '/' expression
 	{
 		json ope { {"exp-type", "/"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression '%' expression
 	{
 		json ope { {"exp-type", "%"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression OPE_EQ expression
 	{
 		json ope { {"exp-type", "=="}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression OPE_NE expression
 	{
 		json ope { {"exp-type", "!="}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression '<' expression
 	{
 		json ope { {"exp-type", "<"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression '>' expression
 	{
 		json ope { {"exp-type", ">"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression OPE_LE expression
 	{
 		json ope { {"exp-type", "<="}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression OPE_GE expression
 	{
 		json ope { {"exp-type", ">="}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression OPE_AND expression
 	{
 		json ope { {"exp-type", "&&"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| expression OPE_OR expression
 	{
 		json ope { {"exp-type", "||"}, {"lval", move($1)}, {"rval", move($3)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| '(' assignment ')'
@@ -530,12 +563,14 @@ expression:
 	{
 		json ope { {"exp-type", "uminus"}, {"val", move($2)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 
 	| '!' expression
 	{
 		json ope = { {"exp-type", "not"}, {"val", move($2)} };
 		$$ = move(ope);
+		LOC($$, @$);
 	}
 	
 	| term
@@ -552,6 +587,7 @@ func_call: ID '(' arguments ')'
 			{"args", $3}
 		};
 		$$ = move(func_call);
+		LOC($$, @$);
 	}
 	;
 
@@ -604,6 +640,7 @@ var_expression: ID
 			{ "base-var", $1 }
 		};
 		$$ = move(uexp);
+		LOC($$,@$);
 	}
 
 	| var_expression array_item
@@ -621,6 +658,7 @@ term: literal
 	{
 		$1["exp-type"] = "var";
 		$$ = move($1);
+		LOC($$, @$);
 	}
 	| '(' expression ')'
 	{
@@ -635,6 +673,7 @@ literal: INT
 			{"val", $1}
 		};
 		$$ = move(lit_int);
+		LOC($$, @$);
 	}
 
 	| UINT
@@ -644,6 +683,7 @@ literal: INT
 			{"val", $1}
 		};
 		$$ = move(lit_uint);
+		LOC($$, @$);
 	}
 
 	| STR
@@ -653,6 +693,7 @@ literal: INT
 			{"val", $1}
 		};
 		$$ = move(lit_str);
+		LOC($$, @$);
 	}
 	;
 
@@ -665,6 +706,7 @@ assignment: expressions arrow_ope dst_vals
 		};
 		if ($2) asgn["dst-vals"][0]["move"] = true;
 		$$ = move(asgn);
+		LOC($$, @$);
 	}
 	;
 
@@ -698,6 +740,7 @@ declaration: type_def ID take_owner
 		};
 		if ($3) dec["move"] = true;
 		$$ = move(dec);
+		LOC($$, @$);
 	}
 	;
 
@@ -708,6 +751,7 @@ subdeclaration: ID take_owner
 		};
 		if ($2) dec["move"] = true;
 		$$ = move(dec);
+		LOC($$, @$);
 	}
 	;
 
@@ -715,6 +759,7 @@ return_stmt: KW_RETURN
 	{
 		json ret = { {"stmt-type", "return"} };
 		$$ = move(ret);
+		LOC($$, @$);
 	}
 	| KW_RETURN expressions
 	{
@@ -723,6 +768,7 @@ return_stmt: KW_RETURN
 			{"ret-vals", move($2)}
 		};
 		$$ = move(ret);
+		LOC($$, @1);
 	}
 	;
 

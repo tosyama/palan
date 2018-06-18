@@ -29,7 +29,7 @@ int clean()
 
 string build(string srcf)
 {
-	string ast_cmd = "../pat pacode/" + srcf + ".pa -o out/"+srcf+".json";
+	string ast_cmd = "../pat pacode/" + srcf + ".pa -i -o out/"+srcf+".json";
 	int ret = system(ast_cmd.c_str());
 	if (ret) return "parser exec err:"+srcf;
 

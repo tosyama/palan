@@ -69,8 +69,8 @@ COMMENT1	\/\/[^\n]*\n
 
 %%
 %{
-	loc.begin.filename = &filename;
-	loc.end.filename = &filename;
+	loc.begin.filename = &filenames[cur_fid];
+	loc.end.filename = &filenames[cur_fid];
 	loc.step();
 %}
 
@@ -195,7 +195,8 @@ static string& unescape(string& str)
 
 void PlnLexer::set_filename(const string& filename)
 {
-	this->filename = filename;
+	filenames.push_back(filename);
+	cur_fid = filenames.size()-1;
 }
 
 void PlnLexer::push_typename(string name)
