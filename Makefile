@@ -27,13 +27,16 @@ OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:models:models/expressions:generators:models/expressions/assignitem
 AST=ast/pat
 TEST=test/tester
+POST_TEST=test/cuitester
 # Workarround of mtrace hang with double free.
 MALLOC_CHECK_=1	
 export MALLOC_CHECK_
 
 .SUFFIXES: .cpp .o
 
-$(PROGRAM): $(OBJS)	$(TEST)
+FORCE: $(PROGRAM)
+	@cd test && $(MAKE) post_test
+$(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST)
 	@cd test && $(MAKE) test
 	@echo link $(PROGRAM).
 	@$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options

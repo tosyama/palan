@@ -18,6 +18,11 @@ AST
 * funcs - Function definition list
 * stmts - Statement list for top level code
 
+Error Message
+-------------
+* msg\* - Error message string
+* loc - Location integer array
+
 Source File
 -----------
 * id\* - Source file ID integer
@@ -66,6 +71,7 @@ Return value
 2. Standard return value
 	* var-type - Variable type list
 	* name\* - Return value name string
+* loc - Location integer array
 
 Variable Type
 -------------

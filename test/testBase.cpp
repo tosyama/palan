@@ -24,7 +24,7 @@ TEST_CASE ("Hello World", "[basic]")
 
 int clean()
 {
-	return system("rm -f out/*");
+	return system("rm -rf out/*");
 }
 
 string build(string srcf)
@@ -42,8 +42,8 @@ string build(string srcf)
 		json j = json::parse(jf);
 		if (j["errs"].is_array()) {
 			json &err = j["errs"][0];
-			return "line:" + to_string(err["loc"]["begin"]["l"].get<int>())
-				+ "-" + to_string(err["loc"]["end"]["l"].get<int>())
+			return "line:" + to_string(err["loc"][1].get<int>())
+				+ "-" + to_string(err["loc"][3].get<int>())
 				+ " parse err:" + err["msg"].get<string>();
 		}
 		PlnModelTreeBuilder modelTreeBuilder;

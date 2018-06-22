@@ -13,6 +13,7 @@ public:
 	vector<PlnExpression*> free_vars;
 	PlnFunction* parent_func;
 	PlnBlock* parent_block;
+	PlnLoc loc;
 
 	PlnBlock();
 	void setParent(PlnFunction* f);

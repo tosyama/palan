@@ -29,6 +29,7 @@ public:
 	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
 	PlnDataPlace* val_place;	// TODO: move this member to PlnValue expression.
+	PlnLoc loc;
 
 	PlnExpression(PlnExprsnType type) : type(type), val_place(NULL) {};
 	PlnExpression(PlnValue value);

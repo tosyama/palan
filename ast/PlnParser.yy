@@ -196,6 +196,7 @@ return_type: type_def
 			{"var-type", move($1)}
 		};
 		$$ = move(ret);
+		LOC($$, @$);
 	}
 	;
 
@@ -213,6 +214,7 @@ return_values: return_value
 		json ret = {
 			{ "name", $3 }
 		};
+		LOC(ret, @3);
 		$$ = move($1);
 		$$.push_back(move(ret));
 	}
@@ -225,6 +227,7 @@ return_value: type_def ID
 			{ "name", $2 }
 		};
 		$$ = move(ret);
+		LOC($$, @$);
 	}
 	;
 
@@ -839,25 +842,9 @@ namespace palan
 void PlnParser::error(const location_type& l, const string& m)
 {
 	json err = {
-		{"msg", m},
-		{"loc",
-			{
-				{"begin", {
-							  {"f",*l.begin.filename},
-							  {"l",l.begin.line},
-							  {"c",l.begin.column}
-						  }
-				},
-				{"end",
-					{
-						{"f",*l.end.filename},
-						{"l",l.end.line},
-						{"c",l.end.column}
-					}
-				}
-			}
-		}
+		{"msg", m}
 	};
+	err["loc"] = { lexer.cur_fid, (int)l.begin.line, (int)l.begin.column, (int)l.end.line, (int)l.end.column };
 	ast["errs"].push_back(err);
 }
 

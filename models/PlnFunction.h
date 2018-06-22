@@ -27,7 +27,7 @@ public:
 	vector<int> ret_dtypes, arg_dtypes;
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
-	
+	PlnLoc loc;
 	union {
 		struct {
 			int id;

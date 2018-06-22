@@ -32,6 +32,19 @@ PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
 }
 
+template <typename T>
+void setLoc(T obj, json& j)
+{
+	if (j["loc"].is_array()) {
+		json& l = j["loc"];
+		obj->loc.fid = l[0];
+		obj->loc.begin_line = l[1];
+		obj->loc.begin_col = l[2];
+		obj->loc.end_line = l[3];
+		obj->loc.end_col = l[4];
+	}
+}
+
 static void registerPrototype(PlnModule& module, json& proto);
 static void buildFunction(json& func, PlnScopeStack &scope);
 static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope);
@@ -100,6 +113,7 @@ void registerPrototype(PlnModule& module, json& proto)
 					pm = FPM_MOVEOWNER;
 			}
 			f->addParam(param["name"], var_type, pm, NULL);
+			setLoc(f->parameters.back(), param);
 		}
 
 		for (auto& ret: proto["rets"]) {
@@ -108,7 +122,9 @@ void registerPrototype(PlnModule& module, json& proto)
 			if (ret["name"].is_string())
 				name = ret["name"];
 			f->addRetValue(name, var_type, true);
+			setLoc(f->return_vals.back(), ret);
 		}
+		setLoc(f, proto);
 
 	} else if (ftype_str == "ccall") {
 		f = new PlnFunction(FT_C, proto["name"]);
@@ -119,6 +135,7 @@ void registerPrototype(PlnModule& module, json& proto)
 				f->addRetValue(rname, tv, false);
 			}
 		}
+		setLoc(f, proto);
 
 	} else if (ftype_str == "syscall") {
 		f = new PlnFunction(FT_SYS, proto["name"]);
@@ -130,6 +147,7 @@ void registerPrototype(PlnModule& module, json& proto)
 				f->addRetValue(rname, tv, false);
 			}
 		}
+		setLoc(f, proto);
 
 	} else
 		BOOST_ASSERT(false);
@@ -165,8 +183,12 @@ void buildFunction(json& func, PlnScopeStack &scope)
 
 	PlnFunction* f = CUR_MODULE->getFunc(func["name"], param_types, ret_types);
 	BOOST_ASSERT(f);
+	setLoc(f, func);
+
 	scope.push_back(f);
 	f->implement = buildBlock(func["impl"]["stmts"], scope);
+	setLoc(f->implement, func["impl"]);
+	 
 	scope.pop_back();
 }
 
@@ -201,29 +223,33 @@ static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope);
 PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope)
 {
 	string type = stmt["stmt-type"];
+	PlnStatement *statement;
 
 	if (type == "exp") {
-		return new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
+		statement = new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
 
 	} else if (type == "block") {
 		PlnBlock *block = buildBlock(stmt["block"]["stmts"], scope);
-		return new PlnStatement(block, CUR_BLOCK);
+		setLoc(block, stmt["block"]);
+		statement = new PlnStatement(block, CUR_BLOCK);
 
 	} else if (type == "var-init") {
-		return new PlnStatement(buildVarInit(stmt, scope), CUR_BLOCK);
+		statement = new PlnStatement(buildVarInit(stmt, scope), CUR_BLOCK);
 
 	} else if (type == "return") {
-		return buildReturn(stmt, scope);
+		statement = buildReturn(stmt, scope);
 
 	} else if (type == "while") {
-		return buildWhile(stmt, scope);
+		statement = buildWhile(stmt, scope);
 
 	} else if (type == "if") {
-		return buildIf(stmt, scope);
+		statement = buildIf(stmt, scope);
 
 	} else {
 		BOOST_ASSERT(false);
 	}
+	setLoc(statement, stmt);
+	return statement;
 }
 
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
@@ -240,6 +266,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
 		}
+		setLoc(v, var);
 	}
 
 	vector<PlnExpression*> inits;
@@ -268,6 +295,7 @@ PlnStatement* buildWhile(json& whl, PlnScopeStack& scope)
 {
 	PlnExpression* cond = buildExpression(whl["cond"], scope);
 	PlnBlock* block = buildBlock(whl["block"]["stmts"], scope);
+	setLoc(block, whl["block"]);
 	return new PlnWhileStatement(cond, block, CUR_BLOCK);
 }
 
@@ -275,6 +303,7 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope)
 {
 	PlnExpression* cond = buildExpression(ifels["cond"], scope);
 	PlnBlock* ifblock = buildBlock(ifels["block"]["stmts"], scope);
+	setLoc(ifblock, ifels["block"]);
 	PlnStatement* else_stmt = NULL;
 	if (ifels["else"].is_object()) {
 		else_stmt = buildStatement(ifels["else"], scope);
@@ -299,53 +328,56 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
 	BOOST_ASSERT(exp["exp-type"].is_string());
 	string type = exp["exp-type"];
+	PlnExpression *expression;
 
 	if (type == "lit-int") {
-		return new PlnExpression(exp["val"].get<int64_t>());
+		expression = new PlnExpression(exp["val"].get<int64_t>());
 	} else if (type == "lit-uint") {
-		return new PlnExpression(exp["val"].get<uint64_t>());
+		expression = new PlnExpression(exp["val"].get<uint64_t>());
 	} else if (type == "lit-str") {
 		PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
-		return new PlnExpression(ro);
+		expression = new PlnExpression(ro);
 	} else if (type == "var") {
-		return buildVariarble(exp, scope);
+		expression = buildVariarble(exp, scope);
 	} else if (type == "asgn") {
-		return buildAssignment(exp, scope);
+		expression = buildAssignment(exp, scope);
 	} else if (type == "func-call") {
-		return buildFuncCall(exp, scope);
+		expression = buildFuncCall(exp, scope);
 	} else if (type == "+") {
-		return buildAddOperation(exp, scope);
+		expression = buildAddOperation(exp, scope);
 	} else if (type == "-") {
-		return buildSubOperation(exp, scope);
+		expression = buildSubOperation(exp, scope);
 	} else if (type == "*") {
-		return buildMulOperation(exp, scope);
+		expression = buildMulOperation(exp, scope);
 	} else if (type == "/") {
-		return buildDivOperation(exp, scope);
+		expression = buildDivOperation(exp, scope);
 	} else if (type == "%") {
-		return buildModOperation(exp, scope);
+		expression = buildModOperation(exp, scope);
 	} else if (type == "==") {
-		return buildCmpOperation(exp, CMP_EQ, scope);
+		expression = buildCmpOperation(exp, CMP_EQ, scope);
 	} else if (type == "!=") {
-		return buildCmpOperation(exp, CMP_NE, scope);
+		expression = buildCmpOperation(exp, CMP_NE, scope);
 	} else if (type == "<") {
-		return buildCmpOperation(exp, CMP_L, scope);
+		expression = buildCmpOperation(exp, CMP_L, scope);
 	} else if (type == ">") {
-		return buildCmpOperation(exp, CMP_G, scope);
+		expression = buildCmpOperation(exp, CMP_G, scope);
 	} else if (type == "<=") {
-		return buildCmpOperation(exp, CMP_LE, scope);
+		expression = buildCmpOperation(exp, CMP_LE, scope);
 	} else if (type == ">=") {
-		return buildCmpOperation(exp, CMP_GE, scope);
+		expression = buildCmpOperation(exp, CMP_GE, scope);
 	} else if (type == "&&") {
-		return buildBoolOperation(exp, ET_AND, scope);
+		expression = buildBoolOperation(exp, ET_AND, scope);
 	} else if (type == "||") {
-		return buildBoolOperation(exp, ET_OR, scope);
+		expression = buildBoolOperation(exp, ET_OR, scope);
 	} else if (type == "uminus") {
-		return buildNegativeOperation(exp, scope);
+		expression = buildNegativeOperation(exp, scope);
 	} else if (type == "not") {
-		return PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
+		expression = PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
 	} else {
 		BOOST_ASSERT(false);
 	}
+	setLoc(expression, exp);
+	return expression;
 }
 
 PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
@@ -396,6 +428,7 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 	BOOST_ASSERT(pvar);
 
 	PlnExpression *var_exp = new PlnExpression(pvar);
+	setLoc(var_exp, var);
 
 	if (var["opes"].is_array()) {
 		for (json& ope: var["opes"]) {

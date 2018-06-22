@@ -24,6 +24,7 @@ public:
 		PlnVarInit* var_init;
 		PlnBlock *block;
 	} inf;
+	PlnLoc loc;
 
 	PlnStatement() {};
 	PlnStatement(PlnExpression *exp, PlnBlock* parent);

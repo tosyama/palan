@@ -35,6 +35,7 @@ namespace po = boost::program_options;
 static string getDirName(string fpath);
 static string getFileName(string& fpath);
 static string getExtention(string& fpath);
+static int getStatus(int ret_status);
 
 /// Main function for palan compiler CUI.
 int main(int argc, char* argv[])
@@ -113,8 +114,8 @@ int main(int argc, char* argv[])
 				}
 				if (j["errs"].is_array()) {
 					json &err = j["errs"][0];
-					cerr << "line:" << err["loc"]["begIn"]["l"]
-						<< "-" << err["loc"]["end"]["l"]
+					cerr << "line:" << err["loc"][1]
+						<< "-" << err["loc"][3]
 						<< " parse err:" << err["msg"] << endl;
 				}
 				PlnModelTreeBuilder modelTreeBuilder;
@@ -131,7 +132,7 @@ int main(int argc, char* argv[])
 
 			if (do_compile) {
 				FILE* as;
-				string obj_file = getFileName(fname) + ".o";
+				string obj_file = getDirName(out_file) + getFileName(fname) + ".o";
 				string cmd = "as -o \"" + obj_file + "\"" ;
 
 				as = popen(cmd.c_str(), "w");
@@ -141,8 +142,7 @@ int main(int argc, char* argv[])
 				PlnX86_64Generator generator(as_input);
 				module->gen(generator);
 
-				int ret = pclose(as);
-				// TODO: error message
+				int ret = getStatus(pclose(as));
 				if (ret) return ret;
 
 				object_files.push_back(obj_file);
@@ -152,9 +152,9 @@ int main(int argc, char* argv[])
 
 	if (do_link) {
 		string flist = join(object_files, " ");
-		cout << "linking: " << flist << endl;
+		cout << "linking: " << out_file << endl;
 		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " -lc " + flist;
-		int ret = system(cmd.c_str());
+		int ret = getStatus(system(cmd.c_str()));
 		// TODO: error message
 		if (ret) return ret;
 	}
@@ -186,3 +186,11 @@ string getExtention(string& fpath)
 	return fpath.substr(ext_i);
 }
 
+int getStatus(int ret_status)
+{
+	if (WIFEXITED(ret_status)) {
+		return WEXITSTATUS(ret_status);
+	} else {
+		return -1;
+	}
+}
