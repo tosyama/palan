@@ -69,3 +69,19 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"9 9 9 0");
 }
 
+TEST_CASE("Compile error test", "[basic]")
+{
+	string testcode;
+
+	testcode = "501_dupvar_err";
+	REQUIRE(build(testcode) == "Variable name 'b' already defined.");
+
+	testcode = "502_undeffunc_err";
+	REQUIRE(build(testcode) == "Function 'add' was not declared in this scope.");
+
+	testcode = "503_undefvar_err";
+	REQUIRE(build(testcode) == "Variable 'abcd' was not declared in this scope.");
+
+	testcode = "504_argmov_err";
+	REQUIRE(build(testcode) == "Can not use '<<' for 'non-variable expression'.");
+}

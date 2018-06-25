@@ -154,6 +154,12 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 			// Check arguments.
 			if (f->parameters.size()==0 && args.size()==0)
 				return f;
+			if (f->parameters.size() < args.size()) {
+				if (f->type == FT_C || f->type == FT_SYS) {
+					return f;
+				} else
+					return NULL;
+			}
 			int i=0;
 			bool ng = false; 
 			for (auto p: f->parameters) {
@@ -162,6 +168,7 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 						ng = true; break;
 					}
 				} else {
+					
 					//TODO: type check.
 				}
 				++i;

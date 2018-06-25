@@ -24,9 +24,11 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_CouldnotOpenFile:
 			f = "Could not open file '%1%'."; break;
 		case E_CantUseMoveOwnership:
-			f = "Can not use '<<' for substantial variable '%1%'."; break;
+			f = "Can not use '<<' for '%1%'."; break;
+		case E_InvalidAST:
+			f = "Detected invalid AST at %1%:%2%"; break;
 		default:
-			f = "Unknown error.";
+			return (format("Unknown error. code:%1% - %2%, %3%")  % err_code % arg1 % arg2).str();
 	}
 	
 	string message;

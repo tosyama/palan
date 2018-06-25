@@ -14,6 +14,8 @@
 #include "../generators/PlnX86_64Generator.h"
 #include "../models/PlnModule.h"
 #include "../PlnModelTreeBuilder.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 TEST_CASE ("Hello World", "[basic]")
 {
@@ -47,7 +49,11 @@ string build(string srcf)
 				+ " parse err:" + err["msg"].get<string>();
 		}
 		PlnModelTreeBuilder modelTreeBuilder;
-		module = modelTreeBuilder.buildModule(j["ast"]);
+		try {
+			module = modelTreeBuilder.buildModule(j["ast"]);
+		} catch (PlnCompileError &err) {
+			return PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+		}
 	}
 
 	// compile

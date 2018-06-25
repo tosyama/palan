@@ -47,8 +47,10 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		if (i < f->parameters.size()) {
 			int ptr_type = f->parameters[i]->ptr_type;
 			if (ptr_type & PTR_CLONE) {
-				auto clone_ex = new PlnClone(arguments[i]);
-				arguments[i] = clone_ex;
+				if (arguments[i]->values[0].type == VL_VAR) {
+					auto clone_ex = new PlnClone(arguments[i]);
+					arguments[i] = clone_ex;
+				}
 			}
 		}
 	}

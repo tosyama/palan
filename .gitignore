@@ -13,5 +13,6 @@ stack.hh
 pac
 pat
 test/tester
+test/cuitester
 test/out
 
