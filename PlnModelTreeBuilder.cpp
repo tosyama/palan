@@ -404,11 +404,11 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		}
 	}
 
-	PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], args);
-	if (f) {
+	try {
+		PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], args);
 		return new PlnFunctionCall(f, args);
-	} else {
-		PlnCompileError err(E_UndefinedFunction, fcall["func-name"]);
+
+	} catch (PlnCompileError& err) {
 		setLoc(&err, fcall);
 		throw err;
 	}

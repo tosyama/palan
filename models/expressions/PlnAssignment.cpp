@@ -34,6 +34,14 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 		PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 		for (int i=0; i<ex->values.size(); ++i) {
 			if (dst_i < this->lvals.size()) {
+
+				PlnType* src_type = ex->values[i].getType();	
+				PlnType* dst_type = this->lvals[dst_i]->values[0].getType();
+				if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
+					cout << dst_type->name << ":" << src_type->name << endl;
+					BOOST_ASSERT(false);
+				}
+
 				ai->addDstEx(this->lvals[dst_i]);
 				dst_i++;
 			}

@@ -15,8 +15,8 @@
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
 
-#include "models/PlnModule.h"
 #include "PlnMessage.h"
+#include "models/PlnModule.h"
 #include "generators/PlnX86_64DataAllocator.h"
 #include "generators/PlnX86_64Generator.h"
 #include "PlnModelTreeBuilder.h"

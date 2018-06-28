@@ -45,58 +45,58 @@ PlnType::PlnType()
 
 static void initBasicTypes()
 {
-	PlnType* t = new PlnType();
-	t->name = "sbyte";
-	t->data_type = DT_SINT;
-	t->size = 1;
-	basic_types.push_back(t);
+	PlnType* sbt = new PlnType();
+	sbt->name = "sbyte";
+	sbt->data_type = DT_SINT;
+	sbt->size = 1;
+	basic_types.push_back(sbt);
 
-	t = new PlnType();
-	t->name = "byte";
-	t->data_type = DT_UINT;
-	t->size = 1;
-	basic_types.push_back(t);
-	byte_type = t;
+	PlnType* bt = new PlnType();
+	bt->name = "byte";
+	bt->data_type = DT_UINT;
+	bt->size = 1;
+	basic_types.push_back(bt);
+	byte_type = bt;
 
-	t = new PlnType();
-	t->name = "int16";
-	t->data_type = DT_SINT;
-	t->size = 2;
-	basic_types.push_back(t);
+	PlnType* i16t = new PlnType();
+	i16t->name = "int16";
+	i16t->data_type = DT_SINT;
+	i16t->size = 2;
+	basic_types.push_back(i16t);
 
-	t = new PlnType();
-	t->name = "uint16";
-	t->data_type = DT_UINT;
-	t->size = 2;
-	basic_types.push_back(t);
+	PlnType* u16t = new PlnType();
+	u16t->name = "uint16";
+	u16t->data_type = DT_UINT;
+	u16t->size = 2;
+	basic_types.push_back(u16t);
 	
-	t = new PlnType();
-	t->name = "int32";
-	t->data_type = DT_SINT;
-	t->size = 4;
-	basic_types.push_back(t);
+	PlnType* i32t = new PlnType();
+	i32t->name = "int32";
+	i32t->data_type = DT_SINT;
+	i32t->size = 4;
+	basic_types.push_back(i32t);
 
-	t = new PlnType();
-	t->name = "uint32";
-	t->data_type = DT_UINT;
-	t->size = 4;
-	basic_types.push_back(t);
+	PlnType* u32t = new PlnType();
+	u32t->name = "uint32";
+	u32t->data_type = DT_UINT;
+	u32t->size = 4;
+	basic_types.push_back(u32t);
 
-	t = new PlnType();
-	t->name = "int64";
-	t->data_type = DT_SINT;
-	t->size = 8;
-	basic_types.push_back(t);
-	int_type = t;
+	PlnType* i64t = new PlnType();
+	i64t->name = "int64";
+	i64t->data_type = DT_SINT;
+	i64t->size = 8;
+	basic_types.push_back(i64t);
+	int_type = i64t;
 
-	t = new PlnType();
-	t->name = "uint64";
-	t->data_type = DT_UINT;
-	t->size = 8;
-	basic_types.push_back(t);
-	uint_type = t;
+	PlnType* u64t = new PlnType();
+	u64t->name = "uint64";
+	u64t->data_type = DT_UINT;
+	u64t->size = 8;
+	basic_types.push_back(u64t);
+	uint_type = u64t;
 
-	t = new PlnType();
+	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
@@ -121,6 +121,79 @@ static void initBasicTypes()
 	t->inf.fixedarray.sizes->push_back(0);
 	basic_types.push_back(t);
 	raw_array_type = t;
+
+	// Set type conversion info.
+	// sbyte
+	sbt->conv_inf.emplace_back(bt, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(u16t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+
+	// byte
+	bt->conv_inf.emplace_back(u16t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(sbt, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+
+	// int16
+	i16t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	i16t->conv_inf.emplace_back(u16t, TC_LOSTABLE_AUTO_CAST);
+	i16t->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
+	i16t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	i16t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	i16t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	i16t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+
+	// uint16
+	u16t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	u16t->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(sbt, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+
+	// int32
+	i32t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	i32t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
+	i32t->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
+	i32t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	i32t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	i32t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
+	i32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+
+	// uint32
+	u32t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	u32t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
+	u32t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	u32t->conv_inf.emplace_back(sbt, TC_LOSTABLE_AUTO_CAST);
+	u32t->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
+	u32t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	u32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+
+	// int64
+	i64t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	i64t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
+	i64t->conv_inf.emplace_back(u32t, TC_AUTO_CAST);
+	i64t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	i64t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	i64t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
+	i64t->conv_inf.emplace_back(i32t, TC_AUTO_CAST);
+
+	// uint64
+	u64t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	u64t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
+	u64t->conv_inf.emplace_back(u32t, TC_AUTO_CAST);
+	u64t->conv_inf.emplace_back(sbt, TC_LOSTABLE_AUTO_CAST);
+	u64t->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
+	u64t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	u64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
 
 	is_initialzed_type = true;
 }
@@ -171,5 +244,22 @@ string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
 	name = item_type->name + name;
 
 	return name;
+}
+
+PlnTypeConvCap PlnType::canConvFrom(PlnType *src)
+{
+	if (this == src)
+		return TC_SAME;
+	
+	for (auto ci: conv_inf)
+		if (ci.type == src)
+			return ci.capacity;
+
+	if (src == object_type) {
+		if (this->data_type == DT_OBJECT_REF) {
+			return TC_DOWN_CAST;
+		}
+	}
+	return TC_CANT_CONV;
 }
 

@@ -22,6 +22,16 @@ public:
 	virtual PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) = 0;
 };
 
+enum PlnTypeConvCap {
+	TC_CANT_CONV = 0,
+	TC_SAME = 1,
+	TC_AUTO_CAST = 2,
+	TC_LOSTABLE_AUTO_CAST = 4,
+	TC_UP_CAST = 8,
+	TC_DOWN_CAST = 16,
+	TC_CONV_OK = TC_SAME | TC_AUTO_CAST | TC_LOSTABLE_AUTO_CAST | TC_UP_CAST | TC_DOWN_CAST
+};
+
 class PlnType {
 public:
 	int	data_type;
@@ -46,7 +56,15 @@ public:
 	PlnFreer *freer;
 	PlnCopyer *copyer;
 
+	struct PlnTypeConvInf {
+		PlnType *type;
+		PlnTypeConvCap capacity;
+		PlnTypeConvInf(PlnType* t, PlnTypeConvCap cap) : type(t), capacity(cap) { }
+	};
+	vector<PlnTypeConvInf> conv_inf;
+
 	PlnType();
+	PlnTypeConvCap canConvFrom(PlnType *src);
 
 	static vector<PlnType*> getBasicTypes();
 	static PlnType* getByte();

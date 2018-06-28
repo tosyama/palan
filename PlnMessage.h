@@ -18,6 +18,7 @@ enum PlnErrCode {
 	E_NeedRetValues,	// none
 	E_CouldnotOpenFile,	// file name
 	E_CantUseMoveOwnership, // var name
+	E_AmbiguousFuncCall,	// func name
 
 	E_InvalidAST	// source name, line
 };
