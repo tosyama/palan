@@ -5,7 +5,7 @@ print(x.str ":" y.str);
 swap(x,y) -> x, y;
 print(x.str ":" y.str);
 
-// コールチェイン(仮) 戻り値(expresion)と引数の前半の方が一致すれば
+// コールチェーン(仮) 戻り値(expresion)と引数の前半の方が一致すれば
 // 関数を->でつなげれらる。
 
 string str1, str2 = "1\t2\t3", "3,4,5";
@@ -13,6 +13,13 @@ string[] tmp = split(str1, "\t");
 join(tmp1, ",") -> str1;
 // こうかける↓
 str1 -> split("\t") -> join(",") -> str1;
+
+// メソッドコール
+// 第一引数と第一戻り値が同じ宣言の関数を使う場合、"."で引数/戻り値にセットしてコールできる。下記は全部同じ。
+replace(str1>>, "a", "b") ->> str1, count;
+str1->>replace("a", "b")->>str1, count;
+str1.replace("a","b") -> count;
+// 第一引数がコピーまたは変更なしの参照の場合にも"."は使えうるが採用しない."->"を使う。
 
 object o1, o3, o4;
 
