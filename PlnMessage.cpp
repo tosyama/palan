@@ -26,7 +26,10 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_CantUseMoveOwnership:
 			f = "Can not use '<<' for '%1%'."; break;
 		case E_AmbiguousFuncCall:
-			f = "Ambiguous function '%1%'."; break;
+			f = "Ambiguous function call '%1%'."; break;
+		case E_IncompatibleTypeAssign:
+			f = "Incompatible types in assignment of '%1%' to '%2%'."; break;
+
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;
 		default:

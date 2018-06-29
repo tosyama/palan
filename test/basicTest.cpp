@@ -66,6 +66,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"3 5 2 1\n"
 							"5 -1\n"
 							"9 9 9 0");
+
+	testcode = "012_overload";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "(int32[10])(uint16)(int32)(uint32,uint32)");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -83,4 +87,10 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "504_argmov_err";
 	REQUIRE(build(testcode) == "Can not use '<<' for 'non-variable expression'.");
+
+	testcode = "505_ambigfunc_err";
+	REQUIRE(build(testcode) == "Ambiguous function call 'ambi_func'.");
+
+	testcode = "506_assigntype_err";
+	REQUIRE(build(testcode) == "Incompatible types in assignment of 'int32[10]' to 'int32'.");
 }

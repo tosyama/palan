@@ -2,6 +2,7 @@ ccall int32 printf();
 ccall exit();
 
 int32 a;
+int32[10] aa;
 overload_func(a);
 
 exit(0);
