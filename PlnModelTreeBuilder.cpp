@@ -50,6 +50,7 @@ static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 
 #define CUR_BLOCK	scope.back().inf.block
 #define CUR_MODULE	scope.front().inf.module
+#define CUR_FUNC	(CUR_BLOCK->parent_func)
 
 #define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
 #define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
@@ -303,12 +304,25 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 {
+	if (!CUR_FUNC) {
+		PlnCompileError err(E_CantUseAtToplevel, "return");
+		setLoc(&err, ret);
+		throw err;
+	}
+
 	vector<PlnExpression *> ret_vals;
 	if (ret["ret-vals"].is_array())
 		for (json& ret_val: ret["ret-vals"])
 			ret_vals.push_back(buildExpression(ret_val, scope));
 	
-	return new PlnReturnStmt(ret_vals, CUR_BLOCK);
+	try {
+		return new PlnReturnStmt(ret_vals, CUR_BLOCK);
+
+	} catch(PlnCompileError &err) {
+		if (err.loc.fid == -1)
+			setLoc(&err, ret);
+		throw err;
+	}
 }
 
 PlnStatement* buildWhile(json& whl, PlnScopeStack& scope)
@@ -397,7 +411,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		if (arg["move"].is_boolean() && arg["move"] == true) {
 			if (args.back()->values[0].type != VL_VAR) {
 				PlnCompileError err(E_CantUseMoveOwnership, "non-variable expression");
-				setLoc(&err, arg);
+				setLoc(&err, arg["exp"]);
 				throw err;
 			}
 			args.back()->values[0].asgn_type = ASGN_MOVE;

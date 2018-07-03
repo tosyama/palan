@@ -77,20 +77,38 @@ TEST_CASE("Compile error test", "[basic]")
 	string testcode;
 
 	testcode = "501_dupvar_err";
-	REQUIRE(build(testcode) == "Variable name 'b' already defined.");
+	REQUIRE(build(testcode) == "0:2-2 Variable name 'b' already defined.");
 
 	testcode = "502_undeffunc_err";
-	REQUIRE(build(testcode) == "Function 'add' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:2-2 Function 'add' was not declared in this scope.");
 
 	testcode = "503_undefvar_err";
-	REQUIRE(build(testcode) == "Variable 'abcd' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:3-3 Variable 'abcd' was not declared in this scope.");
 
 	testcode = "504_argmov_err";
-	REQUIRE(build(testcode) == "Can not use '<<' for 'non-variable expression'.");
+	REQUIRE(build(testcode) == "0:1-1 Can not use '<<' for 'non-variable expression'.");
 
 	testcode = "505_ambigfunc_err";
-	REQUIRE(build(testcode) == "Ambiguous function call 'ambi_func'.");
+	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");
 
 	testcode = "506_assigntype_err";
-	REQUIRE(build(testcode) == "Incompatible types in assignment of 'int32[10]' to 'int32'.");
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'int32[10]' to 'int32'.");
+
+	testcode = "507_toplvstmt_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use 'return' at top level code.");
+
+	testcode = "508_needretarg_err";
+	REQUIRE(build(testcode) == "0:4-4 Return argument(s) can't be omitted at this function.");
+
+	testcode = "509_needret_err";
+	REQUIRE(build(testcode) == "0:6-6 Return argument(s) can't be omitted at this function.");
+
+	testcode = "510_invalidret1_err";
+	REQUIRE(build(testcode) == "0:3-3 Number of return arguments or definitions are not match.");
+
+	testcode = "511_invalidret2_err";
+	REQUIRE(build(testcode) == "0:3-3 Number of return arguments or definitions are not match.");
+
+	testcode = "512_invalidret3_err";
+	REQUIRE(build(testcode) == "0:4-4 Number of return arguments or definitions are not match.");
 }

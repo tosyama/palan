@@ -45,6 +45,7 @@ class PlnDataPlace;
 class PlnGenerator;
 class PlnGenEntity;
 
+// Code location infomation
 struct PlnLoc {
 	uint32_t begin_line;
 	uint32_t end_line;
@@ -56,9 +57,15 @@ struct PlnLoc {
 	{
 		if (fid >= 0)
 			return to_string(fid)
-				+":"+to_string(begin_line)
-				+"-"+to_string(end_line);
+				+ ":" +to_string(begin_line)
+				+ "-" +to_string(end_line);
 		return "none";
 	};
 
 };
+
+// Utilities
+template<class T> 
+inline void deleteInstatnces(vector<T*> objs) {
+	for (auto obj: objs) delete obj;
+}

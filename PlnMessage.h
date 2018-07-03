@@ -14,12 +14,13 @@ enum PlnErrCode {
 	E_UndefinedType,	// type name
 	E_DuplicateVarName,	// var name
 	E_NumOfLRVariables,	// none
-	E_NumOfRetValues,	// none
+	E_InvalidRetValues,	// none
 	E_NeedRetValues,	// none
 	E_CouldnotOpenFile,	// file name
 	E_CantUseMoveOwnership, // var name
 	E_AmbiguousFuncCall,	// func name
 	E_IncompatibleTypeAssign,	// src type, dst type
+	E_CantUseAtToplevel,	// statement
 
 	E_InvalidAST	// source name, line
 };

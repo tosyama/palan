@@ -20,6 +20,8 @@
 #include "../PlnGenerator.h"
 #include "../PlnConstants.h"
 #include "../PlnScopeStack.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 using std::string;
 using std::endl;
@@ -195,6 +197,13 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			// Insert return statement to end of function if needed.
 			if (implement->statements.size() == 0 || implement->statements.back()->type != ST_RETURN) {
+				if (return_vals.size() > 0 && return_vals.front()->name == "") {
+					PlnCompileError err(E_NeedRetValues);
+					err.loc = implement->loc;
+					err.loc.begin_line = err.loc.end_line;
+					err.loc.begin_col= err.loc.end_col;
+					throw err;
+				}
 				vector<PlnExpression *> rv;
 				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);
 				implement->statements.push_back(rs);

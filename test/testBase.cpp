@@ -52,13 +52,17 @@ string build(string srcf)
 		try {
 			module = modelTreeBuilder.buildModule(j["ast"]);
 		} catch (PlnCompileError &err) {
-			return PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+			return err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 		}
 	}
 
 	// compile
 	PlnX86_64DataAllocator allocator;
-	module->finish(allocator);
+	try {
+		module->finish(allocator);
+	} catch (PlnCompileError &err) {
+		return err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+	}
 	string asmf = "out/" + srcf + ".s";
 	ofstream as_output;
 	as_output.open(asmf, ios::out);

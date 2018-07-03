@@ -7,9 +7,15 @@ overload_func(a);
 
 exit(0);
 
-func overload_func(int32[10] >> pa)
+func invalidret() -> int32 int64
+{
+	return sub();
+}
+
+func overload_func(int32[10] >> pa) -> int32
 {
 	printf("func(int32[10])");
+	return 0;
 }
 
 func overload_func(int32 pa)
@@ -20,4 +26,9 @@ func overload_func(int32 pa)
 func overload_func(uint16 pa)
 {
 	printf("func(uint16)");
+}
+
+func sub() -> int32 int32
+{
+	return 1, 2;
 }

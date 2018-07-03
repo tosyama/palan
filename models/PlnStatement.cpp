@@ -14,6 +14,8 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 using std::endl;
 
@@ -71,18 +73,47 @@ void PlnStatement::gen(PlnGenerator& g)
 
 // PlnReturnStmt
 PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
+	: expressions(move(retexp))
 {
 	type = ST_RETURN;
 	this->parent = parent;
 	function = parent->parent_func;
+	BOOST_ASSERT(function);
 	
-	expressions = move(retexp);
+	if (expressions.size()==0) {
+		if (function->return_vals.size() > 0) {
+			if (function->return_vals[0]->name == "") {
+				deleteInstatnces(expressions);
+				PlnCompileError err(E_NeedRetValues);
+				throw err;
+			}
 
-	if (expressions.size()==0 && 
-		function->return_vals.size() > 0)
-	{
-		for (auto v: function->return_vals)
-			expressions.push_back(new PlnExpression(v));
+			for (auto v: function->return_vals)
+				expressions.push_back(new PlnExpression(v));
+		}
+	} else { // check only
+		int i=0;
+		int num_ret = function->return_vals.size();
+		for (auto e: expressions) {
+			if (i >= num_ret) {
+				throw PlnCompileError(E_InvalidRetValues);
+			}
+			for (auto&v: e->values) {
+				if (i < num_ret) {
+					PlnType* t = function->return_vals[i]->var_type.back();
+					if (t->canConvFrom(v.getType()) == TC_CANT_CONV) {
+						PlnCompileError err(E_InvalidRetValues);
+						err.loc = e->loc;
+						throw err;
+					}
+				}
+				++i;
+			}
+		}
+
+		if (i<num_ret) {
+			throw PlnCompileError(E_InvalidRetValues);
+		}
 	}
 }
 
@@ -102,7 +133,8 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	i = 0;
 	for (auto e: expressions) {
 		for (auto &v: e->values) {
-			e->data_places.push_back(dps[i]);
+			if (i<dps.size())
+				e->data_places.push_back(dps[i]);
 			++i;
 		}
 		e->finish(da, si);

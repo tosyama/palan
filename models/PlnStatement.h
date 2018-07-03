@@ -42,7 +42,7 @@ public:
 	vector<PlnExpression*> expressions;
 	vector<PlnExpression*> free_vars;
 
-	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);
+	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);	// throw PlnCompileError
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
