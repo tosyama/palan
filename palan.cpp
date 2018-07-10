@@ -102,15 +102,22 @@ int main(int argc, char* argv[])
 			{
 				FILE* outf;
 				json j;
-				vector<string> files;
 
+				// Get AST json from pat command.
 				string cmd =  cmd_dir + "pat \"" + fname + "\"";
 				outf = popen(cmd.c_str(), "r");
 				if (outf) {
 					popen_filebuf p_buf(outf);
 					istream pat_output(&p_buf);
-					if (pat_output.peek() != std::ios::traits_type::eof())
-						j = json::parse(pat_output);
+					if (pat_output.peek() != std::ios::traits_type::eof()) {
+						try {
+							j = json::parse(pat_output);
+
+						} catch (json::exception& e) {
+							cerr << e.what() << endl;
+							BOOST_ASSERT(false);
+						}
+					}
 
 					int ret = getStatus(pclose(outf));
 					if (ret) return ret;
@@ -119,6 +126,8 @@ int main(int argc, char* argv[])
 					BOOST_ASSERT(false);
 				}
 
+				// Get source file infomation.
+				vector<string> files;
 				int fid = 0;
 				for (auto finf: j["files"]) {
 					BOOST_ASSERT(fid == finf["id"].get<int>());
@@ -126,6 +135,7 @@ int main(int argc, char* argv[])
 					fid++;
 				}
 
+				// Check parse errors.
 				if (j["errs"].is_array()) {
 					json &err = j["errs"][0];
 					PlnLoc loc(err["loc"].get<vector<int>>());
@@ -135,6 +145,7 @@ int main(int argc, char* argv[])
 					return COMPILE_ERR;
 				}
 
+				// Build palan model tree from AST.
 				try {
 					PlnModelTreeBuilder modelTreeBuilder;
 					module = modelTreeBuilder.buildModule(j["ast"]);
@@ -145,6 +156,9 @@ int main(int argc, char* argv[])
 				} catch (PlnCompileError &err) {
 					cerr << files[err.loc.fid] << ":" << err.loc.begin_line << ": " << PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 					return COMPILE_ERR;
+				} catch (json::exception& e) {
+					cerr << e.what() << endl;
+					BOOST_ASSERT(false);
 				}
 			}
 
