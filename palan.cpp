@@ -20,6 +20,7 @@
 #include "generators/PlnX86_64DataAllocator.h"
 #include "generators/PlnX86_64Generator.h"
 #include "PlnModelTreeBuilder.h"
+#include "PlnException.h"
 
 using std::cout;
 using std::cerr;
@@ -36,6 +37,9 @@ static string getDirName(string fpath);
 static string getFileName(string& fpath);
 static string getExtention(string& fpath);
 static int getStatus(int ret_status);
+
+// ErrorCode
+const int COMPILE_ERR = 1;
 
 /// Main function for palan compiler CUI.
 int main(int argc, char* argv[])
@@ -98,32 +102,51 @@ int main(int argc, char* argv[])
 			{
 				FILE* outf;
 				json j;
+				vector<string> files;
+
 				string cmd =  cmd_dir + "pat \"" + fname + "\"";
 				outf = popen(cmd.c_str(), "r");
 				if (outf) {
 					popen_filebuf p_buf(outf);
 					istream pat_output(&p_buf);
-					j = json::parse(pat_output);
+					if (pat_output.peek() != std::ios::traits_type::eof())
+						j = json::parse(pat_output);
 
-					int ret = pclose (outf);
-
-					// TODO: error message
+					int ret = getStatus(pclose(outf));
 					if (ret) return ret;
+
 				} else {
 					BOOST_ASSERT(false);
 				}
+
+				int fid = 0;
+				for (auto finf: j["files"]) {
+					BOOST_ASSERT(fid == finf["id"].get<int>());
+					files.push_back(finf["name"].get<string>());
+					fid++;
+				}
+
 				if (j["errs"].is_array()) {
 					json &err = j["errs"][0];
-					cerr << "line:" << err["loc"][1]
-						<< "-" << err["loc"][3]
-						<< " parse err:" << err["msg"] << endl;
-				}
-				PlnModelTreeBuilder modelTreeBuilder;
-				module = modelTreeBuilder.buildModule(j["ast"]);
-			}
+					PlnLoc loc(err["loc"].get<vector<int>>());
 
-			PlnX86_64DataAllocator allocator;
-			module->finish(allocator);
+					string error_msg = files[loc.fid] + ":" +to_string(loc.begin_line) + ": " + err["msg"].get<string>(); 
+					cerr << error_msg << endl;
+					return COMPILE_ERR;
+				}
+
+				try {
+					PlnModelTreeBuilder modelTreeBuilder;
+					module = modelTreeBuilder.buildModule(j["ast"]);
+
+					PlnX86_64DataAllocator allocator;
+					module->finish(allocator);
+
+				} catch (PlnCompileError &err) {
+					cerr << files[err.loc.fid] << ":" << err.loc.begin_line << ": " << PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+					return COMPILE_ERR;
+				}
+			}
 
 			if (do_asm) {
 				PlnX86_64Generator generator(cout);

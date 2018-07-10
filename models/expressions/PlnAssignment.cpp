@@ -51,6 +51,11 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 		}
 		assgin_items.push_back(ai);
 	}
+
+	if (dst_i < this->lvals.size()) {
+		throw PlnCompileError(E_NumOfLRVariables);
+		BOOST_ASSERT(false);
+	}
 }
 
 void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)

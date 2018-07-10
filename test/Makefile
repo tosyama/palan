@@ -4,7 +4,7 @@ TESTOBJS = testMain.o testBase.o basicTest.o dataAllocTest.o \
 OBJS = $(filter-out ../objs/palan.o, $(wildcard ../objs/*.o))
 AST = ../ast/pat
 POST_TESTER = cuitester
-POST_OBJS = cuiTestMain.o cuiTestBase.o
+POST_OBJS = cuiTestMain.o cuiTestBase.o cuiTest.o
 
 .SUFFIXES: .cpp .o
 

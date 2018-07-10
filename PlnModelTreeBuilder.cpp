@@ -446,7 +446,13 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 		dst_vals.push_back(buildDstValue(dval, scope));
 	}
 
-	return new PlnAssignment(dst_vals, src_exps);
+	try {
+		return new PlnAssignment(dst_vals, src_exps);
+	} catch(PlnCompileError &err) {
+		if (err.loc.fid == -1)
+			setLoc(&err, asgn);
+		throw err;
+	}
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)

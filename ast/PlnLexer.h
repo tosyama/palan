@@ -8,10 +8,10 @@
 #endif
 
 class PlnLexer : public yyFlexLexer {
-	vector<string>	filenames;
 	vector<string> typenames;
 
 public:
+	vector<string>	filenames;
 	int cur_fid;
 
 	void set_filename(const std::string& filename);

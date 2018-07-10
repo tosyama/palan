@@ -1,0 +1,6 @@
+ccall int32 printf();
+
+int32 a;
+a = 32;
+
+

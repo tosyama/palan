@@ -53,6 +53,8 @@ struct PlnLoc {
 	uint16_t end_col;
 	int16_t fid;
 	PlnLoc() : fid(-1) {};
+	PlnLoc(vector<int> a)
+		: fid(a[0]), begin_line(a[1]), begin_col(a[2]), end_line(a[3]), end_col(a[4]) {};
 	string dump()
 	{
 		if (fid >= 0)

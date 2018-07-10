@@ -16,7 +16,7 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_DuplicateVarName:
 			f = "Variable name '%1%' already defined."; break;
 		case E_NumOfLRVariables:
-			f = "A lot of left values."; break;
+			f = "Number of left values did not match right values."; break;
 		case E_InvalidRetValues:
 			f = "Number of return arguments or definitions are not match."; break;
 		case E_NeedRetValues:

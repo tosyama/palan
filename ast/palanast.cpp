@@ -29,6 +29,9 @@ using json = nlohmann::json;
 
 namespace po = boost::program_options;
 
+static string getDirName(string fpath);
+static string getFileName(string& fpath);
+
 int main(int argc, char* argv[])
 {
 	po::options_description opt("Options");
@@ -84,17 +87,45 @@ int main(int argc, char* argv[])
 		lexer.switch_streams(&f, &cout);
 
 		json ast;
+		
 		PlnParser parser(lexer,ast);
 		int res = parser.parse();
+
+		// set src files infomation.
+		json files;
+		int id = 0;
+		for (auto s_path: lexer.filenames) {
+			json src_info = {
+				{"id", id},
+				{"name", getFileName(s_path)}
+			};
+			string dir_path = getDirName(s_path);
+			if (dir_path != "") {
+				src_info["dir"] = dir_path;
+			}
+			files.push_back(src_info);
+		}
+		ast["files"] = files;
 
 		(*jout) << std::setw(indent) << ast << endl;
 
 	} else {
 		string msg(PlnMessage::getErr(E_CouldnotOpenFile, fname));
-		cerr << "error: " << msg << endl;
-		return -1;
+		cerr << "pat: error: " << msg << endl;
+		return 1;
 	}
 
-
 	return 0;
+}
+
+string getDirName(string fpath)
+{
+	int path_i = fpath.find_last_of("/\\")+1;
+	return fpath.substr(0, path_i);
+}
+
+string getFileName(string& fpath)
+{
+	int path_i = fpath.find_last_of("/\\")+1;
+	return fpath.substr(path_i, fpath.length());
 }

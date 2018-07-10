@@ -76,6 +76,9 @@ TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
 
+	testcode = "500_syntax_err";
+	REQUIRE(build(testcode) == "0:4-4 syntax error, unexpected '=', expecting ->> or -> or ','");
+
 	testcode = "501_dupvar_err";
 	REQUIRE(build(testcode) == "0:2-2 Variable name 'b' already defined.");
 
@@ -101,7 +104,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:4-4 Return argument(s) can't be omitted at this function.");
 
 	testcode = "509_needret_err";
-	REQUIRE(build(testcode) == "0:6-6 Return argument(s) can't be omitted at this function.");
+	REQUIRE(build(testcode) == "finish:0:6-6 Return argument(s) can't be omitted at this function.");
 
 	testcode = "510_invalidret1_err";
 	REQUIRE(build(testcode) == "0:3-3 Number of return arguments or definitions are not match.");
@@ -111,4 +114,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "512_invalidret3_err";
 	REQUIRE(build(testcode) == "0:4-4 Number of return arguments or definitions are not match.");
+
+	testcode = "513_asgnLRnum_err";
+	REQUIRE(build(testcode) == "0:2-2 Number of left values did not match right values.");
 }

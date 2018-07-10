@@ -1,0 +1,5 @@
+func invalidret() -> int32 int64
+{
+	return 1, 2, 3;
+}
+
