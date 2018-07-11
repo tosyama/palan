@@ -8,6 +8,8 @@
 /// @copyright	2017- YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <functional>
 #include "PlnFunction.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"
@@ -18,6 +20,8 @@
 #include "../PlnGenerator.h"
 #include "../PlnConstants.h"
 #include "../PlnScopeStack.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 using std::string;
 using std::endl;
@@ -112,9 +116,33 @@ PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype
 	return	param;
 }
 
+static string mangling(PlnFunction* f)
+{
+	static char digits[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.";
+
+	if (f->type == FT_C || f->type == FT_SYS)
+		return f->name;
+
+	string seed = f->name;
+	for (auto p: f->parameters) {
+		seed += "|";
+		seed += p->var_type.back()->name;
+	}
+	size_t hash = std::hash<string>{}(seed);
+	string hash_str;
+
+	int width = (sizeof(hash) * 8) / 6;
+	for (int i=0; i<width; i++) {
+		int c = (hash >> (i*6)) & 0x3f;
+		hash_str.push_back(digits[c]);
+	}
+
+	return f->name + "." + hash_str;
+}
+
 void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	asm_name = name;
+	asm_name = mangling(this);
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
 			si.push_scope(this);
@@ -169,6 +197,13 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			// Insert return statement to end of function if needed.
 			if (implement->statements.size() == 0 || implement->statements.back()->type != ST_RETURN) {
+				if (return_vals.size() > 0 && return_vals.front()->name == "") {
+					PlnCompileError err(E_NeedRetValues);
+					err.loc = implement->loc;
+					err.loc.begin_line = err.loc.end_line;
+					err.loc.begin_col= err.loc.end_col;
+					throw err;
+				}
 				vector<PlnExpression *> rv;
 				PlnReturnStmt* rs = new PlnReturnStmt(rv,implement);
 				implement->statements.push_back(rs);

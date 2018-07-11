@@ -1,0 +1,11 @@
+int32 i32 = 10;
+
+ambi_func(i32);
+
+func ambi_func(int64 i)
+{
+}
+
+func ambi_func(int16 i)
+{
+}

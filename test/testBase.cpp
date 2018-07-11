@@ -14,6 +14,8 @@
 #include "../generators/PlnX86_64Generator.h"
 #include "../models/PlnModule.h"
 #include "../PlnModelTreeBuilder.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 TEST_CASE ("Hello World", "[basic]")
 {
@@ -24,14 +26,23 @@ TEST_CASE ("Hello World", "[basic]")
 
 int clean()
 {
-	return system("rm -f out/*");
+	return system("rm -rf out/*");
+}
+
+int getStatus(int ret_status)
+{
+	if (WIFEXITED(ret_status)) {
+		return WEXITSTATUS(ret_status);
+	} else {
+		return -1;
+	}
 }
 
 string build(string srcf)
 {
-	string ast_cmd = "../pat pacode/" + srcf + ".pa -o out/"+srcf+".json";
-	int ret = system(ast_cmd.c_str());
-	if (ret) return "parser exec err:"+srcf;
+	string ast_cmd = "../pat pacode/" + srcf + ".pa -i -o out/"+srcf+".json";
+	int ret = getStatus(system(ast_cmd.c_str()));
+	if (ret) return "pat exec err:" + to_string(ret) + " " + ast_cmd;
 
 	PlnModule *module;
 	{
@@ -42,17 +53,24 @@ string build(string srcf)
 		json j = json::parse(jf);
 		if (j["errs"].is_array()) {
 			json &err = j["errs"][0];
-			return "line:" + to_string(err["loc"]["begin"]["l"].get<int>())
-				+ "-" + to_string(err["loc"]["end"]["l"].get<int>())
-				+ " parse err:" + err["msg"].get<string>();
+			PlnLoc loc(err["loc"].get<vector<int>>());
+			return loc.dump() + " " + err["msg"].get<string>();
 		}
 		PlnModelTreeBuilder modelTreeBuilder;
-		module = modelTreeBuilder.buildModule(j["ast"]);
+		try {
+			module = modelTreeBuilder.buildModule(j["ast"]);
+		} catch (PlnCompileError &err) {
+			return err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+		}
 	}
 
 	// compile
 	PlnX86_64DataAllocator allocator;
-	module->finish(allocator);
+	try {
+		module->finish(allocator);
+	} catch (PlnCompileError &err) {
+		return "finish:" + err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+	}
 	string asmf = "out/" + srcf + ".s";
 	ofstream as_output;
 	as_output.open(asmf, ios::out);

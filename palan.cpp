@@ -15,11 +15,12 @@
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
 
-#include "models/PlnModule.h"
 #include "PlnMessage.h"
+#include "models/PlnModule.h"
 #include "generators/PlnX86_64DataAllocator.h"
 #include "generators/PlnX86_64Generator.h"
 #include "PlnModelTreeBuilder.h"
+#include "PlnException.h"
 
 using std::cout;
 using std::cerr;
@@ -35,6 +36,10 @@ namespace po = boost::program_options;
 static string getDirName(string fpath);
 static string getFileName(string& fpath);
 static string getExtention(string& fpath);
+static int getStatus(int ret_status);
+
+// ErrorCode
+const int COMPILE_ERR = 1;
 
 /// Main function for palan compiler CUI.
 int main(int argc, char* argv[])
@@ -97,32 +102,65 @@ int main(int argc, char* argv[])
 			{
 				FILE* outf;
 				json j;
+
+				// Get AST json from pat command.
 				string cmd =  cmd_dir + "pat \"" + fname + "\"";
 				outf = popen(cmd.c_str(), "r");
 				if (outf) {
 					popen_filebuf p_buf(outf);
 					istream pat_output(&p_buf);
-					j = json::parse(pat_output);
+					if (pat_output.peek() != std::ios::traits_type::eof()) {
+						try {
+							j = json::parse(pat_output);
 
-					int ret = pclose (outf);
+						} catch (json::exception& e) {
+							cerr << e.what() << endl;
+							BOOST_ASSERT(false);
+						}
+					}
 
-					// TODO: error message
+					int ret = getStatus(pclose(outf));
 					if (ret) return ret;
+
 				} else {
 					BOOST_ASSERT(false);
 				}
+
+				// Get source file infomation.
+				vector<string> files;
+				int fid = 0;
+				for (auto finf: j["files"]) {
+					BOOST_ASSERT(fid == finf["id"].get<int>());
+					files.push_back(finf["name"].get<string>());
+					fid++;
+				}
+
+				// Check parse errors.
 				if (j["errs"].is_array()) {
 					json &err = j["errs"][0];
-					cerr << "line:" << err["loc"]["begIn"]["l"]
-						<< "-" << err["loc"]["end"]["l"]
-						<< " parse err:" << err["msg"] << endl;
-				}
-				PlnModelTreeBuilder modelTreeBuilder;
-				module = modelTreeBuilder.buildModule(j["ast"]);
-			}
+					PlnLoc loc(err["loc"].get<vector<int>>());
 
-			PlnX86_64DataAllocator allocator;
-			module->finish(allocator);
+					string error_msg = files[loc.fid] + ":" +to_string(loc.begin_line) + ": " + err["msg"].get<string>(); 
+					cerr << error_msg << endl;
+					return COMPILE_ERR;
+				}
+
+				// Build palan model tree from AST.
+				try {
+					PlnModelTreeBuilder modelTreeBuilder;
+					module = modelTreeBuilder.buildModule(j["ast"]);
+
+					PlnX86_64DataAllocator allocator;
+					module->finish(allocator);
+
+				} catch (PlnCompileError &err) {
+					cerr << files[err.loc.fid] << ":" << err.loc.begin_line << ": " << PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+					return COMPILE_ERR;
+				} catch (json::exception& e) {
+					cerr << e.what() << endl;
+					BOOST_ASSERT(false);
+				}
+			}
 
 			if (do_asm) {
 				PlnX86_64Generator generator(cout);
@@ -131,7 +169,7 @@ int main(int argc, char* argv[])
 
 			if (do_compile) {
 				FILE* as;
-				string obj_file = getFileName(fname) + ".o";
+				string obj_file = getDirName(out_file) + getFileName(fname) + ".o";
 				string cmd = "as -o \"" + obj_file + "\"" ;
 
 				as = popen(cmd.c_str(), "w");
@@ -141,8 +179,7 @@ int main(int argc, char* argv[])
 				PlnX86_64Generator generator(as_input);
 				module->gen(generator);
 
-				int ret = pclose(as);
-				// TODO: error message
+				int ret = getStatus(pclose(as));
 				if (ret) return ret;
 
 				object_files.push_back(obj_file);
@@ -152,9 +189,9 @@ int main(int argc, char* argv[])
 
 	if (do_link) {
 		string flist = join(object_files, " ");
-		cout << "linking: " << flist << endl;
+		cout << "linking: " << out_file << endl;
 		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " -lc " + flist;
-		int ret = system(cmd.c_str());
+		int ret = getStatus(system(cmd.c_str()));
 		// TODO: error message
 		if (ret) return ret;
 	}
@@ -186,3 +223,11 @@ string getExtention(string& fpath)
 	return fpath.substr(ext_i);
 }
 
+int getStatus(int ret_status)
+{
+	if (WIFEXITED(ret_status)) {
+		return WEXITSTATUS(ret_status);
+	} else {
+		return -1;
+	}
+}

@@ -6,8 +6,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "333");
-	REQUIRE(mcheck("mtrace000") == "+1 -1");
+	REQUIRE(exec(testcode) == "func(int32)");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -67,5 +66,55 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"3 5 2 1\n"
 							"5 -1\n"
 							"9 9 9 0");
+
+	testcode = "012_overload";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "(int32[10])(uint16)(int32)(uint32,uint32)");
 }
 
+TEST_CASE("Compile error test", "[basic]")
+{
+	string testcode;
+
+	testcode = "500_syntax_err";
+	REQUIRE(build(testcode) == "0:4-4 syntax error, unexpected '=', expecting ->> or -> or ','");
+
+	testcode = "501_dupvar_err";
+	REQUIRE(build(testcode) == "0:2-2 Variable name 'b' already defined.");
+
+	testcode = "502_undeffunc_err";
+	REQUIRE(build(testcode) == "0:2-2 Function 'add' was not declared in this scope.");
+
+	testcode = "503_undefvar_err";
+	REQUIRE(build(testcode) == "0:3-3 Variable 'abcd' was not declared in this scope.");
+
+	testcode = "504_argmov_err";
+	REQUIRE(build(testcode) == "0:1-1 Can not use '<<' for 'non-variable expression'.");
+
+	testcode = "505_ambigfunc_err";
+	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");
+
+	testcode = "506_assigntype_err";
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'int32[10]' to 'int32'.");
+
+	testcode = "507_toplvstmt_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use 'return' at top level code.");
+
+	testcode = "508_needretarg_err";
+	REQUIRE(build(testcode) == "0:4-4 Return argument(s) can't be omitted at this function.");
+
+	testcode = "509_needret_err";
+	REQUIRE(build(testcode) == "finish:0:6-6 Return argument(s) can't be omitted at this function.");
+
+	testcode = "510_invalidret1_err";
+	REQUIRE(build(testcode) == "0:3-3 Number of return arguments or definitions are not match.");
+
+	testcode = "511_invalidret2_err";
+	REQUIRE(build(testcode) == "0:3-3 Number of return arguments or definitions are not match.");
+
+	testcode = "512_invalidret3_err";
+	REQUIRE(build(testcode) == "0:4-4 Number of return arguments or definitions are not match.");
+
+	testcode = "513_asgnLRnum_err";
+	REQUIRE(build(testcode) == "0:2-2 Number of left values did not match right values.");
+}

@@ -16,17 +16,26 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_DuplicateVarName:
 			f = "Variable name '%1%' already defined."; break;
 		case E_NumOfLRVariables:
-			f = "A lot of left values."; break;
-		case E_NumOfRetValues:
-			f = "Number of return arguments and definitions are not match."; break;
+			f = "Number of left values did not match right values."; break;
+		case E_InvalidRetValues:
+			f = "Number of return arguments or definitions are not match."; break;
 		case E_NeedRetValues:
 			f = "Return argument(s) can't be omitted at this function."; break;
 		case E_CouldnotOpenFile:
 			f = "Could not open file '%1%'."; break;
 		case E_CantUseMoveOwnership:
-			f = "Can not use '<<' for substantial variable '%1%'."; break;
+			f = "Can not use '<<' for '%1%'."; break;
+		case E_AmbiguousFuncCall:
+			f = "Ambiguous function call '%1%'."; break;
+		case E_IncompatibleTypeAssign:
+			f = "Incompatible types in assignment of '%1%' to '%2%'."; break;
+		case E_CantUseAtToplevel:
+			f = "Can not use '%1%' at top level code."; break;
+
+		case E_InvalidAST:
+			f = "Detected invalid AST at %1%:%2%"; break;
 		default:
-			f = "Unknown error.";
+			return (format("Unknown error. code:%1% - %2%, %3%")  % err_code % arg1 % arg2).str();
 	}
 	
 	string message;

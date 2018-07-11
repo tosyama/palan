@@ -32,9 +32,16 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	if (arguments.size() == 1 && arguments[0]==NULL && f->parameters.size() == 0) 
 			arguments.pop_back();
 
-	// TODO: set dafault arguments if arg == NULL
-
+	// Set dafault arguments if arg == NULL
 	int i=0;
+	for (auto p: f->parameters) {
+		if (i+1>arguments.size()) 
+			arguments.push_back(new PlnExpression(*p->dflt_value));
+		else if(!arguments[i])
+			arguments[i] = new PlnExpression(*p->dflt_value);
+		++i;
+	}
+
 	for (auto rv: f->return_vals) {
 		PlnValue val;
 		val.type = VL_WORK;
@@ -47,8 +54,10 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		if (i < f->parameters.size()) {
 			int ptr_type = f->parameters[i]->ptr_type;
 			if (ptr_type & PTR_CLONE) {
-				auto clone_ex = new PlnClone(arguments[i]);
-				arguments[i] = clone_ex;
+				if (arguments[i]->values[0].type == VL_VAR) {
+					auto clone_ex = new PlnClone(arguments[i]);
+					arguments[i] = clone_ex;
+				}
 			}
 		}
 	}

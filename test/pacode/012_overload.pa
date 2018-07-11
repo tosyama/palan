@@ -1,0 +1,33 @@
+ccall int32 printf();
+ccall exit();
+
+uint16 i16;
+int32 i32;
+int32[10] ia;
+
+ov_func(ia);
+ov_func(i16);
+ov_func(i32);
+ov_func(i32, i16);
+
+exit(0);
+
+func ov_func(int32[10] >> pa)
+{
+	printf("(int32[10])");
+}
+
+func ov_func(int32 pa)
+{
+	printf("(int32)");
+}
+
+func ov_func(uint16 pa)
+{
+	printf("(uint16)");
+}
+
+func ov_func(uint32 pa, uint32 pb)
+{
+	printf("(uint32,uint32)");
+}

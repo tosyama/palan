@@ -9,15 +9,20 @@
 using std::string;
 
 enum PlnErrCode {
-	E_UndefinedVariable,
-	E_UndefinedFunction,
-	E_UndefinedType,
-	E_DuplicateVarName,
-	E_NumOfLRVariables,
-	E_NumOfRetValues,
-	E_NeedRetValues,
-	E_CouldnotOpenFile,
-	E_CantUseMoveOwnership
+	E_UndefinedVariable, // var name
+	E_UndefinedFunction,	// func name
+	E_UndefinedType,	// type name
+	E_DuplicateVarName,	// var name
+	E_NumOfLRVariables,	// none
+	E_InvalidRetValues,	// none
+	E_NeedRetValues,	// none
+	E_CouldnotOpenFile,	// file name
+	E_CantUseMoveOwnership, // var name
+	E_AmbiguousFuncCall,	// func name
+	E_IncompatibleTypeAssign,	// src type, dst type
+	E_CantUseAtToplevel,	// statement
+
+	E_InvalidAST	// source name, line
 };
 
 enum PlnWarnCode {

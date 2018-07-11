@@ -19,6 +19,8 @@
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 using namespace std;
 
@@ -149,38 +151,52 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 
 PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
 {
-	for (auto f: functions)
+	PlnFunction* matched_func = NULL;
+	int amviguous_count = 0; 
+	int is_perfect_match = false; 
+
+	for (auto f: functions) {
 		if (f->name == func_name) {
-			// Check arguments.
-			if (f->parameters.size()==0 && args.size()==0)
-				return f;
+			if (f->parameters.size() < args.size()) {
+				// Excluded C and System call for now
+				if (f->type == FT_C || f->type == FT_SYS) return f;
+				goto next_func;
+			}
+
 			int i=0;
-			bool ng = false; 
+			bool do_cast = false;
 			for (auto p: f->parameters) {
 				if (i+1>args.size() || !args[i]) {
-					if (!p->dflt_value) {
-						ng = true; break;
-					}
+					if (!p->dflt_value) goto next_func;
 				} else {
-					//TODO: type check.
+					PlnType* a_type = args[i]->values[0].getType();
+					PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
+					if (cap == TC_CANT_CONV) goto next_func;
+					if (cap != TC_SAME) do_cast = true;
 				}
 				++i;
 			}
-			if (!ng) {
-				// Set default.
-				i=0;
-				for (auto p: f->parameters) {
-					if (i+1>args.size()) 
-						args.push_back(new PlnExpression(*p->dflt_value));
-					else if(!args[i])
-						args[i] = new PlnExpression(*p->dflt_value);
-					++i;
-				}
-				return f;
+
+			if (is_perfect_match) {
+				if (do_cast) goto next_func;
+				// else Error: Can't decide a function.
+				throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+
+			} else {
+				matched_func = f;
+				if (do_cast) amviguous_count++;
+				else is_perfect_match = true;
 			}
 		}
+next_func:
+		;
+	}
 	
-	return NULL;
+	if (is_perfect_match | amviguous_count == 1) return matched_func;
+
+	if (!matched_func) throw PlnCompileError(E_UndefinedFunction, func_name);
+	// if (amviguous_count >= 0)
+	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 }
 
 PlnFunction* PlnModule::getFunc(const string& func_name, vector<string>& param_types, vector<string>& ret_types)
@@ -189,14 +205,15 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<string>& param_t
 		if (f->name == func_name
 				&& f->parameters.size() == param_types.size()
 				&& f->return_vals.size() == ret_types.size()) {
-			for (int i; i<param_types.size(); i++) {
+
+			for (int i=0; i<param_types.size(); i++) {
 				string& pt_name = f->parameters[i]->var_type.back()->name;
 				if (pt_name != param_types[i]) {
 					goto next;
 				}
 			}
 
-			for (int i; i<ret_types.size(); i++) {
+			for (int i=0; i<ret_types.size(); i++) {
 				string& rt_name = f->return_vals[i]->var_type.back()->name;
 				if (rt_name != ret_types[i]) {
 					goto next;

@@ -8,6 +8,7 @@
 #include "PlnExpression.h"
 
 // Module: Type, ReadOnlyData, Functions
+class PlnCompileError;
 class PlnModule
 {
 public:
@@ -25,7 +26,7 @@ public:
 
 	PlnType* getType(const string& type_name);
 	PlnType* getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes);
-	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args);
+	PlnFunction* getFunc(const string& func_name, vector<PlnExpression*>& args); // throw PlnCompileError;
 	PlnFunction* getFunc(const string& func_name, vector<string>& param_types, vector<string>& ret_types);
 	int getJumpID();
 	PlnReadOnlyData* getReadOnlyData(const string &str);

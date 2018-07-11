@@ -10,12 +10,24 @@ Root
 ----
 * ast\* - AST model
 * errs	- Error message list
+* files - Source file list
 
 AST
 ---
 * protos - Function prototype list
 * funcs - Function definition list
 * stmts - Statement list for top level code
+
+Error Message
+-------------
+* msg\* - Error message string
+* loc - Location integer array
+
+Source File
+-----------
+* id\* - Source file ID integer
+* name\* - Source file name string
+* dir - Directory path string
 
 Function Prototype
 ------------------
@@ -33,6 +45,7 @@ Function Prototype
 		* name\* - System call name string
 		* ret-type - Return value type string
 		* params\* - Parameter list
+* loc - Location integer array
 
 Function
 --------
@@ -41,6 +54,7 @@ Function
 * params\* - Parameter list
 * rets\* - Return value list
 * impl\* - Block model for function implemantation
+* loc - Location integer array
 
 Parameter
 ---------
@@ -48,6 +62,7 @@ Parameter
 * var-type\# - Variable type list
 * move - Move ownership flag boolean
 * default-val - Default value expression
+* loc - Location integer array
 
 Return value
 ------------
@@ -56,6 +71,7 @@ Return value
 2. Standard return value
 	* var-type - Variable type list
 	* name\* - Return value name string
+* loc - Location integer array
 
 Variable Type
 -------------
@@ -66,6 +82,7 @@ Variable Type
 Block
 ------
 * stmts\* - Statement list in the block
+* loc - Location integer array
 
 Statement
 ---------
@@ -87,6 +104,7 @@ Statement
 		* cond\* - Condition expression
 		* block\* - If block model
 		* else - Else statement (block/if)
+* loc - Location integer array
 
 Expression
 ----------
@@ -115,12 +133,14 @@ Expression
 		* rval\* -	Right value expression
 	8. unary operator
 		* val\* -	Value expression
+* loc - Location integer array
 
 Destination Value
 ------------------
 * base-var\* - Base variable name string
 * opes - Modified operator list
 * move - Move ownership flag boolean
+* loc - Location integer array
 
 Modified Operator
 -----------------
@@ -133,8 +153,17 @@ Variable Declaration
 * name\* - Variable name string
 * var-type\# - Variable type list
 * move - Move ownership flag boolean
+* loc - Location integer array
 
 Argument
 --------
 * exp\* - Argument expression
 * move - Move ownership flag boolean
+
+Location Array
+--------------
+* 0\* - Source file ID integer
+* 1\* - Begin line integer
+* 2\* - Begin column integer
+* 3\* - End line integer
+* 4\* - End column integer

@@ -24,6 +24,7 @@ public:
 		PlnVarInit* var_init;
 		PlnBlock *block;
 	} inf;
+	PlnLoc loc;
 
 	PlnStatement() {};
 	PlnStatement(PlnExpression *exp, PlnBlock* parent);
@@ -41,7 +42,7 @@ public:
 	vector<PlnExpression*> expressions;
 	vector<PlnExpression*> free_vars;
 
-	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);
+	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);	// throw PlnCompileError
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

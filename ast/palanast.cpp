@@ -29,6 +29,9 @@ using json = nlohmann::json;
 
 namespace po = boost::program_options;
 
+static string getDirName(string fpath);
+static string getFileName(string& fpath);
+
 int main(int argc, char* argv[])
 {
 	po::options_description opt("Options");
@@ -38,6 +41,7 @@ int main(int argc, char* argv[])
 	opt.add_options()
 		("help,h", "Display this help")
 		("output,o", po::value<string>(), "Output AST json file")
+		("indent,i", "Output indented json")
 		("input-file", po::value<vector<string>>(), "Input palan file");
 
 	p_opt.add("input-file", -1);
@@ -56,6 +60,11 @@ int main(int argc, char* argv[])
 	if (vm.count("help") || vm.count("input-file")!=1) {
 		cout << opt;
 		return 0;
+	}
+
+	int indent = -1;
+	if (vm.count("indent")) {
+		indent = 2;
 	}
 
 	ostream *jout = &cout;
@@ -78,16 +87,45 @@ int main(int argc, char* argv[])
 		lexer.switch_streams(&f, &cout);
 
 		json ast;
+		
 		PlnParser parser(lexer,ast);
 		int res = parser.parse();
 
-		(*jout) << ast.dump() << endl;
+		// set src files infomation.
+		json files;
+		int id = 0;
+		for (auto s_path: lexer.filenames) {
+			json src_info = {
+				{"id", id},
+				{"name", getFileName(s_path)}
+			};
+			string dir_path = getDirName(s_path);
+			if (dir_path != "") {
+				src_info["dir"] = dir_path;
+			}
+			files.push_back(src_info);
+		}
+		ast["files"] = files;
+
+		(*jout) << std::setw(indent) << ast << endl;
+
 	} else {
 		string msg(PlnMessage::getErr(E_CouldnotOpenFile, fname));
-		cerr << "error: " << msg << endl;
-		return -1;
+		cerr << "pat: error: " << msg << endl;
+		return 1;
 	}
 
-
 	return 0;
+}
+
+string getDirName(string fpath)
+{
+	int path_i = fpath.find_last_of("/\\")+1;
+	return fpath.substr(0, path_i);
+}
+
+string getFileName(string& fpath)
+{
+	int path_i = fpath.find_last_of("/\\")+1;
+	return fpath.substr(path_i, fpath.length());
 }

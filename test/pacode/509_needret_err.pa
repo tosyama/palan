@@ -1,0 +1,7 @@
+ccall int32 printf();
+
+func nonameret_func(int32[10] >> pa) -> int32
+{
+	printf("no retrun");
+}
+

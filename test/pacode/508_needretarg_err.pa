@@ -1,0 +1,6 @@
+func noretname(int32 a) -> int32
+{
+	3->a;
+	return;
+}
+

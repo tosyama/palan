@@ -2,6 +2,7 @@
 #include "models/PlnVariable.h"
 #include "PlnScopeStack.h"
 #include <boost/assert.hpp>
+#include <algorithm>
 
 bool PlnScopeInfo::exists_current(PlnVariable* v)
 {

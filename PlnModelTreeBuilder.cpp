@@ -8,6 +8,8 @@
 #include "PlnModelTreeBuilder.h"
 #include "PlnScopeStack.h"
 #include "PlnConstants.h"
+#include "PlnMessage.h"
+#include "PlnException.h"
 #include "models/PlnType.h"
 #include "models/PlnModule.h"
 #include "models/PlnFunction.h"
@@ -25,20 +27,54 @@
 #include "models/expressions/PlnBoolOperation.h"
 #include "models/expressions/PlnArrayItem.h"
 
+static void registerPrototype(PlnModule& module, json& proto);
+static void buildFunction(json& func, PlnScopeStack &scope);
+static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope);
+static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
+static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
+static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
+static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope);
+static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope);
+static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
+static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
+static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
+static PlnExpression* buildAddOperation(json& add, PlnScopeStack &scope);
+static PlnExpression* buildSubOperation(json& sub, PlnScopeStack &scope);
+static PlnExpression* buildMulOperation(json& mul, PlnScopeStack &scope);
+static PlnExpression* buildDivOperation(json& div, PlnScopeStack &scope);
+static PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope);
+static PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope);
+static PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope);
+static PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope);
+static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
+
 #define CUR_BLOCK	scope.back().inf.block
 #define CUR_MODULE	scope.front().inf.module
+#define CUR_FUNC	(CUR_BLOCK->parent_func)
+
+#define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
+#define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
 
 PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
 }
 
-static void registerPrototype(PlnModule& module, json& proto);
-static void buildFunction(json& func, PlnScopeStack &scope);
-static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope);
+template <typename T>
+void setLoc(T obj, json& j)
+{
+	if (j["loc"].is_array()) {
+		json& l = j["loc"];
+		obj->loc.fid = l[0];
+		obj->loc.begin_line = l[1];
+		obj->loc.begin_col = l[2];
+		obj->loc.end_line = l[3];
+		obj->loc.end_col = l[4];
+	}
+}
 
 PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 {
-	BOOST_ASSERT(!ast.is_null());
+	assertAST(!ast.is_null(), ast);
 
 	PlnModule *module = new PlnModule();
 	PlnScopeStack scope;
@@ -71,7 +107,7 @@ static vector<PlnType*> getVarType(PlnModule& module, json& var_type)
 	for (auto& vt: var_type) {
 		string type_name = vt["name"];
 		if (type_name == "[]") {
-			BOOST_ASSERT(vt["sizes"].is_array());
+			assertAST(vt["sizes"].is_array(), vt);
 			vector<int> sizes;
 			for (json& i: vt["sizes"])
 				sizes.push_back(i);
@@ -100,6 +136,7 @@ void registerPrototype(PlnModule& module, json& proto)
 					pm = FPM_MOVEOWNER;
 			}
 			f->addParam(param["name"], var_type, pm, NULL);
+			setLoc(f->parameters.back(), param);
 		}
 
 		for (auto& ret: proto["rets"]) {
@@ -108,7 +145,9 @@ void registerPrototype(PlnModule& module, json& proto)
 			if (ret["name"].is_string())
 				name = ret["name"];
 			f->addRetValue(name, var_type, true);
+			setLoc(f->return_vals.back(), ret);
 		}
+		setLoc(f, proto);
 
 	} else if (ftype_str == "ccall") {
 		f = new PlnFunction(FT_C, proto["name"]);
@@ -119,6 +158,7 @@ void registerPrototype(PlnModule& module, json& proto)
 				f->addRetValue(rname, tv, false);
 			}
 		}
+		setLoc(f, proto);
 
 	} else if (ftype_str == "syscall") {
 		f = new PlnFunction(FT_SYS, proto["name"]);
@@ -130,9 +170,10 @@ void registerPrototype(PlnModule& module, json& proto)
 				f->addRetValue(rname, tv, false);
 			}
 		}
+		setLoc(f, proto);
 
 	} else
-		BOOST_ASSERT(false);
+		assertAST(false, proto);
 	
 	f->setParent(&module);
 	module.functions.push_back(f);
@@ -164,9 +205,13 @@ void buildFunction(json& func, PlnScopeStack &scope)
 	}
 
 	PlnFunction* f = CUR_MODULE->getFunc(func["name"], param_types, ret_types);
-	BOOST_ASSERT(f);
+	assertAST(f, func);
+	setLoc(f, func);
+
 	scope.push_back(f);
 	f->implement = buildBlock(func["impl"]["stmts"], scope);
+	setLoc(f->implement, func["impl"]);
+	 
 	scope.pop_back();
 }
 
@@ -192,54 +237,57 @@ PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope)
 	return block;
 }
 
-static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
-static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
-static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
-static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope);
-static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope);
-
 PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope)
 {
 	string type = stmt["stmt-type"];
+	PlnStatement *statement;
 
 	if (type == "exp") {
-		return new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
+		statement = new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
 
 	} else if (type == "block") {
 		PlnBlock *block = buildBlock(stmt["block"]["stmts"], scope);
-		return new PlnStatement(block, CUR_BLOCK);
+		setLoc(block, stmt["block"]);
+		statement = new PlnStatement(block, CUR_BLOCK);
 
 	} else if (type == "var-init") {
-		return new PlnStatement(buildVarInit(stmt, scope), CUR_BLOCK);
+		statement = new PlnStatement(buildVarInit(stmt, scope), CUR_BLOCK);
 
 	} else if (type == "return") {
-		return buildReturn(stmt, scope);
+		statement = buildReturn(stmt, scope);
 
 	} else if (type == "while") {
-		return buildWhile(stmt, scope);
+		statement = buildWhile(stmt, scope);
 
 	} else if (type == "if") {
-		return buildIf(stmt, scope);
+		statement = buildIf(stmt, scope);
 
 	} else {
-		BOOST_ASSERT(false);
+		assertAST(false, stmt);
 	}
+	setLoc(statement, stmt);
+	return statement;
 }
 
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 {
-	BOOST_ASSERT(var_init["vars"].is_array());
+	assertAST(var_init["vars"].is_array(), var_init);
 	vector<PlnValue> vars;
 	for (json &var: var_init["vars"]) {
 		vector<PlnType*> t = getVarType(*CUR_MODULE, var["var-type"]);
 		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
-		BOOST_ASSERT(v);
+		if (!v) {
+			PlnCompileError err(E_DuplicateVarName, var["name"]);
+			setLoc(&err, var);
+			throw err;
+		}
 		vars.push_back(v);
 		if (var["move"].is_boolean() && var["move"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
 		}
+		setLoc(v, var);
 	}
 
 	vector<PlnExpression*> inits;
@@ -256,18 +304,32 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 {
+	if (!CUR_FUNC) {
+		PlnCompileError err(E_CantUseAtToplevel, "return");
+		setLoc(&err, ret);
+		throw err;
+	}
+
 	vector<PlnExpression *> ret_vals;
 	if (ret["ret-vals"].is_array())
 		for (json& ret_val: ret["ret-vals"])
 			ret_vals.push_back(buildExpression(ret_val, scope));
 	
-	return new PlnReturnStmt(ret_vals, CUR_BLOCK);
+	try {
+		return new PlnReturnStmt(ret_vals, CUR_BLOCK);
+
+	} catch(PlnCompileError &err) {
+		if (err.loc.fid == -1)
+			setLoc(&err, ret);
+		throw err;
+	}
 }
 
 PlnStatement* buildWhile(json& whl, PlnScopeStack& scope)
 {
 	PlnExpression* cond = buildExpression(whl["cond"], scope);
 	PlnBlock* block = buildBlock(whl["block"]["stmts"], scope);
+	setLoc(block, whl["block"]);
 	return new PlnWhileStatement(cond, block, CUR_BLOCK);
 }
 
@@ -275,6 +337,7 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope)
 {
 	PlnExpression* cond = buildExpression(ifels["cond"], scope);
 	PlnBlock* ifblock = buildBlock(ifels["block"]["stmts"], scope);
+	setLoc(ifblock, ifels["block"]);
 	PlnStatement* else_stmt = NULL;
 	if (ifels["else"].is_object()) {
 		else_stmt = buildStatement(ifels["else"], scope);
@@ -283,69 +346,61 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope)
 	return new PlnIfStatement(cond, ifblock, else_stmt, CUR_BLOCK);
 }
 
-static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
-static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
-static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
-static PlnExpression* buildAddOperation(json& add, PlnScopeStack &scope);
-static PlnExpression* buildSubOperation(json& sub, PlnScopeStack &scope);
-static PlnExpression* buildMulOperation(json& mul, PlnScopeStack &scope);
-static PlnExpression* buildDivOperation(json& div, PlnScopeStack &scope);
-static PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope);
-static PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope);
-static PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope);
-static PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope);
 
 PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
-	BOOST_ASSERT(exp["exp-type"].is_string());
+	assertAST(exp["exp-type"].is_string(), exp);
 	string type = exp["exp-type"];
+	PlnExpression *expression;
 
 	if (type == "lit-int") {
-		return new PlnExpression(exp["val"].get<int64_t>());
+		expression = new PlnExpression(exp["val"].get<int64_t>());
 	} else if (type == "lit-uint") {
-		return new PlnExpression(exp["val"].get<uint64_t>());
+		expression = new PlnExpression(exp["val"].get<uint64_t>());
 	} else if (type == "lit-str") {
 		PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
-		return new PlnExpression(ro);
+		expression = new PlnExpression(ro);
 	} else if (type == "var") {
-		return buildVariarble(exp, scope);
+		expression = buildVariarble(exp, scope);
 	} else if (type == "asgn") {
-		return buildAssignment(exp, scope);
+		expression = buildAssignment(exp, scope);
 	} else if (type == "func-call") {
-		return buildFuncCall(exp, scope);
+		expression = buildFuncCall(exp, scope);
 	} else if (type == "+") {
-		return buildAddOperation(exp, scope);
+		expression = buildAddOperation(exp, scope);
 	} else if (type == "-") {
-		return buildSubOperation(exp, scope);
+		expression = buildSubOperation(exp, scope);
 	} else if (type == "*") {
-		return buildMulOperation(exp, scope);
+		expression = buildMulOperation(exp, scope);
 	} else if (type == "/") {
-		return buildDivOperation(exp, scope);
+		expression = buildDivOperation(exp, scope);
 	} else if (type == "%") {
-		return buildModOperation(exp, scope);
+		expression = buildModOperation(exp, scope);
 	} else if (type == "==") {
-		return buildCmpOperation(exp, CMP_EQ, scope);
+		expression = buildCmpOperation(exp, CMP_EQ, scope);
 	} else if (type == "!=") {
-		return buildCmpOperation(exp, CMP_NE, scope);
+		expression = buildCmpOperation(exp, CMP_NE, scope);
 	} else if (type == "<") {
-		return buildCmpOperation(exp, CMP_L, scope);
+		expression = buildCmpOperation(exp, CMP_L, scope);
 	} else if (type == ">") {
-		return buildCmpOperation(exp, CMP_G, scope);
+		expression = buildCmpOperation(exp, CMP_G, scope);
 	} else if (type == "<=") {
-		return buildCmpOperation(exp, CMP_LE, scope);
+		expression = buildCmpOperation(exp, CMP_LE, scope);
 	} else if (type == ">=") {
-		return buildCmpOperation(exp, CMP_GE, scope);
+		expression = buildCmpOperation(exp, CMP_GE, scope);
 	} else if (type == "&&") {
-		return buildBoolOperation(exp, ET_AND, scope);
+		expression = buildBoolOperation(exp, ET_AND, scope);
 	} else if (type == "||") {
-		return buildBoolOperation(exp, ET_OR, scope);
+		expression = buildBoolOperation(exp, ET_OR, scope);
 	} else if (type == "uminus") {
-		return buildNegativeOperation(exp, scope);
+		expression = buildNegativeOperation(exp, scope);
 	} else if (type == "not") {
-		return PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
+		expression = PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
 	} else {
-		BOOST_ASSERT(false);
+		assertAST(false, exp);
 	}
+	setLoc(expression, exp);
+	return expression;
 }
 
 PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
@@ -354,25 +409,29 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	for (auto& arg: fcall["args"]) {
 		args.push_back(buildExpression(arg["exp"], scope));
 		if (arg["move"].is_boolean() && arg["move"] == true) {
-			BOOST_ASSERT(args.back()->values[0].type == VL_VAR);
+			if (args.back()->values[0].type != VL_VAR) {
+				PlnCompileError err(E_CantUseMoveOwnership, "non-variable expression");
+				setLoc(&err, arg["exp"]);
+				throw err;
+			}
 			args.back()->values[0].asgn_type = ASGN_MOVE;
 		}
 	}
 
-	PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], args);
-	if (f) {
+	try {
+		PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], args);
 		return new PlnFunctionCall(f, args);
-	} else {
-		BOOST_ASSERT(false);
+
+	} catch (PlnCompileError& err) {
+		setLoc(&err, fcall);
+		throw err;
 	}
 }
-
-static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 
 PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 {
 	json& src = asgn["src-exps"];
-	BOOST_ASSERT(src.is_array());
+	assertAST(src.is_array(), asgn);
 
 	vector<PlnExpression *> src_exps;
 	for (json& exp: src) {
@@ -380,27 +439,38 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 	}
 
 	json& dst = asgn["dst-vals"];
-	BOOST_ASSERT(dst.is_array());
+	assertAST(dst.is_array(), asgn);
 
 	vector<PlnExpression *> dst_vals;
 	for (json& dval: dst) {
 		dst_vals.push_back(buildDstValue(dval, scope));
 	}
 
-	return new PlnAssignment(dst_vals, src_exps);
+	try {
+		return new PlnAssignment(dst_vals, src_exps);
+	} catch(PlnCompileError &err) {
+		if (err.loc.fid == -1)
+			setLoc(&err, asgn);
+		throw err;
+	}
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 {
 	PlnVariable* pvar = CUR_BLOCK->getVariable(var["base-var"]);
-	BOOST_ASSERT(pvar);
+	if (!pvar) {
+		PlnCompileError err(E_UndefinedVariable, var["base-var"]);
+		setLoc(&err, var);
+		throw err;
+	}
 
 	PlnExpression *var_exp = new PlnExpression(pvar);
+	setLoc(var_exp, var);
 
 	if (var["opes"].is_array()) {
 		for (json& ope: var["opes"]) {
 			if (ope["ope-type"]=="index") {
-				BOOST_ASSERT(ope["indexes"].is_array());
+				assertAST(ope["indexes"].is_array(), var);
 				vector<PlnExpression*> indexes;
 				for (json& exp: ope["indexes"])
 					indexes.push_back(buildExpression(exp, scope));

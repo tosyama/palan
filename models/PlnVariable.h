@@ -20,6 +20,7 @@ public:
 	PlnDataPlace* place;
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
 	int ptr_type;
+	PlnLoc loc;
 
 	static PlnVariable* createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name);
 };

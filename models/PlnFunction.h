@@ -27,7 +27,7 @@ public:
 	vector<int> ret_dtypes, arg_dtypes;
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
-	
+	PlnLoc loc;
 	union {
 		struct {
 			int id;
@@ -47,7 +47,7 @@ public:
 	PlnVariable* addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init);
 	PlnParameter* addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 
-	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;
 	void gen(PlnGenerator& g);
 };
 

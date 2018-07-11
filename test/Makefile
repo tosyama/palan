@@ -3,8 +3,14 @@ TESTOBJS = testMain.o testBase.o basicTest.o dataAllocTest.o \
 		algorithmTest.o
 OBJS = $(filter-out ../objs/palan.o, $(wildcard ../objs/*.o))
 AST = ../ast/pat
+POST_TESTER = cuitester
+POST_OBJS = cuiTestMain.o cuiTestBase.o cuiTest.o
 
 .SUFFIXES: .cpp .o
+
+$(POST_TESTER): $(POST_OBJS) $(PROGRAM)
+	@echo link $(POST_TESTER).
+	@$(CXX) -o $(POST_TESTER) $(filter %.o, $^) -pthread
 
 $(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa $(AST)
 	@echo link $(PROGRAM).
@@ -16,6 +22,10 @@ $(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa $(AST)
 test:
 	@mkdir -p out
 	./$(PROGRAM)
+
+post_test:
+	@mkdir -p out/cui
+	./$(POST_TESTER)
 
 force:
 	@$(CXX) -o fpac ../objs/palan.o $(OBJS) -lboost_program_options
