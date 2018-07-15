@@ -3,6 +3,7 @@ ccall exit();
 
 int32 a, b, c;
 int32[3] arr;
-// printf("%d %d\n", (3, 2 -> a, b), (4->arr[1]));
-// printf("%d \n", arr[1]);
+4->c;
+//printf("%d %d\n", (1, 2 -> a, b), (c->arr[1]));
+//printf("%d \n", arr[1]);
 exit(0);

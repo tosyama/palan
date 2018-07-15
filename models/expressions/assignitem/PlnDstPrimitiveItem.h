@@ -11,10 +11,11 @@ class PlnDstPrimitiveItem : public PlnDstItem {
 	PlnExpression *dst_ex;
 	PlnDataPlace *dst_dp;
 	PlnVariable *save_src_var;
+	PlnDataPlace*litral_dp;
 
 public:
 	PlnDstPrimitiveItem(PlnExpression* ex)
-		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL) {
+		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL), litral_dp(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 	}
 
@@ -25,13 +26,22 @@ public:
 		if (place == NULL) {
 			src_ex->data_places.push_back(dst_dp);
 
-		} else if (dst_ex->type == ET_VALUE) {
-			src_ex->data_places.push_back(dst_dp);
-
 		} else {
-			vector<PlnType*> t = dst_ex->values[0].inf.var->var_type;
-			save_src_var = PlnVariable::createTempVar(da, t, "save src");
-			src_ex->data_places.push_back(save_src_var->place);
+			if (src_ex->type == ET_VALUE) {
+				PlnValue v = src_ex->values[0];
+				if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_RO_DATA) {
+					litral_dp = v.getDataPlace(da);
+				}
+			}
+
+			if (dst_ex->type == ET_VALUE || litral_dp) {
+				src_ex->data_places.push_back(dst_dp);
+
+			} else {	// e.g. ET_ARRAYITME
+				vector<PlnType*> t = dst_ex->values[0].inf.var->var_type;
+				save_src_var = PlnVariable::createTempVar(da, t, "save src");
+				src_ex->data_places.push_back(save_src_var->place);
+			}
 		}
 	}
 
@@ -56,8 +66,12 @@ public:
 			da.popSrc(dst_dp);
 			da.releaseDp(dst_dp);
 			if (place) {
-				PlnDataPlace* dp = dst_ex->values[0].getDataPlace(da);
-				da.pushSrc(place, dp);
+				if (litral_dp) {
+					da.pushSrc(place, litral_dp);
+				} else {
+					PlnDataPlace* dp = dst_ex->values[0].getDataPlace(da);
+					da.pushSrc(place, dp);
+				}
 			}
 		}
 	}
