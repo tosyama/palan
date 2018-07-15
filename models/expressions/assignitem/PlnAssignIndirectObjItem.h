@@ -27,6 +27,11 @@ public:
 		dst_item = PlnDstItem::createDstItem(ex);
 	}
 
+	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
+		dst_item->place = data_places[start_ind];
+		return start_ind + 1;
+	}
+
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		if (dst_item->getAssginType() == ASGN_COPY) {
 			dst_item->setSrcEx(da, si, src_ex);

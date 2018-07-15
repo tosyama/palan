@@ -9,6 +9,7 @@
 class PlnAssignItem {
 public:
 	virtual void addDstEx(PlnExpression* ex) { }
+	virtual int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) { };
 
 	virtual void finishS(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void finishD(PlnDataAllocator& da, PlnScopeInfo& si) { }

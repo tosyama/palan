@@ -1,7 +1,7 @@
 /// Assignment model class definition.
 ///
 /// PlnAssignment store values to variables.
-/// e.g.) a = 2;
+/// e.g.) 2 -> a;
 ///
 /// @file	PlnAssignment.cpp
 /// @copyright	2017 YAMAGUCHI Toshinobu 
@@ -60,6 +60,13 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 
 void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	int start_ind = 0;
+	for (auto ai: assgin_items) {
+		if (start_ind >= data_places.size())
+			break;
+		start_ind = ai->addDataPlace(data_places, start_ind);
+	}
+
 	for (auto ai: assgin_items) {
 		ai->finishS(da, si);
 		ai->finishD(da, si);

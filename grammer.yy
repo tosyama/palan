@@ -15,6 +15,7 @@ int yylex();
 %token UINT
 %token STR
 %token ID
+%token FUNC_ID
 %token TYPENAME
 %token KW_FUNC
 %token KW_CCALL
@@ -55,7 +56,7 @@ module: /* empty */
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC ID '(' parameter_def ')' return_def block
+function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
 	;
 
 return_def: /* empty */
@@ -105,10 +106,10 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
+ccall_declaration: KW_CCALL single_return FUNC_ID '(' parameter_def ')' ';'
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def ')' ';'
 	;
 
 single_return: /* empty */
@@ -157,7 +158,8 @@ statement: basic_statement
 	;
 
 st_expression: expression
-	| assignments
+	| assignment
+	| chain_call
 	;
 
 expressions: expression
@@ -179,13 +181,13 @@ expression:
 	| expression OPE_GE expression
 	| expression OPE_AND expression
 	| expression OPE_OR expression
-	| '(' assignments ')'
+	| '(' assignment ')'
 	| '-' expression %prec UMINUS
 	| '!' expression
 	| term
 	;
 
-func_call: ID '(' arguments ')'
+func_call: FUNC_ID '(' arguments ')'
 	;
 
 arguments: argument
@@ -214,15 +216,18 @@ term: INT
 	| '(' expression ')'
 	;
 
-assignments: assignment
-	| assignments arrow_ope dst_vals
-	;
-
 assignment: expressions arrow_ope dst_vals
+	| assignment arrow_ope dst_vals
+	| chain_call arrow_ope dst_vals
 	;
 	
 arrow_ope: ARROW
 	| DBL_ARROW
+	;
+
+chain_call: expressions arrow_ope func_call
+	| chain_call arrow_ope func_call
+	| assignment arrow_ope func_call
 	;
 
 declarations: declaration

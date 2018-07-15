@@ -33,6 +33,16 @@ public:
 		dsts.push_back( {PlnDstItem::createDstItem(ex), NULL, NULL, NULL} );
 	}
 
+	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
+		for (auto &di: dsts) {
+			di.item->place = data_places[start_ind];
+			start_ind++;
+			if (start_ind >= data_places.size())
+				break;
+		}
+		return start_ind;
+	}
+
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		int i=0;
 		for (auto &di: dsts) {
