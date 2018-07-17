@@ -17,7 +17,7 @@ enum PlnErrCode {
 	E_InvalidRetValues,	// none
 	E_NeedRetValues,	// none
 	E_CouldnotOpenFile,	// file name
-	E_CantUseMoveOwnership, // var name
+	E_CantCopyFreedVar,	// var name
 	E_AmbiguousFuncCall,	// func name
 	E_IncompatibleTypeAssign,	// src type, dst type
 	E_CantUseAtToplevel,	// statement

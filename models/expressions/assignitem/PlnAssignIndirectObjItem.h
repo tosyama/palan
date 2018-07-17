@@ -37,7 +37,13 @@ public:
 			dst_item->setSrcEx(da, si, src_ex);
 			if (src_ex->data_places.size()) {
 				src_ex->finish(da, si);
-			}
+			} else
+				;	// use cop_ex case.
+
+		} else if (dst_item->getAssginType() == ASGN_MOVE) {
+			dst_item->setSrcEx(da, si, src_ex);
+			src_ex->finish(da, si);
+
 		} else {
 			BOOST_ASSERT(false);
 		}
@@ -46,7 +52,7 @@ public:
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		dst_item->finish(da, si);
 		if (dst_item->getAssginType() == ASGN_MOVE) {
-			// Mark as freed variable.
+			// Mark as freed variable. TODO: check this works.
 			auto var = src_ex->values[0].inf.var;
 			if (si.exists_current(var))
 				si.set_lifetime(var, VLT_FREED);
@@ -59,12 +65,6 @@ public:
 
 	void genD(PlnGenerator& g) override {
 		dst_item->gen(g);
-		if (dst_item->getAssginType() == ASGN_MOVE) {
-			vector<unique_ptr<PlnGenEntity>> clr_es;
-			PlnDataPlace* dp = src_ex->values[0].inf.var->place;
-			clr_es.push_back(g.getEntity(dp));
-			g.genNullClear(clr_es);
-		}
 	}
 };
 

@@ -17,6 +17,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnScopeStack.h"
 #include "PlnClone.h"
 
 using std::endl;
@@ -85,9 +86,19 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (arg_dps[i]->data_type == DT_UNKNOWN) {
 			arg_dps[i]->data_type = t->data_type;
 		}
+		if (a->values[0].asgn_type == ASGN_MOVE && a->values[0].type == VL_VAR) {
+			arg_dps[i]->do_clear_src = true;
+		}
 
 		a->data_places.push_back(arg_dps[i]);
 		a->finish(da, si);
+
+		if (a->values[0].asgn_type == ASGN_MOVE && a->values[0].type == VL_VAR) {
+			// Mark as freed variable.
+			auto var = a->values[0].inf.var;
+			if (si.exists_current(var))
+				si.set_lifetime(var, VLT_FREED);
+		}
 
 		++i;
 	}
@@ -148,8 +159,6 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) {
 				auto dp = arg->data_places[0];
 				g.genLoadDp(dp, false);
-				if (arg->values[0].asgn_type == ASGN_MOVE)
-					clr_es.push_back(g.getEntity(dp->src_place));
 			}
 			for (auto arg: arguments)
 				g.genSaveDp(arg->data_places[0]);

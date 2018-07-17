@@ -46,10 +46,16 @@ void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 
 	auto srce = getEntity(src_dp);
 	auto dste = getEntity(dp);
-	if (dp->load_address && !dp->save_place)
+	if (dp->load_address && !dp->save_place) {
 		genLoadAddress(dste.get(), srce.get(), "address of " + src_cmt + " -> " + dp->cmt());
-	else
+	} else {
 		genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
+		if (dp->do_clear_src && !dp->save_place) {
+			vector<unique_ptr<PlnGenEntity>> clr_es;
+			clr_es.push_back(getEntity(src_dp));
+			genNullClear(clr_es);
+		}
+	}
 }
 
 void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
@@ -67,10 +73,16 @@ void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
 		string opt_cmt = (savdp == dp) ? " (accelerate)" : " for save";
 		// genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
 
-		if (dp->load_address)
+		if (dp->load_address) {
 			genLoadAddress(save.get(), srce.get(), "address of " + srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
-		else
+		} else {
 			genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
+			if (dp->do_clear_src) {
+				vector<unique_ptr<PlnGenEntity>> clr_es;
+				clr_es.push_back(getEntity(src_dp));
+				genNullClear(clr_es);
+			}
+		}
 	}
 }
 
@@ -87,5 +99,10 @@ void PlnGenerator::genSaveDp(PlnDataPlace* dp) {
 		auto srce = getEntity(src_dp);
 		auto dste = getEntity(dp);
 		genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
+		if (dp->do_clear_src) {
+			vector<unique_ptr<PlnGenEntity>> clr_es;
+			clr_es.push_back(getEntity(src_dp));
+			genNullClear(clr_es);
+		}
 	}
 }

@@ -53,12 +53,6 @@ public:
 
 	void genD(PlnGenerator& g) override {
 		dst_item->gen(g);
-		if (dst_item->getAssginType() == ASGN_MOVE) {
-			vector<unique_ptr<PlnGenEntity>> clr_es;
-			PlnDataPlace* dp = src_ex->values[0].inf.var->place;
-			clr_es.push_back(g.getEntity(dp));
-			g.genNullClear(clr_es);
-		}
 	}
 };
 

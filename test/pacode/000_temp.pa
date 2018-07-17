@@ -2,8 +2,18 @@ ccall int32 printf();
 ccall exit();
 
 int32 a, b, c;
-int32[3] arr;
-4->c;
-//printf("%d %d\n", (1, 2 -> a, b), (c->arr[1]));
-//printf("%d \n", arr[1]);
+int32[3] arr, arr2;
+int32[3][2] aa, bb;
+
+arr2 ->> arr;
+f(arr>>) ->> arr2;
+
 exit(0);
+
+func f(int32[3] >>a) -> int32[3]a {
+	13->a[1];
+}
+
+func cre() -> int32[3] n
+{
+}

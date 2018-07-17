@@ -520,7 +520,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_UNKNOWN), accessCount(0), alloc_step(0), release_step(INT_MAX),
 	 previous(NULL), save_place(NULL), src_place(NULL),
-	 size(size), data_type(data_type), release_src_pop(true), load_address(false)
+	 size(size), data_type(data_type), release_src_pop(true), load_address(false), do_clear_src(false)
 {
 	static string emp="";
 	comment = &emp;

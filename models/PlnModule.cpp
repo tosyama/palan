@@ -172,6 +172,9 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 					PlnType* a_type = args[i]->values[0].getType();
 					PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
+					if (p->ptr_type == PTR_PARAM_MOVE &&
+						args[i]->values[0].asgn_type != ASGN_MOVE)
+							goto next_func;
 					if (cap != TC_SAME) do_cast = true;
 				}
 				++i;

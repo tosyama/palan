@@ -33,6 +33,11 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 
 	int dst_i = 0;
 	for (auto ex: expressions) {
+		if (!ex->values.size()) {
+			PlnCompileError err(E_NumOfLRVariables);
+			err.loc = ex->loc;
+			throw err;
+		}
 		PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 		for (int i=0; i<ex->values.size(); ++i) {
 			if (dst_i < this->lvals.size()) {

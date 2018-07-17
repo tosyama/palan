@@ -409,11 +409,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	for (auto& arg: fcall["args"]) {
 		args.push_back(buildExpression(arg["exp"], scope));
 		if (arg["move"].is_boolean() && arg["move"] == true) {
-			if (args.back()->values[0].type != VL_VAR) {
-				PlnCompileError err(E_CantUseMoveOwnership, "non-variable expression");
-				setLoc(&err, arg["exp"]);
-				throw err;
-			}
 			args.back()->values[0].asgn_type = ASGN_MOVE;
 		}
 	}

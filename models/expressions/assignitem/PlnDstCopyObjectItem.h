@@ -26,11 +26,29 @@ public:
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
+		PlnVariable* var = dst_ex->values[0].inf.var;
+		if (si.get_lifetime(var) == VLT_FREED) {
+			PlnCompileError err(E_CantCopyFreedVar, var->name);
+			err.loc = dst_ex->loc;
+			throw err;
+		}
+
 		cpy_ex->finish(da, si);
+		if (place) {
+			if (dst_ex->type == ET_VALUE) {
+				PlnDataPlace *dp = dst_ex->values[0].getDataPlace(da);
+				da.pushSrc(place, dp);
+			} else {
+				BOOST_ASSERT(false);
+			}
+		}
 	}
 
 	void gen(PlnGenerator& g) override {
 		cpy_ex->gen(g);
+		if (place) {
+			g.genSaveDp(place);
+		}
 	}
 };
 

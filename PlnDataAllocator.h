@@ -112,6 +112,7 @@ public:
 	int32_t push_src_step;
 	bool release_src_pop;
 	bool load_address;
+	bool do_clear_src;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;

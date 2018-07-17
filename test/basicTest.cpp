@@ -88,8 +88,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "503_undefvar_err";
 	REQUIRE(build(testcode) == "0:3-3 Variable 'abcd' was not declared in this scope.");
 
-	testcode = "504_argmov_err";
-	REQUIRE(build(testcode) == "0:1-1 Can not use '<<' for 'non-variable expression'.");
+	testcode = "504_copyfreevar_err";
+	REQUIRE(build(testcode) == "finish:0:6-6 Can not copy to freed variable 'arr2'.");
 
 	testcode = "505_ambigfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");

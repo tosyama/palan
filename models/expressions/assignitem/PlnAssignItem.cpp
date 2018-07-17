@@ -14,6 +14,8 @@
 #include "../../../PlnGenerator.h"
 #include "../../../PlnConstants.h"
 #include "../../../PlnScopeStack.h"
+#include "../../../PlnMessage.h"
+#include "../../../PlnException.h"
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
 #include "PlnAssignItem.h"

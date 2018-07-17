@@ -45,10 +45,12 @@ public:
 			dst_dp = new PlnDataPlace(8, DT_OBJECT_REF);
 			dst_dp->comment = &addr_var->name;
 			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL);
+			dst_dp->do_clear_src = true;
 			src_ex->data_places.push_back(dst_dp);
 
 		} else {
 			dst_dp = dst_ex->values[0].getDataPlace(da);
+			dst_dp->do_clear_src = true;
 			src_ex->data_places.push_back(dst_dp);
 		}
 	}
