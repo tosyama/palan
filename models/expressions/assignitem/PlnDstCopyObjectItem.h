@@ -22,6 +22,7 @@ public:
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		PlnType *t = dst_ex->values[0].getType();
 		auto copyer = t->copyer;
+		// TODO: It will fail if src return over 2 valuse.
 		cpy_ex = copyer->getCopyEx(dst_ex, src_ex);
 	}
 

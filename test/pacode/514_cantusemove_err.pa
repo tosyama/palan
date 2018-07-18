@@ -1,0 +1,7 @@
+ccall exit();
+
+int32[3] arr, arr2;
+int32[3][2] aa, bb;
+
+bb[0], arr[0] ->> aa[1], >>arr2[1];
+exit(0);

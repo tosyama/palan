@@ -17,7 +17,12 @@ public:
 	PlnDstPrimitiveItem(PlnExpression* ex)
 		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL), litral_dp(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-	}
+		if (ex->values[0].asgn_type == ASGN_MOVE) {
+			PlnCompileError err(E_CantUseMoveOwnership, ex->values[0].inf.var->name);
+			err.loc = ex->loc;
+			throw err;
+		}
+	 }
 
 	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 
@@ -27,8 +32,10 @@ public:
 			src_ex->data_places.push_back(dst_dp);
 
 		} else {
+			int index = src_ex->data_places.size();
+
 			if (src_ex->type == ET_VALUE) {
-				PlnValue v = src_ex->values[0];
+				PlnValue v = src_ex->values[index];
 				if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_RO_DATA) {
 					litral_dp = v.getDataPlace(da);
 				}
@@ -64,14 +71,15 @@ public:
 
 		} else {
 			da.popSrc(dst_dp);
-			da.releaseDp(dst_dp);
 			if (place) {
 				if (litral_dp) {
 					da.pushSrc(place, litral_dp);
+					da.releaseDp(dst_dp);
 				} else {
-					PlnDataPlace* dp = dst_ex->values[0].getDataPlace(da);
-					da.pushSrc(place, dp);
+					da.pushSrc(place, dst_dp);
 				}
+			} else {
+				da.releaseDp(dst_dp);
 			}
 		}
 	}

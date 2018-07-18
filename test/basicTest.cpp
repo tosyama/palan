@@ -117,4 +117,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "513_asgnLRnum_err";
 	REQUIRE(build(testcode) == "0:2-2 Number of left values did not match right values.");
+
+	testcode = "514_cantusemove_err";
+	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
 }

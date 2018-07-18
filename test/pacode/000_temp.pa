@@ -5,8 +5,7 @@ int32 a, b, c;
 int32[3] arr, arr2;
 int32[3][2] aa, bb;
 
-arr2 ->> arr;
-f(arr>>) ->> arr2;
+f((bb[0] ->> aa[1])>>) ->> arr;
 
 exit(0);
 

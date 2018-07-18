@@ -15,7 +15,8 @@ class PlnAssignWorkValsItem : public PlnAssignItem
 	struct DstInf {
 		PlnDstItem* item;
 		PlnVariable* save_src_var;
-		PlnExpression* copy_src_ex, *free_ex; };
+		PlnExpression* copy_src_ex, *free_ex;
+	};
 	vector<DstInf> dsts;
 
 public:
