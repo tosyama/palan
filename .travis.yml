@@ -1,0 +1,6 @@
+language: C++
+install:
+	- make package
+script:
+	- make
+
