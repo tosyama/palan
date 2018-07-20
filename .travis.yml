@@ -1,5 +1,14 @@
 language: C++
 sudo: required
+dist: trusty
+
+addons:
+ apt:
+  sources:
+   - ubuntu-toolchain-r-test
+  packages:
+   - g++-5
+
 install:
  - sudo make package
 script:
