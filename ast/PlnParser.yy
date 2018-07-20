@@ -55,6 +55,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token <uint64_t>	UINT	"unsigned integer"
 %token <string>	STR	"string"
 %token <string>	ID	"identifier"
+%token <string>	FUNC_ID	"function identifier"
 %token <string>	TYPENAME	"type name"
 %token KW_FUNC	"func"
 %token KW_CCALL	"ccall"
@@ -153,7 +154,7 @@ module: /* empty */
 	}
 	;
 
-function_definition: KW_FUNC ID '(' parameter_def ')' return_def block
+function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
 	{
 		json func = {
 			{"func-type", "palan"},
@@ -285,7 +286,7 @@ default_value:	/* empty */	{  }
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
+ccall_declaration: KW_CCALL single_return FUNC_ID '(' parameter_def ')' ';'
 	{
 		json ccall = {
 			{"func-type", "ccall"},
@@ -299,7 +300,7 @@ ccall_declaration: KW_CCALL single_return ID '(' parameter_def ')' ';'
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return ID '(' parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def ')' ';'
 	{
 		json syscall = {
 			{"func-type","syscall"},
@@ -582,7 +583,7 @@ expression:
 	}
 	;
 
-func_call: ID '(' arguments ')'
+func_call: FUNC_ID '(' arguments ')'
 	{
 		json func_call = {
 			{"exp-type", "func-call"},
@@ -705,6 +706,18 @@ assignment: expressions arrow_ope dst_vals
 		json asgn = {
 			{"exp-type", "asgn"},
 			{"src-exps", move($1)},
+			{"dst-vals", move($3)}
+		};
+		if ($2) asgn["dst-vals"][0]["move"] = true;
+		$$ = move(asgn);
+		LOC($$, @$);
+	}
+	| assignment arrow_ope dst_vals
+	{
+		vector<json> exps = { $1 };
+		json asgn = {
+			{"exp-type", "asgn"},
+			{"src-exps", move(exps) },
 			{"dst-vals", move($3)}
 		};
 		if ($2) asgn["dst-vals"][0]["move"] = true;

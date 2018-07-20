@@ -1,34 +1,14 @@
 ccall int32 printf();
 ccall exit();
 
-int32 a, b, c;
-int32[10] aa;
-overload_func(a);
+int32[3][2][5] arr, arr2;
+int32 a=0;
 
+3->arr[1][0][2];
+9->arr2[3][0][1];
+
+arr[a+1], arr2[3] -> arr2[2+a], arr[0];
+
+printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
 exit(0);
 
-func invalidret() -> int32 int64
-{
-	return sub();
-}
-
-func overload_func(int32[10] >> pa) -> int32
-{
-	printf("func(int32[10])");
-	return 0;
-}
-
-func overload_func(int32 pa)
-{
-	printf("func(int32)");
-}
-
-func overload_func(uint16 pa)
-{
-	printf("func(uint16)");
-}
-
-func sub() -> int32 int32
-{
-	return 1, 2;
-}

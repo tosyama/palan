@@ -6,7 +6,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "func(int32)");
+	REQUIRE(exec(testcode) == "3 9");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -62,10 +62,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "011_assignment";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1 2 1 2\n"
+	REQUIRE(exec(testcode) == "1 2 1 2 5 5 6 6\n"
 							"3 5 2 1\n"
 							"5 -1\n"
-							"9 9 9 0");
+							"9 9 9 0\n"
+							"3 9");
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");
@@ -88,8 +89,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "503_undefvar_err";
 	REQUIRE(build(testcode) == "0:3-3 Variable 'abcd' was not declared in this scope.");
 
-	testcode = "504_argmov_err";
-	REQUIRE(build(testcode) == "0:1-1 Can not use '<<' for 'non-variable expression'.");
+	testcode = "504_copyfreevar_err";
+	REQUIRE(build(testcode) == "finish:0:6-6 Can not copy to freed variable 'arr2'.");
 
 	testcode = "505_ambigfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");
@@ -117,4 +118,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "513_asgnLRnum_err";
 	REQUIRE(build(testcode) == "0:2-2 Number of left values did not match right values.");
+
+	testcode = "514_cantusemove_err";
+	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
 }

@@ -543,26 +543,22 @@ void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string comm
 		os << "	movq %rax, " << oprnd(ref) << endl;
 }
 
-void PlnX86_64Generator::genMemCopy(int cp_size, string& comment)
+void PlnX86_64Generator::genMemCopy(int cp_unit, string& comment)
 {
-	int cpy_count;
 	const char* safix = "";
-	if (cp_size % 8 == 0) {
-		cpy_count = cp_size/8;
+
+	if (cp_unit == 8) {
 		safix = "q";
-	} else if (cp_size % 4 == 0) {
-		cpy_count = cp_size/4;
+	} else if (cp_unit == 4) {
 		safix = "l";
-	} else if (cp_size % 2 == 0) {
-		cpy_count = cp_size/2;
+	} else if (cp_unit == 2) {
 		safix = "w";
 	} else {
-		cpy_count = cp_size;
+		BOOST_ASSERT(cp_unit == 1);
 		safix = "b";
 	}
 
 	os << "	cld" << endl;
-	os << "	movq $" << cpy_count << ", %rcx"	<< endl;
 	os << "	rep movs" << safix << "	# " << comment << endl;
 }
 

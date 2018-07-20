@@ -20,7 +20,6 @@ protected:
 	int regnum;
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
-	virtual PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
 	virtual PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
 	virtual vector<int> getRegsNeedSave()=0;
 	bool isDestroyed(PlnDataPlace* dp);
@@ -45,13 +44,14 @@ public:
 
 	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
 	void releaseDp(PlnDataPlace* dp);
+	virtual PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
+	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
 	vector<PlnDataPlace*> prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee);
 	vector<PlnDataPlace*> prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee);
-	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
 
 	// Process register data may be breaken by this process.
-	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) = 0;
-	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) = 0;
+	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) = 0;
+	virtual void memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len) = 0;
 
 	virtual PlnDataPlace* prepareAccumulator(int data_type) = 0;
 	virtual bool isAccumulator(PlnDataPlace* dp) = 0;
@@ -112,6 +112,7 @@ public:
 	int32_t push_src_step;
 	bool release_src_pop;
 	bool load_address;
+	bool do_clear_src;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;

@@ -5,7 +5,7 @@ uint16 i16;
 int32 i32;
 int32[10] ia;
 
-ov_func(ia);
+ov_func(ia>>);
 ov_func(i16);
 ov_func(i32);
 ov_func(i32, i16);

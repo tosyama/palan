@@ -2,11 +2,14 @@ ccall int32 printf();
 ccall exit();
 
 // Primitive assignment.
-int32 p1, p2, p3, p4;
+int32 p1, p2, p3, p4, p5;
 1, 2u -> p1, p2;
 p1, p2 -> p3, p4;
 
-printf("%d %d %d %d\n", p1, p2, p3, p4);
+int32[2] p6;
+
+printf("%d %d %d %d %d %d %d %d\n",
+	p1, p2, p3, p4, (5->p5), p5, (p5+1->p6[1]), p6[1]);
 
 // Work value assignment.
 p1+p2, p2+2 -> p2, p3;	// Note: Currently, p3 of p3+3 is 
@@ -35,5 +38,16 @@ a1[2] -> a2[3];
 a1 ->> a3;
 
 printf("%d %d %d %d\n", a3[2], a2[2], a2[3], a1);
+
+// object copy 
+int32[3][2][5] arr, arr2;
+int32 z=0;
+
+3->arr[1][0][2];
+9->arr2[3][0][1];
+
+arr[z+1], arr2[3] -> arr2[2+z], arr[0];
+
+printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
 
 exit(0);	// to flush buffer.

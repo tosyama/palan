@@ -28,6 +28,7 @@ enum {
 	UINT		= PlnParser::token::UINT,
 	STR			= PlnParser::token::STR,
 	ID			= PlnParser::token::ID,
+	FUNC_ID		= PlnParser::token::FUNC_ID,
 	TYPENAME	= PlnParser::token::TYPENAME,
 	KW_FUNC		= PlnParser::token::KW_FUNC,
 	KW_CCALL	= PlnParser::token::KW_CCALL,
@@ -107,6 +108,11 @@ else	{ return KW_ELSE; }
 ">="	{ return OPE_GE; }
 "&&"	{ return OPE_AND; }
 "||"	{ return OPE_OR; }
+{ID}/[ \t\r\n]*"("	{
+		string fid = yytext;
+		lval.build<string>() = move(fid);
+		return FUNC_ID;
+	}
 {ID}	{
 		string id = yytext;
 		if (std::binary_search(typenames.begin(), typenames.end(), id)) {

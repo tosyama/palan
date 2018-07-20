@@ -15,7 +15,8 @@ class PlnAssignWorkValsItem : public PlnAssignItem
 	struct DstInf {
 		PlnDstItem* item;
 		PlnVariable* save_src_var;
-		PlnExpression* copy_src_ex, *free_ex; };
+		PlnExpression* copy_src_ex, *free_ex;
+	};
 	vector<DstInf> dsts;
 
 public:
@@ -31,6 +32,16 @@ public:
 		BOOST_ASSERT(v.type == VL_VAR);
 
 		dsts.push_back( {PlnDstItem::createDstItem(ex), NULL, NULL, NULL} );
+	}
+
+	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
+		for (auto &di: dsts) {
+			di.item->place = data_places[start_ind];
+			start_ind++;
+			if (start_ind >= data_places.size())
+				break;
+		}
+		return start_ind;
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {

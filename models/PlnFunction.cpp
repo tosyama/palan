@@ -100,9 +100,9 @@ PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype
 	auto t = param->var_type.back();
 	if (t->data_type == DT_OBJECT_REF) {
 		if (pass_method == FPM_MOVEOWNER) 
-			param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
+			param->ptr_type = PTR_PARAM_MOVE;
 		else if (pass_method == FPM_COPY) // FMP_COPY
-			param->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE;
+			param->ptr_type = PTR_PARAM_COPY;
 		else // FMP_REF
 			param->ptr_type = PTR_REFERENCE;
 

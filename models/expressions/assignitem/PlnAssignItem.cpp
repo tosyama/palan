@@ -14,6 +14,8 @@
 #include "../../../PlnGenerator.h"
 #include "../../../PlnConstants.h"
 #include "../../../PlnScopeStack.h"
+#include "../../../PlnMessage.h"
+#include "../../../PlnException.h"
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
 #include "PlnAssignItem.h"
@@ -21,6 +23,8 @@
 // PlnDstItem
 class PlnDstItem {
 public:
+	PlnDataPlace* place;
+	PlnDstItem(): place(NULL) {}
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
 	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }

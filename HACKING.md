@@ -21,7 +21,7 @@ Code Structure
 */ast/PlnLexer.ll*  
 	Lexical analyser.
 
-*PlnModelTreeBuilder*  
+*PlnModelTreeBuilder.cpp*  
 	Build palan model tree form json AST.
 
 *PlnDataAllocator.cpp*  

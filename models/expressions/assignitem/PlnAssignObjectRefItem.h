@@ -27,6 +27,11 @@ public:
 		dst_item = PlnDstItem::createDstItem(ex);
 	}
 
+	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
+		dst_item->place = data_places[start_ind];
+		return start_ind + 1;
+	}
+
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		dst_item->setSrcEx(da, si, src_ex);
 		src_ex->finish(da, si);
@@ -48,12 +53,6 @@ public:
 
 	void genD(PlnGenerator& g) override {
 		dst_item->gen(g);
-		if (dst_item->getAssginType() == ASGN_MOVE) {
-			vector<unique_ptr<PlnGenEntity>> clr_es;
-			PlnDataPlace* dp = src_ex->values[0].inf.var->place;
-			clr_es.push_back(g.getEntity(dp));
-			g.genNullClear(clr_es);
-		}
 	}
 };
 

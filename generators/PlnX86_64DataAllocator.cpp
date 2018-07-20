@@ -164,10 +164,11 @@ void PlnX86_64DataAllocator::funcCalled(
 	step++;
 }
 
-void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src)
+void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len)
 {
 	static string dcmt = "copy dst";
 	static string scmt = "copy src";
+	static string lcmt = "copy len";
 
 	dst = new PlnDataPlace(8, DT_OBJECT_REF);
 	dst->status = DS_READY_ASSIGN;
@@ -182,24 +183,20 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 	src->data.reg.id = RSI;
 	src->data.reg.offset = 0;
 	src->comment = &scmt;
+
+	len = new PlnDataPlace(8, DT_OBJECT_REF);
+	len->type = DP_REG;
+	len->status = DS_READY_ASSIGN;
+	len->data.reg.id = RCX;
+	len->data.reg.offset = 0;
+	len->comment = &lcmt;
 }
 
-void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src)
+void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len)
 {
 	releaseDp(dst);
 	releaseDp(src);
-
-	PlnDataPlace* pdp = regs[RCX];
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
-	dp->type = DP_REG;
-	dp->status = DS_RELEASED;
-	dp->alloc_step = dp->release_step = step;
-	dp->previous = pdp;
-	regs[RCX] = dp;
-	if (pdp && pdp->status != DS_RELEASED)
-		if (!pdp->save_place)  {
-			allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
-		}
+	releaseDp(len);
 	step++;
 }
 

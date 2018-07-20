@@ -17,9 +17,11 @@ public:
 	static PlnExpression* getFreeEx(PlnVariable* var);
 };
 
+class PlnDeepCopyExpression;
 class PlnCopyer {
 public:
 	virtual PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) = 0;
+	virtual PlnDeepCopyExpression* getCopyEx() = 0;
 };
 
 enum PlnTypeConvCap {

@@ -44,11 +44,12 @@ public:
 			// for receiving value from src.
 			dst_dp = new PlnDataPlace(8, DT_OBJECT_REF);
 			dst_dp->comment = &addr_var->name;
-			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL);
+			dst_dp->do_clear_src = true;
 			src_ex->data_places.push_back(dst_dp);
 
 		} else {
 			dst_dp = dst_ex->values[0].getDataPlace(da);
+			dst_dp->do_clear_src = true;
 			src_ex->data_places.push_back(dst_dp);
 		}
 	}
@@ -62,22 +63,25 @@ public:
 			da.pushSrc(free_dp->data.indirect.base_dp, addr_var->place, false);
 			da.pushSrc(save4free_var->place, free_dp);
 			da.popSrc(save4free_var->place);
-		
-			// move src to dst
-			da.pushSrc(dst_dp->data.indirect.base_dp, addr_var->place, false);
-			da.popSrc(dst_dp);
-			da.releaseDp(dst_dp);
 
 			// execute free.	
 			free_ex->finish(da, si);
-
 			da.releaseDp(save4free_var->place);
-			da.releaseDp(addr_var->place);
+
+			// move src to dst
+			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL);
+			da.pushSrc(dst_dp->data.indirect.base_dp, addr_var->place, false);
+			da.popSrc(dst_dp);
 			
 		} else {
 			dst_ex->finish(da, si);
 			da.popSrc(dst_dp);
 		}
+
+		if (place)
+			da.pushSrc(place, dst_dp);
+		else
+			da.releaseDp(dst_dp);
 	}
 
 	void gen(PlnGenerator& g) override {
@@ -87,16 +91,17 @@ public:
 
 			g.genSaveSrc(free_dp->data.indirect.base_dp);
 			g.genLoadDp(save4free_var->place);
+			free_ex->gen(g);
 			
 			g.genSaveSrc(dst_dp->data.indirect.base_dp);
 			g.genLoadDp(dst_dp);
-
-			free_ex->gen(g);
 
 		} else {
 			dst_ex->gen(g);
 			g.genLoadDp(dst_dp);
 		}
+		if (place)
+			g.genSaveSrc(place);
 	}
 };
 

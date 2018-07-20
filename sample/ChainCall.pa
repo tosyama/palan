@@ -1,0 +1,60 @@
+// assignment
+1,2->a,b;
+abc(1,2)->a,b;
+
+// number of L and R values must be L>=R.
+abc(1,2)->a;
+
+// func call
+1, 2 -> abc();
+// func call with arg
+1, 2 -> abc(3);
+1, ff(2) -> abc(3); // c=3
+1, ff(2) -> abc(a=3); // a=3, b=1, c=f(2)
+1, ff(2) -> abc(a=$2,b=$1);
+ff(3), ff(2) -> abc();
+
+// chain call:only one function call.
+1, a -> abc(d) -> xyz();
+1, a -> abc(d) -> xyz() -> a, b;
+1, a -> abc(d) -> a, b -> f();
+// same
+(1, a -> abc(d) -> a, b) -> f();
+// ok func args
+1, a -> abc(ff(d)) -> xyz();
+
+// NG: chain call with assgin
+1, a -> abc(d) -> f(), b;
+1, a -> abc(d) -> b, f()
+// use temp var instead
+1, a -> abc(d) -> a, b -> f();
+1, a -> abc(d) -> a, b -> f(a=$1);
+
+// NG: chain to multi func
+1, a -> abc(d) -> ff(), f()
+
+// NG: f() return void
+1, a -> abc(d) -> f() -> xyz();
+
+
+// can use anonymouse func with {} for special case
+1, a -> {return $1,$0,b} -> abc();
+1, a -> { $1->b; return f($1); } -> abc();
+
+func abc(int32 a, b, c=0)
+	-> int32 d, e
+{
+}
+
+func xyz(int32 a, b, c=0)
+	-> int32 d, e
+{
+}
+
+func f(int a)
+{
+}
+
+func ff(int a) -> a
+{
+}
