@@ -24,6 +24,7 @@ class PlnSingleObjectCopyer : public PlnCopyer {
 public:
 	PlnSingleObjectCopyer(uint64_t len) : len(len) { }
 	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) override;
+	PlnDeepCopyExpression* getCopyEx() override;
 };
 
 // for custom function call alloc/free/copy.
@@ -40,7 +41,6 @@ class PlnSingleParamFreer : public PlnFreer
 	PlnFunction *free_func;
 public:
 	PlnSingleParamFreer(PlnFunction *f) : free_func(f) { }
-
 	PlnExpression* getFreeEx(PlnExpression* free_var) override;
 };
 
@@ -50,4 +50,6 @@ class PlnTwoParamsCopyer : public PlnCopyer
 public:
 	PlnTwoParamsCopyer(PlnFunction *f) : copy_func(f) { }
 	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var);
+	PlnDeepCopyExpression* getCopyEx() override;
 };
+

@@ -26,13 +26,21 @@ static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
 
 // PlnFunctionCall
-PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
-	: PlnExpression(ET_FUNCCALL), function(f), arguments(move(args))
+PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
+	: PlnExpression(ET_FUNCCALL), function(f)
 {
-	// arg == void
-	if (arguments.size() == 1 && arguments[0]==NULL && f->parameters.size() == 0) 
-			arguments.pop_back();
+	for (auto rv: f->return_vals) {
+		PlnValue val;
+		val.type = VL_WORK;
+		val.inf.wk_type = new vector<PlnType*>(rv->var_type);
+		values.push_back(val);
+	}
+}
 
+PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
+	: PlnFunctionCall(f)
+{
+	arguments = move(args);
 	// Set dafault arguments if arg == NULL
 	int i=0;
 	for (auto p: f->parameters) {
@@ -41,13 +49,6 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		else if(!arguments[i])
 			arguments[i] = new PlnExpression(*p->dflt_value);
 		++i;
-	}
-
-	for (auto rv: f->return_vals) {
-		PlnValue val;
-		val.type = VL_WORK;
-		val.inf.wk_type = new vector<PlnType*>(rv->var_type);
-		values.push_back(val);
 	}
 
 	// insert clone/move owner expression if needed.
@@ -64,23 +65,41 @@ PlnFunctionCall:: PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	}
 }
 
-void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types)
 {
-	int func_type = function->type;
+	PlnFunction* f = function;
+	BOOST_ASSERT(!arguments.size());
+
+	arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_data_types, false);
+	if (f->parameters.size()) {
+		BOOST_ASSERT(f->parameters.size() == arg_data_types.size());
+		int i=0;
+		for (auto p: f->parameters) {
+			BOOST_ASSERT(p->var_type.back()->data_type == arg_data_types[i]);
+			arg_dps[i]->data_type = arg_data_types[i];
+			i++;
+		}
+	}
+
+}
+
+static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si, PlnFunction*f, vector<PlnExpression*> &args)
+{
 	vector<int> arg_dtypes;
-	for (auto a: arguments) {
+	for (auto a: args) {
 		arg_dtypes.push_back(a->values[0].getType()->data_type);
 	}
-	arg_dps = da.prepareArgDps(func_type, function->ret_dtypes, arg_dtypes, false);
+
+	auto arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_dtypes, false);
 
 	int i = 0;
-	for (auto p: function->parameters) {
+	for (auto p: f->parameters) {
 		arg_dps[i]->data_type = p->var_type.back()->data_type;
 		++i;
 	}
 
 	i = 0;
-	for (auto a: arguments) {
+	for (auto a: args) {
 		auto t = a->values[0].getType();
 		// in the case declaration parameters omited or variable length parameter
 		if (arg_dps[i]->data_type == DT_UNKNOWN) {
@@ -103,13 +122,23 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		++i;
 	}
 
+	return arg_dps;
+}
+
+void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	int func_type = function->type;
+
+	if (arguments.size()) 
+		arg_dps = loadArgs(da, si, function, arguments);
+
 	for (auto dp: arg_dps)
 		da.popSrc(dp);
 
 	da.funcCalled(arg_dps, function->return_vals, func_type);
 
 	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
-	i = 0;
+	int i = 0;
 	for (auto r: function->return_vals) {
 		ret_dps[i]->data_type = r->var_type.back()->data_type;
 		++i;
@@ -155,16 +184,11 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments)
 				arg->gen(g);
 
-			vector<unique_ptr<PlnGenEntity>> clr_es;
-			for (auto arg: arguments) {
-				auto dp = arg->data_places[0];
+			for (auto dp: arg_dps)
 				g.genLoadDp(dp, false);
-			}
-			for (auto arg: arguments)
-				g.genSaveDp(arg->data_places[0]);
 
-			if (clr_es.size())
-				g.genNullClear(clr_es);
+			for (auto dp: arg_dps)
+				g.genSaveDp(dp);
 
 			g.genCCall(function->asm_name);
 

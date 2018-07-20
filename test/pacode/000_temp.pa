@@ -1,18 +1,14 @@
 ccall int32 printf();
 ccall exit();
 
-int32 a, b, c;
-int32[3] arr, arr2;
-int32[3][2] aa, bb;
+int32[3][2][5] arr, arr2;
+int32 a=0;
 
-f((bb[0] ->> aa[1])>>) ->> arr;
+3->arr[1][0][2];
+9->arr2[3][0][1];
 
+arr[a+1], arr2[3] -> arr2[2+a], arr[0];
+
+printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
 exit(0);
 
-func f(int32[3] >>a) -> int32[3]a {
-	13->a[1];
-}
-
-func cre() -> int32[3] n
-{
-}

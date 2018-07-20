@@ -41,6 +41,13 @@ public:
 	virtual void gen(PlnGenerator& g);
 };
 
+class PlnDeepCopyExpression : public PlnExpression {
+public:
+	PlnDeepCopyExpression(PlnExprsnType type) : PlnExpression(type) {};
+	virtual PlnDataPlace* dstDp(PlnDataAllocator &da) = 0;
+	virtual PlnDataPlace* srcDp(PlnDataAllocator &da) = 0;
+};
+
 // Value (rval)
 enum PlnValType {
 	VL_LIT_INT8,

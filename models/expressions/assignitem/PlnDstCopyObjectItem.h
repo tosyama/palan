@@ -8,7 +8,8 @@
 
 class PlnDstCopyObjectItem : public PlnDstItem
 {
-	PlnExpression *dst_ex, *cpy_ex;
+	PlnExpression *dst_ex;
+	PlnDeepCopyExpression *cpy_ex;
 
 public:
 	PlnDstCopyObjectItem(PlnExpression* ex) : dst_ex(ex), cpy_ex(NULL) {
@@ -22,8 +23,8 @@ public:
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		PlnType *t = dst_ex->values[0].getType();
 		auto copyer = t->copyer;
-		// TODO: It will fail if src return over 2 valuse.
-		cpy_ex = copyer->getCopyEx(dst_ex, src_ex);
+		cpy_ex = copyer->getCopyEx();
+		src_ex->data_places.push_back(cpy_ex->srcDp(da));
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -34,6 +35,8 @@ public:
 			throw err;
 		}
 
+		dst_ex->data_places.push_back(cpy_ex->dstDp(da));
+		dst_ex->finish(da, si);
 		cpy_ex->finish(da, si);
 		if (place) {
 			if (dst_ex->type == ET_VALUE) {
@@ -46,6 +49,7 @@ public:
 	}
 
 	void gen(PlnGenerator& g) override {
+		dst_ex->gen(g);
 		cpy_ex->gen(g);
 		if (place) {
 			g.genSaveDp(place);

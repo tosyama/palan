@@ -14,16 +14,19 @@ enum PlnInternalFuncType {
 // FunctionCall: Function Arguments;
 class PlnFunctionCall : public PlnExpression
 {
-public:
-	PlnFunction* function;
 	vector<PlnExpression*> arguments;
-	vector<PlnDataPlace*> arg_dps;
-	vector<int> clone_size;
 	vector<PlnDataPlace*> ret_dps;
 	vector<PlnVariable*> free_vars;
 	vector<PlnExpression*> free_exs;
 
+public:
+	PlnFunction* function;
+	vector<PlnDataPlace*> arg_dps;
+
+	PlnFunctionCall(PlnFunction* f);
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
+
+	void loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

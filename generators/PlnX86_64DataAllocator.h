@@ -26,8 +26,8 @@ public:
 
 	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) override;
 
-	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src) override;
-	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src) override;
+	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) override;
+	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len) override;
 
 	PlnDataPlace* prepareAccumulator(int data_type) override;
 	bool isAccumulator(PlnDataPlace* dp) override;
