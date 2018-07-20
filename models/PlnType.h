@@ -34,16 +34,6 @@ enum PlnTypeConvCap {
 	TC_CONV_OK = TC_SAME | TC_AUTO_CAST | TC_LOSTABLE_AUTO_CAST | TC_UP_CAST | TC_DOWN_CAST
 };
 
-enum PlnTypeConvCap {
-	TC_CANT_CONV = 0,
-	TC_SAME = 1,
-	TC_AUTO_CAST = 2,
-	TC_LOSTABLE_AUTO_CAST = 4,
-	TC_UP_CAST = 8,
-	TC_DOWN_CAST = 16,
-	TC_CONV_OK = TC_SAME | TC_AUTO_CAST | TC_LOSTABLE_AUTO_CAST | TC_UP_CAST | TC_DOWN_CAST
-};
-
 class PlnType {
 public:
 	int	data_type;
