@@ -6,7 +6,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
+<<<<<<< HEAD
 	REQUIRE(exec(testcode) == "3 9");
+=======
+	REQUIRE(exec(testcode) == "func(int32)");
+>>>>>>> master
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
