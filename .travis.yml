@@ -1,6 +1,7 @@
 language: C++
+sudo: required
 install:
- - make package
+ - sudo make package
 script:
  - make
 
