@@ -10,11 +10,11 @@ POST_OBJS = cuiTestMain.o cuiTestBase.o cuiTest.o
 
 $(POST_TESTER): $(POST_OBJS) $(PROGRAM)
 	@echo link $(POST_TESTER).
-	@$(CXX) -o $(POST_TESTER) $(filter %.o, $^) -pthread
+	@$(CXX) $(LDFLAGS) -o $(POST_TESTER) $(filter %.o, $^) -pthread
 
 $(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa $(AST)
 	@echo link $(PROGRAM).
-	@$(CXX) -o $(PROGRAM) $(filter %.o, $^) -pthread
+	@$(CXX) $(LDFLAGS) -o $(PROGRAM) $(filter %.o, $^) -pthread
 
 .cpp.o:
 	$(CXX) -std=c++11 -c -g $< -pthread

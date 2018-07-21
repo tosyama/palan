@@ -10,10 +10,16 @@ addons:
    - gcc-5
    - g++-5
 
+before_install:
+ - pip install --user cpp-coveralls
+
 install:
  - sudo make package
 script:
  - export CC=g++-5
  - export CXX=g++-5
- - make
+ - make CFLAGS=--coverage "LDFLAGS=--coverage -lgcov"
 
+after_success:
+ - coveralls -b . --exclude libs --exclude test --gcov-options '\-r . \-lp'
+ 
