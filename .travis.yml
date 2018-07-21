@@ -15,4 +15,5 @@ install:
 script:
  - export CC=g++-5
  - export CXX=g++-5
- - make
+ - make CFLAGS=--coverage "LDFLAGS=--coverage -lgcov"
+

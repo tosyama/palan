@@ -39,10 +39,10 @@ FORCE: $(PROGRAM)
 $(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST)
 	@cd test && $(MAKE) test
 	@echo link $(PROGRAM).
-	@$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
+	@$(CXX) $(LDFLAGS) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
 .cpp.o:
 	@mkdir -p objs
-	$(CXX) -std=c++11 -c -g $< -o objs/$@
+	$(CXX) $(CFLAGS) -std=c++11 -c -g $< -o objs/$@
 $(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
 	@$(MAKE) -C test
 $(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll

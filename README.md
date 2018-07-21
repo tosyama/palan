@@ -1,7 +1,7 @@
 # Palan
+[![Build Status](https://travis-ci.org/tosyama/palan.svg?branch=master)](https://travis-ci.org/tosyama/palan)  
 Palan is aiming simpler, safer and more enjoyable programming language alternative C.
-Current palan is very draft.  
-[![Build Status](https://travis-ci.org/tosyama/palan.svg?branch=master)](https://travis-ci.org/tosyama/palan)
+Current palan is very draft.
 
 ## Quick Start
 ### Environment:

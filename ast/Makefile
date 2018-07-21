@@ -5,11 +5,11 @@ VPATH=.:objs:..
 
 $(PROGRAM): $(OBJS)
 	@echo link $(PROGRAM).
-	@$(CXX) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
+	@$(CXX) $(LDFLAGS) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
 	@ln -fs ast/$(PROGRAM) ../$(PROGRAM)
 .cpp.o:
 	@mkdir -p objs
-	$(CXX) -std=c++11 -c -g $< -o objs/$@
+	$(CXX) $(CFLAGS) -std=c++11 -c -g $< -o objs/$@
 PlnParser.cpp: PlnParser.yy
 	bison -o $@ -r all --report-file=bison.log $<
 PlnLexer.cpp: PlnLexer.ll
