@@ -58,5 +58,5 @@ package:
 	-apt-get -y install libboost-program-options-dev
 	-apt-get -y install bison
 	-apt-get -y install flex
-	-curl -o test/catch.hpp https://raw.githubusercontent.com/philsquared/Catch/master/single_include/catch.hpp
+	-curl -o test/catch.hpp https://raw.githubusercontent.com/catchorg/Catch2/master/single_include/catch2/catch.hpp
 
