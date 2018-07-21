@@ -21,4 +21,5 @@ script:
  - make CFLAGS=--coverage "LDFLAGS=--coverage -lgcov"
 
 after_success:
- - coveralls
+ - coveralls -b .
+ 
