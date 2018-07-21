@@ -8,7 +8,7 @@
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 %skeleton "lalr1.cc"
-%require "3.0.4"
+%require "3.0.2"
 %defines
 %define parser_class_name {PlnParser}
 %parse-param	{ PlnLexer &lexer } {json &ast}
