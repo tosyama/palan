@@ -84,6 +84,5 @@ void PlnAssignment::gen(PlnGenerator& g)
 		ai->genS(g);
 		ai->genD(g);
 	}
-	PlnExpression::gen(g);
 }
 

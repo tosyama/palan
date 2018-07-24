@@ -38,6 +38,7 @@ public:
 #include "PlnAssignWorkValsItem.h"
 #include "PlnAssignObjectRefItem.h"
 #include "PlnAssignIndirectObjItem.h"
+#include "PlnChainAssignItem.h"
 
 PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 {
@@ -88,6 +89,11 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		} else if (dt == DT_OBJECT_REF) {
 			return new PlnAssignIndirectObjItem(ex);
 		}
+	}
+
+	if (ex->type == ET_ASSIGN) {
+		return new PlnChainAssignItem(ex);
+		BOOST_ASSERT(false);
 	}
 
 	BOOST_ASSERT(false);
