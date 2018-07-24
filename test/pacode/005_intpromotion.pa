@@ -31,5 +31,18 @@ sq + 1 + 2 -> sq;
 uq + 1u + 2u -> uq;
 printf("%lld %llu\n", sq, uq);
 
+sq - 1 - 2 -> sq;
+uq - 1u - 2u -> uq;
+
+printf("%lld %llu\n", sq, uq);
+
+3u * 2u -> uq;
+uq * 2u * 3u -> uq;
+
+35u / 2u -> uq2;
+uq2 / 2u / 3u -> uq2;
+35u % 9u -> ul;
+printf("%llu %llu %lu\n", uq, uq2, ul);
+
 exit(0);
 

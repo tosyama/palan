@@ -32,7 +32,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"0 -1\n"
 							"0 -1\n"
 							"1 18446744073709551614\n"
-							"-9223372036854775805 4");
+							"-9223372036854775805 4\n"
+							"-9223372036854775808 1\n"
+							"36 2 8");
 
 	testcode = "006_intarray";
 	REQUIRE(build(testcode) == "success");
