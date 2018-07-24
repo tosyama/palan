@@ -11,7 +11,6 @@ using std::string;
 enum PlnErrCode {
 	E_UndefinedVariable, // var name
 	E_UndefinedFunction,	// func name
-	E_UndefinedType,	// type name
 	E_DuplicateVarName,	// var name
 	E_NumOfLRVariables,	// none
 	E_InvalidRetValues,	// none
@@ -26,13 +25,8 @@ enum PlnErrCode {
 	E_InvalidAST	// source name, line
 };
 
-enum PlnWarnCode {
-	W_NumOfLRVariables
-};
-
 class PlnMessage
 {
 public:
 	static string getErr(PlnErrCode err_code, string arg1="", string arg2="");
-	static string getWarn(PlnWarnCode warn_code, string arg1="", string arg2="");
 };

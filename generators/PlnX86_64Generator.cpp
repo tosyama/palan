@@ -533,16 +533,6 @@ void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
 	}
 }
 
-void PlnX86_64Generator::genMemAlloc(PlnGenEntity* ref, int al_size, string comment)
-{
-	os << "	movq $" << al_size << ", %rdi"	<< endl;
-	os << "	call malloc";
-	if (comment != "") os << "	# " << comment;
-	os << endl;
-	if (strcmp(oprnd(ref), "%rax"))
-		os << "	movq %rax, " << oprnd(ref) << endl;
-}
-
 void PlnX86_64Generator::genMemCopy(int cp_unit, string& comment)
 {
 	const char* safix = "";
