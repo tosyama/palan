@@ -34,7 +34,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"1 18446744073709551614\n"
 							"-9223372036854775805 4\n"
 							"-9223372036854775808 1\n"
-							"36 2 8");
+							"36 7 8");
 
 	testcode = "006_intarray";
 	REQUIRE(build(testcode) == "success");
@@ -70,7 +70,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"3 5 2 1\n"
 							"5 -1\n"
 							"9 9 9 0\n"
-							"3 9");
+							"3 9\n"
+							"3 5 10 3 5 10");
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");
