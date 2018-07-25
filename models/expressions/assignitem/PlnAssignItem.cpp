@@ -58,7 +58,8 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		}
 	}
 
-	if (ex->type == ET_ADD || ex->type == ET_MUL || ex->type == ET_NEG) {
+	if (ex->type == ET_ADD || ex->type == ET_MUL || ex->type == ET_NEG
+			|| ex->type == ET_AND || ex->type == ET_OR || ex->type == ET_CMP) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
 		BOOST_ASSERT(v.type == VL_WORK);
