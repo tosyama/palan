@@ -21,5 +21,5 @@ script:
  - make "CFLAGS=--coverage -fno-inline" "LDFLAGS=--coverage -lgcov"
 
 after_success:
- - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-r . \-l \-p' --exclude-lines-pattern BOOST_ASSERT
+ - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-r . \-l' --exclude-lines-pattern BOOST_ASSERT
  
