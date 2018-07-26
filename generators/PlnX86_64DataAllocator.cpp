@@ -129,16 +129,14 @@ vector<int> PlnX86_64DataAllocator::getRegsNeedSave()
 	return save_regs;
 }
 
-static bool checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
+static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 {
 	PlnDataPlace *curdp = root;
 	while (curdp != dp) {
 		BOOST_ASSERT(curdp != NULL);
-		if (curdp->status != DS_RELEASED)
-			return true;
+		BOOST_ASSERT(curdp->status == DS_RELEASED);
 		curdp = curdp->previous;
 	}
-	return false;
 }
 
 void PlnX86_64DataAllocator::funcCalled(
@@ -155,9 +153,9 @@ void PlnX86_64DataAllocator::funcCalled(
 
 		// check invalid state.
 		if (dp->type == DP_REG) 
-			BOOST_ASSERT(!checkExistsActiveDP(regs[dp->data.reg.id], dp));
+			checkExistsActiveDP(regs[dp->data.reg.id], dp);
 		else if (dp->type == DP_STK_SP)
-			BOOST_ASSERT(!checkExistsActiveDP(arg_stack[dp->data.stack.idx], dp));
+			checkExistsActiveDP(arg_stack[dp->data.stack.idx], dp);
 	}
 
 	destroyRegsByFuncCall();
@@ -214,11 +212,6 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type)
 	dp->comment = &cmt;
 
 	return dp;
-}
-
-bool PlnX86_64DataAllocator::isAccumulator(PlnDataPlace* dp)
-{
-	return dp->type == DP_REG && dp->data.reg.id == RAX;
 }
 
 PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp)

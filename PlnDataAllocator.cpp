@@ -313,11 +313,7 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 
 PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
 {
-	BOOST_ASSERT(dp->type != DP_SUBDP);
-
-	// indirect obj is already separated and not managed by data allocator.
-	if (dp->type == DP_INDRCT_OBJ)
-		return dp;
+	BOOST_ASSERT(dp->type != DP_SUBDP && dp->type != DP_INDRCT_OBJ);
 
 	auto sub_dp = new PlnDataPlace(dp->size, dp->data_type);
 	sub_dp->type = DP_SUBDP;
@@ -436,6 +432,7 @@ bool tryAccelerateAlloc(PlnDataPlace *dp, int push_step)
 		} else
 			BOOST_ASSERT(false);
 	}
+	// TODO: DP_INDRCT_OBJ
 	return false;
 }
 
@@ -456,14 +453,17 @@ void updateReleaseStep(PlnDataPlace *dp, int new_release_step)
 	BOOST_ASSERT(dp->status == DS_RELEASED);
 	BOOST_ASSERT(dp->alloc_step <= new_release_step);
 	dp->release_step = new_release_step;
-	if (dp->type == DP_INDRCT_OBJ) {
+
+	// Because only REG that tryAccelerateAlloc will return ture.
+	BOOST_ASSERT(dp->type == DP_REG);
+	/* if (dp->type == DP_INDRCT_OBJ) {
 		if (auto base_dp = dp->data.indirect.base_dp) {
 			base_dp->alloc_step = base_dp->release_step = new_release_step;
 		}
 		if (auto index_dp = dp->data.indirect.index_dp) {
 			index_dp->alloc_step = index_dp->release_step = new_release_step;
 		}
-	}
+	} */
 }
 
 void PlnDataAllocator::popSrc(PlnDataPlace* dp)
