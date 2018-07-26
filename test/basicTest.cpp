@@ -71,7 +71,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"5 -1\n"
 							"9 9 9 0\n"
 							"3 9\n"
-							"3 5 10 3 5 10");
+							"3 5 10 3 5 10\n"
+							"3 9");
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");

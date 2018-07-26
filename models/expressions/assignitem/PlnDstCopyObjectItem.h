@@ -1,7 +1,6 @@
 /// Assignment Item class definition.
 ///
-/// A single Dst variables of object reference (not indirect access).
-/// for deep copy. 
+/// A single Dst variables of object reference for deep copy. 
 ///
 /// @file	PlnDstCopyObjectItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
@@ -10,9 +9,12 @@ class PlnDstCopyObjectItem : public PlnDstItem
 {
 	PlnExpression *dst_ex;
 	PlnDeepCopyExpression *cpy_ex;
+	PlnDataPlace *cpy_dst_dp;
+	PlnVariable *tmp_var;
 
 public:
-	PlnDstCopyObjectItem(PlnExpression* ex) : dst_ex(ex), cpy_ex(NULL) {
+	PlnDstCopyObjectItem(PlnExpression* ex)
+		: dst_ex(ex), cpy_ex(NULL), cpy_dst_dp(NULL), tmp_var(NULL) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
@@ -35,25 +37,45 @@ public:
 			throw err;
 		}
 
-		dst_ex->data_places.push_back(cpy_ex->dstDp(da));
+		cpy_dst_dp = cpy_ex->dstDp(da);
+
+		if (place && dst_ex->type != ET_VALUE) {
+			tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
+			dst_ex->data_places.push_back(tmp_var->place);
+
+		} else {
+			dst_ex->data_places.push_back(cpy_dst_dp);
+		}
+
 		dst_ex->finish(da, si);
+
+		if (tmp_var) {
+			da.popSrc(tmp_var->place);
+			da.pushSrc(cpy_dst_dp, tmp_var->place, false);
+		}
+
 		cpy_ex->finish(da, si);
+
 		if (place) {
-			if (dst_ex->type == ET_VALUE) {
+			if (tmp_var) {
+				da.pushSrc(place, tmp_var->place);
+			} else {
 				PlnDataPlace *dp = dst_ex->values[0].getDataPlace(da);
 				da.pushSrc(place, dp);
-			} else {
-				BOOST_ASSERT(false);
 			}
 		}
 	}
 
 	void gen(PlnGenerator& g) override {
 		dst_ex->gen(g);
+		
+		if (tmp_var) 
+			g.genLoadDp(tmp_var->place);
+
 		cpy_ex->gen(g);
-		if (place) {
+
+		if (place)
 			g.genSaveDp(place);
-		}
 	}
 };
 

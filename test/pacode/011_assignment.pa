@@ -56,4 +56,15 @@ printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
 
 printf("%d %d %d %d %d %d\n",
 		p2, p3, p6[0], p6[1], p4, p5);
+
+int32[3] aa, bb, ee, ff;
+int32[3][2] cc, dd;
+
+3->aa[1];
+9->bb[2];
+
+aa, bb -> cc[0], dd[1] -> ee, ff;
+
+printf("%d %d\n", ee[1], ff[2]);
+
 exit(0);	// to flush buffer.

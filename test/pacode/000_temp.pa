@@ -1,10 +1,14 @@
 ccall int32 printf();
 ccall exit();
 
-int32 a, b, c, d, e, f;
+int32[3] a, b, e, f;
+int32[3][2] c, d;
 
-3,9 -> a,b -> c,d -> e, f;
+3->a[1];
+9->b[2];
 
-printf("%d %d\n", e, f);
+a,b -> c[0], d[1] -> e, f;
+
+printf("%d %d\n", e[1], f[2]);
 exit(0);
 
