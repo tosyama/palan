@@ -1,6 +1,6 @@
 # Palan
 [![Build Status](https://travis-ci.org/tosyama/palan.svg?branch=master)](https://travis-ci.org/tosyama/palan)
-[![Coverage Status](https://coveralls.io/repos/github/tosyama/palan/badge.svg?branch=master)](https://coveralls.io/github/tosyama/palan?branch=master)  
+[![Coverage Status](https://img.shields.io/coveralls/github/tosyama/palan/master.svg)](https://coveralls.io/github/tosyama/palan?branch=master)  
 Palan is aiming simpler, safer and more enjoyable programming language alternative C.
 Current palan is very draft.
 
