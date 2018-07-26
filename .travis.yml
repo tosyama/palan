@@ -18,8 +18,8 @@ install:
 script:
  - export CC=g++-5
  - export CXX=g++-5
- - make CFLAGS=--coverage "LDFLAGS=--coverage -lgcov"
+ - make "CFLAGS=--coverage" "LDFLAGS=--coverage -lgcov"
 
 after_success:
- - coveralls -b . --exclude libs --exclude test --gcov-options '\-r . \-lp'
+ - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
  

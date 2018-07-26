@@ -11,6 +11,7 @@ int32[2] p6;
 printf("%d %d %d %d %d %d %d %d\n",
 	p1, p2, p3, p4, (5->p5), p5, (p5+1->p6[1]), p6[1]);
 
+
 // Work value assignment.
 p1+p2, p2+2 -> p2, p3;	// Note: Currently, p3 of p3+3 is 
 						// used after updated value. But spec would be change in future.
@@ -49,5 +50,21 @@ int32 z=0;
 arr[z+1], arr2[3] -> arr2[2+z], arr[0];
 
 printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
+
+// chain assign
+3, 5, p1+1 -> p2, p3, p6[0] -> p6[1], p4, p5;
+
+printf("%d %d %d %d %d %d\n",
+		p2, p3, p6[0], p6[1], p4, p5);
+
+int32[3] aa, bb, ee, ff;
+int32[3][2] cc, dd;
+
+3->aa[1];
+9->bb[2];
+
+aa, bb -> cc[0], dd[1] -> ee, ff;
+
+printf("%d %d\n", ee[1], ff[2]);
 
 exit(0);	// to flush buffer.

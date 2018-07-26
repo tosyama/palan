@@ -133,21 +133,6 @@ void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.pushSrc(data_places[0], val_place);
 }
 
-static string exp_cmt(PlnValue& v, PlnDataPlace* dp)
-{
-	switch (v.type) {
-		case VL_LIT_INT8:
-		case VL_LIT_UINT8:
-			return (string("$ -> ") + *dp->comment);
-		case VL_VAR:
-			return (v.inf.var->name+" -> " + *dp->comment);
-		case VL_RO_DATA:
-			return ("\"..\" -> " + *dp->comment);
-		default:
-			BOOST_ASSERT(false);
-	}
-}
-
 void PlnExpression::gen(PlnGenerator& g)
 {
 	BOOST_ASSERT(data_places.size() <= 1);

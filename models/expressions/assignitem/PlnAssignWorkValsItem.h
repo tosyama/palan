@@ -64,7 +64,10 @@ public:
 		}
 
 		for (; i<src_ex->values.size(); i++) {
-			BOOST_ASSERT(false);	// not impemented
+			auto v = src_ex->values[i];
+			if (v.getType()->data_type == DT_OBJECT_REF) {
+				BOOST_ASSERT(false);	// not impemented
+			}
 		} 
 
 		src_ex->finish(da, si);

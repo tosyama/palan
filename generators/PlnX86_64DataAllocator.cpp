@@ -194,6 +194,7 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 
 void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len)
 {
+	// TODO: It destory RCX, RDI, RCI
 	releaseDp(dst);
 	releaseDp(src);
 	releaseDp(len);

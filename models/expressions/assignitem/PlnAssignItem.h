@@ -8,13 +8,13 @@
 // PlnAssignItem
 class PlnAssignItem {
 public:
-	virtual void addDstEx(PlnExpression* ex) { }
-	virtual int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) { };
+	virtual void addDstEx(PlnExpression* ex) = 0;
+	virtual int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) = 0;
 
-	virtual void finishS(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
-	virtual void finishD(PlnDataAllocator& da, PlnScopeInfo& si) { }
-	virtual void genS(PlnGenerator& g) { }
-	virtual void genD(PlnGenerator& g) { }
+	virtual void finishS(PlnDataAllocator& da, PlnScopeInfo& si) = 0;
+	virtual void finishD(PlnDataAllocator& da, PlnScopeInfo& si) = 0;
+	virtual void genS(PlnGenerator& g) = 0;
+	virtual void genD(PlnGenerator& g) = 0;
 
 	static PlnAssignItem* createAssignItem(PlnExpression* ex);
 };

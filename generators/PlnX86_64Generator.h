@@ -42,7 +42,6 @@ public:
 	int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment) override;
 
 	void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) override;
-	void genMemAlloc(PlnGenEntity* ref, int al_size, string comment) override;
 	void genMemCopy(int cp_unit, string& comment) override;
 
 	unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp) override;

@@ -195,11 +195,6 @@ void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		
 }
 
-static string gen_n_cmt(PlnDataPlace* dp, PlnDataPlace* result)
-{
-	return string("-") + dp->cmt() + " -> " + result->cmt();
-}
-
 void PlnNegative::gen(PlnGenerator& g)
 {
 	e->gen(g);

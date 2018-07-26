@@ -1,14 +1,14 @@
 ccall int32 printf();
 ccall exit();
 
-int32[3][2][5] arr, arr2;
-int32 a=0;
+int32[3] a, b, e, f;
+int32[3][2] c, d;
 
-3->arr[1][0][2];
-9->arr2[3][0][1];
+3->a[1];
+9->b[2];
 
-arr[a+1], arr2[3] -> arr2[2+a], arr[0];
+a,b -> c[0], d[1] -> e, f;
 
-printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
+printf("%d %d\n", e[1], f[2]);
 exit(0);
 
