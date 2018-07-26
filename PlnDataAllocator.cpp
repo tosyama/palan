@@ -366,7 +366,6 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 
 	// Set total stack size.
 	int stk_itm_num = data_stack.size() + arg_stack.size();
-	if (stk_itm_num & 0x1) stk_itm_num++;  // for 16byte align.
 	stack_size = stk_itm_num * 8;
 
 	// rewrite original data to sub.
