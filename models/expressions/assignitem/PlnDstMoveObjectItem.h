@@ -17,6 +17,7 @@ public:
 			: dst_ex(ex), dst_dp(NULL), free_ex(NULL)
 	{
 		BOOST_ASSERT(ex->values.size() == 1);
+		BOOST_ASSERT(ex->type == ET_VALUE);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 	}
@@ -45,11 +46,8 @@ public:
 		si.set_lifetime(var, VLT_INITED);
 
 		if (place) {
-			if (dst_ex->type == ET_VALUE) {
-				da.pushSrc(place, dst_dp);
-			} else {
-				BOOST_ASSERT(false);
-			}
+			da.pushSrc(place, dst_dp);
+
 		} else {
 			da.releaseDp(dst_dp);
 		}

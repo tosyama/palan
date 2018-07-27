@@ -42,6 +42,8 @@ public:
 		if (place && dst_ex->type != ET_VALUE) {
 			tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
 			dst_ex->data_places.push_back(tmp_var->place);
+			tmp_var->place->do_clear_src = place->do_clear_src;
+			place->do_clear_src = false;
 
 		} else {
 			dst_ex->data_places.push_back(cpy_dst_dp);
@@ -63,6 +65,9 @@ public:
 				PlnDataPlace *dp = dst_ex->values[0].getDataPlace(da);
 				da.pushSrc(place, dp);
 			}
+		} else {
+			if (tmp_var)
+				da.releaseDp(tmp_var->place);
 		}
 	}
 

@@ -57,8 +57,8 @@ printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
 printf("%d %d %d %d %d %d\n",
 		p2, p3, p6[0], p6[1], p4, p5);
 
-int32[3] aa, bb, ee, ff;
-int32[3][2] cc, dd;
+byte[3] aa, bb, ee, ff;
+byte[3][2] cc, dd;
 
 3->aa[1];
 9->bb[2];

@@ -13,6 +13,7 @@ class PlnChainAssignItem : public PlnAssignItem
 
 public:
 	PlnChainAssignItem(PlnExpression* ex) : src_ex(ex) {
+		BOOST_ASSERT(src_ex->type == ET_ASSIGN);
 	}
 	
 	void addDstEx(PlnExpression* ex) override {
