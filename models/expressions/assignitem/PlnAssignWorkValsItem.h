@@ -4,7 +4,7 @@
 /// The work valuses don't need to be cleared.
 /// Exist two cases need to free.
 /// 1) After object was copied.
-/// 2) Didn't assign any variable. (not impemented)
+/// 2) Didn't assign any variable. (freed by src_ex)
 ///
 /// @file	PlnAssignWorkValsItem.h
 /// @copyright	2018 YAMAGUCHI Toshinobu 
@@ -18,6 +18,7 @@ class PlnAssignWorkValsItem : public PlnAssignItem
 		PlnExpression* copy_src_ex, *free_ex;
 	};
 	vector<DstInf> dsts;
+	vector<PlnExpression*> free_exs;
 
 public:
 	PlnAssignWorkValsItem(PlnExpression* ex) : src_ex(ex) {
@@ -62,13 +63,6 @@ public:
 			}
 			i++;
 		}
-
-		for (; i<src_ex->values.size(); i++) {
-			auto v = src_ex->values[i];
-			if (v.getType()->data_type == DT_OBJECT_REF) {
-				BOOST_ASSERT(false);	// not impemented
-			}
-		} 
 
 		src_ex->finish(da, si);
 	}

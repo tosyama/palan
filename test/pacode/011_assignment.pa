@@ -87,10 +87,9 @@ printf("%d %d %d %d %d %d\n",
 
 	setenv("MALLOC_TRACE", "out/mtrace011-2", 1);
 	mtrace();
-	2->aa[1];
-	7->bb[2];
 
-	aa, bb ->> cc[0], >>dd[1]
+	retbytes()-> aa, bb
+			->> cc[0], >>dd[1]
 			-> cc[1], dd[0]
 			-> ee, ff;
 	muntrace();
@@ -112,3 +111,10 @@ printf("%d %d %d %d %d %d\n",
 muntrace();
 
 exit(0);	// to flush buffer.
+
+func retbytes() -> byte[3] aa, bb , cc
+{
+	2->aa[1];
+	7->bb[2];
+	99->cc[0];
+}
