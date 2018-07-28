@@ -1,5 +1,9 @@
 ccall int32 printf();
 ccall exit();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
+
 
 // Primitive assignment.
 int32 p1, p2, p3, p4, p5;
@@ -57,14 +61,53 @@ printf("%d %d\n",arr2[2][0][2], arr[0][0][1]);
 printf("%d %d %d %d %d %d\n",
 		p2, p3, p6[0], p6[1], p4, p5);
 
-byte[3] aa, bb, ee, ff;
-byte[3][2] cc, dd;
+{
+	byte[3] aa, bb, ee, ff;
+	byte[3][2] cc, dd;
 
-3->aa[1];
-9->bb[2];
 
-aa, bb -> cc[0], dd[1] -> ee, ff;
+	3->aa[1];
+	9->bb[2];
 
-printf("%d %d\n", ee[1], ff[2]);
+	aa, bb -> cc[0], dd[1] -> ee, ff;
+
+	printf("%d %d", ee[1], ff[2]);
+
+	setenv("MALLOC_TRACE", "out/mtrace011-1", 1);
+	mtrace();
+	8->aa[0];
+	4->bb[1];
+
+	aa, bb -> cc[0], dd[1]
+		->>ee, >>ff;
+
+	muntrace();
+
+	printf(" %d %d", ee[0], ff[1]);
+
+	setenv("MALLOC_TRACE", "out/mtrace011-2", 1);
+	mtrace();
+	2->aa[1];
+	7->bb[2];
+
+	aa, bb ->> cc[0], >>dd[1]
+			-> ee, ff;
+	muntrace();
+
+	printf(" %d %d", ee[1], ff[2]);
+
+	setenv("MALLOC_TRACE", "out/mtrace011-3", 1);
+	mtrace();
+	6, 1 -> cc[0][1], dd[1][2];
+
+	cc[0], dd[1] ->> aa, >>bb
+		-> ee, ff;
+	muntrace();
+	printf(" %d %d\n", ee[1], ff[2]);
+
+	setenv("MALLOC_TRACE", "out/mtrace011-4", 1);
+	mtrace();
+}
+muntrace();
 
 exit(0);	// to flush buffer.

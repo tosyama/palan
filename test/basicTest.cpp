@@ -72,7 +72,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"9 9 9 0\n"
 							"3 9\n"
 							"3 5 10 3 5 10\n"
-							"3 9");
+							"3 9 8 4 2 7 6 1");
+	CHECK(mcheck("mtrace011-1") == "+0 -2");
+	CHECK(mcheck("mtrace011-2") == "+0 -0");
+	CHECK(mcheck("mtrace011-3") == "+0 -0");
+	CHECK(mcheck("mtrace011-4") == "+0 -8");
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");
