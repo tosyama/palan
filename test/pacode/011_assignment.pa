@@ -91,6 +91,7 @@ printf("%d %d %d %d %d %d\n",
 	7->bb[2];
 
 	aa, bb ->> cc[0], >>dd[1]
+			-> cc[1], dd[0]
 			-> ee, ff;
 	muntrace();
 
