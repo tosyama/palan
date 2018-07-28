@@ -66,8 +66,9 @@ public:
 				da.pushSrc(place, dp);
 			}
 		} else {
-			if (tmp_var)
-				da.releaseDp(tmp_var->place);
+			// no this case.
+			/* if (tmp_var)
+				da.releaseDp(tmp_var->place); */
 		}
 	}
 
