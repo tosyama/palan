@@ -30,7 +30,6 @@ public:
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len) override;
 
 	PlnDataPlace* prepareAccumulator(int data_type) override;
-	bool isAccumulator(PlnDataPlace* dp) override;
 	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) override;
 	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp) override;
 	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp) override;

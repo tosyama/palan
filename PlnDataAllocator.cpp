@@ -313,11 +313,7 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 
 PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
 {
-	BOOST_ASSERT(dp->type != DP_SUBDP);
-
-	// indirect obj is already separated and not managed by data allocator.
-	if (dp->type == DP_INDRCT_OBJ)
-		return dp;
+	BOOST_ASSERT(dp->type != DP_SUBDP && dp->type != DP_INDRCT_OBJ);
 
 	auto sub_dp = new PlnDataPlace(dp->size, dp->data_type);
 	sub_dp->type = DP_SUBDP;
@@ -366,7 +362,6 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 
 	// Set total stack size.
 	int stk_itm_num = data_stack.size() + arg_stack.size();
-	if (stk_itm_num & 0x1) stk_itm_num++;  // for 16byte align.
 	stack_size = stk_itm_num * 8;
 
 	// rewrite original data to sub.
@@ -419,7 +414,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 		case DP_STK_BP:
 			return false;
 		default: // not implemented.
-		BOOST_ASSERT(false);
+			BOOST_ASSERT(false);
 	}
 }
 
@@ -437,6 +432,7 @@ bool tryAccelerateAlloc(PlnDataPlace *dp, int push_step)
 		} else
 			BOOST_ASSERT(false);
 	}
+	// TODO: DP_INDRCT_OBJ
 	return false;
 }
 
@@ -457,14 +453,17 @@ void updateReleaseStep(PlnDataPlace *dp, int new_release_step)
 	BOOST_ASSERT(dp->status == DS_RELEASED);
 	BOOST_ASSERT(dp->alloc_step <= new_release_step);
 	dp->release_step = new_release_step;
-	if (dp->type == DP_INDRCT_OBJ) {
+
+	// Because only REG that tryAccelerateAlloc will return ture.
+	BOOST_ASSERT(dp->type == DP_REG);
+	/* if (dp->type == DP_INDRCT_OBJ) {
 		if (auto base_dp = dp->data.indirect.base_dp) {
 			base_dp->alloc_step = base_dp->release_step = new_release_step;
 		}
 		if (auto index_dp = dp->data.indirect.index_dp) {
 			index_dp->alloc_step = index_dp->release_step = new_release_step;
 		}
-	}
+	} */
 }
 
 void PlnDataAllocator::popSrc(PlnDataPlace* dp)
@@ -507,9 +506,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 			src_place->release_step = dp->push_src_step;
 		}
 		if (dp->save_place != dp) {
-			dp->save_place->alloc_step = dp->push_src_step;
-			dp->save_place->release_step = step;
-			dp->save_place->status = DS_RELEASED;
+			releaseDp(dp->save_place);
 		} 
 	} 
 

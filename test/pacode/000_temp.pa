@@ -1,14 +1,18 @@
 ccall int32 printf();
 ccall exit();
 
-int32[3] a, b, e, f;
+{
+int32[3] a, b, e, f, g, h;
 int32[3][2] c, d;
 
 3->a[1];
 9->b[2];
 
-a,b -> c[0], d[1] -> e, f;
+a,b ->>c[0], >>d[1]
+	->>e, >>f;
 
-printf("%d %d\n", e[1], f[2]);
+printf("%d", e[1], f[2]);
+printf(" %d\n", f[2], e[1]);
+}
 exit(0);
 

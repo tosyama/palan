@@ -78,10 +78,14 @@ public:
 			da.popSrc(dst_dp);
 		}
 
-		if (place)
+		if (place) {
+			dst_dp->data.indirect.base_dp->release_src_pop = true;
 			da.pushSrc(place, dst_dp);
-		else
+
+		} else {
+			da.releaseDp(addr_var->place);
 			da.releaseDp(dst_dp);
+		}
 	}
 
 	void gen(PlnGenerator& g) override {

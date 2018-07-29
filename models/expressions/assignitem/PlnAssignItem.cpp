@@ -94,7 +94,6 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 
 	if (ex->type == ET_ASSIGN) {
 		return new PlnChainAssignItem(ex);
-		BOOST_ASSERT(false);
 	}
 
 	BOOST_ASSERT(false);
@@ -146,6 +145,5 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 	}
 
 	BOOST_ASSERT(false);
-//	return new PlnDstItem();
 }
 

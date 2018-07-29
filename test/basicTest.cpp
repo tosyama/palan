@@ -39,7 +39,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "006_intarray";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3 2 4 5 9 3 4");
-	CHECK(mcheck("mtrace006") == "+19 -19");
+	CHECK(mcheck("mtrace006") == "+27 -27");
 
 	testcode = "007_whiletest";
 	REQUIRE(build(testcode) == "success");
@@ -72,7 +72,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"9 9 9 0\n"
 							"3 9\n"
 							"3 5 10 3 5 10\n"
-							"3 9");
+							"3 9 8 4 2 7 6 1");
+	CHECK(mcheck("mtrace011-1") == "+0 -2");
+	CHECK(mcheck("mtrace011-2") == "+3 -3");
+	CHECK(mcheck("mtrace011-3") == "+0 -0");
+	CHECK(mcheck("mtrace011-4") == "+0 -8");
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");
