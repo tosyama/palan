@@ -11,7 +11,8 @@ int32[3][2] c, d;
 a,b ->>c[0], >>d[1]
 	->>e, >>f;
 
-printf("%d %d\n", e[1], f[2]);
+printf("%d", e[1], f[2]);
+printf(" %d\n", f[2], e[1]);
 }
 exit(0);
 

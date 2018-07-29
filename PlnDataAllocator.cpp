@@ -414,7 +414,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 		case DP_STK_BP:
 			return false;
 		default: // not implemented.
-		BOOST_ASSERT(false);
+			BOOST_ASSERT(false);
 	}
 }
 
@@ -506,9 +506,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 			src_place->release_step = dp->push_src_step;
 		}
 		if (dp->save_place != dp) {
-			dp->save_place->alloc_step = dp->push_src_step;
-			dp->save_place->release_step = step;
-			dp->save_place->status = DS_RELEASED;
+			releaseDp(dp->save_place);
 		} 
 	} 
 
