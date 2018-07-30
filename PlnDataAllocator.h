@@ -71,6 +71,9 @@ public:
 	void popSrc(PlnDataPlace* dp);
 
 	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
+
+	// for debug
+	virtual void checkDataLeak();
 };
 
 enum {

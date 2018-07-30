@@ -289,3 +289,13 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
 
 	return dp;
 }
+
+void PlnX86_64DataAllocator::checkDataLeak()
+{
+	PlnDataAllocator::checkDataLeak();
+	for (int id: DSTRY_TBL) {
+		if (regs[id]) {
+			BOOST_ASSERT(regs[id]->status == DS_RELEASED);
+		}
+	}
+}

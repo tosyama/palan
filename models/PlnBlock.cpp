@@ -92,8 +92,10 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	si.push_scope(this);
-	for (auto s: statements)
+	for (auto s: statements) {
 		s->finish(da, si);
+		da.checkDataLeak();
+	}
 	
 	for (auto v: variables) {
 		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {

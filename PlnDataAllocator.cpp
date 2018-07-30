@@ -513,6 +513,18 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 	step++;
 }
 
+void PlnDataAllocator::checkDataLeak()
+{
+	for (PlnDataPlace* dp: data_stack) {
+		if ((*(dp->comment))[0] == '(') {
+			BOOST_ASSERT(dp->status == DS_RELEASED);
+		}
+	}
+	for (PlnDataPlace* dp: arg_stack) {
+		BOOST_ASSERT(dp->status == DS_RELEASED);
+	}
+}
+
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_UNKNOWN), accessCount(0), alloc_step(0), release_step(INT_MAX),
