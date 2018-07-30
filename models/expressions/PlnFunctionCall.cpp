@@ -155,6 +155,8 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				free_exs.push_back(free_ex);
 				
 				da.pushSrc(tmp_var->place, ret_dps[i]);
+			} else {
+				da.releaseDp(ret_dps[i]);
 			}
 		}
 	}
