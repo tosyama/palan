@@ -1,11 +1,16 @@
 ccall int32 printf();
 ccall exit();
 
-3,9 -> p();
+int32 a, b;
+3,9 -> p() -> p() -> a, b;
+
+printf("%d %d\n", a, b);
 
 exit(0);
 
-func p(int32 a, int32 b)
+func p(int32 a, b) -> int32 c, d
 {
 	printf("%d %d\n", a, b);
+	a+b -> c;
+	a-b -> d;
 }

@@ -773,6 +773,18 @@ chain_call: expressions arrow_ope func_call
 	}
 	| chain_call arrow_ope func_call
 	{
+		json arg = { {"exp", move($1)} };
+		vector<json> in_args = { arg };
+
+		json c_call = {
+			{"exp-type", "chain-call"},
+			{"func-name", $3["func-name"]},
+			{"in-args", move(in_args)},
+			{"args", $3["args"]},
+		};
+		if ($2) c_call["in-args"][0]["move"] = true;
+		$$ = move(c_call);
+		LOC($$, @$);
 	}
 	| assignment arrow_ope func_call
 	{

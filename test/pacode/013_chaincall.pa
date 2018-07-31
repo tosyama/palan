@@ -1,0 +1,13 @@
+
+ccall int32 printf();
+ccall exit();
+
+3,9 -> p();
+3 -> p(9);
+
+exit(0);
+
+func p(int32 a, int32 b)
+{
+	printf("%d %d\n", a, b);
+}

@@ -77,7 +77,8 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 			return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_FUNCCALL) {
+	if (ex->type == ET_FUNCCALL
+			|| ex->type == ET_CHAINCALL) {
 		return new PlnAssignWorkValsItem(ex);
 	}
 

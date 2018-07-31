@@ -14,6 +14,8 @@
 PlnChainCall::PlnChainCall(PlnFunction* f, vector<PlnExpression*> &in_args, vector<PlnExpression*> &args)
 	: PlnExpression(ET_CHAINCALL), fcall(new PlnFunctionCall(f)), in_args(move(in_args)), args(move(args))
 {
+	for (auto v: fcall->values)
+		values.push_back(v);
 }
 
 void PlnChainCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -47,6 +49,9 @@ void PlnChainCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		i++;
 		a->finish(da, si);
 	}
+
+	for (auto dp: data_places)
+		fcall->data_places.push_back(dp);
 
 	fcall->finish(da, si);
 }
