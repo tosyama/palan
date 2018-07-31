@@ -2,10 +2,10 @@
 ///
 /// PlnFunctionCall call function with arguments
 /// and get return values.
-/// e.g. ) a = func(c, d);
+/// e.g. ) funcion(a, b) -> c, d;
 ///
 /// @file	PlnFunctionCall.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
