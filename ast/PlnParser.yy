@@ -87,7 +87,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	declaration subdeclaration 
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
-%type <json>	argument literal
+%type <json>	argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
 %type <vector<json>>	type_def
@@ -710,6 +710,16 @@ literal: INT
 	}
 	;
 
+chain_src: assignment
+	{
+		$$ = move($1);
+	}
+	| chain_call
+	{
+		$$ = move($1);
+	}
+	;
+
 assignment: expressions arrow_ope dst_vals 
 	{
 		json asgn = {
@@ -721,19 +731,7 @@ assignment: expressions arrow_ope dst_vals
 		$$ = move(asgn);
 		LOC($$, @$);
 	}
-	| assignment arrow_ope dst_vals
-	{
-		vector<json> exps = { $1 };
-		json asgn = {
-			{"exp-type", "asgn"},
-			{"src-exps", move(exps) },
-			{"dst-vals", move($3)}
-		};
-		if ($2) asgn["dst-vals"][0]["move"] = true;
-		$$ = move(asgn);
-		LOC($$, @$);
-	}
-	| chain_call arrow_ope dst_vals
+	| chain_src arrow_ope dst_vals
 	{
 		vector<json> exps = { $1 };
 		json asgn = {
@@ -771,7 +769,7 @@ chain_call: expressions arrow_ope func_call
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
-	| chain_call arrow_ope func_call
+	| chain_src arrow_ope func_call
 	{
 		json arg = { {"exp", move($1)} };
 		vector<json> in_args = { arg };
@@ -785,9 +783,6 @@ chain_call: expressions arrow_ope func_call
 		if ($2) c_call["in-args"][0]["move"] = true;
 		$$ = move(c_call);
 		LOC($$, @$);
-	}
-	| assignment arrow_ope func_call
-	{
 	}
 	;
 

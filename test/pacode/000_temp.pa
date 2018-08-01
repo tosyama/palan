@@ -2,11 +2,17 @@ ccall int32 printf();
 ccall exit();
 
 int32 a, b;
-3,9 -> p() -> p() -> a, b;
+int64[3] i, j;
 
-printf("%d %d\n", a, b);
+3->i[1];
+i ->> pa(3) ->> j;
+printf("%d\n", j[1]);
 
 exit(0);
+
+func pa(int64[3] >>a, int32 b) -> int64[3]a
+{
+}
 
 func p(int32 a, b) -> int32 c, d
 {
