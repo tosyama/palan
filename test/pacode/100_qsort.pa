@@ -14,9 +14,11 @@ while i<10 {
 // sort
 printf("before:");
 show(data);
-quicksort(data>>, 0, 9) ->> data;
+
 printf("after:");
-show(data);
+data ->> quicksort(0, 9)
+	->> data
+	-> show();
 
 // flush stdout.
 exit(0);
@@ -56,7 +58,8 @@ func quicksort(int16[10] >>data, int32 left, int32 right)
 	data[mid] -> data[left];
 	temp -> data[mid];
 
-	quicksort(data>>, left, mid-1) ->> data;
-	quicksort(data>>, mid+1, right) ->> data;
+	data ->> quicksort(left, mid-1)
+		->> quicksort(mid+1, right)
+		->> data;
 }
 

@@ -10,6 +10,8 @@
 #include "../PlnType.h"
 #include "PlnChainCall.h"
 #include "PlnFunctionCall.h"
+#include "../../PlnDataAllocator.h"
+#include "../../PlnScopeStack.h"
 
 PlnChainCall::PlnChainCall(PlnFunction* f, vector<PlnExpression*> &in_args, vector<PlnExpression*> &args)
 	: PlnExpression(ET_CHAINCALL), fcall(new PlnFunctionCall(f)), in_args(move(in_args)), args(move(args))
@@ -38,10 +40,22 @@ void PlnChainCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	int i = 0;
 	for (auto a: in_args) {
 		for (auto v: a->values) {
+			if (v.asgn_type == ASGN_MOVE && v.type == VL_VAR) {
+				fcall->arg_dps[i]->do_clear_src = true;
+			}
 			a->data_places.push_back(fcall->arg_dps[i]);
 			i++;
 		}
 		a->finish(da, si);
+
+		for (auto v: a->values) {
+			if (v.asgn_type == ASGN_MOVE && v.type == VL_VAR) {
+				// Mark as freed variable.
+				auto var = v.inf.var;
+				if (si.exists_current(var))
+					si.set_lifetime(var, VLT_FREED);
+			}
+		}
 	}
 
 	for (auto a: args) {

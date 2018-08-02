@@ -43,7 +43,9 @@ class PlnGenerator
 protected:
 	ostream& os;
 public:
-	PlnGenerator(ostream& ostrm) : os(ostrm) {};
+	PlnGenerator(ostream& ostrm) : os(ostrm) {}
+	virtual ~PlnGenerator() {}
+
 	void comment(const string s) { os << "#" << s << endl; }
 	void blank() { os << endl; }
 
