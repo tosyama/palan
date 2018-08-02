@@ -6,9 +6,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3 9\n"
-							"12 -6\n"
-							"6 18");
+	REQUIRE(exec(testcode) == "3");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -86,8 +84,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "013_chaincall";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3 9\n"
-								"3 9");
+	REQUIRE(exec(testcode) == "3 9 4 10 5 11\n"
+								"1 4 8 3 5 8\n"
+								"3 2 4 7 10");
 }
 
 TEST_CASE("Compile error test", "[basic]")

@@ -10,7 +10,7 @@ printf("%d\n", j[1]);
 
 exit(0);
 
-func pa(int64[3] >>a, int32 b) -> int64[3]a
+func pa(int64[3] >>a, int32 b) -> int64[3] a
 {
 }
 

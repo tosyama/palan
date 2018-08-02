@@ -34,6 +34,7 @@ public:
 
 	PlnExpression(PlnExprsnType type) : type(type), val_place(NULL) {};
 	PlnExpression(PlnValue value);
+	virtual ~PlnExpression();
 
 	int getDataType(int val_ind=0);
 	bool isLitNum(int& num_type);

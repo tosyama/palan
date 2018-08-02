@@ -107,6 +107,10 @@ PlnExpression::PlnExpression(PlnValue value)
 	values.push_back(value);
 }
 
+PlnExpression::~PlnExpression()
+{
+}
+
 int PlnExpression::getDataType(int val_ind)
 {
 	BOOST_ASSERT(values.size() > val_ind && val_ind >= 0);
