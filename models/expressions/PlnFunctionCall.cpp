@@ -51,12 +51,13 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		++i;
 	}
 
-	// insert clone/move owner expression if needed.
+	// insert clone owner expression if needed.
 	for (i=0; i<arguments.size(); ++i) {
 		if (i < f->parameters.size()) {
 			int ptr_type = f->parameters[i]->ptr_type;
 			if (ptr_type & PTR_CLONE) {
 				if (arguments[i]->values[0].type == VL_VAR) {
+					BOOST_ASSERT(arguments[i]->values.size() == 1);
 					auto clone_ex = new PlnClone(arguments[i]);
 					arguments[i] = clone_ex;
 				}

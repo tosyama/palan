@@ -30,7 +30,6 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"18446744073709551615\n"
 							"6148914691236517205 0\n"
 							"0 -1\n"
-							"0 -1\n"
 							"1 18446744073709551614\n"
 							"-9223372036854775805 4\n"
 							"-9223372036854775808 1\n"
@@ -86,7 +85,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3 9 4 10 5 11\n"
 								"1 4 8 3 5 8\n"
-								"3 2 4 7 10");
+								"3 2 4 7 10\n"
+								"6 6");
 }
 
 TEST_CASE("Compile error test", "[basic]")

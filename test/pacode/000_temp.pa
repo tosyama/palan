@@ -5,12 +5,12 @@ int32 a, b;
 int64[3] i, j;
 
 3->i[1];
-i ->> pa(3) ->> j;
+i -> pa(3) -> j;
 printf("%d\n", j[1]);
 
 exit(0);
 
-func pa(int64[3] >>a, int32 b) -> int64[3] a
+func pa(int64[3] a, int32 b) -> int64[3] a
 {
 }
 

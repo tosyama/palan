@@ -83,7 +83,10 @@ public:
 	virtual void genMemCopy(int cp_unit, string& comment)=0;
 
 	void genLoadDp(PlnDataPlace* dp, bool load_save=true);
+
+	// Save value to save area or store directory by case.
 	void genSaveSrc(PlnDataPlace* dp);
+	// Only save value to save area if indicated.
 	void genSaveDp(PlnDataPlace* dp);
 
 	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;

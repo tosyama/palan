@@ -88,11 +88,7 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	v.type = VL_WORK;
 	v.inf.wk_type = new vector<PlnType*>();
 	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
-	if (div_type == DV_DIV) {
-		values.push_back(v);
-		values.push_back(v);	// for remainder
-	} else	// DT_MOD
-		values.push_back(v);
+	values.push_back(v);
 }
 
 void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -122,10 +118,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size()) {
 		if (div_type == DV_DIV)  {
 			da.pushSrc(data_places[0], quotient);
-			if (data_places.size() >= 2 && data_places[1] != NULL)
-				da.pushSrc(data_places[1], remainder);
-			else
-				da.releaseDp(remainder);
+			da.releaseDp(remainder);
 		} else {	// DV_MOD
 			da.releaseDp(quotient);
 			da.pushSrc(data_places[0], remainder);
