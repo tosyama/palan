@@ -21,7 +21,6 @@
 #include "models/PlnConditionalBranch.h"
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnFunctionCall.h"
-#include "models/expressions/PlnChainCall.h"
 #include "models/expressions/PlnAddOperation.h"
 #include "models/expressions/PlnMulOperation.h"
 #include "models/expressions/PlnDivOperation.h"
@@ -458,29 +457,25 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 
 PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 {
-	vector<PlnExpression*> in_args, args;
-	vector<PlnValue*> arg_vals;
-	for (auto& arg: ccall["in-args"]) {
-		in_args.push_back(buildExpression(arg["exp"], scope));
-		if (arg["move"].is_boolean() && arg["move"] == true) {
-			in_args.back()->values[0].asgn_type = ASGN_MOVE;
-		}
-		vector<PlnValue> &vals = in_args.back()->values;
-		for (int i=0; i<vals.size(); i++)
-			arg_vals.push_back(&vals[i]);
-	}
-	for (auto& arg: ccall["args"]) {
-		args.push_back(buildExpression(arg["exp"], scope));
-		if (arg["move"].is_boolean() && arg["move"] == true) {
-			args.back()->values[0].asgn_type = ASGN_MOVE;
-		}
+	const char *anames[] = { "in-args", "args" };
 
-		arg_vals.push_back(&args.back()->values[0]);
+	vector<PlnExpression*> args;
+	vector<PlnValue*> arg_vals;
+	for (auto aname: anames) {
+		for (auto& arg: ccall[aname]) {
+			args.push_back(buildExpression(arg["exp"], scope));
+			if (arg["move"].is_boolean() && arg["move"] == true) {
+				args.back()->values[0].asgn_type = ASGN_MOVE;
+			}
+			vector<PlnValue> &vals = args.back()->values;
+			for (int i=0; i<vals.size(); i++)
+				arg_vals.push_back(&vals[i]);
+		}
 	}
 
 	try {
 		PlnFunction* f = CUR_MODULE->getFunc(ccall["func-name"], arg_vals);
-		return new PlnChainCall(f, in_args, args);
+		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, ccall);

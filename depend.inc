@@ -122,14 +122,6 @@ PlnAssignment.o:  \
 	models/expressions/../PlnVariable.h models/expressions/../PlnType.h \
 	models/expressions/PlnDivOperation.h \
 	models/expressions/assignitem/PlnAssignItem.h
-PlnChainCall.o:  \
-	models/expressions/../PlnType.h models/expressions/../../PlnModel.h \
-	models/expressions/../../PlnDataAllocator.h \
-	models/expressions/../../PlnScopeStack.h \
-	models/expressions/../../PlnGenerator.h \
-	models/expressions/../PlnVariable.h models/expressions/../PlnFunction.h \
-	models/expressions/PlnChainCall.h models/expressions/../PlnExpression.h \
-	models/expressions/PlnFunctionCall.h
 PlnArrayItem.o:  \
 	models/expressions/PlnArrayItem.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/PlnMulOperation.h \
@@ -191,7 +183,7 @@ PlnModelTreeBuilder.o:  PlnModel.h \
 	models/PlnFunction.h models/PlnBlock.h models/PlnStatement.h \
 	models/PlnVariable.h models/PlnLoopStatement.h \
 	models/PlnConditionalBranch.h models/expressions/PlnAssignment.h \
-	models/expressions/PlnFunctionCall.h models/expressions/PlnChainCall.h \
+	models/expressions/PlnFunctionCall.h \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h \

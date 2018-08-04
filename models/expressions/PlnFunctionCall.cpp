@@ -84,12 +84,15 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	arguments = move(args);
 	// Set dafault arguments if arg == NULL
 	int i=0;
-	for (auto p: f->parameters) {
-		if (i+1>arguments.size()) 
-			arguments.push_back(new PlnExpression(*p->dflt_value));
-		else if(!arguments[i])
-			arguments[i] = new PlnExpression(*p->dflt_value);
-		++i;
+	for (auto &a: arguments) {
+		if (!a)
+			a = new PlnExpression(*f->parameters[i]->dflt_value);
+		i+=a->values.size();
+	}
+
+	while (i<f->parameters.size()) {
+		arguments.push_back(new PlnExpression(*f->parameters[i]->dflt_value));
+		i+= arguments.back()->values.size();
 	}
 }
 
@@ -116,7 +119,8 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 {
 	vector<int> arg_dtypes;
 	for (auto a: args) {
-		arg_dtypes.push_back(a->values[0].getType()->data_type);
+		for (auto v: a->values)
+			arg_dtypes.push_back(v.getType()->data_type);
 	}
 
 	auto arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_dtypes, false);
@@ -128,43 +132,49 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 	}
 
 	i = 0;
+	int j = 0;
 	for (auto a: args) {
-		auto v = a->values[0];
-		auto t = v.getType();
-		int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
+		for (auto v: a->values) {
+			auto t = v.getType();
+			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
 
-		// in the case declaration parameters omited or variable length parameter
-		if (arg_dps[i]->data_type == DT_UNKNOWN) {
-			arg_dps[i]->data_type = t->data_type;
-		}
+			// in the case declaration parameters omited or variable length parameter
+			if (arg_dps[i]->data_type == DT_UNKNOWN) {
+				arg_dps[i]->data_type = t->data_type;
+			}
 
-		if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
-			arg_dps[i]->do_clear_src = true;
-		}
+			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
+				arg_dps[i]->do_clear_src = true;
+			}
 
-		PlnCloneArg* clone = NULL;
-		if (ptr_type == PTR_PARAM_COPY && v.type == VL_VAR) {
-			clone = new PlnCloneArg(da, v.inf.var->var_type);
-			a->data_places.push_back(clone->src_dp);
-		} else {
-			a->data_places.push_back(arg_dps[i]);
+			PlnCloneArg* clone = NULL;
+			if (ptr_type == PTR_PARAM_COPY && v.type == VL_VAR) {
+				clone = new PlnCloneArg(da, v.inf.var->var_type);
+				a->data_places.push_back(clone->src_dp);
+			} else {
+				a->data_places.push_back(arg_dps[i]);
+			}
+			clones.push_back(clone);
+			++i;
 		}
-		clones.push_back(clone);
 
 		a->finish(da, si);
 
-		if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
-			// Mark as freed variable.
-			auto var = v.inf.var;
-			if (si.exists_current(var))
-				si.set_lifetime(var, VLT_FREED);
-		}
-		if (clones[i]) {
-			clones[i]->data_place = arg_dps[i];
-			clones[i]->finish(da, si);
-		}
+		for (auto v: a->values) {
+			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
+			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
+				// Mark as freed variable.
+				auto var = v.inf.var;
+				if (si.exists_current(var))
+					si.set_lifetime(var, VLT_FREED);
+			}
+			if (clones[j]) {
+				clones[j]->data_place = arg_dps[j];
+				clones[j]->finish(da, si);
+			}
 
-		++i;
+			++j;
+		}
 	}
 
 	return arg_dps;
