@@ -102,7 +102,8 @@ void PlnChainCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		a->finish(da, si);
 
 		for (auto v: a->values) {
-			if (v.asgn_type == ASGN_MOVE && v.type == VL_VAR) {
+			PlnParameter* param = fcall->function->parameters[j];
+			if (param->ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
 				// Mark as freed variable.
 				auto var = v.inf.var;
 				if (si.exists_current(var))
