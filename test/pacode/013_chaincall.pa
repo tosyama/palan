@@ -50,7 +50,6 @@ i ->> omove(3) ->> j
 	->> omove(1) ->> omove(5) ->> j;
 printf(" %d\n", j[1]);
 
-
 1->ii[0][1];
 ii[0][1] -> add(3)-> add(4)
 	-> ii[0][2]-> add(ii[0][1]) -> ii[1][0];
