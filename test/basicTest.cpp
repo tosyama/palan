@@ -86,7 +86,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "3 9 4 10 5 11\n"
 								"1 4 8 3 5 8\n"
 								"3 2 4 7 10\n"
-								"6 6");
+								"9 6 6\n"
+								"1 4 8 1 8 9");
 }
 
 TEST_CASE("Compile error test", "[basic]")
