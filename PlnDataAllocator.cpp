@@ -495,8 +495,10 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 					updateReleaseStep(src_place, dp->push_src_step);
 				}
 				dp->save_place = dp;
-			} else 
+			} else { 
 				allocSaveData(dp, src_place->alloc_step, step);
+				dp->save_place->comment = new string("(save-" + dp->cmt() + ")");
+			}
 		}
 	}
 	

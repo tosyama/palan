@@ -1,0 +1,71 @@
+
+ccall int32 printf();
+ccall exit();
+
+// primitive
+int32 a, b, c, d;
+int32[3] aa, bb;
+
+//case1
+9->a;
+3,a -> inc()-> inc() -> a, b;
+printf("%d %d\n", a, b);
+
+//case2
+1->a;
+a -> add(3)-> add(4) -> a;
+printf("%d ", a);
+3->aa[1]->aa[2];
+aa[1] -> add(2)-> add(aa[2]) -> aa[0];
+printf("%d\n", aa[0]);
+
+//case3
+inc(3,2) -> add() -> aa[2] -> add(3) -> aa[0];
+printf("%d\n", aa[0]);
+
+func inc(int32 a, b) -> int32 a, b
+{
+	printf("%d %d ", a, b);
+	a+1->a;
+	b+1->b;
+}
+
+func add(int32 a, int32 b) -> int32 a
+{
+	printf("%d ", a);
+	a+b->a;
+}
+
+// object
+int64[3] i, j;
+int64[3][2] ii, jj;
+
+// deep copy
+3->i[1];
+i -> ocopy(3) -> ii[1]
+	->ocopy(2) -> ocopy(1) -> j;
+printf("%d %d", j[1], ii[1][1]);
+
+i ->> omove(3) ->> j
+	->> omove(1) ->> omove(5) ->> j;
+printf(" %d\n", j[1]);
+
+1->ii[0][1];
+ii[0][1] -> add(3)-> add(4)
+	-> ii[0][2]-> add(ii[0][1]) -> ii[1][0];
+// 1 8 9
+printf("%d %d %d\n", ii[0][1],ii[0][2],ii[1][0]);
+
+
+
+exit(0);
+
+func ocopy(int64[3] a, int32 b) -> int64[3] a
+{
+	a[1] + b -> a[1];
+}
+
+func omove(int64[3] >>a, int32 b) -> int64[3] a
+{
+	a[1] + b -> a[1];
+}

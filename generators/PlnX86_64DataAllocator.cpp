@@ -37,6 +37,7 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 			if (pdp && pdp->status != DS_RELEASED)
 				if (!pdp->save_place)  {
 					allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
+					pdp->save_place->comment = new string("(save-" + pdp->cmt() + ")");
 				}
 		}
 	}

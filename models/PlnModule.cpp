@@ -149,7 +149,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 	return t;
 }
 
-PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>& args)
+PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnValue*>& arg_vals)
 {
 	PlnFunction* matched_func = NULL;
 	int amviguous_count = 0; 
@@ -157,7 +157,7 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 
 	for (auto f: functions) {
 		if (f->name == func_name) {
-			if (f->parameters.size() < args.size()) {
+			if (f->parameters.size() < arg_vals.size()) {
 				// Excluded C and System call for now
 				if (f->type == FT_C || f->type == FT_SYS) return f;
 				goto next_func;
@@ -166,14 +166,14 @@ PlnFunction* PlnModule::getFunc(const string& func_name, vector<PlnExpression*>&
 			int i=0;
 			bool do_cast = false;
 			for (auto p: f->parameters) {
-				if (i+1>args.size() || !args[i]) {
+				if (i+1>arg_vals.size() || !arg_vals[i]) {
 					if (!p->dflt_value) goto next_func;
 				} else {
-					PlnType* a_type = args[i]->values[0].getType();
+					PlnType* a_type = arg_vals[i]->getType();
 					PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 					if (p->ptr_type == PTR_PARAM_MOVE &&
-						args[i]->values[0].asgn_type != ASGN_MOVE)
+						arg_vals[i]->asgn_type != ASGN_MOVE)
 							goto next_func;
 					if (cap != TC_SAME) do_cast = true;
 				}

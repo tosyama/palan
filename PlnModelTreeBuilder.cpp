@@ -38,6 +38,7 @@ static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
 static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
 static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
+static PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope);
 static PlnExpression* buildAddOperation(json& add, PlnScopeStack &scope);
 static PlnExpression* buildSubOperation(json& sub, PlnScopeStack &scope);
 static PlnExpression* buildMulOperation(json& mul, PlnScopeStack &scope);
@@ -366,6 +367,8 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = buildAssignment(exp, scope);
 	} else if (type == "func-call") {
 		expression = buildFuncCall(exp, scope);
+	} else if (type == "chain-call") {
+		expression = buildChainCall(exp, scope);
 	} else if (type == "+") {
 		expression = buildAddOperation(exp, scope);
 	} else if (type == "-") {
@@ -406,15 +409,17 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 {
 	vector<PlnExpression*> args;
+	vector<PlnValue*> arg_vals;
 	for (auto& arg: fcall["args"]) {
 		args.push_back(buildExpression(arg["exp"], scope));
 		if (arg["move"].is_boolean() && arg["move"] == true) {
 			args.back()->values[0].asgn_type = ASGN_MOVE;
 		}
+		arg_vals.push_back(&args.back()->values[0]);
 	}
 
 	try {
-		PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], args);
+		PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], arg_vals);
 		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
@@ -446,6 +451,34 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 	} catch(PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, asgn);
+		throw err;
+	}
+}
+
+PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
+{
+	const char *anames[] = { "in-args", "args" };
+
+	vector<PlnExpression*> args;
+	vector<PlnValue*> arg_vals;
+	for (auto aname: anames) {
+		for (auto& arg: ccall[aname]) {
+			args.push_back(buildExpression(arg["exp"], scope));
+			if (arg["move"].is_boolean() && arg["move"] == true) {
+				args.back()->values[0].asgn_type = ASGN_MOVE;
+			}
+			vector<PlnValue> &vals = args.back()->values;
+			for (int i=0; i<vals.size(); i++)
+				arg_vals.push_back(&vals[i]);
+		}
+	}
+
+	try {
+		PlnFunction* f = CUR_MODULE->getFunc(ccall["func-name"], arg_vals);
+		return new PlnFunctionCall(f, args);
+
+	} catch (PlnCompileError& err) {
+		setLoc(&err, ccall);
 		throw err;
 	}
 }

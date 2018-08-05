@@ -17,5 +17,6 @@ public:
 	virtual void genD(PlnGenerator& g) = 0;
 
 	static PlnAssignItem* createAssignItem(PlnExpression* ex);
+	virtual ~PlnAssignItem() {};
 };
 

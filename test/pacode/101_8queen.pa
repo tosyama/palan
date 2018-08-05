@@ -3,9 +3,9 @@ ccall exit();
 
 int32 count;
 byte[8,8] board;
-initBoard(board>>)->>board;
-
-queen(board>>, -1, -1)->>board, count;
+board ->> initBoard()
+	->> queen(-1, -1)
+	->> board, count;
 
 printf("answer: %d\n", count);
 exit(0);
@@ -55,7 +55,7 @@ func queen(byte[8,8] >>board, int32 x, y)
 		0 -> yy;
 		while yy < 8 {
 			int32 cnt;
-			queen(board>>, x+1, yy)->>board, cnt;
+			board ->> queen(x+1, yy) ->>board, cnt;
 			cnt + count -> count;
 			yy+1 -> yy;
 		}

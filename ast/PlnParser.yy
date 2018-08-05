@@ -86,8 +86,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	while_statement if_statement else_statement
 %type <json>	declaration subdeclaration 
 %type <json>	expression
-%type <json>	assignment func_call term
-%type <json>	argument literal
+%type <json>	assignment func_call chain_call term
+%type <json>	argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
 %type <vector<json>>	type_def
@@ -447,6 +447,10 @@ st_expression: expression
 	{
 		$$ = move($1);
 	}
+	| chain_call
+	{
+		$$ = move($1);
+	}
 	;
 
 expressions: expression
@@ -559,6 +563,11 @@ expression:
 	}
 
 	| '(' assignment ')'
+	{
+		$$ = move($2);
+	}
+
+	| '(' chain_call ')'
 	{
 		$$ = move($2);
 	}
@@ -701,6 +710,16 @@ literal: INT
 	}
 	;
 
+chain_src: assignment
+	{
+		$$ = move($1);
+	}
+	| chain_call
+	{
+		$$ = move($1);
+	}
+	;
+
 assignment: expressions arrow_ope dst_vals 
 	{
 		json asgn = {
@@ -712,7 +731,7 @@ assignment: expressions arrow_ope dst_vals
 		$$ = move(asgn);
 		LOC($$, @$);
 	}
-	| assignment arrow_ope dst_vals
+	| chain_src arrow_ope dst_vals
 	{
 		vector<json> exps = { $1 };
 		json asgn = {
@@ -730,6 +749,43 @@ arrow_ope: ARROW	{ $$ = false; }
 	| DBL_ARROW	{ $$ = true; }
 	;
 	
+chain_call: expressions arrow_ope func_call
+	{
+		vector<json> in_args;
+		for (auto& e: $1) {
+			json arg = {
+				{"exp", e}
+			};
+			in_args.push_back(move(arg));
+		}
+		
+		json c_call = {
+			{"exp-type", "chain-call"},
+			{"func-name", $3["func-name"]},
+			{"in-args", move(in_args)},
+			{"args", $3["args"]},
+		};
+		if ($2) c_call["in-args"][0]["move"] = true;
+		$$ = move(c_call);
+		LOC($$, @$);
+	}
+	| chain_src arrow_ope func_call
+	{
+		json arg = { {"exp", move($1)} };
+		vector<json> in_args = { arg };
+
+		json c_call = {
+			{"exp-type", "chain-call"},
+			{"func-name", $3["func-name"]},
+			{"in-args", move(in_args)},
+			{"args", $3["args"]},
+		};
+		if ($2) c_call["in-args"][0]["move"] = true;
+		$$ = move(c_call);
+		LOC($$, @$);
+	}
+	;
+
 declarations: declaration
 	{
 		$$.push_back($1);

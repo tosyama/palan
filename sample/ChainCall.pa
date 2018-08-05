@@ -10,8 +10,9 @@ abc(1,2)->a;
 // func call with arg
 1, 2 -> abc(3);
 1, ff(2) -> abc(3); // c=3
-1, ff(2) -> abc(a=3); // a=3, b=1, c=f(2)
-1, ff(2) -> abc(a=$2,b=$1);
+1, ff(2) -> abc(3->a); // a=3, b=1, c=ff(2)
+1, ff(2) -> abc($2,$1->a,b);
+1, ff(2) -> abc($2,$1);
 ff(3), ff(2) -> abc();
 
 // chain call:only one function call.
@@ -28,7 +29,7 @@ ff(3), ff(2) -> abc();
 1, a -> abc(d) -> b, f()
 // use temp var instead
 1, a -> abc(d) -> a, b -> f();
-1, a -> abc(d) -> a, b -> f(a=$1);
+1, a -> abc(d) -> a, b -> f($1->a);
 
 // NG: chain to multi func
 1, a -> abc(d) -> ff(), f()
@@ -41,6 +42,9 @@ ff(3), ff(2) -> abc();
 1, a -> {return $1,$0,b} -> abc();
 1, a -> { $1->b; return f($1); } -> abc();
 
+Object o, o2;
+o, o2 ->> of($2,3->>o2,a);
+
 func abc(int32 a, b, c=0)
 	-> int32 d, e
 {
@@ -51,10 +55,14 @@ func xyz(int32 a, b, c=0)
 {
 }
 
-func f(int a)
+func f(int32 a)
 {
 }
 
-func ff(int a) -> a
+func ff(int32 a) -> a
+{
+}
+
+func objf(Object >>o, >>o2, a)
 {
 }

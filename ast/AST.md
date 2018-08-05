@@ -110,7 +110,7 @@ Expression
 ----------
 * exp-type\* - Expression type string:
 	"lit-int" "lit-uint" "lit-str" "var"
-	"asgn" "func-call" 
+	"asgn" "func-call" "chain-call"
 	birary operator ("+" "-" "*" "/" "%" "==" "!=" "<" ">" "<=" ">=" "&&" "||")
 	unary operator ("uminus" "not")
 	1. lit-int - Integer(64bit) literal
@@ -128,10 +128,14 @@ Expression
 	6. func-call - Function call expression
 		* func-name\* - Function name to call
 		* args\* - Argument list
-	7. binary operator
+	7. chain-call - Chain function call expression
+		* func-name\* - Function call expression 
+		* in-args\* - Input argument list
+		* args\* - Rest of argument list
+	8. binary operator
 		* lval\* -	Left value expression
 		* rval\* -	Right value expression
-	8. unary operator
+	9. unary operator
 		* val\* -	Value expression
 * loc - Location integer array
 

@@ -2,10 +2,10 @@
 ///
 /// PlnFunctionCall call function with arguments
 /// and get return values.
-/// e.g. ) a = func(c, d);
+/// e.g. ) funcion(a, b) -> c, d;
 ///
 /// @file	PlnFunctionCall.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -18,12 +18,53 @@
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
-#include "PlnClone.h"
 
 using std::endl;
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
+
+// PlnCloneArg
+class PlnCloneArg
+{
+	PlnVariable* var;
+	PlnExpression *alloc_ex;
+	PlnDataPlace* copy_dst_dp;
+	PlnDeepCopyExpression *copy_ex;
+
+public:
+	PlnDataPlace *src_dp, *data_place;
+
+	PlnCloneArg(PlnDataAllocator& da, vector<PlnType*> &var_type) {
+		var = PlnVariable::createTempVar(da, var_type, "(clone)");
+		alloc_ex = var_type.back()->allocator->getAllocEx();
+		alloc_ex->data_places.push_back(var->place);
+
+		copy_ex = var_type.back()->copyer->getCopyEx();
+		src_dp = copy_ex->srcDp(da);
+		copy_dst_dp = copy_ex->dstDp(da);
+		data_place = NULL;
+	}
+
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) {
+		BOOST_ASSERT(data_place);
+		alloc_ex->finish(da, si);
+		da.popSrc(var->place);
+
+		da.pushSrc(copy_dst_dp, var->place, false);
+		copy_ex->finish(da, si);
+		da.pushSrc(data_place, var->place);
+	}
+
+	void gen(PlnGenerator& g) {
+		alloc_ex->gen(g);
+		g.genLoadDp(var->place);
+		g.genSaveSrc(copy_dst_dp);
+		copy_ex->gen(g);
+		g.genSaveSrc(data_place);
+	}
+
+};
 
 // PlnFunctionCall
 PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
@@ -43,25 +84,15 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	arguments = move(args);
 	// Set dafault arguments if arg == NULL
 	int i=0;
-	for (auto p: f->parameters) {
-		if (i+1>arguments.size()) 
-			arguments.push_back(new PlnExpression(*p->dflt_value));
-		else if(!arguments[i])
-			arguments[i] = new PlnExpression(*p->dflt_value);
-		++i;
+	for (auto &a: arguments) {
+		if (!a)
+			a = new PlnExpression(*f->parameters[i]->dflt_value);
+		i+=a->values.size();
 	}
 
-	// insert clone/move owner expression if needed.
-	for (i=0; i<arguments.size(); ++i) {
-		if (i < f->parameters.size()) {
-			int ptr_type = f->parameters[i]->ptr_type;
-			if (ptr_type & PTR_CLONE) {
-				if (arguments[i]->values[0].type == VL_VAR) {
-					auto clone_ex = new PlnClone(arguments[i]);
-					arguments[i] = clone_ex;
-				}
-			}
-		}
+	while (i<f->parameters.size()) {
+		arguments.push_back(new PlnExpression(*f->parameters[i]->dflt_value));
+		i+= arguments.back()->values.size();
 	}
 }
 
@@ -83,11 +114,13 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 
 }
 
-static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si, PlnFunction*f, vector<PlnExpression*> &args)
+static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
+	PlnFunction*f, vector<PlnExpression*> &args, vector<PlnCloneArg*> &clones)
 {
 	vector<int> arg_dtypes;
 	for (auto a: args) {
-		arg_dtypes.push_back(a->values[0].getType()->data_type);
+		for (auto v: a->values)
+			arg_dtypes.push_back(v.getType()->data_type);
 	}
 
 	auto arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_dtypes, false);
@@ -99,27 +132,49 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si, Pl
 	}
 
 	i = 0;
+	int j = 0;
 	for (auto a: args) {
-		auto t = a->values[0].getType();
-		// in the case declaration parameters omited or variable length parameter
-		if (arg_dps[i]->data_type == DT_UNKNOWN) {
-			arg_dps[i]->data_type = t->data_type;
-		}
-		if (a->values[0].asgn_type == ASGN_MOVE && a->values[0].type == VL_VAR) {
-			arg_dps[i]->do_clear_src = true;
+		for (auto v: a->values) {
+			auto t = v.getType();
+			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
+
+			// in the case declaration parameters omited or variable length parameter
+			if (arg_dps[i]->data_type == DT_UNKNOWN) {
+				arg_dps[i]->data_type = t->data_type;
+			}
+
+			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
+				arg_dps[i]->do_clear_src = true;
+			}
+
+			PlnCloneArg* clone = NULL;
+			if (ptr_type == PTR_PARAM_COPY && v.type == VL_VAR) {
+				clone = new PlnCloneArg(da, v.inf.var->var_type);
+				a->data_places.push_back(clone->src_dp);
+			} else {
+				a->data_places.push_back(arg_dps[i]);
+			}
+			clones.push_back(clone);
+			++i;
 		}
 
-		a->data_places.push_back(arg_dps[i]);
 		a->finish(da, si);
 
-		if (a->values[0].asgn_type == ASGN_MOVE && a->values[0].type == VL_VAR) {
-			// Mark as freed variable.
-			auto var = a->values[0].inf.var;
-			if (si.exists_current(var))
-				si.set_lifetime(var, VLT_FREED);
-		}
+		for (auto v: a->values) {
+			int ptr_type = (f->parameters.size()>j) ? f->parameters[j]->ptr_type : NO_PTR;
+			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
+				// Mark as freed variable.
+				auto var = v.inf.var;
+				if (si.exists_current(var))
+					si.set_lifetime(var, VLT_FREED);
+			}
+			if (clones[j]) {
+				clones[j]->data_place = arg_dps[j];
+				clones[j]->finish(da, si);
+			}
 
-		++i;
+			++j;
+		}
 	}
 
 	return arg_dps;
@@ -130,7 +185,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	int func_type = function->type;
 
 	if (arguments.size()) 
-		arg_dps = loadArgs(da, si, function, arguments);
+		arg_dps = loadArgs(da, si, function, arguments, clones);
 
 	for (auto dp: arg_dps)
 		da.popSrc(dp);
@@ -183,8 +238,12 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 	switch (function->type) {
 		case FT_PLN:
 		{
-			for (auto arg: arguments)
+			int i=0;
+			for (auto arg: arguments) {
 				arg->gen(g);
+				if (clones[i]) clones[i]->gen(g);
+				i++;
+			}
 
 			for (auto dp: arg_dps)
 				g.genLoadDp(dp, false);
@@ -228,6 +287,10 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 				g.genSaveDp(arg->data_places[0]);
 
 			g.genCCall(function->asm_name);
+
+			for (auto dp: data_places) 
+				g.genSaveSrc(dp);
+
 			break;
 		}
 		default:

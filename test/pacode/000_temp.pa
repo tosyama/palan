@@ -1,19 +1,22 @@
 ccall int32 printf();
 ccall exit();
 
-{
-int32[3] a, b, e, f, g, h;
-int32[3][2] c, d;
+int32 a, b;
+int64[3] i, j;
 
-3->a[1];
-9->b[2];
+3->i[1];
+i -> pa(3) -> j;
+printf("%d\n", j[1]);
 
-a, b -> e, f;
-
-printf("%d %d\n", e[1], f[2]);
-}
 exit(0);
 
-func simple()
+func pa(int64[3] a, int32 b) -> int64[3] a
 {
+}
+
+func p(int32 a, b) -> int32 c, d
+{
+	printf("%d %d\n", a, b);
+	a+b -> c;
+	a-b -> d;
 }

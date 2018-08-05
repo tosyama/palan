@@ -25,6 +25,8 @@ class PlnDstItem {
 public:
 	PlnDataPlace* place;
 	PlnDstItem(): place(NULL) {}
+	virtual ~PlnDstItem() {}
+
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
 	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
@@ -77,7 +79,8 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 			return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_FUNCCALL) {
+	if (ex->type == ET_FUNCCALL
+			|| ex->type == ET_CHAINCALL) {
 		return new PlnAssignWorkValsItem(ex);
 	}
 
