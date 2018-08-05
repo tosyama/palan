@@ -161,7 +161,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 		a->finish(da, si);
 
 		for (auto v: a->values) {
-			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
+			int ptr_type = (f->parameters.size()>j) ? f->parameters[j]->ptr_type : NO_PTR;
 			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
 				// Mark as freed variable.
 				auto var = v.inf.var;
