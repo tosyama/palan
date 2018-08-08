@@ -234,16 +234,18 @@ PlnType* PlnType::getRawArray()
 	return raw_array_type;
 }
 
-string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
+string PlnType::getFixedArrayName(vector<PlnType*> &item_type, vector<int>& sizes)
 {
-	string name = "]";
+	string arr_name = "]";
 	for (int s: sizes) {
-		name = "," + to_string(s) + name;
+		arr_name = "," + to_string(s) + arr_name;
 	}
-	name.front() = '[';
-	name = item_type->name + name;
+	arr_name.front() = '[';
 
-	return name;
+	string &item_name = item_type.front()->name;
+	string item_suffix = item_type.back()->name.substr(item_name.size());
+
+	return item_name + arr_name + item_suffix;
 }
 
 PlnTypeConvCap PlnType::canConvFrom(PlnType *src)

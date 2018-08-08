@@ -38,7 +38,7 @@ func add(int32 a, int32 b) -> int32 a
 
 // object
 int64[3] i, j;
-int64[3][2] ii, jj;
+int64[2][3] ii, jj;
 
 // deep copy
 3->i[1];
@@ -55,7 +55,6 @@ ii[0][1] -> add(3)-> add(4)
 	-> ii[0][2]-> add(ii[0][1]) -> ii[1][0];
 // 1 8 9
 printf("%d %d %d\n", ii[0][1],ii[0][2],ii[1][0]);
-
 
 
 exit(0);

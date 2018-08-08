@@ -45,7 +45,7 @@ a1 ->> a3;
 printf("%d %d %d %d\n", a3[2], a2[2], a2[3], a1);
 
 // object copy 
-int32[3][2][5] arr, arr2;
+int32[5][2][3] arr, arr2;
 int32 z=0;
 
 3->arr[1][0][2];
@@ -63,7 +63,7 @@ printf("%d %d %d %d %d %d\n",
 
 {
 	byte[3] aa, bb, ee, ff;
-	byte[3][2] cc, dd;
+	byte[2][3] cc, dd;
 
 
 	3->aa[1];
