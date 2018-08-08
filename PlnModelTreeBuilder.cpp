@@ -571,6 +571,17 @@ PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scop
 {
 	PlnExpression *l = buildExpression(cmp["lval"], scope);
 	PlnExpression *r = buildExpression(cmp["rval"], scope);
+
+	if (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT) {
+		switch (type) {
+			case CMP_G: type = CMP_A; break; 
+			case CMP_L: type = CMP_B; break; 
+			case CMP_GE: type = CMP_AE; break; 
+			case CMP_LE: type = CMP_BE; break; 
+			dafult: break;
+		}
+	}
+		
 	return new PlnCmpOperation(l, r, type);
 }
 

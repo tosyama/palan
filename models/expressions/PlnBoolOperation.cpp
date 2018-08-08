@@ -245,10 +245,10 @@ PlnExpression* PlnBoolOperation::getNot(PlnExpression *e)
 		switch (ce->cmp_type) {
 			case CMP_EQ: cmp_type=CMP_NE; break;
 			case CMP_NE: cmp_type=CMP_EQ; break;
-			case CMP_L: cmp_type=CMP_GE; break;
 			case CMP_G: cmp_type=CMP_LE; break;
-			case CMP_LE: cmp_type=CMP_G; break;
+			case CMP_L: cmp_type=CMP_GE; break;
 			case CMP_GE: cmp_type=CMP_L; break;
+			case CMP_LE: cmp_type=CMP_G; break;
 			case CMP_A: cmp_type=CMP_BE; break;
 			case CMP_B: cmp_type=CMP_AE; break;
 			case CMP_AE: cmp_type=CMP_B; break;
