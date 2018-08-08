@@ -57,12 +57,11 @@ string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*>
 
 PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes)
 {
-	PlnType* it = item_type.back();
-
-	string name = PlnType::getFixedArrayName(it, sizes);
+	string name = PlnType::getFixedArrayName(item_type, sizes);
 	for (auto t: types) 
 		if (name == t->name) return t;
 
+	PlnType* it = item_type.back();
 	int item_size = it->size;
 	int alloc_size = item_size;
 	for (int s: sizes)

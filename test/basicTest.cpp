@@ -42,7 +42,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "007_whiletest";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "0123456789");
+	REQUIRE(exec(testcode) == "0123456789321");
 
 	testcode = "008_iftest";
 	REQUIRE(build(testcode) == "success");
@@ -56,7 +56,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"100\n"
 							"aaabbbcctdtdftdtdee\n"
 							"110\n"
-							"101010");
+							"1010\n"
+							"100101\n"
+							"010110");
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");
@@ -138,4 +140,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "514_cantusemove_err";
 	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
+
+	testcode = "515_undefchainfunc_err";
+	REQUIRE(build(testcode) == "0:3-3 Function 'test' was not declared in this scope.");
 }

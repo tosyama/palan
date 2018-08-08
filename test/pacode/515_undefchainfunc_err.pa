@@ -1,0 +1,7 @@
+int32 a, b;
+
+a, b -> test(3) -> b;
+
+func test(int32 a) -> int32 b
+{
+}

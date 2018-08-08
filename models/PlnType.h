@@ -76,5 +76,5 @@ public:
 	static PlnType* getObject();
 	static PlnType* getRawArray();
 
-	static string getFixedArrayName(PlnType* item_type, vector<int>& sizes);
+	static string getFixedArrayName(vector<PlnType*> &item_type, vector<int>& sizes);
 };

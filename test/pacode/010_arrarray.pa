@@ -4,7 +4,7 @@ ccall setenv();
 ccall mtrace();
 ccall muntrace();
 
-func set_arrarr(int32[4][3] >>a) -> int32[4][3] a
+func set_arrarr(int32[3][4] >>a) -> int32[3][4] a
 {
 	int32 i, j;
 
@@ -19,7 +19,7 @@ func set_arrarr(int32[4][3] >>a) -> int32[4][3] a
 	}
 }
 
-func inc_arrarr(int32[4][3] a) -> int32[4][3] b
+func inc_arrarr(int32[3][4] a) -> int32[3][4] b
 {
 	int32 i, j;
 
@@ -34,7 +34,7 @@ func inc_arrarr(int32[4][3] a) -> int32[4][3] b
 	}
 }
 
-func set_arrarr2(int32[5][2,3][4] >>a) -> int32[5][2,3][4] a
+func set_arrarr2(int32[4][2,3][5] >>a) -> int32[4][2,3][5] a
 {
 	int32 i, j, k, l;
 
@@ -62,19 +62,19 @@ int32[9] o;
 setenv("MALLOC_TRACE", "out/mtrace010", 1);
 mtrace();
 {
-	int32[4][3] a1;
+	int32[3][4] a1;
 
 	set_arrarr(a1>>) ->> a1;
 
-	int32[4][3] a2 = inc_arrarr(a1);
-	int32[4][3] a3 <<= inc_arrarr(a2);
+	int32[3][4] a2 = inc_arrarr(a1);
+	int32[3][4] a3 <<= inc_arrarr(a2);
 
 	a1[2][3] -> o[0];
 	a2[2][3] -> o[1];
 	a3[2][3] -> o[2];
 
-	int32[5][2,3][4] b1, b2;
-	int32[5][2,3] c;
+	int32[4][2,3][5] b1, b2;
+	int32[2,3][5] c;
 	int32[5] d;
 
 	set_arrarr2(b1>>) ->> b1;

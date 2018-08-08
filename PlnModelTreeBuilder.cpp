@@ -105,18 +105,23 @@ PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 static vector<PlnType*> getVarType(PlnModule& module, json& var_type)
 {
 	vector<PlnType*> ret_vt;
-	for (auto& vt: var_type) {
-		string type_name = vt["name"];
-		if (type_name == "[]") {
-			assertAST(vt["sizes"].is_array(), vt);
-			vector<int> sizes;
-			for (json& i: vt["sizes"])
-				sizes.push_back(i);
-			PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
-			ret_vt.push_back(arr_t);
-		} else {
-			ret_vt.push_back(module.getType(type_name));
-		}
+	if (var_type.is_null()) return ret_vt;
+
+	assertAST(var_type.is_array(), var_type);
+	string type_name = var_type[0]["name"];
+	ret_vt.push_back(module.getType(type_name));
+
+	for (int i=var_type.size()-1; i>0; --i) {
+		json &vt = var_type[i];
+		type_name = vt["name"];
+
+		assertAST(type_name == "[]", vt);
+		assertAST(vt["sizes"].is_array(), vt);
+		vector<int> sizes;
+		for (json& i: vt["sizes"])
+			sizes.push_back(i);
+		PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
+		ret_vt.push_back(arr_t);
 	}
 	return ret_vt;
 }
@@ -566,6 +571,7 @@ PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scop
 {
 	PlnExpression *l = buildExpression(cmp["lval"], scope);
 	PlnExpression *r = buildExpression(cmp["rval"], scope);
+
 	return new PlnCmpOperation(l, r, type);
 }
 
