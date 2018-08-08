@@ -42,7 +42,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "007_whiletest";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "0123456789");
+	REQUIRE(exec(testcode) == "0123456789321");
 
 	testcode = "008_iftest";
 	REQUIRE(build(testcode) == "success");
