@@ -56,7 +56,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"100\n"
 							"aaabbbcctdtdftdtdee\n"
 							"110\n"
-							"101010");
+							"1010\n"
+							"100101\n"
+							"010110");
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");

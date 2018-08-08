@@ -81,7 +81,9 @@ printf("%d\n", b<=i || b<5 || b<i);
 // NOT
 int16 s0, s1 = 0, 1;
 printf("%d%d",!0,!1);
-printf("%d%d",!s0,!s1);
-printf("%d%d",!(s0==s1),!(s1>s0));
+printf("%d%d\n",!s0,!s1);
+printf("%d%d%d%d%d%d\n",!(s0==s1),!(s0!=s1),!(s0<s1),!(s0>s1),!(s0<=s1),!(s0>=s1));
+uint32 u0, u1 = 0u, 1u;
+printf("%d%d%d%d%d%d",!(u0<u1),!(u0>u1),!(u0<=u1),!(u0>=u1), !(u0&&0), !(u0||1));
 
 exit(0);
