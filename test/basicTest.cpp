@@ -138,4 +138,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "514_cantusemove_err";
 	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
+
+	testcode = "515_undefchainfunc_err";
+	REQUIRE(build(testcode) == "0:3-3 Function 'test' was not declared in this scope.");
 }
