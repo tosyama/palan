@@ -64,6 +64,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_WHILE	"while"
 %token KW_IF	"if"
 %token KW_ELSE	"else"
+%token KW_CONST	"const"
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
 %token OPE_LE	"<="
@@ -84,12 +85,13 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	statement
 %type <json>	st_expression block return_stmt
 %type <json>	while_statement if_statement else_statement
-%type <json>	declaration subdeclaration 
+%type <json>	declaration subdeclaration const_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
 %type <json>	argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
+%type <vector<string>>	const_names
 %type <vector<json>>	type_def
 %type <vector<json>>	parameter_def parameters
 %type <vector<json>>	return_def
@@ -350,10 +352,13 @@ statement: st_expression ';'
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
+	| const_def ';'
+	{
+		$$ = move($1);
+	}
 	| return_stmt ';'
 	{
 		$$ = move($1);
-		LOC($$, @$);
 	}
 	| block
 	{
@@ -900,6 +905,28 @@ array_indexes: expression
 	{
 		$$ = move($1);
 		$$.push_back(move($3));
+	}
+	;
+
+const_def: KW_CONST const_names '=' expressions
+	{
+		json cnst = {
+			{"stmt-type", "const"},
+			{"names", move($2)},
+			{"values", move($4)}
+		};
+		$$ = move(cnst);
+		LOC($$, @$);
+	}
+	;
+const_names: ID
+	{
+		$$.push_back($1);
+	}
+	| const_names ',' ID
+	{
+		$$ = move($1);
+		$$.push_back($3);
 	}
 	;
 

@@ -29,9 +29,11 @@
 
 static void registerPrototype(PlnModule& module, json& proto);
 static void buildFunction(json& func, PlnScopeStack &scope);
+static PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope);
 static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope);
 static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
 static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
+static void registerConst(json& cnst, PlnScopeStack &scope);
 static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
 static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope);
 static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope);
@@ -221,7 +223,6 @@ void buildFunction(json& func, PlnScopeStack &scope)
 	scope.pop_back();
 }
 
-static PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope);
 PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope)
 {
 	PlnBlock* block = new PlnBlock();
@@ -237,7 +238,8 @@ PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope)
 
 	scope.push_back(block);
 	for (json& stmt: stmts) {
-		block->statements.push_back(buildStatement(stmt, scope));
+		if (PlnStatement* s = buildStatement(stmt, scope))
+			block->statements.push_back(s);
 	}
 	scope.pop_back();
 	return block;
@@ -258,6 +260,10 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope)
 
 	} else if (type == "var-init") {
 		statement = new PlnStatement(buildVarInit(stmt, scope), CUR_BLOCK);
+	
+	} else if (type == "const") {
+		registerConst(stmt, scope);
+		return NULL;
 
 	} else if (type == "return") {
 		statement = buildReturn(stmt, scope);
@@ -306,6 +312,15 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		return new PlnVarInit(vars, &inits);
 	else
 		return new PlnVarInit(vars);
+}
+
+void registerConst(json& cnst, PlnScopeStack &scope)
+{
+	assertAST(cnst["names"].is_array(), cnst);
+	assertAST(cnst["values"].is_array(), cnst);
+	if (cnst["names"].size() != cnst["values"].size()) {
+		BOOST_ASSERT(false);
+	}
 }
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)

@@ -24,6 +24,7 @@ int yylex();
 %token KW_WHILE
 %token KW_IF
 %token KW_ELSE
+%token KW_CONST
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -123,6 +124,7 @@ toplv_statement: basic_statement
 basic_statement: st_expression ';'
 	| declarations ';'
 	| declarations '=' expression ';'
+	| const_def ';'
 	| while_statement
 	| if_statement
 	;
@@ -269,6 +271,11 @@ array_indexes: array_index
 	;
 
 array_index: expression
+	;
+
+const_def: KW_CONST const_names '=' expressions;
+const_names: ID
+	| const_names ',' ID
 	;
 
 %%

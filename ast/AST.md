@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Specification
 ========================================
 
-ver 0.0.0  
+ver 0.1.0-alpha
 
 \* - Required  
 \# - Required if first item of list 
@@ -77,7 +77,7 @@ Variable Type
 -------------
 * name\* - Type name string: "[]" any
 	1. [] - Fixed size array type
-		* sizes\* - Size integer list
+		* sizes\* - Expression list
 
 Block
 ------
@@ -95,12 +95,15 @@ Statement
 	3. var-init - Variable declaration statement
 		* vars\* - Variable destination list
 		* inits - Variable initialize expression list
-	4. return - Return value statement
+	4. const - Constant value declaration statement
+		* names\* - Constant name string list
+		* values\* - Constant value expression list
+	5. return - Return value statement
 		* ret-vals - Return value expression list
-	5. while - While loop statement
+	6. while - While loop statement
 		* cond\* - Condition expression
 		* block\* - Loop block model
-	6. if - If statement
+	7. if - If statement
 		* cond\* - Condition expression
 		* block\* - If block model
 		* else - Else statement (block/if)
@@ -119,8 +122,8 @@ Expression
 		* val\* - Unsigned integer
 	3. lit-str - String literal
 		* val\* - String value
-	4. var - Variable expression
-		* base-var\* - Base variable name string
+	4. var - Variable/Constant expression
+		* base-var\* - Base variable/ constant vlue name string
 		* opes - Modified operator list
 	5. asgn - Assignment expression
 		* src-exps\* - Source expression list
