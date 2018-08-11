@@ -319,8 +319,31 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 	assertAST(cnst["names"].is_array(), cnst);
 	assertAST(cnst["values"].is_array(), cnst);
 	if (cnst["names"].size() != cnst["values"].size()) {
-		BOOST_ASSERT(false);
+		PlnCompileError err(E_NumOfLRVariables);
+		setLoc(&err, cnst);
+		throw err;
 	}
+
+	int i = 0;
+	for(json& val: cnst["values"]) {
+		PlnExpression *e = buildExpression(val, scope);
+		int vtype = e->values[0].type;
+		const string& name = cnst["names"][i];
+		if (e->type == ET_VALUE
+				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_RO_DATA)) {
+			if (!CUR_BLOCK->declareConst(name, e)) {
+				PlnCompileError err(E_DuplicateConstName, name);
+				setLoc(&err, cnst);
+				throw err;
+			}
+		} else {
+			PlnCompileError err(E_CantDefineConst, name);
+			setLoc(&err, cnst);
+			throw err;
+		}
+		i++;
+	}
+
 }
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)

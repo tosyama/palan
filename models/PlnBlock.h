@@ -11,6 +11,11 @@ public:
 	vector<PlnStatement*> statements;
 	vector<PlnVariable*> variables;
 	vector<PlnExpression*> free_vars;
+	struct PlnConst {
+		string name;
+		PlnExpression* value;
+	};
+	vector<PlnConst> consts;
 	PlnFunction* parent_func;
 	PlnBlock* parent_block;
 	PlnLoc loc;
@@ -21,6 +26,9 @@ public:
 
 	PlnVariable* declareVariable(const string& var_name, vector<PlnType*>& var_types, bool is_owner);
 	PlnVariable* getVariable(const string& var_name);
+
+	// true: success, false: duplicate
+	bool declareConst(const string& name, PlnExpression* exp);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

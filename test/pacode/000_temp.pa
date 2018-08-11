@@ -1,7 +1,8 @@
 ccall int32 printf();
 ccall exit();
 
-const N,M = 3,4;
+const N,M = 2*3, "test";
+
 int32 a, b;
 int64[3] i, j;
 
@@ -20,4 +21,9 @@ func p(int32 a, b) -> int32 c, d
 	printf("%d %d\n", a, b);
 	a+b -> c;
 	a-b -> d;
+}
+
+func p() -> int32
+{
+	return 1;
 }

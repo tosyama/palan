@@ -3,7 +3,7 @@
 /// Manage output message descriptions in Palan compiler.
 ///
 /// @file	PlnMessage.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <string>
 using std::string;
@@ -21,6 +21,8 @@ enum PlnErrCode {
 	E_IncompatibleTypeAssign,	// src type, dst type
 	E_CantUseAtToplevel,	// statement
 	E_CantUseMoveOwnership,	// var name
+	E_CantDefineConst,	// const name
+	E_DuplicateConstName,	// const name
 
 	E_InvalidAST	// source name, line
 };

@@ -47,7 +47,9 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>&
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
-	
+	for (auto c: consts)
+		if (c.name == var_name) return NULL;
+
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 	v->container = NULL;
@@ -68,6 +70,7 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>&
 	return v;
 }
 
+
 PlnVariable* PlnBlock::getVariable(const string& var_name)
 {
 	PlnBlock* b = this;
@@ -87,6 +90,17 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 			return NULL;
 		// TODO: search grobal.
 	}
+}
+
+bool PlnBlock::declareConst(const string& name, PlnExpression* exp)
+{
+	for (auto v: variables)
+		if (v->name == name) return false;
+	for (auto c: consts)
+		if (c.name == name) return false;
+
+	consts.push_back( {name, exp} );
+	return true;
 }
 
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
