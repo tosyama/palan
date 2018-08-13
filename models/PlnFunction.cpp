@@ -28,15 +28,12 @@ using std::endl;
 using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
-	: type(func_type), name(func_name), retval_init(NULL), implement(NULL)
+	:	type(func_type), name(func_name), retval_init(NULL), implement(NULL),
+		parent(NULL)
 {
 }
 
-void PlnFunction::setParent(PlnModule* parent_mod)
-{
-	parent_type = FP_MODULE;
-	parent.module = parent_mod;
-}
+
 
 PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init)
 {

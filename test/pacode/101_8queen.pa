@@ -3,6 +3,7 @@ ccall exit();
 
 int32 count;
 byte[8,8] board;
+
 board ->> initBoard()
 	->> queen(-1, -1)
 	->> board, count;
@@ -31,7 +32,7 @@ func queen(byte[8,8] >>board, int32 x, y)
 
 	x-1 -> xx;
 	while xx >= 0 {
-		if board[y, xx] { return; }
+		if board[y, xx]  { return; }
 		xx-1 -> xx;
 	}
 

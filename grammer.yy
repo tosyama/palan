@@ -51,7 +51,6 @@ int yylex();
 %start module	
 %%
 module: /* empty */
-	| module function_definition
 	| module ccall_declaration
 	| module syscall_definition
 	| module toplv_statement
@@ -127,6 +126,7 @@ basic_statement: st_expression ';'
 	| const_def ';'
 	| while_statement
 	| if_statement
+	| function_definition
 	;
 	
 toplv_block: '{' toplv_statements '}'

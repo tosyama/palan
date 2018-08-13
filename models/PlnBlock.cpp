@@ -9,6 +9,7 @@
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
 #include <boost/range/adaptor/reversed.hpp>
+#include <algorithm>
 
 #include "PlnFunction.h"
 #include "PlnBlock.h"
@@ -92,15 +93,37 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 	}
 }
 
-bool PlnBlock::declareConst(const string& name, PlnExpression* exp)
+static PlnBlock* parentBlock(PlnBlock* block) {
+	if (block->parent_block) return block->parent_block;
+	if (block->parent_func) return block->parent_func->parent;
+	return NULL;
+}
+
+bool PlnBlock::declareConst(const string& name, PlnValue value)
 {
 	for (auto v: variables)
 		if (v->name == name) return false;
 	for (auto c: consts)
 		if (c.name == name) return false;
 
-	consts.push_back( {name, exp} );
+	consts.push_back( {name, value} );
 	return true;
+}
+
+PlnExpression* PlnBlock::getConst(const string& name)
+{
+	PlnExpression* e;
+	PlnBlock* b = this;
+	do {
+		auto const_inf = find_if(b->consts.begin(), b->consts.end(),
+			[name](PlnConst& c) { return c.name == name; } );
+
+		if (const_inf != b->consts.end()) {
+			return new PlnExpression(const_inf->value);
+		}
+
+	} while (b = parentBlock(b));
+	return NULL;
 }
 
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)

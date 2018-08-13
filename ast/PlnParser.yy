@@ -126,21 +126,6 @@ module: /* empty */
 		for (auto& type_name: default_types)
 			lexer.push_typename(type_name);
 	}
-
-	| module function_definition
-	{
-		json proto = {
-			{"func-type", $2["func-type"]},
-			{"name", $2["name"]},
-			{"params", $2["params"]},
-			{"rets", $2["rets"]},
-			{"loc", $2["loc"]}
-		};
-
-		ast["ast"]["protos"].push_back(move(proto));
-		ast["ast"]["funcs"].push_back(move($2));
-	}
-
 	| module ccall_declaration
 	{
 		ast["ast"]["protos"].push_back(move($2));
@@ -376,6 +361,28 @@ statement: st_expression ';'
 	| if_statement
 	{
 		$$ = move($1);
+	}
+	| function_definition
+	{
+		json proto = {
+			{"func-type", $1["func-type"]},
+			{"name", $1["name"]},
+			{"params", $1["params"]},
+			{"rets", $1["rets"]},
+			{"loc", $1["loc"]}
+		};
+
+		ast["ast"]["protos"].push_back(move(proto));
+		int id = ast["ast"]["funcs"].size();
+		$1["id"] = id;
+		ast["ast"]["funcs"].push_back(move($1));
+		
+		json funcdef_stmt = {
+			{"stmt-type", "func-def"},
+			{"id", id}
+		};
+
+		$$ = funcdef_stmt;
 	}
 	;
 	

@@ -1,19 +1,24 @@
 ccall int32 printf();
 ccall exit();
 
-const N,M = 2*3, "test";
+const N = 4-1;
+const M = "%d\n";
 
 int32 a, b;
 int64[3] i, j;
 
-3->i[1];
-i -> pa(3) -> j;
-printf("%d\n", j[1]);
+N->i[N-3];
+i -> pa(N) -> j;
+printf(M, j[1]);
 
 exit(0);
 
 func pa(int64[3] a, int32 b) -> int64[3] a
 {
+	const A = 1;
+	{
+		N -> a[A];
+	}
 }
 
 func p(int32 a, b) -> int32 c, d

@@ -49,6 +49,7 @@ Function Prototype
 
 Function
 --------
+* id\* - Function ID integer
 * func-type\* - Function type string: "palan"
 * name\* - Function name string
 * params\* - Parameter list
@@ -87,7 +88,7 @@ Block
 Statement
 ---------
 * stmt-type\* - Statement type string:
-	"exp" "block" "var-init" "return" "while" "if"
+	"exp" "block" "var-init" "return" "while" "if" "func-def"
 	1. exp - Expression statement
 		* exp\* - Expression model
 	2. block - Block statement
@@ -107,6 +108,8 @@ Statement
 		* cond\* - Condition expression
 		* block\* - If block model
 		* else - Else statement (block/if)
+	8. func-def - Function definition link
+		* id - Function id integer
 * loc - Location integer array
 
 Expression

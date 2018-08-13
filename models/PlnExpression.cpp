@@ -101,8 +101,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 }
 
 // PlnExpression
-PlnExpression::PlnExpression(PlnValue value)
-	: type(ET_VALUE), val_place(NULL)
+PlnExpression::PlnExpression(PlnValue value) : type(ET_VALUE)
 {
 	values.push_back(value);
 }
@@ -131,10 +130,8 @@ bool PlnExpression::isLitNum(int& num_type)
 
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	if (!val_place)
-		val_place = values[0].getDataPlace(da);
 	if (data_places.size())
-		da.pushSrc(data_places[0], val_place);
+		da.pushSrc(data_places[0], values[0].getDataPlace(da));
 }
 
 void PlnExpression::gen(PlnGenerator& g)

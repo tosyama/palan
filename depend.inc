@@ -18,16 +18,16 @@ PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnScopeStack.h models/../PlnMessage.h \
 	models/../PlnException.h
 PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
-	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
-	models/PlnVariable.h models/PlnArray.h models/PlnExpression.h \
+	models/PlnBlock.h models/PlnExpression.h models/PlnStatement.h \
+	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
-	models/PlnStatement.h models/PlnVariable.h models/PlnType.h \
-	models/PlnExpression.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h models/../PlnScopeStack.h \
-	models/../PlnMessage.h models/../PlnException.h
+	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
+	models/PlnType.h models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h models/../PlnMessage.h \
+	models/../PlnException.h
 PlnExpression.o:  models/PlnExpression.h \
 	models/../PlnModel.h models/PlnType.h models/PlnVariable.h \
 	models/../PlnConstants.h models/../PlnDataAllocator.h \
@@ -42,9 +42,9 @@ PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
 PlnArray.o:  models/../PlnConstants.h \
 	models/../PlnTreeBuildHelper.h models/../PlnModel.h models/PlnArray.h \
-	models/PlnBlock.h models/PlnType.h models/PlnFunction.h \
-	models/PlnStatement.h models/PlnVariable.h models/PlnConditionalBranch.h \
-	models/expressions/PlnArrayItem.h models/expressions/../PlnExpression.h \
+	models/PlnBlock.h models/PlnExpression.h models/PlnType.h \
+	models/PlnFunction.h models/PlnStatement.h models/PlnVariable.h \
+	models/PlnConditionalBranch.h models/expressions/PlnArrayItem.h \
 	models/expressions/PlnAssignment.h
 PlnGeneralObject.o:  models/../PlnConstants.h \
 	models/expressions/PlnFunctionCall.h \
