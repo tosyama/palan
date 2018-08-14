@@ -184,11 +184,13 @@ return_values: return_value
 	{
 		$$.push_back($1);
 	}
+
 	| return_values ',' return_value
 	{
 		$$ = move($1);
 		$$.push_back($3);
 	}
+
 	| return_values ',' ID
 	{
 		json ret = {

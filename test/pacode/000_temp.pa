@@ -15,13 +15,8 @@ exit(0);
 
 func pa(int64[N] a, int32 b) -> int64[N] a
 {
-	func priv(int32 a, int32 b)->int32 c
-	{ a+b -> c; }
-
 	const A = 1;
-	{
-		A-1, b -> priv() -> a[A];
-	}
+	b -> a[A];
 }
 
 func p(int32 a, b) -> int32 c, d
@@ -29,10 +24,11 @@ func p(int32 a, b) -> int32 c, d
 	printf("%d %d\n", a, b);
 	a+b -> c;
 	a-b -> d;
-	a,b -> priv() -> c;
+	p();
 }
 
 func p() -> int32
 {
 	return 1;
 }
+

@@ -4,11 +4,9 @@
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
-#include <boost/format.hpp>
-#include <boost/range/adaptor/reversed.hpp>
 #include <algorithm>
 
 #include "PlnFunction.h"
@@ -16,16 +14,13 @@
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnArray.h"
 #include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
-
-using std::endl;
-using boost::format;
-using boost::adaptors::reverse;
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 PlnBlock::PlnBlock()
 	: parent_func(NULL), parent_block(NULL)
@@ -124,6 +119,62 @@ PlnExpression* PlnBlock::getConst(const string& name)
 
 	} while (b = parentBlock(b));
 	return NULL;
+}
+
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_vals)
+{
+	PlnFunction* matched_func = NULL;
+	int amviguous_count = 0; 
+	int is_perfect_match = false; 
+
+	PlnBlock* b = this;
+	do {
+		for (auto f: b->funcs) {
+			if (f->name == func_name) {
+				if (f->parameters.size() < arg_vals.size()) {
+					// Excluded C and System call for now
+					if (f->type == FT_C || f->type == FT_SYS) return f;
+					goto next_func;
+				}
+
+				int i=0;
+				bool do_cast = false;
+				for (auto p: f->parameters) {
+					if (i+1>arg_vals.size() || !arg_vals[i]) {
+						if (!p->dflt_value) goto next_func;
+					} else {
+						PlnType* a_type = arg_vals[i]->getType();
+						PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
+						if (cap == TC_CANT_CONV) goto next_func;
+						if (p->ptr_type == PTR_PARAM_MOVE &&
+								arg_vals[i]->asgn_type != ASGN_MOVE)
+							goto next_func;
+						if (cap != TC_SAME) do_cast = true;
+					}
+					++i;
+				}
+
+				if (is_perfect_match) {
+					if (do_cast) goto next_func;
+					// else Error: Can't decide a function.
+					throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+
+				} else {
+					matched_func = f;
+					if (do_cast) amviguous_count++;
+					else is_perfect_match = true;
+				}
+			}
+next_func:
+			;
+		}
+	} while (b = parentBlock(b));
+	
+	if (is_perfect_match | amviguous_count == 1) return matched_func;
+
+	if (!matched_func) throw PlnCompileError(E_UndefinedFunction, func_name);
+	// if (amviguous_count >= 0)
+	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 }
 
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)

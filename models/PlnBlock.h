@@ -1,7 +1,7 @@
 /// Block model declaration.
 ///
 /// @file	PlnBlock.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 #include "PlnExpression.h"
@@ -17,6 +17,7 @@ public:
 		PlnValue value;
 	};
 	vector<PlnConst> consts;
+	vector<PlnFunction*> funcs;
 	
 	PlnFunction* parent_func;
 	PlnBlock* parent_block;
@@ -32,6 +33,8 @@ public:
 	// true: success, false: duplicate
 	bool declareConst(const string& name, PlnValue value);
 	PlnExpression* getConst(const string& name);
+
+	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError;
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

@@ -180,6 +180,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	} else
 		assertAST(false, proto);
 	
+	CUR_BLOCK->funcs.push_back(f);
 	module.functions.push_back(f);
 }
 
@@ -208,7 +209,7 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		}
 	}
 
-	PlnFunction* f = CUR_MODULE->getFunc(func["name"], param_types, ret_types);
+	PlnFunction* f = CUR_MODULE->getFuncProto(func["name"], param_types, ret_types);
 	assertAST(f, func);
 	setLoc(f, func);
 
@@ -501,7 +502,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	}
 
 	try {
-		PlnFunction* f = CUR_MODULE->getFunc(fcall["func-name"], arg_vals);
+		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
 		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
@@ -556,7 +557,7 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 	}
 
 	try {
-		PlnFunction* f = CUR_MODULE->getFunc(ccall["func-name"], arg_vals);
+		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arg_vals);
 		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
