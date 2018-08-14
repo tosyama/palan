@@ -14,7 +14,6 @@ Root
 
 AST
 ---
-* protos - Function prototype list
 * funcs - Function definition list
 * stmts - Statement list for top level code
 
@@ -29,32 +28,20 @@ Source File
 * name\* - Source file name string
 * dir - Directory path string
 
-Function Prototype
-------------------
-* func-type\* - Function type string: "palan" "ccall" "syscall"
-	1. palan - Palan function prototype
-		* name\* - Function name string
-		* params\* - Parameter list
-		* rets\* - Return value list
-	2. ccall - C function prototype
-		* name\* - Function name string
-		* ret-type - Return value type string
-		* params\* - Parameter list
-	3. syscall - System call prototype
-		* id\* - Integer to set %rax
-		* name\* - System call name string
-		* ret-type - Return value type string
-		* params\* - Parameter list
-* loc - Location integer array
-
 Function
 --------
 * id\* - Function ID integer
-* func-type\* - Function type string: "palan"
 * name\* - Function name string
 * params\* - Parameter list
-* rets\* - Return value list
-* impl\* - Block model for function implemantation
+* func-type\* - Function type string: "palan" "ccall" "syscall"
+	1. palan - Palan function definition
+		* rets\* - Return value list
+		* impl\* - Block model for function implemantation
+	2. ccall - C function prototype
+		* ret-type - Return value type string
+	3. syscall - System call prototype
+		* call-id\* - Integer to set %rax
+		* ret-type - Return value type string
 * loc - Location integer array
 
 Parameter

@@ -78,8 +78,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %type <string>	single_return
 %type <bool>	move_owner take_owner arrow_ope
-%type <vector<int64_t>>	array_def array_sizes
-%type <json>	function_definition	ccall_declaration syscall_definition
+%type <vector<json>>	array_def array_sizes
+%type <json>	function_definition	palan_function_definition
+%type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
 %type <json>	return_type	return_value
 %type <json>	statement
@@ -126,22 +127,13 @@ module: /* empty */
 		for (auto& type_name: default_types)
 			lexer.push_typename(type_name);
 	}
-	| module ccall_declaration
-	{
-		ast["ast"]["protos"].push_back(move($2));
-	}
-
-	| module syscall_definition
-	{
-		ast["ast"]["protos"].push_back(move($2));
-	}
 	| module statement
 	{
 		ast["ast"]["stmts"].push_back(move($2));
 	}
 	;
 
-function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
+palan_function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
 	{
 		json func = {
 			{"func-type", "palan"},
@@ -291,7 +283,7 @@ syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def '
 	{
 		json syscall = {
 			{"func-type","syscall"},
-			{"id",$2},
+			{"call-id",$2},
 			{"name",$5},
 			{"params", $7}	
 		};
@@ -318,6 +310,7 @@ statement: st_expression ';'
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
+
 	| declarations ';'
 	{
 		json stmt = {
@@ -327,6 +320,7 @@ statement: st_expression ';'
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
+
 	| declarations '=' expressions ';'
 	{
 		json stmt = {
@@ -337,14 +331,17 @@ statement: st_expression ';'
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
+
 	| const_def ';'
 	{
 		$$ = move($1);
 	}
+
 	| return_stmt ';'
 	{
 		$$ = move($1);
 	}
+
 	| block
 	{
 		json stmt = {
@@ -354,25 +351,19 @@ statement: st_expression ';'
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
+
 	| while_statement
 	{
 		$$ = move($1);
 	}
+
 	| if_statement
 	{
 		$$ = move($1);
 	}
+
 	| function_definition
 	{
-		json proto = {
-			{"func-type", $1["func-type"]},
-			{"name", $1["name"]},
-			{"params", $1["params"]},
-			{"rets", $1["rets"]},
-			{"loc", $1["loc"]}
-		};
-
-		ast["ast"]["protos"].push_back(move(proto));
 		int id = ast["ast"]["funcs"].size();
 		$1["id"] = id;
 		ast["ast"]["funcs"].push_back(move($1));
@@ -383,6 +374,22 @@ statement: st_expression ';'
 		};
 
 		$$ = funcdef_stmt;
+	}
+	;
+
+function_definition: palan_function_definition
+	{
+		$$ = move($1);
+	}
+
+	| ccall_declaration
+	{
+		$$ = move($1);
+	}
+
+	| syscall_definition
+	{
+		$$ = move($1);
 	}
 	;
 	
@@ -455,10 +462,12 @@ st_expression: expression
 	{
 		$$ = move($1);
 	}
+
 	| assignment
 	{
 		$$ = move($1);
 	}
+
 	| chain_call
 	{
 		$$ = move($1);
@@ -679,12 +688,14 @@ term: literal
 	{
 		$$ = move($1);
 	}
+
 	| var_expression
 	{
 		$1["exp-type"] = "var";
 		$$ = move($1);
 		LOC($$, @$);
 	}
+
 	| '(' expression ')'
 	{
 		$$ = move($2);
@@ -726,6 +737,7 @@ chain_src: assignment
 	{
 		$$ = move($1);
 	}
+
 	| chain_call
 	{
 		$$ = move($1);
@@ -743,6 +755,7 @@ assignment: expressions arrow_ope dst_vals
 		$$ = move(asgn);
 		LOC($$, @$);
 	}
+
 	| chain_src arrow_ope dst_vals
 	{
 		vector<json> exps = { $1 };
@@ -781,6 +794,7 @@ chain_call: expressions arrow_ope func_call
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
+
 	| chain_src arrow_ope func_call
 	{
 		json arg = { {"exp", move($1)} };
@@ -868,7 +882,7 @@ type_def: TYPENAME
 	{
 		json atype = {
 			{"name", "[]"},
-			{"sizes", $2}
+			{"sizes", move($2)}
 		};
 		$$ = move($1);
 		$$.push_back(move(atype));
@@ -881,12 +895,12 @@ array_def: '[' array_sizes ']'
 	}
 	;
 
-array_sizes: INT
+array_sizes: expression
 	{
 		$$.push_back($1);
 	}
 
-	| array_sizes ',' INT
+	| array_sizes ',' expression
 	{
 		$$ = move($1);
 		$$.push_back($3);

@@ -51,12 +51,10 @@ int yylex();
 %start module	
 %%
 module: /* empty */
-	| module ccall_declaration
-	| module syscall_definition
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
+palan_function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
 	;
 
 return_def: /* empty */
@@ -127,6 +125,11 @@ basic_statement: st_expression ';'
 	| while_statement
 	| if_statement
 	| function_definition
+	;
+
+function_definition: palan_function_definition
+	| ccall_declaration
+	| syscall_definition
 	;
 	
 toplv_block: '{' toplv_statements '}'
@@ -260,7 +263,7 @@ array_sizes: array_size
 	;
 
 array_size: /* empty */
-	| INT | ID
+	| expression
 	;
 
 array_item: '[' array_indexes ']'
