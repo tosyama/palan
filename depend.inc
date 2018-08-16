@@ -19,9 +19,9 @@ PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnException.h
 PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnBlock.h models/PlnExpression.h models/PlnStatement.h \
-	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
-	models/../PlnDataAllocator.h models/../PlnGenerator.h \
-	models/../PlnScopeStack.h models/../PlnConstants.h
+	models/PlnType.h models/PlnVariable.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h models/../PlnScopeStack.h \
+	models/../PlnConstants.h models/../PlnMessage.h models/../PlnException.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \

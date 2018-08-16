@@ -90,6 +90,13 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"3 2 4 7 10\n"
 								"9 6 12\n"
 								"1 4 8 1 8 9");
+
+	testcode = "014_const";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "test1 11\n"
+							"test2 5\n"
+							"test3 5\n"
+							"test1 3");
 }
 
 TEST_CASE("Compile error test", "[basic]")

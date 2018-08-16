@@ -33,8 +33,6 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 {
 }
 
-
-
 PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init)
 {
 	for (auto r: return_vals)
@@ -120,7 +118,14 @@ static string mangling(PlnFunction* f)
 	if (f->type == FT_C || f->type == FT_SYS)
 		return f->name;
 
-	string seed = f->name;
+	PlnBlock *b = f->parent;
+	string root;
+	while (b && b->parent_func) {
+		root = b->parent_func->name + "." + root;
+		b = b->parent_func->parent;
+	}
+	
+	string seed = "";
 	for (auto p: f->parameters) {
 		seed += "|";
 		seed += p->var_type.back()->name;
@@ -134,7 +139,7 @@ static string mangling(PlnFunction* f)
 		hash_str.push_back(digits[c]);
 	}
 
-	return f->name + "." + hash_str;
+	return root + f->name + "." + hash_str;
 }
 
 void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)

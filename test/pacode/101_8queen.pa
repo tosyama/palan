@@ -1,8 +1,9 @@
 ccall int32 printf();
 ccall exit();
 
+const X,Y = 8,8;
 int32 count;
-byte[8,8] board;
+byte[Y,X] board;
 
 board ->> initBoard()
 	->> queen(-1, -1)
@@ -11,12 +12,12 @@ board ->> initBoard()
 printf("answer: %d\n", count);
 exit(0);
 
-func initBoard(byte[8,8] >>board)
-	-> byte[8,8] board
+func initBoard(byte[Y,X] >>board)
+	-> byte[Y,X] board
 {
 	int32 x,y = 0,0;
-	while y<8 {
-		while x<8 {
+	while y < Y {
+		while x < Y {
 			0->board[y, x];
 			x+1->x;
 		}
@@ -24,8 +25,8 @@ func initBoard(byte[8,8] >>board)
 	}
 }
 
-func queen(byte[8,8] >>board, int32 x, y)
-	-> byte[8,8] board, int32 count
+func queen(byte[Y,X] >>board, int32 x, y)
+	-> byte[Y,X] board, int32 count
 {
 	0 -> count;
 	int64 xx,yy;
@@ -50,11 +51,11 @@ func queen(byte[8,8] >>board, int32 x, y)
 
 	if x >= 0 { 1 -> board[y, x]; }
 
-	if x == 7 {
+	if x == X-1 {
 		count+1 -> count;
 	} else {
 		0 -> yy;
-		while yy < 8 {
+		while yy < Y {
 			int32 cnt;
 			board ->> queen(x+1, yy) ->>board, cnt;
 			cnt + count -> count;

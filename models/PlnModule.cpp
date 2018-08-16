@@ -148,35 +148,6 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 	return t;
 }
 
-PlnFunction* PlnModule::getFuncProto(const string& func_name, vector<string>& param_types, vector<string>& ret_types)
-{
-	for (auto f: functions) {
-		if (f->name == func_name
-				&& f->parameters.size() == param_types.size()
-				&& f->return_vals.size() == ret_types.size()) {
-
-			for (int i=0; i<param_types.size(); i++) {
-				string& pt_name = f->parameters[i]->var_type.back()->name;
-				if (pt_name != param_types[i]) {
-					goto next;
-				}
-			}
-
-			for (int i=0; i<ret_types.size(); i++) {
-				string& rt_name = f->return_vals[i]->var_type.back()->name;
-				if (rt_name != ret_types[i]) {
-					goto next;
-				}
-			}
-			BOOST_ASSERT(f->implement == NULL);
-			return f;
-		}
-next:	;
-	}
-	
-	return NULL;
-}
-
 int PlnModule::getJumpID()
 {
 	return ++max_jmp_id;

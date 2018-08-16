@@ -180,6 +180,18 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	} else
 		assertAST(false, proto);
 	
+	vector<string> param_types, ret_types;
+	for (auto p: f->parameters)
+		param_types.push_back(p->var_type.back()->name);
+	for (auto r: f->return_vals)
+		ret_types.push_back(r->var_type.back()->name);
+
+	if (CUR_BLOCK->getFuncProto(f->name, param_types, ret_types)) {
+		PlnCompileError err(E_DuplicateFunction, f->name);
+		setLoc(&err, proto);
+		throw err;
+	}
+
 	CUR_BLOCK->funcs.push_back(f);
 	module.functions.push_back(f);
 }
@@ -209,7 +221,7 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		}
 	}
 
-	PlnFunction* f = CUR_MODULE->getFuncProto(func["name"], param_types, ret_types);
+	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types, ret_types);
 	assertAST(f, func);
 	setLoc(f, func);
 

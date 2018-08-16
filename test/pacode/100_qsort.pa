@@ -1,13 +1,14 @@
 ccall int32 printf();
 ccall exit();
 
+const N=10;
 // start
-int16[10] data;
+int16[N] data;
 int32 i=0;
 
 // init data.
-while i<10 {
-	i*13 % 9 -> data[i];
+while i<N {
+	i*13 % (N-1) -> data[i];
 	i+1 -> i;
 }
 
@@ -16,25 +17,25 @@ printf("before:");
 show(data);
 
 printf("after:");
-data ->> quicksort(0, 9)
+data ->> quicksort(0, N-1)
 	->> data
 	-> show();
 
 // flush stdout.
 exit(0);
 
-func show(int16[10] data)
+func show(int16[N] data)
 {
 	int32 i=0;
-	while i<10 {
+	while i<N {
 		printf(" %d",data[i]);
 		i+1 -> i;
 	}
 	printf("\n");
 }
 
-func quicksort(int16[10] >>data, int32 left, int32 right)
-	-> int16[10] data
+func quicksort(int16[N] >>data, int32 left, int32 right)
+	-> int16[N] data
 {
 	int32 i, mid;
 	int32 temp;

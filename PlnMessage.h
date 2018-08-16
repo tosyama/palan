@@ -12,6 +12,7 @@ enum PlnErrCode {
 	E_UndefinedVariable, // var name
 	E_UndefinedFunction,	// func name
 	E_DuplicateVarName,	// var name
+	E_DuplicateFunction,	// func name
 	E_NumOfLRVariables,	// none
 	E_InvalidRetValues,	// none
 	E_NeedRetValues,	// none

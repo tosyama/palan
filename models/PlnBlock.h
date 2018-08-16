@@ -35,6 +35,7 @@ public:
 	PlnExpression* getConst(const string& name);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError;
+	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types, vector<string>& ret_types);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
