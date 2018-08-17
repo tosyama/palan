@@ -166,4 +166,6 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "520_const_LRnum_err";
 	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
 
+	testcode = "521_asgn_novalue_err";
+	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
 }

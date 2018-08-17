@@ -30,8 +30,10 @@ public:
 
 	PlnDataPlace* dstDp(PlnDataAllocator &da) override {
 		BOOST_ASSERT(dst_ex == NULL);
-		if (!cp_dst_dp)
-			da.prepareMemCopyDps(cp_dst_dp, cp_src_dp, cp_len_dp) ;
+		if (!cp_dst_dp) {
+			BOOST_ASSERT(false);	// Should be call srcDp first.
+			// da.prepareMemCopyDps(cp_dst_dp, cp_src_dp, cp_len_dp) ;
+		}
 		return cp_dst_dp;
 	}
 

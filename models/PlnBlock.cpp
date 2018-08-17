@@ -96,8 +96,10 @@ static PlnBlock* parentBlock(PlnBlock* block) {
 
 bool PlnBlock::declareConst(const string& name, PlnValue value)
 {
+	// Always 0. Const declaration is faster than variable.
 	for (auto v: variables)
-		if (v->name == name) return false;
+		BOOST_ASSERT(v->name == name);
+
 	for (auto c: consts)
 		if (c.name == name) return false;
 
@@ -170,7 +172,7 @@ next_func:
 		}
 	} while (b = parentBlock(b));
 	
-	if (is_perfect_match | amviguous_count == 1) return matched_func;
+	if (is_perfect_match || amviguous_count == 1) return matched_func;
 
 	if (!matched_func) throw PlnCompileError(E_UndefinedFunction, func_name);
 	// if (amviguous_count >= 0)
