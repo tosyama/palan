@@ -588,7 +588,9 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 			if (var["opes"].is_null()) {
 				return cnst_val;
 			} else {
-				BOOST_ASSERT(false);
+				PlnCompileError err(E_CantUseOperatorHere, var["base-var"]);
+				setLoc(&err, var);
+				throw err;
 			}
 	
 		} else {

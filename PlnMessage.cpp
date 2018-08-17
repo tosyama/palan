@@ -37,6 +37,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Can not use dynamic expression for const '%1%'."; break;
 		case E_DuplicateConstName:
 			f = "Const name '%1%' already defined."; break;
+		case E_CantUseOperatorHere:
+			f = "Can not use the operator for '%1%'."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

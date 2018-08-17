@@ -7,37 +7,5 @@ const M = "%d\n";
 int32 a, b;
 int64[N] i, j;
 
-N->i[N-3];
-i -> pa(N) -> j;
-
-printf(M, j[1]);
-p();
-
 exit(0);
-
-func pa(int64[N] a, int32 b) -> int64[N] a
-{
-	const A = 1;
-	b -> a[A];
-	priv();
-	func priv() {
-	}
-}
-
-func p(int32 a, b) -> int32 c, d
-{
-	printf("%d %d\n", a, b);
-	a+b -> c;
-	a-b -> d;
-	p();
-}
-
-func p() -> int32
-{
-	priv();
-
-	func priv() {
-	}
-	return 1;
-}
 

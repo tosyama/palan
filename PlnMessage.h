@@ -24,6 +24,7 @@ enum PlnErrCode {
 	E_CantUseMoveOwnership,	// var name
 	E_CantDefineConst,	// const name
 	E_DuplicateConstName,	// const name
+	E_CantUseOperatorHere,	// var name
 
 	E_InvalidAST	// source name, line
 };

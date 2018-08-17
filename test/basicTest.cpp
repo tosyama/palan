@@ -6,7 +6,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3");
+	REQUIRE(exec(testcode) == "");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -150,4 +150,13 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "515_undefchainfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 Function 'test' was not declared in this scope.");
+
+	testcode = "516_duplicate_const_err";
+	REQUIRE(build(testcode) == "0:4-4 Const name 'N' already defined.");
+
+	testcode = "517_invalid_constval_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'N'.");
+
+	testcode = "518_invalid_constuse_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'N'.");
 }
