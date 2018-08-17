@@ -1,0 +1,9 @@
+test(4);
+
+func test(int32 a)
+{
+}
+
+func test(int32 b)
+{
+}

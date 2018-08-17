@@ -159,4 +159,11 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "518_invalid_constuse_err";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'N'.");
+
+	testcode = "519_duplicate_func_err";
+	REQUIRE(build(testcode) == "0:7-7 Function 'test' already defined.");
+
+	testcode = "520_const_LRnum_err";
+	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
+
 }
