@@ -24,6 +24,7 @@ int yylex();
 %token KW_WHILE
 %token KW_IF
 %token KW_ELSE
+%token KW_CONST
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -50,13 +51,10 @@ int yylex();
 %start module	
 %%
 module: /* empty */
-	| module function_definition
-	| module ccall_declaration
-	| module syscall_definition
 	| module toplv_statement
 	;
 
-function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
+palan_function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
 	;
 
 return_def: /* empty */
@@ -123,8 +121,15 @@ toplv_statement: basic_statement
 basic_statement: st_expression ';'
 	| declarations ';'
 	| declarations '=' expression ';'
+	| const_def ';'
 	| while_statement
 	| if_statement
+	| function_definition
+	;
+
+function_definition: palan_function_definition
+	| ccall_declaration
+	| syscall_definition
 	;
 	
 toplv_block: '{' toplv_statements '}'
@@ -258,7 +263,7 @@ array_sizes: array_size
 	;
 
 array_size: /* empty */
-	| INT | ID
+	| expression
 	;
 
 array_item: '[' array_indexes ']'
@@ -269,6 +274,11 @@ array_indexes: array_index
 	;
 
 array_index: expression
+	;
+
+const_def: KW_CONST const_names '=' expressions;
+const_names: ID
+	| const_names ',' ID
 	;
 
 %%

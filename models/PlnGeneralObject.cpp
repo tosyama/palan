@@ -72,8 +72,9 @@ public:
 
 	PlnDataPlace* dstDp(PlnDataAllocator &da) override {
 		if (!fcall->arg_dps.size()) {
-			vector<int> dtypes = { DT_OBJECT_REF, DT_OBJECT_REF };
-			fcall->loadArgDps(da, dtypes);
+			BOOST_ASSERT(false);	// Should be call srcDp first.
+//			vector<int> dtypes = { DT_OBJECT_REF, DT_OBJECT_REF };
+//			fcall->loadArgDps(da, dtypes);
 		}
 		return fcall->arg_dps[0];
 	}

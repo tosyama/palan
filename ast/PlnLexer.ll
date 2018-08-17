@@ -37,6 +37,7 @@ enum {
 	KW_WHILE	= PlnParser::token::KW_WHILE,
 	KW_IF		= PlnParser::token::KW_IF,
 	KW_ELSE		= PlnParser::token::KW_ELSE,
+	KW_CONST	= PlnParser::token::KW_CONST,
 	OPE_EQ		= PlnParser::token::OPE_EQ,
 	OPE_NE		= PlnParser::token::OPE_NE,
 	OPE_LE		= PlnParser::token::OPE_LE,
@@ -102,6 +103,7 @@ return	{ return KW_RETURN; }
 while	{ return KW_WHILE; }
 if		{ return KW_IF; }
 else	{ return KW_ELSE; }
+const 	{ return KW_CONST; }
 "=="	{ return OPE_EQ; }
 "!="	{ return OPE_NE; }
 "<="	{ return OPE_LE; }

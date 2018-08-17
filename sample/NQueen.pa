@@ -1,5 +1,5 @@
 // nqueen: may not work..
-const auto MAX_N = 30;
+const MAX_N = 30;
 alias int int64;
 
 int n;

@@ -37,10 +37,7 @@ public:
 		} pln;
 	} inf;
 	PlnBlock* implement;
-	PlnFncPrntType parent_type;
-	union {
-		PlnModule *module;
-	} parent;
+	PlnBlock* parent;
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);

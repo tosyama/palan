@@ -6,7 +6,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3");
+	REQUIRE(exec(testcode) == "");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -90,6 +90,13 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"3 2 4 7 10\n"
 								"9 6 12\n"
 								"1 4 8 1 8 9");
+
+	testcode = "014_const";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "test1 11\n"
+							"test2 5\n"
+							"test3 5\n"
+							"test1 3");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -143,4 +150,22 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "515_undefchainfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 Function 'test' was not declared in this scope.");
+
+	testcode = "516_duplicate_const_err";
+	REQUIRE(build(testcode) == "0:4-4 Const name 'N' already defined.");
+
+	testcode = "517_invalid_constval_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'N'.");
+
+	testcode = "518_invalid_constuse_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'N'.");
+
+	testcode = "519_duplicate_func_err";
+	REQUIRE(build(testcode) == "0:7-7 Function 'test' already defined.");
+
+	testcode = "520_const_LRnum_err";
+	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
+
+	testcode = "521_asgn_novalue_err";
+	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
 }

@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Specification
 ========================================
 
-ver 0.0.0  
+ver 0.1.0-alpha
 
 \* - Required  
 \# - Required if first item of list 
@@ -14,7 +14,6 @@ Root
 
 AST
 ---
-* protos - Function prototype list
 * funcs - Function definition list
 * stmts - Statement list for top level code
 
@@ -29,31 +28,20 @@ Source File
 * name\* - Source file name string
 * dir - Directory path string
 
-Function Prototype
-------------------
-* func-type\* - Function type string: "palan" "ccall" "syscall"
-	1. palan - Palan function prototype
-		* name\* - Function name string
-		* params\* - Parameter list
-		* rets\* - Return value list
-	2. ccall - C function prototype
-		* name\* - Function name string
-		* ret-type - Return value type string
-		* params\* - Parameter list
-	3. syscall - System call prototype
-		* id\* - Integer to set %rax
-		* name\* - System call name string
-		* ret-type - Return value type string
-		* params\* - Parameter list
-* loc - Location integer array
-
 Function
 --------
-* func-type\* - Function type string: "palan"
+* id\* - Function ID integer
 * name\* - Function name string
 * params\* - Parameter list
-* rets\* - Return value list
-* impl\* - Block model for function implemantation
+* func-type\* - Function type string: "palan" "ccall" "syscall"
+	1. palan - Palan function definition
+		* rets\* - Return value list
+		* impl\* - Block model for function implemantation
+	2. ccall - C function prototype
+		* ret-type - Return value type string
+	3. syscall - System call prototype
+		* call-id\* - Integer to set %rax
+		* ret-type - Return value type string
 * loc - Location integer array
 
 Parameter
@@ -77,7 +65,7 @@ Variable Type
 -------------
 * name\* - Type name string: "[]" any
 	1. [] - Fixed size array type
-		* sizes\* - Size integer list
+		* sizes\* - Expression list
 
 Block
 ------
@@ -87,7 +75,7 @@ Block
 Statement
 ---------
 * stmt-type\* - Statement type string:
-	"exp" "block" "var-init" "return" "while" "if"
+	"exp" "block" "var-init" "return" "while" "if" "func-def"
 	1. exp - Expression statement
 		* exp\* - Expression model
 	2. block - Block statement
@@ -95,15 +83,20 @@ Statement
 	3. var-init - Variable declaration statement
 		* vars\* - Variable destination list
 		* inits - Variable initialize expression list
-	4. return - Return value statement
+	4. const - Constant value declaration statement
+		* names\* - Constant name string list
+		* values\* - Constant value expression list
+	5. return - Return value statement
 		* ret-vals - Return value expression list
-	5. while - While loop statement
+	6. while - While loop statement
 		* cond\* - Condition expression
 		* block\* - Loop block model
-	6. if - If statement
+	7. if - If statement
 		* cond\* - Condition expression
 		* block\* - If block model
 		* else - Else statement (block/if)
+	8. func-def - Function definition link
+		* id - Function id integer
 * loc - Location integer array
 
 Expression
@@ -119,8 +112,8 @@ Expression
 		* val\* - Unsigned integer
 	3. lit-str - String literal
 		* val\* - String value
-	4. var - Variable expression
-		* base-var\* - Base variable name string
+	4. var - Variable/Constant expression
+		* base-var\* - Base variable/ constant vlue name string
 		* opes - Modified operator list
 	5. asgn - Assignment expression
 		* src-exps\* - Source expression list

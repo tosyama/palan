@@ -1,0 +1,7 @@
+int16 a, b;
+
+no_ret(3) -> a, b;
+
+func no_ret(int16 x)
+{
+}

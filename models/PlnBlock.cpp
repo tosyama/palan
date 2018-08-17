@@ -4,27 +4,23 @@
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
-#include <boost/format.hpp>
-#include <boost/range/adaptor/reversed.hpp>
+#include <algorithm>
 
 #include "PlnFunction.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnArray.h"
 #include "PlnExpression.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
-
-using std::endl;
-using boost::format;
-using boost::adaptors::reverse;
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 PlnBlock::PlnBlock()
 	: parent_func(NULL), parent_block(NULL)
@@ -47,7 +43,9 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>&
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
-	
+	for (auto c: consts)
+		if (c.name == var_name) return NULL;
+
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 	v->container = NULL;
@@ -67,6 +65,7 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>&
 
 	return v;
 }
+
 
 PlnVariable* PlnBlock::getVariable(const string& var_name)
 {
@@ -88,6 +87,131 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 		// TODO: search grobal.
 	}
 }
+
+static PlnBlock* parentBlock(PlnBlock* block) {
+	if (block->parent_block) return block->parent_block;
+	if (block->parent_func) return block->parent_func->parent;
+	return NULL;
+}
+
+bool PlnBlock::declareConst(const string& name, PlnValue value)
+{
+	// Always 0. Const declaration is faster than variable.
+	for (auto v: variables)
+		BOOST_ASSERT(v->name == name);
+
+	for (auto c: consts)
+		if (c.name == name) return false;
+
+	consts.push_back( {name, value} );
+	return true;
+}
+
+PlnExpression* PlnBlock::getConst(const string& name)
+{
+	PlnExpression* e;
+	PlnBlock* b = this;
+	do {
+		auto const_inf = find_if(b->consts.begin(), b->consts.end(),
+			[name](PlnConst& c) { return c.name == name; } );
+
+		if (const_inf != b->consts.end()) {
+			return new PlnExpression(const_inf->value);
+		}
+
+	} while (b = parentBlock(b));
+	return NULL;
+}
+
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_vals)
+{
+	PlnFunction* matched_func = NULL;
+	int amviguous_count = 0; 
+	int is_perfect_match = false; 
+
+	PlnBlock* b = this;
+	do {
+		for (auto f: b->funcs) {
+			if (f->name == func_name) {
+				if (f->parameters.size() < arg_vals.size()) {
+					// Excluded C and System call for now
+					if (f->type == FT_C || f->type == FT_SYS) return f;
+					goto next_func;
+				}
+
+				int i=0;
+				bool do_cast = false;
+				for (auto p: f->parameters) {
+					if (i+1>arg_vals.size() || !arg_vals[i]) {
+						if (!p->dflt_value) goto next_func;
+					} else {
+						PlnType* a_type = arg_vals[i]->getType();
+						PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
+						if (cap == TC_CANT_CONV) goto next_func;
+						if (p->ptr_type == PTR_PARAM_MOVE &&
+								arg_vals[i]->asgn_type != ASGN_MOVE)
+							goto next_func;
+						if (cap != TC_SAME) do_cast = true;
+					}
+					++i;
+				}
+
+				if (is_perfect_match) {
+					if (do_cast) goto next_func;
+					// else Error: Can't decide a function.
+					throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+
+				} else {
+					matched_func = f;
+					if (do_cast) amviguous_count++;
+					else is_perfect_match = true;
+				}
+			}
+next_func:
+			;
+		}
+	} while (b = parentBlock(b));
+	
+	if (is_perfect_match || amviguous_count == 1) return matched_func;
+
+	if (!matched_func) throw PlnCompileError(E_UndefinedFunction, func_name);
+	// if (amviguous_count >= 0)
+	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+}
+
+PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& param_types, vector<string>& ret_types)
+{
+	PlnBlock* b = this;
+
+	do {
+		for (auto f: b->funcs) {
+			if (f->name == func_name
+					&& f->parameters.size() == param_types.size()
+					&& f->return_vals.size() == ret_types.size()) {
+
+				for (int i=0; i<param_types.size(); i++) {
+					string& pt_name = f->parameters[i]->var_type.back()->name;
+					if (pt_name != param_types[i]) {
+						goto next;
+					}
+				}
+
+				for (int i=0; i<ret_types.size(); i++) {
+					string& rt_name = f->return_vals[i]->var_type.back()->name;
+					if (rt_name != ret_types[i]) {
+						goto next;
+					}
+				}
+				BOOST_ASSERT(f->implement == NULL);
+				return f;
+			}
+next:	;
+		}
+	} while (b = parentBlock(b));
+	
+	return NULL;
+}
+
 
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {

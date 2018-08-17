@@ -13,6 +13,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f  = "Function '%1%' was not declared in this scope."; break;
 		case E_DuplicateVarName:
 			f = "Variable name '%1%' already defined."; break;
+		case E_DuplicateFunction:
+			f = "Function '%1%' already defined."; break;
 		case E_NumOfLRVariables:
 			f = "Number of left values did not match right values."; break;
 		case E_InvalidRetValues:
@@ -31,6 +33,13 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Can not use '%1%' at top level code."; break;
 		case E_CantUseMoveOwnership:
  			f = "Can not use '>>' for '%1%'."; break;
+		case E_CantDefineConst:
+			f = "Can not use dynamic expression for const '%1%'."; break;
+		case E_DuplicateConstName:
+			f = "Const name '%1%' already defined."; break;
+		case E_CantUseOperatorHere:
+			f = "Can not use the operator for '%1%'."; break;
+
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;
 		default:

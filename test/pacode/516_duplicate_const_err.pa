@@ -1,0 +1,4 @@
+const N = 10;
+int32 n = N;
+
+const N = 20;
