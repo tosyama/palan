@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 
 int32 i=0;
 while i != 10 {
@@ -16,5 +15,3 @@ while i {
 	printf("%d", i);
 	i-1 -> i;
 }
-
-exit(0);

@@ -65,9 +65,7 @@ arr_func2(1, a4>>);
 }
 muntrace();
 
-
 printf("%d %d %d %d %d %d %d\n", o[0], o[1], o[2], o2[0], o2[1], o2[2], o3[0]);
-exit(0);
 
 func arr_func(int32 x, int32[10] pa)
 	-> int16[3] pb

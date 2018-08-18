@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 ccall setenv();
 ccall mtrace();
 ccall muntrace();
@@ -109,8 +108,6 @@ printf("%d %d %d %d %d %d\n",
 	mtrace();
 }
 muntrace();
-
-exit(0);	// to flush buffer.
 
 func retbytes() -> byte[3] aa, bb , cc
 {

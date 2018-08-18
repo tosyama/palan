@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 
 int64 a = 1;
 int64 b,c,d = 2,1+2,4;
@@ -23,8 +22,6 @@ printf("%d %d %d %d %d %d %d\n", h, j, f, a+b+c, k, l, m*3);
 	-> a,b,c;
 
 printf("%d %d %d\n", a, b, c);
-
-exit(0);	// to flush buffer.
 
 func add(int64 a, b)
 	-> int64 aa, ab

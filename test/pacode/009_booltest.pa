@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 
 func bool_t() -> int32
 {
@@ -85,6 +84,4 @@ printf("%d%d\n",!s0,!s1);
 printf("%d%d%d%d%d%d\n",!(s0==s1),!(s0!=s1),!(s0<s1),!(s0>s1),!(s0<=s1),!(s0>=s1));
 uint32 u0, u1 = 0u, 1u;
 printf("%d%d%d%d%d%d",!(u0<u1),!(u0>u1),!(u0<=u1),!(u0>=u1), !(0&&bool_t()), !(1||bool_f()));
-
-exit(0);
 

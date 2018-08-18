@@ -1,5 +1,4 @@
 ccall int64 printf();
-ccall exit();
 
 byte a = 12;
 byte b = a+7;
@@ -13,4 +12,3 @@ byte i2 = 3*a;
 
 printf("%d %d %d %d %d %d\n", b, c, d, e, i, i2);
 
-exit(0);

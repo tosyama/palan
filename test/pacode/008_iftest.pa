@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 
 func elif(int32 i)
 {
@@ -56,5 +55,3 @@ else { printf("f"); }
 if 1>=2<1 { printf("t"); }
 else { printf("f"); }
 printf("%d%d%d\n",i<1,i<2,b<=1u);
-
-exit(0);

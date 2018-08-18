@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 ccall setenv();
 ccall mtrace();
 ccall muntrace();
@@ -108,4 +107,3 @@ muntrace();
 printf("%d %d %d %d %d %d %d %d %d",
 		o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], o[8]);
 
-exit(0);
