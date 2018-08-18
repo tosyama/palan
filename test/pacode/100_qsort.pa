@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 
 const N=10;
 // start
@@ -20,9 +19,6 @@ printf("after:");
 data ->> quicksort(0, N-1)
 	->> data
 	-> show();
-
-// flush stdout.
-exit(0);
 
 func show(int16[N] data)
 {

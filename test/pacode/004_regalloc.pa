@@ -1,5 +1,4 @@
-ccall int64 printf();
-ccall exit();
+ccall int32 printf();
 
 func func1(int64 a1, a2, a3) -> int64
 {
@@ -28,4 +27,3 @@ printf ("%d %d %d %d %d %d %d %d %d\n", a, r1, r2, r3, r4, r5, r6, r7, r8);
 
 int32 bb, int64 aa = as_is(64, 32);
 printf("%d %d", aa, bb);
-exit(0);

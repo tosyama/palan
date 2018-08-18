@@ -8,6 +8,7 @@
 enum PlnInternalFuncType {
 	IFUNC_MALLOC,
 	IFUNC_FREE,
+	IFUNC_EXIT,
 	IFUNC_NUM
 };
 

@@ -12,6 +12,7 @@ namespace palan
 
 	void malloc(PlnBlock* block, PlnVariable* var, uint64_t alloc_size);
 	void free(PlnBlock* block, PlnVariable* var);
+	void exit(PlnBlock* block, uint64_t result);
 
 	PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index);
 

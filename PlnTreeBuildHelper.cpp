@@ -71,6 +71,14 @@ void free(PlnBlock* block, PlnVariable* var)
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
+void exit(PlnBlock* block, uint64_t result)
+{
+	PlnFunction* func_free = PlnFunctionCall::getInternalFunc(IFUNC_EXIT);
+	vector<PlnExpression*> args = { new PlnExpression(result) };
+	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args);
+	block->statements.push_back(new PlnStatement(call_free, block));
+}
+
 PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index)
 {
 	PlnValue var_val(var);

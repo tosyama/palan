@@ -312,6 +312,10 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "free");
 	f->asm_name = f->name;
 	internalFuncs[IFUNC_FREE] = f;
+
+	f = new PlnFunction(FT_C, "exit");
+	f->asm_name = f->name;
+	internalFuncs[IFUNC_EXIT] = f;
 }
 
 PlnFunction* PlnFunctionCall::getInternalFunc(PlnInternalFuncType func_type)

@@ -9,7 +9,8 @@ PlnModule.o:  models/PlnModule.h \
 	models/PlnArray.h models/PlnGeneralObject.h models/PlnType.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h \
-	models/../PlnMessage.h models/../PlnException.h
+	models/../PlnMessage.h models/../PlnException.h \
+	models/../PlnTreeBuildHelper.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \

@@ -1,5 +1,4 @@
 ccall int32 printf();
-ccall exit();
 
 const X,Y = 8,8;
 int32 count;
@@ -10,7 +9,6 @@ board ->> initBoard()
 	->> board, count;
 
 printf("answer: %d\n", count);
-exit(0);
 
 func initBoard(byte[Y,X] >>board)
 	-> byte[Y,X] board

@@ -21,6 +21,7 @@
 #include "../PlnConstants.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
+#include "../PlnTreeBuildHelper.h"
 
 using namespace std;
 
@@ -180,6 +181,7 @@ void PlnModule::finish(PlnDataAllocator& da)
 
 	BOOST_ASSERT(si.scope.size() == 1);
 	BOOST_ASSERT(si.owner_vars.size() == 0);
+	palan::exit(toplevel, 0);
 	toplevel->finish(da, si);
 	da.finish(save_regs, save_reg_dps);
 	stack_size = da.stack_size;
