@@ -30,7 +30,7 @@ func show(int16[N] data)
 	printf("\n");
 }
 
-func quicksort(int16[N] >>data, int32 left, int32 right)
+func quicksort(int16[N] >>data, int32 left, right)
 	-> int16[N] data
 {
 	int32 i, mid;
