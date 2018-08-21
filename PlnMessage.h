@@ -26,11 +26,27 @@ enum PlnErrCode {
 	E_DuplicateConstName,	// const name
 	E_CantUseOperatorHere,	// var name
 
-	E_InvalidAST	// source name, line
+	E_InvalidAST,	// source name, line
+
+	// CUI errors
+	E_CUI_NoInputFile,
+	E_CUI_IncompatibleOpt,
+	E_CUI_InvalidExecOpt
+};
+
+enum PlnHelpCode {
+	H_Help,
+	H_Version,
+	H_Assembly,
+	H_Compile,
+	H_Output,
+	H_Execute,
+	H_Input
 };
 
 class PlnMessage
 {
 public:
 	static string getErr(PlnErrCode err_code, string arg1="", string arg2="");
+	static const char* getHelp(PlnHelpCode help_code);
 };

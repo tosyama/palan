@@ -64,13 +64,13 @@ int main(int argc, char* argv[])
 	po::variables_map vm;
 
 	opt.add_options()
-		("help,h", "Display this help")
-		("version,v", "Display compiler version")
-		("assembly,S", "Display compiled assembly")
-		("compile,c", "Compile, assemble and output object file")
-		("output,o", po::value<string>(), "Output executable file")
-		("execute,x", "Execute immediately after output executable file")
-		("input-file", po::value<vector<string>>(), "Specify input palan source file");
+		("help,h", PlnMessage::getHelp(H_Help))
+		("version,v", PlnMessage::getHelp(H_Version))
+		("assembly,S", PlnMessage::getHelp(H_Assembly))
+		("compile,c", PlnMessage::getHelp(H_Compile))
+		("output,o", po::value<string>(), PlnMessage::getHelp(H_Output))
+		("execute,x", PlnMessage::getHelp(H_Execute))
+		("input-file", po::value<vector<string>>(), PlnMessage::getHelp(H_Input));
 
 	p_opt.add("input-file", -1);
 	
@@ -110,19 +110,19 @@ int main(int argc, char* argv[])
 
 		// Validation
 		if (!input_file) {
-			cerr << "No input file" << endl;
+			cerr << PlnMessage::getErr(E_CUI_NoInputFile) << endl;
 			cerr << usage() << opt << note();
 			return PARAM_ERR;
 		}
 
 		if (compile && output || compile && assembly || output && assembly) {
-			cerr << "Incompatible options specifiled" << endl;
+			cerr << PlnMessage::getErr(E_CUI_IncompatibleOpt) << endl;
 			cerr << usage() << opt << note();
 			return PARAM_ERR;
 		}
 
 		if (execute && (compile || assembly)) {
-			cerr << "Excecute option use only with output option." << endl;
+			cerr << PlnMessage::getErr(E_CUI_InvalidExecOpt) << endl;
 			return PARAM_ERR;
 		}
 
