@@ -1,5 +1,16 @@
 #include "cuiTestBase.h"
 
+TEST_CASE("CUI basic command-line test.", "[cui]")
+{
+	// pat -h
+	REQUIRE(exec_pac("", "-h", "", "") == "success");
+	REQUIRE(errstr("log") == "");
+
+	// pat -v
+	REQUIRE(exec_pac("", "-v", "", "") == "success");
+	REQUIRE(outstr("log") == "Palan compiler 0.1.0\n");
+}
+
 TEST_CASE("CUI basic err test.", "[cui]")
 {
 	string testcode = "XXX_src_not_found";

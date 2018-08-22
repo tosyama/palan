@@ -29,29 +29,50 @@ inline int getStatus(int ret_status)
 	}
 }
 
+
 string build(string srcf)
 {
-	string out_file = "out/cui/" + srcf;
-	string pac_cmd = "../pac pacode/" + srcf + ".pa -o "+ out_file
-			+ ">" + out_file + ".out 2>" + out_file + ".err";
+	return exec_pac(srcf, "-o", srcf, "");
+}
+
+string exec_pac(string srcf, string preopt, string outf, string postopt)
+{
+	string log_file = "out/cui/" + (srcf != "" ? srcf : "log");
+
+	if (outf != "") 
+		outf = "out/cui/" + outf;
+	if (srcf != "") 
+		srcf = "pacode/" + srcf + ".pa";
+
+	string pac_cmd = "../pac " + srcf
+			+ " " + preopt + " "+ outf + " " + postopt
+			+ " >" + log_file + ".out 2>" + log_file + ".err";
 
 	int ret = getStatus(system(pac_cmd.c_str()));
 	if (ret) return "compile err: "+to_string(ret);
 	
-	int out_fd = open(out_file.c_str(), O_RDONLY);
+	return "success";
+}
+
+string outfile(string outf)
+{
+	outf = "out/cui/"+outf;
+	int out_fd = open(outf.c_str(), O_RDONLY);
 	if (out_fd != -1) {
+		string result;
 		struct stat finf;
+		
 		if (fstat(out_fd, &finf) == 0) {
-			if (finf.st_size < 10) {
-				return "too small out file";
-			}
+			if (finf.st_size < 10)
+				result =  "too small";
+			else 
+				result = "exists";
 		} else {
-			return "out file not exists";
+			result = "not exists";
 		}
 		close(out_fd);
+		return result;
 	}
-
-	return "success";
 }
 
 string getFileStr(string file_path)
