@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 
 		if (do_asm) {
 			FILE* as;
-			string obj_file = getDirName(out_file) + getFileName(fname) + ".o";
+			string obj_file = getDirName(fname) + getFileName(fname) + ".o";
 			string cmd = "as -o \"" + obj_file + "\"" ;
 
 			as = popen(cmd.c_str(), "w");

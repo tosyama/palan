@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_RUNNER
 #include <stdio.h>
-
+#include "catch.hpp"
 #include "cuiTestBase.h"
 
 int main(int argc, char* argv[])
