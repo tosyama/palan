@@ -46,9 +46,9 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_CUI_NoInputFile:
 			f = "No input file"; break;
 		case E_CUI_IncompatibleOpt:
-			f = "Incompatible options specifiled"; break;
+			f = "Incompatible options are specifiled"; break;
 		case E_CUI_InvalidExecOpt:
-			f = "Excecute option use only with output option."; break;
+			f = "Excecute option use only with output option"; break;
 
 		default:
 			return (format("Unknown error. code:%1% - %2%, %3%")  % err_code % arg1 % arg2).str();

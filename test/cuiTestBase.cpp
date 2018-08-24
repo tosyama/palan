@@ -61,7 +61,7 @@ string exec_pac(string srcf, string preopt, string outf, string postopt)
 			+ " >" + log_file + ".out 2>" + log_file + ".err";
 	
 	int ret = getStatus(system(pac_cmd.c_str()));
-	if (ret) return "compile err: "+to_string(ret);
+	if (ret) return "err: "+to_string(ret);
 	
 	return "success";
 }
