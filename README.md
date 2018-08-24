@@ -28,13 +28,14 @@ Note: `make package` installs [Boost], [Bison], [Flex] and [Catch].
 ```sh
 $ vi helloworld.pa
 ```
-```c
-syscall 1: write();
-write(1, "Hello World!\n", 13);
+```go
+ccall int32 printf();
+"Hello World!\n" -> printf();
 ```
 
 ### Build and Run:
 ```sh
 $ ./pac helloworld.pa -o a.out
 $ ./a.out
+Hello World!
 ```

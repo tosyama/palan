@@ -42,6 +42,14 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;
+
+		case E_CUI_NoInputFile:
+			f = "No input file"; break;
+		case E_CUI_IncompatibleOpt:
+			f = "Incompatible options are specifiled"; break;
+		case E_CUI_InvalidExecOpt:
+			f = "Excecute option use only with output option"; break;
+
 		default:
 			return (format("Unknown error. code:%1% - %2%, %3%")  % err_code % arg1 % arg2).str();
 	}
@@ -55,5 +63,26 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		message = (format(f) % arg1 % arg2).str();
 
 	return  message;
+}
+
+const char* PlnMessage::getHelp(PlnHelpCode help_code)
+{
+	switch (help_code) {
+		case H_Help:
+			return "Display this help";
+		case H_Version:
+			return "Display compiler version";
+		case H_Assembly:
+			return "Display compiled assembly";
+		case H_Compile:
+			return "Compile, assemble and output object file";
+		case H_Output:
+			return "Output executable file";
+		case H_Execute:
+			return "Execute immediately after output executable file";
+		case H_Input:
+			return "Specify input palan source file";
+	}
+	BOOST_ASSERT(false);
 }
 

@@ -1,19 +1,13 @@
 #include <cstdlib>
-#include "cuiTestBase.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <iostream>
 
-TEST_CASE ("Hello World", "[basic]")
-{
-	string testcode = "001_helloworld";
-	REQUIRE(build(testcode) == "success");
-	REQUIRE(outstr(testcode) == "linking: out/cui/001_helloworld\n");
-	REQUIRE(errstr(testcode) == "");
-}
+#include "cuiTestBase.h"
 
 int clean()
 {
@@ -29,29 +23,70 @@ inline int getStatus(int ret_status)
 	}
 }
 
+void copy_file(const string from_file_name, const string to_file_name)
+{
+	try {
+		ifstream is(from_file_name, ios::in | ios::binary);
+		if (is) {
+			ofstream os(to_file_name, ios::out | ios::binary);
+
+			istreambuf_iterator<char> iit(is);
+			istreambuf_iterator<char> end;
+			ostreambuf_iterator<char> oit(os);
+			copy(iit, end, oit);
+		}
+	} catch(exception &e) {
+		// do nothing
+	}
+}
+
 string build(string srcf)
 {
-	string out_file = "out/cui/" + srcf;
-	string pac_cmd = "../pac pacode/" + srcf + ".pa -o "+ out_file
-			+ ">" + out_file + ".out 2>" + out_file + ".err";
+	return exec_pac(srcf, "-o", srcf, "");
+}
 
-	int ret = getStatus(system(pac_cmd.c_str()));
-	if (ret) return "compile err: "+to_string(ret);
-	
-	int out_fd = open(out_file.c_str(), O_RDONLY);
-	if (out_fd != -1) {
-		struct stat finf;
-		if (fstat(out_fd, &finf) == 0) {
-			if (finf.st_size < 10) {
-				return "too small out file";
-			}
-		} else {
-			return "out file not exists";
-		}
-		close(out_fd);
+string exec_pac(string srcf, string preopt, string outf, string postopt)
+{
+	string log_file = "out/cui/" + (srcf != "" ? srcf : "log");
+
+	if (outf != "") 
+		outf = "out/cui/" + outf;
+	if (srcf != "") { 
+		copy_file("pacode/" + srcf + ".pa", "out/cui/" + srcf + ".pa");
+		srcf = "out/cui/" + srcf + ".pa";
 	}
 
+	string pac_cmd = "../pac " + srcf
+			+ " " + preopt + " "+ outf + " " + postopt
+			+ " >" + log_file + ".out 2>" + log_file + ".err";
+	
+	int ret = getStatus(system(pac_cmd.c_str()));
+	if (ret) return "err: "+to_string(ret);
+	
 	return "success";
+}
+
+string outfile(string outf)
+{
+	outf = "out/cui/"+outf;
+	int out_fd = open(outf.c_str(), O_RDONLY);
+	string result;
+	if (out_fd != -1) {
+		struct stat finf;
+		
+		if (fstat(out_fd, &finf) == 0) {
+			if (finf.st_size < 10)
+				result =  "too small";
+			else 
+				result = "exists";
+		} else {
+			result = "read fail";
+		}
+		close(out_fd);
+	} else {
+		result = "not exists";
+	}
+	return result;
 }
 
 string getFileStr(string file_path)
