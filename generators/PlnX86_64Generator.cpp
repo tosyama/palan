@@ -281,22 +281,10 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 
 static bool needAbsCopy(const PlnGenEntity* immediate)
 {
-	BOOST_ASSERT(immediate->alloc_type == GA_CODE);
-	const char* ints = oprnd(immediate);
-	if (ints[1] == '.') {	// simbol.
-		return false;
+	BOOST_ASSERT(immediate->alloc_type == GA_CODE && immediate->type == GE_INT);
 
-	} else if (ints[1] == '-') {
-		ints+=2;
-		int len = strlen(ints);
-		if (strlen(ints) > 10 || (len==10&&strcmp(ints, "2147483648") > 0))
-			return true;
-
-	} else {
-		ints++;
-		int len = strlen(ints);
-		if (strlen(ints) > 10 || (len==10&&strcmp(ints, "4294967295") > 0))
-			return true;
+	if (immediate->data.i < -2147483648 || immediate->data.i > 4294967295) {
+		return true;
 	}
 	return false;
 }
