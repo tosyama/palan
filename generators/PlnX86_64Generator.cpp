@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <stdio.h>
 #include <sstream>
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
@@ -80,7 +81,15 @@ static const char* oprnd(const PlnGenEntity *e)
 	} else if (e->type == GE_INT) {
 		if (e->alloc_type == GA_REG)
 			return r(e->data.i, e->size);
+		if (e->alloc_type == GA_CODE) {
+			if (!e->buf) {
+				e->buf = new char[32];
+				sprintf(e->buf, "$%lld", (long long int)e->data.i);
+			}
+			return e->buf;
+		}
 	}
+	
 	BOOST_ASSERT(false);
 }
 
@@ -273,7 +282,7 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 static bool needAbsCopy(const PlnGenEntity* immediate)
 {
 	BOOST_ASSERT(immediate->alloc_type == GA_CODE);
-	const char* ints = immediate->data.str->c_str();
+	const char* ints = oprnd(immediate);
 	if (ints[1] == '.') {	// simbol.
 		return false;
 
@@ -363,9 +372,19 @@ void PlnX86_64Generator::genLoadAddress(const PlnGenEntity* dst, const PlnGenEnt
 void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
-	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
-		os << "	incq " << oprnd(tgt) << "	# " << comment << endl;
-		return;
+	if (second->alloc_type == GA_CODE) {
+		if (second->data.i == 1) {
+			os << "	incq " << oprnd(tgt) << "	# " << comment << endl;
+			return;
+		}
+
+		if (second->data.i < 0) {
+			PlnGenEntity e = *second;
+			e.data.i = -e.data.i;
+			e.buf == NULL;
+			genSub(tgt, &e, comment);
+			return;
+		}
 	}
 
 	const char* add_str = oprnd(second);
@@ -381,7 +400,7 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string 
 void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
-	if (second->alloc_type == GA_CODE && *second->data.str == "$1") {
+	if (second->alloc_type == GA_CODE && second->data.i == 1) {
 		os << "	decq " << oprnd(tgt) << "	# " << comment << endl;
 		return;
 	}
@@ -604,11 +623,11 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			);
 
 	} else if (dp->type == DP_LIT_INT) {
-		e->type = GE_STRING;
+		e->type = GE_INT;
 		e->alloc_type = GA_CODE;
 		e->size = 8;
 		e->data_type = dp->data_type;
-		e->data.str = new string(string("$") + to_string(dp->data.intValue));
+		e->data.i = dp->data.intValue;
 
 	} else if (dp->type == DP_RO_DATA) {
 		e->type = GE_STRING;

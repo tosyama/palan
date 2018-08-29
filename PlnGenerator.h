@@ -19,6 +19,7 @@ enum GenEttyType {
 
 class PlnGenEntity {
 public:
+	PlnGenEntity() : buf(NULL) { }
 	char type;
 	char alloc_type;
 	char data_type;
@@ -27,9 +28,11 @@ public:
 	union {
 		string* str;
 		int64_t i;
-	}data;
+	} data;
+	mutable char* buf;
 	~PlnGenEntity()
 	{
+		if (buf) delete buf;
 		switch (type) {
 			case GE_STRING:
 				delete data.str;
