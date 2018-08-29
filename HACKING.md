@@ -1,7 +1,7 @@
 Palan Hacking Guide & Design Memo
 ===================
 
-ver 0.0.0
+ver 0.1.0
 
 Code Structure
 --------------
