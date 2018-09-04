@@ -1,11 +1,8 @@
 ccall int32 printf();
-ccall exit();
 
-const N = 4-1;
-const M = "%d\n";
+func foo() -> int32 i, j, int16 l
+{
+	1,2,3 -> i,j,l;
+}
 
-int32 a, b;
-int64[N] i, j;
-
-exit(0);
-
+"%d, %d, %d\n", foo() -> printf();

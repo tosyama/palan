@@ -63,3 +63,11 @@ func omove(int64[3] >>a, int32 b) -> int64[3] a
 {
 	a[1] + b -> a[1];
 }
+
+func ret_chain() -> int32 i, j, int16 l
+{
+	1,2,3 -> i,j,l;
+}
+
+"%d %d %d\n", ret_chain() -> printf();
+
