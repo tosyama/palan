@@ -268,10 +268,12 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		{
 			for (auto arg: arguments) 
 				arg->gen(g);
-			for (auto arg: arguments)
-				g.genLoadDp(arg->data_places[0], false);
-			for (auto arg: arguments)
-				g.genSaveDp(arg->data_places[0]);
+
+			for (auto dp: arg_dps)
+				g.genLoadDp(dp, false);
+
+			for (auto dp: arg_dps)
+				g.genSaveDp(dp);
 
 			g.genSysCall(function->inf.syscall.id, function->asm_name);
 
@@ -281,10 +283,12 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		{
 			for (auto arg: arguments) 
 				arg->gen(g);
-			for (auto arg: arguments)
-				g.genLoadDp(arg->data_places[0], false);
-			for (auto arg: arguments)
-				g.genSaveDp(arg->data_places[0]);
+
+			for (auto dp: arg_dps)
+				g.genLoadDp(dp, false);
+
+			for (auto dp: arg_dps)
+				g.genSaveDp(dp);
 
 			g.genCCall(function->asm_name);
 
