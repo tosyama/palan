@@ -1,7 +1,7 @@
 Palan Hacking Guide & Design Memo
 ===================
 
-ver 0.1.0
+ver 0.2.0a
 
 Code Structure
 --------------
@@ -43,7 +43,7 @@ Code Structure
 	You can see working palan code here.
 	Asm files and execution files will be created under /test/out.
 
-*/sample*  
+*/idea*  
 	Wrote down the idea of palan language for the future.
 	Don't use for reference.
 
