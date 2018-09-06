@@ -48,7 +48,7 @@ const int PARAM_ERR = -1;
 /// Main function for palan compiler CUI.
 int main(int argc, char* argv[])
 {
-	const char* ver_str = "Palan compiler 0.1.0";
+	const char* ver_str = "Palan compiler 0.1.1";
 	bool show_asm = false;
 	bool do_asm = true;
 	bool do_link = true;

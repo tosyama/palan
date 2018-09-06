@@ -21,7 +21,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 
 	// pac -v
 	REQUIRE(exec_pac("", "-v", "", "") == "success");
-	REQUIRE(outstr("log") == "Palan compiler 0.1.0\n");
+	REQUIRE(outstr("log") == "Palan compiler 0.1.1\n");
 	REQUIRE(errstr("log") == "");
 
 	// pac -S <input-file>"
