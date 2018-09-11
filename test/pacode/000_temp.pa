@@ -1,8 +1,18 @@
 ccall int32 printf();
 
-func foo() -> int32 i, j, int16 l
-{
-	1,2,3 -> i,j,l;
-}
+int32 i, j, k = 1, 2;
 
-"%d, %d, %d\n", foo() -> printf();
+i, j -> j, i;
+printf("%d %d\n", i, j);
+
+int32[3] a, b, c;
+1 -> a[1];
+2 -> a[2];
+3 -> b[1];
+4 -> b[2];
+b, a[1] -> a, i;
+b, a[1] -> c, i;
+
+printf("%d %d\n", a[1], i);
+
+

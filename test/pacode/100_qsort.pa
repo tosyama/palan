@@ -45,15 +45,11 @@ func quicksort(int16[N] >>data, int32 left, right)
 	while i<=right {
 		if data[i] < data[left] {
 			mid+1 -> mid;
-			data[mid] -> temp;
-			data[i] -> data[mid];
-			temp -> data[i];
+			data[mid], data[i] -> data[i],data[mid];
 		}
 		i+1 -> i;
 	}
-	data[left] -> temp;
-	data[mid] -> data[left];
-	temp -> data[mid];
+	data[left], data[mid] -> data[mid], data[left];
 
 	data ->> quicksort(left, mid-1)
 		->> quicksort(mid+1, right)

@@ -72,17 +72,19 @@ void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		start_ind = ai->addDataPlace(data_places, start_ind);
 	}
 
-	for (auto ai: assgin_items) {
+	for (auto ai: assgin_items)
 		ai->finishS(da, si);
+
+	for (auto ai: assgin_items)
 		ai->finishD(da, si);
-	}
 }
 
 void PlnAssignment::gen(PlnGenerator& g)
 {
-	for (auto ai: assgin_items) {
+	for (auto ai: assgin_items)
 		ai->genS(g);
+
+	for (auto ai: assgin_items)
 		ai->genD(g);
-	}
 }
 

@@ -11,11 +11,14 @@ class PlnDstPrimitiveItem : public PlnDstItem {
 	PlnExpression *dst_ex;
 	PlnDataPlace *dst_dp;
 	PlnVariable *save_src_var;
-	PlnDataPlace*litral_dp;
+	PlnDataPlace *litral_dp;
+	PlnVariable *src_var;
 
 public:
 	PlnDstPrimitiveItem(PlnExpression* ex)
-		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL), litral_dp(NULL) {
+		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL), litral_dp(NULL),
+			src_var(NULL) {
+
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		if (ex->values[0].asgn_type == ASGN_MOVE) {
 			PlnCompileError err(E_CantUseMoveOwnership, ex->values[0].inf.var->name);
@@ -32,10 +35,9 @@ public:
 			src_ex->data_places.push_back(dst_dp);
 
 		} else {
-			int index = src_ex->data_places.size();
-
 			if (src_ex->type == ET_VALUE) {
-				PlnValue v = src_ex->values[index];
+				BOOST_ASSERT(src_ex->data_places.size() == 0);
+				PlnValue v = src_ex->values[0];
 				if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_RO_DATA) {
 					litral_dp = v.getDataPlace(da);
 				}
@@ -44,11 +46,24 @@ public:
 			if (dst_ex->type == ET_VALUE || litral_dp) {
 				src_ex->data_places.push_back(dst_dp);
 
-			} else {	// e.g. ET_ARRAYITME
+			} else {	// e.g. ET_ARRAYITME. save_src_var is use also return value.
 				vector<PlnType*> t = dst_ex->values[0].inf.var->var_type;
 				save_src_var = PlnVariable::createTempVar(da, t, "save src");
 				src_ex->data_places.push_back(save_src_var->place);
 			}
+		}
+
+		if (src_ex->type == ET_VALUE && src_ex->values[0].type == VL_VAR) {
+			src_var = src_ex->values[0].inf.var;
+		} else if (src_ex->type == ET_ARRAYITEM) {
+			src_var = src_ex->values[0].inf.var->container;
+		}
+	}
+
+	static void checkNeedToSave(PlnDataAllocator &da, PlnDataPlace* dp, PlnVariable*var) {
+		if (var && (var->place->last_acccess_step > dp->push_src_step)) {
+			BOOST_ASSERT(!dp->save_place);
+			da.allocSaveData(dp, dp->push_src_step, dp->release_step);
 		}
 	}
 
@@ -70,6 +85,8 @@ public:
 			da.pushSrc(place, save_src_var->place);
 
 		} else {
+			checkNeedToSave(da, dst_dp, src_var);
+
 			da.popSrc(dst_dp);
 			if (place) {
 				if (litral_dp) {

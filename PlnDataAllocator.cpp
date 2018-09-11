@@ -472,6 +472,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 	auto src_place = dp->src_place;
 
 	prePopSrc(*this, src_place);
+	src_place->access(step);
 
 	// Release source if flag on.
 	if (dp->release_src_pop) {
@@ -486,6 +487,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 	if (dp->status == DS_READY_ASSIGN) {
 		allocDp(dp, false);
 	}
+	dp->access(step);
 
 	// check src data would be destory.
 	if (!dp->save_place) {
@@ -529,9 +531,10 @@ void PlnDataAllocator::checkDataLeak()
 
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
-	: type(DP_UNKNOWN), status(DS_UNKNOWN), accessCount(0), alloc_step(0), release_step(INT_MAX),
-	 previous(NULL), save_place(NULL), src_place(NULL),
-	 size(size), data_type(data_type), release_src_pop(true), load_address(false), do_clear_src(false)
+	: type(DP_UNKNOWN), status(DS_UNKNOWN),
+		access_count(0), alloc_step(0), release_step(INT_MAX), last_acccess_step(0),
+		previous(NULL), save_place(NULL), src_place(NULL),
+		size(size), data_type(data_type), release_src_pop(true), load_address(false), do_clear_src(false)
 {
 	static string emp="";
 	comment = &emp;
@@ -605,5 +608,15 @@ void PlnDataPlace::updateBytesDpStatus()
 	status = is_released ? DS_RELEASED : DS_ASSIGNED_SOME;
 	this->alloc_step = alloc_step;
 	this->release_step = release_step;
+}
+
+void PlnDataPlace::access(int32_t step)
+{
+	this->last_acccess_step = step;
+	access_count++;
+	if (type == DP_SUBDP) {
+		data.originalDp->last_acccess_step = step;
+		data.originalDp->access_count++;
+	}
 }
 

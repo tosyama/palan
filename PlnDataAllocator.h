@@ -108,11 +108,13 @@ public:
 	char data_type;
 	char status;
 
-	int32_t accessCount;
+	int32_t access_count;
 
 	int32_t alloc_step;
 	int32_t release_step;
 	int32_t push_src_step;
+	int32_t last_acccess_step;
+
 	bool release_src_pop;
 	bool load_address;
 	bool do_clear_src;
@@ -140,5 +142,5 @@ public:
 
 	string cmt() { return *comment; }
 	void updateBytesDpStatus();
-	void access();
+	void access(int32_t step);
 };
