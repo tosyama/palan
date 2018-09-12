@@ -68,6 +68,7 @@ DBL_ARROW	"->>"
 DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
+POST_KW [ \t\r\n(]*		/* To keep priority than FUNC_ID. */
 
 %%
 %{
@@ -96,14 +97,14 @@ COMMENT1	\/\/[^\n]*\n
 			return INT;
 		}
 	}
-ccall	{ return KW_CCALL; }
-syscall	{ return KW_SYSCALL; }
-func	{ return KW_FUNC; }
-return	{ return KW_RETURN; }
-while	{ return KW_WHILE; }
-if		{ return KW_IF; }
-else	{ return KW_ELSE; }
-const 	{ return KW_CONST; }
+ccall/{POST_KW}		{ return KW_CCALL; }
+syscall/{POST_KW}	{ return KW_SYSCALL; }
+func/{POST_KW}		{ return KW_FUNC; }
+return/{POST_KW}	{ return KW_RETURN; }
+while/{POST_KW}		{ return KW_WHILE; }
+if/{POST_KW}		{ return KW_IF; }
+else/{POST_KW}		{ return KW_ELSE; }
+const/{POST_KW} 	{ return KW_CONST; }
 "=="	{ return OPE_EQ; }
 "!="	{ return OPE_NE; }
 "<="	{ return OPE_LE; }

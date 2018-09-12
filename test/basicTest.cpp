@@ -98,6 +98,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"test2 5\n"
 							"test3 5\n"
 							"test1 3");
+
+	testcode = "015_assignment2";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "2 1\n4 1");
 }
 
 TEST_CASE("Compile error test", "[basic]")

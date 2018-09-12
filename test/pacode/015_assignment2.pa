@@ -1,0 +1,21 @@
+ccall int32 printf();
+
+int32 i, j, k = 1, 2;
+
+i, j -> j, i;
+printf("%d %d\n", i, j);
+
+int32[3] a, b = arr(0), arr(3);
+
+b, a[1] -> a, i;
+
+printf("%d %d\n", a[1], i);
+
+func arr(int32 base) -> int32[3] a
+{
+	int32 i = 0;
+	while (i < 3) {
+		base + i -> a[i];
+		i+1 -> i;
+	}
+}
