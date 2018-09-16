@@ -1,4 +1,5 @@
 #include "testBase.h"
+#include <iostream>
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
@@ -6,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 1\n3 3");
+	REQUIRE(exec(testcode) == "1 1");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");

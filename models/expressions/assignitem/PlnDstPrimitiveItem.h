@@ -12,12 +12,10 @@ class PlnDstPrimitiveItem : public PlnDstItem {
 	PlnDataPlace *dst_dp;
 	PlnVariable *save_src_var;
 	PlnDataPlace *litral_dp;
-	PlnVariable *src_var;
 
 public:
 	PlnDstPrimitiveItem(PlnExpression* ex)
-		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL), litral_dp(NULL),
-			src_var(NULL) {
+		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL), litral_dp(NULL) {
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		if (ex->values[0].asgn_type == ASGN_MOVE) {
@@ -52,19 +50,6 @@ public:
 				src_ex->data_places.push_back(save_src_var->place);
 			}
 		}
-
-		if (src_ex->type == ET_VALUE && src_ex->values[0].type == VL_VAR) {
-			src_var = src_ex->values[0].inf.var;
-		} else if (src_ex->type == ET_ARRAYITEM) {
-			src_var = src_ex->values[0].inf.var->container;
-		}
-	}
-
-	static void checkNeedToSave(PlnDataAllocator &da, PlnDataPlace* dp, PlnVariable*var) {
-		if (var && (var->place->last_acccess_step > dp->push_src_step)) {
-			BOOST_ASSERT(!dp->save_place);
-			da.allocSaveData(dp, dp->push_src_step, dp->release_step);
-		}
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -85,7 +70,8 @@ public:
 			da.pushSrc(place, save_src_var->place);
 
 		} else {
-			checkNeedToSave(da, dst_dp, src_var);
+			if (need_save)
+				da.allocSaveData(dst_dp, dst_dp->push_src_step, dst_dp->release_step);
 
 			da.popSrc(dst_dp);
 			if (place) {

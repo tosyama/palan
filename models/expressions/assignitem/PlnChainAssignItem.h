@@ -16,12 +16,12 @@ public:
 		BOOST_ASSERT(src_ex->type == ET_ASSIGN);
 	}
 	
-	void addDstEx(PlnExpression* ex) override {
+	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(ex->values.size() == 1);
 		auto v = ex->values[0];
 
 		BOOST_ASSERT(v.type == VL_VAR);
-		dsts.push_back( {PlnDstItem::createDstItem(ex)} );
+		dsts.push_back( {PlnDstItem::createDstItem(ex, need_save)} );
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) {

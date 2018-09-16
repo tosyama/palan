@@ -8,7 +8,7 @@
 // PlnAssignItem
 class PlnAssignItem {
 public:
-	virtual void addDstEx(PlnExpression* ex) = 0;
+	virtual void addDstEx(PlnExpression* ex, bool need_save) = 0;
 	virtual int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) = 0;
 
 	virtual void finishS(PlnDataAllocator& da, PlnScopeInfo& si) = 0;

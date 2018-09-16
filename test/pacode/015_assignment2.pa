@@ -11,6 +11,11 @@ b, a[1] -> a, i;
 
 printf("%d %d\n", a[1], i);
 
+arr(0) -> a;
+
+a, b -> b, a;
+// printf("%d %d\n", a[1], b[1]);
+
 func arr(int32 base) -> int32[3] a
 {
 	int32 i = 0;

@@ -24,7 +24,8 @@
 class PlnDstItem {
 public:
 	PlnDataPlace* place;
-	PlnDstItem(): place(NULL) {}
+	bool need_save;
+	PlnDstItem(): place(NULL), need_save(false) {}
 	virtual ~PlnDstItem() {}
 
 	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
@@ -32,7 +33,7 @@ public:
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
 	virtual void gen(PlnGenerator& g) { }
 
-	static PlnDstItem* createDstItem(PlnExpression* ex);
+	static PlnDstItem* createDstItem(PlnExpression* ex, bool need_save);
 };
 
 // implementations 
@@ -108,8 +109,10 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 #include "PlnDstMoveObjectItem.h"
 #include "PlnDstMoveIndirectObjItem.h"
 
-PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
+PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 {
+	PlnDstItem* di = NULL;
+
 	if (ex->type == ET_VALUE) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
@@ -117,36 +120,40 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex)
 		if (t->data_type == DT_OBJECT_REF) {
 			auto asgn_type = ex->values[0].asgn_type;
 			if (asgn_type == ASGN_COPY) {
-				return new PlnDstCopyObjectItem(ex);
+				di = new PlnDstCopyObjectItem(ex);
 			} else if (asgn_type == ASGN_MOVE) {
-				return new PlnDstMoveObjectItem(ex);
+				di = new PlnDstMoveObjectItem(ex);
 			} else if (asgn_type == ASGN_COPY_REF) {
-				return new PlnDstPrimitiveItem(ex);
+				di = new PlnDstPrimitiveItem(ex);
 			}
 		} else {
-			return new PlnDstPrimitiveItem(ex);
+			di = new PlnDstPrimitiveItem(ex);
 		}
 	} 
 
-	if (ex->type == ET_ARRAYITEM) {
+	else if (ex->type == ET_ARRAYITEM) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		int dt = ex->values[0].getType()->data_type;
 		if (dt == DT_SINT || dt == DT_UINT) {
-			return new PlnDstPrimitiveItem(ex);
+			di = new PlnDstPrimitiveItem(ex);
 
 		} else if (dt == DT_OBJECT_REF) {
 			int at = ex->values[0].asgn_type;
 			if (at == ASGN_MOVE) {
-				return new PlnDstMoveIndirectObjItem(ex);
+				di = new PlnDstMoveIndirectObjItem(ex);
 			} else if (at == ASGN_COPY) {
-				return new PlnDstCopyObjectItem(ex);
+				di = new PlnDstCopyObjectItem(ex);
 			} else if (at == ASGN_COPY_REF) {
-				return new PlnDstPrimitiveItem(ex);
+				di = new PlnDstPrimitiveItem(ex);
 			}
 		}
 	}
 
-	BOOST_ASSERT(false);
+	BOOST_ASSERT(di);
+
+	di->need_save = need_save;
+	
+	return di;
 }
 

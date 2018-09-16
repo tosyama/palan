@@ -19,12 +19,12 @@ public:
 
 	}
 	
-	void addDstEx(PlnExpression* ex) override {
+	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 
-		dst_item = PlnDstItem::createDstItem(ex);
+		dst_item = PlnDstItem::createDstItem(ex, need_save);
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
