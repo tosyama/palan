@@ -14,7 +14,15 @@ printf("%d %d\n", a[1], i);
 arr(0) -> a;
 
 a, b -> b, a;
-// printf("%d %d\n", a[1], b[1]);
+printf("%d %d\n", a[1], b[1]);
+
+int32[2][3] aa, bb;
+arr(0) -> aa[1];
+arr(3) -> bb[0];
+
+aa[1], bb[0] -> bb[0], aa[1];
+
+printf("%d %d\n", aa[1][1], bb[0][1]);
 
 func arr(int32 base) -> int32[3] a
 {

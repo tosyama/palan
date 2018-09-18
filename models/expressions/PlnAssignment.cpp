@@ -126,7 +126,10 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 					throw err;
 				}
 
-				bool need_save = checkNeedToSave(expressions, exp_i, this->lvals, dst_i);
+				bool need_save = false;
+				if (this->lvals[dst_i]->values[0].asgn_type == ASGN_COPY) {
+					need_save = checkNeedToSave(expressions, exp_i, this->lvals, dst_i);
+				}
 
 				ai->addDstEx(this->lvals[dst_i], need_save);
 				dst_i++;

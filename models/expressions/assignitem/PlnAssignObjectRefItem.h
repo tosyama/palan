@@ -9,10 +9,12 @@
 class PlnAssignObjectRefItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
+	PlnClone* src_save;
 	PlnDstItem* dst_item;
 
 public:
-	PlnAssignObjectRefItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
+	PlnAssignObjectRefItem(PlnExpression* ex)
+			: src_ex(ex), src_save(NULL), dst_item(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
@@ -33,8 +35,17 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->setSrcEx(da, si, src_ex);
-		src_ex->finish(da, si);
+		if (dst_item->need_save) {
+			src_save = new PlnClone(da, src_ex->values[0].inf.var->var_type, true);
+			dst_item->setSrcEx(da, si, src_save);
+			src_ex->data_places.push_back(src_save->src_dp);
+			src_ex->finish(da, si);
+			src_save->finish(da, si);
+
+		} else {
+			dst_item->setSrcEx(da, si, src_ex);
+			src_ex->finish(da, si);
+		}
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -45,14 +56,20 @@ public:
 			if (si.exists_current(var))
 				si.set_lifetime(var, VLT_FREED);
 		}
+		if (src_save)
+			src_save->finishFree(da, si);
 	}
 
 	void genS(PlnGenerator& g) override {
 		src_ex->gen(g);
+		if (src_save)
+			src_save->gen(g);
 	}
 
 	void genD(PlnGenerator& g) override {
 		dst_item->gen(g);
+		if (src_save)
+			src_save->genFree(g);
 	}
 };
 

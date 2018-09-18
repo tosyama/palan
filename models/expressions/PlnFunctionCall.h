@@ -12,7 +12,7 @@ enum PlnInternalFuncType {
 	IFUNC_NUM
 };
 
-class PlnCloneArg;
+class PlnClone;
 
 // FunctionCall: Function Arguments;
 class PlnFunctionCall : public PlnExpression
@@ -21,7 +21,7 @@ class PlnFunctionCall : public PlnExpression
 	vector<PlnDataPlace*> ret_dps;
 	vector<PlnVariable*> free_vars;
 	vector<PlnExpression*> free_exs;
-	vector<PlnCloneArg*> clones;
+	vector<PlnClone*> clones;
 
 public:
 	PlnFunction* function;

@@ -18,7 +18,9 @@
 #include "../../../PlnException.h"
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
+#include "../PlnClone.h"
 #include "PlnAssignItem.h"
+
 
 // PlnDstItem
 class PlnDstItem {

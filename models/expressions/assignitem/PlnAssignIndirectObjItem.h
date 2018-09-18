@@ -9,10 +9,12 @@
 class PlnAssignIndirectObjItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
+	PlnClone* src_save;
 	PlnDstItem* dst_item;
 
 public:
-	PlnAssignIndirectObjItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
+	PlnAssignIndirectObjItem(PlnExpression* ex)
+			: src_ex(ex), src_save(NULL), dst_item(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS);
@@ -34,11 +36,20 @@ public:
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		if (dst_item->getAssginType() == ASGN_COPY) {
-			dst_item->setSrcEx(da, si, src_ex);
-			if (src_ex->data_places.size()) {
+			if (dst_item->need_save) {
+				src_save = new PlnClone(da, src_ex->values[0].inf.var->var_type, true);
+				dst_item->setSrcEx(da, si, src_save);
+				src_ex->data_places.push_back(src_save->src_dp);
 				src_ex->finish(da, si);
-			} else
-				;	// use cop_ex case.
+				src_save->finish(da, si);
+
+			} else {
+				dst_item->setSrcEx(da, si, src_ex);
+				if (src_ex->data_places.size()) {
+					src_ex->finish(da, si);
+				} else
+					;	// use cop_ex case.
+			}
 
 		} else if (dst_item->getAssginType() == ASGN_MOVE) {
 			dst_item->setSrcEx(da, si, src_ex);
@@ -57,14 +68,21 @@ public:
 			if (si.exists_current(var))
 				si.set_lifetime(var, VLT_FREED);
 		}
+
+		if (src_save)
+			src_save->finishFree(da, si);
 	}
 
 	void genS(PlnGenerator& g) override {
 		src_ex->gen(g);
+		if (src_save)
+			src_save->gen(g);
 	}
 
 	void genD(PlnGenerator& g) override {
 		dst_item->gen(g);
+		if (src_save)
+			src_save->genFree(g);
 	}
 };
 

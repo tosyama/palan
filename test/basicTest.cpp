@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1 1");
+	REQUIRE(exec(testcode) == "5 1");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -102,7 +102,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "015_assignment2";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 1\n4 1");
+	REQUIRE(exec(testcode) == "2 1\n4 1\n4 1\n4 1");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -174,4 +174,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "521_asgn_novalue_err";
 	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
+
+	testcode = "522_cantuse_index_err";
+	REQUIRE(build(testcode) == "0:2-2 Can not use the index operator for 'a'.");
 }

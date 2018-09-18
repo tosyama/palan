@@ -19,7 +19,7 @@ enum PlnExprsnType {
 	ET_OR,
 	ET_ASSIGN,
 	ET_CHAINCALL,
-	// ET_CLONE,
+	ET_CLONE,
 	ET_ARRAYITEM,
 	ET_MCOPY
 };

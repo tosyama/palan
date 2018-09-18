@@ -25,6 +25,7 @@ enum PlnErrCode {
 	E_CantDefineConst,	// const name
 	E_DuplicateConstName,	// const name
 	E_CantUseOperatorHere,	// var name
+	E_CantUseIndexHere, // var name
 
 	E_InvalidAST,	// source name, line
 
