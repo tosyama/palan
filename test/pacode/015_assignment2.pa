@@ -16,6 +16,11 @@ arr(0) -> a;
 a, b -> b, a;
 printf("%d %d\n", a[1], b[1]);
 
+arr(0) -> a;
+arr(3) -> b;
+a[1], b[2] -> b[2], a[1];
+printf("%d %d\n", a[1], b[2]);
+
 int32[2][3] aa, bb;
 arr(0) -> aa[1];
 arr(3) -> bb[0];
