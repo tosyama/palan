@@ -35,7 +35,8 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		if (dst_item->need_save) {
+		int assin_type = dst_item->getAssginType();
+		if (dst_item->need_save && assin_type == ASGN_COPY) {
 			src_save = new PlnClone(da, src_ex->values[0].inf.var->var_type, true);
 			dst_item->setSrcEx(da, si, src_save);
 			src_ex->data_places.push_back(src_save->src_dp);
@@ -46,16 +47,16 @@ public:
 			dst_item->setSrcEx(da, si, src_ex);
 			src_ex->finish(da, si);
 		}
-	}
-
-	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->finish(da, si);
-		if (dst_item->getAssginType() == ASGN_MOVE) {
+		if (assin_type == ASGN_MOVE) {
 			// Mark as freed variable.
 			auto var = src_ex->values[0].inf.var;
 			if (si.exists_current(var))
 				si.set_lifetime(var, VLT_FREED);
 		}
+	}
+
+	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
+		dst_item->finish(da, si);
 		if (src_save)
 			src_save->finishFree(da, si);
 	}

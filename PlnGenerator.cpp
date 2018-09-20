@@ -1,7 +1,7 @@
 /// Assembly code generator class definition.
 ///
 /// @file	PlnGenerator.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu
 
 #include <vector>
 #include <iostream>
@@ -35,6 +35,7 @@ void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 
 		src_dp = dp->save_place;
 		src_cmt = dp->src_place->cmt() + src_dp->cmt();
+
 	} else {
 		src_dp = dp->src_place;
 		preLoadDp(*this, src_dp);
@@ -48,6 +49,7 @@ void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 	auto dste = getEntity(dp);
 	if (dp->load_address && !dp->save_place) {
 		genLoadAddress(dste.get(), srce.get(), "address of " + src_cmt + " -> " + dp->cmt());
+
 	} else {
 		genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
 		if (dp->do_clear_src && !dp->save_place) {

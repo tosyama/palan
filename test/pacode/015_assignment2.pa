@@ -1,25 +1,36 @@
+// Assignment swap values tests
 ccall int32 printf();
 
 int32 i, j, k = 1, 2;
 
+// simple primitive copy case
 i, j -> j, i;
 printf("%d %d\n", i, j);
 
-int32[3] a, b = arr(0), arr(3);
+int32[3] a, b, c = arr(0), arr(3), arr(6);
 
+// mixed copy case 
 b, a[1] -> a, i;
 
 printf("%d %d\n", a[1], i);
 
 arr(0) -> a;
 
+// deep copy case
 a, b -> b, a;
 printf("%d %d\n", a[1], b[1]);
 
+// complex case (assign in assign)
 arr(0) -> a;
 arr(3) -> b;
-a[1], (9->a[1]) -> b[2], a[2];
+a[1], c[(9->a[1])-8] -> b[2], a[2];
 printf("%d %d %d\n", a[1],a[2],b[2]);
+
+// move test
+arr(0) -> a;
+arr(3) -> b;
+a, b ->>b, >>a;
+printf("%d %d\n", a[1], b[1]);
 
 int32[2][3] aa, bb;
 arr(0) -> aa[1];

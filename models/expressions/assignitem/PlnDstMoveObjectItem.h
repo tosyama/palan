@@ -27,12 +27,17 @@ public:
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		int index = src_ex->data_places.size();
 		dst_dp = dst_ex->values[0].getDataPlace(da);
-		if (src_ex->values[index].type == VL_VAR)
+		if (src_ex->values[index].type == VL_VAR) {
 			dst_dp->do_clear_src = true;
+		}
 		src_ex->data_places.push_back(dst_dp);
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
+		if (need_save) {
+			da.allocSaveData(dst_dp, dst_dp->push_src_step, dst_dp->release_step);
+		}
+
 		dst_ex->finish(da, si);
 		auto var = dst_ex->values[0].inf.var;
 		auto lt = si.get_lifetime(var);
