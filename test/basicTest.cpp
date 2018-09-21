@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "5 1");
+	REQUIRE(exec(testcode) == "0 1");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
