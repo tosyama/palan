@@ -27,7 +27,8 @@ public:
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		int index = src_ex->data_places.size();
 		dst_dp = dst_ex->values[0].getDataPlace(da);
-		if (src_ex->values[index].type == VL_VAR) {
+		if (src_ex->values[index].type == VL_VAR
+				&& src_ex->values[index].inf.var != dst_ex->values[0].inf.var) {
 			dst_dp->do_clear_src = true;
 		}
 		src_ex->data_places.push_back(dst_dp);

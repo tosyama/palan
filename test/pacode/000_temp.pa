@@ -1,11 +1,12 @@
 ccall int32 printf();
 
-int32[3] a, b, c;
+int32[2][3] a, b;
+int32[3] c;
 
-1 -> a[1];
-5 -> b[1];
+1 -> a[1][1];
+5 -> b[1][1];
 9 -> c[1];
 
-b, a ->> a, >>b;
+a[1] ->> c;
 
-printf("%d %d\n", a[1], b[1]);
+printf("%d %d\n", a[1], c[1]);
