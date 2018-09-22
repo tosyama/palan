@@ -1,12 +1,7 @@
 ccall int32 printf();
 
-int32[2][3] a, b;
-int32[3] c;
+int32 i,j,k = 1,2,3;
 
-1 -> a[1][1];
-5 -> b[1][1];
-9 -> c[1];
+i,j,k -> j,k,i;
 
-a[1] ->> c;
-
-printf("%d %d\n", a[1], c[1]);
+printf("%d %d %d\n", i, j, k);
