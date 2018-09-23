@@ -9,22 +9,24 @@
 class PlnAssignObjectRefItem : public PlnAssignItem
 {
 	PlnExpression* src_ex;
+	PlnClone* src_save;
 	PlnDstItem* dst_item;
 
 public:
-	PlnAssignObjectRefItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
+	PlnAssignObjectRefItem(PlnExpression* ex)
+			: src_ex(ex), src_save(NULL), dst_item(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
 
 	}
 	
-	void addDstEx(PlnExpression* ex) override {
+	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 
-		dst_item = PlnDstItem::createDstItem(ex);
+		dst_item = PlnDstItem::createDstItem(ex, need_save);
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
@@ -33,13 +35,19 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->setSrcEx(da, si, src_ex);
-		src_ex->finish(da, si);
-	}
+		int assin_type = dst_item->getAssginType();
+		if (dst_item->need_save && assin_type == ASGN_COPY) {
+			src_save = new PlnClone(da, src_ex->values[0].inf.var->var_type, true);
+			dst_item->setSrcEx(da, si, src_save);
+			src_ex->data_places.push_back(src_save->src_dp);
+			src_ex->finish(da, si);
+			src_save->finish(da, si);
 
-	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->finish(da, si);
-		if (dst_item->getAssginType() == ASGN_MOVE) {
+		} else {
+			dst_item->setSrcEx(da, si, src_ex);
+			src_ex->finish(da, si);
+		}
+		if (assin_type == ASGN_MOVE) {
 			// Mark as freed variable.
 			auto var = src_ex->values[0].inf.var;
 			if (si.exists_current(var))
@@ -47,12 +55,22 @@ public:
 		}
 	}
 
+	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
+		dst_item->finish(da, si);
+		if (src_save)
+			src_save->finishFree(da, si);
+	}
+
 	void genS(PlnGenerator& g) override {
 		src_ex->gen(g);
+		if (src_save)
+			src_save->gen(g);
 	}
 
 	void genD(PlnGenerator& g) override {
 		dst_item->gen(g);
+		if (src_save)
+			src_save->genFree(g);
 	}
 };
 

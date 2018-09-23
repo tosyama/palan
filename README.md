@@ -6,9 +6,9 @@ Current palan is very draft.
 
 ## Quick Start
 ### Environment:
-* Ubuntu 16.04.2 LTS (64bit)
-* g++ (gcc 5.4.0/ as,ld 2.26.1) or later
-* GNU Make 4.1 or later
+* Ubuntu 14.04.5 LTS (64bit) or later(18.04.1 LTS)
+* g++ (gcc 5.5.0/as,ld) or later(gcc 7.3.0)
+* GNU Make
 * curl
 * git
 

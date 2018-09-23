@@ -11,7 +11,7 @@ while 0 {
 }
 
 3 -> i;
-while i {
+while(i) {
 	printf("%d", i);
 	i-1 -> i;
 }

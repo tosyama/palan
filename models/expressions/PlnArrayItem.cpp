@@ -17,6 +17,8 @@
 #include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 static PlnExpression* getIndexExpression(
 	int index, int offset,
@@ -54,6 +56,12 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
+
+	if (arr_type.size() <= 1) {
+		PlnCompileError err(E_CantUseIndexHere, array_var->name);
+		throw err;
+	}
+
 	var->name = array_var->name + "[]";
 	var->var_type = arr_type;
 	var->var_type.pop_back();

@@ -43,7 +43,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 				if (var_i < vars.size()) {
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex);
-					ai->addDstEx(var_ex);
+					ai->addDstEx(var_ex, false);
 					++var_i;
 				}
 			}

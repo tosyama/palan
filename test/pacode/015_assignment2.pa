@@ -1,0 +1,77 @@
+// Assignment swap values tests
+ccall int32 printf();
+
+int32 i, j, k = 1, 2, 3;
+
+// simple primitive copy case
+i, j -> j, i;
+printf("%d %d ", i, j);
+
+1,2,3 -> i,j,k;
+i,(j->i) -> j,k;
+printf("%d %d %d\n", i,j,k);
+
+int32[3] a, b, c = arr(0), arr(3), arr(6);
+
+// mixed copy case 
+b, a[1] -> a, i;
+printf("%d %d ", a[1], i);
+
+1,2,3 -> i,j,k;
+i,j -> k,a[1];
+printf("%d %d ", a[1], k);
+
+1,2,3 -> i,j,k;
+i,(j->a[1])->j,k;
+printf("%d %d %d\n", a[1],j, k);
+
+arr(0) -> a;
+
+// deep copy case
+a, b -> b, a;
+printf("%d %d\n", a[1], b[1]);
+
+// complex case (assign in assign)
+arr(0) -> a;
+arr(3) -> b;
+a[1], c[(9->a[1])-8] -> b[2], a[2];
+printf("%d %d %d\n", a[1],a[2],b[2]);
+
+// move test
+arr(0) -> a;
+arr(3) -> b;
+a, b ->>b, >>a;
+printf("%d %d ", a[1], b[1]);
+
+// move self (do nothing)
+a ->> a;
+printf("%d\n", a[1]);
+
+int32[2][3] aa, bb;
+arr(0) -> aa[1];
+arr(3) -> bb[0];
+
+aa[1], bb[0] ->> bb[0], >>aa[1];
+printf("%d %d ", aa[1][1], bb[0][1]);
+
+// self move
+aa[1] ->> aa[1];
+printf("%d ", aa[1][1]);
+
+// mixed
+arr(0) -> aa[1];
+arr(3) -> b;
+aa[1], b ->>b, >>aa[1];
+printf("%d %d ", aa[1][1], b[1]);
+
+b, aa[1] ->> aa[1], >>b;
+printf("%d %d\n", aa[1][1], b[1]);
+
+func arr(int32 base) -> int32[3] a
+{
+	int32 i = 0;
+	while (i < 3) {
+		base + i -> a[i];
+		i+1 -> i;
+	}
+}

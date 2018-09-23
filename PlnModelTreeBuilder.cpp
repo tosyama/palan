@@ -610,7 +610,12 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 				vector<PlnExpression*> indexes;
 				for (json& exp: ope["indexes"])
 					indexes.push_back(buildExpression(exp, scope));
-				var_exp = new PlnArrayItem(var_exp, indexes);
+				try {
+					var_exp = new PlnArrayItem(var_exp, indexes);
+				} catch (PlnCompileError& err) {
+					setLoc(&err, var);
+					throw err;
+				}
 			}
 		}
 	}

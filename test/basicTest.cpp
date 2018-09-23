@@ -1,4 +1,5 @@
 #include "testBase.h"
+#include <iostream>
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
@@ -6,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1, 2, 3");
+	REQUIRE(exec(testcode) == "3 2");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -68,7 +69,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "011_assignment";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "1 2 1 2 5 5 6 6\n"
-							"3 5 2 1\n"
+							"3 4 2 0\n"
 							"5 -1\n"
 							"9 9 9 0\n"
 							"3 9\n"
@@ -98,6 +99,14 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"test2 5\n"
 							"test3 5\n"
 							"test1 3");
+
+	testcode = "015_assignment2";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "2 1 2 1 2\n"
+							"4 1 2 1 2 1 2\n"
+							"4 1\n9 7 1\n"
+							"4 1 4\n"
+							"4 1 4 4 1 1 4");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -169,4 +178,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "521_asgn_novalue_err";
 	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
+
+	testcode = "522_cantuse_index_err";
+	REQUIRE(build(testcode) == "0:2-2 Can not use the index operator for 'a'.");
 }

@@ -1,6 +1,7 @@
 *.o
 *.log
 *.tab.*
+*.gcov
 core.*
 core
 .exrc

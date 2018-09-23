@@ -18,53 +18,10 @@
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
-
-using std::endl;
+#include "PlnClone.h"
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
-
-// PlnCloneArg
-class PlnCloneArg
-{
-	PlnVariable* var;
-	PlnExpression *alloc_ex;
-	PlnDataPlace* copy_dst_dp;
-	PlnDeepCopyExpression *copy_ex;
-
-public:
-	PlnDataPlace *src_dp, *data_place;
-
-	PlnCloneArg(PlnDataAllocator& da, vector<PlnType*> &var_type) {
-		var = PlnVariable::createTempVar(da, var_type, "(clone)");
-		alloc_ex = var_type.back()->allocator->getAllocEx();
-		alloc_ex->data_places.push_back(var->place);
-
-		copy_ex = var_type.back()->copyer->getCopyEx();
-		src_dp = copy_ex->srcDp(da);
-		copy_dst_dp = copy_ex->dstDp(da);
-		data_place = NULL;
-	}
-
-	void finish(PlnDataAllocator& da, PlnScopeInfo& si) {
-		BOOST_ASSERT(data_place);
-		alloc_ex->finish(da, si);
-		da.popSrc(var->place);
-
-		da.pushSrc(copy_dst_dp, var->place, false);
-		copy_ex->finish(da, si);
-		da.pushSrc(data_place, var->place);
-	}
-
-	void gen(PlnGenerator& g) {
-		alloc_ex->gen(g);
-		g.genLoadDp(var->place);
-		g.genSaveSrc(copy_dst_dp);
-		copy_ex->gen(g);
-		g.genSaveSrc(data_place);
-	}
-
-};
 
 // PlnFunctionCall
 PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
@@ -115,7 +72,7 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 }
 
 static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
-	PlnFunction*f, vector<PlnExpression*> &args, vector<PlnCloneArg*> &clones)
+	PlnFunction*f, vector<PlnExpression*> &args, vector<PlnClone*> &clones)
 {
 	vector<int> arg_dtypes;
 	for (auto a: args) {
@@ -147,9 +104,9 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				arg_dps[i]->do_clear_src = true;
 			}
 
-			PlnCloneArg* clone = NULL;
+			PlnClone* clone = NULL;
 			if (ptr_type == PTR_PARAM_COPY && v.type == VL_VAR) {
-				clone = new PlnCloneArg(da, v.inf.var->var_type);
+				clone = new PlnClone(da, v.inf.var->var_type, false);
 				a->data_places.push_back(clone->src_dp);
 			} else {
 				a->data_places.push_back(arg_dps[i]);
@@ -169,7 +126,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 					si.set_lifetime(var, VLT_FREED);
 			}
 			if (clones[j]) {
-				clones[j]->data_place = arg_dps[j];
+				clones[j]->data_places.push_back(arg_dps[j]);
 				clones[j]->finish(da, si);
 			}
 

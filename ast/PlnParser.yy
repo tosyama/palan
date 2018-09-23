@@ -613,6 +613,7 @@ expression:
 	{
 		$$ = move($1);
 	}
+
 	;
 
 func_call: FUNC_ID '(' arguments ')'
