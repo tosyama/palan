@@ -106,7 +106,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"4 1 2 1 2 1 2\n"
 							"4 1\n9 7 1\n"
 							"4 1 4\n"
-							"4 1 4 1");
+							"4 1 4 4 1 1 4");
 }
 
 TEST_CASE("Compile error test", "[basic]")

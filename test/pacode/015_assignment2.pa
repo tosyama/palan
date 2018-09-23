@@ -54,10 +54,17 @@ arr(3) -> bb[0];
 aa[1], bb[0] ->> bb[0], >>aa[1];
 printf("%d %d ", aa[1][1], bb[0][1]);
 
+// self move
+aa[1] ->> aa[1];
+printf("%d ", aa[1][1]);
+
 // mixed
 arr(0) -> aa[1];
 arr(3) -> b;
 aa[1], b ->>b, >>aa[1];
+printf("%d %d ", aa[1][1], b[1]);
+
+b, aa[1] ->> aa[1], >>b;
 printf("%d %d\n", aa[1][1], b[1]);
 
 func arr(int32 base) -> int32[3] a
