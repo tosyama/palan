@@ -48,14 +48,21 @@ public:
 			src_ex->data_places.push_back(dst_dp);
 
 		} else {
+			// This case not exitsts currently.
+			BOOST_ASSERT(false);
+			/*
 			dst_dp = dst_ex->values[0].getDataPlace(da);
 			dst_dp->do_clear_src = true;
 			src_ex->data_places.push_back(dst_dp);
+			*/
 		}
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		if (addr_var) {
+			if (need_save)
+				da.allocSaveData(dst_dp, dst_dp->push_src_step, dst_dp->release_step);
+
 			dst_ex->finish(da, si);	
 			da.popSrc(addr_var->place); // save addr.
 			
@@ -74,8 +81,12 @@ public:
 			da.popSrc(dst_dp);
 			
 		} else {
+			// This case not exitsts currently.
+			BOOST_ASSERT(false);
+			/*
 			dst_ex->finish(da, si);
 			da.popSrc(dst_dp);
+			*/
 		}
 
 		if (place) {
@@ -101,8 +112,12 @@ public:
 			g.genLoadDp(dst_dp);
 
 		} else {
+			// This case not exitsts currently.
+			BOOST_ASSERT(false);
+			/*
 			dst_ex->gen(g);
 			g.genLoadDp(dst_dp);
+			*/
 		}
 		if (place)
 			g.genSaveSrc(place);
