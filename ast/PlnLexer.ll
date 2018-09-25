@@ -6,7 +6,7 @@
 /// from this definition file by flex.
 ///
 /// @file	PlnLexer.ll
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <algorithm>
 #include "PlnParser.hpp"

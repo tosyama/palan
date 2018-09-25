@@ -96,6 +96,18 @@ static void initBasicTypes()
 	basic_types.push_back(u64t);
 	uint_type = u64t;
 
+	PlnType* f32t = new PlnType();
+	f32t->name = "flo32";
+	f32t->data_type = DT_FLOAT;
+	f32t->size = 4;
+	basic_types.push_back(f32t);
+
+	PlnType* f64t = new PlnType();
+	f64t->name = "flo64";
+	f64t->data_type = DT_FLOAT;
+	f64t->size = 8;
+	basic_types.push_back(f64t);
+
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
 	t->data_type = DT_OBJECT_REF;
