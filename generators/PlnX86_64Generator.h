@@ -25,7 +25,7 @@ public:
 	void genSaveReg(int reg, PlnGenEntity* dst) override;
 	void genLoadReg(int reg, PlnGenEntity* src) override;
 
-	void genCCall(string& cfuncname) override;
+	void genCCall(string& cfuncname, vector<int> &arg_dtypes, int va_arg_start) override;
 	void genSysCall(int id, const string& comment) override;
 	void genReturn() override;
 	void genMainReturn() override;

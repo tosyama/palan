@@ -1,7 +1,7 @@
 /// Register/Stack allocation class declaration.
 ///
 /// @file	PlnDataAllocator.h
-/// @copyright	2017- YAMAGUCHI Toshinobu
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu
 
 #include <cstddef>
 #include <vector>
@@ -65,6 +65,7 @@ public:
 	virtual void setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
 
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
+	PlnDataPlace* getLiteralFloDp(double floValue);
 	PlnDataPlace* getReadOnlyDp(int index);
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
@@ -86,6 +87,7 @@ enum {
 
 	DP_INDRCT_OBJ,
 	DP_LIT_INT,
+	DP_LIT_FLO,
 	DP_RO_DATA,
 
 	DP_SUBDP
@@ -126,6 +128,7 @@ public:
 				int16_t base_id; int16_t index_id; } indirect;
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
+		double floValue;
 		int index;
 		PlnDataPlace *originalDp;
 	} data;

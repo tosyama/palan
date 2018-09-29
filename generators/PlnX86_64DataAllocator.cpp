@@ -15,11 +15,12 @@
 
 using namespace std;
 static const int ARG_TBL[] = { RDI, RSI, RDX, RCX, R8, R9 };
+static const int FARG_TBL[] = { XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7 };
 static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
 static const int SYSARG_TBL[] = { RDI, RSI, RDX, R10, R8, R9 };
 
 PlnX86_64DataAllocator::PlnX86_64DataAllocator()
-	: PlnDataAllocator(16)
+	: PlnDataAllocator(XMM7+1)
 {
 }
 
@@ -47,22 +48,40 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp
 	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+	int freg_ind = 0;
+	for (int i=0; i<index; i++)
+		if (arg_dtypes[i] == DT_FLOAT)
+			freg_ind++;
+	
+	int reg_ind = index - freg_ind;
 
-	if (index <= 5) {
+	if (arg_dtypes[index] == DT_FLOAT && freg_ind <= 7) {
+		int regid;
+		dp->type = DP_REG;
+		dp->data.reg.id = FARG_TBL[freg_ind];
+		dp->data.reg.offset = 0;
+
+	} else if (arg_dtypes[index] != DT_FLOAT && reg_ind <= 5) {
 		int regid;
 		if (func_type == FT_PLN || func_type == FT_C)
-			regid = ARG_TBL[index];
+			regid = ARG_TBL[reg_ind];
 		else if (func_type == FT_SYS)
-			regid = SYSARG_TBL[index];
+			regid = SYSARG_TBL[reg_ind];
 		else
 			BOOST_ASSERT(false);
 
 		dp->type = DP_REG;
 		dp->data.reg.id = regid;
 		dp->data.reg.offset = 0;
+
 	} else {	// index >= 5
 		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = index-6;
+		int ind = -1;
+		if (reg_ind > 5)
+			ind += reg_ind-5;
+
+		if (freg_ind > 7)
+			ind += freg_ind-7;
 
 		if (is_callee) {
 			dp->type = DP_STK_BP;
@@ -71,7 +90,6 @@ PlnDataPlace* PlnX86_64DataAllocator::createArgDp
 
 		} else {
 			dp->type = DP_STK_SP;
-
 			dp->data.stack.idx = ind;
 			dp->data.stack.offset = ind*8;
 		}

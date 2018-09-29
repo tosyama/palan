@@ -727,6 +727,17 @@ literal: INT
 		LOC($$, @$);
 	}
 
+	| FLOAT 
+	{
+		json lit_float = {
+			{"exp-type", "lit-float"},
+			{"val", $1}
+		};
+		$$ = move(lit_float);
+		LOC($$, @$);
+	}
+
+
 	| STR
 	{
 		json lit_str = {

@@ -29,7 +29,9 @@ enum GenEttyAllocType {
 
 static const char* r(int rt, int size=8)
 {
-	static const char* tbl[16][4];
+	BOOST_ASSERT(rt <= XMM7);
+
+	static const char* tbl[XMM7+1][4];
 	static bool init = false;
 	if (!init) {
 		init = true;
@@ -68,16 +70,54 @@ static const char* r(int rt, int size=8)
 
 		tbl[R11][0] = "%r11b"; tbl[R11][1] = "%r11w";
 		tbl[R11][2] = "%r11d"; tbl[R11][3] = "%r11";
+
+		tbl[XMM0][0] = "%xmm0"; tbl[XMM0][1] = "%xmm0";
+		tbl[XMM0][2] = "%xmm0"; tbl[XMM0][3] = "%xmm0";
+
+		tbl[XMM1][0] = "%xmm1"; tbl[XMM1][1] = "%xmm1";
+		tbl[XMM1][2] = "%xmm1"; tbl[XMM1][3] = "%xmm1";
+
+		tbl[XMM2][0] = "%xmm2"; tbl[XMM2][1] = "%xmm2";
+		tbl[XMM2][2] = "%xmm2"; tbl[XMM2][3] = "%xmm2";
+
+		tbl[XMM3][0] = "%xmm3"; tbl[XMM3][1] = "%xmm3";
+		tbl[XMM3][2] = "%xmm3"; tbl[XMM3][3] = "%xmm3";
+
+		tbl[XMM4][0] = "%xmm4"; tbl[XMM4][1] = "%xmm4";
+		tbl[XMM4][2] = "%xmm4"; tbl[XMM4][3] = "%xmm4";
+
+		tbl[XMM5][0] = "%xmm5"; tbl[XMM5][1] = "%xmm5";
+		tbl[XMM5][2] = "%xmm5"; tbl[XMM5][3] = "%xmm5";
+
+		tbl[XMM6][0] = "%xmm6"; tbl[XMM6][1] = "%xmm6";
+		tbl[XMM6][2] = "%xmm6"; tbl[XMM6][3] = "%xmm6";
+
+		tbl[XMM7][0] = "%xmm7"; tbl[XMM7][1] = "%xmm7";
+		tbl[XMM7][2] = "%xmm7"; tbl[XMM7][3] = "%xmm7";
 	}
-	// 1->0, 2->1, 4->2, 8->3
-	int i = (size & 7) ? size >> 1 : 3;
-	return tbl[rt][i];
+
+	if (rt < XMM0) {
+		// 1->0, 2->1, 4->2, 8->3
+		int i = (size & 7) ? size >> 1 : 3;
+		return tbl[rt][i];
+
+	} else {
+		int i;
+		switch (size) {
+			case 4: case 8:
+				i = 0; break;
+			defalt:
+				BOOST_ASSERT(false);
+		}
+		return tbl[rt][i];
+	}
 }
 
 static const char* oprnd(const PlnGenEntity *e)
 {
 	if (e->type == GE_STRING) {
 		return e->data.str->c_str();
+
 	} else if (e->type == GE_INT) {
 		if (e->alloc_type == GA_REG)
 			return r(e->data.i, e->size);
@@ -88,6 +128,13 @@ static const char* oprnd(const PlnGenEntity *e)
 			}
 			return e->buf;
 		}
+
+	} else if (e->type == GE_FLO) {
+		if (!e->buf) {
+			e->buf = new char[32];
+			sprintf(e->buf, "$%lld", (long long int)e->data.i);
+		}
+		return e->buf;
 	}
 	
 	BOOST_ASSERT(false);
@@ -197,11 +244,12 @@ void PlnX86_64Generator::genEntryFunc()
 
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
-	if (size) {
-		if (size % 16)
-			size = 16 * (size / 16 + 1);
-		os << "	subq $" << size << ", %rsp" << endl;
-	}
+	BOOST_ASSERT((size%8) == 0 && size >= 0);
+	if (!size) return;
+
+	if ((size-8) % 16)
+		size = size + 8;
+	os << "	subq $" << size << ", %rsp" << endl;
 }
 
 void PlnX86_64Generator::genSaveReg(int reg, PlnGenEntity* dst)
@@ -215,9 +263,21 @@ void PlnX86_64Generator::genLoadReg(int reg, PlnGenEntity* src)
 }
 
 
-void PlnX86_64Generator::genCCall(string& cfuncname)
+void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, int va_arg_start)
 {
-	os << "	xorq %rax, %rax" << endl;
+	if (va_arg_start >= 0) {
+		int flo_cnt = 0;
+		for (auto dt: arg_dtypes)
+			if (dt == DT_FLOAT)
+				flo_cnt++;
+
+		if (flo_cnt) {
+			if (flo_cnt > 2)
+				flo_cnt = 2;
+			os << "	movq $" << flo_cnt << ", %rax" << endl;
+		} else
+			os << "	xorq %rax, %rax" << endl;
+	}
 	os << "	call " << cfuncname << endl;
 }
 
@@ -252,6 +312,18 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 {
 	BOOST_ASSERT(mem->alloc_type == GA_MEM);
+	if (reg >= XMM0) {
+		if (mem->data_type == DT_FLOAT) {
+			if (mem->size == 8)
+				os << "	movsd " << oprnd(mem) << ", " << r(reg, 8);
+			else if (mem->size == 4)
+				os << "	cvtss2sd " << oprnd(mem) << ", " << r(reg, 8);
+			else
+				BOOST_ASSERT(false);
+		} else
+			BOOST_ASSERT(false);
+		return;
+	}
 	string dst_safix = "q";
 	string src_safix = "";
 
@@ -281,7 +353,7 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 
 static bool needAbsCopy(const PlnGenEntity* immediate)
 {
-	BOOST_ASSERT(immediate->alloc_type == GA_CODE && immediate->type == GE_INT);
+	BOOST_ASSERT(immediate->alloc_type == GA_CODE && (immediate->type == GE_INT || immediate->type == GE_FLO));
 
 	if (immediate->data.i < -2147483648 || immediate->data.i > 4294967295) {
 		return true;
@@ -305,6 +377,21 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		case 8: dst_safix = "q"; break;
 		default:
 			BOOST_ASSERT(false);
+	}
+
+	if (dst->alloc_type == GA_MEM && dst->data_type == GE_FLO) {
+		if (dst->size == 4) {
+			if (src->alloc_type == GA_CODE && src->data_type == GE_FLO) {
+				union { uint32_t i; float f; } u;
+				u.f = src->data.f;	// double -> float
+				src->data.i = u.i;
+			}
+		}
+	}
+
+	if (dst->alloc_type == GA_REG && dst->data.i >= XMM0) {
+		// xmmN register
+		dst_safix = "sd";
 	}
 
 	// Reg -> Reg or immediate integer copy
@@ -612,6 +699,13 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 
 	} else if (dp->type == DP_LIT_INT) {
 		e->type = GE_INT;
+		e->alloc_type = GA_CODE;
+		e->size = 8;
+		e->data_type = dp->data_type;
+		e->data.i = dp->data.intValue;
+
+	} else if (dp->type == DP_LIT_FLO) {
+		e->type = GE_FLO;
 		e->alloc_type = GA_CODE;
 		e->size = 8;
 		e->data_type = dp->data_type;

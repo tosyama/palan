@@ -453,6 +453,8 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = new PlnExpression(exp["val"].get<int64_t>());
 	} else if (type == "lit-uint") {
 		expression = new PlnExpression(exp["val"].get<uint64_t>());
+	} else if (type == "lit-float") {
+		expression = new PlnExpression(exp["val"].get<double>());
 	} else if (type == "lit-str") {
 		PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
 		expression = new PlnExpression(ro);

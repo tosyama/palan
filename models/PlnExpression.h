@@ -53,6 +53,7 @@ public:
 enum PlnValType {
 	VL_LIT_INT8,
 	VL_LIT_UINT8,
+	VL_LIT_FLO8,
 	VL_RO_DATA,
 	VL_VAR,
 	VL_WORK
@@ -73,6 +74,7 @@ public:
 		int index;
 		int64_t intValue;
 		uint64_t uintValue;
+		double floValue;
 		PlnReadOnlyData* rod;
 		PlnVariable* var;
 		vector<PlnType*> *wk_type;
@@ -81,6 +83,7 @@ public:
 	PlnValue() {};
 	PlnValue(int64_t intValue);
 	PlnValue(uint64_t uintValue);
+	PlnValue(double floValue);
 	PlnValue(PlnReadOnlyData* rod);
 	PlnValue(PlnVariable* var);
 

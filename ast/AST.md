@@ -110,6 +110,8 @@ Expression
 		* val\* - Integer
 	2. lit-uint - Unsigned integer(64bit) literal
 		* val\* - Unsigned integer
+	2. lit-float - Floating point number(64bit) literal
+		* val\* - Floating point number
 	3. lit-str - String literal
 		* val\* - String value
 	4. var - Variable/Constant expression
