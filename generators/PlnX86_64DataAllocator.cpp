@@ -20,7 +20,7 @@ static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
 static const int SYSARG_TBL[] = { RDI, RSI, RDX, R10, R8, R9 };
 
 PlnX86_64DataAllocator::PlnX86_64DataAllocator()
-	: PlnDataAllocator(XMM7+1)
+	: PlnDataAllocator(REG_NUM)
 {
 }
 

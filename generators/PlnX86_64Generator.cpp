@@ -29,9 +29,9 @@ enum GenEttyAllocType {
 
 static const char* r(int rt, int size=8)
 {
-	BOOST_ASSERT(rt <= XMM7);
+	BOOST_ASSERT(rt < REG_NUM);
 
-	static const char* tbl[XMM7+1][4];
+	static const char* tbl[REG_NUM][4];
 	static bool init = false;
 	if (!init) {
 		init = true;
@@ -130,18 +130,20 @@ static const char* oprnd(const PlnGenEntity *e)
 		}
 
 	} else if (e->type == GE_FLO) {
-		if (!e->buf) {
-			e->buf = new char[32];
-			sprintf(e->buf, "$%lld", (long long int)e->data.i);
+		if (e->alloc_type == GA_CODE) {
+			if (!e->buf) {
+				e->buf = new char[32];
+				sprintf(e->buf, "$%lld", (long long int)e->data.i);
+			}
+			return e->buf;
 		}
-		return e->buf;
 	}
 	
 	BOOST_ASSERT(false);
 }
 
 PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
-	: PlnGenerator(ostrm)
+	: PlnGenerator(ostrm), require_align(false)
 {
 }
 
@@ -166,8 +168,11 @@ void PlnX86_64Generator::genEntryPoint(const string& entryname)
 
 void PlnX86_64Generator::genLabel(const string& label)
 {
-	if (label == "") os << "_start:" << endl;
-	else os << label << ":" << endl;
+	if (label == "") {
+		os << "_start:" << endl;
+		require_align = true;
+	} else
+		os << label << ":" << endl;
 }
 
 void PlnX86_64Generator::genJumpLabel(int id, string comment)
@@ -245,10 +250,18 @@ void PlnX86_64Generator::genEntryFunc()
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
 	BOOST_ASSERT((size%8) == 0 && size >= 0);
-	if (!size) return;
 
-	if ((size-8) % 16)
-		size = size + 8;
+	if (require_align) {
+		if ((size-8) % 16)
+			size = size + 8;
+		require_align = false;
+
+	} else {
+		if (!size) return;
+		if ((size) % 16)
+			size = size + 8;
+	}
+
 	os << "	subq $" << size << ", %rsp" << endl;
 }
 
@@ -272,8 +285,8 @@ void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, in
 				flo_cnt++;
 
 		if (flo_cnt) {
-			if (flo_cnt > 2)
-				flo_cnt = 2;
+			if (flo_cnt > 8)
+				flo_cnt = 8;
 			os << "	movq $" << flo_cnt << ", %rax" << endl;
 		} else
 			os << "	xorq %rax, %rax" << endl;
@@ -312,18 +325,7 @@ void PlnX86_64Generator::genStringData(int index, const string& str)
 void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 {
 	BOOST_ASSERT(mem->alloc_type == GA_MEM);
-	if (reg >= XMM0) {
-		if (mem->data_type == DT_FLOAT) {
-			if (mem->size == 8)
-				os << "	movsd " << oprnd(mem) << ", " << r(reg, 8);
-			else if (mem->size == 4)
-				os << "	cvtss2sd " << oprnd(mem) << ", " << r(reg, 8);
-			else
-				BOOST_ASSERT(false);
-		} else
-			BOOST_ASSERT(false);
-		return;
-	}
+
 	string dst_safix = "q";
 	string src_safix = "";
 
@@ -351,6 +353,35 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 	os << "	mov" << src_safix << dst_safix << " " << srcstr << ", " << dststr;
 }
 
+void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	if (src->alloc_type == GA_CODE) {
+		BOOST_ASSERT(false);	// need to implement.
+	}
+
+	if (src->data_type == DT_FLOAT && dst->data_type == DT_FLOAT) {
+		if (src->size == 4) {
+			BOOST_ASSERT(dst->size == 8);	// Currently no usecase size 4->4.
+			os << "	cvtss2sd " << oprnd(src) << ", " << oprnd(dst);
+
+		} else {
+			BOOST_ASSERT(src->size == 8);
+
+			if (dst->size == 4) {
+				os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM7, 4) << endl;
+				os << "	movss	" << r(XMM7, 4) << ", " << oprnd(dst);
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	movsd " << oprnd(src) << ", " << oprnd(dst);
+			}
+		}
+
+	} else {
+		BOOST_ASSERT(false);	// need to implement.
+	}
+}
+
 static bool needAbsCopy(const PlnGenEntity* immediate)
 {
 	BOOST_ASSERT(immediate->alloc_type == GA_CODE && (immediate->type == GE_INT || immediate->type == GE_FLO));
@@ -367,7 +398,14 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		if (!strcmp(oprnd(dst), oprnd(src))) return;	// do nothing
 	}
 
-	if (dst->alloc_type == GA_NULL) return;
+	// for floating point register.
+	if ((src->alloc_type == GA_REG && src->data.i >= XMM0)
+		|| (dst->alloc_type == GA_REG && dst->data.i >= XMM0)) {
+		genMoveFReg(src, dst);
+		if (comment != "") os << "	# " << comment;
+		os << endl;
+		return;
+	}
 
 	string dst_safix;
 	switch (dst->size) {
@@ -387,11 +425,6 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 				src->data.i = u.i;
 			}
 		}
-	}
-
-	if (dst->alloc_type == GA_REG && dst->data.i >= XMM0) {
-		// xmmN register
-		dst_safix = "sd";
 	}
 
 	// Reg -> Reg or immediate integer copy
