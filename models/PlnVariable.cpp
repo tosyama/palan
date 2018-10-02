@@ -4,7 +4,7 @@
 /// such as type and momory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -18,6 +18,8 @@
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 #include "expressions/assignitem/PlnAssignItem.h"
 
 // PlnVarInit
@@ -38,6 +40,12 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 	int var_i=0;
 	if (inits)
 		for (auto ex: *inits) {
+			if (var_i >= vars.size()) {
+				// No any more assign.
+				PlnCompileError err(E_NumOfLRVariables);
+				err.loc = ex->loc;
+				throw err;
+			}
 			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 			for (int i=0; i<ex->values.size(); ++i) {
 				if (var_i < vars.size()) {

@@ -4,7 +4,7 @@
 /// e.g.) 2 -> a;
 ///
 /// @file	PlnAssignment.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <iostream>
 #include <boost/assert.hpp>

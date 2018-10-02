@@ -181,4 +181,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "522_cantuse_index_err";
 	REQUIRE(build(testcode) == "0:2-2 Can not use the index operator for 'a'.");
+
+	testcode = "523_varinitLRnum_err";
+	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
 }

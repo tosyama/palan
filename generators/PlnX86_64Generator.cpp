@@ -94,6 +94,30 @@ static const char* r(int rt, int size=8)
 
 		tbl[XMM7][0] = "%xmm7"; tbl[XMM7][1] = "%xmm7";
 		tbl[XMM7][2] = "%xmm7"; tbl[XMM7][3] = "%xmm7";
+
+		tbl[XMM8][0] = "%xmm8"; tbl[XMM8][1] = "%xmm8";
+		tbl[XMM8][2] = "%xmm8"; tbl[XMM8][3] = "%xmm8";
+
+		tbl[XMM9][0] = "%xmm9"; tbl[XMM9][1] = "%xmm9";
+		tbl[XMM9][2] = "%xmm9"; tbl[XMM9][3] = "%xmm9";
+
+		tbl[XMM10][0] = "%xmm10"; tbl[XMM10][1] = "%xmm10";
+		tbl[XMM10][2] = "%xmm10"; tbl[XMM10][3] = "%xmm10";
+
+		tbl[XMM11][0] = "%xmm11"; tbl[XMM11][1] = "%xmm11";
+		tbl[XMM11][2] = "%xmm11"; tbl[XMM11][3] = "%xmm11";
+
+		tbl[XMM12][0] = "%xmm12"; tbl[XMM12][1] = "%xmm12";
+		tbl[XMM12][2] = "%xmm12"; tbl[XMM12][3] = "%xmm12";
+
+		tbl[XMM13][0] = "%xmm13"; tbl[XMM13][1] = "%xmm13";
+		tbl[XMM13][2] = "%xmm13"; tbl[XMM13][3] = "%xmm13";
+
+		tbl[XMM14][0] = "%xmm14"; tbl[XMM14][1] = "%xmm14";
+		tbl[XMM14][2] = "%xmm14"; tbl[XMM14][3] = "%xmm14";
+
+		tbl[XMM15][0] = "%xmm15"; tbl[XMM15][1] = "%xmm15";
+		tbl[XMM15][2] = "%xmm15"; tbl[XMM15][3] = "%xmm15";
 	}
 
 	if (rt < XMM0) {
@@ -368,8 +392,8 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 			BOOST_ASSERT(src->size == 8);
 
 			if (dst->size == 4) {
-				os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM7, 4) << endl;
-				os << "	movss	" << r(XMM7, 4) << ", " << oprnd(dst);
+				os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
+				os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
 
 			} else {
 				BOOST_ASSERT(dst->size == 8);
