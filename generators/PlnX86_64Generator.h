@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class declaration.
 ///
 /// @file	PlnX86_64Generator.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include "../PlnGenerator.h"
 
@@ -9,6 +9,7 @@ class PlnX86_64Generator : public PlnGenerator
 {
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
 	void genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	bool require_align;
 
 public:

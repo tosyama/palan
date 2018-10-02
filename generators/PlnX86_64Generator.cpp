@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class definition.
 ///
 /// @file	PlnX86_64Generator.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -406,6 +406,18 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 	}
 }
 
+void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	if (src->size == 4 && dst->size == 8) {
+		os << "	cvtss2sd " << oprnd(src) << ", " << r(XMM11, 4) << endl;
+		os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+	} else {
+		BOOST_ASSERT(src->size == 8 && dst->size == 4);
+		os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
+		os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+	}
+}
+
 static bool needAbsCopy(const PlnGenEntity* immediate)
 {
 	BOOST_ASSERT(immediate->alloc_type == GA_CODE && (immediate->type == GE_INT || immediate->type == GE_FLO));
@@ -426,6 +438,15 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	if ((src->alloc_type == GA_REG && src->data.i >= XMM0)
 		|| (dst->alloc_type == GA_REG && dst->data.i >= XMM0)) {
 		genMoveFReg(src, dst);
+		if (comment != "") os << "	# " << comment;
+		os << endl;
+		return;
+	}
+
+	if (src->alloc_type == GA_MEM && src->data_type == DT_FLOAT
+		&& dst->alloc_type == GA_MEM && dst->data_type == DT_FLOAT
+		&& src->size != dst->size) {
+		genConvFMem(src, dst);
 		if (comment != "") os << "	# " << comment;
 		os << endl;
 		return;
