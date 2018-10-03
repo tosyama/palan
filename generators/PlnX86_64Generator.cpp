@@ -418,6 +418,41 @@ void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity
 	}
 }
 
+static void adjustImmediateFloat(const PlnGenEntity* src, int dst_size)
+{
+	BOOST_ASSERT(src->alloc_type == GA_CODE);
+	if (dst_size == 4) {
+		union { uint32_t i; float f; } u;
+		if (src->type == GE_FLO) {
+			u.f = src->data.f;	// double -> float
+
+		} else {
+			BOOST_ASSERT(src->type == GE_INT);
+			if (src->data_type == DT_SINT)
+				u.f = src->data.i;	// int -> float
+			else if (src->data_type == DT_UINT)
+				u.f = static_cast<uint64_t>(src->data.i);	// int -> float
+			else
+				BOOST_ASSERT(false);
+		}
+		src->data.i = u.i;
+
+	} else {
+		BOOST_ASSERT(dst_size == 8);
+		union { uint64_t i; double d; } u;
+		if (src->type == GE_INT) {
+			if (src->data_type == DT_SINT)
+				u.d = src->data.i;	// int -> double
+			else if (src->data_type == DT_UINT)
+				u.d = static_cast<uint64_t>(src->data.i);	// int -> float
+			else
+				BOOST_ASSERT(false);
+
+			src->data.i = u.i;
+		}
+	}
+}
+
 static bool needAbsCopy(const PlnGenEntity* immediate)
 {
 	BOOST_ASSERT(immediate->alloc_type == GA_CODE && (immediate->type == GE_INT || immediate->type == GE_FLO));
@@ -452,6 +487,10 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		return;
 	}
 
+	if (src->alloc_type == GA_CODE && dst->data_type == DT_FLOAT ) {
+		adjustImmediateFloat(src, dst->size);
+	}
+
 	string dst_safix;
 	switch (dst->size) {
 		case 1: dst_safix = "b"; break;
@@ -460,16 +499,6 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		case 8: dst_safix = "q"; break;
 		default:
 			BOOST_ASSERT(false);
-	}
-
-	if (dst->alloc_type == GA_MEM && dst->data_type == GE_FLO) {
-		if (dst->size == 4) {
-			if (src->alloc_type == GA_CODE && src->data_type == GE_FLO) {
-				union { uint32_t i; float f; } u;
-				u.f = src->data.f;	// double -> float
-				src->data.i = u.i;
-			}
-		}
 	}
 
 	// Reg -> Reg or immediate integer copy

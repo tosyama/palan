@@ -7,10 +7,11 @@
 
 class PlnX86_64Generator : public PlnGenerator
 {
+	bool require_align;
+	
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
 	void genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
-	bool require_align;
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
