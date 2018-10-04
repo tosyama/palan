@@ -377,50 +377,11 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 	os << "	mov" << src_safix << dst_safix << " " << srcstr << ", " << dststr;
 }
 
-void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
-{
-	if (src->alloc_type == GA_CODE) {
-		BOOST_ASSERT(false);	// need to implement.
-	}
-
-	if (src->data_type == DT_FLOAT && dst->data_type == DT_FLOAT) {
-		if (src->size == 4) {
-			BOOST_ASSERT(dst->size == 8);	// Currently no usecase size 4->4.
-			os << "	cvtss2sd " << oprnd(src) << ", " << oprnd(dst);
-
-		} else {
-			BOOST_ASSERT(src->size == 8);
-
-			if (dst->size == 4) {
-				os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
-				os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	movsd " << oprnd(src) << ", " << oprnd(dst);
-			}
-		}
-
-	} else {
-		BOOST_ASSERT(false);	// need to implement.
-	}
-}
-
-void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
-{
-	if (src->size == 4 && dst->size == 8) {
-		os << "	cvtss2sd " << oprnd(src) << ", " << r(XMM11, 4) << endl;
-		os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
-	} else {
-		BOOST_ASSERT(src->size == 8 && dst->size == 4);
-		os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
-		os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
-	}
-}
-
 static void adjustImmediateFloat(const PlnGenEntity* src, int dst_size)
 {
 	BOOST_ASSERT(src->alloc_type == GA_CODE);
+	if (src->buf) return;
+
 	if (dst_size == 4) {
 		union { uint32_t i; float f; } u;
 		if (src->type == GE_FLO) {
@@ -462,6 +423,56 @@ static bool needAbsCopy(const PlnGenEntity* immediate)
 	}
 	return false;
 }
+
+void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	if (src->alloc_type == GA_CODE) {
+		adjustImmediateFloat(src, dst->size);
+		if (needAbsCopy(src)) {
+			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
+		} else {
+			os << "	movq " << oprnd(src) << ", " << r(R11, 8);
+			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst) << endl;
+		}
+		return ;
+	}
+
+	if (src->data_type == DT_FLOAT && dst->data_type == DT_FLOAT) {
+		if (src->size == 4) {
+			BOOST_ASSERT(dst->size == 8);	// Currently no usecase size 4->4.
+			os << "	cvtss2sd " << oprnd(src) << ", " << oprnd(dst);
+
+		} else {
+			BOOST_ASSERT(src->size == 8);
+
+			if (dst->size == 4) {
+				os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
+				os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	movsd " << oprnd(src) << ", " << oprnd(dst);
+			}
+		}
+
+	} else {
+		BOOST_ASSERT(false);	// need to implement.
+	}
+}
+
+void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	if (src->size == 4 && dst->size == 8) {
+		os << "	cvtss2sd " << oprnd(src) << ", " << r(XMM11, 4) << endl;
+		os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+	} else {
+		BOOST_ASSERT(src->size == 8 && dst->size == 4);
+		os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
+		os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+	}
+}
+
 
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {

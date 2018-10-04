@@ -208,9 +208,11 @@ static void initBasicTypes()
 	u64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
 
 	// flo32
+	f32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
 	f32t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// flo64
+	f64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
 	f64t->conv_inf.emplace_back(f32t, TC_AUTO_CAST);
 
 	is_initialzed_type = true;

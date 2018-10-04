@@ -1,0 +1,15 @@
+ccall int32 printf();
+
+flo32 f = 3.14159265358979323846;
+flo64 d = 3.14159265358979323846;
+
+printf("%.8f %.8f\n", f, d);
+showflo(f, d);
+showflo(d, f);
+
+4, -5 -> f, d -> showflo();
+
+func showflo(flo32 f, flo64 d)
+{
+	printf("%.8f %.8f\n", f, d);
+}

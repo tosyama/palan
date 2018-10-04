@@ -107,6 +107,13 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"4 1\n9 7 1\n"
 							"4 1 4\n"
 							"4 1 4 4 1 1 4");
+
+	testcode = "016_varflo";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "3.14159274 3.14159265\n"
+							"3.14159274 3.14159265\n"
+							"3.14159274 3.14159274\n"
+							"4.00000000 -5.00000000");
 }
 
 TEST_CASE("Compile error test", "[basic]")
