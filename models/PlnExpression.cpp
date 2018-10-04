@@ -57,6 +57,8 @@ PlnType* PlnValue::getType()
 			return PlnType::getSint();
 		case VL_LIT_UINT8:
 			return PlnType::getUint();
+		case VL_LIT_FLO8:
+			return PlnType::getFlo();
 		case VL_RO_DATA:
 			return PlnType::getReadOnlyCStr();
 		case VL_VAR:

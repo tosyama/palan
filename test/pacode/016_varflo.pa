@@ -4,12 +4,27 @@ flo32 f = 3.14159265358979323846;
 flo64 d = 3.14159265358979323846;
 
 printf("%.8f %.8f\n", f, d);
-showflo(f, d);
-showflo(d, f);
+showflo8(f, d);
+showflo8(d, f);
+
+flo32 ff;
+flo64 dd;
 
 4, -5 -> f, d -> showflo();
+f, d -> d, f -> showflo();
+6u, 7u -> f, d -> showflo();
+showflo(0.0,0.0);
 
-func showflo(flo32 f, flo64 d)
+printf("%d %d %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+		1, 2, 1.0, 2.0, 3.0, 4.0, 5.0, f, d, 8.0, 9.0);
+
+func showflo8(flo32 f, flo64 d)
 {
 	printf("%.8f %.8f\n", f, d);
 }
+
+func showflo(flo32 f, flo64 d)
+{
+	printf("%.2f %.2f\n", f, d);
+}
+

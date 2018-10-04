@@ -202,10 +202,11 @@ void PlnModule::gen(PlnGenerator &g)
 	g.genLabel(s);
 	g.genEntryFunc();
 	g.genLocalVarArea(stack_size);
-	for (int i=0; i<save_regs.size(); ++i) {
+	// No need to save reg at top level.
+/*	for (int i=0; i<save_regs.size(); ++i) {
 		auto sav_e = g.getEntity(save_reg_dps[i]);
 		g.genSaveReg(save_regs[i], sav_e.get());
-	}
+	} */
 	
 	toplevel->gen(g);
 

@@ -17,6 +17,7 @@ static vector<PlnType*> basic_types;
 static PlnType* byte_type = NULL;
 static PlnType* int_type = NULL;
 static PlnType* uint_type = NULL;
+static PlnType* flo_type = NULL;
 static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
 static PlnType* raw_array_type = NULL;
@@ -107,6 +108,7 @@ static void initBasicTypes()
 	f64t->data_type = DT_FLOAT;
 	f64t->size = 8;
 	basic_types.push_back(f64t);
+	flo_type = f64t;
 
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
@@ -209,10 +211,12 @@ static void initBasicTypes()
 
 	// flo32
 	f32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	f32t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
 	f32t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// flo64
 	f64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	f64t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
 	f64t->conv_inf.emplace_back(f32t, TC_AUTO_CAST);
 
 	is_initialzed_type = true;
@@ -237,6 +241,11 @@ PlnType* PlnType::getSint()
 PlnType* PlnType::getUint()
 {
 	return uint_type;
+}
+
+PlnType* PlnType::getFlo()
+{
+	return flo_type;
 }
 
 PlnType* PlnType::getReadOnlyCStr()

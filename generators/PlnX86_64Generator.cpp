@@ -432,8 +432,8 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
 			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
 		} else {
-			os << "	movq " << oprnd(src) << ", " << r(R11, 8);
-			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst) << endl;
+			os << "	movq " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
 		}
 		return ;
 	}

@@ -192,7 +192,7 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 		for (auto dp: e->data_places)
 			g.genSaveDp(dp);
 
-	for (int i; i<function->save_regs.size(); i++) {
+	for (int i=0; i<function->save_regs.size(); i++) {
 		auto e = g.getEntity(function->save_reg_dps[i]);
 		g.genLoadReg(function->save_regs[i], e.get());
 	}
