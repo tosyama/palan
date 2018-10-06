@@ -377,6 +377,15 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 	os << "	mov" << src_safix << dst_safix << " " << srcstr << ", " << dststr;
 }
 
+static void adjustImmediateInt(const PlnGenEntity* src)
+{
+	BOOST_ASSERT(src->alloc_type == GA_CODE);
+	if (src->buf) return;
+	if (src->type == GE_FLO) {
+		src->data.i = src->data.f;
+	}
+}
+
 static void adjustImmediateFloat(const PlnGenEntity* src, int dst_size)
 {
 	BOOST_ASSERT(src->alloc_type == GA_CODE);
@@ -456,6 +465,18 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 			}
 		}
 
+	} else if (src->data_type == DT_SINT && dst->data_type == DT_FLOAT) {
+		if (src->size == 8) {
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << oprnd(src) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << oprnd(src) << ", " << oprnd(dst) << endl;
+			}
+		} else {
+			BOOST_ASSERT(false);
+		}
 	} else {
 		BOOST_ASSERT(false);	// need to implement.
 	}
@@ -473,6 +494,63 @@ void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity
 	}
 }
 
+
+void PlnX86_64Generator::genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	if (src->size == 4) {
+		if (dst->size == 4) {
+			os << "	movslq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+		} else {
+			BOOST_ASSERT(dst->size == 8);
+			os << "	movslq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2sd " << r(R11,8) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		}
+
+	} else {
+		BOOST_ASSERT(src->size == 8);
+		if (dst->size == 8) {
+			os << "	cvtsi2sd " << oprnd(src) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		} else if (dst->size == 4) {
+			os << "	cvtsi2ss " << oprnd(src) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+		} else
+			BOOST_ASSERT(false);
+	}
+	
+}
+
+void PlnX86_64Generator::genConvUMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	if (src->size == 4) {
+		if (dst->size == 4) {
+			os << "	movl	" << oprnd(src) << ", " << r(R11, 4) << endl;
+			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+		} else {
+			BOOST_ASSERT(dst->size == 8);
+			os << "	movl	" << oprnd(src) << ", " << r(R11, 4) << endl;
+			os << "	cvtsi2sd " << r(R11,8) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		}
+
+	} else {
+		BOOST_ASSERT(src->size == 8);
+		if (dst->size == 8) {
+			os << "	cvtsi2sd " << oprnd(src) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		} else if (dst->size == 4) {
+			os << "	cvtsi2ss " << oprnd(src) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+		} else
+			BOOST_ASSERT(false);
+	}
+}
 
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
@@ -498,8 +576,32 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		return;
 	}
 
-	if (src->alloc_type == GA_CODE && dst->data_type == DT_FLOAT ) {
-		adjustImmediateFloat(src, dst->size);
+	if (src->alloc_type == GA_MEM && src->data_type == DT_SINT
+		&& dst->alloc_type == GA_MEM && dst->data_type == DT_FLOAT) {
+		genConvIMem2FMem(src, dst);
+		if (comment != "") os << "	# " << comment;
+		os << endl;
+		return;
+	}
+
+	if (src->alloc_type == GA_MEM && src->data_type == DT_UINT
+		&& dst->alloc_type == GA_MEM && dst->data_type == DT_FLOAT) {
+		genConvUMem2FMem(src, dst);
+		if (comment != "") os << "	# " << comment;
+		os << endl;
+		return;
+	}
+
+	if (src->alloc_type == GA_CODE) {
+		switch (dst->data_type) {
+			case DT_SINT:
+			case DT_UINT:
+				adjustImmediateInt(src);
+				break;
+			case DT_FLOAT:
+				adjustImmediateFloat(src, dst->size);
+				break;
+		}
 	}
 
 	string dst_safix;

@@ -12,6 +12,8 @@ class PlnX86_64Generator : public PlnGenerator
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
 	void genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvUMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
