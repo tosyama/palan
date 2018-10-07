@@ -497,7 +497,31 @@ void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity
 
 void PlnX86_64Generator::genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
-	if (src->size == 4) {
+	if (src->size == 1) {
+		if (dst->size == 4) {
+			os << "	movsbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+		} else {
+			os << "	movsbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2sd " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		}
+
+	} else if (src->size == 2) {
+		if (dst->size == 4) {
+			os << "	movswq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+		} else {
+			os << "	movswq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2sd " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		}
+
+	} else if (src->size == 4) {
 		if (dst->size == 4) {
 			os << "	movslq	" << oprnd(src) << ", " << r(R11, 8) << endl;
 			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
@@ -514,7 +538,7 @@ void PlnX86_64Generator::genConvIMem2FMem(const PlnGenEntity* src, const PlnGenE
 		BOOST_ASSERT(src->size == 8);
 		if (dst->size == 8) {
 			os << "	cvtsi2sd " << oprnd(src) << ", " << r(XMM11, 8) << endl;
-			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+			os << "	movsd	" << r(XMM11, 8) << ", " << oprnd(dst);
 		} else if (dst->size == 4) {
 			os << "	cvtsi2ss " << oprnd(src) << ", " << r(XMM11, 8) << endl;
 			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
@@ -526,7 +550,33 @@ void PlnX86_64Generator::genConvIMem2FMem(const PlnGenEntity* src, const PlnGenE
 
 void PlnX86_64Generator::genConvUMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
-	if (src->size == 4) {
+	if (src->size == 1) {
+		if (dst->size == 4) {
+			os << "	movzbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+		} else {
+			BOOST_ASSERT(dst->size == 8);
+			os << "	movzbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2sd " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		}
+
+	} else if (src->size == 2) {
+		if (dst->size == 4) {
+			os << "	movzwq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movss	" << r(XMM11, 4) << ", " << oprnd(dst);
+
+		} else {
+			BOOST_ASSERT(dst->size == 8);
+			os << "	movzwq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvtsi2sd " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	movsd	" << r(XMM11, 4) << ", " << oprnd(dst);
+		}
+
+	} else if (src->size == 4) {
 		if (dst->size == 4) {
 			os << "	movl	" << oprnd(src) << ", " << r(R11, 4) << endl;
 			os << "	cvtsi2ss " << r(R11, 8) << ", " << r(XMM11, 8) << endl;

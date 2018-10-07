@@ -218,6 +218,10 @@ static void initBasicTypes()
 	u64t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// flo32
+	f32t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
 	f32t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	f32t->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
 	f32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
@@ -225,6 +229,10 @@ static void initBasicTypes()
 	f32t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// flo64
+	f64t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
 	f64t->conv_inf.emplace_back(i32t, TC_AUTO_CAST);
 	f64t->conv_inf.emplace_back(u32t, TC_AUTO_CAST);
 	f64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
