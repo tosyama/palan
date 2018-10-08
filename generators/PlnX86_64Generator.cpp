@@ -466,7 +466,37 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		}
 
 	} else if (src->data_type == DT_SINT && dst->data_type == DT_FLOAT) {
-		if (src->size == 8) {
+		if (src->size == 1) {
+			os << "	movsbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
+			}
+
+		} else if (src->size == 2) {
+			os << "	movswq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
+			}
+
+		} else if (src->size == 4) {
+			os << "	movslq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
+			}
+
+		} else if (src->size == 8) {
 			if (dst->size == 4) {
 				os << "	cvtsi2ss " << oprnd(src) << ", " << oprnd(dst) << endl;
 
@@ -477,6 +507,49 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		} else {
 			BOOST_ASSERT(false);
 		}
+
+	} else if (src->data_type == DT_UINT && dst->data_type == DT_FLOAT) {
+		if (src->size == 1) {
+			os << "	movzbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
+			}
+		} else if (src->size == 2) {
+			os << "	movzwq	" << oprnd(src) << ", " << r(R11, 8) << endl;
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
+			}
+
+		} else if (src->size == 4) {
+			os << "	movl	" << oprnd(src) << ", " << r(R11, 4) << endl;
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
+			}
+
+		} else if (src->size == 8) {
+			if (dst->size == 4) {
+				os << "	cvtsi2ss " << oprnd(src) << ", " << oprnd(dst) << endl;
+
+			} else {
+				BOOST_ASSERT(dst->size == 8);
+				os << "	cvtsi2sd " << oprnd(src) << ", " << oprnd(dst) << endl;
+			}
+		} else {
+			BOOST_ASSERT(false);
+		}
+
 	} else {
 		BOOST_ASSERT(false);	// need to implement.
 	}
