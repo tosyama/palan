@@ -435,6 +435,7 @@ static bool needAbsCopy(const PlnGenEntity* immediate)
 
 void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
+
 	if (src->alloc_type == GA_CODE) {
 		adjustImmediateFloat(src, dst->size);
 		if (needAbsCopy(src)) {
@@ -447,7 +448,11 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		return ;
 	}
 
-	if (src->data_type == DT_FLOAT && dst->data_type == DT_FLOAT) {
+
+	BOOST_ASSERT(dst->data_type == DT_FLOAT);
+
+	// flo -> flo
+	if (src->data_type == DT_FLOAT) {
 		if (src->size == 4) {
 			BOOST_ASSERT(dst->size == 8);	// Currently no usecase size 4->4.
 			os << "	cvtss2sd " << oprnd(src) << ", " << oprnd(dst);
@@ -464,94 +469,49 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 				os << "	movsd " << oprnd(src) << ", " << oprnd(dst);
 			}
 		}
+		return;
 
-	} else if (src->data_type == DT_SINT && dst->data_type == DT_FLOAT) {
-		if (src->size == 1) {
+	}
+	
+	// int/uint -> flo
+	const char *src_str;
+	BOOST_ASSERT(src->data_type == DT_SINT || src->data_type == DT_UINT);
+
+	if (src->size == 8) {
+		src_str = oprnd(src);
+
+	} else if (src->data_type == DT_SINT) {
+		if (src->size == 1)
 			os << "	movsbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
-			}
-
-		} else if (src->size == 2) {
+		else if (src->size == 2)
 			os << "	movswq	" << oprnd(src) << ", " << r(R11, 8) << endl;
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
-			}
-
-		} else if (src->size == 4) {
+		else if (src->size == 4)
 			os << "	movslq	" << oprnd(src) << ", " << r(R11, 8) << endl;
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
-			}
-
-		} else if (src->size == 8) {
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << oprnd(src) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << oprnd(src) << ", " << oprnd(dst) << endl;
-			}
-		} else {
+		else
 			BOOST_ASSERT(false);
-		}
 
-	} else if (src->data_type == DT_UINT && dst->data_type == DT_FLOAT) {
-		if (src->size == 1) {
+		src_str = r(R11, 8);
+
+	} else { // src->data_type == DT_UINT
+		if (src->size == 1)
 			os << "	movzbq	" << oprnd(src) << ", " << r(R11, 8) << endl;
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
-			}
-		} else if (src->size == 2) {
+		else if (src->size == 2)
 			os << "	movzwq	" << oprnd(src) << ", " << r(R11, 8) << endl;
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
-			}
-
-		} else if (src->size == 4) {
+		else if (src->size == 4)
 			os << "	movl	" << oprnd(src) << ", " << r(R11, 4) << endl;
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << r(R11, 8) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << r(R11, 8) << ", " << oprnd(dst) << endl;
-			}
-
-		} else if (src->size == 8) {
-			if (dst->size == 4) {
-				os << "	cvtsi2ss " << oprnd(src) << ", " << oprnd(dst) << endl;
-
-			} else {
-				BOOST_ASSERT(dst->size == 8);
-				os << "	cvtsi2sd " << oprnd(src) << ", " << oprnd(dst) << endl;
-			}
-		} else {
+		else
 			BOOST_ASSERT(false);
-		}
+
+		src_str = r(R11, 8);
+
+	} 
+
+	if (dst->size == 4) {
+		os << "	cvtsi2ss " << src_str << ", " << oprnd(dst) << endl;
 
 	} else {
-		BOOST_ASSERT(false);	// need to implement.
+		BOOST_ASSERT(dst->size == 8);
+		os << "	cvtsi2sd " << src_str << ", " << oprnd(dst) << endl;
 	}
 }
 
