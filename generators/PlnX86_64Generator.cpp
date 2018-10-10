@@ -591,57 +591,92 @@ void PlnX86_64Generator::genConvUMem2FMem(const PlnGenEntity* src, const PlnGenE
 	}
 }
 
+void PlnX86_64Generator::genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	BOOST_ASSERT(src->data_type == DT_FLOAT);
+	BOOST_ASSERT(src->size == 4 || src->size == 8);
+	BOOST_ASSERT(dst->data_type == DT_SINT || dst->data_type == DT_UINT);
+
+	if (src->size == 4) {
+		os << "	cvtss2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+	} else {
+		os << "	cvtsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+	}
+
+	if (dst->size == 1)
+		os << "	movb " << r(R11, 1) << ", " << oprnd(dst) << endl;
+	else if (dst->size == 2)
+		os << "	movw " << r(R11, 2) << ", " << oprnd(dst) << endl;
+	else if (dst->size == 4)
+		os << "	movl " << r(R11, 4) << ", " << oprnd(dst) << endl;
+	else if (dst->size == 8)
+		os << "	movq " << r(R11, 8) << ", " << oprnd(dst) << endl;
+	else
+		BOOST_ASSERT(false);
+}
+
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
 	if (dst->alloc_type == src->alloc_type) {
 		if (!strcmp(oprnd(dst), oprnd(src))) return;	// do nothing
 	}
 
+	bool is_src_mem = src->alloc_type == GA_MEM;
+	bool is_src_reg = src->alloc_type == GA_REG;
+	bool is_src_code = src->alloc_type == GA_CODE;
+	bool is_src_sint = src->data_type == DT_SINT;
+	bool is_src_uint = src->data_type == DT_UINT;
+	bool is_src_flo = src->data_type == DT_FLOAT;
+
+	bool is_dst_mem = dst->alloc_type == GA_MEM;
+	bool is_dst_reg = dst->alloc_type == GA_REG;
+	bool is_dst_sint = dst->data_type == DT_SINT;
+	bool is_dst_uint = dst->data_type == DT_UINT;
+	bool is_dst_flo = dst->data_type == DT_FLOAT;
+
 	// for floating point register.
-	if ((src->alloc_type == GA_REG && src->data.i >= XMM0)
-		|| (dst->alloc_type == GA_REG && dst->data.i >= XMM0)) {
+	if (is_src_reg && is_src_flo || is_dst_reg && is_dst_flo) {
 		genMoveFReg(src, dst);
 		if (comment != "") os << "	# " << comment;
 		os << endl;
 		return;
 	}
 
-	if (src->alloc_type == GA_MEM && src->data_type == DT_FLOAT
-		&& dst->alloc_type == GA_MEM && dst->data_type == DT_FLOAT
-		&& src->size != dst->size) {
+	if (is_src_mem && is_src_flo && is_dst_mem && is_dst_flo
+			&& src->size != dst->size) {
 		genConvFMem(src, dst);
 		if (comment != "") os << "	# " << comment;
 		os << endl;
 		return;
 	}
 
-	if (src->alloc_type == GA_MEM && src->data_type == DT_SINT
-		&& dst->alloc_type == GA_MEM && dst->data_type == DT_FLOAT) {
+	if (is_src_mem && is_src_sint && is_dst_mem && is_dst_flo) {
 		genConvIMem2FMem(src, dst);
 		if (comment != "") os << "	# " << comment;
 		os << endl;
 		return;
 	}
 
-	if (src->alloc_type == GA_MEM && src->data_type == DT_UINT
-		&& dst->alloc_type == GA_MEM && dst->data_type == DT_FLOAT) {
+	if (is_src_mem && is_src_uint && is_dst_mem && is_dst_flo) {
 		genConvUMem2FMem(src, dst);
 		if (comment != "") os << "	# " << comment;
 		os << endl;
 		return;
 	}
 
-	if (src->alloc_type == GA_CODE) {
-		switch (dst->data_type) {
-			case DT_SINT:
-			case DT_UINT:
-				adjustImmediateInt(src);
-				break;
-			case DT_FLOAT:
-				adjustImmediateFloat(src, dst->size);
-				break;
-		}
+	if (is_src_mem && is_src_flo && is_dst_mem && (is_dst_sint || is_dst_uint)) {
+		genConvFMem2IMem(src, dst);
+		if (comment != "") os << "	# " << comment;
+		os << endl;
+		return;
 	}
+
+	if (is_src_code) {
+		if (is_dst_sint || is_dst_uint)
+			adjustImmediateInt(src);
+		else if (is_dst_flo)
+			adjustImmediateFloat(src, dst->size);
+	} 
 
 	string dst_safix;
 	switch (dst->size) {
@@ -654,8 +689,7 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	}
 
 	// Reg -> Reg or immediate integer copy
-	if (src->alloc_type == GA_REG && dst->alloc_type == GA_REG
-			|| src->alloc_type == GA_CODE && !needAbsCopy(src)) {
+	if (is_src_reg && is_dst_reg || is_src_code && !needAbsCopy(src)) {
 		os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
 		if (comment != "") os << "	# " << comment;
 		os << endl;
@@ -663,23 +697,25 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	}
 
 	int regid = R11;	// work register.
-	if (dst->alloc_type == GA_REG) {
+	if (is_dst_reg) {
 		regid = dst->data.i;
 	}
 
 	// Load to registor.
 	bool pre_process = false;
-	if (src->alloc_type == GA_MEM) {
+	if (is_src_mem) {
 		moveMemToReg(src, regid);
 		pre_process = true;
-	} else if (src->alloc_type == GA_CODE) {
+
+	} else if (is_src_code) {
 		os << "	movabsq " << oprnd(src) << ", " << r(regid, 8);
 		pre_process = true;
+
 	} else	// src->alloc_type == RA_REG
 		regid = src->data.i;
 
 	// Reg -> Memory
-	if (dst->alloc_type == GA_MEM) {
+	if (is_dst_mem) {
 		if (pre_process) os << endl;
 		os << "	mov" << dst_safix << " " << r(regid, dst->size) << ", " << oprnd(dst);
 	}
