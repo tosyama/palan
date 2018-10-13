@@ -1,0 +1,80 @@
+ccall int32 printf();
+
+flo32 f = 3.14159265358979323846;
+flo64 d = 3.14159265358979323846;
+
+printf("%.8f %.8f\n", f, d);
+showflo8(f, d);
+showflo8(d, f);
+
+
+4, -5 -> f, d -> showflo();
+f, d -> d, f -> showflo();
+6u, 7u -> f, d -> showflo();
+showflo(0.0, 0.0);
+showflo(8, 9);
+printf("\n");
+
+int32 i = 3.6;
+printf("%d %d %d %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+		1, 2, i, 1.0, 2.0, 3.0, 4.0, 5.0, f, d, 8.0, 9.0);
+
+flo32 ff = f;
+flo64 dd = d;
+
+int64 i8, j8;
+-10, 11 -> i8, j8 -> f, d -> showflo();
+uint64 u8, v8;
+10, 11 -> u8, v8 -> ff, dd -> showflo();
+i8, j8 -> showflo();
+u8, v8 -> showflo();
+f, d, ff, dd -> i8, j8, u8, v8;
+printf("%d %d %d %d\n", i8, j8, u8, v8);
+
+int32 i4, j4;
+-12, 13 -> i4, j4 -> f, d -> showflo();
+uint32 u4, v4;
+12, 13 -> u4, v4 -> ff, dd -> showflo();
+i4, j4 -> showflo();
+u4, v4 -> showflo();
+f, d, ff, dd -> i4, j4, u4, v4;
+printf("%d %d %d %d\n", i4, j4, u4, v4);
+
+int16 i2, j2;
+-14, 15 -> i2, j2 -> f, d -> showflo();
+uint16 u2, v2;
+14, 15 -> u2, v2 -> ff, dd -> showflo();
+i2, j2 -> showflo();
+u2, v2 -> showflo();
+f, d, ff, dd -> i2, j2, u2, v2;
+printf("%d %d %d %d\n", i2, j2, u2, v2);
+
+sbyte i1, j1;
+-16, 17 -> i1, j1 -> f, d -> showflo();
+byte u1, v1;
+16, 17 -> u1, v1 -> ff, dd -> showflo();
+i1, j1 -> showflo();
+u1, v1 -> showflo();
+f, d, ff, dd -> i1, j1, u1, v1;
+printf("%d %d %d %d\n", i1, j1, u1, v1);
+
+1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1 -> showInt();
+-1.1, -2.1, -3.1, -4.1, 5.1, 6.1, 7.1, 8.1
+	-> i1, i2, i4, i8, u1, u2, u4, u8
+	-> showInt();
+
+func showflo8(flo32 f, flo64 d)
+{
+	printf("%.8f %.8f\n", f, d);
+}
+
+func showflo(flo32 f, flo64 d)
+{
+	printf("%.2f %.2f ", f, d);
+}
+
+func showInt(sbyte i1, int16 i2, int32 i4, int64 i8,
+			byte u1, uint16 u2, uint32 u4, uint64 u8)
+{
+	printf("%d %d %d %d %d %d %d %d\n", i1, i2, i4, i8, u1, u2, u4, u8);
+}

@@ -4,7 +4,7 @@
 /// The values are set specified place.
 ///
 /// @file	PlnExpression.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -32,6 +32,12 @@ PlnValue::PlnValue(uint64_t uintValue)
 	inf.uintValue = uintValue;
 }
 
+PlnValue::PlnValue(double floValue)
+	: type(VL_LIT_FLO8), asgn_type(NO_ASGN)
+{
+	inf.floValue = floValue;
+}
+
 PlnValue::PlnValue(PlnReadOnlyData* rod)
 	: type(VL_RO_DATA), asgn_type(NO_ASGN)
 {
@@ -51,6 +57,8 @@ PlnType* PlnValue::getType()
 			return PlnType::getSint();
 		case VL_LIT_UINT8:
 			return PlnType::getUint();
+		case VL_LIT_FLO8:
+			return PlnType::getFlo();
 		case VL_RO_DATA:
 			return PlnType::getReadOnlyCStr();
 		case VL_VAR:
@@ -65,13 +73,18 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 {
 	switch(type) {
 		case VL_LIT_INT8:
-				return da.getLiteralIntDp(inf.intValue);
+			return da.getLiteralIntDp(inf.intValue);
+
 		case VL_LIT_UINT8:
 			{
 				auto dp = da.getLiteralIntDp(inf.intValue);
 				dp->data_type = DT_UINT;
 				return dp;
 			}
+
+		case VL_LIT_FLO8:
+			return da.getLiteralFloDp(inf.floValue);
+
 		case VL_RO_DATA:
 			return da.getReadOnlyDp(inf.rod->index);
 

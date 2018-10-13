@@ -1,13 +1,19 @@
 /// x86-64 (Linux) assembly generator class declaration.
 ///
 /// @file	PlnX86_64Generator.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include "../PlnGenerator.h"
 
 class PlnX86_64Generator : public PlnGenerator
 {
+	bool require_align;
+	
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
+	void genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
@@ -25,7 +31,7 @@ public:
 	void genSaveReg(int reg, PlnGenEntity* dst) override;
 	void genLoadReg(int reg, PlnGenEntity* src) override;
 
-	void genCCall(string& cfuncname) override;
+	void genCCall(string& cfuncname, vector<int> &arg_dtypes, int va_arg_start) override;
 	void genSysCall(int id, const string& comment) override;
 	void genReturn() override;
 	void genMainReturn() override;

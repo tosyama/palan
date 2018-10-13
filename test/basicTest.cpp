@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3 2");
+	REQUIRE(exec(testcode) == "3.14159274 3.14159265");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -107,6 +107,23 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"4 1\n9 7 1\n"
 							"4 1 4\n"
 							"4 1 4 4 1 1 4");
+
+	testcode = "016_varflo";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "3.14159274 3.14159265\n"
+							"3.14159274 3.14159265\n"
+							"3.14159274 3.14159274\n"
+							"4.00 -5.00 4.00 -5.00 "
+							"6.00 7.00 0.00 0.00 "
+							"8.00 9.00 \n"
+							"1 2 3 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0\n"
+							"-10.00 11.00 10.00 11.00 -10.00 11.00 10.00 11.00 -10 11 10 11\n"
+							"-12.00 13.00 12.00 13.00 -12.00 13.00 12.00 13.00 -12 13 12 13\n"
+							"-14.00 15.00 14.00 15.00 -14.00 15.00 14.00 15.00 -14 15 14 15\n"
+							"-16.00 17.00 16.00 17.00 -16.00 17.00 16.00 17.00 -16 17 16 17\n"
+							"1 2 3 4 5 6 7 8\n"
+							"-1 -2 -3 -4 5 6 7 8"
+							);
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -181,4 +198,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "522_cantuse_index_err";
 	REQUIRE(build(testcode) == "0:2-2 Can not use the index operator for 'a'.");
+
+	testcode = "523_varinitLRnum_err";
+	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
 }

@@ -1,9 +1,9 @@
 #!/bin/bash
 # Coverage check tool
 
-target="../models/expressions/assignitem/PlnAssignItem"
+target="../generators/PlnX86_64Generator"
 targetnm=${target##*/}
-gcovs="${targetnm}.cpp|PlnDstMoveIndirectObjItem.h"
+gcovs="${targetnm}.cpp"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov

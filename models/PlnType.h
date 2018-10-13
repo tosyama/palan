@@ -72,6 +72,7 @@ public:
 	static PlnType* getByte();
 	static PlnType* getSint();
 	static PlnType* getUint();
+	static PlnType* getFlo();
 	static PlnType* getReadOnlyCStr();
 	static PlnType* getObject();
 	static PlnType* getRawArray();

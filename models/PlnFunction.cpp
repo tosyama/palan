@@ -166,7 +166,8 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				if (p->ptr_type & PTR_OWNERSHIP)
 					si.push_owner_var(p);
 
-				auto dp = da.allocData(arg_dps[i]->size, arg_dps[i]->data_type);
+				PlnType *t = p->var_type.back();
+				auto dp = da.allocData(t->size, t->data_type);
 				dp->comment = &p->name;
 
 				da.pushSrc(dp, arg_dps[i]);

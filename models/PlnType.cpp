@@ -17,6 +17,7 @@ static vector<PlnType*> basic_types;
 static PlnType* byte_type = NULL;
 static PlnType* int_type = NULL;
 static PlnType* uint_type = NULL;
+static PlnType* flo_type = NULL;
 static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
 static PlnType* raw_array_type = NULL;
@@ -96,6 +97,19 @@ static void initBasicTypes()
 	basic_types.push_back(u64t);
 	uint_type = u64t;
 
+	PlnType* f32t = new PlnType();
+	f32t->name = "flo32";
+	f32t->data_type = DT_FLOAT;
+	f32t->size = 4;
+	basic_types.push_back(f32t);
+
+	PlnType* f64t = new PlnType();
+	f64t->name = "flo64";
+	f64t->data_type = DT_FLOAT;
+	f64t->size = 8;
+	basic_types.push_back(f64t);
+	flo_type = f64t;
+
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
 	t->data_type = DT_OBJECT_REF;
@@ -131,6 +145,8 @@ static void initBasicTypes()
 	sbt->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
 	sbt->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	sbt->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	sbt->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// byte
 	bt->conv_inf.emplace_back(u16t, TC_LOSTABLE_AUTO_CAST);
@@ -140,6 +156,8 @@ static void initBasicTypes()
 	bt->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
 	bt->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	bt->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	bt->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// int16
 	i16t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
@@ -149,6 +167,8 @@ static void initBasicTypes()
 	i16t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
 	i16t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	i16t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	i16t->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	i16t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// uint16
 	u16t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
@@ -158,6 +178,8 @@ static void initBasicTypes()
 	u16t->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
 	u16t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	u16t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	u16t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// int32
 	i32t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
@@ -167,6 +189,8 @@ static void initBasicTypes()
 	i32t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
 	i32t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
 	i32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	i32t->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	i32t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// uint32
 	u32t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
@@ -176,6 +200,8 @@ static void initBasicTypes()
 	u32t->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
 	u32t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	u32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	u32t->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	u32t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// int64
 	i64t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
@@ -185,6 +211,8 @@ static void initBasicTypes()
 	i64t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
 	i64t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
 	i64t->conv_inf.emplace_back(i32t, TC_AUTO_CAST);
+	i64t->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	i64t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
 
 	// uint64
 	u64t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
@@ -194,6 +222,30 @@ static void initBasicTypes()
 	u64t->conv_inf.emplace_back(i16t, TC_LOSTABLE_AUTO_CAST);
 	u64t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
 	u64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	u64t->conv_inf.emplace_back(f32t, TC_LOSTABLE_AUTO_CAST);
+	u64t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
+
+	// flo32
+	f32t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
+	f32t->conv_inf.emplace_back(i32t, TC_LOSTABLE_AUTO_CAST);
+	f32t->conv_inf.emplace_back(u32t, TC_LOSTABLE_AUTO_CAST);
+	f32t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	f32t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	f32t->conv_inf.emplace_back(f64t, TC_LOSTABLE_AUTO_CAST);
+
+	// flo64
+	f64t->conv_inf.emplace_back(sbt, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(bt, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(i16t, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(u16t, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(i32t, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(u32t, TC_AUTO_CAST);
+	f64t->conv_inf.emplace_back(i64t, TC_LOSTABLE_AUTO_CAST);
+	f64t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
+	f64t->conv_inf.emplace_back(f32t, TC_AUTO_CAST);
 
 	is_initialzed_type = true;
 }
@@ -217,6 +269,11 @@ PlnType* PlnType::getSint()
 PlnType* PlnType::getUint()
 {
 	return uint_type;
+}
+
+PlnType* PlnType::getFlo()
+{
+	return flo_type;
 }
 
 PlnType* PlnType::getReadOnlyCStr()

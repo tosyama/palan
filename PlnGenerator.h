@@ -14,7 +14,8 @@ class PlnDataPlace;
 
 enum GenEttyType {
 	GE_STRING,
-	GE_INT
+	GE_INT,
+	GE_FLO
 };
 
 class PlnGenEntity {
@@ -25,9 +26,10 @@ public:
 	char data_type;
 	int size;
 
-	union {
+	mutable union {
 		string* str;
 		int64_t i;
+		double f;
 	} data;
 	mutable char* buf;
 	~PlnGenEntity()
@@ -66,7 +68,7 @@ public:
 	virtual void genSaveReg(int reg, PlnGenEntity* dst)=0;
 	virtual void genLoadReg(int reg, PlnGenEntity* src)=0;
 
-	virtual void genCCall(string& cfuncname)=0;
+	virtual void genCCall(string& cfuncname, vector<int> &arg_dtypes, int va_arg_start=-1)=0;
 	virtual void genSysCall(int id, const string& comment)=0;
 	virtual void genReturn()=0;
 	virtual void genMainReturn()=0;

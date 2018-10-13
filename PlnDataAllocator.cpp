@@ -297,6 +297,20 @@ PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)
 	return dp;
 }
 
+PlnDataPlace* PlnDataAllocator::getLiteralFloDp(double floValue)
+{
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_FLOAT);
+	dp->type = DP_LIT_FLO;
+	dp->status = DS_ASSIGNED;
+	dp->data.floValue = floValue;
+	dp->alloc_step = step;
+	dp->release_step = step;
+	static string cmt = "$f";
+	dp->comment = &cmt;
+	all.push_back(dp);
+	return dp;
+}
+
 PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
@@ -410,6 +424,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 		}
 		case DP_RO_DATA:
 		case DP_LIT_INT:
+		case DP_LIT_FLO:
 		case DP_BYTES:
 		case DP_STK_BP:
 			return false;

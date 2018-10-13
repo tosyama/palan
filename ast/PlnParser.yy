@@ -53,6 +53,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %token <int64_t>	INT	"integer"
 %token <uint64_t>	UINT	"unsigned integer"
+%token <double>		FLOAT	"float"
 %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	FUNC_ID	"function identifier"
@@ -123,6 +124,7 @@ module: /* empty */
 		vector<string> default_types = {
 			"sbyte", "int16", "int32", "int64",
 			"byte", "uint16", "uint32", "uint64",
+			"flo32", "flo64",
 		};
 		for (auto& type_name: default_types)
 			lexer.push_typename(type_name);
@@ -724,6 +726,17 @@ literal: INT
 		$$ = move(lit_uint);
 		LOC($$, @$);
 	}
+
+	| FLOAT 
+	{
+		json lit_float = {
+			{"exp-type", "lit-float"},
+			{"val", $1}
+		};
+		$$ = move(lit_float);
+		LOC($$, @$);
+	}
+
 
 	| STR
 	{
