@@ -435,19 +435,6 @@ static bool needAbsCopy(const PlnGenEntity* immediate)
 
 void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
-	if (src->alloc_type == GA_CODE) {
-		adjustImmediateFloat(src, dst->size);
-		if (needAbsCopy(src)) {
-			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
-			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
-		} else {
-			os << "	movq " << oprnd(src) << ", " << r(R11, 8) << endl;
-			os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
-		}
-		return ;
-	}
-
-
 	BOOST_ASSERT(dst->data_type == DT_FLOAT);
 	BOOST_ASSERT(dst->size == 4 || dst->size == 8);
 
@@ -580,7 +567,28 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 			BOOST_ASSERT(false);
 	}
 
-	if (is_src_reg && is_src_flo || is_dst_reg && is_dst_flo) {
+	if (is_src_code) {
+		if (is_dst_sint || is_dst_uint)
+			adjustImmediateInt(src);
+		else if (is_dst_flo)
+			adjustImmediateFloat(src, dst->size);
+
+		if (!needAbsCopy(src)) {
+			if (is_dst_reg && is_dst_flo) {
+				os << "	movq " << oprnd(src) << ", " << r(R11, 8) << endl;
+				os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
+			} else
+				os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
+
+		} else if (is_dst_mem || is_dst_reg && is_dst_flo) {
+			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	mov" << dst_safix << " " << r(R11, dst->size) << ", " << oprnd(dst);
+		} else {
+			BOOST_ASSERT(is_dst_reg);
+			os << "	movabsq " << oprnd(src) << ", " << oprnd(dst);
+		}
+
+	} else if (is_src_reg && is_src_flo || is_dst_reg && is_dst_flo) {
 		genMoveFReg(src, dst);
 
 	} else if (is_src_mem && is_src_flo && is_dst_mem && is_dst_flo
@@ -592,21 +600,6 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 
 	} else if (is_src_mem && is_src_flo && is_dst_mem && (is_dst_sint || is_dst_uint)) {
 		genConvFMem2IMem(src, dst);
-
-	} else if (is_src_code) {
-		if (is_dst_sint || is_dst_uint)
-			adjustImmediateInt(src);
-		else if (is_dst_flo)
-			adjustImmediateFloat(src, dst->size);
-
-		if (!needAbsCopy(src)) {
-			os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
-		} else if (is_dst_reg) {
-			os << "	movabsq " << oprnd(src) << ", " << oprnd(dst);
-		} else if (is_dst_mem) {
-			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
-			os << "	mov" << dst_safix << " " << r(R11, dst->size) << ", " << oprnd(dst);
-		}
 
 	}  else if (is_src_reg && is_dst_reg) {
 		os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
