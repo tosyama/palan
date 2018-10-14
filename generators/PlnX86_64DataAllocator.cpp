@@ -102,8 +102,20 @@ PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
 	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+	int freg_ind = 0;
+	for (int i=0; i<index; i++)
+		if (ret_dtypes[i] == DT_FLOAT)
+			freg_ind++;
 
-	if (index <= 5) {
+	int reg_ind = index - freg_ind;
+
+	if (ret_dtypes[index] == DT_FLOAT && freg_ind <= 7) {
+		int regid;
+		dp->type = DP_REG;
+		dp->data.reg.id = FARG_TBL[freg_ind];
+		dp->data.reg.offset = 0;
+
+	} else if (ret_dtypes[index] != DT_FLOAT && index <= 5) {
 		int regid;
 		if (ret_dtypes.size() == 1) {
 			BOOST_ASSERT(index == 0);
@@ -118,9 +130,15 @@ PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
 		dp->type = DP_REG;
 		dp->data.reg.id = regid;
 		dp->data.reg.offset = 0;
+		
 	} else {	// index >= 5
 		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = index-6;
+		int ind = -1;
+		if (reg_ind > 5)
+			ind += reg_ind-5;
+
+		if (freg_ind > 7)
+			ind += freg_ind-7;
 
 		if (is_callee) {
 			dp->type = DP_STK_BP;

@@ -12,7 +12,7 @@ showflo8(d, f);
 f, d -> d, f -> showflo();
 6u, 7u -> f, d -> showflo();
 showflo(0.0, 0.0);
-showflo(8, 9);
+showflo(8, 9) -> showflo();
 printf("\n");
 
 int32 i = 3.6;
@@ -68,9 +68,11 @@ func showflo8(flo32 f, flo64 d)
 	printf("%.8f %.8f\n", f, d);
 }
 
-func showflo(flo32 f, flo64 d)
+func showflo(flo32 f, flo64 d) -> flo32 ff, flo64 dd
 {
 	printf("%.2f %.2f ", f, d);
+	1.23 -> ff;
+	2.34 -> dd;
 }
 
 func showInt(sbyte i1, int16 i2, int32 i4, int64 i8,
