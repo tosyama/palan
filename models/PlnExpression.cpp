@@ -134,7 +134,7 @@ bool PlnExpression::isLitNum(int& num_type)
 	if (type != ET_VALUE) return false;
 
 	auto t = values[0].type;
-	if (t == VL_LIT_INT8 || t== VL_LIT_UINT8) {
+	if (t == VL_LIT_INT8 || t == VL_LIT_UINT8 || t == VL_LIT_FLO8) {
 		num_type = t;
 		return true;
 	}

@@ -242,7 +242,11 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type)
 	dp->type = DP_REG;
 
 	dp->status = DS_READY_ASSIGN;
-	dp->data.reg.id = RAX;
+	if (data_type == DT_FLOAT) {
+		dp->data.reg.id = XMM0;
+	} else {
+		dp->data.reg.id = RAX;
+	}
 	dp->data.reg.offset = 0;
 
 	static string cmt = "%accm";

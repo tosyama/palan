@@ -435,6 +435,32 @@ static bool needAbsCopy(const PlnGenEntity* immediate)
 
 void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
+	// flo(reg) -> int/uint;
+	if (dst->data_type == DT_SINT || dst->data_type == DT_UINT) {
+		BOOST_ASSERT(src->data_type == DT_FLOAT);
+		BOOST_ASSERT(src->size == 8);
+
+		if (dst->alloc_type == GA_REG) {
+			BOOST_ASSERT(false);
+		} else {
+			string dst_safix;
+			switch (dst->size) {
+				case 1: dst_safix = "b"; break;
+				case 2: dst_safix = "w"; break;
+				case 4: dst_safix = "l"; break;
+				case 8: dst_safix = "q"; break;
+				default:
+						BOOST_ASSERT(false);
+			}
+
+			BOOST_ASSERT(dst->alloc_type == GA_MEM);
+			os << "	cvtsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	mov" << dst_safix << " " << r(R11, dst->size) << ", " << oprnd(dst);
+		}
+		
+		return;
+	}
+
 	BOOST_ASSERT(dst->data_type == DT_FLOAT);
 	BOOST_ASSERT(dst->size == 4 || dst->size == 8);
 
@@ -473,9 +499,9 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 	} 
 
 	if (dst->size == 4)
-		os << "	cvtsi2ss " << src_str << ", " << oprnd(dst) << endl;
+		os << "	cvtsi2ss " << src_str << ", " << oprnd(dst);
 	else
-		os << "	cvtsi2sd " << src_str << ", " << oprnd(dst) << endl;
+		os << "	cvtsi2sd " << src_str << ", " << oprnd(dst);
 }
 
 void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
@@ -639,7 +665,48 @@ void PlnX86_64Generator::genLoadAddress(const PlnGenEntity* dst, const PlnGenEnt
 void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
 {
 	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
-	if (second->alloc_type == GA_CODE) {
+
+	bool is_sec_mem = second->alloc_type == GA_MEM;
+	bool is_sec_reg = second->alloc_type == GA_REG;
+	bool is_sec_code = second->alloc_type == GA_CODE;
+	bool is_sec_sint = second->data_type == DT_SINT;
+	bool is_sec_uint = second->data_type == DT_UINT;
+	bool is_sec_flo = second->data_type == DT_FLOAT;
+
+	bool is_tgt_mem = tgt->alloc_type == GA_MEM;
+	bool is_tgt_reg = tgt->alloc_type == GA_REG;
+	bool is_tgt_sint = tgt->data_type == DT_SINT;
+	bool is_tgt_uint = tgt->data_type == DT_UINT;
+	bool is_tgt_flo = tgt->data_type == DT_FLOAT;
+	
+	if (is_tgt_flo && is_tgt_reg && is_sec_flo && is_sec_mem) {
+		BOOST_ASSERT(tgt->size == 8);
+		if (second->size == 4) {
+			os << "	cvtss2sd " << oprnd(second) << ", " << r(XMM11, 8) << "	# " << comment << endl;
+			os << "	addsd " << r(XMM11, 8) << ", " << oprnd(tgt) << "	# " << comment << endl;
+		} else {
+			os << "	addsd " << oprnd(second) << ", " << oprnd(tgt) << "	# " << comment << endl;
+		}
+		return;
+	} else if (is_tgt_flo && is_tgt_reg && is_sec_flo && is_sec_code) {
+		if (needAbsCopy(second)) {
+			os << "	movabsq " << oprnd(second) << ", " << r(R11, 8) << endl;
+			os << "	movq " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+			os << "	addsd " << r(XMM11,8) << ", " << oprnd(tgt) << "	# " << comment << endl;
+		} else {
+			BOOST_ASSERT(false);
+		}
+		return;
+
+	} if (is_tgt_flo && is_tgt_reg && (is_sec_sint || is_sec_uint) && is_sec_mem) {
+		moveMemToReg(second, R11);
+		os << endl;
+		os << "	cvtsi2sd " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+		os << "	addsd " << r(XMM11,8) << ", " << oprnd(tgt) << "	# " << comment << endl;
+		return;
+	}
+
+	if (is_sec_code) {
 		if (second->data.i == 1) {
 			os << "	incq " << oprnd(tgt) << "	# " << comment << endl;
 			return;

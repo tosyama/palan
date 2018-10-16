@@ -8,6 +8,8 @@ int32 a = 3.5;
 
 ffunc(f, d) -> p1, f1;
 
+d + f -> d;
+
 func ffunc(flo32 f, flo64 d)
 		-> flo64 p, flo32 f
 {
