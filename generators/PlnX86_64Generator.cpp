@@ -411,7 +411,7 @@ static void adjustImmediateInt(const PlnGenEntity* src)
 static void adjustImmediateFloat(const PlnGenEntity* src, int dst_size)
 {
 	BOOST_ASSERT(src->alloc_type == GA_CODE);
-	if (src->buf) return;
+	BOOST_ASSERT(src->buf == NULL);
 
 	if (dst_size == 4) {
 		union { uint32_t i; float f; } u;
@@ -517,6 +517,7 @@ void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity
 	if (src->size == 4 && dst->size == 8) {
 		os << "	cvtss2sd " << oprnd(src) << ", " << r(XMM11, 4) << endl;
 		os << "	movsd	" << r(XMM11, 8) << ", " << oprnd(dst);
+
 	} else {
 		BOOST_ASSERT(src->size == 8 && dst->size == 4);
 		os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
@@ -585,18 +586,21 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	if (is_src_code) {
 		if (is_dst_sint || is_dst_uint)
 			adjustImmediateInt(src);
-		else if (is_dst_flo)
+		else if (is_dst_flo) {
 			adjustImmediateFloat(src, dst->size);
+		}
 
 		if (!needAbsCopy(src)) {
 			if (is_dst_reg && is_dst_flo) {
 				os << "	movq " << oprnd(src) << ", " << r(R11, 8) << endl;
 				os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
-			} else
+			} else {
 				os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
+			}
 
 		} else if (is_dst_mem || is_dst_reg && is_dst_flo) {
-			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8);
+			os << endl;
 			os << "	mov" << dst_safix << " " << r(R11, dst->size) << ", " << oprnd(dst);
 
 		} else {

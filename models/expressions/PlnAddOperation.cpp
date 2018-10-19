@@ -38,6 +38,16 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 	 			delete r;
 				return l;
 
+			} else if (r_num_type == VL_LIT_FLO8) {
+				if (l_num_type == VL_LIT_INT8) {
+					r->values[0].inf.floValue += l->values[0].inf.intValue;
+				} else {
+					BOOST_ASSERT(l_num_type == VL_LIT_UINT8);
+					r->values[0].inf.floValue += l->values[0].inf.uintValue;
+				}
+	 			delete l;
+				return r;
+
 			} else {
 				int64_t i = l->values[0].inf.intValue + r->values[0].inf.intValue;
 				delete l; delete r;

@@ -2,16 +2,16 @@ ccall int32 printf();
 
 const N = 1.23;
 
-flo64 d1, d2 = N, 2.34;
+flo64 d1, d2 = N, 0.34 + 2;
 flo64 d3, d4;
 flo32 f1, f2;
 
 d1 + d2 -> d3;
-d1 + 2.34 -> d4;
+d1 + (0.34 + 2u) -> d4;
 
 printf("%.2f %.2f", d3, d4);
 
-int64 i1 = 10; int16 i2 = 5;
+int64 i1 = 9+1.28; int16 i2 = 5;
 
 d1 + i1 -> d3;
 d1 + i2 -> d4;
@@ -25,7 +25,7 @@ d1 + d2 -> i1;
 d1 + d2 -> i2;
 printf(" %d %d", i1, i2);
 
-3.45 -> d3;
+3u + 0.45 -> d3;
 d1 + d2 + d3 -> d3;
 1.23 + d2 -> d4;
 printf(" %.2f %.2f", d3, d4);
@@ -37,3 +37,4 @@ printf(" %.2f %.2f", d3, d4);
 2 + d1 -> d3;
 d1 + 2 -> d4;
 printf(" %.2f %.2f", d3, d4);
+
