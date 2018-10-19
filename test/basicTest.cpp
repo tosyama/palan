@@ -127,7 +127,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "017_floope";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3.57 3.57");
+	REQUIRE(exec(testcode) == "3.57 3.57 11.23 6.23 11.23 6.23 3 3 7.02 3.57 3.57 7.15 3.23 3.23");
 }
 
 TEST_CASE("Compile error test", "[basic]")

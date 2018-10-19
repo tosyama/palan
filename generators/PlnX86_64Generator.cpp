@@ -465,7 +465,7 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		if (dst->alloc_type == GA_REG) {
 			BOOST_ASSERT(false);
 		} else {
-			os << "	cvtsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	cvttsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
 			moveRegTo(R11, dst);
 		}
 		return;
@@ -498,6 +498,7 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 	// int/uint -> flo
 	const char *src_str;
 	BOOST_ASSERT(src->data_type == DT_SINT || src->data_type == DT_UINT);
+	BOOST_ASSERT(dst->size == 8);
 
 	if (src->size == 8) {
 		src_str = oprnd(src);
@@ -508,10 +509,7 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		os << endl;
 	} 
 
-	if (dst->size == 4)
-		os << "	cvtsi2ss " << src_str << ", " << oprnd(dst);
-	else
-		os << "	cvtsi2sd " << src_str << ", " << oprnd(dst);
+	os << "	cvtsi2sd " << src_str << ", " << oprnd(dst);
 }
 
 void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
@@ -557,9 +555,9 @@ void PlnX86_64Generator::genConvFMem2IMem(const PlnGenEntity* src, const PlnGenE
 	BOOST_ASSERT(dst->data_type == DT_SINT || dst->data_type == DT_UINT);
 
 	if (src->size == 4) {
-		os << "	cvtss2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+		os << "	cvttss2si " << oprnd(src) << ", " << r(R11, 8) << endl;
 	} else {
-		os << "	cvtsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+		os << "	cvttsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
 	}
 
 	moveRegTo(R11, dst);

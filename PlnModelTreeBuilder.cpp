@@ -382,7 +382,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 		int vtype = value.type;
 		const string& name = cnst["names"][i];
 		if (e->type == ET_VALUE
-				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_RO_DATA)) {
+				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_RO_DATA || vtype == VL_LIT_FLO8)) {
 			if (!CUR_BLOCK->declareConst(name, value)) {
 				PlnCompileError err(E_DuplicateConstName, name);
 				setLoc(&err, cnst);
