@@ -38,3 +38,5 @@ printf(" %.2f %.2f", d3, d4);
 d1 + 2 -> d4;
 printf(" %.2f %.2f", d3, d4);
 
+printf(" %.2f %.2f", 1.11+d1, d1+d2);
+
