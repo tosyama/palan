@@ -10,10 +10,14 @@ class PlnX86_64Generator : public PlnGenerator
 	bool require_align;
 	
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
+	void moveRegTo(int reg, const PlnGenEntity* dst);
+
 	void genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst);
+
+	const char* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);

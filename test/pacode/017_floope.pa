@@ -1,0 +1,42 @@
+ccall int32 printf();
+
+const N = 1.23;
+
+flo64 d1, d2 = N, 0.34 + 2;
+flo64 d3, d4;
+flo32 f1, f2;
+
+d1 + d2 -> d3;
+d1 + (0.34 + 2u) -> d4;
+
+printf("%.2f %.2f", d3, d4);
+
+int64 i1 = 9+1.28; int16 i2 = 5;
+
+d1 + i1 -> d3;
+d1 + i2 -> d4;
+printf(" %.2f %.2f", d3, d4);
+
+i1 + d1 -> f1;
+i2 + d1 -> f2;
+printf(" %.2f %.2f", f1, f2);
+
+d1 + d2 -> i1;
+d1 + d2 -> i2;
+printf(" %d %d", i1, i2);
+
+3u + 0.45 -> d3;
+d1 + d2 + d3 -> d3;
+1.23 + d2 -> d4;
+printf(" %.2f %.2f", d3, d4);
+
+1.23 + 2.34 -> d3;
+d1 + d2 + 1.24 + d2 -> d4;
+printf(" %.2f %.2f", d3, d4);
+
+2 + d1 -> d3;
+d1 + 2 -> d4;
+printf(" %.2f %.2f", d3, d4);
+
+printf(" %.2f %.2f", 1.11+d1, d1+d2);
+

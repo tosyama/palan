@@ -25,6 +25,29 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 				l->values[0].inf.uintValue += r->values[0].inf.uintValue;
 				delete r;
 				return l;
+
+			} else if (l_num_type == VL_LIT_FLO8) {
+				if (r_num_type == VL_LIT_FLO8) {
+					l->values[0].inf.floValue += r->values[0].inf.floValue;
+				} else if (r_num_type == VL_LIT_INT8) {
+					l->values[0].inf.floValue += r->values[0].inf.intValue;
+				} else {
+					BOOST_ASSERT(r_num_type == VL_LIT_UINT8);
+					l->values[0].inf.floValue += r->values[0].inf.uintValue;
+				}
+	 			delete r;
+				return l;
+
+			} else if (r_num_type == VL_LIT_FLO8) {
+				if (l_num_type == VL_LIT_INT8) {
+					r->values[0].inf.floValue += l->values[0].inf.intValue;
+				} else {
+					BOOST_ASSERT(l_num_type == VL_LIT_UINT8);
+					r->values[0].inf.floValue += l->values[0].inf.uintValue;
+				}
+	 			delete l;
+				return r;
+
 			} else {
 				int64_t i = l->values[0].inf.intValue + r->values[0].inf.intValue;
 				delete l; delete r;
@@ -103,11 +126,18 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	: PlnExpression(ET_ADD), l(l), r(r), is_add(is_add)
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
+	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
 
 	PlnValue v;
 	v.type = VL_WORK;
 	v.inf.wk_type = new vector<PlnType*>();
-	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
+	if (isFloat) {
+		v.inf.wk_type->push_back(PlnType::getFlo());
+	} else if (isUnsigned) {
+		v.inf.wk_type->push_back(PlnType::getUint());
+	} else {
+		v.inf.wk_type->push_back(PlnType::getSint());
+	}
 	values.push_back(v);
 }
 
@@ -115,7 +145,8 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(l->getDataType());
+	// ldp = da.prepareAccumulator(l->getDataType());
+	ldp = da.prepareAccumulator(values[0].getType()->data_type);
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);

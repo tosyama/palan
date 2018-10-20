@@ -27,6 +27,13 @@ enum GenEttyAllocType {
 	GA_MEM
 };
 
+#define CREATE_CHECK_FLAG(f)	bool is_##f##_mem = f->alloc_type == GA_MEM;\
+							 	bool is_##f##_reg = f->alloc_type == GA_REG;\
+							 	bool is_##f##_code = f->alloc_type == GA_CODE;\
+							 	bool is_##f##_sint = f->data_type == DT_SINT;\
+							 	bool is_##f##_uint = f->data_type == DT_UINT;\
+							 	bool is_##f##_flo = f->data_type == DT_FLOAT;
+
 static const char* r(int rt, int size=8)
 {
 	BOOST_ASSERT(rt < REG_NUM);
@@ -377,6 +384,21 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
 	os << "	mov" << src_safix << dst_safix << " " << srcstr << ", " << dststr;
 }
 
+void PlnX86_64Generator::moveRegTo(int reg, const PlnGenEntity* dst)
+{
+	BOOST_ASSERT(dst->alloc_type == GA_MEM || dst->alloc_type == GA_REG);
+	string dst_safix;
+	switch (dst->size) {
+		case 1: dst_safix = "b"; break;
+		case 2: dst_safix = "w"; break;
+		case 4: dst_safix = "l"; break;
+		case 8: dst_safix = "q"; break;
+		default:
+			BOOST_ASSERT(false);
+	}
+	os << "	mov" << dst_safix << " " << r(reg, dst->size) << ", " << oprnd(dst);
+}
+
 static void adjustImmediateInt(const PlnGenEntity* src)
 {
 	BOOST_ASSERT(src->alloc_type == GA_CODE);
@@ -389,7 +411,7 @@ static void adjustImmediateInt(const PlnGenEntity* src)
 static void adjustImmediateFloat(const PlnGenEntity* src, int dst_size)
 {
 	BOOST_ASSERT(src->alloc_type == GA_CODE);
-	if (src->buf) return;
+	BOOST_ASSERT(src->buf == NULL);
 
 	if (dst_size == 4) {
 		union { uint32_t i; float f; } u;
@@ -435,6 +457,20 @@ static bool needAbsCopy(const PlnGenEntity* immediate)
 
 void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
+	// flo(reg) -> int/uint;
+	if (dst->data_type == DT_SINT || dst->data_type == DT_UINT) {
+		BOOST_ASSERT(src->data_type == DT_FLOAT);
+		BOOST_ASSERT(src->size == 8);
+
+		if (dst->alloc_type == GA_REG) {
+			BOOST_ASSERT(false);
+		} else {
+			os << "	cvttsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+			moveRegTo(R11, dst);
+		}
+		return;
+	}
+
 	BOOST_ASSERT(dst->data_type == DT_FLOAT);
 	BOOST_ASSERT(dst->size == 4 || dst->size == 8);
 
@@ -462,6 +498,7 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 	// int/uint -> flo
 	const char *src_str;
 	BOOST_ASSERT(src->data_type == DT_SINT || src->data_type == DT_UINT);
+	BOOST_ASSERT(dst->size == 8);
 
 	if (src->size == 8) {
 		src_str = oprnd(src);
@@ -472,10 +509,7 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		os << endl;
 	} 
 
-	if (dst->size == 4)
-		os << "	cvtsi2ss " << src_str << ", " << oprnd(dst) << endl;
-	else
-		os << "	cvtsi2sd " << src_str << ", " << oprnd(dst) << endl;
+	os << "	cvtsi2sd " << src_str << ", " << oprnd(dst);
 }
 
 void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
@@ -483,6 +517,7 @@ void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity
 	if (src->size == 4 && dst->size == 8) {
 		os << "	cvtss2sd " << oprnd(src) << ", " << r(XMM11, 4) << endl;
 		os << "	movsd	" << r(XMM11, 8) << ", " << oprnd(dst);
+
 	} else {
 		BOOST_ASSERT(src->size == 8 && dst->size == 4);
 		os << "	cvtsd2ss " << oprnd(src) << ", " << r(XMM11, 4) << endl;
@@ -521,21 +556,12 @@ void PlnX86_64Generator::genConvFMem2IMem(const PlnGenEntity* src, const PlnGenE
 	BOOST_ASSERT(dst->data_type == DT_SINT || dst->data_type == DT_UINT);
 
 	if (src->size == 4) {
-		os << "	cvtss2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+		os << "	cvttss2si " << oprnd(src) << ", " << r(R11, 8) << endl;
 	} else {
-		os << "	cvtsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
+		os << "	cvttsd2si " << oprnd(src) << ", " << r(R11, 8) << endl;
 	}
 
-	if (dst->size == 1)
-		os << "	movb " << r(R11, 1) << ", " << oprnd(dst) << endl;
-	else if (dst->size == 2)
-		os << "	movw " << r(R11, 2) << ", " << oprnd(dst) << endl;
-	else if (dst->size == 4)
-		os << "	movl " << r(R11, 4) << ", " << oprnd(dst) << endl;
-	else if (dst->size == 8)
-		os << "	movq " << r(R11, 8) << ", " << oprnd(dst) << endl;
-	else
-		BOOST_ASSERT(false);
+	moveRegTo(R11, dst);
 }
 
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
@@ -544,18 +570,8 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		if (!strcmp(oprnd(dst), oprnd(src))) return;	// do nothing
 	}
 
-	bool is_src_mem = src->alloc_type == GA_MEM;
-	bool is_src_reg = src->alloc_type == GA_REG;
-	bool is_src_code = src->alloc_type == GA_CODE;
-	bool is_src_sint = src->data_type == DT_SINT;
-	bool is_src_uint = src->data_type == DT_UINT;
-	bool is_src_flo = src->data_type == DT_FLOAT;
-
-	bool is_dst_mem = dst->alloc_type == GA_MEM;
-	bool is_dst_reg = dst->alloc_type == GA_REG;
-	bool is_dst_sint = dst->data_type == DT_SINT;
-	bool is_dst_uint = dst->data_type == DT_UINT;
-	bool is_dst_flo = dst->data_type == DT_FLOAT;
+	CREATE_CHECK_FLAG(src);
+	CREATE_CHECK_FLAG(dst);
 
 	string dst_safix;
 	switch (dst->size) {
@@ -570,19 +586,23 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	if (is_src_code) {
 		if (is_dst_sint || is_dst_uint)
 			adjustImmediateInt(src);
-		else if (is_dst_flo)
+		else if (is_dst_flo) {
 			adjustImmediateFloat(src, dst->size);
+		}
 
 		if (!needAbsCopy(src)) {
 			if (is_dst_reg && is_dst_flo) {
 				os << "	movq " << oprnd(src) << ", " << r(R11, 8) << endl;
 				os << "	movq	" << r(R11, 8) << ", " << oprnd(dst);
-			} else
+			} else {
 				os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
+			}
 
 		} else if (is_dst_mem || is_dst_reg && is_dst_flo) {
-			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8) << endl;
+			os << "	movabsq " << oprnd(src) << ", " << r(R11, 8);
+			os << endl;
 			os << "	mov" << dst_safix << " " << r(R11, dst->size) << ", " << oprnd(dst);
+
 		} else {
 			BOOST_ASSERT(is_dst_reg);
 			os << "	movabsq " << oprnd(src) << ", " << oprnd(dst);
@@ -602,7 +622,7 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 		genConvFMem2IMem(src, dst);
 
 	}  else if (is_src_reg && is_dst_reg) {
-		os << "	mov" << dst_safix << " " << oprnd(src) << ", " << oprnd(dst);
+		moveRegTo(src->data.i, dst);
 
 	} else if (is_src_mem && is_dst_reg) {
 		moveMemToReg(src, dst->data.i);
@@ -610,11 +630,11 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	} else if (is_src_mem && is_dst_mem) {
 		moveMemToReg(src, R11);
 		os << endl;
-		os << "	mov" << dst_safix << " " << r(R11, dst->size) << ", " << oprnd(dst);
+		moveRegTo(R11, dst);
 
 	} else {
 		BOOST_ASSERT(is_src_reg && is_dst_mem);
-		os << "	mov" << dst_safix << " " << r(src->data.i, dst->size) << ", " << oprnd(dst);
+		moveRegTo(src->data.i, dst);
 	}
 
 	if (comment != "") os << "	# " << comment;
@@ -636,17 +656,64 @@ void PlnX86_64Generator::genLoadAddress(const PlnGenEntity* dst, const PlnGenEnt
 	}
 }
 
-void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
+const char* PlnX86_64Generator::genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd)
 {
-	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
-	if (second->alloc_type == GA_CODE) {
-		if (second->data.i == 1) {
+	CREATE_CHECK_FLAG(tgt);
+	CREATE_CHECK_FLAG(scnd);
+
+	BOOST_ASSERT(is_tgt_flo && is_tgt_reg);
+	BOOST_ASSERT(tgt->size == 8);
+
+	if (is_scnd_flo && is_scnd_mem) {
+		if (scnd->size == 4) {
+			os << "	cvtss2sd " << oprnd(scnd) << ", " << r(XMM11, 8) << endl;
+			return r(XMM11, 8);
+		} else {
+			return oprnd(scnd);
+		}
+
+	} else if (is_scnd_code) {
+		adjustImmediateFloat(scnd, tgt->size);
+
+		if (needAbsCopy(scnd)) {
+			os << "	movabsq " << oprnd(scnd) << ", " << r(R11, 8) << endl;
+		} else {
+			os << "	movq " << oprnd(scnd) << ", " << r(R11, 8) << endl;
+		}
+		os << "	movq " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+		return r(XMM11, 8);
+
+	} else if ((is_scnd_sint || is_scnd_uint) && is_scnd_mem) {
+		moveMemToReg(scnd, R11);
+		os << endl;
+		os << "	cvtsi2sd " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+		return r(XMM11, 8);
+
+	} else {
+		BOOST_ASSERT(false);
+	}
+}
+
+void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
+{
+	CREATE_CHECK_FLAG(scnd);
+
+	BOOST_ASSERT(tgt->alloc_type != GA_MEM || !is_scnd_mem);
+
+	if (tgt->data_type == DT_FLOAT) {
+		const char* scnd_str = genPreFloOperation(tgt, scnd);
+		os << "	addsd " << scnd_str << ", " << oprnd(tgt) << "	# " << comment << endl;
+		return;
+	}
+
+	if (is_scnd_code) {
+		if (scnd->data.i == 1) {
 			os << "	incq " << oprnd(tgt) << "	# " << comment << endl;
 			return;
 		}
 
-		if (second->data.i < 0) {
-			PlnGenEntity e = *second;
+		if (scnd->data.i < 0) {
+			PlnGenEntity e = *scnd;
 			e.data.i = -e.data.i;
 			e.buf == NULL;
 			genSub(tgt, &e, comment);
@@ -654,9 +721,9 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* second, string 
 		}
 	}
 
-	const char* add_str = oprnd(second);
-	if (second->alloc_type == GA_MEM && second->size < 8) {
-		moveMemToReg(second, R11);
+	const char* add_str = oprnd(scnd);
+	if (is_scnd_mem && scnd->size < 8) {
+		moveMemToReg(scnd, R11);
 		os << endl;
 		add_str = r(R11,8);
 	}
