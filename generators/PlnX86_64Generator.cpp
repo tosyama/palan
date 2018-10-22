@@ -731,17 +731,24 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 	os << "	addq " << add_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
+void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
-	if (second->alloc_type == GA_CODE && second->data.i == 1) {
+	BOOST_ASSERT(tgt->alloc_type != GA_MEM || scnd->alloc_type != GA_MEM);
+
+	if (tgt->data_type == DT_FLOAT) {
+		const char* scnd_str = genPreFloOperation(tgt, scnd);
+		os << "	subsd " << scnd_str << ", " << oprnd(tgt) << "	# " << comment << endl;
+		return;
+	}
+
+	if (scnd->alloc_type == GA_CODE && scnd->data.i == 1) {
 		os << "	decq " << oprnd(tgt) << "	# " << comment << endl;
 		return;
 	}
 
-	const char* sub_str = oprnd(second);
-	if (second->alloc_type == GA_MEM && second->size < 8) {
-		moveMemToReg(second, R11);
+	const char* sub_str = oprnd(scnd);
+	if (scnd->alloc_type == GA_MEM && scnd->size < 8) {
+		moveMemToReg(scnd, R11);
 		os << endl;
 		sub_str = r(R11,8);
 	}

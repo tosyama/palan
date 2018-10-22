@@ -40,7 +40,7 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 
 			} else if (r_num_type == VL_LIT_FLO8) {
 				if (l_num_type == VL_LIT_INT8) {
-					r->values[0].inf.floValue += l->values[0].inf.intValue;
+				r->values[0].inf.floValue += l->values[0].inf.intValue;
 				} else {
 					BOOST_ASSERT(l_num_type == VL_LIT_UINT8);
 					r->values[0].inf.floValue += l->values[0].inf.uintValue;
@@ -66,7 +66,7 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 				ad->r->values[0].inf.uintValue += r->values[0].inf.uintValue;
 				delete r;
 				return ad;
-			} else {
+			} else if (l_num_type != VL_LIT_FLO8 && r_num_type != VL_LIT_FLO8){
 				int64_t val = ad->r->values[0].inf.intValue + r->values[0].inf.intValue;
 				delete r;
 				r = new PlnExpression(val);
@@ -89,6 +89,27 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 				l->values[0].inf.uintValue -= r->values[0].inf.uintValue;
 				delete r;
 				return l;
+			} else if (l_num_type == VL_LIT_FLO8) {
+				if (r_num_type == VL_LIT_FLO8) {
+					l->values[0].inf.floValue -= r->values[0].inf.floValue;
+				} else if (r_num_type == VL_LIT_INT8) {
+					l->values[0].inf.floValue -= r->values[0].inf.intValue;
+				} else {
+					BOOST_ASSERT(r_num_type == VL_LIT_UINT8);
+					l->values[0].inf.floValue -= r->values[0].inf.uintValue;
+				}
+	 			delete r;
+				return l;
+			} else if (r_num_type == VL_LIT_FLO8) {
+				r->values[0].inf.floValue = -r->values[0].inf.floValue;
+				if (l_num_type == VL_LIT_INT8) {
+					r->values[0].inf.floValue += l->values[0].inf.intValue;
+				} else {
+					BOOST_ASSERT(l_num_type == VL_LIT_UINT8);
+					r->values[0].inf.floValue += l->values[0].inf.uintValue;
+				}
+	 			delete l;
+				return r;
 			} else {
 				int64_t i = l->values[0].inf.intValue - r->values[0].inf.intValue;
 				delete l; delete r;
@@ -103,7 +124,7 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 				ad->r->values[0].inf.uintValue -= r->values[0].inf.uintValue;
 				delete r;
 				return ad;
-			} else {
+			} else if (l_num_type != VL_LIT_FLO8 && r_num_type != VL_LIT_FLO8){
 				int64_t val = ad->r->values[0].inf.intValue - r->values[0].inf.intValue;
 				delete r;
 				r = new PlnExpression(val);
@@ -114,7 +135,8 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 		}
 	}
 
-	if (r->isLitNum(r_num_type)) {
+	if (r->isLitNum(r_num_type)
+		&& l->getDataType() != DT_FLOAT && r->getDataType() != DT_FLOAT) {
 		r->values[0].inf.intValue *= -1;
 		return new PlnAddOperation(l,r);
 	}
