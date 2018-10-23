@@ -76,7 +76,7 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 
 		if (is_adr_int || is_adr_uint) {
 			// e.g.) a+1+2 => a+3
-			if (is_l_uint && is_r_uint) {
+			if (is_adr_uint && is_r_uint) {
 				ad->r->values[0].inf.uintValue = adrval.u + rval.u;
 				delete r;
 				return ad;
@@ -134,7 +134,7 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 
 		if (is_adr_int || is_adr_uint) {
 			// e.g.) a+(-1)-2 => a+(-3)
-			if (is_l_uint && is_r_uint) {
+			if (is_adr_uint && is_r_uint) {
 				adr->values[0].inf.uintValue = adrval.u - rval.u;
 				delete r;
 				return ad;
