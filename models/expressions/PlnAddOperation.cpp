@@ -66,7 +66,7 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 	if (is_l_num_lit) {
 		// e.g.) 1+a => a+1
 		// l <-> r
-		return new PlnAddOperation(r,l);
+		return new PlnAddOperation(r, l);
 	}
 
 	if (l->type == ET_ADD && (is_r_int || is_r_uint)) {
@@ -77,21 +77,19 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 		if (is_adr_int || is_adr_uint) {
 			// e.g.) a+1+2 => a+3
 			if (is_adr_uint && is_r_uint) {
-				ad->r->values[0].inf.uintValue = adrval.u + rval.u;
-				delete r;
-				return ad;
+				uint64_t u = ad->is_add ? adrval.u + rval.u : adrval.u - rval.u;
+				ad->r->values[0].inf.uintValue = u;
 			} else {
-				delete r;
-				r = new PlnExpression(adrval.i + rval.i);
-				l = ad->l;
-				ad->l = NULL; delete ad;
-				return new PlnAddOperation(l, r);
-
+				int64_t i = ad->is_add ? adrval.i + rval.i : adrval.i - rval.i;
+				ad->r->values[0].type = VL_LIT_INT8;
+				ad->r->values[0].inf.intValue = i;
 			}
+			delete r;
+			return ad;
 		}
 	}
 
-	return new PlnAddOperation(l,r);
+	return new PlnAddOperation(l, r);
 }
 
 PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
@@ -135,26 +133,19 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 		if (is_adr_int || is_adr_uint) {
 			// e.g.) a+(-1)-2 => a+(-3)
 			if (is_adr_uint && is_r_uint) {
-				adr->values[0].inf.uintValue = adrval.u - rval.u;
-				delete r;
-				return ad;
+				uint64_t u = ad->is_add ? adrval.u - rval.u : adrval.u + rval.u;
+				adr->values[0].inf.uintValue = u;
 			} else {
-				int64_t i = adrval.i - rval.i;
-				delete r;
-				r = new PlnExpression(i);
-				l = ad->l; ad->l = NULL; delete ad;
-				return new PlnAddOperation(l, r);
+				int64_t i = ad->is_add ? adrval.i - rval.i : adrval.i + rval.i;
+				ad->r->values[0].type = VL_LIT_INT8;
+				ad->r->values[0].inf.intValue = i;
 			}
+			delete r;
+			return ad;
 		}
 	}
 
-	if (is_r_num_lit
-		&& l->getDataType() != DT_FLOAT && r->getDataType() != DT_FLOAT) {
-		r->values[0].inf.intValue *= -1;
-		return new PlnAddOperation(l,r);
-	}
-
-	return new PlnAddOperation(l,r,false);
+	return new PlnAddOperation(l, r, false);
 }
 
 PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add)
