@@ -4,7 +4,7 @@
 /// e.g.) a + b / a - b
 ///
 /// @file	PlnAddOperation.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -221,10 +221,16 @@ void PlnAddOperation::gen(PlnGenerator& g)
 // PlnNegative
 PlnExpression* PlnNegative::create(PlnExpression *e)
 {
-	if (e->type == ET_VALUE && e->values[0].type == VL_LIT_INT8) {
+	CREATE_CHECK_FLAG(e);
+	if (is_e_int || is_e_uint) {
 		e->values[0].inf.intValue = - e->values[0].inf.intValue;
 		return e;
+
+	} else if (is_e_flo) {
+		e->values[0].inf.floValue = - e->values[0].inf.floValue;
+		return e;
 	}
+
 	return new PlnNegative(e); 
 }
 
@@ -240,7 +246,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	auto dp = da.prepareAccumulator(DT_SINT);
+	auto dp = da.prepareAccumulator(values[0].getType()->data_type);
 	e->data_places.push_back(dp);
 	e->finish(da, si);
 	da.popSrc(dp);
@@ -260,6 +266,6 @@ void PlnNegative::gen(PlnGenerator& g)
 	
 	auto ne = g.getEntity(dp);
 	g.genNegative(ne.get(), "-" + dp->cmt());
-	if (data_places.size() > 0)
+	if (data_places.size())
 		g.genSaveSrc(data_places[0]);
 }

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Coverage check tool
 
+#target="../generators/PlnX86_64Generator"
 target="../models/expressions/PlnAddOperation"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"

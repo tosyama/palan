@@ -758,7 +758,15 @@ void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 
 void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)
 {
-	os << "	negq " << oprnd(tgt) << "	# " << comment << endl;
+
+	if (tgt->data_type == DT_FLOAT) {
+		int64_t mask = 0x8000000000000000;
+		os << "	movabsq $" << mask << ", " << r(R11, 8) << endl;
+		os << "	movq " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+		os << "	xorpd " << r(XMM11, 8) << ", " << oprnd(tgt) << "	# " << comment << endl;
+	} else {
+		os << "	negq " << oprnd(tgt) << "	# " << comment << endl;
+	}
 }
 
 void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
