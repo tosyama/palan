@@ -34,7 +34,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"1 18446744073709551614\n"
 							"-9223372036854775805 4\n"
 							"-9223372036854775808 1\n"
-							"36 7 8");
+							"36 7 8\n"
+							"9223372036854775807");
 
 	testcode = "006_intarray";
 	REQUIRE(build(testcode) == "success");
@@ -127,7 +128,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "017_floope";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3.57 3.57 11.23 6.23 11.23 6.23 3 3 7.02 3.57 3.57 7.15 3.23 3.23 2.34 3.57");
+	REQUIRE(exec(testcode) == "3.57 3.57 11.23 6.23 11.23 6.23 3 3 7.02 3.57 3.57 7.15 3.23 3.23 2.34 3.57\n"
+							"-1.11 1.11 2.89 -0.43 -7.77 -3.77 7.77 3.77 -1 1 -0.12 -1.11 -1.11 -4.69 0.77 -0.77\n"
+							"-1.23 1.11 -2.50 -1.23 -0.00");
 }
 
 TEST_CASE("Compile error test", "[basic]")

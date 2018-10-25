@@ -4,7 +4,7 @@
 /// e.g.) a + b / a - b
 ///
 /// @file	PlnAddOperation.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -14,112 +14,138 @@
 #include "../../PlnConstants.h"
 #include "../PlnType.h"
 
+#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
+	union {int64_t i; uint64_t u; double d;} ex##val; \
+	if (ex->type == ET_VALUE) { \
+		switch (ex->values[0].type) { \
+			case VL_LIT_INT8: is_##ex##_int = true; \
+				ex##val.i = ex->values[0].inf.intValue; break;\
+			case VL_LIT_UINT8: is_##ex##_uint = true; \
+				ex##val.u = ex->values[0].inf.uintValue; break; \
+			case VL_LIT_FLO8: is_##ex##_flo = true; \
+				ex##val.d = ex->values[0].inf.floValue; break; \
+		} \
+	} \
+	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
+
 // PlnAddOperation
 PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 {
-	int l_num_type, r_num_type;
-	if (l->isLitNum(l_num_type)) {
-		if (r->isLitNum(r_num_type)) {
-			// e.g.) 1+2 => 3
-			if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-				l->values[0].inf.uintValue += r->values[0].inf.uintValue;
-				delete r;
-				return l;
+	CREATE_CHECK_FLAG(l);
+	CREATE_CHECK_FLAG(r);
 
-			} else if (l_num_type == VL_LIT_FLO8) {
-				if (r_num_type == VL_LIT_FLO8) {
-					l->values[0].inf.floValue += r->values[0].inf.floValue;
-				} else if (r_num_type == VL_LIT_INT8) {
-					l->values[0].inf.floValue += r->values[0].inf.intValue;
-				} else {
-					BOOST_ASSERT(r_num_type == VL_LIT_UINT8);
-					l->values[0].inf.floValue += r->values[0].inf.uintValue;
-				}
-	 			delete r;
-				return l;
+	// e.g.) 1+2 => 3
+	if (is_l_uint && is_r_uint) {
+		l->values[0].inf.uintValue = rval.u + lval.u;
+		delete r;
+		return l;
+	}
 
-			} else if (r_num_type == VL_LIT_FLO8) {
-				if (l_num_type == VL_LIT_INT8) {
-					r->values[0].inf.floValue += l->values[0].inf.intValue;
-				} else {
-					BOOST_ASSERT(l_num_type == VL_LIT_UINT8);
-					r->values[0].inf.floValue += l->values[0].inf.uintValue;
-				}
-	 			delete l;
-				return r;
+	if (is_l_flo && is_r_num_lit) {
+		double d =	is_r_int ? rval.i:
+					is_r_uint ? rval.u:
+					rval.d;
+		l->values[0].inf.floValue = lval.d + d;
+		delete r;
+		return l;
+	}
 
-			} else {
-				int64_t i = l->values[0].inf.intValue + r->values[0].inf.intValue;
-				delete l; delete r;
-				return new PlnExpression(i);
-			}
-		} else {
-			// e.g.) 1+a => a+1
-			PlnExpression *t;
-			t = l; l = r; r = t;
-		}
-	} else if (l->type == ET_ADD) {
+	if (is_l_num_lit && is_r_flo) { // is_l_flo == false
+		double d = is_l_int ? lval.i : lval.u;
+		r->values[0].inf.floValue = d + rval.d;
+	 	delete l;
+		return r;
+	}
+
+	if (is_l_num_lit && is_r_num_lit) {	// promote to integer.
+		delete l; delete r;
+		return new PlnExpression(lval.i + rval.i);
+	}
+
+	// e.g.) 1+a => a+1
+	if (is_l_num_lit) {
+		// e.g.) 1+a => a+1
+		// l <-> r
+		return new PlnAddOperation(r, l);
+	}
+
+	if (l->type == ET_ADD && (is_r_int || is_r_uint)) {
 		PlnAddOperation* ad = static_cast<PlnAddOperation*>(l);
-		if (ad->r->isLitNum(l_num_type) && r->isLitNum(r_num_type)) {
+		PlnExpression* adr = ad->r;
+		CREATE_CHECK_FLAG(adr);
+
+		if (is_adr_int || is_adr_uint) {
 			// e.g.) a+1+2 => a+3
-			if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-				ad->r->values[0].inf.uintValue += r->values[0].inf.uintValue;
-				delete r;
-				return ad;
+			if (is_adr_uint && is_r_uint) {
+				uint64_t u = ad->is_add ? adrval.u + rval.u : adrval.u - rval.u;
+				ad->r->values[0].inf.uintValue = u;
 			} else {
-				int64_t val = ad->r->values[0].inf.intValue + r->values[0].inf.intValue;
-				delete r;
-				r = new PlnExpression(val);
-				l = ad->l;
-				ad->l = NULL; delete ad;
+				int64_t i = ad->is_add ? adrval.i + rval.i : adrval.i - rval.i;
+				ad->r->values[0].type = VL_LIT_INT8;
+				ad->r->values[0].inf.intValue = i;
 			}
+			delete r;
+			return ad;
 		}
 	}
 
-	return new PlnAddOperation(l,r);
+	return new PlnAddOperation(l, r);
 }
 
 PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 {
-	int l_num_type, r_num_type;
-	if (l->isLitNum(l_num_type)) {
-		if (r->isLitNum(r_num_type)) {
-			// e.g.) 1-2 => -1
-			if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-				l->values[0].inf.uintValue -= r->values[0].inf.uintValue;
-				delete r;
-				return l;
-			} else {
-				int64_t i = l->values[0].inf.intValue - r->values[0].inf.intValue;
-				delete l; delete r;
-				return new PlnExpression(i);
-			}
-		} 
-	} else if (l->type == ET_ADD) {
+	CREATE_CHECK_FLAG(l);
+	CREATE_CHECK_FLAG(r);
+	
+	// e.g.) 1-2 => -1
+	if (is_l_uint && is_r_uint) {
+		l->values[0].inf.uintValue = lval.u - rval.u;
+		delete r;
+		return l;
+	}
+
+	if (is_l_flo && is_r_num_lit) {
+		double d =	is_r_int ? rval.i:
+					is_r_uint ? rval.u:
+					rval.d;
+		l->values[0].inf.floValue = lval.d - d;
+		delete r;
+		return l;
+	}
+
+	if (is_l_num_lit && is_r_flo) { // is_l_flo == false
+		double d = is_l_int ? lval.i : lval.u;
+		r->values[0].inf.floValue = d - rval.d;
+	 	delete l;
+		return r;
+	}
+
+	if (is_l_num_lit && is_r_num_lit) {	// promote to integer.
+		delete l; delete r;
+		return new PlnExpression(lval.i - rval.i);
+	}
+
+	if (l->type == ET_ADD && (is_r_int || is_r_uint)) {
 		PlnAddOperation* ad = static_cast<PlnAddOperation*>(l);
-		if (ad->r->isLitNum(l_num_type) && r->isLitNum(r_num_type)) {
+		PlnExpression* adr = ad->r;
+		CREATE_CHECK_FLAG(adr);
+
+		if (is_adr_int || is_adr_uint) {
 			// e.g.) a+(-1)-2 => a+(-3)
-			if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-				ad->r->values[0].inf.uintValue -= r->values[0].inf.uintValue;
-				delete r;
-				return ad;
+			if (is_adr_uint && is_r_uint) {
+				uint64_t u = ad->is_add ? adrval.u - rval.u : adrval.u + rval.u;
+				adr->values[0].inf.uintValue = u;
 			} else {
-				int64_t val = ad->r->values[0].inf.intValue - r->values[0].inf.intValue;
-				delete r;
-				r = new PlnExpression(val);
-				l = ad->l;
-				ad->l = NULL; delete ad;
-				return new PlnAddOperation(l,r);
+				int64_t i = ad->is_add ? adrval.i - rval.i : adrval.i + rval.i;
+				ad->r->values[0].type = VL_LIT_INT8;
+				ad->r->values[0].inf.intValue = i;
 			}
+			delete r;
+			return ad;
 		}
 	}
 
-	if (r->isLitNum(r_num_type)) {
-		r->values[0].inf.intValue *= -1;
-		return new PlnAddOperation(l,r);
-	}
-
-	return new PlnAddOperation(l,r,false);
+	return new PlnAddOperation(l, r, false);
 }
 
 PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add)
@@ -195,10 +221,16 @@ void PlnAddOperation::gen(PlnGenerator& g)
 // PlnNegative
 PlnExpression* PlnNegative::create(PlnExpression *e)
 {
-	if (e->type == ET_VALUE && e->values[0].type == VL_LIT_INT8) {
+	CREATE_CHECK_FLAG(e);
+	if (is_e_int || is_e_uint) {
 		e->values[0].inf.intValue = - e->values[0].inf.intValue;
 		return e;
+
+	} else if (is_e_flo) {
+		e->values[0].inf.floValue = - e->values[0].inf.floValue;
+		return e;
 	}
+
 	return new PlnNegative(e); 
 }
 
@@ -214,7 +246,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	auto dp = da.prepareAccumulator(DT_SINT);
+	auto dp = da.prepareAccumulator(values[0].getType()->data_type);
 	e->data_places.push_back(dp);
 	e->finish(da, si);
 	da.popSrc(dp);
@@ -234,6 +266,6 @@ void PlnNegative::gen(PlnGenerator& g)
 	
 	auto ne = g.getEntity(dp);
 	g.genNegative(ne.get(), "-" + dp->cmt());
-	if (data_places.size() > 0)
+	if (data_places.size())
 		g.genSaveSrc(data_places[0]);
 }
