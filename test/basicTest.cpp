@@ -130,7 +130,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3.57 3.57 11.23 6.23 11.23 6.23 3 3 7.02 3.57 3.57 7.15 3.23 3.23 2.34 3.57\n"
 							"-1.11 1.11 2.89 -0.43 -7.77 -3.77 7.77 3.77 -1 1 -0.12 -1.11 -1.11 -4.69 0.77 -0.77\n"
-							"-1.23 1.11 -2.50 -1.23 -0.00");
+							"-1.23 1.11 -2.50 -1.23 -0.00 -1.23e+10 2.34e-02 2.25e-308 1.80e+308");
 }
 
 TEST_CASE("Compile error test", "[basic]")

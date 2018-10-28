@@ -61,6 +61,7 @@ static string& unescape(string& str);
 DIGIT	[0-9]+
 UDIGIT	[0-9]+"u"
 FLOAT	[0-9]+"."[0-9]+
+FLO_EX	[0-9]+"."[0-9]+"e"("+"|"-")?[0-9]+
 DIGIT_MIN	"-9223372036854775808"
 ID	[a-zA-Z_][0-9a-zA-Z_]*
 DBL_LESS	"<<"
@@ -99,7 +100,7 @@ POST_KW [ \t\r\n(]*		/* To keep priority than FUNC_ID. */
 			return INT;
 		}
 	}
-{FLOAT}	{
+{FLOAT}|{FLO_EX}	{
 			lval.build<double>() = std::stod(yytext);
 			return FLOAT;
 		}
