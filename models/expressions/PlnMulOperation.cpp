@@ -51,6 +51,13 @@ PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
 		return l;
 	}
 
+	if (is_l_num_lit && is_r_flo) { // is_l_flo == false
+		double d = is_l_int ? lval.i : lval.u;
+		r->values[0].inf.floValue = d * rval.d;
+	 	delete l;
+		return r;
+	}
+
 	if (is_l_num_lit && is_r_num_lit) {	// promote to integer.
 		delete l; delete r;
 		return new PlnExpression(lval.i * rval.i);

@@ -9,6 +9,7 @@ byte c,d = b+1+a, b-a;
 byte e = 255;
 int64 i = e+a;
 byte i2 = 3*a;
+byte i3 = a*b;
 
-printf("%d %d %d %d %d %d\n", b, c, d, e, i, i2);
+printf("%d %d %d %d %d %d %d\n", b, c, d, e, i, i2, i3);
 
