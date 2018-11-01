@@ -62,7 +62,6 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 		return new PlnExpression(lval.i + rval.i);
 	}
 
-	// e.g.) 1+a => a+1
 	if (is_l_num_lit) {
 		// e.g.) 1+a => a+1
 		// l <-> r
@@ -171,7 +170,6 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	// ldp = da.prepareAccumulator(l->getDataType());
 	ldp = da.prepareAccumulator(values[0].getType()->data_type);
 
 	if (r->type == ET_VALUE) {

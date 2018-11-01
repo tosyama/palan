@@ -769,13 +769,19 @@ void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)
 	}
 }
 
-void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
+void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type != GA_MEM || second->alloc_type != GA_MEM);
+	BOOST_ASSERT(tgt->alloc_type != GA_MEM || scnd->alloc_type != GA_MEM);
 
-	const char* mul_str = oprnd(second);
-	if (second->alloc_type == GA_MEM && second->size < 8) {
-		moveMemToReg(second, R11);
+	if (tgt->data_type == DT_FLOAT) {
+		const char* scnd_str = genPreFloOperation(tgt, scnd);
+		os << "	mulsd " << scnd_str << ", " << oprnd(tgt) << "	# " << comment << endl;
+		return;
+	}
+
+	const char* mul_str = oprnd(scnd);
+	if (scnd->alloc_type == GA_MEM && scnd->size < 8) {
+		moveMemToReg(scnd, R11);
 		os << endl;
 		mul_str = r(R11,8);
 	}
