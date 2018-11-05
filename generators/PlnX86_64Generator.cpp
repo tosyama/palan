@@ -788,21 +788,27 @@ void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 	os << "	imulq " << mul_str << ", " << oprnd(tgt) << "	# " << comment << endl;
 }
 
-void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)
+void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type == GA_REG && tgt->data.i == RAX);
+	BOOST_ASSERT(tgt->alloc_type == GA_REG);
+	if (tgt->data_type == DT_FLOAT) {
+		const char* scnd_str = genPreFloOperation(tgt, scnd);
+		os << "	divsd " << scnd_str << ", " << oprnd(tgt) << "	# " << comment << endl;
+		return;
+	}
 
-	const char* div_str = oprnd(second);
-	if (second->alloc_type == GA_CODE) { 
+	BOOST_ASSERT(tgt->data.i == RAX);
+	const char* div_str = oprnd(scnd);
+	if (scnd->alloc_type == GA_CODE) { 
 		div_str = r(R11, 8);
-		if (needAbsCopy(second)) {
-			os << "	movabsq " << oprnd(second) << ", " << div_str << endl;
+		if (needAbsCopy(scnd)) {
+			os << "	movabsq " << oprnd(scnd) << ", " << div_str << endl;
 		} else {
-			os << "	movq " << oprnd(second) << ", " << div_str << endl;
+			os << "	movq " << oprnd(scnd) << ", " << div_str << endl;
 		}
 	}
 
-	if (tgt->data_type == DT_UINT && second->data_type == DT_UINT) {
+	if (tgt->data_type == DT_UINT && scnd->data_type == DT_UINT) {
 		os << "	movq $0, %rdx" << endl;
 		os << "	divq " << div_str << "	# " << comment << endl;
 	} else {

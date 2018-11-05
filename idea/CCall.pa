@@ -1,0 +1,17 @@
+ccall int32 printf(byte[?] format, ...);
+ccall int32 sprintf(out byte[?] str, byte[?] format, ...) -> str;
+ccall int32 scanf(byte[?] format, out ...) -> int32, ...;
+ccall int32 sscanf(byte[?] str, byte[?] format, out ...) -> ...;
+
+call int32 sqlite3_open(byte[?] filename, out sqlite3* ppDb) -> ppDb;
+
+byte[80] str;
+int32 result;
+sprintf("Hello world") -> str;
+sprintf("Hello world") -> result ,str;
+
+flo64 d;
+int32 i;
+"1.23 5" -> sscanf("%f %d") -> result, d, i;
+"1.23 5" -> sscanf("%f %d") -> result;
+
