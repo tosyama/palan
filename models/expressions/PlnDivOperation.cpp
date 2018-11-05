@@ -104,11 +104,18 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt)
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
+	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
 	
 	PlnValue v;
 	v.type = VL_WORK;
 	v.inf.wk_type = new vector<PlnType*>();
-	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
+	if (isFloat) {
+		v.inf.wk_type->push_back(PlnType::getFlo());
+	} else if (isUnsigned) {
+		v.inf.wk_type->push_back(PlnType::getUint());
+	} else {
+		v.inf.wk_type->push_back(PlnType::getSint());
+	}
 	values.push_back(v);
 }
 
@@ -116,7 +123,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(l->getDataType());
+	ldp = da.prepareAccumulator(values[0].getType()->data_type);
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
