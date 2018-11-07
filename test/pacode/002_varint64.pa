@@ -21,8 +21,10 @@ printf("%d %d %d %d %d %d %d\n", h, j, f, a+b+c, k, l, m*3);
 a+b+c; // only calc
 -a;
 a*c;
+a/c;
+a%c;
 
-1+2*c, 5/2*3%2, d/(-2)*5, a*b*(c-2)
+1+2*c, 5/2*3%2, d/(-2)*5, a*b*(c-2)/(c-1)
 	-> a,b,c,d;
 
 printf("%d %d %d %d\n", a, b, c, d);

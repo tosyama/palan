@@ -1,17 +1,17 @@
-ccall int32 printf(byte[?] format, ...);
-ccall int32 sprintf(out byte[?] str, byte[?] format, ...) -> str;
-ccall int32 scanf(byte[?] format, out ...) -> int32, ...;
-ccall int32 sscanf(byte[?] str, byte[?] format, out ...) -> ...;
+ccall printf(byte[?] format, ...) -> int32;
+ccall sprintf(out, byte[?] format, ...) -> int32, byte[?] str;
+ccall scanf(byte[?] format, out) -> int32, ...;
+ccall sscanf(byte[?] str, byte[?] format, out) -> int32, ...;
+ccall strcpy(out byte[?] dst, byte[?] src)->byte[?];
 
 call int32 sqlite3_open(byte[?] filename, out sqlite3* ppDb) -> ppDb;
 
 byte[80] str;
 int32 result;
-sprintf("Hello world") -> str;
-sprintf("Hello world") -> result ,str;
+sprintf(>>str, "Hello world");
+sprintf(("Hello world")->str);
 
 flo64 d;
 int32 i;
-"1.23 5" -> sscanf("%f %d") -> result, d, i;
-"1.23 5" -> sscanf("%f %d") -> result;
-
+"1.23 5" -> sscanf("%f %d", >>d, >>i);
+"1.23 5" -> sscanf(("%f %d")-> d, i);

@@ -12,7 +12,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8 1263\n"
-							"7 0 -10 2");
+							"7 0 -10 1");
 
 	testcode = "003_varbyte";
 	REQUIRE(build(testcode) == "success");
@@ -31,7 +31,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"18446744073709551615\n"
 							"6148914691236517205 0\n"
 							"0 -1\n"
-							"1 18446744073709551614\n"
+							"1 18446744073709551614 2 2\n"
 							"-9223372036854775805 4\n"
 							"-9223372036854775808 1\n"
 							"36 7 8\n"

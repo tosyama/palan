@@ -286,6 +286,14 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
 	releaseDp(rdp);
 
+	if (ldp->data_type == DT_FLOAT) {
+		releaseDp(ldp);
+		*quotient = prepareAccumulator(ldp->data_type);
+		*reminder = NULL;
+		step++;
+		return;
+	}
+
 	int regid = RDX;
 	auto pdp = regs[regid];
 	auto dp = new PlnDataPlace(8,ldp->data_type);

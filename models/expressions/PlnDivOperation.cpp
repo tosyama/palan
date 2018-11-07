@@ -67,11 +67,13 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 		PlnExpression* dvr = dv->r;
 		CREATE_CHECK_FLAG(dvr);
 		if (dv->div_type == DV_DIV && (is_dvr_int || is_dvr_uint)) {
-			// e.g.) 5/2 => 2
-			dv->r->values[0].inf.uintValue = dvrval.u * rval.u;
-		} else {
-			dv->r->values[0].type = VL_LIT_INT8;
-			dv->r->values[0].inf.intValue = dvrval.i * rval.i;
+			if (is_dvr_uint && is_r_uint) {
+				// e.g.) 5/2 => 2
+				dv->r->values[0].inf.uintValue = dvrval.u * rval.u;
+			} else {
+				dv->r->values[0].type = VL_LIT_INT8;
+				dv->r->values[0].inf.intValue = dvrval.i * rval.i;
+			}
 		}
 		delete r;
 		return dv;
@@ -146,14 +148,15 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size()) {
 		if (div_type == DV_DIV)  {
 			da.pushSrc(data_places[0], quotient);
-			da.releaseDp(remainder);
+			if (remainder) da.releaseDp(remainder);
 		} else {	// DV_MOD
+			BOOST_ASSERT(remainder != NULL);
 			da.releaseDp(quotient);
 			da.pushSrc(data_places[0], remainder);
 		}
 	} else {
 		da.releaseDp(quotient);
-		da.releaseDp(remainder);
+		if (remainder) da.releaseDp(remainder);
 	}
 
 }
@@ -178,8 +181,9 @@ void PlnDivOperation::gen(PlnGenerator& g)
 	if (data_places.size() > 0) {
 		if (div_type == DV_DIV) {
 			g.genSaveSrc(data_places[0]);
-			if (data_places.size() > 1)
-				g.genSaveSrc(data_places[1]);
+			BOOST_ASSERT(data_places.size() == 1);
+			// if (data_places.size() > 1)
+			//	g.genSaveSrc(data_places[1]);
 			
 		} else { // div_type == DT_MOD
 			g.genSaveSrc(data_places[0]);
