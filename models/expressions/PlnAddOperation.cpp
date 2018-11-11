@@ -36,7 +36,7 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 
 	// e.g.) 1+2 => 3
 	if (is_l_uint && is_r_uint) {
-		l->values[0].inf.uintValue = rval.u + lval.u;
+		l->values[0].inf.uintValue = lval.u + rval.u;
 		delete r;
 		return l;
 	}

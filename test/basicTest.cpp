@@ -12,7 +12,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8 1263\n"
-							"7 0 -10 2");
+							"7 0 -10 1");
 
 	testcode = "003_varbyte";
 	REQUIRE(build(testcode) == "success");
@@ -31,7 +31,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"18446744073709551615\n"
 							"6148914691236517205 0\n"
 							"0 -1\n"
-							"1 18446744073709551614\n"
+							"1 18446744073709551614 2 2\n"
 							"-9223372036854775805 4\n"
 							"-9223372036854775808 1\n"
 							"36 7 8\n"
@@ -131,7 +131,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "3.57 3.57 11.23 6.23 11.23 6.23 3 3 7.02 3.57 3.57 7.15 3.23 3.23 2.34 3.57\n"
 							"-1.11 1.11 2.89 -0.43 -7.77 -3.77 7.77 3.77 -1 1 -0.12 -1.11 -1.11 -4.69 0.77 -0.77\n"
 							"-1.23 1.11 -2.50 -1.23 -0.00 -1.23e+10 2.34e-02 1.23e+00 1.80e+308\n"
-							"2.88 2.88 0.84 0.84 2.46 6.15 2.46 6.15 9.93 2.88 3.03 8.42 2.46 2.46");
+							"2.88 2.88 0.84 0.84 2.46 6.15 2.46 6.15 9.93 2.88 3.03 8.42 2.46 2.46\n"
+							"0.53 0.53 7.24 0.21 4.07 4.07 0.25 0.25 1.20 0.53 0.50 0.18 1.63 0.61");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -209,4 +210,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "523_varinitLRnum_err";
 	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
+
+	testcode = "524_flo_mod_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'float number'.");
 }

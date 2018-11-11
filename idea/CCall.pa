@@ -1,0 +1,19 @@
+ccall printf(byte[?] format, ...) -> int32;
+ccall sprintf(out, byte[?] format, ...) => byte[?] str -> int32;
+ccall scanf(byte[?] format, out) => ... -> int32;
+ccall sscanf(byte[?] str, byte[?] format, out) => ... -> int32;
+ccall strcpy(out, byte[?] src)-> byte[?] dst => byte[?];
+
+call sqlite3_open(byte[?] filename, out) => sqlite3* ppDb -> int32;
+
+byte[80] str;
+int32 result;
+sprintf("Hello world") => str -> result;
+
+flo64 d;
+int32 i;
+"1.23 5" -> sscanf("%f %d") => d, i -> result;
+
+if (("1.23 5" -> sscanf("%f %d") => d, i) == 0) {
+	printf("err\n");
+}

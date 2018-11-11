@@ -36,7 +36,6 @@ public:
 	virtual ~PlnExpression();
 
 	int getDataType(int val_ind=0);
-	bool isLitNum(int& num_type);
 
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	virtual void gen(PlnGenerator& g);

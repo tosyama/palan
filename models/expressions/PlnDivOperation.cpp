@@ -12,68 +12,93 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 #include "../PlnType.h"
+
+#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
+	union {int64_t i; uint64_t u; double d;} ex##val; \
+	if (ex->type == ET_VALUE) { \
+		switch (ex->values[0].type) { \
+			case VL_LIT_INT8: is_##ex##_int = true; \
+				ex##val.i = ex->values[0].inf.intValue; break;\
+			case VL_LIT_UINT8: is_##ex##_uint = true; \
+				ex##val.u = ex->values[0].inf.uintValue; break; \
+			case VL_LIT_FLO8: is_##ex##_flo = true; \
+				ex##val.d = ex->values[0].inf.floValue; break; \
+		} \
+	} \
+	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
 
 // PlnDivOperation
 PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 {
-	int r_num_type;
+	CREATE_CHECK_FLAG(l);
+	CREATE_CHECK_FLAG(r);
+	 
+	// e.g.) 5/2 => 2
+	if (is_l_uint && is_r_uint) {
+		l->values[0].inf.uintValue = lval.u / rval.u;
+		delete r;
+		return l;
+	}
 
-	if (r->isLitNum(r_num_type)) {
-		int l_num_type;
-		if (l->isLitNum(l_num_type)) { 
-			PlnExpression* new_val;
+	if (is_l_flo && is_r_num_lit) {
+		double d =	is_r_int ? rval.i:
+					is_r_uint ? rval.u:
+					rval.d;
+		l->values[0].inf.floValue = lval.d / d;
+		delete r;
+		return l;
+	}
 
-			// e.g.) 5/2 => 2
-			if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-				uint64_t val = l->values[0].inf.uintValue / r->values[0].inf.uintValue;
-				new_val = new PlnExpression(val);
+	if (is_l_num_lit && is_r_flo) { // is_l_flo == false
+		double d = is_l_int ? lval.i : lval.u;
+		r->values[0].inf.floValue = d / rval.d;
+	 	delete l;
+		return r;
+	}
+
+	if (is_l_num_lit && is_r_num_lit) {	// promote to integer.
+		delete l; delete r;
+		return new PlnExpression(lval.i / rval.i);
+	}
+
+	if (l->type == ET_DIV && (is_r_int || is_r_uint)) {
+		PlnDivOperation* dv = static_cast<PlnDivOperation*>(l);
+		PlnExpression* dvr = dv->r;
+		CREATE_CHECK_FLAG(dvr);
+		if (dv->div_type == DV_DIV && (is_dvr_int || is_dvr_uint)) {
+			if (is_dvr_uint && is_r_uint) {
+				// e.g.) 5/2 => 2
+				dv->r->values[0].inf.uintValue = dvrval.u * rval.u;
 			} else {
-				int64_t val = l->values[0].inf.intValue / r->values[0].inf.intValue;
-				new_val = new PlnExpression(val);
+				dv->r->values[0].type = VL_LIT_INT8;
+				dv->r->values[0].inf.intValue = dvrval.i * rval.i;
 			}
-			delete l; delete r;
-			return new_val;
-
-		} else if (l->type == ET_DIV) {
-			PlnDivOperation* dv = static_cast<PlnDivOperation*>(l);
-			int lr_num_type;
-			if (dv->div_type == DV_DIV && dv->r->isLitNum(lr_num_type)) {
-
-				// e.g.) a/2/3 => a/6
-				if (lr_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-					dv->r->values[0].inf.uintValue *= r->values[0].inf.uintValue;
-					delete r;
-					return dv;
-				} else {
-					int64_t val = dv->r->values[0].inf.intValue * r->values[0].inf.intValue;
-					delete r;
-					r = new PlnExpression(val);
-					l = dv->l;
-					dv->l = NULL; delete dv;
-				}
-			} 
 		}
-	} 
+		delete r;
+		return dv;
+	}
 
-	return new PlnDivOperation(l,r, DV_DIV);
+	return new PlnDivOperation(l, r, DV_DIV);
 }
 
 PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 {
-	int l_num_type, r_num_type;
-	if (l->isLitNum(l_num_type) && r->isLitNum(r_num_type)) {
-		PlnExpression* new_val;
-		// e.g.) 5%2 => 1
-		if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-			uint64_t ui = l->values[0].inf.uintValue % r->values[0].inf.uintValue;
-			new_val = new PlnExpression(ui);
-		} else {
-			int64_t i = l->values[0].inf.intValue % r->values[0].inf.intValue;
-			new_val = new PlnExpression(i);
-		}
+	CREATE_CHECK_FLAG(l);
+	CREATE_CHECK_FLAG(r);
+
+	// e.g.) 5%2 => 1
+	if (is_l_uint && is_r_uint) {
+		l->values[0].inf.uintValue = lval.u % rval.u;
+		delete r;
+		return l;
+	}
+
+	if (is_l_num_lit && is_r_num_lit) {
 		delete l; delete r;
-		return new_val;
+		return new PlnExpression(lval.i % rval.i);
 	}
 
 	return new PlnDivOperation(l,r, DV_MOD);
@@ -83,11 +108,23 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt)
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
+	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
+	if (isFloat && div_type == DV_MOD) {
+		PlnCompileError err(E_CantUseOperatorHere, "float number");
+		throw err;
+	}
+	BOOST_ASSERT(!(isFloat && div_type == DV_MOD));
 	
 	PlnValue v;
 	v.type = VL_WORK;
 	v.inf.wk_type = new vector<PlnType*>();
-	v.inf.wk_type->push_back(isUnsigned ? PlnType::getUint() : PlnType::getSint());
+	if (isFloat) {
+		v.inf.wk_type->push_back(PlnType::getFlo());
+	} else if (isUnsigned) {
+		v.inf.wk_type->push_back(PlnType::getUint());
+	} else {
+		v.inf.wk_type->push_back(PlnType::getSint());
+	}
 	values.push_back(v);
 }
 
@@ -95,7 +132,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(l->getDataType());
+	ldp = da.prepareAccumulator(values[0].getType()->data_type);
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
@@ -118,14 +155,15 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size()) {
 		if (div_type == DV_DIV)  {
 			da.pushSrc(data_places[0], quotient);
-			da.releaseDp(remainder);
+			if (remainder) da.releaseDp(remainder);
 		} else {	// DV_MOD
+			BOOST_ASSERT(remainder != NULL);
 			da.releaseDp(quotient);
 			da.pushSrc(data_places[0], remainder);
 		}
 	} else {
 		da.releaseDp(quotient);
-		da.releaseDp(remainder);
+		if (remainder) da.releaseDp(remainder);
 	}
 
 }
@@ -150,8 +188,9 @@ void PlnDivOperation::gen(PlnGenerator& g)
 	if (data_places.size() > 0) {
 		if (div_type == DV_DIV) {
 			g.genSaveSrc(data_places[0]);
-			if (data_places.size() > 1)
-				g.genSaveSrc(data_places[1]);
+			BOOST_ASSERT(data_places.size() == 1);
+			// if (data_places.size() > 1)
+			//	g.genSaveSrc(data_places[1]);
 			
 		} else { // div_type == DT_MOD
 			g.genSaveSrc(data_places[0]);
