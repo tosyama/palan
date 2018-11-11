@@ -668,7 +668,12 @@ PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope)
 {
 	PlnExpression *l = buildExpression(mod["lval"], scope);
 	PlnExpression *r = buildExpression(mod["rval"], scope);
-	return PlnDivOperation::create_mod(l, r);
+	try {
+		return PlnDivOperation::create_mod(l, r);
+	} catch (PlnCompileError& err) {
+		setLoc(&err, mod);
+		throw err;
+	}
 }
 
 PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope)

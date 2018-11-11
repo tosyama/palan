@@ -210,4 +210,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "523_varinitLRnum_err";
 	REQUIRE(build(testcode) == "0:1-1 Number of left values did not match right values.");
+
+	testcode = "524_flo_mod_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'float number'.");
 }

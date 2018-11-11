@@ -12,6 +12,8 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 #include "../PlnType.h"
 
 #define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
@@ -84,19 +86,19 @@ PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
 
 PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 {
-	int l_num_type, r_num_type;
-	if (l->isLitNum(l_num_type) && r->isLitNum(r_num_type)) {
-		PlnExpression* new_val;
-		// e.g.) 5%2 => 1
-		if (l_num_type == VL_LIT_UINT8 && r_num_type == VL_LIT_UINT8) {
-			uint64_t ui = l->values[0].inf.uintValue % r->values[0].inf.uintValue;
-			new_val = new PlnExpression(ui);
-		} else {
-			int64_t i = l->values[0].inf.intValue % r->values[0].inf.intValue;
-			new_val = new PlnExpression(i);
-		}
+	CREATE_CHECK_FLAG(l);
+	CREATE_CHECK_FLAG(r);
+
+	// e.g.) 5%2 => 1
+	if (is_l_uint && is_r_uint) {
+		l->values[0].inf.uintValue = lval.u % rval.u;
+		delete r;
+		return l;
+	}
+
+	if (is_l_num_lit && is_r_num_lit) {
 		delete l; delete r;
-		return new_val;
+		return new PlnExpression(lval.i % rval.i);
 	}
 
 	return new PlnDivOperation(l,r, DV_MOD);
@@ -107,6 +109,11 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
 	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
+	if (isFloat && div_type == DV_MOD) {
+		PlnCompileError err(E_CantUseOperatorHere, "float number");
+		throw err;
+	}
+	BOOST_ASSERT(!(isFloat && div_type == DV_MOD));
 	
 	PlnValue v;
 	v.type = VL_WORK;
