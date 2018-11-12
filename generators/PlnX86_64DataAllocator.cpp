@@ -326,7 +326,7 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjBasePtr()
 
 PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
 {
-	auto dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	auto dp = new PlnDataPlace(8, DT_UINT);
 	dp->type = DP_REG;
 	dp->status = DS_READY_ASSIGN;
 

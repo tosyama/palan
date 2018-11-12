@@ -63,6 +63,8 @@ printf("%d %d %d %d\n", i1, j1, u1, v1);
 	-> i1, i2, i4, i8, u1, u2, u4, u8
 	-> showInt();
 
+f, d, f, d, f, d, f, d -> showInt();
+
 func showflo8(flo32 f, flo64 d)
 {
 	printf("%.8f %.8f\n", f, d);
@@ -78,5 +80,5 @@ func showflo(flo32 f, flo64 d) -> flo32 ff, flo64 dd
 func showInt(sbyte i1, int16 i2, int32 i4, int64 i8,
 			byte u1, uint16 u2, uint32 u4, uint64 u8)
 {
-	printf("%d %d %d %d %d %d %d %d\n", i1, i2, i4, i8, u1, u2, u4, u8);
+	printf("%d %d %d %d %u %u %u %u\n", i1, i2, i4, i8, u1, u2, u4, u8);
 }

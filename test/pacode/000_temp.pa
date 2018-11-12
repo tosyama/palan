@@ -6,9 +6,12 @@ flo64 p1,p2 = 1, 2.0;
 flo32 f1,f2 = -1,2.0;
 int32 a = 3.5;
 
-ffunc(f, d) -> p1, f1;
+flo64[10] fa;
+flo32[10] fb;
+d -> fa[f2];
+f -> fb[3];
 
-d + f -> d;
+ffunc(fb[3], fa[2]) -> fa[4], fb[5];
 
 func ffunc(flo32 f, flo64 d)
 		-> flo64 p, flo32 f

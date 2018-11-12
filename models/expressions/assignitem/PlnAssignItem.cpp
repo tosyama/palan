@@ -137,7 +137,7 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		int dt = ex->values[0].getType()->data_type;
-		if (dt == DT_SINT || dt == DT_UINT) {
+		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			di = new PlnDstPrimitiveItem(ex);
 
 		} else if (dt == DT_OBJECT_REF) {

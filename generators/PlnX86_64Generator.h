@@ -16,6 +16,7 @@ class PlnX86_64Generator : public PlnGenerator
 	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst);
+	void genConvFMem2IReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 
 	const char* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
 
