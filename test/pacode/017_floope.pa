@@ -39,7 +39,7 @@ printf(" %.2f %.2f", d3, d4);
 d1 + 2 -> d4;
 printf(" %.2f %.2f", d3, d4);
 
-printf(" %.2f %.2f\n", 1.11+d1, d1+d2);
+printf(" %.2f %.2f\n", 1.11+d1, d1+f1);
 
 // Subtraction
 // d1 = 1.23
