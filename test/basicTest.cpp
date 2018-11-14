@@ -134,6 +134,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"-1.23 1.11 -2.50 -1.23 -0.00 -1.23e+10 2.34e-02 1.23e+00 1.80e+308\n"
 							"2.88 2.88 0.84 0.84 2.46 6.15 2.46 6.15 9.93 2.88 3.03 8.42 2.46 2.46\n"
 							"0.53 0.53 7.24 0.21 4.07 4.07 0.25 0.25 1.20 0.53 0.50 0.18 1.63 0.61");
+
+	testcode = "018_floarr";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "1.23 2.21");
+
 }
 
 TEST_CASE("Compile error test", "[basic]")

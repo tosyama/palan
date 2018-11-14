@@ -91,7 +91,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
 		int dt = ex->values[0].getType()->data_type;
-		if (dt == DT_SINT || dt == DT_UINT) {
+		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			return new PlnAssignPrimitiveItem(ex);
 		} else if (dt == DT_OBJECT_REF) {
 			return new PlnAssignIndirectObjItem(ex);
