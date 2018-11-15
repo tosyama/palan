@@ -564,6 +564,19 @@ void PlnX86_64Generator::genConvFMem2IMem(const PlnGenEntity* src, const PlnGenE
 	moveRegTo(R11, dst);
 }
 
+void PlnX86_64Generator::genConvFMem2IReg(const PlnGenEntity* src, const PlnGenEntity* dst)
+{
+	BOOST_ASSERT(src->data_type == DT_FLOAT);
+	BOOST_ASSERT(src->size == 4 || src->size == 8);
+	BOOST_ASSERT(dst->data_type == DT_SINT || dst->data_type == DT_UINT);
+
+	if (src->size == 4) {
+		os << "	cvttss2si " << oprnd(src) << ", " << r(dst->data.i, 8);
+	} else {
+		os << "	cvttsd2si " << oprnd(src) << ", " << r(dst->data.i, 8);
+	}
+}
+
 void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
 	if (dst->alloc_type == src->alloc_type) {
@@ -620,6 +633,9 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 
 	} else if (is_src_mem && is_src_flo && is_dst_mem && (is_dst_sint || is_dst_uint)) {
 		genConvFMem2IMem(src, dst);
+	
+	} else if (is_src_mem && is_src_flo && is_dst_reg && (is_dst_sint || is_dst_uint)) {
+		genConvFMem2IReg(src, dst);
 
 	}  else if (is_src_reg && is_dst_reg) {
 		moveRegTo(src->data.i, dst);

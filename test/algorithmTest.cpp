@@ -11,4 +11,8 @@ TEST_CASE("basic algorithm code example.", "[algorithm]")
 	testcode = "101_8queen";
  	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "answer: 92");
+
+	testcode = "102_lsm";
+ 	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "-0.633, 1.204");
 }

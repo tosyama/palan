@@ -469,16 +469,14 @@ void updateReleaseStep(PlnDataPlace *dp, int new_release_step)
 	BOOST_ASSERT(dp->alloc_step <= new_release_step);
 	dp->release_step = new_release_step;
 
-	// Because only REG that tryAccelerateAlloc will return ture.
-	BOOST_ASSERT(dp->type == DP_REG);
-	/* if (dp->type == DP_INDRCT_OBJ) {
+	if (dp->type == DP_INDRCT_OBJ) {
 		if (auto base_dp = dp->data.indirect.base_dp) {
 			base_dp->alloc_step = base_dp->release_step = new_release_step;
 		}
 		if (auto index_dp = dp->data.indirect.index_dp) {
 			index_dp->alloc_step = index_dp->release_step = new_release_step;
 		}
-	} */
+	}
 }
 
 void PlnDataAllocator::popSrc(PlnDataPlace* dp)
