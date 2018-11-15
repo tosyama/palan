@@ -1,12 +1,22 @@
 ccall int32 printf();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
 
+setenv("MALLOC_TRACE", "out/mtrace018", 1);
 // alloc only
 flo32[10] f;
 flo64[3] d1, d2;
 int32 i,j = 1,2;
 
+mtrace();
 arr_func(d1>>) ->> d1;
+muntrace();
 printf("%.2f %.2f", d1[i], d1[j]);
+
+flo32[5,3] ff;
+d1[i],d1[j] -> ff[i,j], ff[j,i];
+printf(" %.2f %.2f", ff[i,j], ff[j,i]);
 
 func arr_func(flo64[3] >>da) -> flo64[3] da
 {

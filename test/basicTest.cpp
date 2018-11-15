@@ -137,8 +137,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "018_floarr";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1.23 2.21");
-
+	REQUIRE(exec(testcode) == "1.23 2.21 1.23 2.21");
+	CHECK(mcheck("mtrace018") == "+1 -1");
 }
 
 TEST_CASE("Compile error test", "[basic]")
