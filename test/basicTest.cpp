@@ -139,6 +139,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "1.23 2.21 1.23 2.21");
 	CHECK(mcheck("mtrace018") == "+1 -1");
+
+	testcode = "019_flocmp";
+	REQUIRE(build(testcode) == "success");
 }
 
 TEST_CASE("Compile error test", "[basic]")

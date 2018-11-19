@@ -20,6 +20,9 @@ class PlnX86_64Generator : public PlnGenerator
 
 	const char* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
 
+	void genCmpImmFMem(const PlnGenEntity* first, const PlnGenEntity* second);
+
+
 public:
 	PlnX86_64Generator(ostream& ostrm);
 	void genSecReadOnlyData() override;

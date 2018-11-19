@@ -833,8 +833,78 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 	}
 }
 
+void PlnX86_64Generator::genCmpImmFMem(const PlnGenEntity* first, const PlnGenEntity* second)
+{
+	BOOST_ASSERT(first->alloc_type == GA_CODE);
+	adjustImmediateFloat(first, second->size);
+	if (needAbsCopy(first)) {
+		os << "	movabsq " << oprnd(first) << ", " << r(R11,8) << endl;
+		os << "	movq " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
+	} else {
+		os << "	movq " << oprnd(first) << ", " << r(XMM11,8) << endl;
+	}
+
+	if (second->size == 4) {
+		os << "	ucomiss " << oprnd(second) << ", " << r(XMM11,8) ;
+	} else {
+		os << "	ucomisd " << oprnd(second) << ", " << r(XMM11,8) ;
+	}
+}
+
+int inv_cmp(int cmp_type) {
+	switch (cmp_type) {
+		case CMP_L: return CMP_G;
+		case CMP_G: return CMP_L;
+		case CMP_LE: return CMP_GE;
+		case CMP_GE: return CMP_LE;
+	}
+	return cmp_type;
+}
+
 int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)
 {
+	CREATE_CHECK_FLAG(first);
+	CREATE_CHECK_FLAG(second);
+	
+	BOOST_ASSERT(!(is_first_code && is_second_code));
+
+	if (is_first_flo || is_second_flo) {
+		// ucomisd 2nd, 1st - G/A:1st > 2nd, L/B:1st < 2nd
+		// ucomisd reg, reg
+		// ucomisd mem, reg
+
+		if (is_first_code && (is_second_mem && is_second_flo)) {
+			genCmpImmFMem(first, second);
+
+		} else if (is_first_mem && is_first_flo && is_second_code) {
+			genCmpImmFMem(second, first);
+			// swap cmp_type
+			cmp_type = inv_cmp(cmp_type);
+		} else if (is_first_reg && is_first_flo && is_second_code) {
+			BOOST_ASSERT(first->size == 8);
+			BOOST_ASSERT(false);
+
+		} else {
+			BOOST_ASSERT(false);
+		}
+
+
+		os << "	# " << comment << endl;
+		switch (cmp_type) {
+			case CMP_L: cmp_type = CMP_B; break;
+			case CMP_G: cmp_type = CMP_A; break;
+			case CMP_LE: cmp_type = CMP_BE; break;
+			case CMP_GE: cmp_type = CMP_AE; break;
+		}
+		return cmp_type;
+	}
+
+	// cmp 2nd, 1st -  G/A:1st > 2nd, L/B:1st < 2nd
+	// align rule to
+	//  cmp reg, reg
+	//  cmp reg, mem  // reg(mem_min), mem
+	//  cmp code, reg
+	//  cmp code, mem
 	if ((second->alloc_type != GA_CODE && first->alloc_type == GA_CODE) 
 			|| (second->alloc_type == GA_MEM && first->alloc_type != GA_MEM)
 			|| (second->alloc_type == GA_MEM && first->alloc_type == GA_MEM
@@ -843,12 +913,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		auto tmp = second;
 		second = first;
 		first = tmp;
-		switch (cmp_type) {
-			case CMP_L: cmp_type = CMP_G; break;
-			case CMP_G: cmp_type = CMP_L; break;
-			case CMP_LE: cmp_type = CMP_GE; break;
-			case CMP_GE: cmp_type = CMP_LE; break;
-		}
+		cmp_type = inv_cmp(cmp_type);
 	}
 
 	if (first->data_type == DT_UINT && second->data_type == DT_UINT) {
