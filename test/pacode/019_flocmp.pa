@@ -1,0 +1,7 @@
+ccall int32 printf();
+
+flo64 d1, d2 = 1.0, -2.0;
+
+if d1 == 1.0 {
+	printf("t");
+}
