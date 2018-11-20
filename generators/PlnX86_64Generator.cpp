@@ -851,6 +851,39 @@ void PlnX86_64Generator::genCmpImmFMem(const PlnGenEntity* first, const PlnGenEn
 	}
 }
 
+
+void PlnX86_64Generator::genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second)
+{
+	BOOST_ASSERT(first->size <= second->size);
+	if (first->size < second->size) {
+		BOOST_ASSERT(second->size == 8);
+		os << "	cvtss2sd " << oprnd(first) << ", " << r(XMM11, 8) << endl;
+	} else if (second->size == 4) {
+		os << "	movss " << oprnd(first) << ", " << r(XMM11, 4) << endl;
+	} else {
+		BOOST_ASSERT(first->size == 8 && second->size == 8);
+		os << "	movsd " << oprnd(first) << ", " << r(XMM11, 8) << endl;
+	}
+
+	if (second->size == 4) {
+		os << "	ucomiss " << oprnd(second) << ", " << r(XMM11,8) ;
+	} else {
+		os << "	ucomisd " << oprnd(second) << ", " << r(XMM11,8) ;
+	}
+}
+
+void PlnX86_64Generator::genCmpFRegFMem(const PlnGenEntity* first, const PlnGenEntity* second)
+{
+	BOOST_ASSERT(first->size == 8);
+
+	if (second->size == 4) {
+		os << "	cvtss2sd " << oprnd(second) << ", " << r(XMM11, 8) << endl;
+		os << "	ucomisd " << r(XMM11,8) << ", " << oprnd(first);
+	} else { 
+		os << "	ucomisd " << oprnd(second) << ", " << oprnd(first);
+	}
+}
+
 int inv_cmp(int cmp_type) {
 	switch (cmp_type) {
 		case CMP_L: return CMP_G;
@@ -868,26 +901,42 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 	
 	BOOST_ASSERT(!(is_first_code && is_second_code));
 
-	if (is_first_flo || is_second_flo) {
+	if (is_first_flo && is_second_flo) {
 		// ucomisd 2nd, 1st - G/A:1st > 2nd, L/B:1st < 2nd
 		// ucomisd reg, reg
 		// ucomisd mem, reg
 
-		if (is_first_code && (is_second_mem && is_second_flo)) {
+		if (is_first_code && is_second_mem) {
 			genCmpImmFMem(first, second);
 
-		} else if (is_first_mem && is_first_flo && is_second_code) {
+		} else if (is_first_mem && is_second_code) {
 			genCmpImmFMem(second, first);
 			// swap cmp_type
 			cmp_type = inv_cmp(cmp_type);
-		} else if (is_first_reg && is_first_flo && is_second_code) {
+
+		} else if (is_first_mem && is_second_mem) {
+			if (first->size <= second->size) {
+				genCmpFMem(first, second);
+			} else {
+				genCmpFMem(second, first);
+				cmp_type = inv_cmp(cmp_type);
+			}
+
+		} else if (is_first_reg && is_second_mem) {
+			genCmpFRegFMem(first, second);
+
+		} else if (is_first_mem && is_second_reg) {
+			genCmpFRegFMem(second, first);
+			cmp_type = inv_cmp(cmp_type);
+
+		} else if (is_first_reg && is_second_reg) {
 			BOOST_ASSERT(first->size == 8);
-			BOOST_ASSERT(false);
+			BOOST_ASSERT(second->size == 8);
+			os << "	ucomisd " << oprnd(second) << ", " << oprnd(first);
 
 		} else {
 			BOOST_ASSERT(false);
 		}
-
 
 		os << "	# " << comment << endl;
 		switch (cmp_type) {

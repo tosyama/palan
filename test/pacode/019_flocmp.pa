@@ -1,7 +1,43 @@
 ccall int32 printf();
 
-flo64 d1, d2 = 1.0, -2.0;
+flo64 d1, d2 = 1.1, -2.2;
 
-if d1 == 1.0 {
-	printf("t");
-}
+// tftf
+if d1 == 1.1 { printf("t"); } else { printf("f"); }
+if d1 == 2.2 { printf("t"); } else { printf("f"); }
+if -2.2 == d2 { printf("t"); } else { printf("f"); }
+if 2.2 == d2 { printf("t"); } else { printf("f"); }
+
+// ft
+if d1 != 1.1 { printf("t"); } else { printf("f"); }
+if d1 != 2.2 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+
+// tfft
+if d1 > d2 { printf("t"); } else { printf("f"); }
+if d2 > d1 { printf("t"); } else { printf("f"); }
+if d1 < d2 { printf("t"); } else { printf("f"); }
+if d2 < d1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+
+// fttf
+if d1 > d1 { printf("t"); } else { printf("f"); }
+if d1 >= d1 { printf("t"); } else { printf("f"); }
+if d1 >= d2 { printf("t"); } else { printf("f"); }
+if d2 >= d1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// ftft
+if d1 < d1 { printf("t"); } else { printf("f"); }
+if d1 <= d1 { printf("t"); } else { printf("f"); }
+if d1 <= d2 { printf("t"); } else { printf("f"); }
+if d2 <= d1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// fft
+if d1 > d2+3.9 { printf("t"); } else { printf("f"); }
+if d1-3.9 > d2 { printf("t"); } else { printf("f"); }
+if d1+2 > d2+4 { printf("t"); } else { printf("f"); }
+
