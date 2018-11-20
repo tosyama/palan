@@ -902,6 +902,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 	BOOST_ASSERT(!(is_first_code && is_second_code));
 
 	if (is_first_flo && is_second_flo) {
+		// Float comparison
 		// ucomisd 2nd, 1st - G/A:1st > 2nd, L/B:1st < 2nd
 		// ucomisd reg, reg
 		// ucomisd mem, reg
@@ -948,8 +949,8 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		return cmp_type;
 	}
 
+	// Integer comparison
 	// cmp 2nd, 1st -  G/A:1st > 2nd, L/B:1st < 2nd
-	// align rule to
 	//  cmp reg, reg
 	//  cmp reg, mem  // reg(mem_min), mem
 	//  cmp code, reg
