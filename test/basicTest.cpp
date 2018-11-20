@@ -142,7 +142,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "019_flocmp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft fft");
+	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft fft\n"
+								"tftfft tfft fttf ftft fft\n"
+								"fftf");
 }
 
 TEST_CASE("Compile error test", "[basic]")

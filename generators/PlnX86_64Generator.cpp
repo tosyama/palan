@@ -841,7 +841,8 @@ void PlnX86_64Generator::genCmpImmFMem(const PlnGenEntity* first, const PlnGenEn
 		os << "	movabsq " << oprnd(first) << ", " << r(R11,8) << endl;
 		os << "	movq " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
 	} else {
-		os << "	movq " << oprnd(first) << ", " << r(XMM11,8) << endl;
+		os << "	movq " << oprnd(first) << ", " << r(R11,8) << endl;
+		os << "	movq " << r(R11, 8) << ", " << r(XMM11, 8) << endl;
 	}
 
 	if (second->size == 4) {
