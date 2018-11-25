@@ -178,6 +178,32 @@ PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
 {
 }
 
+int PlnX86_64Generator::registerConst(const PlnGenEntity* constValue) {
+	BOOST_ASSERT(constValue->alloc_type == GA_CODE);
+	ConstInfo cinfo;
+	if (constValue->data_type == DT_FLOAT) {
+		if (constValue->size == 8) {
+			cinfo.generated = false;
+			cinfo.type = GCT_FLO64;
+			cinfo.data.d = constValue->data.f;
+		} else
+			BOOST_ASSERT(false);
+	} else {
+		BOOST_ASSERT(false);
+	}
+
+	int id=0;
+	for (ConstInfo ci: const_buf) {
+		if (ci.type == cinfo.type && ci.data.d == cinfo.data.d) {
+			return id;
+		}
+		id++;
+	}
+
+	const_buf.push_back(cinfo);
+	return id; 
+}
+
 void PlnX86_64Generator::genSecReadOnlyData()
 {
 	os << ".section .rodata" << endl;
@@ -294,6 +320,28 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 	}
 
 	os << "	subq $" << size << ", %rsp" << endl;
+}
+
+void PlnX86_64Generator::genEndFunc()
+{
+	bool aligned = false;
+	int i = 0;
+	for (ConstInfo ci: const_buf) {
+		if (!ci.generated) {
+			if (!aligned) {
+				os << "	.align 8" << endl;
+				aligned = true;
+			}
+			os << ".LD" << i << ":	# " << ci.data.d << endl;
+			if (ci.type == GCT_FLO64) {
+				os << "	.long	" << ci.data.ai[0] << endl;
+				os << "	.long	" << ci.data.ai[1] << endl;
+			} else {
+				BOOST_ASSERT(false);
+			}
+		}
+		i++;
+	}
 }
 
 void PlnX86_64Generator::genSaveReg(int reg, PlnGenEntity* dst)
@@ -833,7 +881,7 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 	}
 }
 
-void PlnX86_64Generator::genCmpImmFMem(const PlnGenEntity* first, const PlnGenEntity* second)
+void PlnX86_64Generator::genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second)
 {
 	BOOST_ASSERT(first->alloc_type == GA_CODE);
 	adjustImmediateFloat(first, second->size);
@@ -851,7 +899,6 @@ void PlnX86_64Generator::genCmpImmFMem(const PlnGenEntity* first, const PlnGenEn
 		os << "	ucomisd " << oprnd(second) << ", " << r(XMM11,8) ;
 	}
 }
-
 
 void PlnX86_64Generator::genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second)
 {
@@ -885,7 +932,70 @@ void PlnX86_64Generator::genCmpFRegFMem(const PlnGenEntity* first, const PlnGenE
 	}
 }
 
-int inv_cmp(int cmp_type) {
+void PlnX86_64Generator::genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second)
+{
+	int ireg_id;
+	if (first->alloc_type == GA_MEM) {
+		moveMemToReg(first, R11);
+		os << endl;
+		ireg_id = R11;
+	} else {
+		BOOST_ASSERT(first->alloc_type == GA_REG);
+		ireg_id = first->data.i;;
+	}
+
+	if (second->size == 4) {
+		os << "	cvtsi2ss " << r(ireg_id, 8) << ", " << r(XMM11, 4) << endl;
+		os << "	ucomiss " << oprnd(second) << ", " << r(XMM11, 4);
+	} else {
+		os << "	cvtsi2sd " << r(ireg_id, 8) << ", " << r(XMM11, 8) << endl;
+		os << "	ucomisd " << oprnd(second) << ", " << r(XMM11, 4);
+	}
+}
+
+void PlnX86_64Generator::genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second)
+{
+	adjustImmediateFloat(second, 8);
+	int id = registerConst(second);
+
+	if (first->size == 8 || first->alloc_type == GA_REG) {
+		os << "	cvtsi2sd " << oprnd(first) << ", " << r(XMM11, 8) << endl;
+	} else {
+		moveMemToReg(first, R11);
+		os << endl;
+		os << "	cvtsi2sd " << r(R11,8) << ", " << r(XMM11, 8) << endl;
+	}
+
+	os << "	ucomisd .LD" << id << "(%rip), " << r(XMM11, 8);
+}
+
+int PlnX86_64Generator::genCmpI2F(const PlnGenEntity* first, const PlnGenEntity* second, int cmp_type)
+{
+	CREATE_CHECK_FLAG(first);
+	CREATE_CHECK_FLAG(second);
+
+	if (is_first_code && (is_second_reg || is_second_mem)) {
+		genCmpImmFRegMem(first, second);
+
+	} else if ((is_first_reg || is_first_mem) && is_second_code) {
+		genCmpIRegMemFImm(first, second);
+
+	} else if ((is_first_reg || is_first_mem) && (is_second_reg || is_second_mem)) {
+		genCmpIMemFRegMem(first, second);
+
+	} else {
+		BOOST_ASSERT(false);
+	}
+	switch (cmp_type) {
+		case CMP_L: cmp_type = CMP_B; break;
+		case CMP_G: cmp_type = CMP_A; break;
+		case CMP_LE: cmp_type = CMP_BE; break;
+		case CMP_GE: cmp_type = CMP_AE; break;
+		}
+	return cmp_type;
+}
+
+int rev_cmp(int cmp_type) {
 	switch (cmp_type) {
 		case CMP_L: return CMP_G;
 		case CMP_G: return CMP_L;
@@ -908,20 +1018,19 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		// ucomisd reg, reg
 		// ucomisd mem, reg
 
-		if (is_first_code && is_second_mem) {
-			genCmpImmFMem(first, second);
+		if (is_first_code && (is_second_reg || is_second_mem)) {
+			genCmpImmFRegMem(first, second);
 
-		} else if (is_first_mem && is_second_code) {
-			genCmpImmFMem(second, first);
-			// swap cmp_type
-			cmp_type = inv_cmp(cmp_type);
+		} else if ((is_first_reg || is_first_mem) && is_second_code) {
+			genCmpImmFRegMem(second, first);
+			cmp_type = rev_cmp(cmp_type);
 
 		} else if (is_first_mem && is_second_mem) {
 			if (first->size <= second->size) {
 				genCmpFMem(first, second);
 			} else {
 				genCmpFMem(second, first);
-				cmp_type = inv_cmp(cmp_type);
+				cmp_type = rev_cmp(cmp_type);
 			}
 
 		} else if (is_first_reg && is_second_mem) {
@@ -929,7 +1038,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 
 		} else if (is_first_mem && is_second_reg) {
 			genCmpFRegFMem(second, first);
-			cmp_type = inv_cmp(cmp_type);
+			cmp_type = rev_cmp(cmp_type);
 
 		} else if (is_first_reg && is_second_reg) {
 			BOOST_ASSERT(first->size == 8);
@@ -950,6 +1059,18 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		return cmp_type;
 	}
 
+	if ((is_first_sint || is_first_uint) && is_second_flo) {
+		cmp_type =  genCmpI2F(first, second, cmp_type);
+		os << "	# " << comment << endl;
+		return cmp_type;
+	}
+
+	if (is_first_flo && (is_second_sint || is_second_uint)) {
+		cmp_type =  genCmpI2F(second, first, rev_cmp(cmp_type));
+		os << "	# " << comment << endl;
+		return cmp_type;
+	}
+
 	// Integer comparison
 	// cmp 2nd, 1st -  G/A:1st > 2nd, L/B:1st < 2nd
 	//  cmp reg, reg
@@ -964,7 +1085,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		auto tmp = second;
 		second = first;
 		first = tmp;
-		cmp_type = inv_cmp(cmp_type);
+		cmp_type = rev_cmp(cmp_type);
 	}
 
 	if (first->data_type == DT_UINT && second->data_type == DT_UINT) {

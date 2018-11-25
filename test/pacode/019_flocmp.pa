@@ -36,10 +36,12 @@ if d1 <= d2 { printf("t"); } else { printf("f"); }
 if d2 <= d1 { printf("t"); } else { printf("f"); }
 
 printf(" ");
-// fft
+// fftt
 if d1 > d2+3.9 { printf("t"); } else { printf("f"); }
 if d1-3.9 > d2 { printf("t"); } else { printf("f"); }
 if d1+2 > d2+4 { printf("t"); } else { printf("f"); }
+if d1+2 > 1.5 { printf("t"); } else { printf("f"); }
+if 1.5 > d1+2 { printf("t"); } else { printf("f"); }
 
 printf("\n");
 
@@ -97,7 +99,35 @@ if f2 >= d1 { printf("t"); } else { printf("f"); }
 int32 i1, i2 = 2, -3;
 uint64 u = 4;
 
-// printf(" ");
-// f 
-//if d1 > i1 { printf("t"); } else { printf("f"); }
+printf(" ");
+// fttff
+if d1 > i1 { printf("t"); } else { printf("f"); }
+if d1 > i1-1 { printf("t"); } else { printf("f"); }
+if i1 > d1 { printf("t"); } else { printf("f"); }
+if d1-1 > i1 { printf("t"); } else { printf("f"); }
+if d1+1 > i1+1 { printf("t"); } else { printf("f"); }
+if i1+1 > d1+1 { printf("t"); } else { printf("f"); }
 
+printf(" ");
+flo64 d3 = 1.0;
+//  fftft
+if d3 > 1 { printf("t"); } else { printf("f"); }
+if 1 > d3 { printf("t"); } else { printf("f"); }
+if 1 >= d3 { printf("t"); } else { printf("f"); }
+if 1 >= d3+1.0 { printf("t"); } else { printf("f"); }
+if d3+1.0 >= 1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+
+// tftf
+if i1 < 2.1 { printf("t"); } else { printf("f"); }
+if i1 < 1.9 { printf("t"); } else { printf("f"); }
+if 2.1 > i1 { printf("t"); } else { printf("f"); }
+if 1.9 > i1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// tf
+if i1-1 < 2.1 { printf("t"); } else { printf("f"); }
+if i1+1 < 2.1 { printf("t"); } else { printf("f"); }
+if i1+1 < d1+2.1 { printf("t"); } else { printf("f"); }
+if i1+2 < d1+2.1 { printf("t"); } else { printf("f"); }

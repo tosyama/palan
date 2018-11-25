@@ -253,6 +253,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			// TODO: if malloc failed.
 			
 			implement->gen(g);
+			g.genEndFunc();
 			break;
 		}
 	}
