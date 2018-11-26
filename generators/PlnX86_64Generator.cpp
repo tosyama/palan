@@ -1041,9 +1041,10 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 			cmp_type = rev_cmp(cmp_type);
 
 		} else if (is_first_reg && is_second_reg) {
+			BOOST_ASSERT(false);	// currentlly no case.
 			BOOST_ASSERT(first->size == 8);
 			BOOST_ASSERT(second->size == 8);
-			os << "	ucomisd " << oprnd(second) << ", " << oprnd(first);
+			// os << "	ucomisd " << oprnd(second) << ", " << oprnd(first);
 
 		} else {
 			BOOST_ASSERT(false);
