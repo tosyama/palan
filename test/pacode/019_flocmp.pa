@@ -96,7 +96,7 @@ if d1 == f1 { printf("t"); } else { printf("f"); }
 if f1 >= d2 { printf("t"); } else { printf("f"); }
 if f2 >= d1 { printf("t"); } else { printf("f"); }
 
-int32 i1, i2 = 2, -3;
+int32 i1, i2, i3= 2, -3, 1;
 uint64 u = 4;
 
 printf(" ");
@@ -126,8 +126,15 @@ if 2.1 > i1 { printf("t"); } else { printf("f"); }
 if 1.9 > i1 { printf("t"); } else { printf("f"); }
 
 printf(" ");
-// tf
+// tftf
 if i1-1 < 2.1 { printf("t"); } else { printf("f"); }
 if i1+1 < 2.1 { printf("t"); } else { printf("f"); }
 if i1+1 < d1+2.1 { printf("t"); } else { printf("f"); }
 if i1+2 < d1+2.1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// tftt
+if i3 < f1 { printf("t"); } else { printf("f"); }
+if i1 < f2 { printf("t"); } else { printf("f"); }
+if i2 < f1 { printf("t"); } else { printf("f"); }
+if i2 < f2 { printf("t"); } else { printf("f"); }
