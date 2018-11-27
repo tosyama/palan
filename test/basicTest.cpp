@@ -54,9 +54,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttde\n"
+	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttdef\n"
 							"100\n"
-							"aaa01bbbcctdtdftdtdee\n"
+							"aaa01bbbcctdtdftdtdeefg\n"
 							"110\n"
 							"1010\n"
 							"100101\n"

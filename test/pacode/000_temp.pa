@@ -1,4 +1,4 @@
 ccall int32 printf();
 
 int32 a, b, c = 0, 1, 2;
-if a && (a!=c) { printf("t"); } else { printf("f"); }
+if a>0 && a { printf("t"); } else { printf("f"); }
