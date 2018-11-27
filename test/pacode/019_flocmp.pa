@@ -138,3 +138,41 @@ if i3 < f1 { printf("t"); } else { printf("f"); }
 if i1 < f2 { printf("t"); } else { printf("f"); }
 if i2 < f1 { printf("t"); } else { printf("f"); }
 if i2 < f2 { printf("t"); } else { printf("f"); }
+
+printf("\n");
+// tftf
+if 1.1 < 2.1 { printf("t"); } else { printf("f"); }
+if 2.1 < 1.1 { printf("t"); } else { printf("f"); }
+if 1.1 < 2 { printf("t"); } else { printf("f"); }
+if 2 < 1.1 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// ttf
+if 1.9 <= 2u { printf("t"); } else { printf("f"); }
+if 2.0 <= 2u { printf("t"); } else { printf("f"); }
+if 2u <= 1.9 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+flo64 z1, z2 = 0.0, -0.0;
+printf("%.1f %.1f ", z1, z2);
+
+// ttftf
+if z1 == z2 { printf("t"); } else { printf("f"); }
+if z1 == 0.0 { printf("t"); } else { printf("f"); }
+if z1 == 1.0 { printf("t"); } else { printf("f"); }
+if z2 == 0.0 { printf("t"); } else { printf("f"); }
+if z2 == 1.0 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// ttt
+if 0 == z1 { printf("t"); } else { printf("f"); }
+if z1 == 0 { printf("t"); } else { printf("f"); }
+if 0 == z2 { printf("t"); } else { printf("f"); }
+
+printf(" ");
+// fftt
+if z1 { printf("t"); } else { printf("f"); }
+if z2 { printf("t"); } else { printf("f"); }
+if !z1 { printf("t"); } else { printf("f"); }
+if !z2 { printf("t"); } else { printf("f"); }
+

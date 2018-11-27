@@ -144,7 +144,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft ffttf\n"
 								"tftfft tfft fttf ftft fft\n"
-								"fftf fttfft fftft tftf tftf tftt");
+								"fftf fttfft fftft tftf tftf tftt\n"
+								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
 }
 
 TEST_CASE("Compile error test", "[basic]")
