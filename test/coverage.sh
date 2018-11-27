@@ -1,9 +1,9 @@
 #!/bin/bash
 # Coverage check tool
 
-target="../generators/PlnX86_64Generator"
+# target="../generators/PlnX86_64Generator"
 # target="../PlnDataAllocator"
-# target="../models/expressions/PlnDivOperation"
+target="../models/expressions/PlnBoolOperation"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
 

@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "t");
+	REQUIRE(exec(testcode) == "f");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -50,7 +50,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "[if][elif][elif2][else][true]\n"
 							"0!=<<=1==<=>=2!=>>=\n"
-							"[uu][us]>tt010");
+							"[uu][us]>tt010ttf");
 
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
