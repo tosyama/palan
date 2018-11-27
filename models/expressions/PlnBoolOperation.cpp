@@ -66,6 +66,8 @@ inline int getConstValue(int const_type) {
 // Case 5) l:cmp, r:definite_const -> definite_const
 // Case 6) l:cmp, r:proxy_const -> l:cmp
 // Case 7) l:cmp = r:cmp -> cmp = r:cmp
+// Case 8: l:cmp != r:cmp
+//   >> Can't deside one jump condition. So, unifiy return cmp type to ne.
 // Case 8-1) l:cmp == ne r:cmp != ne -> cmp = ne
 // Case 8-2) l:cmp != ne r:cmp == ne -> cmp = ne
 // Case 8-3) l:cmp != ne r:cmp != ne -> cmp = ne

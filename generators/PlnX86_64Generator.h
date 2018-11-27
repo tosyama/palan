@@ -5,9 +5,20 @@
 
 #include "../PlnGenerator.h"
 
+enum PlnGenConstType {
+	GCT_FLO32,
+	GCT_FLO64
+};
+
 class PlnX86_64Generator : public PlnGenerator
 {
 	bool require_align;
+	struct ConstInfo {
+		PlnGenConstType type;
+		union { double d; uint32_t ai[2]; } data;
+		bool generated;
+	};
+	vector<ConstInfo> const_buf;
 	
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
 	void moveRegTo(int reg, const PlnGenEntity* dst);
@@ -19,6 +30,16 @@ class PlnX86_64Generator : public PlnGenerator
 	void genConvFMem2IReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 
 	const char* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
+
+	void genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
+	void genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second);
+	void genCmpFRegFMem(const PlnGenEntity* first, const PlnGenEntity* second);
+
+	int genCmpI2F(const PlnGenEntity* first, const PlnGenEntity* second, int cmp_type);
+	void genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
+	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
+
+	int registerConst(const PlnGenEntity* constValue);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
@@ -32,6 +53,7 @@ public:
 	void genFalseJump(int id, int cmp_type, string comment) override;
 	void genEntryFunc() override;
 	void genLocalVarArea(int size) override;
+	void genEndFunc() override;
 
 	void genSaveReg(int reg, PlnGenEntity* dst) override;
 	void genLoadReg(int reg, PlnGenEntity* src) override;

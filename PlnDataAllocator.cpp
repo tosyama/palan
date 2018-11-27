@@ -97,15 +97,14 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 
 	// size < 8
 	int free_index = -1;
-	PlnDataPlace* aft_dp; 
+	PlnDataPlace* aft_dp = NULL; 
 
 	for (int i=0; i<stack_size; ++i) {
-		aft_dp = data_stack[i]; 
-		if (canAlloc(aft_dp, alloc_step, release_step)) {
+		PlnDataPlace* p_aft_dp = data_stack[i]; 
+		if (free_index < 0 && canAlloc(p_aft_dp, alloc_step, release_step)) {
 			free_index = i;
-		}
-		
-		else if (data_stack[i]->type == DP_BYTES
+			aft_dp = p_aft_dp;
+		} else if (data_stack[i]->type == DP_BYTES
 				&& data_stack[i]->tryAllocBytes(dp)) {
 			dp->data.bytes.idx = i;
 			return;
@@ -558,7 +557,7 @@ unsigned int PlnDataPlace::getAllocBytesBits(int alloc_step, int release_step)
 	// return 8bit flg. e.g) 0000 0100: a byte of offset 2 byte is alloced.
 	BOOST_ASSERT(type == DP_BYTES);
 	unsigned int alloc_bytes = 0;
-	for (auto child: (*data.bytesData)) 
+	for (auto child: (*data.bytesData))  {
 		// exists overlaped span
 		if (child->alloc_step <= release_step
 				&& child->release_step >= alloc_step)
@@ -570,6 +569,7 @@ unsigned int PlnDataPlace::getAllocBytesBits(int alloc_step, int release_step)
 				case 4:
 					alloc_bytes |= 0xf << child->data.bytes.offset; break;
 			}
+	}
 
 	return alloc_bytes;
 }

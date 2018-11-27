@@ -211,5 +211,6 @@ void PlnModule::gen(PlnGenerator &g)
 	toplevel->gen(g);
 
 	g.genMainReturn();
+	g.genEndFunc();
 }
 

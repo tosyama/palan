@@ -76,6 +76,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
+
 void PlnCmpOperation::gen(PlnGenerator& g)
 {
 	if (gen_cmp_type == CMP_CONST_TRUE
@@ -106,8 +107,8 @@ void PlnCmpOperation::gen(PlnGenerator& g)
 	}
 }
 
-template <typename T>
-int static_comp(T lval, T rval, int cmp_type)
+template <typename T1, typename T2>
+int static_comp(T1 lval, T2 rval, int cmp_type)
 {
 	bool result;
 	switch (cmp_type) {
@@ -123,25 +124,44 @@ int static_comp(T lval, T rval, int cmp_type)
 	return  result ? CMP_CONST_TRUE : CMP_CONST_FALSE;
 }
 
+#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
+	union {int64_t i; uint64_t u; double d;} ex##val; \
+	if (ex->type == ET_VALUE) { \
+		switch (ex->values[0].type) { \
+			case VL_LIT_INT8: is_##ex##_int = true; \
+				ex##val.i = ex->values[0].inf.intValue; break;\
+			case VL_LIT_UINT8: is_##ex##_uint = true; \
+				ex##val.u = ex->values[0].inf.uintValue; break; \
+			case VL_LIT_FLO8: is_##ex##_flo = true; \
+				ex##val.d = ex->values[0].inf.floValue; break; \
+		} \
+	} \
+	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
+
 bool PlnCmpOperation::isConst()
 {
-	if (l->type != ET_VALUE || r->type != ET_VALUE)
+	CREATE_CHECK_FLAG(l);
+	CREATE_CHECK_FLAG(r);
+
+	if (!is_l_num_lit || !is_r_num_lit)
 		return false;
 
-	int lval_t = l->values[0].type;
-	int rval_t = r->values[0].type;
-	auto lval = l->values[0].inf;
-	auto rval = r->values[0].inf;
-
-	if ((lval_t == VL_LIT_INT8 && (rval_t == VL_LIT_INT8 || rval_t == VL_LIT_UINT8))
-			|| (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_INT8))
-		gen_cmp_type = static_comp(lval.intValue, rval.intValue, cmp_type);
-
-	else if (lval_t == VL_LIT_UINT8 && rval_t == VL_LIT_UINT8)
-		gen_cmp_type = static_comp(lval.uintValue, rval.uintValue, cmp_type);
-
+	if (is_l_uint && is_r_uint)
+		gen_cmp_type = static_comp(lval.u, rval.u, cmp_type);
+	else if ((is_l_int || is_l_uint) && (is_r_int || is_r_uint))
+		gen_cmp_type = static_comp(lval.i, rval.i, cmp_type);
+	else if (is_l_flo && is_r_flo)
+		gen_cmp_type = static_comp(lval.d, rval.d, cmp_type);
+	else if (is_l_flo && is_r_int)
+		gen_cmp_type = static_comp(lval.d, rval.i, cmp_type);
+	else if (is_l_int && is_r_flo)
+		gen_cmp_type = static_comp(lval.i, rval.d, cmp_type);
+	else if (is_l_flo && is_r_uint)
+		gen_cmp_type = static_comp(lval.d, rval.u, cmp_type);
+	else if (is_l_uint && is_r_flo)
+		gen_cmp_type = static_comp(lval.u, rval.d, cmp_type);
 	else
-		return false;
-
+		BOOST_ASSERT(false);
+	
 	return true;
 }
