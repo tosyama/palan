@@ -169,34 +169,33 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(const string &str)
 	return rodata;
 }
 
-void PlnModule::finish(PlnDataAllocator& da)
+void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 {
 	PlnScopeInfo si;
 	si.scope.push_back(PlnScopeItem(this));
-	
-	for (auto f: functions) {
-		f->finish(da, si);
-		da.reset();
-	}
 
-	BOOST_ASSERT(si.scope.size() == 1);
-	BOOST_ASSERT(si.owner_vars.size() == 0);
-	palan::exit(toplevel, 0);
-	toplevel->finish(da, si);
-	da.finish(save_regs, save_reg_dps);
-	stack_size = da.stack_size;
-}
-
-void PlnModule::gen(PlnGenerator &g)
-{
 	g.genSecReadOnlyData();
 	for (auto rod: readonlydata)
 		rod->gen(g);
 
 	g.genSecText();
 	for (auto f : functions)
+		f->genAsmName();
+
+	for (auto f : functions) {
+		f->finish(da, si);
 		f->gen(g);
+		f->clear();
+		da.reset();
+	}
 	
+	BOOST_ASSERT(si.scope.size() == 1);
+	BOOST_ASSERT(si.owner_vars.size() == 0);
+	palan::exit(toplevel, 0);
+	toplevel->finish(da, si);
+	da.finish(save_regs, save_reg_dps);
+	stack_size = da.stack_size;
+
 	string s="";
 	g.genEntryPoint(s);
 	g.genLabel(s);
@@ -209,6 +208,7 @@ void PlnModule::gen(PlnGenerator &g)
 	} */
 	
 	toplevel->gen(g);
+	da.reset();
 
 	g.genMainReturn();
 	g.genEndFunc();

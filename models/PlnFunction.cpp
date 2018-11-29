@@ -77,7 +77,6 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rty
 	return_vals.push_back(ret_var);
 	ret_dtypes.push_back(t->data_type);
 
-
 	return ret_var;
 }
 
@@ -142,9 +141,13 @@ static string mangling(PlnFunction* f)
 	return root + f->name + "." + hash_str;
 }
 
-void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnFunction::genAsmName()
 {
 	asm_name = mangling(this);
+}
+
+void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
 	if (type == FT_PLN || type == FT_INLINE) {
 		if (implement) {
 			si.push_scope(this);
@@ -257,5 +260,9 @@ void PlnFunction::gen(PlnGenerator &g)
 			break;
 		}
 	}
+}
+
+void PlnFunction::clear()
+{
 }
 

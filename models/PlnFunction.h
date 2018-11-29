@@ -44,7 +44,9 @@ public:
 	PlnVariable* addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init);
 	PlnParameter* addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnValue* defaultVal = NULL);
 
+	void genAsmName();
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;
 	void gen(PlnGenerator& g);
+	void clear();
 };
 

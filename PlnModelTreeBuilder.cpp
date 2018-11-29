@@ -229,7 +229,7 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	scope.push_back(f);
 	f->implement = buildBlock(func["impl"]["stmts"], scope, ast);
 	setLoc(f->implement, func["impl"]);
-	 
+
 	scope.pop_back();
 }
 

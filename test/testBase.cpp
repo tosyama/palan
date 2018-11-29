@@ -64,21 +64,22 @@ string build(string srcf)
 		}
 	}
 
+	string asmf = "out/" + srcf + ".s";
+
 	// compile
-	PlnX86_64DataAllocator allocator;
 	try {
-		module->finish(allocator);
+		PlnX86_64DataAllocator allocator;
+		// module->finish(allocator);
+		ofstream as_output;
+		as_output.open(asmf, ios::out);
+
+		PlnX86_64Generator generator(as_output);
+		module->gen(allocator, generator);
+
+		as_output.close();
 	} catch (PlnCompileError &err) {
 		return "finish:" + err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 	}
-	string asmf = "out/" + srcf + ".s";
-	ofstream as_output;
-	as_output.open(asmf, ios::out);
-
-	PlnX86_64Generator generator(as_output);
-	module->gen(generator);
-
-	as_output.close();
 
 	// assemble
 	string cmd = "as -o tmp.o " + asmf;
@@ -92,7 +93,6 @@ string build(string srcf)
 
 	return "success";
 }
-
 
 string exec_worker(string srcf)
 {

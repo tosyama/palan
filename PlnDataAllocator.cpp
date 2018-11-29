@@ -34,6 +34,9 @@ void PlnDataAllocator::reset()
 	all.insert(all.end(),regs.begin(),regs.end());
 	for (auto& reg: regs) reg = NULL;
 
+	for (auto dp: all) delete dp;
+	all.resize(0);
+
 	stack_size = 0;
 	step = 0;
 }
