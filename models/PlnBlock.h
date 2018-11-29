@@ -24,6 +24,8 @@ public:
 	PlnLoc loc;
 
 	PlnBlock();
+	~PlnBlock();
+
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 

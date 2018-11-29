@@ -14,6 +14,7 @@ public:
 	PlnDataPlace* cond_dp;
 
 	PlnWhileStatement(PlnExpression* condition, PlnBlock* block, PlnBlock* parent);
+	~PlnWhileStatement();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

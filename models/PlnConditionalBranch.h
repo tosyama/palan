@@ -15,6 +15,7 @@ public:
 	PlnStatement* next;
 
 	PlnIfStatement(PlnExpression* condition, PlnBlock* block, PlnStatement* next, PlnBlock* parent);
+	~PlnIfStatement();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

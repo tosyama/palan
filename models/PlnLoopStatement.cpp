@@ -28,6 +28,12 @@ PlnWhileStatement::PlnWhileStatement
 	}
 }
 
+PlnWhileStatement::~PlnWhileStatement()
+{
+	delete condition;
+	delete inf.block;
+}
+
 void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(si.scope[0].type == SC_MODULE);

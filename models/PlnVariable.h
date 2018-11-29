@@ -48,6 +48,7 @@ class PlnVarInit {
 
 public:
 	PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits=NULL);
+	~PlnVarInit();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

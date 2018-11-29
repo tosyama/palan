@@ -264,5 +264,14 @@ void PlnFunction::gen(PlnGenerator &g)
 
 void PlnFunction::clear()
 {
+	if (retval_init) {
+		delete retval_init;
+		retval_init = NULL;
+	}
+	if (implement) {
+		delete implement;
+		implement = NULL;
+	}
+	parent = NULL;
 }
 
