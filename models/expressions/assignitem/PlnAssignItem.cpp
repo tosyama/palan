@@ -30,10 +30,10 @@ public:
 	PlnDstItem(): place(NULL), need_save(false) {}
 	virtual ~PlnDstItem() {}
 
-	virtual PlnAsgnType getAssginType() { return NO_ASGN; };
+	virtual PlnAsgnType getAssginType() = 0;
 	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
-	virtual void gen(PlnGenerator& g) { }
+	virtual void gen(PlnGenerator& g) = 0;
 
 	static PlnDstItem* createDstItem(PlnExpression* ex, bool need_save);
 };

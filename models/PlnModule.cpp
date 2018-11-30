@@ -87,19 +87,16 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 		// allocator
 		{
 			string fname = createFuncName("new", {t}, {});
-			PlnFunction* alloc_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
-					alloc_func = f;
-					break;
+					BOOST_ASSERT(false);
 				}
 			}
-			if (!alloc_func) {
-				vector<PlnType*> type_def = item_type;
-				type_def.push_back(t);
-				alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
-				functions.push_back(alloc_func);
-			}
+
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
+			functions.push_back(alloc_func);
 
 			t->allocator = new PlnNoParamAllocator(alloc_func);
 		}
@@ -107,40 +104,35 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 		// freer
 		{
 			string fname = createFuncName("del", {}, {t});
-			PlnFunction* free_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
-					free_func = f;
-					break;
+					BOOST_ASSERT(false);
 				}
 			}
-			if (!free_func) {
-				vector<PlnType*> type_def = item_type;
-				type_def.push_back(t);
-				free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
-				functions.push_back(free_func);
-			}
+
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
+			functions.push_back(free_func);
+
 			t->freer = new PlnSingleParamFreer(free_func);
 		}
 
 		// copyer
 		{
 			string fname = createFuncName("cpy", {}, {t,t});
-			PlnFunction* copy_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
-					copy_func = f;
-					break;
+					BOOST_ASSERT(false);
 				}
 			}
-			if (!copy_func) {
-				vector<PlnType*> type_def = item_type;
-				type_def.push_back(t);
-				copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
-				functions.push_back(copy_func);
-			}
-			t->copyer = new PlnTwoParamsCopyer(copy_func);
+
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
+			functions.push_back(copy_func);
 			
+			t->copyer = new PlnTwoParamsCopyer(copy_func);
 		}
 	}
 
