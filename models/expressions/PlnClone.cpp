@@ -23,6 +23,13 @@ PlnClone::PlnClone(PlnDataAllocator& da, vector<PlnType*> &var_type, bool keep_v
 	copy_dst_dp = copy_ex->dstDp(da);
 }
 
+PlnClone::~PlnClone()
+{
+	delete alloc_ex;
+	delete copy_ex;
+	delete free_ex;
+}
+
 void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() == 1);

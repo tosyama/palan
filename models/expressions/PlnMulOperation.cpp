@@ -108,6 +108,12 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	values.push_back(v);
 }
 
+PlnMulOperation::~PlnMulOperation()
+{
+	delete l;
+	delete r;
+}
+
 void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;

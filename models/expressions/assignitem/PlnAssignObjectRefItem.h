@@ -20,6 +20,11 @@ public:
 		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
 
 	}
+
+	~PlnAssignObjectRefItem() {
+		delete src_save;
+		delete dst_item;
+	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);

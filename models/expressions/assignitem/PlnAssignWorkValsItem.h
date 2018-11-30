@@ -26,6 +26,15 @@ public:
 		BOOST_ASSERT(v.type == VL_WORK);
 	}
 
+	~PlnAssignWorkValsItem() {
+		for (auto di: dsts) {
+			delete di.item;
+			delete di.save_src_var;
+			delete di.copy_src_ex;
+			delete di.free_ex;
+		}
+	}
+
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(ex->values.size() == 1);
 		auto v = ex->values[0];

@@ -82,6 +82,14 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
 }
 
+PlnArrayItem::~PlnArrayItem()
+{
+	if (values.size())
+		delete values[0].inf.var;
+	delete array_ex;
+	delete index_ex;
+}
+
 void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	auto item_var = values[0].inf.var;

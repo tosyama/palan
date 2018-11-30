@@ -28,6 +28,12 @@ public:
 		len_ex->values[0].inf.uintValue = cp_size;
 	}
 
+	~PlnMemCopy() {
+		delete src_ex;
+		delete dst_ex;
+		delete len_ex;
+	}
+
 	PlnDataPlace* dstDp(PlnDataAllocator &da) override {
 		BOOST_ASSERT(dst_ex == NULL);
 		if (!cp_dst_dp) {

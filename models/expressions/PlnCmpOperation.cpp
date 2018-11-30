@@ -25,6 +25,12 @@ PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType 
 	values.push_back(v);
 }
 
+PlnCmpOperation::~PlnCmpOperation()
+{
+	delete l;
+	delete r;
+}
+
 void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() <= 1);

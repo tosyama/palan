@@ -20,6 +20,11 @@ public:
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 	}
 
+	~PlnDstCopyObjectItem() {
+		delete cpy_ex;
+		delete tmp_var;
+	}
+
 	PlnAsgnType getAssginType() override { return ASGN_COPY; }
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {

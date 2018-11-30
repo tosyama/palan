@@ -40,6 +40,12 @@ PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsn
 	}
 }
 
+PlnBoolOperation::~PlnBoolOperation()
+{
+	delete l;
+	delete r;
+}
+
 inline void initConstType(PlnExprsnType type, int& definite_const, int& proxy_const)
 {
 	switch (type) {

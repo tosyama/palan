@@ -53,6 +53,16 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	}
 }
 
+PlnFunctionCall::~PlnFunctionCall()
+{
+	for (auto a: arguments)
+		delete a;
+	for (auto fv: free_vars)
+		delete fv;
+	for (auto fex: free_exs)
+		delete fex;
+}
+
 void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types)
 {
 	PlnFunction* f = function;

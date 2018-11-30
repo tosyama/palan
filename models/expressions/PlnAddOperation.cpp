@@ -166,6 +166,12 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	values.push_back(v);
 }
 
+PlnAddOperation::~PlnAddOperation()
+{
+	delete l;
+	delete r;
+}
+
 void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
@@ -240,6 +246,11 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	v.inf.wk_type = new vector<PlnType*>();
 	v.inf.wk_type->push_back(e->values[0].getType());
 	values.push_back(v);
+}
+
+PlnNegative::~PlnNegative()
+{
+	delete e;
 }
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
