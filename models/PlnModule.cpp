@@ -87,19 +87,16 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 		// allocator
 		{
 			string fname = createFuncName("new", {t}, {});
-			PlnFunction* alloc_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
-					alloc_func = f;
-					break;
+					BOOST_ASSERT(false);
 				}
 			}
-			if (!alloc_func) {
-				vector<PlnType*> type_def = item_type;
-				type_def.push_back(t);
-				alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
-				functions.push_back(alloc_func);
-			}
+
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
+			functions.push_back(alloc_func);
 
 			t->allocator = new PlnNoParamAllocator(alloc_func);
 		}
@@ -107,40 +104,35 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 		// freer
 		{
 			string fname = createFuncName("del", {}, {t});
-			PlnFunction* free_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
-					free_func = f;
-					break;
+					BOOST_ASSERT(false);
 				}
 			}
-			if (!free_func) {
-				vector<PlnType*> type_def = item_type;
-				type_def.push_back(t);
-				free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
-				functions.push_back(free_func);
-			}
+
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
+			functions.push_back(free_func);
+
 			t->freer = new PlnSingleParamFreer(free_func);
 		}
 
 		// copyer
 		{
 			string fname = createFuncName("cpy", {}, {t,t});
-			PlnFunction* copy_func = NULL;
 			for (auto f: functions) {
 				if (f->name == fname) {
-					copy_func = f;
-					break;
+					BOOST_ASSERT(false);
 				}
 			}
-			if (!copy_func) {
-				vector<PlnType*> type_def = item_type;
-				type_def.push_back(t);
-				copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
-				functions.push_back(copy_func);
-			}
-			t->copyer = new PlnTwoParamsCopyer(copy_func);
+
+			vector<PlnType*> type_def = item_type;
+			type_def.push_back(t);
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
+			functions.push_back(copy_func);
 			
+			t->copyer = new PlnTwoParamsCopyer(copy_func);
 		}
 	}
 
@@ -169,34 +161,33 @@ PlnReadOnlyData* PlnModule::getReadOnlyData(const string &str)
 	return rodata;
 }
 
-void PlnModule::finish(PlnDataAllocator& da)
+void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 {
 	PlnScopeInfo si;
 	si.scope.push_back(PlnScopeItem(this));
-	
-	for (auto f: functions) {
-		f->finish(da, si);
-		da.reset();
-	}
 
-	BOOST_ASSERT(si.scope.size() == 1);
-	BOOST_ASSERT(si.owner_vars.size() == 0);
-	palan::exit(toplevel, 0);
-	toplevel->finish(da, si);
-	da.finish(save_regs, save_reg_dps);
-	stack_size = da.stack_size;
-}
-
-void PlnModule::gen(PlnGenerator &g)
-{
 	g.genSecReadOnlyData();
 	for (auto rod: readonlydata)
 		rod->gen(g);
 
 	g.genSecText();
 	for (auto f : functions)
+		f->genAsmName();
+
+	for (auto f : functions) {
+		f->finish(da, si);
 		f->gen(g);
+		f->clear();
+		da.reset();
+	}
 	
+	BOOST_ASSERT(si.scope.size() == 1);
+	BOOST_ASSERT(si.owner_vars.size() == 0);
+	palan::exit(toplevel, 0);
+	toplevel->finish(da, si);
+	da.finish(save_regs, save_reg_dps);
+	stack_size = da.stack_size;
+
 	string s="";
 	g.genEntryPoint(s);
 	g.genLabel(s);
@@ -209,6 +200,9 @@ void PlnModule::gen(PlnGenerator &g)
 	} */
 	
 	toplevel->gen(g);
+	da.reset();
+	delete toplevel;
+	toplevel = NULL;
 
 	g.genMainReturn();
 	g.genEndFunc();

@@ -143,6 +143,18 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 	}
 }
 
+PlnAssignment::~PlnAssignment()
+{
+	for (auto lval: lvals)
+		delete lval;
+
+	for (auto ex: expressions)
+		delete ex;
+	
+	for (auto ai: assgin_items)
+		delete ai;
+}
+
 void PlnAssignment::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	int start_ind = 0;

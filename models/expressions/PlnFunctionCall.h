@@ -29,6 +29,7 @@ public:
 
 	PlnFunctionCall(PlnFunction* f);
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
+	~PlnFunctionCall();
 
 	void loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types);
 

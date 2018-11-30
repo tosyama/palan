@@ -22,6 +22,12 @@ public:
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & (PTR_REFERENCE | PTR_INDIRECT_ACCESS));
 	}
 
+	~PlnDstMoveIndirectObjItem() {
+		delete addr_var;
+		delete save4free_var;
+		delete free_ex;
+	}
+
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {

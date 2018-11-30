@@ -30,7 +30,6 @@ public:
 	int getJumpID();
 	PlnReadOnlyData* getReadOnlyData(const string &str);
 
-	void finish(PlnDataAllocator& da);
-	void gen(PlnGenerator& g);
+	void gen(PlnDataAllocator& da, PlnGenerator& g);
 };
 

@@ -38,6 +38,21 @@ PlnStatement::PlnStatement(PlnBlock* block, PlnBlock* parent)
 	inf.block = block;
 }
 
+PlnStatement::~PlnStatement()
+{	
+	switch (type) {
+		case ST_EXPRSN:
+			delete inf.expression;
+			break;
+		case ST_BLOCK:
+			delete inf.block;
+			break;
+		case ST_VARINIT:
+			delete inf.var_init;
+			break;
+	}
+}
+
 void PlnStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	switch (type) {
@@ -115,6 +130,14 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 			throw PlnCompileError(E_InvalidRetValues);
 		}
 	}
+}
+
+PlnReturnStmt::~PlnReturnStmt()
+{
+	for (auto e: expressions)
+		delete e;
+	for (auto free_var: free_vars)
+		delete free_var;
 }
 
 void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)

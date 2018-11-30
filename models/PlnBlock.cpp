@@ -27,6 +27,16 @@ PlnBlock::PlnBlock()
 {
 }
 
+PlnBlock::~PlnBlock()
+{
+	for (auto v: variables)
+		delete v;
+	for (auto free_var: free_vars)
+		delete free_var;
+	for (auto stmt: statements)
+		delete stmt;
+}
+
 void PlnBlock::setParent(PlnFunction* f)
 {
 	parent_func = f;
@@ -65,7 +75,6 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>&
 
 	return v;
 }
-
 
 PlnVariable* PlnBlock::getVariable(const string& var_name)
 {

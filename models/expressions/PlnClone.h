@@ -15,6 +15,8 @@ public:
 	PlnDataPlace *src_dp;
 
 	PlnClone(PlnDataAllocator& da, vector<PlnType*> &var_type, bool keep_var);
+	~PlnClone();
+
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void finishFree(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g) override;

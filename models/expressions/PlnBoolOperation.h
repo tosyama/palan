@@ -13,6 +13,7 @@ protected:
 	PlnCmpOperation *l, *r;
 public:
 	PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
+	~PlnBoolOperation();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

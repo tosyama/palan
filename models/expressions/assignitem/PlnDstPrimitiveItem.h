@@ -24,6 +24,10 @@ public:
 		}
 	 }
 
+	 ~PlnDstPrimitiveItem() {
+		 delete save_src_var;
+	 }
+
 	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo &si, PlnExpression *src_ex) override {

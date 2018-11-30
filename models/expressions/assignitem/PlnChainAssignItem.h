@@ -15,6 +15,11 @@ public:
 	PlnChainAssignItem(PlnExpression* ex) : src_ex(ex) {
 		BOOST_ASSERT(src_ex->type == ET_ASSIGN);
 	}
+
+	~PlnChainAssignItem() {
+		for (auto di: dsts)
+			delete di.item;
+	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(ex->values.size() == 1);

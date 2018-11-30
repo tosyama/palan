@@ -28,6 +28,14 @@ PlnIfStatement::PlnIfStatement
 	}
 }
 
+PlnIfStatement::~PlnIfStatement()
+{
+	delete condition;
+	delete inf.block;
+	if (next)
+		delete next;
+}
+
 void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(si.scope[0].type == SC_MODULE);

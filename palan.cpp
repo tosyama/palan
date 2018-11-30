@@ -204,45 +204,49 @@ int main(int argc, char* argv[])
 				return COMPILE_ERR;
 			}
 
-			// Build palan model tree from AST.
+			FILE *as = NULL;	// as process
 			try {
+				// Build palan model tree from AST.
 				PlnModelTreeBuilder modelTreeBuilder;
 				module = modelTreeBuilder.buildModule(j["ast"]);
+				// free json object memory.
+				j.clear();
 
-				PlnX86_64DataAllocator allocator;
-				module->finish(allocator);
+				if (show_asm) {
+					PlnX86_64DataAllocator allocator;
+					PlnX86_64Generator generator(cout);
+					module->gen(allocator, generator);
+
+				} else if (do_asm) {
+					PlnX86_64DataAllocator allocator;
+					string obj_file = getDirName(fname) + getFileName(fname) + ".o";
+					string cmd = "as -o \"" + obj_file + "\"" ;
+
+					as = popen(cmd.c_str(), "w");
+					popen_filebuf p_buf(as);
+					ostream as_input(&p_buf);
+
+					PlnX86_64Generator generator(as_input);
+					module->gen(allocator, generator);
+
+					int ret = getStatus(pclose(as));
+					if (ret) return ret;
+
+					object_files.push_back(obj_file);
+				} else {
+					BOOST_ASSERT(false);
+				}
 
 			} catch (PlnCompileError &err) {
+				if (as) pclose(as);
 				cerr << files[err.loc.fid] << ":" << err.loc.begin_line << ": " << PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 				return COMPILE_ERR;
 	
 			} catch (json::exception& e) {
+				if (as) pclose(as);
 				cerr << e.what() << endl;
 				BOOST_ASSERT(false);
 			}
-		}
-
-		if (show_asm) {
-			PlnX86_64Generator generator(cout);
-			module->gen(generator);
-		} 
-
-		if (do_asm) {
-			FILE* as;
-			string obj_file = getDirName(fname) + getFileName(fname) + ".o";
-			string cmd = "as -o \"" + obj_file + "\"" ;
-
-			as = popen(cmd.c_str(), "w");
-			popen_filebuf p_buf(as);
-			ostream as_input(&p_buf);
-
-			PlnX86_64Generator generator(as_input);
-			module->gen(generator);
-
-			int ret = getStatus(pclose(as));
-			if (ret) return ret;
-
-			object_files.push_back(obj_file);
 		}
 	}
 

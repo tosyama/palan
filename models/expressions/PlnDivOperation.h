@@ -18,6 +18,8 @@ public:
 	PlnDivType div_type;
 
 	PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType dt);
+	~PlnDivOperation();
+
 	static PlnExpression* create(PlnExpression* l, PlnExpression* r);
 	static PlnExpression* create_mod(PlnExpression* l, PlnExpression* r);
 	

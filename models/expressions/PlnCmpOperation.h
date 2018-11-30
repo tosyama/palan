@@ -25,6 +25,8 @@ public:
 	PlnExpression* r;
 
 	PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType cmp_type);
+	~PlnCmpOperation();
+
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 	bool isConst();

@@ -12,6 +12,10 @@ class PlnAssignPrimitiveItem : public PlnAssignItem {
 public:
 	PlnAssignPrimitiveItem(PlnExpression* ex) : src_ex(ex), dst_item(NULL) {
 	}
+
+	~PlnAssignPrimitiveItem() {
+		delete dst_item;
+	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);

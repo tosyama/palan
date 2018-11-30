@@ -13,6 +13,7 @@ public:
 	bool is_add;
 
 	PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add=true);
+	~PlnAddOperation();
 	static PlnExpression* create(PlnExpression* l, PlnExpression* r);
 	static PlnExpression* create_sub(PlnExpression* l, PlnExpression* r);
 	
@@ -26,6 +27,7 @@ class PlnNegative : public PlnExpression
 public:
 	static PlnExpression* create(PlnExpression* exp);
 	PlnNegative(PlnExpression* e);
+	~PlnNegative();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

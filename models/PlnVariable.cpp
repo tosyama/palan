@@ -70,6 +70,16 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 	}
 }
 
+PlnVarInit::~PlnVarInit()
+{
+	for (auto vi: varinits)
+		if (vi.alloc_ex)
+			delete vi.alloc_ex;
+
+	for (auto ai: assgin_items)
+		delete ai;
+}
+
 void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	// alloc memory.

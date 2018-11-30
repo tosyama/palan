@@ -3,7 +3,7 @@
 
 # target="../generators/PlnX86_64Generator"
 # target="../PlnDataAllocator"
-target="../models/expressions/PlnBoolOperation"
+target="../models/expressions/PlnAddOperation"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
 

@@ -128,6 +128,12 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	values.push_back(v);
 }
 
+PlnDivOperation::~PlnDivOperation()
+{
+	delete l;
+	delete r;
+}
+
 void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
