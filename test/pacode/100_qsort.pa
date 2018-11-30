@@ -36,9 +36,7 @@ func quicksort(int16[N] >>data, int32 left, right)
 	int32 i, mid;
 	int32 temp;
 
-	if left >= right {
-		return;
-	}
+	if left >= right { return }
 
 	left -> mid;
 	left+1 -> i;

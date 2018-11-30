@@ -153,7 +153,7 @@ TEST_CASE("Compile error test", "[basic]")
 	string testcode;
 
 	testcode = "500_syntax_err";
-	REQUIRE(build(testcode) == "0:4-4 syntax error, unexpected '=', expecting ->> or -> or ','");
+	REQUIRE(build(testcode) == "0:4-4 syntax error, unexpected '=', expecting ';'");
 
 	testcode = "501_dupvar_err";
 	REQUIRE(build(testcode) == "0:2-2 Variable name 'b' already defined.");

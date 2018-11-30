@@ -84,7 +84,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
 %type <json>	return_type	return_value
-%type <json>	statement
+%type <json>	statement semi_stmt
 %type <json>	st_expression block return_stmt
 %type <json>	while_statement if_statement else_statement
 %type <json>	declaration subdeclaration const_def
@@ -305,43 +305,7 @@ single_return:  { }
 	}
 	;
 
-statement: st_expression ';'
-	{ 
-		json stmt = {
-			{"stmt-type", "exp"},
-			{"exp", move($1)}
-		};
-		$$ = move(stmt);
-		LOC($$, @$);
-	}
-
-	| declarations ';'
-	{
-		json stmt = {
-			{"stmt-type", "var-init"},
-			{"vars", move($1)},
-		};
-		$$ = move(stmt);
-		LOC($$, @$);
-	}
-
-	| declarations '=' expressions ';'
-	{
-		json stmt = {
-			{"stmt-type", "var-init"},
-			{"vars", move($1)},
-			{"inits", move($3)},
-		};
-		$$ = move(stmt);
-		LOC($$, @$);
-	}
-
-	| const_def ';'
-	{
-		$$ = move($1);
-	}
-
-	| return_stmt ';'
+statement: semi_stmt ';'
 	{
 		$$ = move($1);
 	}
@@ -381,6 +345,48 @@ statement: st_expression ';'
 	}
 	;
 
+semi_stmt: st_expression
+	{ 
+		json stmt = {
+			{"stmt-type", "exp"},
+			{"exp", move($1)}
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+
+	| declarations
+	{
+		json stmt = {
+			{"stmt-type", "var-init"},
+			{"vars", move($1)},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+
+	| declarations '=' expressions
+	{
+		json stmt = {
+			{"stmt-type", "var-init"},
+			{"vars", move($1)},
+			{"inits", move($3)},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+
+	| const_def
+	{
+		$$ = move($1);
+	}
+
+	| return_stmt
+	{
+		$$ = move($1);
+	}
+	;
+
 function_definition: palan_function_definition
 	{
 		$$ = move($1);
@@ -399,6 +405,16 @@ function_definition: palan_function_definition
 	
 block: '{' statements '}'
 	{
+		json block = {
+			{"stmts", move($2)}
+		};
+		$$ = move(block);
+		LOC($$, @$);
+	}
+
+	| '{' statements semi_stmt '}'
+	{
+		$2.push_back(move($3));
 		json block = {
 			{"stmts", move($2)}
 		};

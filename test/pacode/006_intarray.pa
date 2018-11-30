@@ -73,10 +73,10 @@ func arr_func(int32 x, int32[10] pa)
 	{
 		int16[5] a2;
 		int16[3] a3;
-		return a3;
+		return a3
 	}
 	byte[10] a4;
-	return;
+	return
 }
 
 func arr_func2(int32 x, int32[10] >> pa)
@@ -89,10 +89,10 @@ func arr_func2(int32 x, int32[10] >> pa)
 func int32_func(int32 i, j)
 	-> int32 x, y
 {
-	i+1,j -> x, y;
+	i+1,j -> x, y
 }
 
 func int32_func2(int32 i, j) -> int32
 {
-	return i+j;
+	return i+j
 }

@@ -3,176 +3,176 @@ ccall int32 printf();
 flo64 d1, d2 = 1.1, -2.2;
 
 // tftf
-if d1 == 1.1 { printf("t"); } else { printf("f"); }
-if d1 == 2.2 { printf("t"); } else { printf("f"); }
-if -2.2 == d2 { printf("t"); } else { printf("f"); }
-if 2.2 == d2 { printf("t"); } else { printf("f"); }
+if d1 == 1.1 { printf("t") } else { printf("f") }
+if d1 == 2.2 { printf("t") } else { printf("f") }
+if -2.2 == d2 { printf("t") } else { printf("f") }
+if 2.2 == d2 { printf("t") } else { printf("f") }
 
 // ft
-if d1 != 1.1 { printf("t"); } else { printf("f"); }
-if d1 != 2.2 { printf("t"); } else { printf("f"); }
+if d1 != 1.1 { printf("t") } else { printf("f") }
+if d1 != 2.2 { printf("t") } else { printf("f") }
 
 printf(" ");
 
 // tfft
-if d1 > d2 { printf("t"); } else { printf("f"); }
-if d2 > d1 { printf("t"); } else { printf("f"); }
-if d1 < d2 { printf("t"); } else { printf("f"); }
-if d2 < d1 { printf("t"); } else { printf("f"); }
+if d1 > d2 { printf("t") } else { printf("f") }
+if d2 > d1 { printf("t") } else { printf("f") }
+if d1 < d2 { printf("t") } else { printf("f") }
+if d2 < d1 { printf("t") } else { printf("f") }
 
 printf(" ");
 
 // fttf
-if d1 > d1 { printf("t"); } else { printf("f"); }
-if d1 >= d1 { printf("t"); } else { printf("f"); }
-if d1 >= d2 { printf("t"); } else { printf("f"); }
-if d2 >= d1 { printf("t"); } else { printf("f"); }
+if d1 > d1 { printf("t") } else { printf("f") }
+if d1 >= d1 { printf("t") } else { printf("f") }
+if d1 >= d2 { printf("t") } else { printf("f") }
+if d2 >= d1 { printf("t") } else { printf("f") }
 
 printf(" ");
 // ftft
-if d1 < d1 { printf("t"); } else { printf("f"); }
-if d1 <= d1 { printf("t"); } else { printf("f"); }
-if d1 <= d2 { printf("t"); } else { printf("f"); }
-if d2 <= d1 { printf("t"); } else { printf("f"); }
+if d1 < d1 { printf("t") } else { printf("f") }
+if d1 <= d1 { printf("t") } else { printf("f") }
+if d1 <= d2 { printf("t") } else { printf("f") }
+if d2 <= d1 { printf("t") } else { printf("f") }
 
 printf(" ");
 // fftt
-if d1 > d2+3.9 { printf("t"); } else { printf("f"); }
-if d1-3.9 > d2 { printf("t"); } else { printf("f"); }
-if d1+2 > d2+4 { printf("t"); } else { printf("f"); }
-if d1+2 > 1.5 { printf("t"); } else { printf("f"); }
-if 1.5 > d1+2 { printf("t"); } else { printf("f"); }
+if d1 > d2+3.9 { printf("t") } else { printf("f") }
+if d1-3.9 > d2 { printf("t") } else { printf("f") }
+if d1+2 > d2+4 { printf("t") } else { printf("f") }
+if d1+2 > 1.5 { printf("t") } else { printf("f") }
+if 1.5 > d1+2 { printf("t") } else { printf("f") }
 
 printf("\n");
 
 flo32 f1, f2 = 1.1, -2.2;
 
 // tftf
-if f1 == 1.1 { printf("t"); } else { printf("f"); }
-if f1 == 2.2 { printf("t"); } else { printf("f"); }
-if -2.2 == f2 { printf("t"); } else { printf("f"); }
-if 2.2 == f2 { printf("t"); } else { printf("f"); }
+if f1 == 1.1 { printf("t") } else { printf("f") }
+if f1 == 2.2 { printf("t") } else { printf("f") }
+if -2.2 == f2 { printf("t") } else { printf("f") }
+if 2.2 == f2 { printf("t") } else { printf("f") }
 
 // ft
-if f1 != 1.1 { printf("t"); } else { printf("f"); }
-if f1 != 2.2 { printf("t"); } else { printf("f"); }
+if f1 != 1.1 { printf("t") } else { printf("f") }
+if f1 != 2.2 { printf("t") } else { printf("f") }
 
 printf(" ");
 
 // tfft
-if f1 > f2 { printf("t"); } else { printf("f"); }
-if f2 > f1 { printf("t"); } else { printf("f"); }
-if f1 < f2 { printf("t"); } else { printf("f"); }
-if f2 < f1 { printf("t"); } else { printf("f"); }
+if f1 > f2 { printf("t") } else { printf("f") }
+if f2 > f1 { printf("t") } else { printf("f") }
+if f1 < f2 { printf("t") } else { printf("f") }
+if f2 < f1 { printf("t") } else { printf("f") }
 
 printf(" ");
 
 // fttf
-if f1 > f1 { printf("t"); } else { printf("f"); }
-if f1 >= f1 { printf("t"); } else { printf("f"); }
-if f1 >= f2 { printf("t"); } else { printf("f"); }
-if f2 >= f1 { printf("t"); } else { printf("f"); }
+if f1 > f1 { printf("t") } else { printf("f") }
+if f1 >= f1 { printf("t") } else { printf("f") }
+if f1 >= f2 { printf("t") } else { printf("f") }
+if f2 >= f1 { printf("t") } else { printf("f") }
 
 printf(" ");
 
 // ftft
-if f1 < f1 { printf("t"); } else { printf("f"); }
-if f1 <= f1 { printf("t"); } else { printf("f"); }
-if f1 <= f2 { printf("t"); } else { printf("f"); }
-if f2 <= f1 { printf("t"); } else { printf("f"); }
+if f1 < f1 { printf("t") } else { printf("f") }
+if f1 <= f1 { printf("t") } else { printf("f") }
+if f1 <= f2 { printf("t") } else { printf("f") }
+if f2 <= f1 { printf("t") } else { printf("f") }
 
 printf(" ");
 // fft
-if f1 > f2+3.9 { printf("t"); } else { printf("f"); }
-if f1-3.9 > f2 { printf("t"); } else { printf("f"); }
-if f1+2 > f2+4 { printf("t"); } else { printf("f"); }
+if f1 > f2+3.9 { printf("t") } else { printf("f") }
+if f1-3.9 > f2 { printf("t") } else { printf("f") }
+if f1+2 > f2+4 { printf("t") } else { printf("f") }
 
 printf("\n");
 
 // fftf
-if d1 > f1 { printf("t"); } else { printf("f"); }
+if d1 > f1 { printf("t") } else { printf("f") }
 // d1 != f1
-if d1 == f1 { printf("t"); } else { printf("f"); }
-if f1 >= d2 { printf("t"); } else { printf("f"); }
-if f2 >= d1 { printf("t"); } else { printf("f"); }
+if d1 == f1 { printf("t") } else { printf("f") }
+if f1 >= d2 { printf("t") } else { printf("f") }
+if f2 >= d1 { printf("t") } else { printf("f") }
 
 int32 i1, i2, i3= 2, -3, 1;
 uint64 u = 4;
 
 printf(" ");
 // fttff
-if d1 > i1 { printf("t"); } else { printf("f"); }
-if d1 > i1-1 { printf("t"); } else { printf("f"); }
-if i1 > d1 { printf("t"); } else { printf("f"); }
-if d1-1 > i1 { printf("t"); } else { printf("f"); }
-if d1+1 > i1+1 { printf("t"); } else { printf("f"); }
-if i1+1 > d1+1 { printf("t"); } else { printf("f"); }
+if d1 > i1 { printf("t") } else { printf("f") }
+if d1 > i1-1 { printf("t") } else { printf("f") }
+if i1 > d1 { printf("t") } else { printf("f") }
+if d1-1 > i1 { printf("t") } else { printf("f") }
+if d1+1 > i1+1 { printf("t") } else { printf("f") }
+if i1+1 > d1+1 { printf("t") } else { printf("f") }
 
 printf(" ");
 flo64 d3 = 1.0;
 //  fftft
-if d3 > 1 { printf("t"); } else { printf("f"); }
-if 1 > d3 { printf("t"); } else { printf("f"); }
-if 1 >= d3 { printf("t"); } else { printf("f"); }
-if 1 >= d3+1.0 { printf("t"); } else { printf("f"); }
-if d3+1.0 >= 1 { printf("t"); } else { printf("f"); }
+if d3 > 1 { printf("t") } else { printf("f") }
+if 1 > d3 { printf("t") } else { printf("f") }
+if 1 >= d3 { printf("t") } else { printf("f") }
+if 1 >= d3+1.0 { printf("t") } else { printf("f") }
+if d3+1.0 >= 1 { printf("t") } else { printf("f") }
 
 printf(" ");
 
 // tftf
-if i1 < 2.1 { printf("t"); } else { printf("f"); }
-if i1 < 1.9 { printf("t"); } else { printf("f"); }
-if 2.1 > i1 { printf("t"); } else { printf("f"); }
-if 1.9 > i1 { printf("t"); } else { printf("f"); }
+if i1 < 2.1 { printf("t") } else { printf("f") }
+if i1 < 1.9 { printf("t") } else { printf("f") }
+if 2.1 > i1 { printf("t") } else { printf("f") }
+if 1.9 > i1 { printf("t") } else { printf("f") }
 
 printf(" ");
 // tftf
-if i1-1 < 2.1 { printf("t"); } else { printf("f"); }
-if i1+1 < 2.1 { printf("t"); } else { printf("f"); }
-if i1+1 < d1+2.1 { printf("t"); } else { printf("f"); }
-if i1+2 < d1+2.1 { printf("t"); } else { printf("f"); }
+if i1-1 < 2.1 { printf("t") } else { printf("f") }
+if i1+1 < 2.1 { printf("t") } else { printf("f") }
+if i1+1 < d1+2.1 { printf("t") } else { printf("f") }
+if i1+2 < d1+2.1 { printf("t") } else { printf("f") }
 
 printf(" ");
 // tftt
-if i3 < f1 { printf("t"); } else { printf("f"); }
-if i1 < f2 { printf("t"); } else { printf("f"); }
-if i2 < f1 { printf("t"); } else { printf("f"); }
-if i2 < f2 { printf("t"); } else { printf("f"); }
+if i3 < f1 { printf("t") } else { printf("f") }
+if i1 < f2 { printf("t") } else { printf("f") }
+if i2 < f1 { printf("t") } else { printf("f") }
+if i2 < f2 { printf("t") } else { printf("f") }
 
 printf("\n");
 // tftf
-if 1.1 < 2.1 { printf("t"); } else { printf("f"); }
-if 2.1 < 1.1 { printf("t"); } else { printf("f"); }
-if 1.1 < 2 { printf("t"); } else { printf("f"); }
-if 2 < 1.1 { printf("t"); } else { printf("f"); }
+if 1.1 < 2.1 { printf("t") } else { printf("f") }
+if 2.1 < 1.1 { printf("t") } else { printf("f") }
+if 1.1 < 2 { printf("t") } else { printf("f") }
+if 2 < 1.1 { printf("t") } else { printf("f") }
 
 printf(" ");
 // ttf
-if 1.9 <= 2u { printf("t"); } else { printf("f"); }
-if 2.0 <= 2u { printf("t"); } else { printf("f"); }
-if 2u <= 1.9 { printf("t"); } else { printf("f"); }
+if 1.9 <= 2u { printf("t") } else { printf("f") }
+if 2.0 <= 2u { printf("t") } else { printf("f") }
+if 2u <= 1.9 { printf("t") } else { printf("f") }
 
 printf(" ");
 flo64 z1, z2 = 0.0, -0.0;
 printf("%.1f %.1f ", z1, z2);
 
 // ttftf
-if z1 == z2 { printf("t"); } else { printf("f"); }
-if z1 == 0.0 { printf("t"); } else { printf("f"); }
-if z1 == 1.0 { printf("t"); } else { printf("f"); }
-if z2 == 0.0 { printf("t"); } else { printf("f"); }
-if z2 == 1.0 { printf("t"); } else { printf("f"); }
+if z1 == z2 { printf("t") } else { printf("f") }
+if z1 == 0.0 { printf("t") } else { printf("f") }
+if z1 == 1.0 { printf("t") } else { printf("f") }
+if z2 == 0.0 { printf("t") } else { printf("f") }
+if z2 == 1.0 { printf("t") } else { printf("f") }
 
 printf(" ");
 // ttt
-if 0 == z1 { printf("t"); } else { printf("f"); }
-if z1 == 0 { printf("t"); } else { printf("f"); }
-if 0 == z2 { printf("t"); } else { printf("f"); }
+if 0 == z1 { printf("t") } else { printf("f") }
+if z1 == 0 { printf("t") } else { printf("f") }
+if 0 == z2 { printf("t") } else { printf("f") }
 
 printf(" ");
 // fftt
-if z1 { printf("t"); } else { printf("f"); }
-if z2 { printf("t"); } else { printf("f"); }
-if !z1 { printf("t"); } else { printf("f"); }
-if !z2 { printf("t"); } else { printf("f"); }
+if z1 { printf("t") } else { printf("f") }
+if z2 { printf("t") } else { printf("f") }
+if !z1 { printf("t") } else { printf("f") }
+if !z2 { printf("t") } else { printf("f") }
 
