@@ -51,7 +51,7 @@ int yylex();
 %start module	
 %%
 module: /* empty */
-	| module toplv_statement
+	| module statement
 	;
 
 palan_function_definition: KW_FUNC FUNC_ID '(' parameter_def ')' return_def block
@@ -114,32 +114,14 @@ single_return: /* empty */
 	| type_def
 	;
 
-toplv_statement: basic_statement
-	| toplv_block
-	;
-
-basic_statement: st_expression ';'
-	| declarations ';'
-	| declarations '=' expression ';'
-	| const_def ';'
-	| while_statement
-	| if_statement
-	| function_definition
-	;
 
 function_definition: palan_function_definition
 	| ccall_declaration
 	| syscall_definition
 	;
 	
-toplv_block: '{' toplv_statements '}'
-	;
-
-toplv_statements:	/* empty */
-	| toplv_statements toplv_statement
-	;
-
 block: '{' statements '}'
+	| '{' statements semi_stmt '}'
 	;
 
 while_statement: KW_WHILE st_expression block
@@ -157,9 +139,18 @@ statements:	/* empty */ { }
 	| statements statement
 	;
 
-statement: basic_statement
-	| return_stmt ';'
+statement: semi_stmt ';'
+	| while_statement
+	| if_statement
+	| function_definition
 	| block
+	;
+
+semi_stmt: st_expression
+	| declarations
+	| declarations '=' expression
+	| const_def
+	| return_stmt
 	;
 
 st_expression: expression

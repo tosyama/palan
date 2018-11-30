@@ -14,6 +14,7 @@ Current palan is very draft.
 
 ### Build Palan Compiler:
 ```sh
+$ git clone --recursive https://github.com/tosyama/palan.git
 $ sudo make package
 $ make
 ```

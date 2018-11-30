@@ -151,7 +151,7 @@ TEST_CASE("CUI basic err test.", "[cui]")
 	testcode = "500_syntax_err";
 	REQUIRE(build(testcode) == "err: 1");
 	REQUIRE(outstr(testcode) == "");
-	REQUIRE(errstr(testcode) == "500_syntax_err.pa:4: syntax error, unexpected '=', expecting ->> or -> or ','\n");
+	REQUIRE(errstr(testcode) == "500_syntax_err.pa:4: syntax error, unexpected '=', expecting ';'\n");
 
 	// err from build tree
 	testcode = "501_dupvar_err";
