@@ -209,6 +209,8 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 	
 	toplevel->gen(g);
 	da.reset();
+	delete toplevel;
+	toplevel = NULL;
 
 	g.genMainReturn();
 	g.genEndFunc();
