@@ -117,20 +117,23 @@ Expression
 	4. var - Variable/Constant expression
 		* base-var\* - Base variable/ constant vlue name string
 		* opes - Modified operator list
-	5. asgn - Assignment expression
+	5. array - Array expression
+		* sizes\* - Array size integer list
+		* vals\* - Item value expression list
+	6. asgn - Assignment expression
 		* src-exps\* - Source expression list
 		* dst-vals\* - Destination value list
-	6. func-call - Function call expression
+	7. func-call - Function call expression
 		* func-name\* - Function name to call
 		* args\* - Argument list
-	7. chain-call - Chain function call expression
+	8. chain-call - Chain function call expression
 		* func-name\* - Function call expression 
 		* in-args\* - Input argument list
 		* args\* - Rest of argument list
-	8. binary operator
+	9. binary operator
 		* lval\* -	Left value expression
 		* rval\* -	Right value expression
-	9. unary operator
+	10. unary operator
 		* val\* -	Value expression
 * loc - Location integer array
 

@@ -458,6 +458,8 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 	} else if (type == "lit-str") {
 		PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
 		expression = new PlnExpression(ro);
+	} else if (type == "array") {
+		return new PlnExpression(int64_t(9));
 	} else if (type == "var") {
 		expression = buildVariarble(exp, scope);
 	} else if (type == "asgn") {

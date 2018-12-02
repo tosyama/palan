@@ -205,10 +205,15 @@ unary_expression: ID
 	| unary_expression array_item
 	;
 
+array_val: '[' expressions ']'
+	| array_val '[' expressions ']'
+	;
+
 term: INT
 	| UINT
 	| STR
 	| unary_expression
+	| array_val
 	| '(' expression ')'
 	;
 

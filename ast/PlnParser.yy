@@ -90,7 +90,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	declaration subdeclaration const_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
-%type <json>	argument literal chain_src
+%type <json>	argument literal array_val chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
 %type <vector<string>>	const_names
@@ -710,6 +710,12 @@ term: literal
 		$$ = move($1);
 	}
 
+	| array_val
+	{
+		$$ = move($1);
+		LOC($$, @$);
+	}
+
 	| var_expression
 	{
 		$1["exp-type"] = "var";
@@ -753,7 +759,6 @@ literal: INT
 		LOC($$, @$);
 	}
 
-
 	| STR
 	{
 		json lit_str = {
@@ -762,6 +767,27 @@ literal: INT
 		};
 		$$ = move(lit_str);
 		LOC($$, @$);
+	}
+	;
+
+array_val: '[' expressions ']'
+	{
+		vector<json> sizes = { $2.size() };
+		json arr_val = {
+			{"exp-type", "array"},
+			{"sizes", sizes},
+			{"vals", $2}
+		};
+		$$ = move(arr_val);
+	}
+
+	| array_val '[' expressions ']'
+	{
+		$$ = move($1);
+		$$["sizes"].push_back( $3.size() );
+		for (json &e: $3) {
+			$$["vals"].push_back(e);
+		}
 	}
 	;
 
