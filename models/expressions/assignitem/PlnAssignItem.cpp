@@ -19,6 +19,7 @@
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
 #include "../PlnClone.h"
+#include "../PlnArrayValue.h"
 #include "PlnAssignItem.h"
 
 
@@ -83,7 +84,8 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 	}
 
 	if (ex->type == ET_FUNCCALL
-			|| ex->type == ET_CHAINCALL) {
+			|| ex->type == ET_CHAINCALL
+			|| ex->type == ET_ARRAYVALUE) {
 		return new PlnAssignWorkValsItem(ex);
 	}
 
@@ -103,7 +105,6 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 	}
 
 	BOOST_ASSERT(false);
-// return new PlnAssignItem();
 }
 
 #include "PlnDstPrimitiveItem.h"

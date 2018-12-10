@@ -117,7 +117,7 @@ Expression
 	4. var - Variable/Constant expression
 		* base-var\* - Base variable/ constant vlue name string
 		* opes - Modified operator list
-	5. array - Array expression
+	5. array-val - Array expression
 		* sizes\* - Array size integer list
 		* vals\* - Item value expression list
 	6. asgn - Assignment expression

@@ -40,7 +40,7 @@ PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 
 // PlnType
 PlnType::PlnType()
-	: allocator(NULL), freer(NULL)
+	: obj_type(OT_UNKNOWN), allocator(NULL), freer(NULL)
 {
 }
 

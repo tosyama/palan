@@ -32,6 +32,9 @@ public:
 		auto copyer = t->copyer;
 		cpy_ex = copyer->getCopyEx();
 		src_ex->data_places.push_back(cpy_ex->srcDp(da));
+		if (src_ex->type == ET_ARRAYVALUE) {
+			static_cast<PlnArrayValue*>(src_ex)->setVarType(dst_ex->values[0].inf.var->var_type);
+		}
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {

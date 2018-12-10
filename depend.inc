@@ -38,6 +38,7 @@ PlnVariable.o:  models/PlnFunction.h \
 	models/PlnType.h models/PlnVariable.h models/PlnArray.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h \
+	models/../PlnMessage.h models/../PlnException.h \
 	models/expressions/assignitem/PlnAssignItem.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
@@ -93,7 +94,9 @@ PlnDivOperation.o:  \
 	models/expressions/../../PlnModel.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h \
-	models/expressions/../../PlnConstants.h models/expressions/../PlnType.h
+	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnMessage.h \
+	models/expressions/../../PlnException.h models/expressions/../PlnType.h
 PlnCmpOperation.o:  \
 	models/expressions/PlnCmpOperation.h \
 	models/expressions/../PlnExpression.h \
@@ -134,6 +137,11 @@ PlnArrayItem.o:  \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnMessage.h \
 	models/expressions/../../PlnException.h
+PlnArrayValue.o:  \
+	models/expressions/PlnArrayValue.h models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h models/expressions/../PlnType.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnConstants.h
 PlnClone.o:  \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
@@ -155,6 +163,7 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/../PlnDivOperation.h \
 	models/expressions/assignitem/../PlnMemCopy.h \
 	models/expressions/assignitem/../PlnClone.h \
+	models/expressions/assignitem/../PlnArrayValue.h \
 	models/expressions/assignitem/PlnAssignItem.h \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \
 	models/expressions/assignitem/PlnAssignWorkValsItem.h \
@@ -193,8 +202,8 @@ PlnModelTreeBuilder.o:  PlnModel.h \
 	models/PlnType.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnFunction.h models/PlnBlock.h models/PlnStatement.h \
 	models/PlnVariable.h models/PlnLoopStatement.h \
-	models/PlnConditionalBranch.h models/expressions/PlnAssignment.h \
-	models/expressions/PlnFunctionCall.h \
+	models/PlnConditionalBranch.h models/expressions/PlnArrayValue.h \
+	models/expressions/PlnAssignment.h models/expressions/PlnFunctionCall.h \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h \

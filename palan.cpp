@@ -254,7 +254,7 @@ int main(int argc, char* argv[])
 		string flist = join(object_files, " ");
 		if (!do_exec)
 			cout << "linking: " << out_file << endl;
-		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " -lc " + flist;
+		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " -lc " + flist + " -lm";
 
 		int ret = getStatus(system(cmd.c_str()));
 		if (ret) return ret;

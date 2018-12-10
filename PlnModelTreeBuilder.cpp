@@ -19,6 +19,7 @@
 #include "models/PlnVariable.h"
 #include "models/PlnLoopStatement.h"
 #include "models/PlnConditionalBranch.h"
+#include "models/expressions/PlnArrayValue.h"
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnFunctionCall.h"
 #include "models/expressions/PlnAddOperation.h"
@@ -37,6 +38,7 @@ static void registerConst(json& cnst, PlnScopeStack &scope);
 static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
 static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast);
+static PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
 static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
 static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
@@ -157,7 +159,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	} else if (ftype_str == "ccall") {
 		f = new PlnFunction(FT_C, proto["name"]);
 		if (proto["ret-type"].is_string()) {
-			if(PlnType *t = module.getType(proto["ret-type"])) {
+			if (PlnType *t = module.getType(proto["ret-type"])) {
 				string rname = "";
 				vector<PlnType*> tv = { t };
 				f->addRetValue(rname, tv, false);
@@ -229,6 +231,9 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	scope.push_back(f);
 	f->implement = buildBlock(func["impl"]["stmts"], scope, ast);
 	setLoc(f->implement, func["impl"]);
+
+	// free memory
+	func["impl"].clear();
 
 	scope.pop_back();
 }
@@ -442,7 +447,6 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast)
 	return new PlnIfStatement(cond, ifblock, else_stmt, CUR_BLOCK);
 }
 
-
 PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
 	assertAST(exp["exp-type"].is_string(), exp);
@@ -458,8 +462,8 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 	} else if (type == "lit-str") {
 		PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
 		expression = new PlnExpression(ro);
-	} else if (type == "array") {
-		return new PlnExpression(int64_t(9));
+	} else if (type == "array-val") {
+		expression = buildArrayValue(exp, scope);
 	} else if (type == "var") {
 		expression = buildVariarble(exp, scope);
 	} else if (type == "asgn") {
@@ -580,6 +584,34 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 		setLoc(&err, ccall);
 		throw err;
 	}
+}
+
+PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
+{
+	json &vals = arrval["vals"];
+
+	// 1 dementional case
+	if (arrval["sizes"].size() == 1) {
+		int s = arrval["sizes"][0];
+		vector<PlnExpression*> exps;
+		for (int i=0; i<s; i++,i++) {
+			exps.push_back(buildExpression(vals[i], scope));
+		}
+		return new PlnArrayValue(exps);
+	}
+
+	// 2 dementional case
+	int i=0;
+	vector<PlnExpression *> arrs;
+	for (int s: arrval["sizes"]) {
+		vector<PlnExpression*> exps;
+		for (int j=0; j<s; j++,i++) {
+			exps.push_back(buildExpression(vals[i], scope));
+		}
+		arrs.push_back(new PlnArrayValue(exps));
+	}
+
+	return new PlnArrayValue(arrs);
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)

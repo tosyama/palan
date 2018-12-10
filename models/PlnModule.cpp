@@ -72,6 +72,7 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 	t->name = name;
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
+	t->obj_type = OT_FIXED_ARRAY;
 	t->inf.obj.is_fixed_size = true;
 	t->inf.obj.alloc_size = alloc_size;
 	t->inf.fixedarray.sizes = new vector<int>(move(sizes));

@@ -774,7 +774,7 @@ array_val: '[' expressions ']'
 	{
 		vector<json> sizes = { $2.size() };
 		json arr_val = {
-			{"exp-type", "array"},
+			{"exp-type", "array-val"},
 			{"sizes", sizes},
 			{"vals", $2}
 		};
