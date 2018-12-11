@@ -204,6 +204,22 @@ int PlnX86_64Generator::registerConst(const PlnGenEntity* constValue) {
 	return id; 
 }
 
+int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_size)
+{
+	ConstInfo cinfo;
+	cinfo.generated = false;
+	cinfo.type = GCT_INT64_ARRAY;
+	cinfo.data.q_arr = new int64_t[int_array.size()];
+	cinfo.size = int_array.size();
+
+	for (int i=0; i<cinfo.size; i++)
+		cinfo.data.q_arr[i] = int_array[i];
+
+	int id = const_buf.size();
+	const_buf.push_back(cinfo);
+	return id;
+}
+
 void PlnX86_64Generator::genSecReadOnlyData()
 {
 	os << ".section .rodata" << endl;
@@ -332,10 +348,14 @@ void PlnX86_64Generator::genEndFunc()
 				os << "	.align 8" << endl;
 				aligned = true;
 			}
-			os << ".LD" << i << ":	# " << ci.data.d << endl;
+			os << ".LD" << i << ":" << endl;
 			if (ci.type == GCT_FLO64) {
-				os << "	.long	" << ci.data.ai[0] << endl;
-				os << "	.long	" << ci.data.ai[1] << endl;
+				os << "	.quad	" << ci.data.q << "	# " << ci.data.d << endl;
+			} else if (ci.type == GCT_INT64_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.quad	" << ci.data.q_arr[i] << endl;
+				}
+
 			} else {
 				BOOST_ASSERT(false);
 			}
@@ -1252,11 +1272,21 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->data.i = dp->data.intValue;
 
 	} else if (dp->type == DP_RO_DATA) {
-		e->type = GE_STRING;
-		e->alloc_type = GA_MEM;
-		e->size = 8;
-		e->data_type = DT_OBJECT_REF;
-		e->data.str = new string(string("$.LC") + to_string(dp->data.index));
+		if (dp->data.ro.index >= 0) {
+			e->type = GE_STRING;
+			e->alloc_type = GA_MEM;
+			e->size = 8;
+			e->data_type = DT_OBJECT_REF;
+			e->data.str = new string(string("$.LC") + to_string(dp->data.ro.index));
+		} else {
+			BOOST_ASSERT(dp->data.ro.int_array);
+			int id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
+			e->type = GE_STRING;
+			e->alloc_type = GA_MEM;
+			e->size = 8;
+			e->data_type = DT_OBJECT_REF;
+			e->data.str = new string(string("$.LD") + to_string(id));
+		}
 
 	} else
 		BOOST_ASSERT(false);

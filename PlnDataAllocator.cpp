@@ -1,7 +1,7 @@
 /// Register/Stack allocation class definition.
 ///
 /// @file	PlnDataAllocator.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <stdlib.h>
@@ -318,10 +318,28 @@ PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
 	dp->status = DS_ASSIGNED;
-	dp->data.index = index;
+	dp->data.ro.index = index;
+	dp->data.ro.item_size = 1;
+	dp->data.ro.int_array = NULL;
 	dp->alloc_step = step;
 	dp->release_step = step;
 	static string cmt = "\"..\"";
+	dp->comment = &cmt;
+	all.push_back(dp);
+	return dp;
+}
+
+PlnDataPlace* PlnDataAllocator::getROIntArrayDp(vector<int64_t> int_array, int item_size)
+{
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_RO_DATA;
+	dp->status = DS_ASSIGNED;
+	dp->data.ro.index = -1;
+	dp->data.ro.item_size = item_size;
+	dp->data.ro.int_array = new vector<int64_t>(move(int_array));
+	dp->alloc_step = step;
+	dp->release_step = step;
+	static string cmt = "\"[..]\"";
 	dp->comment = &cmt;
 	all.push_back(dp);
 	return dp;
@@ -553,6 +571,13 @@ PlnDataPlace::PlnDataPlace(int size, int data_type)
 {
 	static string emp="";
 	comment = &emp;
+}
+
+PlnDataPlace::~PlnDataPlace()
+{
+	if (type == DP_RO_DATA && data.ro.int_array) {
+		delete data.ro.int_array;
+	}
 }
 
 unsigned int PlnDataPlace::getAllocBytesBits(int alloc_step, int release_step)

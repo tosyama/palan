@@ -594,7 +594,7 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 	if (arrval["sizes"].size() == 1) {
 		int s = arrval["sizes"][0];
 		vector<PlnExpression*> exps;
-		for (int i=0; i<s; i++,i++) {
+		for (int i=0; i<s; i++) {
 			exps.push_back(buildExpression(vals[i], scope));
 		}
 		return new PlnArrayValue(exps);

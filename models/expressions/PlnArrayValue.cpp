@@ -10,6 +10,7 @@
 #include "PlnArrayValue.h"
 #include "../PlnType.h"
 #include "../../PlnDataAllocator.h"
+#include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
 
 PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &elements)
@@ -53,7 +54,6 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 			addElements(exps, sizes, elements);
 			elements = move(exps);
 		}
-
 		BOOST_ASSERT(total_num == elements.size());
 
 	} else {
@@ -86,16 +86,24 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 			BOOST_ASSERT(false);
 		}
 	}
-
-	cout << "elements_num " << elements.size() << " type: " << is_int << ":" << is_flo << endl;
-
-	BOOST_ASSERT(false);
 }
 
 void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	if (data_places.size())
-		da.pushSrc(data_places[0], da.getReadOnlyDp(0));
+	if (data_places.size()) {
+		PlnDataPlace *dp;
+		if (arrval_type == AVT_INT_LIT_ARRAY) {
+			vector<int64_t> int_array;
+			for (auto e: elements) {
+				BOOST_ASSERT(e->type == ET_VALUE && e->values[0].type == VL_LIT_INT8);
+				int_array.push_back(e->values[0].inf.intValue);
+			}
+			dp = da.getROIntArrayDp(int_array, element_type.back()->size);
+		} else {
+			BOOST_ASSERT(false);
+		}
+	 	da.pushSrc(data_places[0], dp);
+	}
 }
 
 void PlnArrayValue::gen(PlnGenerator& g)

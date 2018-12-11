@@ -15,6 +15,7 @@ public:
 	vector<PlnExpression*> elements;
 	vector<PlnType*> element_type;
 	PlnArrayValueType arrval_type;
+	PlnDataPlace *test_dp;
 
 	PlnArrayValue(vector<PlnExpression*> &elements);
 
