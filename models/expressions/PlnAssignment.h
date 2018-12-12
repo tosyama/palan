@@ -11,7 +11,7 @@ class PlnAssignItem;
 class PlnAssignment : public PlnExpression
 {
 public:
-	PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps); // throw PlnCompileError
+	PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpression*>& exps); // throw PlnCompileError
 	~PlnAssignment();
 	vector<PlnExpression*> lvals;
 	vector<PlnExpression*> expressions;

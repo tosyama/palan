@@ -86,6 +86,8 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 			BOOST_ASSERT(false);
 		}
 	}
+
+	(*values[0].inf.wk_type) = var_type;
 }
 
 void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
