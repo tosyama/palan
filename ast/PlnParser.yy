@@ -53,8 +53,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %token <int64_t>	INT	"integer"
 %token <uint64_t>	UINT	"unsigned integer"
-%token <double>		FLOAT	"float"
-%token <string>	STR	"string"
+%token <double>		FLOAT	"float" %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	FUNC_ID	"function identifier"
 %token <string>	TYPENAME	"type name"
@@ -90,7 +89,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	declaration subdeclaration const_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
-%type <json>	argument literal array_val chain_src
+%type <json>	argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
 %type <vector<string>>	const_names
@@ -101,7 +100,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<json>>	arguments
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
-%type <vector<json>>	dst_vals
+%type <vector<json>>	dst_vals array_val
 %type <vector<json>>	array_indexes
 
 %right '='
@@ -712,7 +711,15 @@ term: literal
 
 	| array_val
 	{
-		$$ = move($1);
+		if ($1.size() >= 2) {
+			json arr_val = {
+				{"exp-type", "array-val"},
+				{"vals", $1}
+			};
+			$$ = move(arr_val);
+		} else {
+			$$ = move($1[0]);
+		}
 		LOC($$, @$);
 	}
 
@@ -772,22 +779,21 @@ literal: INT
 
 array_val: '[' expressions ']'
 	{
-		vector<json> sizes = { $2.size() };
 		json arr_val = {
 			{"exp-type", "array-val"},
-			{"sizes", sizes},
 			{"vals", $2}
 		};
-		$$ = move(arr_val);
+		$$.push_back(arr_val);
 	}
 
 	| array_val '[' expressions ']'
 	{
 		$$ = move($1);
-		$$["sizes"].push_back( $3.size() );
-		for (json &e: $3) {
-			$$["vals"].push_back(e);
-		}
+		json arr_val = {
+			{"exp-type", "array-val"},
+			{"vals", $3}
+		};
+		$$.push_back(arr_val);
 	}
 	;
 

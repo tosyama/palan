@@ -588,30 +588,11 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 
 PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 {
-	json &vals = arrval["vals"];
-
-	// 1 dementional case
-	if (arrval["sizes"].size() == 1) {
-		int s = arrval["sizes"][0];
-		vector<PlnExpression*> exps;
-		for (int i=0; i<s; i++) {
-			exps.push_back(buildExpression(vals[i], scope));
-		}
-		return new PlnArrayValue(exps);
+	vector<PlnExpression*> exps;
+	for (auto v: arrval["vals"]) {
+		exps.push_back(buildExpression(v, scope));
 	}
-
-	// 2 dementional case
-	int i=0;
-	vector<PlnExpression *> arrs;
-	for (int s: arrval["sizes"]) {
-		vector<PlnExpression*> exps;
-		for (int j=0; j<s; j++,i++) {
-			exps.push_back(buildExpression(vals[i], scope));
-		}
-		arrs.push_back(new PlnArrayValue(exps));
-	}
-
-	return new PlnArrayValue(arrs);
+	return new PlnArrayValue(exps);
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)

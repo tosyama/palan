@@ -102,7 +102,7 @@ Statement
 Expression
 ----------
 * exp-type\* - Expression type string:
-	"lit-int" "lit-uint" "lit-str" "var"
+	"lit-int" "lit-uint" "lit-str" "var" "array-val"
 	"asgn" "func-call" "chain-call"
 	birary operator ("+" "-" "*" "/" "%" "==" "!=" "<" ">" "<=" ">=" "&&" "||")
 	unary operator ("uminus" "not")
@@ -118,7 +118,6 @@ Expression
 		* base-var\* - Base variable/ constant vlue name string
 		* opes - Modified operator list
 	5. array-val - Array expression
-		* sizes\* - Array size integer list
 		* vals\* - Item value expression list
 	6. asgn - Assignment expression
 		* src-exps\* - Source expression list
