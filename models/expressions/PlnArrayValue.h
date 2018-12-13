@@ -7,7 +7,8 @@
 
 enum PlnArrayValueType {
 	AVT_OBJ_ARRAY,
-	AVT_INT_LIT_ARRAY
+	AVT_INT_LIT_ARRAY,
+	AVT_FLO_LIT_ARRAY
 };
 
 class PlnArrayValue : public PlnExpression {

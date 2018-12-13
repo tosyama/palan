@@ -80,12 +80,18 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 			|| element_type.back()->data_type == DT_UINT) {
 		if (is_int) {
 			arrval_type = AVT_INT_LIT_ARRAY;
-		} else if (is_flo) {
-			BOOST_ASSERT(false);
 		} else {
 			BOOST_ASSERT(false);
 		}
-	}
+
+	} else if (element_type.back()->data_type == DT_FLOAT) {
+		if (is_int || is_flo) {
+			arrval_type = AVT_FLO_LIT_ARRAY;
+		} else {
+			BOOST_ASSERT(false);
+		}
+	} else
+		BOOST_ASSERT(false);
 
 	(*values[0].inf.wk_type) = var_type;
 }
@@ -97,10 +103,28 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (arrval_type == AVT_INT_LIT_ARRAY) {
 			vector<int64_t> int_array;
 			for (auto e: elements) {
-				BOOST_ASSERT(e->type == ET_VALUE && e->values[0].type == VL_LIT_INT8);
+				BOOST_ASSERT(e->type == ET_VALUE);
+				PlnValue val = e->values[0];
+				BOOST_ASSERT(val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8);
 				int_array.push_back(e->values[0].inf.intValue);
 			}
 			dp = da.getROIntArrayDp(int_array, element_type.back()->size);
+
+		} else if (arrval_type == AVT_FLO_LIT_ARRAY) {
+			vector<double> flo_array;
+			for (auto e: elements) {
+				BOOST_ASSERT(e->type == ET_VALUE);
+				PlnValue val = e->values[0];
+				BOOST_ASSERT(val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8 || val.type == VL_LIT_FLO8);
+				if (val.type == VL_LIT_INT8)
+					flo_array.push_back(val.inf.intValue);
+				else if (val.type == VL_LIT_UINT8)
+					flo_array.push_back(val.inf.uintValue);
+				else 
+					flo_array.push_back(val.inf.floValue);
+			}
+			dp = da.getROFloArrayDp(flo_array, element_type.back()->size);
+
 		} else {
 			BOOST_ASSERT(false);
 		}

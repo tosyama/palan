@@ -39,7 +39,8 @@ PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h \
 	models/../PlnMessage.h models/../PlnException.h \
-	models/expressions/assignitem/PlnAssignItem.h
+	models/expressions/assignitem/PlnAssignItem.h \
+	models/expressions/PlnArrayValue.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
 	models/PlnVariable.h models/PlnExpression.h models/../PlnConstants.h
 PlnArray.o:  models/../PlnConstants.h \
@@ -124,7 +125,7 @@ PlnAssignment.o:  \
 	models/expressions/../../PlnMessage.h \
 	models/expressions/../../PlnException.h \
 	models/expressions/../PlnVariable.h models/expressions/../PlnType.h \
-	models/expressions/PlnDivOperation.h \
+	models/expressions/PlnDivOperation.h models/expressions/PlnArrayValue.h \
 	models/expressions/assignitem/PlnAssignItem.h \
 	models/expressions/PlnArrayItem.h
 PlnArrayItem.o:  \
@@ -141,6 +142,7 @@ PlnArrayValue.o:  \
 	models/expressions/PlnArrayValue.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnType.h \
 	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnConstants.h
 PlnClone.o:  \
 	models/expressions/../PlnExpression.h \

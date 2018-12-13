@@ -68,6 +68,7 @@ public:
 	PlnDataPlace* getLiteralFloDp(double floValue);
 	PlnDataPlace* getReadOnlyDp(int index);
 	PlnDataPlace* getROIntArrayDp(vector<int64_t> int_array, int item_size);
+	PlnDataPlace* getROFloArrayDp(vector<double> flo_array, int item_size);
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
 	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
@@ -130,7 +131,7 @@ public:
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		double floValue;
-		struct { int32_t index; int32_t item_size; vector<int64_t>* int_array; } ro;
+		struct { int32_t index; int32_t item_size; vector<int64_t>* int_array; vector<double>* flo_array; } ro;
 		PlnDataPlace *originalDp;
 	} data;
 

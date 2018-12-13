@@ -208,12 +208,33 @@ int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_
 {
 	ConstInfo cinfo;
 	cinfo.generated = false;
-	cinfo.type = GCT_INT64_ARRAY;
-	cinfo.data.q_arr = new int64_t[int_array.size()];
 	cinfo.size = int_array.size();
+	if (item_size == 8) {
+		cinfo.type = GCT_INT64_ARRAY;
+		cinfo.data.q_arr = new int64_t[int_array.size()];
+		for (int i=0; i<cinfo.size; i++)
+			cinfo.data.q_arr[i] = int_array[i];
 
-	for (int i=0; i<cinfo.size; i++)
-		cinfo.data.q_arr[i] = int_array[i];
+	} else if (item_size == 4) {
+		cinfo.type = GCT_INT32_ARRAY;
+		cinfo.data.l_arr = new int32_t[int_array.size()];
+		for (int i=0; i<cinfo.size; i++)
+			cinfo.data.l_arr[i] = int_array[i];
+
+	} else if (item_size == 2) {
+		cinfo.type = GCT_INT16_ARRAY;
+		cinfo.data.s_arr = new int16_t[int_array.size()];
+		for (int i=0; i<cinfo.size; i++)
+			cinfo.data.s_arr[i] = int_array[i];
+
+	} else if (item_size == 1) {
+		cinfo.type = GCT_INT8_ARRAY;
+		cinfo.data.b_arr = new int8_t[int_array.size()];
+		for (int i=0; i<cinfo.size; i++)
+			cinfo.data.b_arr[i] = int_array[i];
+
+	} else
+		BOOST_ASSERT(false);	
 
 	int id = const_buf.size();
 	const_buf.push_back(cinfo);
@@ -340,14 +361,10 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 
 void PlnX86_64Generator::genEndFunc()
 {
-	bool aligned = false;
 	int i = 0;
 	for (ConstInfo ci: const_buf) {
 		if (!ci.generated) {
-			if (!aligned) {
-				os << "	.align 8" << endl;
-				aligned = true;
-			}
+			os << "	.align 8" << endl;
 			os << ".LD" << i << ":" << endl;
 			if (ci.type == GCT_FLO64) {
 				os << "	.quad	" << ci.data.q << "	# " << ci.data.d << endl;
@@ -355,7 +372,18 @@ void PlnX86_64Generator::genEndFunc()
 				for (int i=0; i<ci.size; i++) {
 					os << "	.quad	" << ci.data.q_arr[i] << endl;
 				}
-
+			} else if (ci.type == GCT_INT32_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.long	" << ci.data.l_arr[i] << endl;
+				}
+			} else if (ci.type == GCT_INT16_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.short	" << ci.data.s_arr[i] << endl;
+				}
+			} else if (ci.type == GCT_INT8_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.byte	" << int(ci.data.b_arr[i]) << endl;
+				}
 			} else {
 				BOOST_ASSERT(false);
 			}
@@ -1279,8 +1307,33 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			e->data_type = DT_OBJECT_REF;
 			e->data.str = new string(string("$.LC") + to_string(dp->data.ro.index));
 		} else {
-			BOOST_ASSERT(dp->data.ro.int_array);
-			int id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
+			int id;
+			if (dp->data.ro.int_array) {
+				id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
+
+			} else {
+				BOOST_ASSERT(dp->data.ro.flo_array);
+				vector<int64_t> int_array;
+
+				if (dp->data.ro.item_size == 8) {
+					union { double d; int64_t i; } data;
+					for (double d: *(dp->data.ro.flo_array)) {
+						data.d = d;
+						int_array.push_back(data.i);
+					}
+				} else if (dp->data.ro.item_size == 4) {
+					union { float f; int32_t i; } data;
+					for (double d: *(dp->data.ro.flo_array)) {
+						data.f = d;
+						int_array.push_back(data.i);
+					}
+
+				} else {
+					BOOST_ASSERT(false);
+				}
+				id = registerConstArray(int_array, dp->data.ro.item_size);
+			}
+
 			e->type = GE_STRING;
 			e->alloc_type = GA_MEM;
 			e->size = 8;

@@ -8,6 +8,9 @@
 enum PlnGenConstType {
 	GCT_FLO32,
 	GCT_FLO64,
+	GCT_INT8_ARRAY,
+	GCT_INT16_ARRAY,
+	GCT_INT32_ARRAY,
 	GCT_INT64_ARRAY
 };
 
@@ -16,7 +19,10 @@ class PlnX86_64Generator : public PlnGenerator
 	bool require_align;
 	struct ConstInfo {
 		PlnGenConstType type;
-		union { double d; int64_t q; int64_t* q_arr; } data;
+		union {
+			double d; int64_t q;
+			int64_t* q_arr; int32_t* l_arr; int16_t* s_arr; int8_t* b_arr;
+		} data;
 		bool generated;
 		int size;
 	};
