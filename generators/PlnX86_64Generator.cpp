@@ -204,40 +204,62 @@ int PlnX86_64Generator::registerConst(const PlnGenEntity* constValue) {
 	return id; 
 }
 
+
+template <typename T>
+int findCinfo(T*& arr, PlnGenConstType type, vector<int64_t> &int_array, vector<PlnX86_64Generator::ConstInfo> &const_buf)
+{
+	int id = 0;
+	for (auto cinfo: const_buf) {
+		if (cinfo.type == type && cinfo.size == int_array.size()) {
+			T* darr = (T*)cinfo.data.q_arr;
+			int i;
+			for (i=0; i<cinfo.size; i++)
+				if (darr[i] != int_array[i])
+					break;
+			if (i==cinfo.size) {
+				arr = NULL;
+				return id; // found same data xxto id;
+			}
+		}
+		id++;
+	}
+
+	arr = new T[int_array.size()];
+	for (int i=0; i<int_array.size(); i++)
+		arr[i] = int_array[i];
+	
+	return id;
+}
+
 int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_size)
 {
 	ConstInfo cinfo;
 	cinfo.generated = false;
 	cinfo.size = int_array.size();
+	int id;
+
 	if (item_size == 8) {
 		cinfo.type = GCT_INT64_ARRAY;
-		cinfo.data.q_arr = new int64_t[int_array.size()];
-		for (int i=0; i<cinfo.size; i++)
-			cinfo.data.q_arr[i] = int_array[i];
+		id = findCinfo(cinfo.data.q_arr, cinfo.type, int_array, const_buf);
 
 	} else if (item_size == 4) {
 		cinfo.type = GCT_INT32_ARRAY;
-		cinfo.data.l_arr = new int32_t[int_array.size()];
-		for (int i=0; i<cinfo.size; i++)
-			cinfo.data.l_arr[i] = int_array[i];
+		id = findCinfo(cinfo.data.l_arr, cinfo.type, int_array, const_buf);
 
 	} else if (item_size == 2) {
 		cinfo.type = GCT_INT16_ARRAY;
-		cinfo.data.s_arr = new int16_t[int_array.size()];
-		for (int i=0; i<cinfo.size; i++)
-			cinfo.data.s_arr[i] = int_array[i];
+		id = findCinfo(cinfo.data.s_arr, cinfo.type, int_array, const_buf);
 
 	} else if (item_size == 1) {
 		cinfo.type = GCT_INT8_ARRAY;
-		cinfo.data.b_arr = new int8_t[int_array.size()];
-		for (int i=0; i<cinfo.size; i++)
-			cinfo.data.b_arr[i] = int_array[i];
+		id = findCinfo(cinfo.data.b_arr, cinfo.type, int_array, const_buf);
 
 	} else
 		BOOST_ASSERT(false);	
 
-	int id = const_buf.size();
-	const_buf.push_back(cinfo);
+	if (cinfo.data.q_arr)
+		const_buf.push_back(cinfo);
+
 	return id;
 }
 
