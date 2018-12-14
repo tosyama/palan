@@ -146,6 +146,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"tftfft tfft fttf ftft fft\n"
 								"fftf fttfft fftft tftf tftf tftt\n"
 								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
+
+	testcode = "020_arrlit";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "23413 56746 ");
 }
 
 TEST_CASE("Compile error test", "[basic]")
