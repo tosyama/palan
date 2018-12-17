@@ -712,11 +712,28 @@ term: literal
 	| array_val
 	{
 		if ($1.size() >= 2) {
-			json arr_val = {
-				{"exp-type", "array-val"},
-				{"vals", $1}
-			};
-			$$ = move(arr_val);
+			bool three_dim = true;
+			for (json e: $1) {
+				if (e["exp-type"] != "array-val"
+						|| e["vals"].size() != 1
+						|| e["vals"][0]["exp-type"] != "array-val") {
+					three_dim = false;
+					break;
+				}
+			}
+
+			if (three_dim) {
+				for (int i=1; i<$1.size(); i++)
+					$1[0]["vals"].push_back($1[i]["vals"][0]);
+				$$ = move($1[0]);
+
+			} else {
+				json arr_val = {
+					{"exp-type", "array-val"},
+					{"vals", $1}
+				};
+				$$ = move(arr_val);
+			}
 		} else {
 			$$ = move($1[0]);
 		}
