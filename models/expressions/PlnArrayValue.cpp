@@ -88,14 +88,12 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 	bool is_int = true;
 	bool is_flo = true;
 	for (auto e: elements) {
-		if (e->type == ET_ARRAYVALUE) {
-			setVarType(element_type);
-		}
 		if (e->type == ET_VALUE) {
 			PlnValType vtype = e->values[0].type;
 			is_int = is_int && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8);
 			is_flo = is_flo && (vtype == VL_LIT_FLO8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8);
-		}
+		} else
+			BOOST_ASSERT(false);
 	}
 
 	if (!is_int && !is_flo) {

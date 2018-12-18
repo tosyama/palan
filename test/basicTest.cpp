@@ -247,4 +247,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "529_arrlit_type_err3";
 	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "530_arrlit_type_err4";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[3]'.");
 }
