@@ -9,7 +9,6 @@ PlnModule.o:  models/PlnModule.h \
 	models/PlnArray.h models/PlnGeneralObject.h models/PlnType.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h \
-	models/../PlnMessage.h models/../PlnException.h \
 	models/../PlnTreeBuildHelper.h
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
@@ -143,7 +142,9 @@ PlnArrayValue.o:  \
 	models/expressions/../../PlnModel.h models/expressions/../PlnType.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h \
-	models/expressions/../../PlnConstants.h
+	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnMessage.h \
+	models/expressions/../../PlnException.h
 PlnClone.o:  \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \

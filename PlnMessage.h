@@ -26,6 +26,8 @@ enum PlnErrCode {
 	E_DuplicateConstName,	// const name
 	E_CantUseOperatorHere,	// var name
 	E_CantUseIndexHere, // var name
+	E_CantUseDynamicValue, // sentence
+	E_AllowedOnlyInteger,	// none
 
 	E_InvalidAST,	// source name, line
 
@@ -48,6 +50,10 @@ enum PlnHelpCode {
 class PlnMessage
 {
 public:
+	// Static terms
+	static string floatNumber();
+	static string arrayValue();
+
 	static string getErr(PlnErrCode err_code, string arg1="", string arg2="");
 	static const char* getHelp(PlnHelpCode help_code);
 };

@@ -12,6 +12,8 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &elements)
 	: PlnExpression(ET_ARRAYVALUE), elements(move(elements)),
@@ -23,24 +25,35 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &elements)
 	values.push_back(val);
 }
 
-static void addElements(vector<PlnExpression*> &dst, vector<int> sizes, vector<PlnExpression*> &src)
+// true: success, false: NG
+static bool addElements(vector<PlnExpression*> &dst, vector<int> sizes, vector<PlnExpression*> &src)
 {
-	BOOST_ASSERT(sizes[0] == src.size());
+	if (sizes[0] != src.size())
+		return false;
+
 	if (sizes.size() >= 2) {
 		sizes.erase(sizes.begin());
 		for (auto e: src) {
 			BOOST_ASSERT(e->type == ET_ARRAYVALUE);
-			addElements(dst, sizes, static_cast<PlnArrayValue*>(e)->elements);
+			bool success = addElements(dst, sizes, static_cast<PlnArrayValue*>(e)->elements);
+			if (!success)
+				return false;
 		}
 	} else {
 		for (auto e: src)
 			dst.push_back(e);
 	}
+	return true;
 }
 
 void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 {
-	BOOST_ASSERT(var_type.size()>=2);
+	if (var_type.size() <= 1) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), var_type.back()->name);
+		err.loc = this->loc;
+		throw err;
+	}
+
 	PlnType* t = var_type.back();
 
 	if (t->obj_type == OT_FIXED_ARRAY) {
@@ -51,10 +64,19 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 
 		if (sizes.size() >= 2) {
 			vector<PlnExpression*> exps;
-			addElements(exps, sizes, elements);
+			bool success = addElements(exps, sizes, elements);
+			if (!success) {
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), var_type.back()->name);
+				err.loc = this->loc;
+				throw err;
+			}
 			elements = move(exps);
 		}
-		BOOST_ASSERT(total_num == elements.size());
+		if (total_num != elements.size()) {
+			PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), var_type.back()->name);
+			err.loc = this->loc;
+			throw err;
+		}
 
 	} else {
 		BOOST_ASSERT(false);
@@ -76,12 +98,20 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 		}
 	}
 
+	if (!is_int && !is_flo) {
+		PlnCompileError err(E_CantUseDynamicValue, PlnMessage::arrayValue());
+		err.loc = this->loc;
+		throw err;
+	}
+
 	if (element_type.back()->data_type == DT_SINT
 			|| element_type.back()->data_type == DT_UINT) {
 		if (is_int) {
 			arrval_type = AVT_INT_LIT_ARRAY;
 		} else {
-			BOOST_ASSERT(false);
+			PlnCompileError err(E_AllowedOnlyInteger);
+			err.loc = this->loc;
+			throw err;
 		}
 
 	} else if (element_type.back()->data_type == DT_FLOAT) {
@@ -90,8 +120,11 @@ void PlnArrayValue::setVarType(vector<PlnType*> var_type)
 		} else {
 			BOOST_ASSERT(false);
 		}
-	} else
-		BOOST_ASSERT(false);
+	} else {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), var_type.back()->name);
+		err.loc = this->loc;
+		throw err;
+	}
 
 	(*values[0].inf.wk_type) = var_type;
 }

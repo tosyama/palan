@@ -19,8 +19,6 @@
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
-#include "../PlnMessage.h"
-#include "../PlnException.h"
 #include "../PlnTreeBuildHelper.h"
 
 using namespace std;

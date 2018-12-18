@@ -26,4 +26,3 @@ public:
 	void gen(PlnGenerator& g) override;
 };
 
-

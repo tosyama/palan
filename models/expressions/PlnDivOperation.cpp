@@ -110,7 +110,7 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
 	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
 	if (isFloat && div_type == DV_MOD) {
-		PlnCompileError err(E_CantUseOperatorHere, "float number");
+		PlnCompileError err(E_CantUseOperatorHere, PlnMessage::floatNumber());
 		throw err;
 	}
 	BOOST_ASSERT(!(isFloat && div_type == DV_MOD));

@@ -293,11 +293,11 @@ PlnType* PlnType::getRawArray()
 
 string PlnType::getFixedArrayName(vector<PlnType*> &item_type, vector<int>& sizes)
 {
-	string arr_name = "]";
+	string arr_name = "[";
 	for (int s: sizes) {
-		arr_name = "," + to_string(s) + arr_name;
+		arr_name = arr_name + to_string(s) + ",";
 	}
-	arr_name.front() = '[';
+	arr_name.back() = ']';
 
 	string &item_name = item_type.front()->name;
 	string item_suffix = item_type.back()->name.substr(item_name.size());
