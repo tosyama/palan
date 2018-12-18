@@ -18,6 +18,7 @@
 #include "../PlnVariable.h"
 #include "../PlnType.h"
 #include "PlnDivOperation.h"
+#include "PlnArrayValue.h"
 #include "assignitem/PlnAssignItem.h"
 
 #include "PlnArrayItem.h"
@@ -96,10 +97,10 @@ static bool checkNeedToSave(vector<PlnExpression*> &exps, int exp_ind, vector<Pl
 }
 
 // PlnAssignment
-PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression*>& exps)
-	: lvals(move(lvals)), PlnExpression(ET_ASSIGN), expressions(move(exps))
+PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpression*>& exps)
+	: lvals(move(dst_vals)), PlnExpression(ET_ASSIGN), expressions(move(exps))
 {
-	for (auto e: this->lvals) {
+	for (auto e: lvals) {
 		BOOST_ASSERT(e->values.size() == 1);
 		BOOST_ASSERT(e->type == ET_VALUE || e->type == ET_ARRAYITEM);
 		BOOST_ASSERT(e->values[0].type == VL_VAR);
@@ -116,9 +117,13 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 		}
 		PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 		for (int i=0; i<ex->values.size(); ++i) {
-			if (dst_i < this->lvals.size()) {
+			if (dst_i < lvals.size()) {
+				if (ex->type == ET_ARRAYVALUE) {
+					BOOST_ASSERT(lvals[dst_i]->values[0].type == VL_VAR);
+					static_cast<PlnArrayValue*>(ex)->setVarType(lvals[dst_i]->values[0].inf.var->var_type);
+				}
 				PlnType* src_type = ex->values[i].getType();	
-				PlnType* dst_type = this->lvals[dst_i]->values[0].getType();
+				PlnType* dst_type = lvals[dst_i]->values[0].getType();
 				if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
 					delete ai;
 					PlnCompileError err(E_IncompatibleTypeAssign, src_type->name, dst_type->name);
@@ -127,9 +132,9 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& lvals, vector<PlnExpression
 				}
 
 				bool need_save = false;
-				need_save = checkNeedToSave(expressions, exp_i, this->lvals, dst_i);
+				need_save = checkNeedToSave(expressions, exp_i, lvals, dst_i);
 
-				ai->addDstEx(this->lvals[dst_i], need_save);
+				ai->addDstEx(lvals[dst_i], need_save);
 				dst_i++;
 			}
 		}

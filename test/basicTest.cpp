@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "f");
+	REQUIRE(exec(testcode) == "1 5");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -146,6 +146,12 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"tftfft tfft fttf ftft fft\n"
 								"fftf fttfft fftft tftf tftf tftt\n"
 								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
+
+	testcode = "020_arrlit";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "23-413 56746 3.3 1.0 5.5\n"
+								"567 210 46 12-6-12 12-6-12 12-6-12\n"
+								"116 161 13131313");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -226,4 +232,22 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "524_flo_mod_err";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'float number'.");
+
+	testcode = "525_notarrlit_err";
+	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
+
+	testcode = "526_arrlit_noint_err";
+	REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
+
+	testcode = "527_arrlit_type_err";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2][3]'.");
+
+	testcode = "528_arrlit_type_err2";
+	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
+
+	testcode = "529_arrlit_type_err3";
+	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "530_arrlit_type_err4";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[3]'.");
 }

@@ -21,6 +21,7 @@
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 #include "expressions/assignitem/PlnAssignItem.h"
+#include "expressions/PlnArrayValue.h"
 
 // PlnVarInit
 static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* ex)
@@ -49,9 +50,13 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 			for (int i=0; i<ex->values.size(); ++i) {
 				if (var_i < vars.size()) {
+					if (ex->type == ET_ARRAYVALUE) {
+						static_cast<PlnArrayValue*>(ex)->setVarType(vars[var_i].inf.var->var_type);
+					}
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex);
 					ai->addDstEx(var_ex, false);
+
 					++var_i;
 				}
 			}

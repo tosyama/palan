@@ -204,6 +204,65 @@ int PlnX86_64Generator::registerConst(const PlnGenEntity* constValue) {
 	return id; 
 }
 
+
+template <typename T>
+int findCinfo(T*& arr, PlnGenConstType type, vector<int64_t> &int_array, vector<PlnX86_64Generator::ConstInfo> &const_buf)
+{
+	int id = 0;
+	for (auto cinfo: const_buf) {
+		if (cinfo.type == type && cinfo.size == int_array.size()) {
+			T* darr = (T*)cinfo.data.q_arr;
+			int i;
+			for (i=0; i<cinfo.size; i++)
+				if (darr[i] != int_array[i])
+					break;
+			if (i==cinfo.size) {
+				arr = NULL;
+				return id; // found same data xxto id;
+			}
+		}
+		id++;
+	}
+
+	arr = new T[int_array.size()];
+	for (int i=0; i<int_array.size(); i++)
+		arr[i] = int_array[i];
+	
+	return id;
+}
+
+int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_size)
+{
+	ConstInfo cinfo;
+	cinfo.generated = false;
+	cinfo.size = int_array.size();
+	int id;
+
+	if (item_size == 8) {
+		cinfo.type = GCT_INT64_ARRAY;
+		id = findCinfo(cinfo.data.q_arr, cinfo.type, int_array, const_buf);
+
+	} else if (item_size == 4) {
+		cinfo.type = GCT_INT32_ARRAY;
+		id = findCinfo(cinfo.data.l_arr, cinfo.type, int_array, const_buf);
+
+	} else if (item_size == 2) {
+		cinfo.type = GCT_INT16_ARRAY;
+		id = findCinfo(cinfo.data.s_arr, cinfo.type, int_array, const_buf);
+
+	} else if (item_size == 1) {
+		cinfo.type = GCT_INT8_ARRAY;
+		id = findCinfo(cinfo.data.b_arr, cinfo.type, int_array, const_buf);
+
+	} else
+		BOOST_ASSERT(false);	
+
+	if (cinfo.data.q_arr)
+		const_buf.push_back(cinfo);
+
+	return id;
+}
+
 void PlnX86_64Generator::genSecReadOnlyData()
 {
 	os << ".section .rodata" << endl;
@@ -324,18 +383,29 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 
 void PlnX86_64Generator::genEndFunc()
 {
-	bool aligned = false;
 	int i = 0;
 	for (ConstInfo ci: const_buf) {
 		if (!ci.generated) {
-			if (!aligned) {
-				os << "	.align 8" << endl;
-				aligned = true;
-			}
-			os << ".LD" << i << ":	# " << ci.data.d << endl;
+			os << "	.align 8" << endl;
+			os << ".LD" << i << ":" << endl;
 			if (ci.type == GCT_FLO64) {
-				os << "	.long	" << ci.data.ai[0] << endl;
-				os << "	.long	" << ci.data.ai[1] << endl;
+				os << "	.quad	" << ci.data.q << "	# " << ci.data.d << endl;
+			} else if (ci.type == GCT_INT64_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.quad	" << ci.data.q_arr[i] << endl;
+				}
+			} else if (ci.type == GCT_INT32_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.long	" << ci.data.l_arr[i] << endl;
+				}
+			} else if (ci.type == GCT_INT16_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.short	" << ci.data.s_arr[i] << endl;
+				}
+			} else if (ci.type == GCT_INT8_ARRAY) {
+				for (int i=0; i<ci.size; i++) {
+					os << "	.byte	" << int(ci.data.b_arr[i]) << endl;
+				}
 			} else {
 				BOOST_ASSERT(false);
 			}
@@ -1252,11 +1322,46 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->data.i = dp->data.intValue;
 
 	} else if (dp->type == DP_RO_DATA) {
-		e->type = GE_STRING;
-		e->alloc_type = GA_MEM;
-		e->size = 8;
-		e->data_type = DT_OBJECT_REF;
-		e->data.str = new string(string("$.LC") + to_string(dp->data.index));
+		if (dp->data.ro.index >= 0) {
+			e->type = GE_STRING;
+			e->alloc_type = GA_MEM;
+			e->size = 8;
+			e->data_type = DT_OBJECT_REF;
+			e->data.str = new string(string("$.LC") + to_string(dp->data.ro.index));
+		} else {
+			int id;
+			if (dp->data.ro.int_array) {
+				id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
+
+			} else {
+				BOOST_ASSERT(dp->data.ro.flo_array);
+				vector<int64_t> int_array;
+
+				if (dp->data.ro.item_size == 8) {
+					union { double d; int64_t i; } data;
+					for (double d: *(dp->data.ro.flo_array)) {
+						data.d = d;
+						int_array.push_back(data.i);
+					}
+				} else if (dp->data.ro.item_size == 4) {
+					union { float f; int32_t i; } data;
+					for (double d: *(dp->data.ro.flo_array)) {
+						data.f = d;
+						int_array.push_back(data.i);
+					}
+
+				} else {
+					BOOST_ASSERT(false);
+				}
+				id = registerConstArray(int_array, dp->data.ro.item_size);
+			}
+
+			e->type = GE_STRING;
+			e->alloc_type = GA_MEM;
+			e->size = 8;
+			e->data_type = DT_OBJECT_REF;
+			e->data.str = new string(string("$.LD") + to_string(id));
+		}
 
 	} else
 		BOOST_ASSERT(false);

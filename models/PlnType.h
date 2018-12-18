@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -34,11 +34,17 @@ enum PlnTypeConvCap {
 	TC_CONV_OK = TC_SAME | TC_AUTO_CAST | TC_LOSTABLE_AUTO_CAST | TC_UP_CAST | TC_DOWN_CAST
 };
 
+enum PlnObjectType {
+	OT_UNKNOWN,
+	OT_FIXED_ARRAY
+};
+
 class PlnType {
 public:
 	int	data_type;
 	string name;
 	int size;
+	PlnObjectType obj_type;
 	union {
 		struct {
 			bool is_fixed_size;

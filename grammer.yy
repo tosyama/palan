@@ -25,6 +25,7 @@ int yylex();
 %token KW_IF
 %token KW_ELSE
 %token KW_CONST
+%token KW_VAR
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -114,7 +115,6 @@ single_return: /* empty */
 	| type_def
 	;
 
-
 function_definition: palan_function_definition
 	| ccall_declaration
 	| syscall_definition
@@ -148,7 +148,9 @@ statement: semi_stmt ';'
 
 semi_stmt: st_expression
 	| declarations
-	| declarations '=' expression
+	| declarations '=' expressions
+	| subdeclaration '=' expression
+	| KW_VAR autotype_declartations '=' expressions
 	| const_def
 	| return_stmt
 	;
@@ -205,10 +207,15 @@ unary_expression: ID
 	| unary_expression array_item
 	;
 
+array_val: '[' expressions ']'
+	| array_val '[' expressions ']'
+	;
+
 term: INT
 	| UINT
 	| STR
 	| unary_expression
+	| array_val
 	| '(' expression ')'
 	;
 
@@ -235,6 +242,10 @@ declaration: type_def ID take_owner
 	;
 
 subdeclaration: ID take_owner
+	;
+
+autotype_declartations: subdeclaration
+	| autotype_declartations ',' subdeclaration
 	;
 
 return_stmt: KW_RETURN

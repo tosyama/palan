@@ -53,8 +53,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %token <int64_t>	INT	"integer"
 %token <uint64_t>	UINT	"unsigned integer"
-%token <double>		FLOAT	"float"
-%token <string>	STR	"string"
+%token <double>		FLOAT	"float" %token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	FUNC_ID	"function identifier"
 %token <string>	TYPENAME	"type name"
@@ -101,7 +100,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<json>>	arguments
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
-%type <vector<json>>	dst_vals
+%type <vector<json>>	dst_vals array_val
 %type <vector<json>>	array_indexes
 
 %right '='
@@ -710,6 +709,37 @@ term: literal
 		$$ = move($1);
 	}
 
+	| array_val
+	{
+		if ($1.size() >= 2) {
+			bool three_dim = true;
+			for (json e: $1) {
+				if (e["exp-type"] != "array-val"
+						|| e["vals"].size() != 1
+						|| e["vals"][0]["exp-type"] != "array-val") {
+					three_dim = false;
+					break;
+				}
+			}
+
+			if (three_dim) {
+				for (int i=1; i<$1.size(); i++)
+					$1[0]["vals"].push_back($1[i]["vals"][0]);
+				$$ = move($1[0]);
+
+			} else {
+				json arr_val = {
+					{"exp-type", "array-val"},
+					{"vals", $1}
+				};
+				$$ = move(arr_val);
+			}
+		} else {
+			$$ = move($1[0]);
+		}
+		LOC($$, @$);
+	}
+
 	| var_expression
 	{
 		$1["exp-type"] = "var";
@@ -753,7 +783,6 @@ literal: INT
 		LOC($$, @$);
 	}
 
-
 	| STR
 	{
 		json lit_str = {
@@ -762,6 +791,26 @@ literal: INT
 		};
 		$$ = move(lit_str);
 		LOC($$, @$);
+	}
+	;
+
+array_val: '[' expressions ']'
+	{
+		json arr_val = {
+			{"exp-type", "array-val"},
+			{"vals", $2}
+		};
+		$$.push_back(arr_val);
+	}
+
+	| array_val '[' expressions ']'
+	{
+		$$ = move($1);
+		json arr_val = {
+			{"exp-type", "array-val"},
+			{"vals", $3}
+		};
+		$$.push_back(arr_val);
 	}
 	;
 

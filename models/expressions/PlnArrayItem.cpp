@@ -5,7 +5,7 @@
 /// e.g.) a[3]
 ///
 /// @file	PlnArrayItem.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
 #include "PlnArrayItem.h"
@@ -31,9 +31,9 @@ static PlnExpression* getIndexExpression(
 		ex = PlnMulOperation::create(ex, oex);
 	}
 
-	if (item_ind.size() > (index+1)) {
+	if (index) {
 		int next_offset = offset * arr_sizes[index];
-		auto base_ex = getIndexExpression(index+1, next_offset, item_ind, arr_sizes);
+		auto base_ex = getIndexExpression(index-1, next_offset, item_ind, arr_sizes);
 		ex = PlnAddOperation::create(base_ex, ex);
 	}
 
@@ -79,7 +79,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 
 	auto arr_sizes = arr_type.back()->inf.fixedarray.sizes;
 	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
-	index_ex = getIndexExpression(0,1,item_ind,*arr_sizes);
+	index_ex = getIndexExpression(item_ind.size()-1, 1, item_ind,*arr_sizes);
 }
 
 PlnArrayItem::~PlnArrayItem()

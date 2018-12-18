@@ -9,6 +9,7 @@
 // Expression: 
 enum PlnExprsnType {
 	ET_VALUE,
+	ET_ARRAYVALUE,
 	ET_FUNCCALL,
 	ET_ADD,
 	ET_MUL,

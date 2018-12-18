@@ -58,7 +58,10 @@ public:
 		int i=0;
 		for (auto &di: dsts) {
 			auto v = src_ex->values[i];
-			if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
+			if (src_ex->type == ET_ARRAYVALUE) {
+				di.item->setSrcEx(da, si, src_ex);
+
+			} else if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
 				di.save_src_var = PlnVariable::createTempVar(da, *v.inf.wk_type, "save src");
 				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);
 

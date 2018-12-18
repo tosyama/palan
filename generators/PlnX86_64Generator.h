@@ -7,7 +7,11 @@
 
 enum PlnGenConstType {
 	GCT_FLO32,
-	GCT_FLO64
+	GCT_FLO64,
+	GCT_INT8_ARRAY,
+	GCT_INT16_ARRAY,
+	GCT_INT32_ARRAY,
+	GCT_INT64_ARRAY
 };
 
 class PlnX86_64Generator : public PlnGenerator
@@ -15,8 +19,12 @@ class PlnX86_64Generator : public PlnGenerator
 	bool require_align;
 	struct ConstInfo {
 		PlnGenConstType type;
-		union { double d; uint32_t ai[2]; } data;
+		union {
+			double d; int64_t q;
+			int64_t* q_arr; int32_t* l_arr; int16_t* s_arr; int8_t* b_arr;
+		} data;
 		bool generated;
+		int size;
 	};
 	vector<ConstInfo> const_buf;
 	
@@ -40,6 +48,7 @@ class PlnX86_64Generator : public PlnGenerator
 	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
 
 	int registerConst(const PlnGenEntity* constValue);
+	int registerConstArray(vector<int64_t> &int_array, int item_size);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
