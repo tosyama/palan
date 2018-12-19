@@ -151,7 +151,15 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			string name;
 			if (ret["name"].is_string())
 				name = ret["name"];
-			f->addRetValue(name, var_type, true);
+
+			try {
+				f->addRetValue(name, var_type, true);
+
+			} catch (PlnCompileError& err) {
+				if (err.loc.fid == -1)
+					setLoc(&err, ret);
+				throw err;
+			}
 			setLoc(f->return_vals.back(), ret);
 		}
 		setLoc(f, proto);
@@ -419,7 +427,7 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 	try {
 		return new PlnReturnStmt(ret_vals, CUR_BLOCK);
 
-	} catch(PlnCompileError &err) {
+	} catch (PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, ret);
 		throw err;
@@ -551,7 +559,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 
 	try {
 		return new PlnAssignment(dst_vals, src_exps);
-	} catch(PlnCompileError &err) {
+	} catch (PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, asgn);
 		throw err;

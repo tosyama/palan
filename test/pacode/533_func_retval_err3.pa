@@ -1,0 +1,5 @@
+
+func err_func(int64 a, int32 b)
+	-> int64 a, b
+{
+}

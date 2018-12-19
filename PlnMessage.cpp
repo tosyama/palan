@@ -21,6 +21,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Number of return arguments or definitions are not match."; break;
 		case E_NeedRetValues:
 			f = "Return argument(s) can't be omitted at this function."; break;
+		case E_InvalidReturnValType:
+			f = "Return value '%1%' type need to same as the parameter type."; break;
 		case E_CouldnotOpenFile:
 			f = "Could not open file '%1%'."; break;
 		case E_CantCopyFreedVar:

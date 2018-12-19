@@ -36,18 +36,20 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init)
 {
 	for (auto r: return_vals)
-		if (r->name != "" && r->name == rname) return NULL;
+		if (r->name != "" && r->name == rname)
+			throw PlnCompileError(E_DuplicateVarName, rname);
 
 	for (auto p: parameters)
 		if (p->name == rname) {
 			if (!rtype.size()) 
 				rtype = return_vals.back()->var_type;
 			if (p->var_type.size() != rtype.size())
-				return NULL;
+				throw PlnCompileError(E_InvalidReturnValType, rname);
 
 			for (int i=0; i<rtype.size(); i++)
 				if (p->var_type[i] != rtype[i])
-					return NULL;
+					throw PlnCompileError(E_InvalidReturnValType, rname);
+
 			p->param_type = PRT_PARAM | PRT_RETVAL;
 
 			return_vals.push_back(p);
