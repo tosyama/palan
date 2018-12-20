@@ -20,7 +20,7 @@ static void preLoadDp(PlnGenerator &g, PlnDataPlace *dp)
 		auto index_dp = dp->data.indirect.index_dp;
 
 		if (base_dp) g.genLoadDp(base_dp, false);
-		if (index_dp) g.genLoadDp(index_dp, false);
+		if (index_dp && index_dp->type != DP_LIT_INT) g.genLoadDp(index_dp, false);
 		if (base_dp) g.genSaveDp(base_dp);
 		if (index_dp) g.genSaveDp(index_dp);
 	}

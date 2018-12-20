@@ -326,7 +326,7 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjBasePtr()
 
 PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
 {
-	auto dp = new PlnDataPlace(8, DT_UINT);
+	auto dp = new PlnDataPlace(8, DT_SINT);
 	dp->type = DP_REG;
 	dp->status = DS_READY_ASSIGN;
 
@@ -337,6 +337,11 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr()
 	dp->comment = &cmt;
 
 	return dp;
+}
+
+PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr(int staticIndex)
+{
+	return getLiteralIntDp(staticIndex);
 }
 
 void PlnX86_64DataAllocator::checkDataLeak()

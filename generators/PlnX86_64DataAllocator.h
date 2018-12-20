@@ -42,6 +42,7 @@ public:
 	// for array item
 	PlnDataPlace* prepareObjBasePtr() override;
 	PlnDataPlace* prepareObjIndexPtr() override;
+	PlnDataPlace* prepareObjIndexPtr(int staticIndex) override;
 
 	// for debug
 	void checkDataLeak() override;

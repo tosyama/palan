@@ -275,10 +275,16 @@ void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 	dp->data.indirect.base_dp = base_dp;
 	dp->data.indirect.index_dp = index_dp;
 	dp->data.indirect.base_id = base_dp->data.reg.id;
-	if (index_dp)
-		dp->data.indirect.index_id = index_dp->data.reg.id;
-	else 
-		dp->data.indirect.index_id = -1;
+	dp->data.indirect.index_id = -1;
+
+	if (index_dp) {
+		if (index_dp->type == DP_REG)
+			dp->data.indirect.index_id = index_dp->data.reg.id;
+		else if (index_dp->type == DP_LIT_INT)
+			dp->data.indirect.displacement = index_dp->data.intValue * dp->size;
+		else
+			BOOST_ASSERT(false);
+	}
 
 	dp->alloc_step = step;
 	dp->release_step = step;
@@ -455,8 +461,10 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 				if (regs[base_id] != base_dp) return true;
 			}
 			if (auto index_dp = dp->data.indirect.index_dp) {
-				int index_id = index_dp->data.reg.id;
-				if (regs[index_id] != index_dp) return true;
+				if (index_dp->type == DP_REG) {
+					int index_id = index_dp->data.reg.id;
+					if (regs[index_id] != index_dp) return true;
+				}
 			}
 			return false;
 		}
@@ -496,7 +504,8 @@ static void prePopSrc(PlnDataAllocator& da, PlnDataPlace *dp)
 			da.popSrc(base_dp);
 		}
 		if (auto index_dp = dp->data.indirect.index_dp) {
-			da.popSrc(index_dp);
+			if (index_dp->type != DP_LIT_INT)
+				da.popSrc(index_dp);
 		}
 	}
 }
