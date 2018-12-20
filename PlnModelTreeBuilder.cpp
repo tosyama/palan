@@ -191,8 +191,13 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		assertAST(false, proto);
 	
 	vector<string> param_types, ret_types;
-	for (auto p: f->parameters)
-		param_types.push_back(p->var_type.back()->name);
+	for (auto p: f->parameters) {
+		if (p->ptr_type == PTR_PARAM_MOVE) {
+			param_types.push_back(p->var_type.back()->name + ">>");
+		} else {
+			param_types.push_back(p->var_type.back()->name);
+		}
+	}
 	for (auto r: f->return_vals)
 		ret_types.push_back(r->var_type.back()->name);
 
@@ -215,6 +220,9 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		if (var_type.size()) {
 			param_types.push_back(var_type.back()->name);
 			pre_name = param_types.back();
+			if (param["move"].is_boolean() && param["move"] == true) {
+				param_types.back() = pre_name + ">>";
+			}
 		} else {
 			param_types.push_back(pre_name);
 		}

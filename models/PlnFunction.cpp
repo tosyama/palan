@@ -130,6 +130,7 @@ static string mangling(PlnFunction* f)
 	for (auto p: f->parameters) {
 		seed += "|";
 		seed += p->var_type.back()->name;
+		seed += "." + to_string(p->ptr_type);
 	}
 	size_t hash = std::hash<string>{}(seed);
 	string hash_str;

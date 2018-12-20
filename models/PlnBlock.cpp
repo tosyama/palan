@@ -157,9 +157,16 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 						PlnType* a_type = arg_vals[i]->getType();
 						PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
 						if (cap == TC_CANT_CONV) goto next_func;
-						if (p->ptr_type == PTR_PARAM_MOVE &&
-								arg_vals[i]->asgn_type != ASGN_MOVE)
+
+						if (p->ptr_type == PTR_PARAM_MOVE && arg_vals[i]->asgn_type != ASGN_MOVE) {
+							if (func_name == "show") cout << "NG1" << endl;
 							goto next_func;
+						}
+						if (p->ptr_type != PTR_PARAM_MOVE && arg_vals[i]->asgn_type == ASGN_MOVE) {
+							if (func_name == "show") cout << "NG2" << endl;
+							goto next_func;
+						}
+
 						if (cap != TC_SAME) do_cast = true;
 					}
 					++i;
@@ -199,7 +206,10 @@ PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& par
 					&& f->return_vals.size() == ret_types.size()) {
 
 				for (int i=0; i<param_types.size(); i++) {
-					string& pt_name = f->parameters[i]->var_type.back()->name;
+					string pt_name = f->parameters[i]->var_type.back()->name;
+					if (f->parameters[i]->ptr_type == PTR_PARAM_MOVE) {
+						pt_name += ">>";
+					}
 					if (pt_name != param_types[i]) {
 						goto next;
 					}

@@ -105,6 +105,7 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 		BOOST_ASSERT(e->type == ET_VALUE || e->type == ET_ARRAYITEM);
 		BOOST_ASSERT(e->values[0].type == VL_VAR);
 		values.push_back(e->values[0]);
+		values.back().asgn_type = NO_ASGN;
 	}
 
 	int dst_i = 0;
