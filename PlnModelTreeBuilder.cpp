@@ -190,7 +190,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	} else
 		assertAST(false, proto);
 	
-	vector<string> param_types, ret_types;
+	vector<string> param_types;
 	for (auto p: f->parameters) {
 		if (p->ptr_type == PTR_PARAM_MOVE) {
 			param_types.push_back(p->var_type.back()->name + ">>");
@@ -198,10 +198,8 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			param_types.push_back(p->var_type.back()->name);
 		}
 	}
-	for (auto r: f->return_vals)
-		ret_types.push_back(r->var_type.back()->name);
 
-	if (CUR_BLOCK->getFuncProto(f->name, param_types, ret_types)) {
+	if (CUR_BLOCK->getFuncProto(f->name, param_types)) {
 		PlnCompileError err(E_DuplicateFunction, f->name);
 		setLoc(&err, proto);
 		throw err;
@@ -228,19 +226,9 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		}
 	}
 
-	vector<string> ret_types;
-	for (auto& ret: func["rets"]) {
-		vector<PlnType*> var_type = getVarType(ret["var-type"], scope);
-		if (var_type.size()) {
-			ret_types.push_back(var_type.back()->name);
-			pre_name = ret_types.back();
-		} else {
-			ret_types.push_back(pre_name);
-		}
-	}
-
-	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types, ret_types);
+	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);
 	assertAST(f, func);
+	assertAST(f->return_vals.size() == func["rets"].size(), func);
 	setLoc(f, func);
 
 	f->parent = CUR_BLOCK;
