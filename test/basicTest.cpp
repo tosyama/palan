@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1 5");
+	REQUIRE(exec(testcode) == "2 5");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -250,4 +250,13 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "530_arrlit_type_err4";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[3]'.");
+
+	testcode = "531_func_retval_err";
+	REQUIRE(build(testcode) == "0:4-4 Variable name 'b' already defined.");
+
+	testcode = "532_func_retval_err2";
+	REQUIRE(build(testcode) == "0:1-1 Return value 'a' type need to same as the parameter type.");
+
+	testcode = "533_func_retval_err3";
+	REQUIRE(build(testcode) == "0:3-3 Return value 'b' type need to same as the parameter type.");
 }

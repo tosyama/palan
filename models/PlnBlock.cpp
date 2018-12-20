@@ -157,9 +157,14 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 						PlnType* a_type = arg_vals[i]->getType();
 						PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
 						if (cap == TC_CANT_CONV) goto next_func;
-						if (p->ptr_type == PTR_PARAM_MOVE &&
-								arg_vals[i]->asgn_type != ASGN_MOVE)
+
+						if (p->ptr_type == PTR_PARAM_MOVE && arg_vals[i]->asgn_type != ASGN_MOVE) {
 							goto next_func;
+						}
+						if (p->ptr_type != PTR_PARAM_MOVE && arg_vals[i]->asgn_type == ASGN_MOVE) {
+							goto next_func;
+						}
+
 						if (cap != TC_SAME) do_cast = true;
 					}
 					++i;
@@ -167,8 +172,8 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 
 				if (is_perfect_match) {
 					if (do_cast) goto next_func;
-					// else Error: Can't decide a function.
-					throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+					else // Existing another perfect match case is bug.
+						BOOST_ASSERT(false);
 
 				} else {
 					matched_func = f;
@@ -188,29 +193,24 @@ next_func:
 	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 }
 
-PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& param_types, vector<string>& ret_types)
+PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& param_types)
 {
 	PlnBlock* b = this;
 
 	do {
 		for (auto f: b->funcs) {
-			if (f->name == func_name
-					&& f->parameters.size() == param_types.size()
-					&& f->return_vals.size() == ret_types.size()) {
+			if (f->name == func_name && f->parameters.size() == param_types.size()) {
 
 				for (int i=0; i<param_types.size(); i++) {
-					string& pt_name = f->parameters[i]->var_type.back()->name;
+					string pt_name = f->parameters[i]->var_type.back()->name;
+					if (f->parameters[i]->ptr_type == PTR_PARAM_MOVE) {
+						pt_name += ">>";
+					}
 					if (pt_name != param_types[i]) {
 						goto next;
 					}
 				}
 
-				for (int i=0; i<ret_types.size(); i++) {
-					string& rt_name = f->return_vals[i]->var_type.back()->name;
-					if (rt_name != ret_types[i]) {
-						goto next;
-					}
-				}
 				BOOST_ASSERT(f->implement == NULL);
 				return f;
 			}

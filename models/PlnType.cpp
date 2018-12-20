@@ -256,10 +256,10 @@ vector<PlnType*> PlnType::getBasicTypes()
 	return basic_types;
 }
 
-PlnType* PlnType::getByte()
-{
-	return byte_type;
-}
+// PlnType* PlnType::getByte()	// not use now
+// {
+// 	return byte_type;
+// }
 
 PlnType* PlnType::getSint()
 {

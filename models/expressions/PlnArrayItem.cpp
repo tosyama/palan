@@ -80,6 +80,15 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	auto arr_sizes = arr_type.back()->inf.fixedarray.sizes;
 	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
 	index_ex = getIndexExpression(item_ind.size()-1, 1, item_ind,*arr_sizes);
+	if (index_ex->type == ET_VALUE) {
+		if (index_ex->values[0].type == VL_LIT_UINT8) {
+			int64_t i = index_ex->values[0].inf.uintValue;
+			index_ex->values[0] = PlnValue(i);
+		} else if (index_ex->values[0].type == VL_LIT_FLO8) {
+			int64_t i = index_ex->values[0].inf.floValue;
+			index_ex->values[0] = PlnValue(i);
+		}
+	}
 }
 
 PlnArrayItem::~PlnArrayItem()
@@ -103,9 +112,18 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	array_ex->data_places.push_back(base_dp);
 	array_ex->finish(da, si);
 
-	auto index_dp = da.prepareObjIndexPtr();
-	index_ex->data_places.push_back(index_dp);
-	index_ex->finish(da, si);
+	PlnDataPlace *index_dp;
+	if (index_ex->type == ET_VALUE
+		&& index_ex->values[0].type == VL_LIT_INT8) {
+		index_dp = da.prepareObjIndexPtr(index_ex->values[0].inf.intValue);
+		delete index_ex;
+		index_ex = NULL;
+
+	} else {
+		index_dp = da.prepareObjIndexPtr();
+		index_ex->data_places.push_back(index_dp);
+		index_ex->finish(da, si);
+	}
 
 	auto item_dp = item_var->place;
 	da.setIndirectObjDp(item_dp, base_dp, index_dp);
@@ -119,7 +137,8 @@ void PlnArrayItem::gen(PlnGenerator& g)
 {
 	// for lval & rval
 	array_ex->gen(g);
-	index_ex->gen(g);
+	if (index_ex)
+		index_ex->gen(g);
 	
 	// rval
 	if (data_places.size()) {

@@ -75,7 +75,7 @@ public:
 	PlnTypeConvCap canConvFrom(PlnType *src);
 
 	static vector<PlnType*> getBasicTypes();
-	static PlnType* getByte();
+//	static PlnType* getByte();	// not use now
 	static PlnType* getSint();
 	static PlnType* getUint();
 	static PlnType* getFlo();

@@ -16,6 +16,7 @@ enum PlnErrCode {
 	E_NumOfLRVariables,	// none
 	E_InvalidRetValues,	// none
 	E_NeedRetValues,	// none
+	E_InvalidReturnValType, // var name
 	E_CouldnotOpenFile,	// file name
 	E_CantCopyFreedVar,	// var name
 	E_AmbiguousFuncCall,	// func name

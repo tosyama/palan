@@ -151,7 +151,15 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			string name;
 			if (ret["name"].is_string())
 				name = ret["name"];
-			f->addRetValue(name, var_type, true);
+
+			try {
+				f->addRetValue(name, var_type, true);
+
+			} catch (PlnCompileError& err) {
+				if (err.loc.fid == -1)
+					setLoc(&err, ret);
+				throw err;
+			}
 			setLoc(f->return_vals.back(), ret);
 		}
 		setLoc(f, proto);
@@ -182,13 +190,16 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	} else
 		assertAST(false, proto);
 	
-	vector<string> param_types, ret_types;
-	for (auto p: f->parameters)
-		param_types.push_back(p->var_type.back()->name);
-	for (auto r: f->return_vals)
-		ret_types.push_back(r->var_type.back()->name);
+	vector<string> param_types;
+	for (auto p: f->parameters) {
+		if (p->ptr_type == PTR_PARAM_MOVE) {
+			param_types.push_back(p->var_type.back()->name + ">>");
+		} else {
+			param_types.push_back(p->var_type.back()->name);
+		}
+	}
 
-	if (CUR_BLOCK->getFuncProto(f->name, param_types, ret_types)) {
+	if (CUR_BLOCK->getFuncProto(f->name, param_types)) {
 		PlnCompileError err(E_DuplicateFunction, f->name);
 		setLoc(&err, proto);
 		throw err;
@@ -207,24 +218,17 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		if (var_type.size()) {
 			param_types.push_back(var_type.back()->name);
 			pre_name = param_types.back();
+			if (param["move"].is_boolean() && param["move"] == true) {
+				param_types.back() = pre_name + ">>";
+			}
 		} else {
 			param_types.push_back(pre_name);
 		}
 	}
 
-	vector<string> ret_types;
-	for (auto& ret: func["rets"]) {
-		vector<PlnType*> var_type = getVarType(ret["var-type"], scope);
-		if (var_type.size()) {
-			ret_types.push_back(var_type.back()->name);
-			pre_name = ret_types.back();
-		} else {
-			ret_types.push_back(pre_name);
-		}
-	}
-
-	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types, ret_types);
+	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);
 	assertAST(f, func);
+	assertAST(f->return_vals.size() == func["rets"].size(), func);
 	setLoc(f, func);
 
 	f->parent = CUR_BLOCK;
@@ -419,7 +423,7 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 	try {
 		return new PlnReturnStmt(ret_vals, CUR_BLOCK);
 
-	} catch(PlnCompileError &err) {
+	} catch (PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, ret);
 		throw err;
@@ -551,7 +555,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 
 	try {
 		return new PlnAssignment(dst_vals, src_exps);
-	} catch(PlnCompileError &err) {
+	} catch (PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, asgn);
 		throw err;

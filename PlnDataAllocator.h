@@ -62,6 +62,7 @@ public:
 	// for array item
 	virtual PlnDataPlace* prepareObjBasePtr() = 0;
 	virtual PlnDataPlace* prepareObjIndexPtr() = 0;
+	virtual PlnDataPlace* prepareObjIndexPtr(int staticIndex) = 0;
 	virtual void setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp);
 
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);

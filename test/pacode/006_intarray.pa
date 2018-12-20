@@ -19,7 +19,7 @@ int16[3] f <<= e;
 int32 xx = 10;
 
 arr_func(3, a) -> b;
-arr_func2(4, a>>) ->> b, xx;
+arr_func(4, a>>) ->> b, xx;
 xx -> o3[0];
 
 int16 ind = 1;
@@ -27,7 +27,7 @@ int16 ind = 1;
 5 -> b[ind-1];	// b[0]=5
 2 -> b[ind];	// b[1]=2
 
-int32_func(b[1],b[0]-1) -> b[0], b[2];	// b[0]=3,  b[2]=4
+int32_func(b[1],b[0]-1) -> b[0], b[2u];	// b[0]=3,  b[2]=4
 
 int16 s = b[0] + 1;	// s=4
 
@@ -59,7 +59,7 @@ a3[2,3,1] -> o2[2];
 int32[10] a4;
 
 arr_func(1, a4);
-arr_func2(1, a4>>);
+arr_func(1, a4>>);
 
 }
 muntrace();
@@ -79,7 +79,7 @@ func arr_func(int32 x, int32[10] pa)
 	return
 }
 
-func arr_func2(int32 x, int32[10] >> pa)
+func arr_func(int32 x, int32[10]>> pa)
 	-> int16[3] pb, int32 x
 {
 	int32[5] a1;

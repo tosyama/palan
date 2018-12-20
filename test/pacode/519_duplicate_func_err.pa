@@ -4,6 +4,6 @@ func test(int32 a)
 {
 }
 
-func test(int32 b)
+func test(int32 b) -> int32 b
 {
 }

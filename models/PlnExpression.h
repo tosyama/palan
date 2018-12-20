@@ -51,6 +51,7 @@ public:
 
 // Value (rval)
 enum PlnValType {
+	VL_UNKNOWN,
 	VL_LIT_INT8,
 	VL_LIT_UINT8,
 	VL_LIT_FLO8,
@@ -80,7 +81,7 @@ public:
 		vector<PlnType*> *wk_type;
 	} inf;
 
-	PlnValue() {};
+	PlnValue() : type(VL_UNKNOWN), asgn_type(NO_ASGN)  {};
 	PlnValue(int64_t intValue);
 	PlnValue(uint64_t uintValue);
 	PlnValue(double floValue);
