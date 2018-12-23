@@ -65,7 +65,7 @@ Variable Type
 -------------
 * name\* - Type name string: "[]" any
 	1. [] - Fixed size array type
-		* sizes\* - Expression list
+		* sizes\* - Expression list (lit-int:-1: inference)
 
 Block
 ------

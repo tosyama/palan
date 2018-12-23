@@ -339,11 +339,53 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 	return statement;
 }
 
+enum InferenceType {
+	NO_INFER,
+	ARR_INDEX_INFER
+};
+
+static InferenceType checkNeedsTypeInference(json& var_type)
+{
+	for (json &vt: var_type) {
+		if (vt["name"] == "[]") {
+			for (json& sz: vt["sizes"]) {
+				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+					return ARR_INDEX_INFER;
+				}
+			}
+		}
+	}
+	return NO_INFER;
+}
+
+static void inferArrayIndex(json& var_type, PlnValue val)
+{
+	BOOST_ASSERT(false);
+}
+
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 {
 	assertAST(var_init["vars"].is_array(), var_init);
+	vector<PlnExpression*> inits;
+	if (var_init["inits"].is_array())
+		for (json &exp: var_init["inits"]) {
+			inits.push_back(buildExpression(exp, scope));
+		}
+
 	vector<PlnValue> vars;
+	int init_ex_ind = 0;
+	int init_val_ind = 0;
 	for (json &var: var_init["vars"]) {
+		InferenceType infer = checkNeedsTypeInference(var["var-type"]);
+		if (infer != NO_INFER) {
+			if (init_ex_ind >= inits.size()) {
+				BOOST_ASSERT(false);
+			}
+			if (infer == ARR_INDEX_INFER) {
+				inferArrayIndex(var["var-type"], inits[init_ex_ind]->values[init_val_ind]);
+			}
+		}
+
 		vector<PlnType*> t = getVarType(var["var-type"], scope);
 		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
 		if (!v) {
@@ -357,14 +399,14 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
 		}
-		setLoc(v, var);
-	}
 
-	vector<PlnExpression*> inits;
-	if (var_init["inits"].is_array())
-		for (json &exp: var_init["inits"]) {
-			inits.push_back(buildExpression(exp, scope));
+		setLoc(v, var);
+
+		if (init_ex_ind < inits.size()) {
+			if (init_val_ind < inits[init_ex_ind]->values.size()) init_val_ind++;
+			else init_ex_ind++;
 		}
+	}
 
 	if (inits.size())
 		return new PlnVarInit(vars, &inits);
