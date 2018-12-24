@@ -4,6 +4,7 @@
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include "PlnModel.h"
 #include "PlnModelTreeBuilder.h"
 #include "PlnScopeStack.h"
@@ -360,7 +361,40 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 
 static void inferArrayIndex(json& var_type, PlnValue val)
 {
-	BOOST_ASSERT(false);
+	vector<PlnType*> atype;
+	if (val.type == VL_VAR)
+		atype = val.inf.var->var_type;
+	else if (val.type == VL_WORK)
+		atype = *val.inf.wk_type;
+	else
+		BOOST_ASSERT(false);
+	
+	vector<int> sizes;
+	for (PlnType* at: boost::adaptors::reverse(atype)) {
+		if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
+			for (int sz: *at->inf.fixedarray.sizes) {
+				sizes.push_back(sz);	
+			}
+		}
+	}
+	
+	int sz_i = 0;
+	for (json &vt: var_type) {
+		if (vt["name"] == "[]") {
+			for (json& sz: vt["sizes"]) {
+				if (sz_i >= sizes.size()) {
+					BOOST_ASSERT(false);
+				}
+				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+					sz["val"] = sizes[sz_i];
+				}
+				sz_i++;
+			}
+		}
+	}
+
+	if (sz_i != sizes.size())
+		BOOST_ASSERT(false);
 }
 
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
