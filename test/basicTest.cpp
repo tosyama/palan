@@ -152,6 +152,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "23-413 56746 3.3 1.0 5.5\n"
 								"567 210 46 12-6-12 12-6-12 12-6-12\n"
 								"116 161 13131313");
+
+	testcode = "021_arr_size_infer";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "235.0999");
 }
 
 TEST_CASE("Compile error test", "[basic]")

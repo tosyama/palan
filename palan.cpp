@@ -240,6 +240,7 @@ int main(int argc, char* argv[])
 			} catch (PlnCompileError &err) {
 				if (as) pclose(as);
 				cerr << files[err.loc.fid] << ":" << err.loc.begin_line << ": " << PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+				cerr << endl;
 				return COMPILE_ERR;
 	
 			} catch (json::exception& e) {

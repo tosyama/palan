@@ -415,8 +415,12 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			if (init_ex_ind >= inits.size()) {
 				BOOST_ASSERT(false);
 			}
+			PlnExpression* init_ex = inits[init_ex_ind];
 			if (infer == ARR_INDEX_INFER) {
-				inferArrayIndex(var["var-type"], inits[init_ex_ind]->values[init_val_ind]);
+				if (init_ex->type == ET_ARRAYVALUE) {
+					static_cast<PlnArrayValue*>(init_ex)->setDefaultType(CUR_MODULE);
+				}
+				inferArrayIndex(var["var-type"], init_ex->values[init_val_ind]);
 			}
 		}
 
