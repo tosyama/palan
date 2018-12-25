@@ -1,0 +1,22 @@
+ccall int32 printf();
+
+int64[] arr1 = [1,2,3];
+int64[3] tarr1 = arr1;
+int64[] arr11 = arr1;
+
+flo32[,] arr2 = [1,2,3][4,5,6];
+flo32[2,3] tarr2 = arr2;
+
+int32[2][3] tarr3;
+9 -> tarr3[1][1];
+int32[][] arr3 = tarr3;
+int32[2][] arr31 = tarr3;
+int32[][3] arr32 = tarr3;
+
+printf("%d%d%.1f%d%d%d\n", arr1[1], arr11[2], arr2[1,1], arr3[1][1], arr31[1][1], arr32[1][1]);
+
+// check exactlyssame.
+tarr1 -> arr1;
+tarr2 -> arr2;
+tarr3 -> arr3;
+
