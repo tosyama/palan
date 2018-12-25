@@ -63,8 +63,9 @@ static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes)
 	} else if (ex->type == ET_ARRAYVALUE) {
 		PlnArrayValue* av = static_cast<PlnArrayValue*>(ex);
 		sizes.push_back(av->elements.size());
-		PlnType* elm_type = setFixedArrayInfo(av->elements[0], sizes);
-	}
+		return setFixedArrayInfo(av->elements[0], sizes);
+	} else
+		BOOST_ASSERT(false);
 }
 
 void PlnArrayValue::setDefaultType(PlnModule* module)
