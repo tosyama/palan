@@ -155,7 +155,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "021_arr_size_infer";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "235.0999");
+	REQUIRE(exec(testcode) == "235.0999\n" "3388");
 }
 
 TEST_CASE("Compile error test", "[basic]")
