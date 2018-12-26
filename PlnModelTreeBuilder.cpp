@@ -359,8 +359,10 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 	return NO_INFER;
 }
 
-static void inferArrayIndex(json& var_type, PlnValue val)
+static void inferArrayIndex(json& var, PlnValue val)
 {
+	json& var_type = var["var-type"];
+
 	vector<PlnType*> atype;
 	if (val.type == VL_VAR)
 		atype = val.inf.var->var_type;
@@ -383,7 +385,7 @@ static void inferArrayIndex(json& var_type, PlnValue val)
 		if (vt["name"] == "[]") {
 			for (json& sz: vt["sizes"]) {
 				if (sz_i >= sizes.size()) {
-					BOOST_ASSERT(false);
+					goto sz_err;
 				}
 				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
 					sz["val"] = sizes[sz_i];
@@ -393,8 +395,13 @@ static void inferArrayIndex(json& var_type, PlnValue val)
 		}
 	}
 
-	if (sz_i != sizes.size())
-		BOOST_ASSERT(false);
+	if (sz_i == sizes.size())
+		return;
+
+sz_err:
+	PlnCompileError err(E_IncompatibleTypeInitVar, var["name"]);
+	setLoc(&err, var);
+	throw err;
 }
 
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
@@ -413,14 +420,16 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		InferenceType infer = checkNeedsTypeInference(var["var-type"]);
 		if (infer != NO_INFER) {
 			if (init_ex_ind >= inits.size()) {
-				BOOST_ASSERT(false);
+				PlnCompileError err(E_AmbiguousVarType, var["name"]);
+				setLoc(&err, var);
+				throw err;
 			}
 			PlnExpression* init_ex = inits[init_ex_ind];
 			if (infer == ARR_INDEX_INFER) {
 				if (init_ex->type == ET_ARRAYVALUE) {
 					static_cast<PlnArrayValue*>(init_ex)->setDefaultType(CUR_MODULE);
 				}
-				inferArrayIndex(var["var-type"], init_ex->values[init_val_ind]);
+				inferArrayIndex(var, init_ex->values[init_val_ind]);
 			}
 		}
 

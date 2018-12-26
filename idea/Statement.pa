@@ -16,6 +16,11 @@ for:out i: 0..9 {
 	}
 }
 
+// loop of loop
+for i:0..9 of j:0..9 {
+	if (i==8 && j==5) break;
+}
+
 int i;
 while:out i<10 {
 	++i;
