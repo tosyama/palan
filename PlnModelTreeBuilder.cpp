@@ -4,6 +4,7 @@
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include "PlnModel.h"
 #include "PlnModelTreeBuilder.h"
 #include "PlnScopeStack.h"
@@ -339,11 +340,99 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 	return statement;
 }
 
+enum InferenceType {
+	NO_INFER,
+	ARR_INDEX_INFER
+};
+
+static InferenceType checkNeedsTypeInference(json& var_type)
+{
+	for (json &vt: var_type) {
+		if (vt["name"] == "[]") {
+			for (json& sz: vt["sizes"]) {
+				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+					return ARR_INDEX_INFER;
+				}
+			}
+		}
+	}
+	return NO_INFER;
+}
+
+static void inferArrayIndex(json& var, PlnValue val)
+{
+	json& var_type = var["var-type"];
+
+	vector<PlnType*> atype;
+	if (val.type == VL_VAR)
+		atype = val.inf.var->var_type;
+	else if (val.type == VL_WORK)
+		atype = *val.inf.wk_type;
+	else
+		BOOST_ASSERT(false);
+	
+	vector<int> sizes;
+	for (PlnType* at: boost::adaptors::reverse(atype)) {
+		if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
+			for (int sz: *at->inf.fixedarray.sizes) {
+				sizes.push_back(sz);	
+			}
+		}
+	}
+	
+	int sz_i = 0;
+	for (json &vt: var_type) {
+		if (vt["name"] == "[]") {
+			for (json& sz: vt["sizes"]) {
+				if (sz_i >= sizes.size()) {
+					goto sz_err;
+				}
+				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+					sz["val"] = sizes[sz_i];
+				}
+				sz_i++;
+			}
+		}
+	}
+
+	if (sz_i == sizes.size())
+		return;
+
+sz_err:
+	PlnCompileError err(E_IncompatibleTypeInitVar, var["name"]);
+	setLoc(&err, var);
+	throw err;
+}
+
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 {
 	assertAST(var_init["vars"].is_array(), var_init);
+	vector<PlnExpression*> inits;
+	if (var_init["inits"].is_array())
+		for (json &exp: var_init["inits"]) {
+			inits.push_back(buildExpression(exp, scope));
+		}
+
 	vector<PlnValue> vars;
+	int init_ex_ind = 0;
+	int init_val_ind = 0;
 	for (json &var: var_init["vars"]) {
+		InferenceType infer = checkNeedsTypeInference(var["var-type"]);
+		if (infer != NO_INFER) {
+			if (init_ex_ind >= inits.size()) {
+				PlnCompileError err(E_AmbiguousVarType, var["name"]);
+				setLoc(&err, var);
+				throw err;
+			}
+			PlnExpression* init_ex = inits[init_ex_ind];
+			if (infer == ARR_INDEX_INFER) {
+				if (init_ex->type == ET_ARRAYVALUE) {
+					static_cast<PlnArrayValue*>(init_ex)->setDefaultType(CUR_MODULE);
+				}
+				inferArrayIndex(var, init_ex->values[init_val_ind]);
+			}
+		}
+
 		vector<PlnType*> t = getVarType(var["var-type"], scope);
 		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
 		if (!v) {
@@ -357,14 +446,14 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
 		}
-		setLoc(v, var);
-	}
 
-	vector<PlnExpression*> inits;
-	if (var_init["inits"].is_array())
-		for (json &exp: var_init["inits"]) {
-			inits.push_back(buildExpression(exp, scope));
+		setLoc(v, var);
+
+		if (init_ex_ind < inits.size()) {
+			if (init_val_ind < inits[init_ex_ind]->values.size()) init_val_ind++;
+			else init_ex_ind++;
 		}
+	}
 
 	if (inits.size())
 		return new PlnVarInit(vars, &inits);

@@ -6,6 +6,7 @@
 #include "../PlnExpression.h"
 
 enum PlnArrayValueType {
+	AVT_UNKNOWN,
 	AVT_OBJ_ARRAY,
 	AVT_INT_LIT_ARRAY,
 	AVT_FLO_LIT_ARRAY
@@ -20,6 +21,7 @@ public:
 
 	PlnArrayValue(vector<PlnExpression*> &elements);
 
+	void setDefaultType(PlnModule* module);
 	void setVarType(vector<PlnType*> var_type);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;

@@ -157,11 +157,11 @@ TEST_CASE("CUI basic err test.", "[cui]")
 	testcode = "501_dupvar_err";
 	REQUIRE(build(testcode) == "err: 1");
 	REQUIRE(outstr(testcode) == "");
-	REQUIRE(errstr(testcode) == "501_dupvar_err.pa:2: Variable name 'b' already defined.");
+	REQUIRE(errstr(testcode) == "501_dupvar_err.pa:2: Variable name 'b' already defined.\n");
 
 	// err from finish phase.
 	testcode = "509_needret_err";
 	REQUIRE(build(testcode) == "err: 1");
 	REQUIRE(outstr(testcode) == "");
-	REQUIRE(errstr(testcode) == "509_needret_err.pa:6: Return argument(s) can't be omitted at this function.");
+	REQUIRE(errstr(testcode) == "509_needret_err.pa:6: Return argument(s) can't be omitted at this function.\n");
 }

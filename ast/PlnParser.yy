@@ -91,7 +91,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	assignment func_call chain_call term
 %type <json>	argument literal chain_src
 %type <json>	dst_val var_expression
-%type <json>	array_item
+%type <json>	array_item array_size
 %type <vector<string>>	const_names
 %type <vector<json>>	type_def
 %type <vector<json>>	parameter_def parameters
@@ -976,17 +976,32 @@ array_def: '[' array_sizes ']'
 	}
 	;
 
-array_sizes: expression
+array_sizes: array_size
 	{
 		$$.push_back($1);
 	}
 
-	| array_sizes ',' expression
+	| array_sizes ',' array_size 
 	{
 		$$ = move($1);
 		$$.push_back($3);
 	}
 	;
+
+array_size: /* empty */
+	{
+		json inference_size = {
+			{"exp-type", "lit-int"},
+			{"val", -1}
+		};
+		$$ = move(inference_size);
+		LOC($$, @$);
+	}
+
+	| expression
+	{
+		$$ = move($1);
+	}
 
 array_item: '[' array_indexes ']'
 	{

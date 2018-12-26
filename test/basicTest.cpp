@@ -152,6 +152,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "23-413 56746 3.3 1.0 5.5\n"
 								"567 210 46 12-6-12 12-6-12 12-6-12\n"
 								"116 161 13131313");
+
+	testcode = "021_arr_size_infer";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "235.0999\n" "3388");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -259,4 +263,13 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "533_func_retval_err3";
 	REQUIRE(build(testcode) == "0:3-3 Return value 'b' type need to same as the parameter type.");
+
+	testcode = "534_ambiguous_type_err";
+	REQUIRE(build(testcode) == "0:2-2 Type of variable 'amb_arr' is ambiguous.");
+
+	testcode = "535_varinit_type_err";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+
+	testcode = "536_varinit_type_err2";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible type to init variable 'b'.");
 }

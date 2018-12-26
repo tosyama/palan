@@ -9,6 +9,7 @@
 #include <boost/assert.hpp>
 #include "PlnArrayValue.h"
 #include "../PlnType.h"
+#include "../PlnModule.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
@@ -17,7 +18,7 @@
 
 PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &elements)
 	: PlnExpression(ET_ARRAYVALUE), elements(move(elements)),
-		arrval_type(AVT_OBJ_ARRAY)
+		arrval_type(AVT_UNKNOWN)
 {
 	PlnValue val;
 	val.type = VL_WORK;
@@ -44,6 +45,41 @@ static bool addElements(vector<PlnExpression*> &dst, vector<int> sizes, vector<P
 			dst.push_back(e);
 	}
 	return true;
+}
+
+// return ElementType
+static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes)
+{
+	if (ex->type == ET_VALUE) {
+		if (ex->values[0].type == VL_LIT_INT8) {
+			return PlnType::getSint();
+		} else if (ex->values[0].type == VL_LIT_UINT8) {
+			return PlnType::getUint();
+		} else if (ex->values[0].type == VL_LIT_FLO8) {
+			return PlnType::getFlo();
+		} else
+			BOOST_ASSERT(false);
+
+	} else if (ex->type == ET_ARRAYVALUE) {
+		PlnArrayValue* av = static_cast<PlnArrayValue*>(ex);
+		sizes.push_back(av->elements.size());
+		return setFixedArrayInfo(av->elements[0], sizes);
+	} else
+		BOOST_ASSERT(false);
+}
+
+void PlnArrayValue::setDefaultType(PlnModule* module)
+{
+	vector<int> sizes;
+	PlnType* element_type = setFixedArrayInfo(this, sizes);
+
+	vector<PlnType*> var_type = { element_type };
+	PlnType* array_type = module->getFixedArrayType(var_type, sizes);
+	var_type.push_back(array_type);
+	
+	BOOST_ASSERT(var_type.size() == 2);
+
+	(*values[0].inf.wk_type) = move(var_type);
 }
 
 void PlnArrayValue::setVarType(vector<PlnType*> var_type)
