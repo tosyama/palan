@@ -30,3 +30,6 @@ flo32[2,2,2] tarr5 = arr5;
 
 printf("%d%d%.0f%.0f", arr4[2], tarr4[2], arr5[1,1,1], tarr5[1,1,1]);
 
+flo64[] a, int16[] b = [1,2], [1,2,3];
+printf(" %.0f%d", a[1], b[2]);
+

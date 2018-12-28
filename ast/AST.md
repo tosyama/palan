@@ -65,7 +65,8 @@ Variable Type
 -------------
 * name\* - Type name string: "[]" any
 	1. [] - Fixed size array type
-		* sizes\* - Expression list (lit-int:-1: inference)
+		* sizes\* - Expression list (lit-int:-1 - size inference)
+	2. any - Specified variable type name
 
 Block
 ------
@@ -152,7 +153,7 @@ Modified Operator
 Variable Declaration
 --------------------
 * name\* - Variable name string
-* var-type\# - Variable type list
+* var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
 * move - Move ownership flag boolean
 * loc - Location integer array
 

@@ -155,7 +155,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "021_arr_size_infer";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "235.0999\n" "3388");
+	REQUIRE(exec(testcode) == "235.0999\n" "3388 23");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -163,7 +163,7 @@ TEST_CASE("Compile error test", "[basic]")
 	string testcode;
 
 	testcode = "500_syntax_err";
-	REQUIRE(build(testcode) == "0:4-4 syntax error, unexpected '=', expecting ';'");
+	REQUIRE(build(testcode) == "0:4-4 syntax error, unexpected function identifier, expecting ';'");
 
 	testcode = "501_dupvar_err";
 	REQUIRE(build(testcode) == "0:2-2 Variable name 'b' already defined.");

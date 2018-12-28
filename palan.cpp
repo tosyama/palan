@@ -244,9 +244,7 @@ int main(int argc, char* argv[])
 				return COMPILE_ERR;
 	
 			} catch (json::exception& e) {
-				if (as) pclose(as);
-				cerr << e.what() << endl;
-				BOOST_ASSERT(false);
+				BOOST_ASSERT(false); // need to detect error before json error.
 			}
 		}
 	}

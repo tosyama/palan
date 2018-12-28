@@ -1,7 +1,7 @@
 ccall int32 printf();
 
 const N = 5;
-flo64[N] x, y =
+var x, y =
 	[1.1, 2.3, 2.8, 4.2, 5.1],
 	[0.7, 1.9, 3.1, 4.2, 5.6];
 
@@ -9,9 +9,9 @@ printf("%.3f, %.3f\n", lsm(x, y));
 
 func lsm(flo64[N] x, y) -> flo64 a0, a1
 {
-	int32 i=0;
 	flo64 a00, a01, a02, a11, a12 = 0,0,0,0,0;
 
+	i=0;
 	while i<N {
 		a00 + 1.0 -> a00;
 		a01 + x[i] -> a01;
