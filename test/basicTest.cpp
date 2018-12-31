@@ -156,6 +156,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "021_arr_size_infer";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "235.0999\n" "3388 23");
+
+	testcode = "022_type_inference";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "91012.3 91012.3 91012 91012.3\n"
+							"32.2 5");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -272,4 +277,16 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "536_varinit_type_err2";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible type to init variable 'b'.");
+
+	testcode = "537_dupinfervar_err";
+	REQUIRE(build(testcode) == "0:3-3 Variable name 'i' already defined.");
+
+	testcode = "538_var_difftypes_err";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64'.");
+
+	testcode = "539_not_var_sytax_err";
+	REQUIRE(build(testcode) == "0:1-1 syntax error, unexpected '=', expecting ->> or -> or ','");
+
+	testcode = "540_noinit_autotype_err";
+	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");
 }

@@ -15,3 +15,4 @@ func show(int64[3] arr1, flo32[2,3] arr2) {
 	printf("%d %.0f\n", arr1[1], arr2[1,1]);
 }
 
+// var a, b, var c = 3, 2;
