@@ -15,7 +15,7 @@ data ->> quicksort(0, N-1)
 
 func show(int16[N] data)
 {
-	int32 i=0;
+	i=0;
 	while i<N {
 		printf(" %d",data[i]);
 		i+1 -> i;
@@ -26,13 +26,10 @@ func show(int16[N] data)
 func quicksort(int16[N] >>data, int32 left, right)
 	-> int16[N] data
 {
-	int32 i, mid;
-	int32 temp;
-
 	if left >= right { return }
 
-	left -> mid;
-	left+1 -> i;
+	var mid, i = left, left+1;
+
 	while i<=right {
 		if data[i] < data[left] {
 			mid+1 -> mid;

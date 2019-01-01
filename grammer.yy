@@ -25,7 +25,7 @@ int yylex();
 %token KW_IF
 %token KW_ELSE
 %token KW_CONST
-%token KW_VAR
+%token KW_AUTOTYPE
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -150,7 +150,6 @@ semi_stmt: st_expression
 	| declarations
 	| declarations '=' expressions
 	| subdeclaration '=' expression
-	| KW_VAR autotype_declartations '=' expressions
 	| const_def
 	| return_stmt
 	;
@@ -238,18 +237,18 @@ declarations: declaration
 	| declarations ',' declaration 
 	;
 
-declaration: type_def ID take_owner
+declaration: var_type ID take_owner
 	;
 
 subdeclaration: ID take_owner
 	;
 
-autotype_declartations: subdeclaration
-	| autotype_declartations ',' subdeclaration
-	;
-
 return_stmt: KW_RETURN
 	| KW_RETURN expressions
+	;
+
+var_type: KW_AUTOTYPE
+	| type_def
 	;
 
 type_def: TYPENAME

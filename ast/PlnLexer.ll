@@ -39,6 +39,7 @@ enum {
 	KW_IF		= PlnParser::token::KW_IF,
 	KW_ELSE		= PlnParser::token::KW_ELSE,
 	KW_CONST	= PlnParser::token::KW_CONST,
+	KW_AUTOTYPE = PlnParser::token::KW_AUTOTYPE,
 	OPE_EQ		= PlnParser::token::OPE_EQ,
 	OPE_NE		= PlnParser::token::OPE_NE,
 	OPE_LE		= PlnParser::token::OPE_LE,
@@ -71,7 +72,7 @@ DBL_ARROW	"->>"
 DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
-POST_KW [ \t\r\n(]*		/* To keep priority than FUNC_ID. */
+POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
 
 %%
 %{
@@ -112,13 +113,14 @@ while/{POST_KW}		{ return KW_WHILE; }
 if/{POST_KW}		{ return KW_IF; }
 else/{POST_KW}		{ return KW_ELSE; }
 const/{POST_KW} 	{ return KW_CONST; }
+var/{POST_KW} 	{ return KW_AUTOTYPE; }
 "=="	{ return OPE_EQ; }
 "!="	{ return OPE_NE; }
 "<="	{ return OPE_LE; }
 ">="	{ return OPE_GE; }
 "&&"	{ return OPE_AND; }
 "||"	{ return OPE_OR; }
-{ID}/[ \t\r\n]*"("	{
+{ID}/([ \t\r\n]|{COMMENT1})*"("	{
 		string fid = yytext;
 		lval.build<string>() = move(fid);
 		return FUNC_ID;

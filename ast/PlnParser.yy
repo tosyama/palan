@@ -65,6 +65,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_IF	"if"
 %token KW_ELSE	"else"
 %token KW_CONST	"const"
+%token KW_AUTOTYPE	"var"
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
 %token OPE_LE	"<="
@@ -93,7 +94,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	dst_val var_expression
 %type <json>	array_item array_size
 %type <vector<string>>	const_names
-%type <vector<json>>	type_def
+%type <vector<json>>	var_type type_def
 %type <vector<json>>	parameter_def parameters
 %type <vector<json>>	return_def
 %type <vector<json>>	return_types return_values
@@ -370,6 +371,21 @@ semi_stmt: st_expression
 			{"stmt-type", "var-init"},
 			{"vars", move($1)},
 			{"inits", move($3)},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+
+	| subdeclaration '=' expression
+	{
+		// add empty list for type inference
+		$1["var-type"] = vector<json>();
+		vector<json> vars = { $1 };
+		vector<json> inits = { $3 };
+		json stmt = {
+			{"stmt-type", "var-init"},
+			{"vars", move(vars)},
+			{"inits", move(inits)},
 		};
 		$$ = move(stmt);
 		LOC($$, @$);
@@ -723,8 +739,9 @@ term: literal
 			}
 
 			if (three_dim) {
-				for (int i=1; i<$1.size(); i++)
+				for (int i=1; i<$1.size(); i++) {
 					$1[0]["vals"].push_back($1[i]["vals"][0]);
+				}
 				$$ = move($1[0]);
 
 			} else {
@@ -800,6 +817,7 @@ array_val: '[' expressions ']'
 			{"exp-type", "array-val"},
 			{"vals", $2}
 		};
+		LOC(arr_val, @$);
 		$$.push_back(arr_val);
 	}
 
@@ -810,6 +828,7 @@ array_val: '[' expressions ']'
 			{"exp-type", "array-val"},
 			{"vals", $3}
 		};
+		LOC_BE(arr_val, @2, @4);
 		$$.push_back(arr_val);
 	}
 	;
@@ -911,7 +930,7 @@ declarations: declaration
 	}
 	;
 
-declaration: type_def ID take_owner
+declaration: var_type ID take_owner
 	{
 		json dec = {
 			{"var-type", move($1)},
@@ -948,6 +967,16 @@ return_stmt: KW_RETURN
 		};
 		$$ = move(ret);
 		LOC($$, @1);
+	}
+	;
+
+var_type: KW_AUTOTYPE	/* empty */
+	{
+	}
+
+	| type_def
+	{
+		$$ = move($1);
 	}
 	;
 
