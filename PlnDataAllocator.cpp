@@ -1,7 +1,7 @@
 /// Register/Stack allocation class definition.
 ///
 /// @file	PlnDataAllocator.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <stdlib.h>
@@ -49,19 +49,21 @@ static bool canAlloc(PlnDataPlace*& dp, int alloc_step, int release_step)
 		dp = NULL;
 		return true;
 	}
-	while (dp->previous) {
-		if (dp->alloc_step > release_step
-			&& alloc_step > dp->previous->release_step) {
-			return true;
-		} else if (dp->alloc_step <= release_step
-			|| alloc_step >=  dp->previous->release_step) {
-			return false;
-		}
-		dp = dp->previous;
-	}
 
-	if (dp->alloc_step > release_step)
-		return true;
+	// over spec code. no case to match now.
+	// while (dp->previous) {
+	// 	if (dp->alloc_step > release_step
+	// 		&& alloc_step > dp->previous->release_step) {
+	// 		return true;
+	// 	} else if (dp->alloc_step <= release_step
+	// 		|| alloc_step >=  dp->previous->release_step) {
+	// 		return false;
+	// 	}
+	// 	dp = dp->previous;
+	// }
+
+	// if (dp->alloc_step > release_step)
+	// 	return true;
 	
 	return false;
 }
@@ -81,10 +83,11 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 			auto aft_dp = data_stack[i]; 
 			if (canAlloc(aft_dp, alloc_step, release_step)) {
 				dp->data.stack.idx = i;
-				if (aft_dp) {
+				BOOST_ASSERT(!aft_dp);
+				/* if (aft_dp) {
 					dp->previous = aft_dp->previous;
 					aft_dp->previous = dp;
-				} else {
+				} else */ {
 					dp->previous = data_stack[i];
 					data_stack[i] = dp;
 				}
@@ -127,10 +130,11 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 
 	if (free_index >= 0) {
 		dp->data.bytes.idx = free_index;
-		if (aft_dp) {
+		BOOST_ASSERT(!aft_dp);
+		/* if (aft_dp) {
 			dp_ctnr->previous = aft_dp->previous;
 			aft_dp->previous = dp_ctnr;
-		} else {
+		} else */ {
 			dp_ctnr->previous = data_stack[free_index];
 			data_stack[free_index] = dp_ctnr;
 		}
