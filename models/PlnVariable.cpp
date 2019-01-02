@@ -4,7 +4,7 @@
 /// such as type and momory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -58,7 +58,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					PlnType* dst_type = vars[var_i].getType();
 					if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
 						delete ai;
-						PlnCompileError err(E_IncompatibleTypeAssign, src_type->name, dst_type->name);
+						PlnCompileError err(E_IncompatibleTypeInitVar, vars[var_i].inf.var->name);
 						err.loc = ex->loc;
 						throw err;
 					}
