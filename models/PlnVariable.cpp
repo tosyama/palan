@@ -53,6 +53,16 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					if (ex->type == ET_ARRAYVALUE) {
 						static_cast<PlnArrayValue*>(ex)->setVarType(vars[var_i].inf.var->var_type);
 					}
+
+					PlnType* src_type = ex->values[i].getType();	
+					PlnType* dst_type = vars[var_i].getType();
+					if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
+						delete ai;
+						PlnCompileError err(E_IncompatibleTypeAssign, src_type->name, dst_type->name);
+						err.loc = ex->loc;
+						throw err;
+					}
+
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex);
 					ai->addDstEx(var_ex, false);
