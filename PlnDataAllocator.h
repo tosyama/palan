@@ -132,7 +132,7 @@ public:
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		double floValue;
-		struct { int32_t index; int32_t item_size; vector<int64_t>* int_array; vector<double>* flo_array; string* str; } ro;
+		struct { int32_t item_size; vector<int64_t>* int_array; vector<double>* flo_array; string* str; } ro;
 		PlnDataPlace *originalDp;
 	} data;
 

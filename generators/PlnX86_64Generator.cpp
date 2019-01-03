@@ -1338,49 +1338,41 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->data.i = dp->data.intValue;
 
 	} else if (dp->type == DP_RO_DATA) {
-		if (dp->data.ro.index >= 0) {
-			e->type = GE_STRING;
-			e->alloc_type = GA_MEM;
-			e->size = 8;
-			e->data_type = DT_OBJECT_REF;
-			e->data.str = new string(string("$.LC") + to_string(dp->data.ro.index));
-		} else {
-			int id;
-			if (dp->data.ro.int_array) {
-				id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
+		int id;
+		if (dp->data.ro.int_array) {
+			id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
 
-			} else if (dp->data.ro.flo_array) {
-				vector<int64_t> int_array;
+		} else if (dp->data.ro.flo_array) {
+			vector<int64_t> int_array;
 
-				if (dp->data.ro.item_size == 8) {
-					union { double d; int64_t i; } data;
-					for (double d: *(dp->data.ro.flo_array)) {
-						data.d = d;
-						int_array.push_back(data.i);
-					}
-				} else if (dp->data.ro.item_size == 4) {
-					union { float f; int32_t i; } data;
-					for (double d: *(dp->data.ro.flo_array)) {
-						data.f = d;
-						int_array.push_back(data.i);
-					}
-
-				} else {
-					BOOST_ASSERT(false);
+			if (dp->data.ro.item_size == 8) {
+				union { double d; int64_t i; } data;
+				for (double d: *(dp->data.ro.flo_array)) {
+					data.d = d;
+					int_array.push_back(data.i);
 				}
-				id = registerConstArray(int_array, dp->data.ro.item_size);
+			} else if (dp->data.ro.item_size == 4) {
+				union { float f; int32_t i; } data;
+				for (double d: *(dp->data.ro.flo_array)) {
+					data.f = d;
+					int_array.push_back(data.i);
+				}
 
 			} else {
-				BOOST_ASSERT(dp->data.ro.str);
-				id = registerString(*dp->data.ro.str);
+				BOOST_ASSERT(false);
 			}
+			id = registerConstArray(int_array, dp->data.ro.item_size);
 
-			e->type = GE_STRING;
-			e->alloc_type = GA_MEM;
-			e->size = 8;
-			e->data_type = DT_OBJECT_REF;
-			e->data.str = new string(string("$.LC") + to_string(id));
+		} else {
+			BOOST_ASSERT(dp->data.ro.str);
+			id = registerString(*dp->data.ro.str);
 		}
+
+		e->type = GE_STRING;
+		e->alloc_type = GA_MEM;
+		e->size = 8;
+		e->data_type = DT_OBJECT_REF;
+		e->data.str = new string(string("$.LC") + to_string(id));
 
 	} else
 		BOOST_ASSERT(false);

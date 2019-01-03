@@ -328,7 +328,6 @@ PlnDataPlace* PlnDataAllocator::getROIntArrayDp(vector<int64_t> int_array, int i
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
 	dp->status = DS_ASSIGNED;
-	dp->data.ro.index = -1;
 	dp->data.ro.item_size = item_size;
 	dp->data.ro.int_array = new vector<int64_t>(move(int_array));
 	dp->data.ro.flo_array = NULL;
@@ -346,7 +345,6 @@ PlnDataPlace* PlnDataAllocator::getROFloArrayDp(vector<double> flo_array, int it
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
 	dp->status = DS_ASSIGNED;
-	dp->data.ro.index = -1;
 	dp->data.ro.item_size = item_size;
 	dp->data.ro.int_array = NULL;
 	dp->data.ro.flo_array = new vector<double>(move(flo_array));
@@ -364,7 +362,6 @@ PlnDataPlace* PlnDataAllocator::getROStrArrayDp(string &str)
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
 	dp->status = DS_ASSIGNED;
-	dp->data.ro.index = -1;
 	dp->data.ro.item_size = -1;
 	dp->data.ro.int_array = NULL;
 	dp->data.ro.flo_array = NULL;
