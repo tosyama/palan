@@ -1,7 +1,7 @@
 /// Build model trees from AST json definision.
 ///
 /// @file	PlnModelTreeBuilder.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -533,7 +533,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 		int vtype = value.type;
 		const string& name = cname;
 		if (e->type == ET_VALUE
-				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_RO_DATA || vtype == VL_LIT_FLO8)) {
+				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_STR || vtype == VL_LIT_FLO8)) {
 			if (!CUR_BLOCK->declareConst(name, value)) {
 				PlnCompileError err(E_DuplicateConstName, name);
 				setLoc(&err, cnst);
@@ -611,8 +611,8 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = new PlnExpression(exp["val"].get<double>());
 	} else if (type == "lit-str") {
 		assertAST(exp["val"].is_string(), exp);
-		PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
-		expression = new PlnExpression(ro);
+		// PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
+		expression = new PlnExpression(exp["val"].get<string>());
 	} else if (type == "array-val") {
 		expression = buildArrayValue(exp, scope);
 	} else if (type == "var") {

@@ -4,7 +4,7 @@
 /// Module includes function definitions and top level code.
 ///
 /// @file	PlnModule.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
@@ -145,31 +145,14 @@ int PlnModule::getJumpID()
 	return ++max_jmp_id;
 }
 
-PlnReadOnlyData* PlnModule::getReadOnlyData(const string &str)
-{
-	for (auto d: readonlydata)
-		if (d->type == RO_LIT_STR && d->name == str)
-			return d;
-
-	PlnReadOnlyData* rodata = new PlnReadOnlyData();
-	rodata->type = RO_LIT_STR;
-	rodata->index = readonlydata.size();
-	rodata->name = str;
-	readonlydata.push_back(rodata);
-
-	return rodata;
-}
-
 void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 {
 	PlnScopeInfo si;
 	si.scope.push_back(PlnScopeItem(this));
 
 	g.genSecReadOnlyData();
-	for (auto rod: readonlydata)
-		rod->gen(g);
-
 	g.genSecText();
+
 	for (auto f : functions)
 		f->genAsmName();
 

@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class definition.
 ///
 /// @file	PlnX86_64Generator.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -204,7 +204,6 @@ int PlnX86_64Generator::registerConst(const PlnGenEntity* constValue) {
 	return id; 
 }
 
-
 template <typename T>
 int findCinfo(T*& arr, PlnGenConstType type, vector<int64_t> &int_array, vector<PlnX86_64Generator::ConstInfo> &const_buf)
 {
@@ -259,6 +258,26 @@ int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_
 
 	if (cinfo.data.q_arr)
 		const_buf.push_back(cinfo);
+
+	return id;
+}
+
+int PlnX86_64Generator::registerString(string& str)
+{
+	int id = 0;
+	for (auto cinfo: const_buf) {
+		if (cinfo.type == GCT_STRING) {
+			if ((*cinfo.data.str) == str)
+				return id;
+		}
+		id++;
+	}
+
+	ConstInfo cinfo;
+	cinfo.type = GCT_STRING;
+	cinfo.generated = false;
+	cinfo.data.str = new string(str);
+	const_buf.push_back(cinfo);
 
 	return id;
 }
@@ -384,10 +403,10 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 void PlnX86_64Generator::genEndFunc()
 {
 	int i = 0;
-	for (ConstInfo ci: const_buf) {
+	for (ConstInfo &ci: const_buf) {
 		if (!ci.generated) {
 			os << "	.align 8" << endl;
-			os << ".LD" << i << ":" << endl;
+			os << ".LC" << i << ":" << endl;
 			if (ci.type == GCT_FLO64) {
 				os << "	.quad	" << ci.data.q << "	# " << ci.data.d << endl;
 			} else if (ci.type == GCT_INT64_ARRAY) {
@@ -406,9 +425,13 @@ void PlnX86_64Generator::genEndFunc()
 				for (int i=0; i<ci.size; i++) {
 					os << "	.byte	" << int(ci.data.b_arr[i]) << endl;
 				}
+			} else if (ci.type == GCT_STRING) {
+				string ostr = replace_all_copy(*ci.data.str,"\n","\\n");
+				os << "	.string \"" << ostr << "\"" << endl;
 			} else {
 				BOOST_ASSERT(false);
 			}
+			ci.generated = true;
 		}
 		i++;
 	}
@@ -462,13 +485,6 @@ void PlnX86_64Generator::genMainReturn()
 	os << "	xorq %rdi, %rdi" << endl;
 	os << "	movq $60, %rax" << endl;
 	os << "	syscall"<< endl;
-}
-
-void PlnX86_64Generator::genStringData(int index, const string& str)
-{
-	os << ".LC" << index << ":" << endl;
-	string ostr = replace_all_copy(str,"\n","\\n");
-	os << "	.string \"" << ostr << "\"" << endl;
 }
 
 void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
@@ -1036,7 +1052,7 @@ void PlnX86_64Generator::genCmpIRegMemFImm(const PlnGenEntity* first, const PlnG
 		os << "	cvtsi2sd " << r(R11,8) << ", " << r(XMM11, 8) << endl;
 	}
 
-	os << "	ucomisd .LD" << id << "(%rip), " << r(XMM11, 8);
+	os << "	ucomisd .LC" << id << "(%rip), " << r(XMM11, 8);
 }
 
 int PlnX86_64Generator::genCmpI2F(const PlnGenEntity* first, const PlnGenEntity* second, int cmp_type)
@@ -1333,8 +1349,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			if (dp->data.ro.int_array) {
 				id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
 
-			} else {
-				BOOST_ASSERT(dp->data.ro.flo_array);
+			} else if (dp->data.ro.flo_array) {
 				vector<int64_t> int_array;
 
 				if (dp->data.ro.item_size == 8) {
@@ -1354,13 +1369,17 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 					BOOST_ASSERT(false);
 				}
 				id = registerConstArray(int_array, dp->data.ro.item_size);
+
+			} else {
+				BOOST_ASSERT(dp->data.ro.str);
+				id = registerString(*dp->data.ro.str);
 			}
 
 			e->type = GE_STRING;
 			e->alloc_type = GA_MEM;
 			e->size = 8;
 			e->data_type = DT_OBJECT_REF;
-			e->data.str = new string(string("$.LD") + to_string(id));
+			e->data.str = new string(string("$.LC") + to_string(id));
 		}
 
 	} else

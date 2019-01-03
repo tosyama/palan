@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class declaration.
 ///
 /// @file	PlnX86_64Generator.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnGenerator.h"
 
@@ -11,7 +11,8 @@ enum PlnGenConstType {
 	GCT_INT8_ARRAY,
 	GCT_INT16_ARRAY,
 	GCT_INT32_ARRAY,
-	GCT_INT64_ARRAY
+	GCT_INT64_ARRAY,
+	GCT_STRING
 };
 
 class PlnX86_64Generator : public PlnGenerator
@@ -22,6 +23,7 @@ class PlnX86_64Generator : public PlnGenerator
 		union {
 			double d; int64_t q;
 			int64_t* q_arr; int32_t* l_arr; int16_t* s_arr; int8_t* b_arr;
+			string* str;
 		} data;
 		bool generated;
 		int size;
@@ -49,6 +51,7 @@ class PlnX86_64Generator : public PlnGenerator
 
 	int registerConst(const PlnGenEntity* constValue);
 	int registerConstArray(vector<int64_t> &int_array, int item_size);
+	int registerString(string &string);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
@@ -71,7 +74,6 @@ public:
 	void genSysCall(int id, const string& comment) override;
 	void genReturn() override;
 	void genMainReturn() override;
-	void genStringData(int index, const string& str) override;
 	void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment) override;
 	void genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment);
 

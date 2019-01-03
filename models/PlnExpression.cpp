@@ -4,7 +4,7 @@
 /// The values are set specified place.
 ///
 /// @file	PlnExpression.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -26,6 +26,15 @@ PlnValue::PlnValue(int64_t intValue)
 	inf.intValue = intValue;
 }
 
+
+PlnValue::PlnValue(const PlnValue &src)
+{
+	*this = src;
+	if (src.type == VL_LIT_STR) {
+		inf.strValue = new string(*src.inf.strValue);
+	}
+}
+
 PlnValue::PlnValue(uint64_t uintValue)
 	: type(VL_LIT_UINT8), asgn_type(NO_ASGN)
 {
@@ -38,16 +47,22 @@ PlnValue::PlnValue(double floValue)
 	inf.floValue = floValue;
 }
 
-PlnValue::PlnValue(PlnReadOnlyData* rod)
-	: type(VL_RO_DATA), asgn_type(NO_ASGN)
+PlnValue::PlnValue(string strValue)
+	: type(VL_LIT_STR), asgn_type(NO_ASGN)
 {
-	inf.rod = rod;
+	inf.strValue = new string(strValue);
 }
 
 PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR), asgn_type(NO_ASGN)
 {
 	inf.var = var;
+}
+ 
+PlnValue::~PlnValue()
+{
+	if (type == VL_LIT_STR)
+		delete inf.strValue;
 }
 
 PlnType* PlnValue::getType()
@@ -59,7 +74,7 @@ PlnType* PlnValue::getType()
 			return PlnType::getUint();
 		case VL_LIT_FLO8:
 			return PlnType::getFlo();
-		case VL_RO_DATA:
+		case VL_LIT_STR:
 			return PlnType::getReadOnlyCStr();
 		case VL_VAR:
 			return inf.var->var_type.back();
@@ -85,8 +100,9 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 		case VL_LIT_FLO8:
 			return da.getLiteralFloDp(inf.floValue);
 
-		case VL_RO_DATA:
-			return da.getReadOnlyDp(inf.rod->index);
+		case VL_LIT_STR:
+			return da.getROStrArrayDp(*inf.strValue);
+
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;
@@ -100,17 +116,6 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 				return da.getSeparatedDp(inf.var->place);
 	}
 	BOOST_ASSERT(false);
-}
-
-	void PlnReadOnlyData::gen(PlnGenerator &g)
-{
-	switch (type) {
-		case RO_LIT_STR:
-			g.genStringData(index, name); 
-			break;
-		default:
-			BOOST_ASSERT(false);
-	}
 }
 
 // PlnExpression

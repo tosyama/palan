@@ -5,7 +5,7 @@
 /// e.g.) a[3]
 ///
 /// @file	PlnArrayItem.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
 #include "PlnArrayItem.h"
