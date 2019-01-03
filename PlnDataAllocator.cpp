@@ -323,31 +323,15 @@ PlnDataPlace* PlnDataAllocator::getLiteralFloDp(double floValue)
 	return dp;
 }
 
-PlnDataPlace* PlnDataAllocator::getReadOnlyDp(int index)
-{
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-	dp->type = DP_RO_DATA;
-	dp->status = DS_ASSIGNED;
-	dp->data.ro.index = index;
-	dp->data.ro.item_size = 1;
-	dp->data.ro.int_array = NULL;
-	dp->alloc_step = step;
-	dp->release_step = step;
-	static string cmt = "\"..\"";
-	dp->comment = &cmt;
-	all.push_back(dp);
-	return dp;
-}
-
 PlnDataPlace* PlnDataAllocator::getROIntArrayDp(vector<int64_t> int_array, int item_size)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
 	dp->status = DS_ASSIGNED;
-	dp->data.ro.index = -1;
 	dp->data.ro.item_size = item_size;
 	dp->data.ro.int_array = new vector<int64_t>(move(int_array));
 	dp->data.ro.flo_array = NULL;
+	dp->data.ro.str = NULL;
 	dp->alloc_step = step;
 	dp->release_step = step;
 	static string cmt = "\"[..]\"";
@@ -361,13 +345,30 @@ PlnDataPlace* PlnDataAllocator::getROFloArrayDp(vector<double> flo_array, int it
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
 	dp->type = DP_RO_DATA;
 	dp->status = DS_ASSIGNED;
-	dp->data.ro.index = -1;
 	dp->data.ro.item_size = item_size;
 	dp->data.ro.int_array = NULL;
 	dp->data.ro.flo_array = new vector<double>(move(flo_array));
+	dp->data.ro.str = NULL;
 	dp->alloc_step = step;
 	dp->release_step = step;
 	static string cmt = "\"[..]\"";
+	dp->comment = &cmt;
+	all.push_back(dp);
+	return dp;
+}
+
+PlnDataPlace* PlnDataAllocator::getROStrArrayDp(string &str)
+{
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_RO_DATA;
+	dp->status = DS_ASSIGNED;
+	dp->data.ro.item_size = -1;
+	dp->data.ro.int_array = NULL;
+	dp->data.ro.flo_array = NULL;
+	dp->data.ro.str = new string(str);
+	dp->alloc_step = step;
+	dp->release_step = step;
+	static string cmt = "\"..\"";
 	dp->comment = &cmt;
 	all.push_back(dp);
 	return dp;

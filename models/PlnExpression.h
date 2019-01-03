@@ -1,7 +1,7 @@
 /// Expression model class declaration.
 ///
 /// @file	PlnExpression.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #pragma once
 #include "../PlnModel.h"
@@ -55,7 +55,7 @@ enum PlnValType {
 	VL_LIT_INT8,
 	VL_LIT_UINT8,
 	VL_LIT_FLO8,
-	VL_RO_DATA,
+	VL_LIT_STR,
 	VL_VAR,
 	VL_WORK
 };
@@ -76,31 +76,20 @@ public:
 		int64_t intValue;
 		uint64_t uintValue;
 		double floValue;
-		PlnReadOnlyData* rod;
+		string* strValue;
 		PlnVariable* var;
 		vector<PlnType*> *wk_type;
 	} inf;
 
 	PlnValue() : type(VL_UNKNOWN), asgn_type(NO_ASGN)  {};
+	PlnValue(const PlnValue &src);
 	PlnValue(int64_t intValue);
 	PlnValue(uint64_t uintValue);
 	PlnValue(double floValue);
-	PlnValue(PlnReadOnlyData* rod);
+	PlnValue(string strValue);
 	PlnValue(PlnVariable* var);
+	~PlnValue();
 
 	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
-};
-
-// Read only data (String literal/Const)
-enum PlnRodType {
-	RO_LIT_STR
-};
-
-class PlnReadOnlyData {
-public:
-	PlnRodType type;
-	int index;
-	string name;
-	void gen(PlnGenerator& g);
 };

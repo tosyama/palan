@@ -4,7 +4,7 @@
 /// such as type and momory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -53,6 +53,16 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					if (ex->type == ET_ARRAYVALUE) {
 						static_cast<PlnArrayValue*>(ex)->setVarType(vars[var_i].inf.var->var_type);
 					}
+
+					PlnType* src_type = ex->values[i].getType();	
+					PlnType* dst_type = vars[var_i].getType();
+					if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
+						delete ai;
+						PlnCompileError err(E_IncompatibleTypeInitVar, vars[var_i].inf.var->name);
+						err.loc = ex->loc;
+						throw err;
+					}
+
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex);
 					ai->addDstEx(var_ex, false);

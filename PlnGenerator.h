@@ -1,7 +1,7 @@
 /// Interface of assembly generator class.
 ///
 /// @file	PlnGenerator.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <memory>
 
@@ -73,7 +73,6 @@ public:
 	virtual void genSysCall(int id, const string& comment)=0;
 	virtual void genReturn()=0;
 	virtual void genMainReturn()=0;
-	virtual void genStringData(int index, const string& str)=0;
 	virtual void genMove(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
 	virtual void genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)=0;
 

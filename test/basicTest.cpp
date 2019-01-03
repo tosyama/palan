@@ -57,6 +57,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttdef\n"
 							"100\n"
 							"aaa01bbbcctdtdftdtdeefg\n"
+							"tt tt\n"
 							"110\n"
 							"1010\n"
 							"100101\n"
@@ -289,4 +290,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "540_noinit_autotype_err";
 	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");
+
+	testcode = "541_varinit_type_err3";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
 }

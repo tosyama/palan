@@ -1,7 +1,7 @@
 /// Module model class declaration.
 ///
 /// @file	PlnModule.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <string>
 #include <vector>
@@ -19,7 +19,6 @@ public:
 
 	int stack_size;
 	vector<PlnFunction*> functions;
-	vector<PlnReadOnlyData*> readonlydata;
 	vector<PlnType*> types;
 
 	PlnModule();
@@ -28,7 +27,6 @@ public:
 	PlnType* getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes);
 
 	int getJumpID();
-	PlnReadOnlyData* getReadOnlyData(const string &str);
 
 	void gen(PlnDataAllocator& da, PlnGenerator& g);
 };

@@ -1,7 +1,7 @@
 /// Assembly code generator class definition.
 ///
 /// @file	PlnGenerator.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu
 
 #include <vector>
 #include <iostream>
