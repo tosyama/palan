@@ -21,7 +21,7 @@ TEST_CASE ("Hello World", "[basic]")
 {
 	string testcode = "001_helloworld";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "Hello World!");
+	REQUIRE(exec(testcode) == "Hello World!\n13");
 }
 
 int clean()

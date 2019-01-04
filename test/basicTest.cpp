@@ -125,8 +125,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"-16.00 17.00 16.00 17.00 -16.00 17.00 16.00 17.00 -16 17 16 17\n"
 							"1 2 3 4 5 6 7 8\n"
 							"-1 -2 -3 -4 5 6 7 8\n"
-							"-16 17 -16 17 240 17 4294967280 17"
-							);
+							"-16 17 -16 17 240 17 4294967280 17\n"
+							"1.1 8.8 9.9");
 
 	testcode = "017_floope";
 	REQUIRE(build(testcode) == "success");
@@ -293,4 +293,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "541_varinit_type_err3";
 	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+
+	testcode = "542_asgnLRnum_err2";
+	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
 }

@@ -11,7 +11,15 @@ arr1 -> arr3[1];
 arr4 = arr3[1];
 arr4, arr2 -> show();
 
+{
+//	int64[3] arrx <<= arr1;
+	[1,2,3] -> arr1;
+}
+
 func show(int64[3] arr1, flo32[2,3] arr2) {
 	printf("%d %.0f\n", arr1[1], arr2[1,1]);
 }
 
+func freearr(int64[3] >>arr) -> int64[3] arr
+{
+}

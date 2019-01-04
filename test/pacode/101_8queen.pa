@@ -13,9 +13,10 @@ printf("answer: %d\n", count);
 func initBoard(byte[Y,X] >>board)
 	-> byte[Y,X] board
 {
-	int32 x,y = 0,0;
+	y = 0;
 	while y < Y {
-		while x < Y {
+		x = 0;
+		while x < X {
 			0->board[y, x];
 			x+1->x;
 		}
@@ -27,24 +28,31 @@ func queen(byte[Y,X] >>board, int32 x, y)
 	-> byte[Y,X] board, int32 count
 {
 	0 -> count;
-	int64 xx,yy;
 
-	x-1 -> xx;
-	while xx >= 0 {
-		if board[y, xx]  { return }
-		xx-1 -> xx;
+	{
+		xx = x-1;
+		while xx >= 0 {
+			if board[y, xx] { return }
+			xx-1 -> xx;
+		}
 	}
 
-	x-1, y-1 -> xx, yy;
-	while xx >= 0 && yy >= 0 {
-		if board[yy, xx] { return }
-		xx-1, yy-1 -> xx, yy;
+	{
+		xx = x-1;
+		yy = y-1;
+		while xx >= 0 && yy >= 0 {
+			if board[yy, xx] { return }
+			xx-1, yy-1 -> xx, yy;
+		}
 	}
 
-	x-1, y+1 -> xx, yy;
-	while xx >= 0 && yy < 8 {
-		if board[yy, xx] { return }
-		xx-1, yy+1 -> xx, yy;
+	{
+		xx = x-1;
+		yy = y+1;
+		while xx >= 0 && yy < 8 {
+			if board[yy, xx] { return }
+			xx-1, yy+1 -> xx, yy;
+		}
 	}
 
 	if x >= 0 { 1 -> board[y, x] }
@@ -52,7 +60,7 @@ func queen(byte[Y,X] >>board, int32 x, y)
 	if x == X-1 {
 		count+1 -> count;
 	} else {
-		0 -> yy;
+		yy = 0;
 		while yy < Y {
 			int32 cnt;
 			board ->> queen(x+1, yy) ->>board, cnt;
@@ -63,4 +71,3 @@ func queen(byte[Y,X] >>board, int32 x, y)
 
 	if x >= 0 { 0 -> board[y, x] }
 }
-

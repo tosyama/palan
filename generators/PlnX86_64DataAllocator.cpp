@@ -117,14 +117,13 @@ PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
 
 	} else if (ret_dtypes[index] != DT_FLOAT && index <= 5) {
 		int regid;
-		if (ret_dtypes.size() == 1) {
-			BOOST_ASSERT(index == 0);
+		if (func_type == FT_PLN || func_type == FT_C) {
+			regid = (ret_dtypes.size() == 1) ? RAX : ARG_TBL[index];
+
+		} else if (func_type == FT_SYS) {
+			BOOST_ASSERT(ret_dtypes.size() == 1);
 			regid = RAX;
-		} else if (func_type == FT_PLN || func_type == FT_C)
-			regid = ARG_TBL[index];
-		else if (func_type == FT_SYS)
-			regid = SYSARG_TBL[index];
-		else
+		} else
 			BOOST_ASSERT(false);
 
 		dp->type = DP_REG;
