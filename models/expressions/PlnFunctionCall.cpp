@@ -137,8 +137,9 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
 				// Mark as freed variable.
 				auto var = v.inf.var;
-				if (si.exists_current(var))
-					si.set_lifetime(var, VLT_FREED);
+				if (!si.exists_current(var))
+					si.push_owner_var(var);
+				si.set_lifetime(var, VLT_FREED);
 			}
 			if (clones[j]) {
 				clones[j]->data_places.push_back(arg_dps[j]);

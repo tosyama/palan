@@ -221,7 +221,6 @@ next:	;
 	return NULL;
 }
 
-
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	si.push_scope(this);

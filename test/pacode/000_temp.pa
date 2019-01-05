@@ -12,8 +12,7 @@ arr4 = arr3[1];
 arr4, arr2 -> show();
 
 {
-//	int64[3] arrx <<= arr1;
-	[1,2,3] -> arr1;
+//	freearr(arr1>>) -> arr1;
 }
 
 func show(int64[3] arr1, flo32[2,3] arr2) {

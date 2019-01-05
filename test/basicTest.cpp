@@ -296,4 +296,10 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "542_asgnLRnum_err2";
 	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
+
+	testcode = "543_copyfreevar_err2";
+	REQUIRE(build(testcode) == "finish:0:6-6 Can not copy to freed variable 'arr'.");
+
+	testcode = "544_copyfreevar_err3";
+	REQUIRE(build(testcode) == "finish:0:3-3 Can not copy to freed variable 'arr1'.");
 }
