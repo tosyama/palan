@@ -1,7 +1,7 @@
 /// Block model declaration.
 ///
 /// @file	PlnBlock.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 #include "PlnExpression.h"
@@ -14,7 +14,7 @@ public:
 	vector<PlnExpression*> free_vars;
 	struct PlnConst {
 		string name;
-		PlnValue value;
+		PlnExpression *ex;
 	};
 	vector<PlnConst> consts;
 	vector<PlnFunction*> funcs;
@@ -32,8 +32,7 @@ public:
 	PlnVariable* declareVariable(const string& var_name, vector<PlnType*>& var_types, bool is_owner);
 	PlnVariable* getVariable(const string& var_name);
 
-	// true: success, false: duplicate
-	bool declareConst(const string& name, PlnValue value);
+	void declareConst(const string& name, PlnExpression *ex);
 	PlnExpression* getConst(const string& name);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError;

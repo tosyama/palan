@@ -35,6 +35,8 @@ PlnBlock::~PlnBlock()
 		delete free_var;
 	for (auto stmt: statements)
 		delete stmt;
+	for (auto cons: consts)
+		delete cons.ex;
 }
 
 void PlnBlock::setParent(PlnFunction* f)
@@ -103,17 +105,31 @@ static PlnBlock* parentBlock(PlnBlock* block) {
 	return NULL;
 }
 
-bool PlnBlock::declareConst(const string& name, PlnValue value)
+void PlnBlock::declareConst(const string& name, PlnExpression *ex)
 {
+	bool isConst = false;
+	if (ex->type == ET_VALUE) {
+		int vtype = ex->values[0].type;
+		if (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_STR || vtype == VL_LIT_FLO8)
+			isConst = true;
+	}
+
+	if (!isConst) {
+		PlnCompileError err(E_CantDefineConst, name);
+		throw err;
+	}
+
 	// Always 0. Const declaration is faster than variable.
 	for (auto v: variables)
 		BOOST_ASSERT(v->name == name);
 
 	for (auto c: consts)
-		if (c.name == name) return false;
+		if (c.name == name) {
+			PlnCompileError err(E_DuplicateConstName, name);
+			throw err;
+		}
 
-	consts.push_back( {name, value} );
-	return true;
+	consts.push_back( {name, ex} );
 }
 
 PlnExpression* PlnBlock::getConst(const string& name)
@@ -125,7 +141,7 @@ PlnExpression* PlnBlock::getConst(const string& name)
 			[name](PlnConst& c) { return c.name == name; } );
 
 		if (const_inf != b->consts.end()) {
-			return new PlnExpression(const_inf->value);
+			return new PlnExpression(const_inf->ex->values[0]);
 		}
 
 	} while (b = parentBlock(b));

@@ -525,22 +525,12 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 	for(json& val: cnst["values"]) {
 		assertAST(val.is_object(), cnst);
 		PlnExpression *e = buildExpression(val, scope);
-		PlnValue value = e->values[0];
-		delete e;
-
 		json &cname = cnst["names"][i];
 		assertAST(cname.is_string(), cnst);
-		int vtype = value.type;
-		const string& name = cname;
-		if (e->type == ET_VALUE
-				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_STR || vtype == VL_LIT_FLO8)) {
-			if (!CUR_BLOCK->declareConst(name, value)) {
-				PlnCompileError err(E_DuplicateConstName, name);
-				setLoc(&err, cnst);
-				throw err;
-			}
-		} else {
-			PlnCompileError err(E_CantDefineConst, name);
+		try {
+			CUR_BLOCK->declareConst(cname, e);
+
+		} catch (PlnCompileError &err) {
 			setLoc(&err, cnst);
 			throw err;
 		}
