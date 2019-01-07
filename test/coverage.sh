@@ -5,7 +5,8 @@
 # target="../generators/PlnX86_64DataAllocator"
 # target="../PlnDataAllocator"
 # target="../models/PlnVariable"
-target="../models/expressions/PlnAssignment"
+# target="../PlnModelTreeBuilder"
+target="../models/expressions/PlnArrayValue"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
 

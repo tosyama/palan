@@ -308,4 +308,13 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "545_undefconst_err";
 	REQUIRE(build(testcode) == "0:2-2 Constant 'i' was not declared in this scope.");
+
+	testcode = "546_const_exp_err";
+	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
+
+	testcode = "547_constarr_exp_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
+
+	testcode = "548_constarr_exp_err2";
+	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
 }

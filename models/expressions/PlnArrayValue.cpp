@@ -58,7 +58,7 @@ bool PlnArrayValue::isLiteral()
 			}
 
 		} else
-			BOOST_ASSERT(false);
+			return false;
 	}
 	return true;
 }
