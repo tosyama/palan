@@ -32,10 +32,10 @@ public:
 	PlnVariable* declareVariable(const string& var_name, vector<PlnType*>& var_types, bool is_owner);
 	PlnVariable* getVariable(const string& var_name);
 
-	void declareConst(const string& name, PlnExpression *ex);
+	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError
 	PlnExpression* getConst(const string& name);
 
-	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError;
+	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);

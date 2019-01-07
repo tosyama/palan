@@ -21,7 +21,8 @@ PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnBlock.h models/PlnExpression.h models/PlnStatement.h \
 	models/PlnType.h models/PlnVariable.h models/../PlnDataAllocator.h \
 	models/../PlnGenerator.h models/../PlnScopeStack.h \
-	models/../PlnConstants.h models/../PlnMessage.h models/../PlnException.h
+	models/../PlnConstants.h models/../PlnMessage.h models/../PlnException.h \
+	models/expressions/PlnArrayValue.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
@@ -140,6 +141,7 @@ PlnArrayItem.o:  \
 PlnArrayValue.o:  \
 	models/expressions/PlnArrayValue.h models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnType.h \
+	models/expressions/../PlnModule.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnConstants.h \

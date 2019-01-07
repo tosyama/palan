@@ -4,7 +4,7 @@
 /// e.g.) [1,2,3,4,5,6]
 ///
 /// @file	PlnArrayValue.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "PlnArrayValue.h"
@@ -24,6 +24,51 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &elements)
 	val.type = VL_WORK;
 	val.inf.wk_type = new vector<PlnType*>({PlnType::getRawArray()});
 	values.push_back(val);
+}
+
+PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
+	: PlnExpression(ET_ARRAYVALUE)
+{
+	values = src.values;
+	arrval_type = src.arrval_type;
+
+	for (PlnExpression* e: src.elements) {
+		if (e->type == ET_VALUE) {
+			elements.push_back(new PlnExpression(e->values[0]));
+		} else if (e->type == ET_ARRAYVALUE) {
+			elements.push_back(new PlnArrayValue(*static_cast<PlnArrayValue*>(e)));
+		} else
+			BOOST_ASSERT(false);
+	}
+}
+
+bool PlnArrayValue::isLiteral()
+{
+	if (arrval_type == AVT_INT_LIT_ARRAY || arrval_type == AVT_FLO_LIT_ARRAY) {
+		return true;
+
+	} else if (arrval_type == AVT_UNKNOWN) {
+		for (PlnExpression* e: elements) {
+			if (e->type == ET_VALUE) {
+				PlnValType vtype = e->values[0].type;
+				if (vtype != VL_LIT_INT8 && vtype != VL_LIT_UINT8
+					&& vtype != VL_LIT_FLO8 && vtype != VL_LIT_STR) {
+					return false;
+				}
+			} else if (e->type == ET_ARRAYVALUE) {
+				if (!static_cast<PlnArrayValue*>(e)->isLiteral()) {
+					return false;
+				}
+
+			} else
+				BOOST_ASSERT(false);
+		}
+		return true;
+
+	} else {
+		BOOST_ASSERT(false);
+		// return false;
+	}
 }
 
 // true: success, false: NG

@@ -524,9 +524,22 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 	int i = 0;
 	for(json& val: cnst["values"]) {
 		assertAST(val.is_object(), cnst);
-		PlnExpression *e = buildExpression(val, scope);
 		json &cname = cnst["names"][i];
 		assertAST(cname.is_string(), cnst);
+
+		PlnExpression *e;
+		try {
+			e = buildExpression(val, scope);
+
+		} catch (PlnCompileError &err) {
+			if (err.err_code == E_UndefinedVariable) {
+				PlnCompileError cerr(E_CantUseDynamicValue, cname);
+				cerr.loc = err.loc;
+				throw cerr;
+			}
+			throw;
+		}
+
 		try {
 			CUR_BLOCK->declareConst(cname, e);
 
