@@ -44,31 +44,23 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 
 bool PlnArrayValue::isLiteral()
 {
-	if (arrval_type == AVT_INT_LIT_ARRAY || arrval_type == AVT_FLO_LIT_ARRAY) {
-		return true;
+	BOOST_ASSERT(arrval_type == AVT_UNKNOWN);
+	for (PlnExpression* e: elements) {
+		if (e->type == ET_VALUE) {
+			PlnValType vtype = e->values[0].type;
+			if (vtype != VL_LIT_INT8 && vtype != VL_LIT_UINT8 && vtype != VL_LIT_FLO8) {
+				return false;
+			}
 
-	} else if (arrval_type == AVT_UNKNOWN) {
-		for (PlnExpression* e: elements) {
-			if (e->type == ET_VALUE) {
-				PlnValType vtype = e->values[0].type;
-				if (vtype != VL_LIT_INT8 && vtype != VL_LIT_UINT8
-					&& vtype != VL_LIT_FLO8 && vtype != VL_LIT_STR) {
-					return false;
-				}
-			} else if (e->type == ET_ARRAYVALUE) {
-				if (!static_cast<PlnArrayValue*>(e)->isLiteral()) {
-					return false;
-				}
+		} else if (e->type == ET_ARRAYVALUE) {
+			if (!static_cast<PlnArrayValue*>(e)->isLiteral()) {
+				return false;
+			}
 
-			} else
-				BOOST_ASSERT(false);
-		}
-		return true;
-
-	} else {
-		BOOST_ASSERT(false);
-		// return false;
+		} else
+			BOOST_ASSERT(false);
 	}
+	return true;
 }
 
 // true: success, false: NG

@@ -51,6 +51,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Type of variable '%1%' is ambiguous."; break;
 		case E_IncompatibleTypeInitVar:
 			f = "Incompatible type to init variable '%1%'."; break;
+		case E_UndefinedConst:
+			f  = "Constant '%1%' was not declared in this scope."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

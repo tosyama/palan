@@ -162,6 +162,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "91012.3 91012.3 91012 91012.3\n"
 							"32.2 5");
+	testcode = "023_const_array";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "123 1232 23.312");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -302,4 +305,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "544_copyfreevar_err3";
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not copy to freed variable 'arr1'.");
+
+	testcode = "545_undefconst_err";
+	REQUIRE(build(testcode) == "0:2-2 Constant 'i' was not declared in this scope.");
 }

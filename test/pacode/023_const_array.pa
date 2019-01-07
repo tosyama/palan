@@ -1,0 +1,35 @@
+ccall int32 printf();
+
+const ARR1 = [1,2,3];
+const ARR2 = [ARR1, ARR1];
+const ARR3 = [ARR2, ARR2];
+
+arr1 = ARR1;
+arr2 = ARR2;
+arr3 = ARR3;
+
+int32[3] arr11 = ARR1;
+int16[2,3] arr21 = ARR2;
+sbyte[2,2,3] arr31 = ARR3;
+sbyte[2,2,3] arr32;
+
+ARR3 -> arr32;
+
+printf("%d%d%d ", arr1[0], arr2[1,1], arr3[1,1,2]);
+printf("%d%d%d%d ", arr11[0], arr21[1,1], arr31[1,1,2], arr32[1,1,1]);
+
+const UARR1 = [1u,2u,3u];
+const FARR1 = [1.1, 2.2, 3.3];
+const MIXARR = [ARR1, UARR1, [11,12,13]];
+
+uarr1 = UARR1;
+farr1 = FARR1;
+mix = MIXARR;
+
+printf("%d%.1f%d", uarr1[1], farr1[2], mix[2,1]);
+
+// Todo: array type detection.(current is check only first item. it's not good)
+// e.g) [ARR1, UARR1, FARR1]
+// inhibit move e.g.) func(ARR1>>); -> compile error
+// support access item // e.g.) i = ARR1[1];
+

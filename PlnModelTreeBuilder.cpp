@@ -533,7 +533,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 
 		} catch (PlnCompileError &err) {
 			if (err.err_code == E_UndefinedVariable) {
-				PlnCompileError cerr(E_CantUseDynamicValue, cname);
+				PlnCompileError cerr(E_UndefinedConst, err.arg1);
 				cerr.loc = err.loc;
 				throw cerr;
 			}

@@ -21,6 +21,7 @@ public:
 	PlnArrayValue(vector<PlnExpression*> &elements);
 	PlnArrayValue(const PlnArrayValue& src);
 
+	// 0: not literal, 1: int64 literal, 2: uint64 literal, 3: float literal
 	bool isLiteral();
 
 	void setDefaultType(PlnModule* module);
