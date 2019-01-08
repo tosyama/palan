@@ -318,4 +318,13 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "548_constarr_exp_err2";
 	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
+
+	testcode = "549_constarr_mv_err";
+	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");
+
+	testcode = "550_const_assign_err";
+	REQUIRE(build(testcode) == "0:3-3 Can't use constant value here.");
+
+	testcode = "551_constarr_mv_err2";
+	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
 }

@@ -9,8 +9,8 @@
 # target="../models/expressions/PlnArrayValue"
 target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
-gcovs="${targetnm}.cpp"
-gcovs="PlnAssignIndirectObjItem.h"
+# gcovs="${targetnm}.cpp"
+gcovs="PlnAssignWorkValsItem.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov
