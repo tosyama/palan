@@ -710,7 +710,7 @@ var_expression: ID
 			{ "base-var", $1 }
 		};
 		$$ = move(uexp);
-		LOC($$,@$);
+		LOC($$, @$);
 	}
 
 	| var_expression array_item

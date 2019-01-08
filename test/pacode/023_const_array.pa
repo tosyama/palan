@@ -26,10 +26,14 @@ uarr1 = UARR1;
 farr1 = FARR1;
 mix = MIXARR;
 
-printf("%d%.1f%d", uarr1[1], farr1[2], mix[2,1]);
+printf("%d%.1f%d ", uarr1[1], farr1[2], mix[2,1]);
 
 // Todo: array type detection.(current is check only first item. it's not good)
 // e.g) [ARR1, UARR1, FARR1]
-// inhibit move e.g.) func(ARR1>>); -> compile error
-// support access item // e.g.) i = ARR1[1];
+
+arrayshow([1,2,3][4,5,6]);
+
+func arrayshow(int64[2,3] a) {
+	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
+}
 

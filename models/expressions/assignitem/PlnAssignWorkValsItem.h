@@ -59,6 +59,11 @@ public:
 		for (auto &di: dsts) {
 			auto v = src_ex->values[i];
 			if (src_ex->type == ET_ARRAYVALUE) {
+				if (di.item->getAssginType() == ASGN_MOVE) {
+					PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
+					err.loc = src_ex->loc;
+					throw err;
+				}
 				di.item->setSrcEx(da, si, src_ex);
 
 			} else if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {

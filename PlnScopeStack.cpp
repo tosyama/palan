@@ -3,11 +3,12 @@
 /// @file	PlnScopeStack.cpp
 /// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
+#include <boost/assert.hpp>
+#include <algorithm>
+
 #include "PlnModel.h"
 #include "models/PlnVariable.h"
 #include "PlnScopeStack.h"
-#include <boost/assert.hpp>
-#include <algorithm>
 
 bool PlnScopeInfo::exists_current(PlnVariable* v)
 {

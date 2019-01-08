@@ -71,9 +71,10 @@ public:
 		if (dst_item->getAssginType() == ASGN_MOVE) {
 		 	auto container_var = src_ex->values[0].inf.var->container;
 			BOOST_ASSERT(container_var);
-			if (si.exists_current(container_var)) {
-				si.set_lifetime(container_var, VLT_PARTLY_FREED);
+			if (!si.exists_current(container_var)) {
+				si.push_owner_var(container_var);
 			}
+			si.set_lifetime(container_var, VLT_PARTLY_FREED);
 		}
 
 		if (src_save)

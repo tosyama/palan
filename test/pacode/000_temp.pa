@@ -1,27 +1,8 @@
 ccall int32 printf();
-const ARR = [1+1, 2, 3];
+a = [1,2,3][4,5,6];
 
-arr1 = [1,1+1,3];
-flo32[,] arr2 = [1,2,3][4,5,6];
-aaa = 1;
+test(a);
 
-int64[2][3] arr3;
-int64[2,3] arrA = [ARR, [4,5,6]];
-
-arr1 -> arr3[1];
-
-arr4 = arr3[1];
-arr4, arr2 -> show();
-
-{
-//	freearr(arr1>>) -> arr1;
+func test(int64[2,3] a) -> int64[2,3] a {
+	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
 }
-
-func show(int64[3] arr1, flo32[2,3] arr2) {
-	printf("%d %.0f\n", arr1[1], arr2[1,1]);
-}
-
-func freearr(int64[3] >>arr) -> int64[3] arr
-{
-}
-
