@@ -46,7 +46,7 @@ public:
 		dst_ex->finish(da, si);
 		auto var = dst_ex->values[0].inf.var;
 		auto lt = si.get_lifetime(var);
-		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+		if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 			free_ex = PlnFreer::getFreeEx(var);
 			free_ex->finish(da, si);
 		}

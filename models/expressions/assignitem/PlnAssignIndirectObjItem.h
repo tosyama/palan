@@ -67,11 +67,13 @@ public:
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		dst_item->finish(da, si);
+
 		if (dst_item->getAssginType() == ASGN_MOVE) {
-			// Mark as freed variable. TODO: check this works.
-			auto var = src_ex->values[0].inf.var;
-			if (si.exists_current(var))
-				si.set_lifetime(var, VLT_FREED);
+		 	auto container_var = src_ex->values[0].inf.var->container;
+			BOOST_ASSERT(container_var);
+			if (si.exists_current(container_var)) {
+				si.set_lifetime(container_var, VLT_PARTLY_FREED);
+			}
 		}
 
 		if (src_save)

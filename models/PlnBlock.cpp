@@ -257,7 +257,7 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto v: variables) {
 		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
 			auto lt = si.get_lifetime(v);
-			if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+			if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 				PlnExpression* free_var = PlnFreer::getFreeEx(v);
 				free_var->finish(da, si);
 				free_vars.push_back(free_var);

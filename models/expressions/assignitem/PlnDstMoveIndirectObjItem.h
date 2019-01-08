@@ -32,7 +32,7 @@ public:
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		auto lt = si.get_lifetime(dst_ex->values[0].inf.var);
-		if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+		if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 			// set destination address to save place.
 			vector<PlnType*> t = dst_ex->values[0].inf.var->var_type;
 			addr_var = PlnVariable::createTempVar(da, t, "(save addr)");

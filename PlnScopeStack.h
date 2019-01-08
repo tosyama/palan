@@ -37,7 +37,8 @@ enum PlnVarLifetime {
 	VLT_UNKNOWN,
 	VLT_ALLOCED,
 	VLT_INITED,
-	VLT_FREED
+	VLT_FREED,
+	VLT_PARTLY_FREED
 };
 
 class PlnScopeVarInfo {
