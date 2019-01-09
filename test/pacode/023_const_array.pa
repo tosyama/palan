@@ -20,16 +20,15 @@ printf("%d%d%d%d ", arr11[0], arr21[1,1], arr31[1,1,2], arr32[1,1,1]);
 
 const UARR1 = [1u,2u,3u];
 const FARR1 = [1.1, 2.2, 3.3];
-const MIXARR = [ARR1, UARR1, [11,12,13]];
+const MIXARR = [ARR1, UARR1, [11,12,13], FARR1];
 
 uarr1 = UARR1;
 farr1 = FARR1;
 mix = MIXARR;
 
-printf("%d%.1f%d ", uarr1[1], farr1[2], mix[2,1]);
+flo64[4,3] ff = mix;
 
-// Todo: array type detection.(current is check only first item. it's not good)
-// e.g) [ARR1, UARR1, FARR1]
+printf("%d%.1f%.1f ", uarr1[1], farr1[2], mix[2,1]);
 
 arrayshow([1,2,3][4,5,6]);
 

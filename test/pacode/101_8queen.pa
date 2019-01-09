@@ -63,7 +63,8 @@ func queen(byte[Y,X] >>board, int32 x, y)
 		yy = 0;
 		while yy < Y {
 			int32 cnt;
-			board ->> queen(x+1, yy) ->>board, cnt;
+			board ->> queen(x+1, yy)
+				->> board,  cnt;
 			cnt + count -> count;
 			yy+1 -> yy;
 		}

@@ -85,7 +85,7 @@ static bool addElements(vector<PlnExpression*> &dst, vector<int> sizes, vector<P
 }
 
 // return ElementType
-static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes)
+static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes, int depth=0)
 {
 	if (ex->type == ET_VALUE) {
 		if (ex->values[0].type == VL_LIT_INT8) {
@@ -99,8 +99,24 @@ static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes)
 
 	} else if (ex->type == ET_ARRAYVALUE) {
 		PlnArrayValue* av = static_cast<PlnArrayValue*>(ex);
-		sizes.push_back(av->elements.size());
-		return setFixedArrayInfo(av->elements[0], sizes);
+		if (depth == sizes.size())
+			sizes.push_back(av->elements.size());
+
+		PlnType* element_type = NULL; 
+		for (int i=0; i<av->elements.size(); ++i) {
+			PlnExpression* e = av->elements[i];
+			PlnType* etype = setFixedArrayInfo(e, sizes, depth+1);
+			if (!element_type) element_type = etype;
+			else if (element_type == PlnType::getUint()) {
+				element_type = etype;
+			} else if (element_type == PlnType::getSint()) {
+				if (etype == PlnType::getFlo())
+					element_type = etype;
+			} else
+				BOOST_ASSERT(element_type == PlnType::getFlo());
+		}
+		return element_type;
+
 	} else
 		BOOST_ASSERT(false);
 }

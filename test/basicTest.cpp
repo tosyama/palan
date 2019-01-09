@@ -165,7 +165,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "023_const_array";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "123 1232 23.312 126");
+	REQUIRE(exec(testcode) == "123 1232 23.312.0 126");
 }
 
 TEST_CASE("Compile error test", "[basic]")
