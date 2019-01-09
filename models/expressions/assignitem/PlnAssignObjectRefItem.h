@@ -55,8 +55,9 @@ public:
 		if (assin_type == ASGN_MOVE) {
 			// Mark as freed variable.
 			auto var = src_ex->values[0].inf.var;
-			if (si.exists_current(var))
-				si.set_lifetime(var, VLT_FREED);
+			if (!si.exists_current(var))
+				si.push_owner_var(var);
+			si.set_lifetime(var, VLT_FREED);
 		}
 	}
 

@@ -524,23 +524,26 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 	int i = 0;
 	for(json& val: cnst["values"]) {
 		assertAST(val.is_object(), cnst);
-		PlnExpression *e = buildExpression(val, scope);
-		PlnValue value = e->values[0];
-		delete e;
-
 		json &cname = cnst["names"][i];
 		assertAST(cname.is_string(), cnst);
-		int vtype = value.type;
-		const string& name = cname;
-		if (e->type == ET_VALUE
-				&& (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_STR || vtype == VL_LIT_FLO8)) {
-			if (!CUR_BLOCK->declareConst(name, value)) {
-				PlnCompileError err(E_DuplicateConstName, name);
-				setLoc(&err, cnst);
-				throw err;
+
+		PlnExpression *e;
+		try {
+			e = buildExpression(val, scope);
+
+		} catch (PlnCompileError &err) {
+			if (err.err_code == E_UndefinedVariable) {
+				PlnCompileError cerr(E_UndefinedConst, err.arg1);
+				cerr.loc = err.loc;
+				throw cerr;
 			}
-		} else {
-			PlnCompileError err(E_CantDefineConst, name);
+			throw;
+		}
+
+		try {
+			CUR_BLOCK->declareConst(cname, e);
+
+		} catch (PlnCompileError &err) {
 			setLoc(&err, cnst);
 			throw err;
 		}
@@ -668,11 +671,20 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	assertAST(fcall["args"].is_array(), fcall);
 	for (auto& arg: fcall["args"]) {
 		assertAST(arg["exp"].is_object(), fcall);
-		args.push_back(buildExpression(arg["exp"], scope));
-		if (arg["move"].is_boolean() && arg["move"] == true) {
-			args.back()->values[0].asgn_type = ASGN_MOVE;
+		PlnExpression *e = buildExpression(arg["exp"], scope);
+		if (e->type == ET_ARRAYVALUE) {
+			static_cast<PlnArrayValue*>(e)->setDefaultType(CUR_MODULE);
 		}
-		arg_vals.push_back(&args.back()->values[0]);
+		if (arg["move"].is_boolean() && arg["move"] == true) {
+			e->values[0].asgn_type = ASGN_MOVE;
+			if (e->type == ET_ARRAYVALUE) {
+				PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
+				err.loc = e->loc;
+				throw err;
+			}
+		}
+		arg_vals.push_back(&e->values[0]);
+		args.push_back(e);
 	}
 
 	try {
@@ -804,6 +816,12 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 {
 	PlnExpression* var_exp = buildVariarble(dval, scope);
+
+	if (var_exp->values[0].type != VL_VAR) {
+		PlnCompileError err(E_CantUseConstHere);
+		setLoc(&err, dval);
+		throw err;
+	}
 
 	if (dval["move"].is_boolean() && dval["move"]==true) {
 		var_exp->values[0].asgn_type = ASGN_MOVE;

@@ -117,6 +117,7 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 			throw err;
 		}
 		PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
+		bool added = false;
 		for (int i=0; i<ex->values.size(); ++i) {
 			if (dst_i < lvals.size()) {
 				if (ex->type == ET_ARRAYVALUE) {
@@ -136,17 +137,19 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 				need_save = checkNeedToSave(expressions, exp_i, lvals, dst_i);
 
 				ai->addDstEx(lvals[dst_i], need_save);
+				added = true;
 				dst_i++;
 			}
 		}
+		if (!added)
+			throw PlnCompileError(E_NumOfLRVariables);
+
 		assgin_items.push_back(ai);
 		exp_i++;
 	}
 
-	if (dst_i < this->lvals.size()) {
+	if (dst_i < lvals.size())
 		throw PlnCompileError(E_NumOfLRVariables);
-		BOOST_ASSERT(false);
-	}
 }
 
 PlnAssignment::~PlnAssignment()

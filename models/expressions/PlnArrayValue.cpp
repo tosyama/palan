@@ -4,7 +4,7 @@
 /// e.g.) [1,2,3,4,5,6]
 ///
 /// @file	PlnArrayValue.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "PlnArrayValue.h"
@@ -24,6 +24,43 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &elements)
 	val.type = VL_WORK;
 	val.inf.wk_type = new vector<PlnType*>({PlnType::getRawArray()});
 	values.push_back(val);
+}
+
+PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
+	: PlnExpression(ET_ARRAYVALUE)
+{
+	values = src.values;
+	arrval_type = src.arrval_type;
+
+	for (PlnExpression* e: src.elements) {
+		if (e->type == ET_VALUE) {
+			elements.push_back(new PlnExpression(e->values[0]));
+		} else if (e->type == ET_ARRAYVALUE) {
+			elements.push_back(new PlnArrayValue(*static_cast<PlnArrayValue*>(e)));
+		} else
+			BOOST_ASSERT(false);
+	}
+}
+
+bool PlnArrayValue::isLiteral()
+{
+	BOOST_ASSERT(arrval_type == AVT_UNKNOWN);
+	for (PlnExpression* e: elements) {
+		if (e->type == ET_VALUE) {
+			PlnValType vtype = e->values[0].type;
+			if (vtype != VL_LIT_INT8 && vtype != VL_LIT_UINT8 && vtype != VL_LIT_FLO8) {
+				return false;
+			}
+
+		} else if (e->type == ET_ARRAYVALUE) {
+			if (!static_cast<PlnArrayValue*>(e)->isLiteral()) {
+				return false;
+			}
+
+		} else
+			return false;
+	}
+	return true;
 }
 
 // true: success, false: NG
@@ -48,7 +85,7 @@ static bool addElements(vector<PlnExpression*> &dst, vector<int> sizes, vector<P
 }
 
 // return ElementType
-static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes)
+static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes, int depth=0)
 {
 	if (ex->type == ET_VALUE) {
 		if (ex->values[0].type == VL_LIT_INT8) {
@@ -62,8 +99,24 @@ static PlnType* setFixedArrayInfo(PlnExpression* ex, vector<int>& sizes)
 
 	} else if (ex->type == ET_ARRAYVALUE) {
 		PlnArrayValue* av = static_cast<PlnArrayValue*>(ex);
-		sizes.push_back(av->elements.size());
-		return setFixedArrayInfo(av->elements[0], sizes);
+		if (depth == sizes.size())
+			sizes.push_back(av->elements.size());
+
+		PlnType* element_type = NULL; 
+		for (int i=0; i<av->elements.size(); ++i) {
+			PlnExpression* e = av->elements[i];
+			PlnType* etype = setFixedArrayInfo(e, sizes, depth+1);
+			if (!element_type) element_type = etype;
+			else if (element_type == PlnType::getUint()) {
+				element_type = etype;
+			} else if (element_type == PlnType::getSint()) {
+				if (etype == PlnType::getFlo())
+					element_type = etype;
+			} else
+				BOOST_ASSERT(element_type == PlnType::getFlo());
+		}
+		return element_type;
+
 	} else
 		BOOST_ASSERT(false);
 }

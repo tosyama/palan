@@ -1,7 +1,7 @@
 /// PlnArrayValue model class declaration.
 ///
 /// @file	PlnArrayValue.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnExpression.h"
 
@@ -17,9 +17,12 @@ public:
 	vector<PlnExpression*> elements;
 	vector<PlnType*> element_type;
 	PlnArrayValueType arrval_type;
-	PlnDataPlace *test_dp;
 
 	PlnArrayValue(vector<PlnExpression*> &elements);
+	PlnArrayValue(const PlnArrayValue& src);
+
+	// 0: not literal, 1: int64 literal, 2: uint64 literal, 3: float literal
+	bool isLiteral();
 
 	void setDefaultType(PlnModule* module);
 	void setVarType(vector<PlnType*> var_type);

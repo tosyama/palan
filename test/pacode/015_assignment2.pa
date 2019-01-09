@@ -64,8 +64,10 @@ arr(3) -> b;
 aa[1], b ->>b, >>aa[1];
 printf("%d %d ", aa[1][1], b[1]);
 
-b, aa[1] ->> aa[1], >>b;
-printf("%d %d\n", aa[1][1], b[1]);
+{
+	b, aa[1] ->> aa[1], >>b;
+	printf("%d %d\n", aa[1][1], b[1]);
+}
 
 func arr(int32 base) -> int32[3] a
 {

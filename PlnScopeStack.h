@@ -37,7 +37,8 @@ enum PlnVarLifetime {
 	VLT_UNKNOWN,
 	VLT_ALLOCED,
 	VLT_INITED,
-	VLT_FREED
+	VLT_FREED,
+	VLT_PARTLY_FREED
 };
 
 class PlnScopeVarInfo {
@@ -67,7 +68,8 @@ public:
 	void pop_owner_vars(PlnFunction *f) {
 		for (auto it=owner_vars.begin(); it!=owner_vars.end();) {
 			if (it->scope.inf.function == f) it = owner_vars.erase(it);
-			else ++it;
+			else // ++it;	// for global variable
+				BOOST_ASSERT(false);
 		}
 	}
 

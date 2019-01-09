@@ -3,7 +3,9 @@
 /// e.g.) a || b / a && b
 ///
 /// @file	PlnBoolOperation.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2018 YAMAGUCHI Toshinobu 
+
+#include "boost/assert.hpp"
 
 #include "PlnBoolOperation.h"
 #include "../PlnType.h"
@@ -13,7 +15,6 @@
 #include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
 
-#include "boost/assert.hpp"
 
 // PlnBoolOperation
 PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type)

@@ -31,6 +31,8 @@ enum PlnErrCode {
 	E_AllowedOnlyInteger,	// none
 	E_AmbiguousVarType,	// var name
 	E_IncompatibleTypeInitVar, // var name
+	E_UndefinedConst, // const name
+	E_CantUseConstHere, // none
 
 	E_InvalidAST,	// source name, line
 

@@ -1,8 +1,9 @@
 /// Loop statement model classes definition.
 ///
 /// @file	PlnLoopStatement.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
+#include "boost/assert.hpp"
 #include "PlnLoopStatement.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"
@@ -10,7 +11,6 @@
 #include "../PlnGenerator.h"
 #include "expressions/PlnCmpOperation.h"
 
-#include "boost/assert.hpp"
 
 PlnWhileStatement::PlnWhileStatement
 	(PlnExpression* condition, PlnBlock* block, PlnBlock* parent)

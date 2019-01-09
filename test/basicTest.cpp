@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5");
+	REQUIRE(exec(testcode) == "126");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -125,8 +125,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"-16.00 17.00 16.00 17.00 -16.00 17.00 16.00 17.00 -16 17 16 17\n"
 							"1 2 3 4 5 6 7 8\n"
 							"-1 -2 -3 -4 5 6 7 8\n"
-							"-16 17 -16 17 240 17 4294967280 17"
-							);
+							"-16 17 -16 17 240 17 4294967280 17\n"
+							"1.1 8.8 9.9");
 
 	testcode = "017_floope";
 	REQUIRE(build(testcode) == "success");
@@ -162,6 +162,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "91012.3 91012.3 91012 91012.3\n"
 							"32.2 5");
+
+	testcode = "023_const_array";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "123 1232 23.312.0 126");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -293,4 +297,34 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "541_varinit_type_err3";
 	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+
+	testcode = "542_asgnLRnum_err2";
+	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
+
+	testcode = "543_copyfreevar_err2";
+	REQUIRE(build(testcode) == "finish:0:6-6 Can not copy to freed variable 'arr'.");
+
+	testcode = "544_copyfreevar_err3";
+	REQUIRE(build(testcode) == "finish:0:3-3 Can not copy to freed variable 'arr1'.");
+
+	testcode = "545_undefconst_err";
+	REQUIRE(build(testcode) == "0:2-2 Constant 'i' was not declared in this scope.");
+
+	testcode = "546_const_exp_err";
+	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
+
+	testcode = "547_constarr_exp_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
+
+	testcode = "548_constarr_exp_err2";
+	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
+
+	testcode = "549_constarr_mv_err";
+	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");
+
+	testcode = "550_const_assign_err";
+	REQUIRE(build(testcode) == "0:3-3 Can't use constant value here.");
+
+	testcode = "551_constarr_mv_err2";
+	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
 }

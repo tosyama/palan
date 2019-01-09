@@ -1,0 +1,5 @@
+func mvfun(int64[3] >>arr)
+{
+}
+
+mvfun([1,2,3]>>);

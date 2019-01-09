@@ -21,6 +21,7 @@
 #include "../PlnConstants.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
+#include "expressions/PlnArrayValue.h"
 
 PlnBlock::PlnBlock()
 	: parent_func(NULL), parent_block(NULL)
@@ -35,6 +36,8 @@ PlnBlock::~PlnBlock()
 		delete free_var;
 	for (auto stmt: statements)
 		delete stmt;
+	for (auto cons: consts)
+		delete cons.ex;
 }
 
 void PlnBlock::setParent(PlnFunction* f)
@@ -103,17 +106,33 @@ static PlnBlock* parentBlock(PlnBlock* block) {
 	return NULL;
 }
 
-bool PlnBlock::declareConst(const string& name, PlnValue value)
+void PlnBlock::declareConst(const string& name, PlnExpression *ex)
 {
+	bool isConst = false;
+	if (ex->type == ET_VALUE) {
+		int vtype = ex->values[0].type;
+		if (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_STR || vtype == VL_LIT_FLO8)
+			isConst = true;
+	} else if (ex->type == ET_ARRAYVALUE) {
+		isConst = static_cast<PlnArrayValue*>(ex)->isLiteral();
+	}
+
+	if (!isConst) {
+		PlnCompileError err(E_CantDefineConst, name);
+		throw err;
+	}
+
 	// Always 0. Const declaration is faster than variable.
 	for (auto v: variables)
 		BOOST_ASSERT(v->name == name);
 
 	for (auto c: consts)
-		if (c.name == name) return false;
+		if (c.name == name) {
+			PlnCompileError err(E_DuplicateConstName, name);
+			throw err;
+		}
 
-	consts.push_back( {name, value} );
-	return true;
+	consts.push_back( {name, ex} );
 }
 
 PlnExpression* PlnBlock::getConst(const string& name)
@@ -125,7 +144,13 @@ PlnExpression* PlnBlock::getConst(const string& name)
 			[name](PlnConst& c) { return c.name == name; } );
 
 		if (const_inf != b->consts.end()) {
-			return new PlnExpression(const_inf->value);
+			PlnExpression* ex = const_inf->ex;
+			if (ex->type == ET_VALUE) {
+				return new PlnExpression(ex->values[0]);
+			} else if (ex->type == ET_ARRAYVALUE) {
+				return new PlnArrayValue(*static_cast<PlnArrayValue*>(ex));
+			} else
+				BOOST_ASSERT(false);
 		}
 
 	} while (b = parentBlock(b));
@@ -221,7 +246,6 @@ next:	;
 	return NULL;
 }
 
-
 void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	si.push_scope(this);
@@ -233,7 +257,7 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto v: variables) {
 		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
 			auto lt = si.get_lifetime(v);
-			if (lt == VLT_ALLOCED || lt == VLT_INITED) {
+			if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 				PlnExpression* free_var = PlnFreer::getFreeEx(v);
 				free_var->finish(da, si);
 				free_vars.push_back(free_var);

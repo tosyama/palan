@@ -19,6 +19,7 @@
 #include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
 #include "PlnClone.h"
+#include "PlnArrayValue.h"
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
@@ -107,6 +108,10 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 	int j = 0;
 	for (auto a: args) {
 		for (auto v: a->values) {
+			if (a->type == ET_ARRAYVALUE) {
+				static_cast<PlnArrayValue*>(a)->setVarType(f->parameters[i]->var_type);
+			}
+
 			auto t = v.getType();
 			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
 
@@ -123,10 +128,14 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			if (ptr_type == PTR_PARAM_COPY && v.type == VL_VAR) {
 				clone = new PlnClone(da, v.inf.var->var_type, false);
 				a->data_places.push_back(clone->src_dp);
+			} else if (ptr_type == PTR_PARAM_COPY && v.type == VL_WORK) {
+				clone = new PlnClone(da, *v.inf.wk_type, false);
+				a->data_places.push_back(clone->src_dp);
 			} else {
 				a->data_places.push_back(arg_dps[i]);
 			}
 			clones.push_back(clone);
+
 			++i;
 		}
 
@@ -137,8 +146,9 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			if (ptr_type == PTR_PARAM_MOVE && v.type == VL_VAR) {
 				// Mark as freed variable.
 				auto var = v.inf.var;
-				if (si.exists_current(var))
-					si.set_lifetime(var, VLT_FREED);
+				if (!si.exists_current(var))
+					si.push_owner_var(var);
+				si.set_lifetime(var, VLT_FREED);
 			}
 			if (clones[j]) {
 				clones[j]->data_places.push_back(arg_dps[j]);

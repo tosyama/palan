@@ -1,8 +1,9 @@
 /// Conditinal branch model classes definition.
 ///
 /// @file	PlnConditionalBranch.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
+#include "boost/assert.hpp"
 #include "PlnConditionalBranch.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"
@@ -10,7 +11,6 @@
 #include "../PlnGenerator.h"
 #include "expressions/PlnCmpOperation.h"
 
-#include "boost/assert.hpp"
 
 PlnIfStatement::PlnIfStatement
 	(PlnExpression* condition, PlnBlock* block, PlnStatement* next, PlnBlock* parent)
