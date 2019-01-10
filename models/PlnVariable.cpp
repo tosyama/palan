@@ -40,7 +40,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 {
 	int var_i=0;
 	if (inits)
-		for (auto ex: *inits) {
+		for (auto &ex: *inits) {
 			if (var_i >= vars.size()) {
 				// No any more assign.
 				PlnCompileError err(E_NumOfLRVariables);
@@ -51,7 +51,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			for (int i=0; i<ex->values.size(); ++i) {
 				if (var_i < vars.size()) {
 					if (ex->type == ET_ARRAYVALUE) {
-						static_cast<PlnArrayValue*>(ex)->setVarType(vars[var_i].inf.var->var_type);
+						ex->adjustType(vars[var_i].inf.var->var_type);
 					}
 
 					PlnType* src_type = ex->values[i].getType();	

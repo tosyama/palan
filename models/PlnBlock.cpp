@@ -197,8 +197,10 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 
 				if (is_perfect_match) {
 					if (do_cast) goto next_func;
-					else // Existing another perfect match case is bug.
+					else {// Existing another perfect match case is bug.
+						// The case func f() && func f(int32 a = 0) exists and try call func();
 						BOOST_ASSERT(false);
+					}
 
 				} else {
 					matched_func = f;

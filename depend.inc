@@ -74,7 +74,8 @@ PlnFunctionCall.o:  \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnConstants.h \
-	models/expressions/../../PlnScopeStack.h models/expressions/PlnClone.h
+	models/expressions/../../PlnScopeStack.h models/expressions/PlnClone.h \
+	models/expressions/PlnArrayValue.h
 PlnAddOperation.o:  \
 	models/expressions/PlnAddOperation.h \
 	models/expressions/../PlnExpression.h \

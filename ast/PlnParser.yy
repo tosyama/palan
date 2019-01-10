@@ -263,7 +263,7 @@ take_owner: /* empty */	{ $$ = false; }
 	;
 
 default_value:	/* empty */	{  }
-	| '=' literal
+	| '=' expression
 	{
 		$$ = move($2);
 	}
@@ -670,6 +670,11 @@ arguments: argument
 	| arguments ',' argument
 	{
 		$$ = move($1);
+		// for the case first arg is empty
+		if (!$$.size()) {
+			json empty_json;
+			$$.push_back(empty_json);
+		}
 		$$.push_back(move($3));
 	}
 	;

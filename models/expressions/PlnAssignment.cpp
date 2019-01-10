@@ -120,10 +120,9 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 		bool added = false;
 		for (int i=0; i<ex->values.size(); ++i) {
 			if (dst_i < lvals.size()) {
-				if (ex->type == ET_ARRAYVALUE) {
-					BOOST_ASSERT(lvals[dst_i]->values[0].type == VL_VAR);
-					static_cast<PlnArrayValue*>(ex)->setVarType(lvals[dst_i]->values[0].inf.var->var_type);
-				}
+				BOOST_ASSERT(lvals[dst_i]->values[0].type == VL_VAR);
+				ex->adjustType(lvals[dst_i]->values[0].inf.var->var_type);
+				
 				PlnType* src_type = ex->values[i].getType();	
 				PlnType* dst_type = lvals[dst_i]->values[0].getType();
 				if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {

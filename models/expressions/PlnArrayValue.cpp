@@ -135,7 +135,7 @@ void PlnArrayValue::setDefaultType(PlnModule* module)
 	(*values[0].inf.wk_type) = move(var_type);
 }
 
-void PlnArrayValue::setVarType(vector<PlnType*> var_type)
+void PlnArrayValue::adjustType(const vector<PlnType*> &var_type)
 {
 	if (var_type.size() <= 1) {
 		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), var_type.back()->name);

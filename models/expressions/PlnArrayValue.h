@@ -25,8 +25,9 @@ public:
 	bool isLiteral();
 
 	void setDefaultType(PlnModule* module);
-	void setVarType(vector<PlnType*> var_type);
+	// void setVarType(vector<PlnType*> var_type);
 
+	void adjustType(const vector<PlnType*> &var_type) override;
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 };

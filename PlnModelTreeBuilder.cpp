@@ -147,7 +147,11 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				if (param["move"] == true)
 					pm = FPM_MOVEOWNER;
 			}
-			f->addParam(param["name"], var_type, pm, NULL);
+			PlnExpression* default_val = NULL;
+			if (param["default-val"].is_object()) {
+				default_val = buildExpression(param["default-val"], scope);
+			}
+			f->addParam(param["name"], var_type, pm, default_val);
 			setLoc(f->parameters.back(), param);
 		}
 
@@ -670,9 +674,16 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	assertAST(fcall["func-name"].is_string(), fcall);
 	assertAST(fcall["args"].is_array(), fcall);
 	for (auto& arg: fcall["args"]) {
+		if (arg.is_null()) {
+			// use default
+			arg_vals.push_back(NULL);
+			args.push_back(NULL);
+			continue;
+		}
 		assertAST(arg["exp"].is_object(), fcall);
 		PlnExpression *e = buildExpression(arg["exp"], scope);
 		if (e->type == ET_ARRAYVALUE) {
+			// to use default type  for function search.
 			static_cast<PlnArrayValue*>(e)->setDefaultType(CUR_MODULE);
 		}
 		if (arg["move"].is_boolean() && arg["move"] == true) {
@@ -689,6 +700,11 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 
 	try {
 		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
+
+		// add for default value
+		for (int i=args.size(); i<f->parameters.size(); i++)
+			args.push_back(NULL);
+
 		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
