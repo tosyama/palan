@@ -3,7 +3,7 @@
 /// Manage output message descriptions in Palan compiler.
 ///
 /// @file	PlnMessage.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <string>
 using std::string;

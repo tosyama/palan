@@ -1,7 +1,7 @@
 /// Variable model class declaration.
 ///
 /// @file	PlnVariable.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -34,7 +34,7 @@ enum {
 
 class PlnParameter : public PlnVariable {
 public:
-	PlnValue* dflt_value;
+	PlnExpression* dflt_value;
 	int param_type;
 };
 

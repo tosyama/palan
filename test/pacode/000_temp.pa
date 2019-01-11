@@ -1,8 +1,17 @@
 ccall int32 printf();
+const A = 12.5;
+const ARR = [10,20];
 a = [1,2,3][4,5,6];
 
 test(a);
+test();
 
 func test(int64[2,3] a) -> int64[2,3] a {
 	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
 }
+
+func test(int64[2] a = [10,20])
+{
+	printf("%d%d", a[0], a[1]);
+}
+

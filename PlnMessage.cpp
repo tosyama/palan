@@ -1,3 +1,10 @@
+/// Message definitions.
+///
+/// Manage output message descriptions in Palan compiler.
+///
+/// @file	PlnMessage.cpp
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+
 #include "PlnMessage.h"
 #include "boost/format.hpp"
 

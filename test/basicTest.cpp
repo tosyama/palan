@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "126");
+	REQUIRE(exec(testcode) == "1261020");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -166,6 +166,12 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "023_const_array";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "123 1232 23.312.0 126");
+
+	testcode = "024_default_arg";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "i34i12i32i13i12\n"
+								"i32i34i13i34\n"
+								"a22.2a42.2a24.4a44.4a5");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -327,4 +333,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "551_constarr_mv_err2";
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
+
+	testcode = "552_ambigfunc_err2";
+	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
 }

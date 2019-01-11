@@ -1,0 +1,11 @@
+
+
+func afunc()
+{
+}
+
+func afunc(int64 a=10)
+{
+}
+
+afunc();

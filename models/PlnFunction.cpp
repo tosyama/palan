@@ -5,7 +5,7 @@
 /// e.g.) int ret1, int ret2 funcname(int arg1, int arg2) { ... }
 ///
 /// @file	PlnFunction.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
@@ -82,7 +82,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rty
 	return ret_var;
 }
 
-PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnValue* defaultVal)
+PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	for (auto p: parameters)
 		if (p->name == pname) return NULL;
@@ -90,8 +90,8 @@ PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
 	param->var_type = ptype.size() ? move(ptype) : parameters.back()->var_type;
-	param->dflt_value = defaultVal;
 	param->param_type = PRT_PARAM;
+	param->dflt_value = defaultVal;
 
 	auto t = param->var_type.back();
 	if (t->data_type == DT_OBJECT_REF) {

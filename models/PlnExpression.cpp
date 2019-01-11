@@ -134,6 +134,10 @@ int PlnExpression::getDataType(int val_ind)
 	return values[val_ind].getType()->data_type;
 }
 
+void PlnExpression::adjustType(const vector<PlnType*> &var_type)
+{
+}
+
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	if (data_places.size())

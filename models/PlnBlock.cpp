@@ -4,7 +4,7 @@
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <algorithm>
@@ -197,8 +197,10 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 
 				if (is_perfect_match) {
 					if (do_cast) goto next_func;
-					else // Existing another perfect match case is bug.
-						BOOST_ASSERT(false);
+					else {// Existing another perfect match case is bug.
+						// The case func f() && func f(int32 a = 0) exists and try call func();
+						throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+					}
 
 				} else {
 					matched_func = f;

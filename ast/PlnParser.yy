@@ -5,7 +5,7 @@
 /// is created from this definition file by bison.
 ///
 /// @file	PlnParser.yy
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 %skeleton "lalr1.cc"
 %require "3.0.2"
@@ -225,7 +225,7 @@ parameters: parameter { $$.push_back($1); }
 		$$ = move($1);
 		$$.push_back($3);
 	}
-	| parameters ',' move_owner ID
+	| parameters ',' move_owner ID default_value
 	{
 		$$ = move($1);
 		json prm = {
@@ -233,6 +233,9 @@ parameters: parameter { $$.push_back($1); }
 		};
 		if ($3)
 			prm["move"] = true;
+		if (!$5.is_null())
+			prm["default-val"] = move($5);
+
 		LOC_BE(prm, @3, @4);
 
 		$$.push_back(move(prm));
@@ -263,7 +266,7 @@ take_owner: /* empty */	{ $$ = false; }
 	;
 
 default_value:	/* empty */	{  }
-	| '=' literal
+	| '=' expression
 	{
 		$$ = move($2);
 	}
@@ -670,6 +673,11 @@ arguments: argument
 	| arguments ',' argument
 	{
 		$$ = move($1);
+		// for the case first arg is empty
+		if (!$$.size()) {
+			json empty_json;
+			$$.push_back(empty_json);
+		}
 		$$.push_back(move($3));
 	}
 	;

@@ -1,0 +1,47 @@
+ccall int32 printf();
+const A = 1;
+const B = [1.1, 2.2];
+
+intfunc(3,4);
+intfunc();
+intfunc(3);
+intfunc(,3);
+intfunc(,);
+printf("\n");
+
+intfunc2(3);
+intfunc2(3,4);
+intfunc3(,3);
+intfunc3(3,4);
+printf("\n");
+
+arrayfunc();
+arrayfunc([3,4]);
+arrayfunc(,[3.3,4.4]);
+arrayfunc([3,4],[3.3,4.4]);
+array2func();
+
+func intfunc(int32 a=1, b=2)
+{
+	printf("i%d%d", a, b);
+}
+
+func intfunc2(int32 a, b=2)
+{
+	printf("i%d%d", a, b);
+}
+
+func intfunc3(int32 a=A, int64 b)
+{
+	printf("i%d%d", a, b);
+}
+
+func arrayfunc(int64[2] a=[1,2], flo64[2] b=B)
+{
+	printf("a%d%.1f", a[1], b[1]);
+}
+
+func array2func(int64[2,3] a=[1,2,3][4,5,6])
+{
+	printf("a%d", a[1,1]);
+}
