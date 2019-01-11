@@ -91,10 +91,6 @@ PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype
 	param->name = pname;
 	param->var_type = ptype.size() ? move(ptype) : parameters.back()->var_type;
 	param->param_type = PRT_PARAM;
-
-	if (defaultVal) 
-		defaultVal->adjustType(param->var_type);
-
 	param->dflt_value = defaultVal;
 
 	auto t = param->var_type.back();

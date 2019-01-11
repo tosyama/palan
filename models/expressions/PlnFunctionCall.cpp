@@ -126,10 +126,10 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 	i = 0;
 	int j = 0;
 	for (auto &a: args) {
-		for (auto v: a->values) {
-			if (i<f->parameters.size())
-				a->adjustType(f->parameters[i]->var_type);
+		if (i<f->parameters.size())
+			a->adjustType(f->parameters[i]->var_type);
 
+		for (auto v: a->values) {
 			auto t = v.getType();
 			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
 

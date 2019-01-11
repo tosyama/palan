@@ -150,6 +150,9 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
 				default_val = buildExpression(param["default-val"], scope);
+				if (default_val->type == ET_ARRAYVALUE) {
+					static_cast<PlnArrayValue*>(default_val)->setDefaultType(CUR_MODULE);
+				}
 			}
 			f->addParam(param["name"], var_type, pm, default_val);
 			setLoc(f->parameters.back(), param);
