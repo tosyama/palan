@@ -67,10 +67,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 		i+=a->values.size();
 	}
 
-	while (i<f->parameters.size()) {
-		arguments.push_back(new PlnExpression(*f->parameters[i]->dflt_value));
-		i+= arguments.back()->values.size();
-	}
+	BOOST_ASSERT(i>=f->parameters.size());
 }
 
 PlnFunctionCall::~PlnFunctionCall()

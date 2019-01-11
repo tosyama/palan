@@ -333,4 +333,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "551_constarr_mv_err2";
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
+
+	testcode = "552_ambigfunc_err2";
+	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
 }
