@@ -23,9 +23,7 @@ public:
 
 	// 0: not literal, 1: int64 literal, 2: uint64 literal, 3: float literal
 	bool isLiteral();
-
 	void setDefaultType(PlnModule* module);
-	// void setVarType(vector<PlnType*> var_type);
 
 	void adjustType(const vector<PlnType*> &var_type) override;
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;

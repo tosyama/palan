@@ -21,7 +21,6 @@
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 #include "expressions/assignitem/PlnAssignItem.h"
-#include "expressions/PlnArrayValue.h"
 
 // PlnVarInit
 static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* ex)
