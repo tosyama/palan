@@ -55,6 +55,8 @@ class PlnX86_64Generator : public PlnGenerator
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
+	void comment(const string s) override;
+
 	void genSecReadOnlyData() override;
 	void genSecText() override;
 	void genEntryPoint(const string& entryname) override;

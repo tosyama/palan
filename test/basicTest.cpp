@@ -1,13 +1,17 @@
 #include "testBase.h"
 #include <iostream>
 
+extern bool migrate;
+
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
 	string testcode;
 
+	migrate = true;
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "1261020");
+	migrate = false;
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");

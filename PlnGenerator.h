@@ -18,9 +18,17 @@ enum GenEttyType {
 	GE_FLO
 };
 
+class PlnOperandInfo {
+public:
+	int type;
+	PlnOperandInfo(int opetype) : type(opetype) { };
+	virtual char* str(char* buf) { buf[0] = 0; return buf; };
+	virtual ~PlnOperandInfo() {};
+};
+
 class PlnGenEntity {
 public:
-	PlnGenEntity() : buf(NULL) { }
+	PlnGenEntity() : buf(NULL), ope(NULL) { }
 	char type;
 	char alloc_type;
 	char data_type;
@@ -32,6 +40,7 @@ public:
 		double f;
 	} data;
 	mutable char* buf;
+	PlnOperandInfo* ope;
 	~PlnGenEntity()
 	{
 		if (buf) delete buf;
@@ -40,6 +49,8 @@ public:
 				delete data.str;
 				break;
 		}
+		if (ope)
+			delete ope;
 	}
 };
 
@@ -51,8 +62,8 @@ public:
 	PlnGenerator(ostream& ostrm) : os(ostrm) {}
 	virtual ~PlnGenerator() {}
 
-	void comment(const string s) { os << "#" << s << endl; }
-	void blank() { os << endl; }
+	virtual void comment(const string s) = 0;
+	void blank() { comment(""); }
 
 	virtual void genSecReadOnlyData()=0;
 	virtual void genSecText()=0;

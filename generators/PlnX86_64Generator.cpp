@@ -144,6 +144,99 @@ static const char* r(int rt, int size=8)
 	}
 }
 
+bool migrate = false;
+
+enum {
+	OP_REG,
+	OP_IMM,
+	OP_ADRS,
+	OP_LBL
+};
+
+class PlnRegOperand : public PlnOperandInfo {
+public:
+	int8_t regid;
+	int8_t size;
+	PlnRegOperand(int regid, int size) : PlnOperandInfo(OP_REG), regid(regid), size(size) {}
+	char* str(char* buf) override { return strcpy(buf, r(regid, size)); }
+};
+inline PlnRegOperand* reg(int regid, int size=8) { new PlnRegOperand(regid, size); }
+
+class PlnImmOperand : public PlnOperandInfo {
+public:
+	int64_t value;
+	PlnImmOperand(int64_t value) : PlnOperandInfo(OP_IMM), value(value) {}
+	char* str(char* buf) override { sprintf(buf, "$%ld", value); return buf; }
+};
+inline PlnImmOperand* imm(int64_t value) { new PlnImmOperand(value); }
+
+class PlnAdrsModeOperand : public PlnOperandInfo {
+public:
+	int8_t base_regid;
+	int32_t displacement;
+	int8_t index_regid;
+	int8_t scale;
+	PlnAdrsModeOperand(int base_regid, int displacement, int index_regid, int scale)
+		: PlnOperandInfo(OP_ADRS),  base_regid(base_regid), displacement(displacement), index_regid(index_regid), scale(scale) {}
+};
+inline PlnAdrsModeOperand* adrs(int base_regid, int displacement=0, int index_regid=-1, int scale=0) {
+	new PlnAdrsModeOperand(base_regid, displacement, index_regid, scale);
+}
+
+class PlnLabelOperand : public PlnOperandInfo {
+	string label;
+	int8_t indirect_regid;
+public:
+	PlnLabelOperand(string label, int indirect_regid=-1)
+		: PlnOperandInfo(OP_LBL), label(label), indirect_regid(indirect_regid) {}
+};
+
+class PlnOpeCode {
+public:
+	const char *mnemonic;
+	PlnOperandInfo *src, *dst;
+	string comment;
+	PlnOpeCode(const char *mnemonic, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
+		: mnemonic(mnemonic), src(src), dst(dst), comment(comment) {}
+};
+
+ostream& operator<<(ostream& out, const PlnOpeCode& oc)
+{
+	if (!oc.mnemonic) {	// only comment
+		if (oc.src) {	// label
+			BOOST_ASSERT(oc.src->type == OP_LBL);
+		}
+		if (oc.comment != "") out << "# " << oc.comment;
+		return out;
+	}
+
+	char buf1[256], buf2[256];
+	if (!migrate) out << "#";
+	out << "	" << oc.mnemonic;
+	if (oc.src) out << " " << oc.src->str(buf1);
+	if (oc.dst) out << ", " << oc.dst->str(buf2);
+	if (oc.comment != "") out << "	# " << oc.comment;
+	return out;
+}
+
+class PlnRegsterMachine {
+public:
+	vector<PlnOpeCode> opecodes;
+
+	void push(const char *mnemonic, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="") {
+		opecodes.push_back({mnemonic, src, dst, comment});
+	}
+
+	void popOpecodes(ostream& os) {
+		for (PlnOpeCode& oc: opecodes) {
+			os << oc << endl;
+		}
+		opecodes.clear();
+	}
+};
+
+static PlnRegsterMachine m;
+
 static const char* oprnd(const PlnGenEntity *e)
 {
 	if (e->type == GE_STRING) {
@@ -282,6 +375,14 @@ int PlnX86_64Generator::registerString(string& str)
 	return id;
 }
 
+void PlnX86_64Generator::comment(const string s)
+{
+	if (s == "") os << endl;
+	else os << "# " << s << endl;
+
+	m.push(NULL,NULL,NULL,s);
+}
+
 void PlnX86_64Generator::genSecReadOnlyData()
 {
 	os << ".section .rodata" << endl;
@@ -380,6 +481,9 @@ void PlnX86_64Generator::genEntryFunc()
 {
 	os << "	pushq %rbp" << endl;
 	os << "	movq %rsp, %rbp" << endl;
+
+	m.push("pushq", reg(RBP));
+	m.push("movq", reg(RSP), reg(RBP));
 }
 
 void PlnX86_64Generator::genLocalVarArea(int size)
@@ -398,10 +502,13 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 	}
 
 	os << "	subq $" << size << ", %rsp" << endl;
+	m.push("subq", imm(size), reg(RSP));
 }
 
 void PlnX86_64Generator::genEndFunc()
 {
+	m.popOpecodes(os);
+
 	int i = 0;
 	for (ConstInfo &ci: const_buf) {
 		if (!ci.generated) {
@@ -470,12 +577,18 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 {
 	os << "	movq $" << id << ", %rax	# " <<  comment << endl;
 	os << "	syscall" << endl;
+
+	m.push("movq", imm(id), reg(RAX), comment);
+	m.push("syscall");
 }
 
 void PlnX86_64Generator::genReturn()
 {
 	os << "	leave" << endl;
 	os << "	ret" << endl;
+
+	m.push("leave");
+	m.push("ret");
 }
 
 void PlnX86_64Generator::genMainReturn()
@@ -485,6 +598,12 @@ void PlnX86_64Generator::genMainReturn()
 	os << "	xorq %rdi, %rdi" << endl;
 	os << "	movq $60, %rax" << endl;
 	os << "	syscall"<< endl;
+
+	m.push("movq", reg(RBP), reg(RSP));
+	m.push("popq", reg(RBP));
+	m.push("xorq", reg(RDI), reg(RDI));
+	m.push("movq", imm(60), reg(RAX));
+	m.push("syscall");
 }
 
 void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int reg)
@@ -1296,6 +1415,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->data.str = new string(to_string(dp->data.stack.offset) + "(%rbp)");
+		e->ope = adrs(RBP, dp->data.stack.offset);
 
 	} else if (dp->type == DP_STK_SP) {
 		e->type = GE_STRING;
