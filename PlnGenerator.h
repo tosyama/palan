@@ -22,13 +22,13 @@ class PlnOperandInfo {
 public:
 	int type;
 	PlnOperandInfo(int opetype) : type(opetype) { };
-	virtual char* str(char* buf) { buf[0] = 0; return buf; };
 	virtual ~PlnOperandInfo() {};
+	virtual PlnOperandInfo* clone() { return NULL; };
+	virtual char* str(char* buf) { buf[0] = 0; return buf; };
 };
 
 class PlnGenEntity {
 public:
-	PlnGenEntity() : buf(NULL), ope(NULL) { }
 	char type;
 	char alloc_type;
 	char data_type;
@@ -41,6 +41,9 @@ public:
 	} data;
 	mutable char* buf;
 	PlnOperandInfo* ope;
+
+	PlnGenEntity() : buf(NULL), ope(NULL) { }
+	PlnGenEntity(const PlnGenEntity&) = delete;
 	~PlnGenEntity()
 	{
 		if (buf) delete buf;
@@ -49,8 +52,9 @@ public:
 				delete data.str;
 				break;
 		}
-		if (ope)
+		if (ope) {
 			delete ope;
+		}
 	}
 };
 
