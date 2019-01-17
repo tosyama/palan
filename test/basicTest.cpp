@@ -1,13 +1,10 @@
 #include "testBase.h"
 #include <iostream>
 
-extern bool nmigrate;
-
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
 	string testcode;
 
-	nmigrate = false;
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "1261020");
@@ -44,8 +41,6 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3 2 4 5 9 3 4");
 	CHECK(mcheck("mtrace006") == "+27 -27");
-
-	nmigrate = true;
 
 	testcode = "007_whiletest";
 	REQUIRE(build(testcode) == "success");

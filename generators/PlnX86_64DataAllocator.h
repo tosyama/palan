@@ -14,7 +14,7 @@ enum {
 	XMM4, XMM5, XMM6, XMM7,
 	XMM8, XMM9, XMM10, XMM11,
 	XMM12, XMM13, XMM14, XMM15,
-	REG_NUM
+	RIP, REG_NUM,
 };
 
 class PlnX86_64DataAllocator: public PlnDataAllocator
