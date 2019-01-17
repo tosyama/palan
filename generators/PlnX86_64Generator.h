@@ -39,7 +39,7 @@ class PlnX86_64Generator : public PlnGenerator
 	void genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem2IReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 
-	const char* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
+	PlnOperandInfo* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd, const char** res);
 
 	void genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
 	void genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second);

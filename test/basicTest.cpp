@@ -7,11 +7,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 {
 	string testcode;
 
-	//nmigrate = false;
+	nmigrate = false;
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
-	nmigrate = true;
+	REQUIRE(exec(testcode) == "1261020");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -45,6 +44,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3 2 4 5 9 3 4");
 	CHECK(mcheck("mtrace006") == "+27 -27");
+
+	nmigrate = true;
 
 	testcode = "007_whiletest";
 	REQUIRE(build(testcode) == "success");
