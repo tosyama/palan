@@ -39,14 +39,12 @@ public:
 		int64_t i;
 		double f;
 	} data;
-	mutable char* buf;
 	PlnOperandInfo* ope;
 
-	PlnGenEntity() : buf(NULL), ope(NULL) { }
+	PlnGenEntity() : ope(NULL) { data.str = NULL;}
 	PlnGenEntity(const PlnGenEntity&) = delete;
 	~PlnGenEntity()
 	{
-		if (buf) delete buf;
 		switch (type) {
 			case GE_STRING:
 				delete data.str;
