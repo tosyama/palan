@@ -12,47 +12,27 @@ using std::unique_ptr;
 
 class PlnDataPlace;
 
-enum GenEttyType {
-	GE_STRING,
-	GE_INT,
-	GE_FLO
-};
-
 class PlnOperandInfo {
 public:
 	int type;
 	PlnOperandInfo(int opetype) : type(opetype) { };
 	virtual ~PlnOperandInfo() {};
-	virtual PlnOperandInfo* clone() { return NULL; };
-	virtual char* str(char* buf) { buf[0] = 0; return buf; };
+	virtual PlnOperandInfo* clone() = 0;
+	virtual const char* str(char* buf) = 0;
 };
 
 class PlnGenEntity {
 public:
-	char type;
 	char alloc_type;
 	char data_type;
 	int size;
-
-	mutable union {
-		string* str;
-		int64_t i;
-		double f;
-	} data;
 	PlnOperandInfo* ope;
 
-	PlnGenEntity() : ope(NULL) { data.str = NULL;}
+	PlnGenEntity() : ope(NULL) { }
 	PlnGenEntity(const PlnGenEntity&) = delete;
 	~PlnGenEntity()
 	{
-		switch (type) {
-			case GE_STRING:
-				delete data.str;
-				break;
-		}
-		if (ope) {
-			delete ope;
-		}
+		delete ope;
 	}
 };
 

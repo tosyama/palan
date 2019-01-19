@@ -49,7 +49,7 @@ class PlnX86_64Generator : public PlnGenerator
 	void genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
 	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
 
-	int registerConst(const PlnGenEntity* constValue);
+	int registerFlo64Const(const PlnOperandInfo* constValue);
 	int registerConstArray(vector<int64_t> &int_array, int item_size);
 	int registerString(string &string);
 
