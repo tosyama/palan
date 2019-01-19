@@ -331,6 +331,8 @@ public:
 	void popOpecodes(ostream& os) {
 		for (PlnOpeCode& oc: opecodes) {
 			os << oc << "\n";
+			delete oc.src;
+			delete oc.dst;
 		}
 		os.flush();
 		opecodes.clear();
