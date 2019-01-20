@@ -21,7 +21,6 @@ using std::to_string;
 using boost::algorithm::replace_all_copy;
 
 enum GenEttyType {
-	GA_NULL,
 	GA_CODE,
 	GA_REG,
 	GA_MEM
@@ -234,7 +233,7 @@ public:
 	int8_t base_regid;
 	PlnLabelAdrsModeOperand(string label, int base_regid) 
 		: PlnOperandInfo(OP_LBLADRS), label(label), base_regid(base_regid) {}
-	PlnOperandInfo* clone() override { return new PlnLabelAdrsModeOperand(label, base_regid); }
+	PlnOperandInfo* clone() override { BOOST_ASSERT(false); }
 	const char* str(char* buf) override { sprintf(buf, "%s(%s)", label.c_str(), r(base_regid,8)); return buf; }
 };
 inline PlnLabelAdrsModeOperand* lblval(const string &label, int base_regid = RIP) {
