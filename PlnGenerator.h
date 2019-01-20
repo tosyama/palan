@@ -23,17 +23,14 @@ public:
 
 class PlnGenEntity {
 public:
-	char alloc_type;
+	char type;
 	char data_type;
 	int size;
 	PlnOperandInfo* ope;
 
 	PlnGenEntity() : ope(NULL) { }
 	PlnGenEntity(const PlnGenEntity&) = delete;
-	~PlnGenEntity()
-	{
-		delete ope;
-	}
+	~PlnGenEntity() { delete ope; }
 };
 
 class PlnGenerator

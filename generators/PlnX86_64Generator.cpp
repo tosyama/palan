@@ -20,16 +20,16 @@ using std::ostringstream;
 using std::to_string;
 using boost::algorithm::replace_all_copy;
 
-enum GenEttyAllocType {
+enum GenEttyType {
 	GA_NULL,
 	GA_CODE,
 	GA_REG,
 	GA_MEM
 };
 
-#define CREATE_CHECK_FLAG(f)	bool is_##f##_mem = f->alloc_type == GA_MEM;\
-							 	bool is_##f##_reg = f->alloc_type == GA_REG;\
-							 	bool is_##f##_code = f->alloc_type == GA_CODE;\
+#define CREATE_CHECK_FLAG(f)	bool is_##f##_mem = f->type == GA_MEM;\
+							 	bool is_##f##_reg = f->type == GA_REG;\
+							 	bool is_##f##_code = f->type == GA_CODE;\
 							 	bool is_##f##_sint = f->data_type == DT_SINT;\
 							 	bool is_##f##_uint = f->data_type == DT_UINT;\
 							 	bool is_##f##_flo = f->data_type == DT_FLOAT;
@@ -241,17 +241,57 @@ inline PlnLabelAdrsModeOperand* lblval(const string &label, int base_regid = RIP
 	return new PlnLabelAdrsModeOperand(label, base_regid);
 }
 
-const char* MNE_COMMENT = "#";
-const char* MNE_LABEL = ":";
+enum PlnX86_64Mnemonic{
+	COMMENT, LABEL,
+	ADDQ, ADDSD,
+	CALL,
+	CLD,
+	CMP, CMPB, CMPW, CMPL, CMPQ,
+	CQTO,
+	CVTSD2SS, CVTSI2SS, CVTSI2SD, CVTSS2SD,
+	CVTTSD2SI, CVTTSS2SI,
+	DECQ,
+	DIVSD, DIVQ,
+	IDIVQ,
+	IMULQ,
+	INCQ,
+	JA, JAE, JB, JBE,
+	JE,
+	JG, JGE,
+	JMP, JNE,
+	JL, JLE,
+	LEA,
+	LEAVE,
+	MOVABSQ,
+	MOVB, MOVW, MOVL, MOVQ,
+	MOVSBQ, MOVSWQ, MOVSLQ,
+	MOVSS, MOVSD,
+	MOVZBQ, MOVZWQ,
+	MULSD,
+	NEGQ,
+	POPQ, PUSHQ,
+	REP_MOVSQ, REP_MOVSL, REP_MOVSW, REP_MOVSB,
+	RET,
+	SETE, SETNE, SETL, SETG, SETLE, SETGE,
+	SETB, SETA, SETBE, SETAE,
+	SUBQ, SUBSD,
+	SYSCALL,
+	UCOMISD, UCOMISS,
+	XORPD, XORQ,
+
+	MNE_SIZE
+};
 
 class PlnOpeCode {
 public:
-	const char *mnemonic;
+	static vector<const char*> mnes;
+	PlnX86_64Mnemonic mne;
 	PlnOperandInfo *src, *dst;
 	string comment;
-	PlnOpeCode(const char *mnemonic, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
-		: mnemonic(mnemonic), src(src), dst(dst), comment(comment) {}
+	PlnOpeCode(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
+		: mne(mne), src(src), dst(dst), comment(comment) {}
 };
+vector<const char*> PlnOpeCode::mnes;
 inline PlnOperandInfo* ope(const PlnGenEntity* e) {
 	return e->ope->clone();
 }
@@ -260,19 +300,19 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 {
 	char buf1[256], buf2[256];
 
-	if (oc.mnemonic == MNE_COMMENT) {
+	if (oc.mne == COMMENT) {
 		if (oc.comment != "") out << "# " << oc.comment;
 		return out;
 	}
 
-	if (oc.mnemonic == MNE_LABEL) {
+	if (oc.mne == LABEL) {
 		BOOST_ASSERT(oc.src->type == OP_LBL);
 		out << oc.src->str(buf1) << ":";
 		if (oc.comment != "") out << "	# " << oc.comment;
 		return out;
 	}
 
-	out << "	" << oc.mnemonic;
+	out << "	" << PlnOpeCode::mnes[oc.mne];
 	if (oc.src) out << " " << oc.src->str(buf1);
 	if (oc.dst) out << ", " << oc.dst->str(buf2);
 	if (oc.comment != "") out << "	# " << oc.comment;
@@ -317,10 +357,104 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 class PlnRegisterMachine {
 public:
 	vector<PlnOpeCode> opecodes;
+	PlnRegisterMachine() {
+		vector<const char*> mnes;
+		mnes.reserve(MNE_SIZE);
+		mnes[COMMENT] = "#";
+		mnes[LABEL] = ":";
+		
+		mnes[CALL] = "call";
+		mnes[SYSCALL] = "syscall";
 
-	void push(const char *mnemonic, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="") {
-		BOOST_ASSERT(mnemonic);
-		opecodes.push_back({mnemonic, src, dst, comment});
+		mnes[JMP] = "jmp";
+		mnes[JNE] = "jne";
+		mnes[JE] = "je";
+		mnes[JGE] = "jge";
+		mnes[JLE] = "jle";
+		mnes[JG] = "jg";
+		mnes[JL] = "jl";
+		mnes[JAE] = "jae";
+		mnes[JBE] = "jbe";
+		mnes[JA] = "ja";
+		mnes[JB] = "jb";
+
+		mnes[LEA] = "lea";
+		mnes[LEAVE] = "leave";
+		mnes[RET] = "ret";
+
+		mnes[POPQ] = "popq";
+		mnes[PUSHQ] = "pushq";
+
+		mnes[MOVABSQ] = "movabsq";
+		mnes[MOVB] = "movb";
+		mnes[MOVW] = "movw";
+		mnes[MOVL] = "movl";
+		mnes[MOVQ] = "movq";
+		mnes[MOVSBQ] = "movsbq";
+		mnes[MOVSWQ] = "movswq";
+		mnes[MOVSLQ] = "movslq";
+		mnes[MOVZBQ] = "movzbq";
+		mnes[MOVZWQ] = "movzwq";
+		mnes[MOVSS] = "movss";
+		mnes[MOVSD] = "movsd";
+
+		mnes[ADDSD] = "addsd";
+		mnes[INCQ] = "incq";
+		mnes[ADDQ] = "addq";
+
+		mnes[SUBSD] = "subsd";
+		mnes[DECQ] = "decq";
+		mnes[SUBQ] = "subq";
+		mnes[NEGQ] = "negq";
+
+		mnes[MULSD] = "mulsd";
+		mnes[IMULQ] = "imulq";
+		mnes[DIVSD] = "divsd";
+		mnes[DIVQ] = "divq";
+		mnes[CQTO] = "cqto";
+		mnes[IDIVQ] = "idivq";
+
+		mnes[XORQ] = "xorq";
+		mnes[XORPD] = "xorpd";
+
+		mnes[CVTTSD2SI] = "cvttsd2si";
+		mnes[CVTTSS2SI] = "cvttss2si";
+		mnes[CVTSD2SS] = "cvtsd2ss";
+		mnes[CVTSI2SS] = "cvtsi2ss";
+		mnes[CVTSI2SD] = "cvtsi2sd";
+		mnes[CVTSS2SD] = "cvtss2sd";
+
+		mnes[UCOMISS] = "ucomiss";
+		mnes[UCOMISD] = "ucomisd";
+
+		mnes[CMP] = "cmp";
+		mnes[CMPB] = "cmpb";
+		mnes[CMPW] = "cmpw";
+		mnes[CMPL] = "cmpl";
+		mnes[CMPQ] = "cmpq";
+
+		mnes[SETE] = "sete";
+		mnes[SETNE] = "setne";
+		mnes[SETL] = "setl";
+		mnes[SETG] = "setg";
+		mnes[SETLE] = "setle";
+		mnes[SETGE] = "setge";
+		mnes[SETB] = "setb";
+		mnes[SETA] = "seta";
+		mnes[SETBE] = "setbe";
+		mnes[SETAE] = "setae";
+
+		mnes[REP_MOVSQ] = "rep movsq";
+		mnes[REP_MOVSL] = "rep movsl";
+		mnes[REP_MOVSW] = "rep movsw";
+		mnes[REP_MOVSB] = "rep movsb";
+		mnes[CLD] = "cld";
+		
+		PlnOpeCode::mnes = move(mnes);
+	}
+
+	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="") {
+		opecodes.push_back({mne, src, dst, comment});
 	}
 
 	void addComment(string comment) {
@@ -445,7 +579,7 @@ int PlnX86_64Generator::registerString(string& str)
 
 void PlnX86_64Generator::comment(const string s)
 {
-	m.push(MNE_COMMENT,NULL,NULL,s);
+	m.push(COMMENT,NULL,NULL,s);
 }
 
 void PlnX86_64Generator::genSecReadOnlyData()
@@ -470,37 +604,37 @@ void PlnX86_64Generator::genEntryPoint(const string& entryname)
 void PlnX86_64Generator::genLabel(const string& label)
 {
 	if (label == "") {
-		m.push(MNE_LABEL, lbl("_start"));
+		m.push(LABEL, lbl("_start"));
 		require_align = true;
 	} else {
-		m.push(MNE_LABEL, lbl(label));
+		m.push(LABEL, lbl(label));
 	}
 }
 
 void PlnX86_64Generator::genJumpLabel(int id, string comment)
 {
-	m.push(MNE_LABEL, lbl(".L", id), NULL, comment);
+	m.push(LABEL, lbl(".L", id), NULL, comment);
 }
 
 void PlnX86_64Generator::genJump(int id, string comment)
 {
-	m.push("jmp", lbl(".L", id), NULL, comment);
+	m.push(JMP, lbl(".L", id), NULL, comment);
 }
 
 void PlnX86_64Generator::genTrueJump(int id, int cmp_type, string comment)
 {
-	const char* jcmd;
+	PlnX86_64Mnemonic jcmd;
 	switch (cmp_type) {
-		case CMP_EQ: jcmd = "je"; break;
-		case CMP_NE: jcmd = "jne"; break;
-		case CMP_L: jcmd = "jl"; break;
-		case CMP_G: jcmd = "jg"; break;
-		case CMP_LE: jcmd = "jle"; break;
-		case CMP_GE: jcmd = "jge"; break;
-		case CMP_B: jcmd = "jb"; break;
-		case CMP_A: jcmd = "ja"; break;
-		case CMP_BE: jcmd = "jbe"; break;
-		case CMP_AE: jcmd = "jae"; break;
+		case CMP_EQ: jcmd = JE; break;
+		case CMP_NE: jcmd = JNE; break;
+		case CMP_L: jcmd = JL; break;
+		case CMP_G: jcmd = JG; break;
+		case CMP_LE: jcmd = JLE; break;
+		case CMP_GE: jcmd = JGE; break;
+		case CMP_B: jcmd = JB; break;
+		case CMP_A: jcmd = JA; break;
+		case CMP_BE: jcmd = JBE; break;
+		case CMP_AE: jcmd = JAE; break;
 			break;
 
 		defalt:
@@ -511,18 +645,18 @@ void PlnX86_64Generator::genTrueJump(int id, int cmp_type, string comment)
 
 void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 {
-	const char* jcmd;
+	PlnX86_64Mnemonic jcmd;
 	switch (cmp_type) {
-		case CMP_EQ: jcmd = "jne"; break;
-		case CMP_NE: jcmd = "je"; break;
-		case CMP_L: jcmd = "jge"; break;
-		case CMP_G: jcmd = "jle"; break;
-		case CMP_LE: jcmd = "jg"; break;
-		case CMP_GE: jcmd = "jl"; break;
-		case CMP_B: jcmd = "jae"; break;
-		case CMP_A: jcmd = "jbe"; break;
-		case CMP_BE: jcmd = "ja"; break;
-		case CMP_AE: jcmd = "jb"; break;
+		case CMP_EQ: jcmd = JNE; break;
+		case CMP_NE: jcmd = JE; break;
+		case CMP_L: jcmd = JGE; break;
+		case CMP_G: jcmd = JLE; break;
+		case CMP_LE: jcmd = JG; break;
+		case CMP_GE: jcmd = JL; break;
+		case CMP_B: jcmd = JAE; break;
+		case CMP_A: jcmd = JBE; break;
+		case CMP_BE: jcmd = JA; break;
+		case CMP_AE: jcmd = JB; break;
 			break;
 
 		defalt:
@@ -533,8 +667,8 @@ void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 
 void PlnX86_64Generator::genEntryFunc()
 {
-	m.push("pushq", reg(RBP));
-	m.push("movq", reg(RSP), reg(RBP));
+	m.push(PUSHQ, reg(RBP));
+	m.push(MOVQ, reg(RSP), reg(RBP));
 }
 
 void PlnX86_64Generator::genLocalVarArea(int size)
@@ -552,7 +686,7 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 			size = size + 8;
 	}
 
-	m.push("subq", imm(size), reg(RSP));
+	m.push(SUBQ, imm(size), reg(RSP));
 }
 
 void PlnX86_64Generator::genEndFunc()
@@ -596,12 +730,12 @@ void PlnX86_64Generator::genEndFunc()
 
 void PlnX86_64Generator::genSaveReg(int regid, PlnGenEntity* dst)
 {
-	m.push("movq", reg(regid), ope(dst));
+	m.push(MOVQ, reg(regid), ope(dst));
 }
 
 void PlnX86_64Generator::genLoadReg(int regid, PlnGenEntity* src)
 {
-	m.push("movq", ope(src), reg(regid));
+	m.push(MOVQ, ope(src), reg(regid));
 }
 
 
@@ -616,54 +750,54 @@ void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, in
 		if (flo_cnt) {
 			if (flo_cnt > 8)
 				flo_cnt = 8;
-			m.push("movq", imm(flo_cnt), reg(RAX));
+			m.push(MOVQ, imm(flo_cnt), reg(RAX));
 		} else {
-			m.push("xorq", reg(RAX), reg(RAX));
+			m.push(XORQ, reg(RAX), reg(RAX));
 		}
 	}
-	m.push("call", lbl(cfuncname));
+	m.push(CALL, lbl(cfuncname));
 }
 
 void PlnX86_64Generator::genSysCall(int id, const string& comment)
 {
-	m.push("movq", imm(id), reg(RAX), comment);
-	m.push("syscall");
+	m.push(MOVQ, imm(id), reg(RAX), comment);
+	m.push(SYSCALL);
 }
 
 void PlnX86_64Generator::genReturn()
 {
-	m.push("leave");
-	m.push("ret");
+	m.push(LEAVE);
+	m.push(RET);
 }
 
 void PlnX86_64Generator::genMainReturn()
 {
-	m.push("movq", reg(RBP), reg(RSP));
-	m.push("popq", reg(RBP));
-	m.push("xorq", reg(RDI), reg(RDI));
-	m.push("movq", imm(60), reg(RAX));
-	m.push("syscall");
+	m.push(MOVQ, reg(RBP), reg(RSP));
+	m.push(POPQ, reg(RBP));
+	m.push(XORQ, reg(RDI), reg(RDI));
+	m.push(MOVQ, imm(60), reg(RAX));
+	m.push(SYSCALL);
 }
 
 void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int regid)
 {
-	BOOST_ASSERT(mem->alloc_type == GA_MEM);
-	const char* mnemonic = "";
+	BOOST_ASSERT(mem->type == GA_MEM);
+	PlnX86_64Mnemonic mnemonic;
 	int regsize = 8;
 
 	if (mem->data_type == DT_SINT) {
 		switch (mem->size) {
-			case 1: mnemonic = "movsbq"; break;
-			case 2: mnemonic = "movswq"; break;
-			case 4: mnemonic = "movslq"; break;
-			case 8: mnemonic = "movq"; break;
+			case 1: mnemonic = MOVSBQ; break;
+			case 2: mnemonic = MOVSWQ; break;
+			case 4: mnemonic = MOVSLQ; break;
+			case 8: mnemonic = MOVQ; break;
 		}
 	} else { // unsigned
 		switch (mem->size) {
-			case 1: mnemonic = "movzbq"; break;
-			case 2: mnemonic = "movzwq"; break;
-			case 4: mnemonic = "movl"; regsize = 4; break;
-			case 8: mnemonic = "movq"; break;
+			case 1: mnemonic = MOVZBQ; break;
+			case 2: mnemonic = MOVZWQ; break;
+			case 4: mnemonic = MOVL; regsize = 4; break;
+			case 8: mnemonic = MOVQ; break;
 		}
 	}
 
@@ -672,14 +806,14 @@ void PlnX86_64Generator::moveMemToReg(const PlnGenEntity* mem, int regid)
 
 void PlnX86_64Generator::moveRegTo(int regid, const PlnGenEntity* dst)
 {
-	BOOST_ASSERT(dst->alloc_type == GA_MEM || dst->alloc_type == GA_REG);
-	const char* mnemonic;
+	BOOST_ASSERT(dst->type == GA_MEM || dst->type == GA_REG);
+	PlnX86_64Mnemonic mnemonic;
 
 	switch (dst->size) {
-		case 1: mnemonic = "movb"; break;
-		case 2: mnemonic = "movw"; break;
-		case 4: mnemonic = "movl"; break;
-		case 8: mnemonic = "movq"; break;
+		case 1: mnemonic = MOVB; break;
+		case 2: mnemonic = MOVW; break;
+		case 4: mnemonic = MOVL; break;
+		case 8: mnemonic = MOVQ; break;
 		default:
 			BOOST_ASSERT(false);
 	}
@@ -689,7 +823,7 @@ void PlnX86_64Generator::moveRegTo(int regid, const PlnGenEntity* dst)
 
 static PlnOperandInfo* adjustImmediateInt(const PlnGenEntity* src)
 {
-	BOOST_ASSERT(src->alloc_type == GA_CODE);
+	BOOST_ASSERT(src->type == GA_CODE);
 	if (src->data_type == DT_FLOAT) {
 		union { int64_t i; double f; } u;
 		u.i = int64_of(src);
@@ -700,7 +834,7 @@ static PlnOperandInfo* adjustImmediateInt(const PlnGenEntity* src)
 
 static PlnOperandInfo* adjustImmediateFloat(const PlnGenEntity* src, int dst_size)
 {
-	BOOST_ASSERT(src->alloc_type == GA_CODE);
+	BOOST_ASSERT(src->type == GA_CODE);
 
 	if (dst_size == 4) {
 		union { int64_t i; double d; } tmp;
@@ -753,10 +887,10 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		BOOST_ASSERT(src->data_type == DT_FLOAT);
 		BOOST_ASSERT(src->size == 8);
 
-		if (dst->alloc_type == GA_REG) {
+		if (dst->type == GA_REG) {
 			BOOST_ASSERT(false);
 		} else {
-			m.push("cvttsd2si", ope(src), reg(R11));
+			m.push(CVTTSD2SI, ope(src), reg(R11));
 			moveRegTo(R11, dst);
 		}
 		return;
@@ -772,15 +906,15 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		if (src->size == 4) {
 			// Currently no usecase size 4->4.
 			BOOST_ASSERT(dst->size == 8);
-			m.push("cvtss2sd", ope(src), ope(dst));
+			m.push(CVTSS2SD, ope(src), ope(dst));
 
 		} else { // src->size == 8
 			if (dst->size == 4) {
-				m.push("cvtsd2ss", ope(src), reg(XMM11,4));
-				m.push("movss", reg(XMM11,4), ope(dst));
+				m.push(CVTSD2SS, ope(src), reg(XMM11,4));
+				m.push(MOVSS, reg(XMM11,4), ope(dst));
 
 			} else { // dst->size == 8
-				m.push("movsd", ope(src), ope(dst));
+				m.push(MOVSD, ope(src), ope(dst));
 			}
 		}
 		return;
@@ -798,19 +932,19 @@ void PlnX86_64Generator::genMoveFReg(const PlnGenEntity* src, const PlnGenEntity
 		moveMemToReg(src, R11);
 	} 
 
-	m.push("cvtsi2sd", src_ope, ope(dst));
+	m.push(CVTSI2SD, src_ope, ope(dst));
 }
 
 void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
 	if (src->size == 4 && dst->size == 8) {
-		m.push("cvtss2sd", ope(src), reg(XMM11,4));
-		m.push("movsd", reg(XMM11), ope(dst));
+		m.push(CVTSS2SD, ope(src), reg(XMM11,4));
+		m.push(MOVSD, reg(XMM11), ope(dst));
 
 	} else {
 		BOOST_ASSERT(src->size == 8 && dst->size == 4);
-		m.push("cvtsd2ss", ope(src), reg(XMM11,4));
-		m.push("movss", reg(XMM11,4), ope(dst));
+		m.push(CVTSD2SS, ope(src), reg(XMM11,4));
+		m.push(MOVSS, reg(XMM11,4), ope(dst));
 	}
 }
 
@@ -829,11 +963,11 @@ void PlnX86_64Generator::genConvIMem2FMem(const PlnGenEntity* src, const PlnGenE
 	}
 
 	if (dst->size == 8) {
-		m.push("cvtsi2sd", src_ope, reg(XMM11));
-		m.push("movsd", reg(XMM11), ope(dst));
+		m.push(CVTSI2SD, src_ope, reg(XMM11));
+		m.push(MOVSD, reg(XMM11), ope(dst));
 	} else if (dst->size == 4) {
-		m.push("cvtsi2ss", src_ope, reg(XMM11,4));
-		m.push("movss", reg(XMM11,4), ope(dst));
+		m.push(CVTSI2SS, src_ope, reg(XMM11,4));
+		m.push(MOVSS, reg(XMM11,4), ope(dst));
 	}
 }
 
@@ -844,9 +978,9 @@ void PlnX86_64Generator::genConvFMem2IMem(const PlnGenEntity* src, const PlnGenE
 	BOOST_ASSERT(dst->data_type == DT_SINT || dst->data_type == DT_UINT);
 
 	if (src->size == 4) {
-		m.push("cvttss2si", ope(src), reg(R11));
+		m.push(CVTTSS2SI, ope(src), reg(R11));
 	} else {
-		m.push("cvttsd2si", ope(src), reg(R11));
+		m.push(CVTTSD2SI, ope(src), reg(R11));
 	}
 
 	moveRegTo(R11, dst);
@@ -859,9 +993,9 @@ void PlnX86_64Generator::genConvFMem2IReg(const PlnGenEntity* src, const PlnGenE
 	BOOST_ASSERT(dst->data_type == DT_SINT || dst->data_type == DT_UINT);
 
 	if (src->size == 4) {
-		m.push("cvttss2si", ope(src), reg(regid_of(dst)));
+		m.push(CVTTSS2SI, ope(src), reg(regid_of(dst)));
 	} else {
-		m.push("cvttsd2si", ope(src), reg(regid_of(dst)));
+		m.push(CVTTSD2SI, ope(src), reg(regid_of(dst)));
 	}
 }
 
@@ -874,12 +1008,12 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 	CREATE_CHECK_FLAG(dst);
 
 	if (is_src_code) {
-		const char* mnemonic;
+		PlnX86_64Mnemonic mnemonic;
 		switch (dst->size) {
-			case 1: mnemonic = "movb"; break;
-			case 2: mnemonic = "movw"; break;
-			case 4: mnemonic = "movl"; break;
-			case 8: mnemonic = "movq"; break;
+			case 1: mnemonic = MOVB; break;
+			case 2: mnemonic = MOVW; break;
+			case 4: mnemonic = MOVL; break;
+			case 8: mnemonic = MOVQ; break;
 		}
 
 		PlnOperandInfo *src_ope;
@@ -893,19 +1027,19 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 
 		if (!needAbsCopy(src_ope)) {
 			if (is_dst_reg && is_dst_flo) {
-				m.push("movq", src_ope, reg(R11));
-				m.push("movq", reg(R11), ope(dst));
+				m.push(MOVQ, src_ope, reg(R11));
+				m.push(MOVQ, reg(R11), ope(dst));
 			} else {
 				m.push(mnemonic, src_ope, ope(dst));
 			}
 
 		} else if (is_dst_mem || is_dst_reg && is_dst_flo) {
-			m.push("movabsq", src_ope, reg(R11));
+			m.push(MOVABSQ, src_ope, reg(R11));
 			m.push(mnemonic, reg(R11, dst->size), ope(dst));
 
 		} else {
 			BOOST_ASSERT(is_dst_reg);
-			m.push("movabsq", src_ope, ope(dst));
+			m.push(MOVABSQ, src_ope, ope(dst));
 		}
 
 	} else if (is_src_reg && is_src_flo || is_dst_reg && is_dst_flo) {
@@ -944,16 +1078,16 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 
 void PlnX86_64Generator::genLoadAddress(const PlnGenEntity* dst, const PlnGenEntity* src, string comment)
 {
-	BOOST_ASSERT(src->alloc_type == GA_MEM);
+	BOOST_ASSERT(src->type == GA_MEM);
 	BOOST_ASSERT(dst->size == 8);
 	int regid = R11;
-	if (dst->alloc_type == GA_REG) {
+	if (dst->type == GA_REG) {
 		regid = regid_of(dst);
 	}
-	m.push("lea", ope(src), reg(regid), comment);
+	m.push(LEA, ope(src), reg(regid), comment);
 
-	if (dst->alloc_type == GA_MEM) {
-		m.push("movq", reg(regid), ope(dst));
+	if (dst->type == GA_MEM) {
+		m.push(MOVQ, reg(regid), ope(dst));
 	}
 }
 
@@ -967,7 +1101,7 @@ PlnOperandInfo* PlnX86_64Generator::genPreFloOperation(PlnGenEntity* tgt, PlnGen
 
 	if (is_scnd_flo && is_scnd_mem) {
 		if (scnd->size == 4) {
-			m.push("cvtss2sd", ope(scnd), reg(XMM11));
+			m.push(CVTSS2SD, ope(scnd), reg(XMM11));
 			return reg(XMM11);
 		} else {
 			return ope(scnd);
@@ -977,16 +1111,16 @@ PlnOperandInfo* PlnX86_64Generator::genPreFloOperation(PlnGenEntity* tgt, PlnGen
 		PlnOperandInfo *scnd_ope = adjustImmediateFloat(scnd, tgt->size);
 
 		if (needAbsCopy(scnd_ope)) {
-			m.push("movabsq", scnd_ope, reg(R11));
+			m.push(MOVABSQ, scnd_ope, reg(R11));
 		} else {
-			m.push("movq", scnd_ope, reg(R11));
+			m.push(MOVQ, scnd_ope, reg(R11));
 		}
-		m.push("movq", reg(R11), reg(XMM11));
+		m.push(MOVQ, reg(R11), reg(XMM11));
 		return reg(XMM11);
 
 	} else if ((is_scnd_sint || is_scnd_uint) && is_scnd_mem) {
 		moveMemToReg(scnd, R11);
-		m.push("cvtsi2sd", reg(R11), reg(XMM11));
+		m.push(CVTSI2SD, reg(R11), reg(XMM11));
 		return reg(XMM11);
 
 	} else {
@@ -998,23 +1132,23 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 {
 	CREATE_CHECK_FLAG(scnd);
 
-	BOOST_ASSERT(tgt->alloc_type != GA_MEM || !is_scnd_mem);
+	BOOST_ASSERT(tgt->type != GA_MEM || !is_scnd_mem);
 
 	if (tgt->data_type == DT_FLOAT) {
 		PlnOperandInfo* scnd_ope = genPreFloOperation(tgt, scnd);
-		m.push("addsd", scnd_ope, ope(tgt), comment);
+		m.push(ADDSD, scnd_ope, ope(tgt), comment);
 		return;
 	}
 
 	if (is_scnd_code) {
 		if (int64_of(scnd) == 1) {
-			m.push("incq", ope(tgt), NULL, comment);
+			m.push(INCQ, ope(tgt), NULL, comment);
 			return;
 		}
 
 		if (int64_of(scnd) < 0) {
 			PlnGenEntity e;
-			e.alloc_type = GA_CODE;
+			e.type = GA_CODE;
 			e.size = 8;
 			e.data_type = scnd->data_type;
 			e.ope = imm(-int64_of(scnd));
@@ -1030,118 +1164,118 @@ void PlnX86_64Generator::genAdd(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 	} else
 		add_ope = ope(scnd);
 	
-	m.push("addq", add_ope, ope(tgt), comment);
+	m.push(ADDQ, add_ope, ope(tgt), comment);
 }
 
 void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type != GA_MEM || scnd->alloc_type != GA_MEM);
+	BOOST_ASSERT(tgt->type != GA_MEM || scnd->type != GA_MEM);
 
 	if (tgt->data_type == DT_FLOAT) {
 		PlnOperandInfo* scnd_ope = genPreFloOperation(tgt, scnd);
-		m.push("subsd", scnd_ope, ope(tgt), comment);
+		m.push(SUBSD, scnd_ope, ope(tgt), comment);
 		return;
 	}
 
-	if (scnd->alloc_type == GA_CODE && int64_of(scnd) == 1) {
-		m.push("decq", ope(tgt), NULL, comment);
+	if (scnd->type == GA_CODE && int64_of(scnd) == 1) {
+		m.push(DECQ, ope(tgt), NULL, comment);
 		return;
 	}
 
 	PlnOperandInfo* sub_ope;
-	if (scnd->alloc_type == GA_MEM && scnd->size < 8) {
+	if (scnd->type == GA_MEM && scnd->size < 8) {
 		moveMemToReg(scnd, R11);
 		sub_ope = reg(R11);
 	} else {
 		sub_ope = ope(scnd);
 	}
 
-	m.push("subq", sub_ope, ope(tgt), comment);
+	m.push(SUBQ, sub_ope, ope(tgt), comment);
 }
 
 void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)
 {
 	if (tgt->data_type == DT_FLOAT) {
 		int64_t mask = 0x8000000000000000;
-		m.push("movabsq", imm(mask), reg(R11));
-		m.push("movq", reg(R11), reg(XMM11));
-		m.push("xorpd", reg(XMM11), ope(tgt), comment);
+		m.push(MOVABSQ, imm(mask), reg(R11));
+		m.push(MOVQ, reg(R11), reg(XMM11));
+		m.push(XORPD, reg(XMM11), ope(tgt), comment);
 
 	} else {
-		m.push("negq", ope(tgt), NULL, comment);
+		m.push(NEGQ, ope(tgt), NULL, comment);
 	}
 }
 
 void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type != GA_MEM || scnd->alloc_type != GA_MEM);
+	BOOST_ASSERT(tgt->type != GA_MEM || scnd->type != GA_MEM);
 
 	if (tgt->data_type == DT_FLOAT) {
 		PlnOperandInfo* scnd_ope = genPreFloOperation(tgt, scnd);
-		m.push("mulsd", scnd_ope, ope(tgt), comment);
+		m.push(MULSD, scnd_ope, ope(tgt), comment);
 		return;
 	}
 
 	PlnOperandInfo* mul_ope;
-	if (scnd->alloc_type == GA_MEM && scnd->size < 8) {
+	if (scnd->type == GA_MEM && scnd->size < 8) {
 		moveMemToReg(scnd, R11);
 		mul_ope = reg(R11);
 	} else {
 		mul_ope = ope(scnd);
 	}
-	m.push("imulq", mul_ope, ope(tgt), comment);
+	m.push(IMULQ, mul_ope, ope(tgt), comment);
 }
 
 void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type == GA_REG);
+	BOOST_ASSERT(tgt->type == GA_REG);
 	if (tgt->data_type == DT_FLOAT) {
 		PlnOperandInfo* scnd_ope = genPreFloOperation(tgt, scnd);
-		m.push("divsd", scnd_ope, ope(tgt), comment);
+		m.push(DIVSD, scnd_ope, ope(tgt), comment);
 		return;
 	}
 
 	BOOST_ASSERT(regid_of(tgt) == RAX);
 	PlnOperandInfo* div_ope;
-	if (scnd->alloc_type == GA_CODE) { 
+	if (scnd->type == GA_CODE) { 
 		div_ope = reg(R11);
 		if (needAbsCopy(scnd->ope)) {
-			m.push("movabsq", ope(scnd), reg(R11));
+			m.push(MOVABSQ, ope(scnd), reg(R11));
 		} else {
-			m.push("movq", ope(scnd), reg(R11));
+			m.push(MOVQ, ope(scnd), reg(R11));
 		}
 	} else {
 		div_ope = ope(scnd);
 	}
 
 	if (tgt->data_type == DT_UINT && scnd->data_type == DT_UINT) {
-		m.push("movq", imm(0), reg(RDX));
-		m.push("divq", div_ope);
+		m.push(MOVQ, imm(0), reg(RDX));
+		m.push(DIVQ, div_ope);
 
 	} else {
-		m.push("cqto");
-		m.push("idivq", div_ope);
+		m.push(CQTO);
+		m.push(IDIVQ, div_ope);
 	}
 	m.addComment(comment);
 }
 
 void PlnX86_64Generator::genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second)
 {
-	BOOST_ASSERT(first->alloc_type == GA_CODE);
+	BOOST_ASSERT(first->type == GA_CODE);
 
 	PlnOperandInfo* fst_ope = adjustImmediateFloat(first, second->size);
 	if (needAbsCopy(fst_ope)) {
-		m.push("movabsq", fst_ope, reg(R11));
-		m.push("movq", reg(R11), reg(XMM11));
+		m.push(MOVABSQ, fst_ope, reg(R11));
+		m.push(MOVQ, reg(R11), reg(XMM11));
 	} else {
-		m.push("movq", fst_ope, reg(R11));
-		m.push("movq", reg(R11), reg(XMM11));
+		m.push(MOVQ, fst_ope, reg(R11));
+		m.push(MOVQ, reg(R11), reg(XMM11));
 	}
 
 	if (second->size == 4) {
-		m.push("ucomiss", ope(second), reg(XMM11));
+		m.push(UCOMISS, ope(second), reg(XMM11));
 	} else {
-		m.push("ucomisd", ope(second), reg(XMM11));
+		m.push(UCOMISD, ope(second), reg(XMM11));
 	}
 }
 
@@ -1150,18 +1284,18 @@ void PlnX86_64Generator::genCmpFMem(const PlnGenEntity* first, const PlnGenEntit
 	BOOST_ASSERT(first->size <= second->size);
 	if (first->size < second->size) {
 		BOOST_ASSERT(second->size == 8);
-		m.push("cvtss2sd", ope(first), reg(XMM11));
+		m.push(CVTSS2SD, ope(first), reg(XMM11));
 	} else if (second->size == 4) {
-		m.push("movss", ope(first), reg(XMM11, 4));
+		m.push(MOVSS, ope(first), reg(XMM11, 4));
 	} else {
 		BOOST_ASSERT(first->size == 8 && second->size == 8);
-		m.push("movsd", ope(first), reg(XMM11));
+		m.push(MOVSD, ope(first), reg(XMM11));
 	}
 
 	if (second->size == 4) {
-		m.push("ucomiss", ope(second), reg(XMM11));
+		m.push(UCOMISS, ope(second), reg(XMM11));
 	} else {
-		m.push("ucomisd", ope(second), reg(XMM11));
+		m.push(UCOMISD, ope(second), reg(XMM11));
 	}
 }
 
@@ -1170,17 +1304,17 @@ void PlnX86_64Generator::genCmpFRegFMem(const PlnGenEntity* first, const PlnGenE
 	BOOST_ASSERT(first->size == 8);
 
 	if (second->size == 4) {
-		m.push("cvtss2sd", ope(second), reg(XMM11));
-		m.push("ucomisd", reg(XMM11), ope(first));
+		m.push(CVTSS2SD, ope(second), reg(XMM11));
+		m.push(UCOMISD, reg(XMM11), ope(first));
 	} else { 
-		m.push("ucomisd", ope(second), ope(first));
+		m.push(UCOMISD, ope(second), ope(first));
 	}
 }
 
 void PlnX86_64Generator::genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second)
 {
 	int ireg_id;
-	if (first->alloc_type == GA_MEM) {
+	if (first->type == GA_MEM) {
 		moveMemToReg(first, R11);
 		ireg_id = R11;
 	} else {
@@ -1188,12 +1322,12 @@ void PlnX86_64Generator::genCmpIMemFRegMem(const PlnGenEntity* first, const PlnG
 	}
 
 	if (second->size == 4) {
-		m.push("cvtsi2ss", reg(ireg_id), reg(XMM11,4));
-		m.push("ucomiss", ope(second), reg(XMM11,4));
+		m.push(CVTSI2SS, reg(ireg_id), reg(XMM11,4));
+		m.push(UCOMISS, ope(second), reg(XMM11,4));
 
 	} else {
-		m.push("cvtsi2sd", reg(ireg_id), reg(XMM11));
-		m.push("ucomisd", ope(second), reg(XMM11));
+		m.push(CVTSI2SD, reg(ireg_id), reg(XMM11));
+		m.push(UCOMISD, ope(second), reg(XMM11));
 	}
 }
 
@@ -1203,15 +1337,15 @@ void PlnX86_64Generator::genCmpIRegMemFImm(const PlnGenEntity* first, const PlnG
 	int id = registerFlo64Const(scnd_ope);
 	delete scnd_ope;	// don't use any more.
 
-	if (first->size == 8 || first->alloc_type == GA_REG) {
-		m.push("cvtsi2sd", ope(first), reg(XMM11));
+	if (first->size == 8 || first->type == GA_REG) {
+		m.push(CVTSI2SD, ope(first), reg(XMM11));
 
 	} else {
 		moveMemToReg(first, R11);
-		m.push("cvtsi2sd", reg(R11), reg(XMM11));
+		m.push(CVTSI2SD, reg(R11), reg(XMM11));
 	}
 
-	m.push("ucomisd", lblval(".LC" + to_string(id)), reg(XMM11));
+	m.push(UCOMISD, lblval(".LC" + to_string(id)), reg(XMM11));
 }
 
 int PlnX86_64Generator::genCmpI2F(const PlnGenEntity* first, const PlnGenEntity* second, int cmp_type)
@@ -1289,7 +1423,7 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 		// } else if (is_first_reg && is_second_reg) {
 		// 	BOOST_ASSERT(first->size == 8);
 		// 	BOOST_ASSERT(second->size == 8);
-		//	m.push("ucomisd", ope(second), ope(first));
+		//	m.push(UCOMISD, ope(second), ope(first));
 
 		} else {
 			BOOST_ASSERT(false);
@@ -1324,9 +1458,9 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 	//  cmp reg, mem  // reg(mem_min), mem
 	//  cmp code, reg
 	//  cmp code, mem
-	if ((second->alloc_type != GA_CODE && first->alloc_type == GA_CODE) 
-			|| (second->alloc_type == GA_MEM && first->alloc_type != GA_MEM)
-			|| (second->alloc_type == GA_MEM && first->alloc_type == GA_MEM
+	if ((second->type != GA_CODE && first->type == GA_CODE) 
+			|| (second->type == GA_MEM && first->type != GA_MEM)
+			|| (second->type == GA_MEM && first->type == GA_MEM
 				&& second->size > first->size)) {
 		// swap
 		auto tmp = second;
@@ -1343,31 +1477,31 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 			case CMP_GE: cmp_type = CMP_AE; break;
 		}
 	}
-	BOOST_ASSERT(first->alloc_type != GA_CODE);
+	BOOST_ASSERT(first->type != GA_CODE);
 
 	PlnOperandInfo* scnd_ope;
-	if (second->alloc_type == GA_REG) {
+	if (second->type == GA_REG) {
 		scnd_ope = reg(regid_of(second), first->size);
 
-	} else if (second->alloc_type == GA_MEM) {
+	} else if (second->type == GA_MEM) {
 		moveMemToReg(second, R11);
 		scnd_ope = reg(R11, first->size);
 	} else {
 		scnd_ope = ope(second);
 	}
 
-	const char* mnemonic;
-	if (first->alloc_type == GA_MEM) {
+	PlnX86_64Mnemonic mnemonic;
+	if (first->type == GA_MEM) {
 		switch (first->size) {
-			case 1: mnemonic = "cmpb"; break;
-			case 2: mnemonic = "cmpw"; break;
-			case 4: mnemonic = "cmpl"; break;
-			case 8: mnemonic = "cmpq"; break;
+			case 1: mnemonic = CMPB; break;
+			case 2: mnemonic = CMPW; break;
+			case 4: mnemonic = CMPL; break;
+			case 8: mnemonic = CMPQ; break;
 			default:
 				BOOST_ASSERT(false);
 		}
 	} else {
-		mnemonic = "cmp";
+		mnemonic = CMP;
 	}
 
 	m.push(mnemonic, scnd_ope, ope(first), comment);
@@ -1377,58 +1511,58 @@ int PlnX86_64Generator::genCmp(PlnGenEntity* first, PlnGenEntity* second, int cm
 
 int PlnX86_64Generator::genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment)
 {
-	BOOST_ASSERT(tgt->alloc_type == GA_REG);
+	BOOST_ASSERT(tgt->type == GA_REG);
 	BOOST_ASSERT(tgt->size == 8);
 
-	const char* setcmd =
-		cmp_type == CMP_EQ ? "sete":
-		cmp_type == CMP_NE ? "setne":
-		cmp_type == CMP_L ? "setl":
-		cmp_type == CMP_G ? "setg":
-		cmp_type == CMP_LE ? "setle":
-		cmp_type == CMP_GE ? "setge":
-		cmp_type == CMP_B ? "setb":
-		cmp_type == CMP_A ? "seta":
-		cmp_type == CMP_BE ? "setbe":
-		cmp_type == CMP_AE ? "setae":
-		NULL;
+	PlnX86_64Mnemonic setcmd =
+		cmp_type == CMP_EQ ? SETE:
+		cmp_type == CMP_NE ? SETNE:
+		cmp_type == CMP_L ? SETL:
+		cmp_type == CMP_G ? SETG:
+		cmp_type == CMP_LE ? SETLE:
+		cmp_type == CMP_GE ? SETGE:
+		cmp_type == CMP_B ? SETB:
+		cmp_type == CMP_A ? SETA:
+		cmp_type == CMP_BE ? SETBE:
+		cmp_type == CMP_AE ? SETAE:
+		COMMENT;
 
-	BOOST_ASSERT(setcmd);
+	BOOST_ASSERT(setcmd != COMMENT);
 	
 	m.push(setcmd, reg(regid_of(tgt),1), NULL, comment);
-	m.push("movzbq", reg(regid_of(tgt),1), ope(tgt));
+	m.push(MOVZBQ, reg(regid_of(tgt),1), ope(tgt));
 }
 
 void PlnX86_64Generator::genNullClear(vector<unique_ptr<PlnGenEntity>> &refs)
 {
 	if (refs.size() == 1) {
-		m.push("movq", imm(0), ope(refs[0].get()));
+		m.push(MOVQ, imm(0), ope(refs[0].get()));
 
 	} else if (refs.size() >= 2) {
-		m.push("xorq", reg(RAX), reg(RAX));
+		m.push(XORQ, reg(RAX), reg(RAX));
 		
 		for (auto& r: refs) {
-			m.push("movq", reg(RAX), ope(r.get()));
+			m.push(MOVQ, reg(RAX), ope(r.get()));
 		}
 	}
 }
 
 void PlnX86_64Generator::genMemCopy(int cp_unit, string& comment)
 {
-	const char* mnemonic;
+	PlnX86_64Mnemonic mnemonic;
 
 	if (cp_unit == 8) {
-		mnemonic = "rep movsq";
+		mnemonic = REP_MOVSQ;
 	} else if (cp_unit == 4) {
-		mnemonic = "rep movsl";
+		mnemonic = REP_MOVSL;
 	} else if (cp_unit == 2) {
-		mnemonic = "rep movsw";
+		mnemonic = REP_MOVSW;
 	} else {
 		BOOST_ASSERT(cp_unit == 1);
-		mnemonic = "rep movsb";
+		mnemonic = REP_MOVSB;
 	}
 
-	m.push("cld");
+	m.push(CLD);
 	m.push(mnemonic, NULL, NULL, comment);
 }
 
@@ -1437,25 +1571,25 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 	BOOST_ASSERT(dp->data_type != DT_UNKNOWN);
 	unique_ptr<PlnGenEntity> e(new PlnGenEntity());
 	if (dp->type == DP_STK_BP) {
-		e->alloc_type = GA_MEM;
+		e->type = GA_MEM;
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->ope = adrs(RBP, dp->data.stack.offset);
 
 	} else if (dp->type == DP_STK_SP) {
-		e->alloc_type = GA_MEM;
+		e->type = GA_MEM;
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->ope = adrs(RSP, dp->data.stack.offset);
 
 	} else if (dp->type == DP_REG) {
-		e->alloc_type = GA_REG;
+		e->type = GA_REG;
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->ope = reg(dp->data.reg.id, dp->size);
 
 	} else if (dp->type == DP_INDRCT_OBJ) {
-		e->alloc_type = GA_MEM;
+		e->type = GA_MEM;
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->ope = adrs(
@@ -1465,7 +1599,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			dp->size);
 
 	} else if (dp->type == DP_LIT_INT || dp->type == DP_LIT_FLO) {
-		e->alloc_type = GA_CODE;
+		e->type = GA_CODE;
 		e->size = 8;
 		e->data_type = dp->data_type;
 		e->ope = imm(dp->data.intValue);
@@ -1500,7 +1634,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			BOOST_ASSERT(dp->data.ro.str);
 			id = registerString(*dp->data.ro.str);
 		}
-		e->alloc_type = GA_MEM;
+		e->type = GA_MEM;
 		e->size = 8;
 		e->data_type = DT_OBJECT_REF;
 		e->ope = lbl("$.LC", id);
