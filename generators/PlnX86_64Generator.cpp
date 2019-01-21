@@ -182,9 +182,12 @@ public:
 	const char* str(char* buf) override { sprintf(buf, "$%ld", value); return buf; }
 };
 inline PlnImmOperand* imm(int64_t value) { return new PlnImmOperand(value); }
+inline int64_t int64_of(const PlnOperandInfo* ope) {
+	BOOST_ASSERT(ope->type == OP_IMM);
+	return static_cast<const PlnImmOperand*>(ope)->value;
+}
 inline int64_t int64_of(const PlnGenEntity *e) {
-	BOOST_ASSERT(e->ope->type == OP_IMM);
-	return static_cast<PlnImmOperand*>(e->ope)->value;
+	return int64_of(e->ope);
 }
 
 // Addressing mode(Memory access) operand (e.g. -8($rax))
@@ -253,10 +256,10 @@ enum PlnX86_64Mnemonic{
 	CQTO,
 	CVTSD2SS, CVTSI2SS, CVTSI2SD, CVTSS2SD,
 	CVTTSD2SI, CVTTSS2SI,
+	CVTSD2SI,
 	DECQ,
 	DIVSD, DIVQ,
-	IDIVQ,
-	IMULQ,
+	IDIVQ, IMULQ,
 	INCQ,
 	JA, JAE, JB, JBE,
 	JE,
@@ -344,9 +347,7 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 			}
 		case OP_IMM: 
 			{
-				auto ll = static_cast<const PlnImmOperand*>(l);
-				auto rr = static_cast<const PlnImmOperand*>(r);
-				return ll->value == rr->value;
+				return int64_of(l) == int64_of(r);
 			}
 		case OP_LBL: 
 			BOOST_ASSERT(false);
@@ -361,7 +362,8 @@ class PlnRegisterMachine {
 public:
 	vector<PlnOpeCode> opecodes;
 	bool has_call;
-	PlnRegisterMachine() : has_call(false){
+	int may_exist_rounding;
+	PlnRegisterMachine() : has_call(false), may_exist_rounding(0) {
 		vector<const char*> mnes;
 		mnes.reserve(MNE_SIZE);
 		mnes[COMMENT] = "#";
@@ -427,6 +429,7 @@ public:
 		mnes[CVTSI2SS] = "cvtsi2ss";
 		mnes[CVTSI2SD] = "cvtsi2sd";
 		mnes[CVTSS2SD] = "cvtss2sd";
+		mnes[CVTSD2SI] = "cvtsd2si";
 
 		mnes[UCOMISS] = "ucomiss";
 		mnes[UCOMISD] = "ucomisd";
@@ -459,7 +462,13 @@ public:
 
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="") {
 		opecodes.push_back({mne, src, dst, comment});
+		// collect optimise information.
 		if (mne == CALL) has_call = true;
+		else if (mne == MOVABSQ && may_exist_rounding==0 && int64_of(src)==4602678819172646912) {
+			may_exist_rounding = 1;	
+		} else if (mne == CVTTSD2SI && may_exist_rounding==1) {
+			may_exist_rounding = 2;	
+		}
 	}
 
 	void addComment(string comment) {
@@ -483,8 +492,49 @@ public:
 		}
 	}
 
+	void roundingOptimize() {
+		// movabsq $4602678819172646912, %r11
+		// movq %r11, %xmm11
+		// addsd %xmm11, %xmm0	# %accm + $f
+		// cvttsd2si %xmm0, %r11
+		// ->
+		// cvtsd2si %xmm0, %r11
+		int max = opecodes.size()-3;
+		for (int i=0; i<max; ++i) {
+			// find target.
+			if (opecodes[i].mne != MOVABSQ
+					|| int64_of(opecodes[i].src) !=4602678819172646912
+					|| regid_of(opecodes[i].dst) != R11)
+				continue;
+			i++;
+			if (opecodes[i].mne != MOVQ
+					|| regid_of(opecodes[i].src) != R11
+					|| regid_of(opecodes[i].dst) != XMM11)
+				continue;
+			i++;
+			if (opecodes[i].mne != ADDSD
+					|| regid_of(opecodes[i].src) != XMM11
+					|| opecodes[i].dst->type != OP_REG
+					|| regid_of(opecodes[i].dst) != XMM0)
+				continue;
+			i++;
+			if (opecodes[i].mne != CVTTSD2SI
+					|| regid_of(opecodes[i].src) != XMM0)
+				continue;
+
+			// founded.
+			opecodes[i].mne = CVTSD2SI;
+			opecodes[i].comment += "(optimized +0.5 to rounding)";
+			opecodes.erase(opecodes.begin()+i-3, opecodes.begin()+i);
+			i -= 3;
+		}
+	}
+
 	void popOpecodes(ostream& os) {
+		// Optimize
 		if (!has_call) removeStackArea();
+		if (may_exist_rounding == 2) roundingOptimize();
+
 		for (PlnOpeCode& oc: opecodes) {
 			os << oc << "\n";
 			delete oc.src;
@@ -492,7 +542,9 @@ public:
 		}
 		os.flush();
 		opecodes.clear();
+
 		has_call = false;
+		may_exist_rounding = 0;
 	}
 };
 
@@ -508,7 +560,7 @@ int PlnX86_64Generator::registerFlo64Const(const PlnOperandInfo* constValue) {
 	ConstInfo cinfo;
 	cinfo.generated = false;
 	cinfo.type = GCT_FLO64;
-	cinfo.data.q = static_cast<const PlnImmOperand*>(constValue)->value;
+	cinfo.data.q = int64_of(constValue);
 
 	int id=0;
 	for (ConstInfo ci: const_buf) {
@@ -898,7 +950,7 @@ static PlnOperandInfo* adjustImmediateFloat(const PlnGenEntity* src, int dst_siz
 static bool needAbsCopy(const PlnOperandInfo* imm_ope)
 {
 	BOOST_ASSERT(imm_ope->type == OP_IMM);
-	int64_t i = static_cast<const PlnImmOperand*>(imm_ope)->value;
+	int64_t i = int64_of(imm_ope);
 
 	return (i < -2147483648 || i > 4294967295);
 }

@@ -171,3 +171,9 @@ printf(" %.2f %.2f", d3, d4);
 d1 / 2 -> d4;
 printf(" %.2f %.2f\n", d3, d4);
 
+// rounding.
+d3 + 0.5 -> i1;
+1.49 -> d3;
+d3 + 0.5 -> i2;
+printf("%d %d", i1, i2);
+
