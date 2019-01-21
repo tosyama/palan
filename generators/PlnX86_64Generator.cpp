@@ -164,9 +164,13 @@ public:
 	const char* str(char* buf) override { return r(regid, size); }
 };
 inline PlnRegOperand* reg(int regid, int size=8) { return new PlnRegOperand(regid, size); }
+
+inline int regid_of(PlnOperandInfo *ope) {
+	BOOST_ASSERT(ope->type == OP_REG);
+	return static_cast<PlnRegOperand*>(ope)->regid;
+}
 inline int regid_of(const PlnGenEntity *e) {
-	BOOST_ASSERT(e->ope->type == OP_REG);
-	return static_cast<PlnRegOperand*>(e->ope)->regid;
+	return regid_of(e->ope);
 }
 
 // Immediate operand (e.g. $10)
@@ -356,7 +360,8 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 class PlnRegisterMachine {
 public:
 	vector<PlnOpeCode> opecodes;
-	PlnRegisterMachine() {
+	bool has_call;
+	PlnRegisterMachine() : has_call(false){
 		vector<const char*> mnes;
 		mnes.reserve(MNE_SIZE);
 		mnes[COMMENT] = "#";
@@ -454,6 +459,7 @@ public:
 
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="") {
 		opecodes.push_back({mne, src, dst, comment});
+		if (mne == CALL) has_call = true;
 	}
 
 	void addComment(string comment) {
@@ -461,7 +467,24 @@ public:
 		opecodes.back().comment = comment;
 	}
 
+	void removeStackArea() {
+		auto opec = opecodes.begin();
+		while (opec != opecodes.end()) {
+			if (opec->mne == SUBQ && opec->dst->type == OP_REG
+				&& regid_of(opec->dst) == RSP) {
+				opec = opecodes.erase(opec);
+			} else {
+				if (opec->mne == LEAVE) {
+					opec->mne = POPQ;
+					opec->src = reg(RBP);
+				}
+				opec++;
+			}
+		}
+	}
+
 	void popOpecodes(ostream& os) {
+		if (!has_call) removeStackArea();
 		for (PlnOpeCode& oc: opecodes) {
 			os << oc << "\n";
 			delete oc.src;
@@ -469,6 +492,7 @@ public:
 		}
 		os.flush();
 		opecodes.clear();
+		has_call = false;
 	}
 };
 
