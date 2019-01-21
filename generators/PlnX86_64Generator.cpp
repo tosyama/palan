@@ -256,7 +256,6 @@ enum PlnX86_64Mnemonic{
 	CQTO,
 	CVTSD2SS, CVTSI2SS, CVTSI2SD, CVTSS2SD,
 	CVTTSD2SI, CVTTSS2SI,
-	CVTSD2SI,
 	DECQ,
 	DIVSD, DIVQ,
 	IDIVQ, IMULQ,
@@ -429,7 +428,6 @@ public:
 		mnes[CVTSI2SS] = "cvtsi2ss";
 		mnes[CVTSI2SD] = "cvtsi2sd";
 		mnes[CVTSS2SD] = "cvtss2sd";
-		mnes[CVTSD2SI] = "cvtsd2si";
 
 		mnes[UCOMISS] = "ucomiss";
 		mnes[UCOMISD] = "ucomisd";
@@ -492,48 +490,9 @@ public:
 		}
 	}
 
-	void roundingOptimize() {
-		// movabsq $4602678819172646912, %r11
-		// movq %r11, %xmm11
-		// addsd %xmm11, %xmm0	# %accm + $f
-		// cvttsd2si %xmm0, %r11
-		// ->
-		// cvtsd2si %xmm0, %r11
-		int max = opecodes.size()-3;
-		for (int i=0; i<max; ++i) {
-			// find target.
-			if (opecodes[i].mne != MOVABSQ
-					|| int64_of(opecodes[i].src) !=4602678819172646912
-					|| regid_of(opecodes[i].dst) != R11)
-				continue;
-			i++;
-			if (opecodes[i].mne != MOVQ
-					|| regid_of(opecodes[i].src) != R11
-					|| regid_of(opecodes[i].dst) != XMM11)
-				continue;
-			i++;
-			if (opecodes[i].mne != ADDSD
-					|| regid_of(opecodes[i].src) != XMM11
-					|| opecodes[i].dst->type != OP_REG
-					|| regid_of(opecodes[i].dst) != XMM0)
-				continue;
-			i++;
-			if (opecodes[i].mne != CVTTSD2SI
-					|| regid_of(opecodes[i].src) != XMM0)
-				continue;
-
-			// founded.
-			opecodes[i].mne = CVTSD2SI;
-			opecodes[i].comment += "(optimized +0.5 to rounding)";
-			opecodes.erase(opecodes.begin()+i-3, opecodes.begin()+i);
-			i -= 3;
-		}
-	}
-
 	void popOpecodes(ostream& os) {
 		// Optimize
 		if (!has_call) removeStackArea();
-		if (may_exist_rounding == 2) roundingOptimize();
 
 		for (PlnOpeCode& oc: opecodes) {
 			os << oc << "\n";
