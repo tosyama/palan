@@ -12,35 +12,25 @@ using std::unique_ptr;
 
 class PlnDataPlace;
 
-enum GenEttyType {
-	GE_STRING,
-	GE_INT,
-	GE_FLO
+class PlnOperandInfo {
+public:
+	int type;
+	PlnOperandInfo(int opetype) : type(opetype) { };
+	virtual ~PlnOperandInfo() {};
+	virtual PlnOperandInfo* clone() = 0;
+	virtual const char* str(char* buf) = 0;
 };
 
 class PlnGenEntity {
 public:
-	PlnGenEntity() : buf(NULL) { }
 	char type;
-	char alloc_type;
 	char data_type;
 	int size;
+	PlnOperandInfo* ope;
 
-	mutable union {
-		string* str;
-		int64_t i;
-		double f;
-	} data;
-	mutable char* buf;
-	~PlnGenEntity()
-	{
-		if (buf) delete buf;
-		switch (type) {
-			case GE_STRING:
-				delete data.str;
-				break;
-		}
-	}
+	PlnGenEntity() : ope(NULL) { }
+	PlnGenEntity(const PlnGenEntity&) = delete;
+	~PlnGenEntity() { delete ope; }
 };
 
 class PlnGenerator
@@ -51,8 +41,8 @@ public:
 	PlnGenerator(ostream& ostrm) : os(ostrm) {}
 	virtual ~PlnGenerator() {}
 
-	void comment(const string s) { os << "#" << s << endl; }
-	void blank() { os << endl; }
+	virtual void comment(const string s) = 0;
+	void blank() { comment(""); }
 
 	virtual void genSecReadOnlyData()=0;
 	virtual void genSecText()=0;

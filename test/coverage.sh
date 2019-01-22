@@ -1,16 +1,16 @@
 #!/bin/bash
 # Coverage check tool
 
-# target="../generators/PlnX86_64Generator"
+target="../generators/PlnX86_64Generator"
 # target="../generators/PlnX86_64DataAllocator"
 # target="../PlnDataAllocator"
 # target="../models/PlnVariable"
 # target="../PlnModelTreeBuilder"
 # target="../models/expressions/PlnArrayValue"
-target="../models/expressions/assignitem/PlnAssignItem"
+# target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
-# gcovs="${targetnm}.cpp"
-gcovs="PlnAssignWorkValsItem.h"
+gcovs="${targetnm}.cpp"
+#gcovs="PlnAssignWorkValsItem.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov

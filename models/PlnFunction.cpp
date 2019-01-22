@@ -141,6 +141,7 @@ static string mangling(PlnFunction* f)
 		hash_str.push_back(digits[c]);
 	}
 
+	BOOST_ASSERT(f->name.size() < 200);	// need define spec & check gen buffer.
 	return root + f->name + "." + hash_str;
 }
 

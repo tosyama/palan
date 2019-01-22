@@ -39,7 +39,7 @@ class PlnX86_64Generator : public PlnGenerator
 	void genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst);
 	void genConvFMem2IReg(const PlnGenEntity* src, const PlnGenEntity* dst);
 
-	const char* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
+	PlnOperandInfo* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
 
 	void genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
 	void genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second);
@@ -49,12 +49,14 @@ class PlnX86_64Generator : public PlnGenerator
 	void genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
 	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
 
-	int registerConst(const PlnGenEntity* constValue);
+	int registerFlo64Const(const PlnOperandInfo* constValue);
 	int registerConstArray(vector<int64_t> &int_array, int item_size);
 	int registerString(string &string);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
+	void comment(const string s) override;
+
 	void genSecReadOnlyData() override;
 	void genSecText() override;
 	void genEntryPoint(const string& entryname) override;
