@@ -25,6 +25,7 @@ enum PlnExprsnType {
 	ET_MCOPY
 };
 
+class PlnModule;
 class PlnExpression {
 public:
 	PlnExprsnType type;
@@ -38,6 +39,7 @@ public:
 
 	int getDataType(int val_ind=0);
 
+	PlnExpression* adjustTypes(const vector<vector<PlnType*>> &types, PlnModule &module);
 	virtual void adjustType(const vector<PlnType*> &var_type);
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	virtual void gen(PlnGenerator& g);
@@ -57,6 +59,7 @@ enum PlnValType {
 	VL_LIT_UINT8,
 	VL_LIT_FLO8,
 	VL_LIT_STR,
+	VL_LIT_ARRAY,
 	VL_VAR,
 	VL_WORK
 };
@@ -68,6 +71,7 @@ enum PlnAsgnType {
 	ASGN_COPY_REF
 };
 
+class PlnArrayLiteral;
 class PlnValue {
 public:
 	PlnValType type;
@@ -78,6 +82,7 @@ public:
 		uint64_t uintValue;
 		double floValue;
 		string* strValue;
+		PlnArrayLiteral *arrValue;
 		PlnVariable* var;
 		vector<PlnType*> *wk_type;
 	} inf;
@@ -88,6 +93,7 @@ public:
 	PlnValue(uint64_t uintValue);
 	PlnValue(double floValue);
 	PlnValue(string strValue);
+	PlnValue(PlnArrayLiteral *arr);
 	PlnValue(PlnVariable* var);
 	~PlnValue();
 

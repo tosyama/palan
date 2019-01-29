@@ -2,9 +2,10 @@
 ///
 /// A single Src variables of object reference (not indirect access).
 /// Need to clear reference to null after move ownership. 
+/// Saving src for swap assignment (e.g. a,b = b,a).
 ///
 /// @file	PlnAssignObjectRefItem.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 class PlnAssignObjectRefItem : public PlnAssignItem
 {
@@ -15,10 +16,11 @@ class PlnAssignObjectRefItem : public PlnAssignItem
 public:
 	PlnAssignObjectRefItem(PlnExpression* ex)
 			: src_ex(ex), src_save(NULL), dst_item(NULL) {
-		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
-		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
-
+		if (ex->values[0].type == VL_VAR) {
+			BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+			BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
+		} else
+			BOOST_ASSERT(ex->values[0].type == VL_LIT_ARRAY);
 	}
 
 	~PlnAssignObjectRefItem() {

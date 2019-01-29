@@ -18,6 +18,7 @@
 #include "models/PlnStatement.h"
 #include "models/PlnExpression.h"
 #include "models/PlnVariable.h"
+#include "models/PlnObjectLiteral.h"
 #include "models/PlnLoopStatement.h"
 #include "models/PlnConditionalBranch.h"
 #include "models/expressions/PlnArrayValue.h"
@@ -60,6 +61,8 @@ static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 
 #define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
 #define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
+
+extern bool nmigrate;
 
 PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
@@ -456,66 +459,102 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		}
 
 	vector<PlnValue> vars;
-	int init_ex_ind = 0;
-	int init_val_ind = 0;
-	for (json &var: var_init["vars"]) {
-		PlnExpression* init_ex = NULL;
-		PlnValue init_val;
-		InferenceType infer = checkNeedsTypeInference(var["var-type"]);
-		if (infer != NO_INFER) {
-			if (init_ex_ind >= inits.size()) {
-				PlnCompileError err(E_AmbiguousVarType, var["name"]);
-				setLoc(&err, var);
-				throw err;
-			}
-			init_ex = inits[init_ex_ind];
-			if (init_ex->type == ET_ARRAYVALUE) {
-				static_cast<PlnArrayValue*>(init_ex)->setDefaultType(CUR_MODULE);
-			}
-			init_val = init_ex->values[init_val_ind];
-		}
-
-		vector<PlnType*> t;
-		if (infer == TYPE_INFER) {
-			t = getType(init_val);
-
-		} else if (infer == ARR_INDEX_INFER) {
-			inferArrayIndex(var, getType(init_val));
+	if (!nmigrate) {
+		vector<vector<PlnType*>> types;
+		int init_ex_ind = 0;
+		int init_val_ind = 0;
+		for (json &var: var_init["vars"]) {
+			vector<PlnType*> t;
 			t = getVarType(var["var-type"], scope);
+			types.push_back(t);
 
-		} else {
-			t = getVarType(var["var-type"], scope);
-		}
+			PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
+			vars.push_back(v);
+			if (var["move"].is_boolean() && var["move"] == true) {
+				vars.back().asgn_type = ASGN_MOVE;
+			} else {
+				vars.back().asgn_type = ASGN_COPY;
+			}
 
-		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
-		if (!v) {
-			PlnCompileError err(E_DuplicateVarName, var["name"]);
-			setLoc(&err, var);
-			throw err;
-		}
-		vars.push_back(v);
-		if (var["move"].is_boolean() && var["move"] == true) {
-			vars.back().asgn_type = ASGN_MOVE;
-		} else {
-			vars.back().asgn_type = ASGN_COPY;
-		}
+			setLoc(v, var);
 
-		setLoc(v, var);
-
-		if (init_ex_ind < inits.size()) {
-			if (init_val_ind+1 < inits[init_ex_ind]->values.size())
-				init_val_ind++;
-			else {
-				init_ex_ind++;
-				init_val_ind = 0;
+			if (init_ex_ind < inits.size()) {
+				if (init_val_ind+1 < inits[init_ex_ind]->values.size()) {
+					init_val_ind++;
+				} else {
+					inits[init_ex_ind] = inits[init_ex_ind]->adjustTypes(types, *CUR_MODULE);
+					init_ex_ind++;
+					init_val_ind = 0;
+					types.clear();
+				}
 			}
 		}
 	}
 
-	if (inits.size())
+	if (nmigrate)  {
+		int init_ex_ind = 0;
+		int init_val_ind = 0;
+		for (json &var: var_init["vars"]) {
+			PlnExpression* init_ex = NULL;
+			PlnValue init_val;
+			InferenceType infer = checkNeedsTypeInference(var["var-type"]);
+			if (infer != NO_INFER) {
+				if (init_ex_ind >= inits.size()) {
+					PlnCompileError err(E_AmbiguousVarType, var["name"]);
+					setLoc(&err, var);
+					throw err;
+				}
+				init_ex = inits[init_ex_ind];
+				if (init_ex->type == ET_ARRAYVALUE) {
+					static_cast<PlnArrayValue*>(init_ex)->setDefaultType(CUR_MODULE);
+				}
+				init_val = init_ex->values[init_val_ind];
+			}
+
+			vector<PlnType*> t;
+			if (infer == TYPE_INFER) {
+				t = getType(init_val);
+
+			} else if (infer == ARR_INDEX_INFER) {
+				inferArrayIndex(var, getType(init_val));
+				t = getVarType(var["var-type"], scope);
+
+			} else {
+				t = getVarType(var["var-type"], scope);
+			}
+
+			PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
+
+			if (!v) {
+				PlnCompileError err(E_DuplicateVarName, var["name"]);
+				setLoc(&err, var);
+				throw err;
+			}
+			vars.push_back(v);
+			if (var["move"].is_boolean() && var["move"] == true) {
+				vars.back().asgn_type = ASGN_MOVE;
+			} else {
+				vars.back().asgn_type = ASGN_COPY;
+			}
+
+			setLoc(v, var);
+
+			if (init_ex_ind < inits.size()) {
+				if (init_val_ind+1 < inits[init_ex_ind]->values.size())
+					init_val_ind++;
+				else {
+					init_ex_ind++;
+					init_val_ind = 0;
+				}
+			}
+		}
+	}
+
+	if (inits.size()) {
 		return new PlnVarInit(vars, &inits);
-	else
+	} else {
 		return new PlnVarInit(vars);
+	}
 }
 
 void registerConst(json& cnst, PlnScopeStack &scope)
@@ -778,11 +817,58 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 {
 	assertAST(arrval["vals"].is_array(), arrval);
 	vector<PlnExpression*> exps;
+	bool isLiteral = true;
 	for (auto v: arrval["vals"]) {
 		assertAST(v.is_object(), arrval);
-		exps.push_back(buildExpression(v, scope));
+		auto exp = buildExpression(v, scope);
+		exps.push_back(exp);
+		if (exp->type == ET_VALUE) {
+			int type = exp->values[0].type;
+			if (type != VL_LIT_INT8 && type != VL_LIT_UINT8 && type != VL_LIT_FLO8
+				&& type != VL_LIT_STR && type != VL_LIT_ARRAY) {
+				isLiteral = false;
+			}
+		} else
+			isLiteral = false;
 	}
-	return new PlnArrayValue(exps);
+
+	if (nmigrate)
+		return new PlnArrayValue(exps);
+
+	if (isLiteral) {
+		vector<PlnObjectLiteralItem> items;
+		for (PlnExpression *exp: exps) {
+			BOOST_ASSERT(exp->type == ET_VALUE);
+			PlnValue v = exp->values[0];
+			switch (v.type) {
+			case VL_LIT_INT8:
+				items.push_back(v.inf.intValue);
+				delete exp;
+				break;
+			case VL_LIT_UINT8:
+				items.push_back(v.inf.uintValue);
+				delete exp;
+				break;
+			case VL_LIT_FLO8:
+				items.push_back(v.inf.floValue);
+				delete exp;
+				break;
+			case VL_LIT_ARRAY:
+				items.push_back(v.inf.arrValue);
+				v.inf.arrValue = NULL;
+				delete exp;
+				break;
+			default:
+				BOOST_ASSERT(false);
+			}
+		}
+
+		auto arr_lit = new PlnArrayLiteral(items); 
+		return new PlnExpression(arr_lit);
+	}
+
+	BOOST_ASSERT(false);
+
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
