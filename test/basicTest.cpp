@@ -10,8 +10,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	nmigrate = false;
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "6");
-	nmigrate = true;
+	REQUIRE(exec(testcode) == "6 6");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -66,6 +65,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"1010\n"
 							"100101\n"
 							"010110");
+	nmigrate = true;
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");

@@ -31,7 +31,7 @@ public:
 	PlnObjectLiteralItem(uint64_t u)
 		: type(OLI_UINT) { data.u = u; };
 	PlnObjectLiteralItem(double f)
-		: type(OLI_UINT) { data.f = f; };
+		: type(OLI_FLO) { data.f = f; };
 };
 
 class PlnArrayLiteral
@@ -43,7 +43,10 @@ public:
 	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr) { this->arr = move(arr); }
 	PlnArrayLiteral(const PlnArrayLiteral& src);
 
-	void adjustTypes(const vector<vector<PlnType*>> &types, PlnModule &module);
+	vector<PlnType*> getDefaultType(PlnModule *module);
+	vector<int> getArraySizes();
+
+	void adjustTypes(const vector<vector<PlnType*>> &types);
 	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
 };

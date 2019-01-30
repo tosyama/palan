@@ -156,12 +156,12 @@ int PlnExpression::getDataType(int val_ind)
 	return values[val_ind].getType()->data_type;
 }
 
-PlnExpression* PlnExpression::adjustTypes(const vector<vector<PlnType*>> &types, PlnModule &module)
+PlnExpression* PlnExpression::adjustTypes(const vector<vector<PlnType*>> &types)
 {
 	if (type == ET_VALUE) {
 		BOOST_ASSERT(types.size()==1);
 		if (values[0].type == VL_LIT_ARRAY) {
-			values[0].inf.arrValue->adjustTypes(types, module);
+			values[0].inf.arrValue->adjustTypes(types);
 		}
 	}
 	return this;

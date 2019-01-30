@@ -23,6 +23,8 @@
 #include "../PlnException.h"
 #include "expressions/PlnArrayValue.h"
 
+extern bool nmigrate;
+
 PlnBlock::PlnBlock()
 	: parent_func(NULL), parent_block(NULL)
 {
@@ -111,10 +113,14 @@ void PlnBlock::declareConst(const string& name, PlnExpression *ex)
 	bool isConst = false;
 	if (ex->type == ET_VALUE) {
 		int vtype = ex->values[0].type;
-		if (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8 || vtype == VL_LIT_STR || vtype == VL_LIT_FLO8)
+		if (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8 || vtype == VL_LIT_FLO8
+			|| vtype == VL_LIT_STR || vtype == VL_LIT_ARRAY)
 			isConst = true;
 	} else if (ex->type == ET_ARRAYVALUE) {
-		isConst = static_cast<PlnArrayValue*>(ex)->isLiteral();
+		if (nmigrate)
+			isConst = static_cast<PlnArrayValue*>(ex)->isLiteral();
+		else
+			isConst = false;
 	}
 
 	if (!isConst) {
@@ -148,6 +154,7 @@ PlnExpression* PlnBlock::getConst(const string& name)
 			if (ex->type == ET_VALUE) {
 				return new PlnExpression(ex->values[0]);
 			} else if (ex->type == ET_ARRAYVALUE) {
+				if (!nmigrate) BOOST_ASSERT(false);
 				return new PlnArrayValue(*static_cast<PlnArrayValue*>(ex));
 			} else
 				BOOST_ASSERT(false);

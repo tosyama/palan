@@ -385,7 +385,6 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 		if (vt["name"] == "[]") {
 			assertAST(vt["sizes"].is_array(),vt);
 			for (json& sz: vt["sizes"]) {
-				
 				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
 					return ARR_INDEX_INFER;
 				}
@@ -395,7 +394,7 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 	return NO_INFER;
 }
 
-static vector<PlnType*> getType(PlnValue val)
+static vector<PlnType*> getDefaultType(PlnValue &val, PlnModule *module)
 {
 	if (val.type == VL_VAR)
 		return val.inf.var->var_type;
@@ -407,22 +406,16 @@ static vector<PlnType*> getType(PlnValue val)
 		return { PlnType::getFlo() };
 	else if (val.type == VL_WORK)
 		return *val.inf.wk_type;
+	else if (val.type == VL_LIT_ARRAY)
+		return val.inf.arrValue->getDefaultType(module);
 	else
 		BOOST_ASSERT(false);
 }
 
-static void inferArrayIndex(json& var, vector<PlnType*> atype)
+static void inferArrayIndex(json& var, vector<int> sizes)
 {
 	json& var_type = var["var-type"];
 	
-	vector<int> sizes;
-	for (PlnType* at: boost::adaptors::reverse(atype)) {
-		if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
-			for (int sz: *at->inf.fixedarray.sizes) {
-				sizes.push_back(sz);	
-			}
-		}
-	}
 	
 	int sz_i = 0;
 	for (json &vt: var_type) {
@@ -464,8 +457,30 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		int init_ex_ind = 0;
 		int init_val_ind = 0;
 		for (json &var: var_init["vars"]) {
+			InferenceType infer = checkNeedsTypeInference(var["var-type"]);
+			if (infer != NO_INFER) {
+				if (init_ex_ind >= inits.size()) {
+					PlnCompileError err(E_AmbiguousVarType, var["name"]);
+					setLoc(&err, var);
+					throw err;
+				}
+			}
+
 			vector<PlnType*> t;
-			t = getVarType(var["var-type"], scope);
+
+			if (infer == TYPE_INFER) {
+				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
+			} else if (infer == ARR_INDEX_INFER) {
+				vector<int> sizes;
+				PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
+				if (val.type == VL_LIT_ARRAY)
+					sizes = val.inf.arrValue->getArraySizes();
+				inferArrayIndex(var, sizes);
+				t = getVarType(var["var-type"], scope);
+				
+			} else {
+				t = getVarType(var["var-type"], scope);
+			}
 			types.push_back(t);
 
 			PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
@@ -482,7 +497,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				if (init_val_ind+1 < inits[init_ex_ind]->values.size()) {
 					init_val_ind++;
 				} else {
-					inits[init_ex_ind] = inits[init_ex_ind]->adjustTypes(types, *CUR_MODULE);
+					inits[init_ex_ind] = inits[init_ex_ind]->adjustTypes(types);
 					init_ex_ind++;
 					init_val_ind = 0;
 					types.clear();
@@ -513,10 +528,19 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 			vector<PlnType*> t;
 			if (infer == TYPE_INFER) {
-				t = getType(init_val);
+				t = getDefaultType(init_val, CUR_MODULE);
 
 			} else if (infer == ARR_INDEX_INFER) {
-				inferArrayIndex(var, getType(init_val));
+				vector<int> sizes;
+				vector<PlnType*> atype = getDefaultType(init_val, CUR_MODULE);
+				for (PlnType* at: boost::adaptors::reverse(atype)) {
+					if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
+						for (int sz: *at->inf.fixedarray.sizes) {
+							sizes.push_back(sz);	
+						}
+					}
+				}
+				inferArrayIndex(var, sizes);
 				t = getVarType(var["var-type"], scope);
 
 			} else {
@@ -768,9 +792,26 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 	json& dst = asgn["dst-vals"];
 	assertAST(dst.is_array(), asgn);
 
-	vector<PlnExpression *> dst_vals;
+	vector<PlnExpression*> dst_vals;
+	vector<vector<PlnType*>> types;
+
+	int src_ex_ind = 0;
+	int src_val_ind = 0;
 	for (json& dval: dst) {
 		dst_vals.push_back(buildDstValue(dval, scope));
+		BOOST_ASSERT(dst_vals.back()->values[0].type == VL_VAR);
+
+		types.push_back(dst_vals.back()->values[0].inf.var->var_type);
+		if (src_ex_ind < src_exps.size()) {
+			if (src_val_ind+1 < src_exps[src_ex_ind]->values.size()) {
+				src_val_ind++;
+			} else {
+				src_exps[src_ex_ind] = src_exps[src_ex_ind]->adjustTypes(types);
+				src_ex_ind++;
+				src_val_ind = 0;
+				types.clear();
+			}
+		}
 	}
 
 	try {
