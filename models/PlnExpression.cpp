@@ -16,6 +16,8 @@
 #include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 using std::to_string;
 using boost::adaptors::reverse;
@@ -161,7 +163,12 @@ PlnExpression* PlnExpression::adjustTypes(const vector<vector<PlnType*>> &types)
 	if (type == ET_VALUE) {
 		BOOST_ASSERT(types.size()==1);
 		if (values[0].type == VL_LIT_ARRAY) {
-			values[0].inf.arrValue->adjustTypes(types);
+			try {
+				values[0].inf.arrValue->adjustTypes(types);
+			} catch (PlnCompileError& err) {
+				err.loc = loc;
+				throw err;
+			}
 		}
 	}
 	return this;

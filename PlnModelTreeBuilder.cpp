@@ -406,6 +406,8 @@ static vector<PlnType*> getDefaultType(PlnValue &val, PlnModule *module)
 		return { PlnType::getFlo() };
 	else if (val.type == VL_WORK)
 		return *val.inf.wk_type;
+	else if (val.type == VL_LIT_STR)
+		return { PlnType::getReadOnlyCStr() };
 	else if (val.type == VL_LIT_ARRAY)
 		return val.inf.arrValue->getDefaultType(module);
 	else
@@ -473,18 +475,33 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			} else if (infer == ARR_INDEX_INFER) {
 				vector<int> sizes;
 				PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
-				if (val.type == VL_LIT_ARRAY)
+				if (val.type == VL_LIT_ARRAY) {
 					sizes = val.inf.arrValue->getArraySizes();
+				} else {
+					vector<PlnType*> atype = getDefaultType(val, CUR_MODULE);
+					for (PlnType* at: boost::adaptors::reverse(atype)) {
+						if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
+							for (int sz: *at->inf.fixedarray.sizes) {
+								sizes.push_back(sz);	
+							}
+						}
+					}
+				}
 				inferArrayIndex(var, sizes);
 				t = getVarType(var["var-type"], scope);
 				
 			} else {
 				t = getVarType(var["var-type"], scope);
 			}
-			types.push_back(t);
 
 			PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
+			if (!v) {
+				PlnCompileError err(E_DuplicateVarName, var["name"]);
+				setLoc(&err, var);
+				throw err;
+			}
 			vars.push_back(v);
+			types.push_back(v->var_type);
 			if (var["move"].is_boolean() && var["move"] == true) {
 				vars.back().asgn_type = ASGN_MOVE;
 			} else {
@@ -748,17 +765,34 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		}
 		assertAST(arg["exp"].is_object(), fcall);
 		PlnExpression *e = buildExpression(arg["exp"], scope);
-		if (e->type == ET_ARRAYVALUE) {
-			// to use default type  for function search.
-			static_cast<PlnArrayValue*>(e)->setDefaultType(CUR_MODULE);
-		}
+		if (nmigrate)
+			if (e->type == ET_ARRAYVALUE) {
+				// to use default type  for function search.
+				static_cast<PlnArrayValue*>(e)->setDefaultType(CUR_MODULE);
+			}
+
 		if (arg["move"].is_boolean() && arg["move"] == true) {
 			e->values[0].asgn_type = ASGN_MOVE;
-			if (e->type == ET_ARRAYVALUE) {
+			// ??
+			if (e->type == ET_VALUE) {
+				if (e->values[0].type == VL_LIT_ARRAY) {
+					PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
+					err.loc = e->loc;
+					throw err;
+				}
+			}
+
+			if (nmigrate) if (e->type == ET_ARRAYVALUE) {
 				PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
 				err.loc = e->loc;
 				throw err;
 			}
+		}
+
+		// *** Temporaly for getFunc
+		if (e->type == ET_VALUE) {
+			vector<vector<PlnType*>> types = { getDefaultType(e->values[0], CUR_MODULE) };
+			e = e->adjustTypes(types);
 		}
 		arg_vals.push_back(&e->values[0]);
 		args.push_back(e);
@@ -767,7 +801,35 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	try {
 		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
 
-		// add for default value
+		// Set default value and adjusting type.
+		if (!nmigrate) {
+			vector<vector<PlnType*>> types;
+			int arg_ex_ind = 0;
+			int arg_val_ind = 0;
+			for (int i=0; i<f->parameters.size(); i++) {
+				if (arg_ex_ind == args.size()) {
+					args.push_back(NULL);
+				}
+				
+				if (!args[arg_ex_ind]) {
+					PlnExpression* dexp = f->parameters[i]->dflt_value;
+					BOOST_ASSERT(dexp && dexp->type == ET_VALUE);
+					args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
+				}
+
+				types.push_back(f->parameters[i]->var_type);
+				if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
+					arg_val_ind++;
+
+				} else {
+					args[arg_ex_ind] = args[arg_ex_ind]->adjustTypes(types);
+					arg_ex_ind++;
+					arg_val_ind = 0;
+					types.clear();
+				}
+			}
+		}
+
 		for (int i=args.size(); i<f->parameters.size(); i++)
 			args.push_back(NULL);
 
@@ -906,6 +968,10 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 
 		auto arr_lit = new PlnArrayLiteral(items); 
 		return new PlnExpression(arr_lit);
+	} else { // not literal
+		PlnCompileError err(E_CantUseDynamicValue, PlnMessage::arrayValue());
+		setLoc(&err, arrval);
+		throw err;
 	}
 
 	BOOST_ASSERT(false);

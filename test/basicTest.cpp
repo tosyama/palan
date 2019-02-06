@@ -7,10 +7,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 {
 	string testcode;
 
-	nmigrate = false;
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "6 6");
+	REQUIRE(exec(testcode) == "1261020");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -65,7 +64,6 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 							"1010\n"
 							"100101\n"
 							"010110");
-	nmigrate = true;
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");
@@ -324,11 +322,12 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "546_const_exp_err";
 	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
 
-	testcode = "547_constarr_exp_err";
-	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
+	// // not suport yet dynamic expression for array.
+	// testcode = "547_constarr_exp_err";
+	// REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
 
-	testcode = "548_constarr_exp_err2";
-	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
+	// testcode = "548_constarr_exp_err2";
+	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
 
 	testcode = "549_constarr_mv_err";
 	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");

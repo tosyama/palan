@@ -12,8 +12,10 @@
 #include "PlnObjectLiteral.h"
 #include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
-bool nmigrate = true;
+bool nmigrate = false;
 
 // PlnObjectLiteralItem
 PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
@@ -31,12 +33,7 @@ PlnArrayLiteral::PlnArrayLiteral(const PlnArrayLiteral& src)
 {
 	for (auto &i: src.arr)
 		arr.push_back(i);
-}
-
-void PlnArrayLiteral::adjustTypes(const vector<vector<PlnType*>> &types)
-{
-	BOOST_ASSERT(types.size() == 1);
-	arr_type = types[0];
+	arr_type = src.arr_type;
 }
 
 static bool isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> &fixarr_sizes, PlnObjLitItemType &item_type, int depth)
@@ -83,12 +80,63 @@ static bool isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> 
 	return true;
 }
 
+void PlnArrayLiteral::adjustTypes(const vector<vector<PlnType*>> &types)
+{
+	BOOST_ASSERT(types.size() == 1);
+	vector<PlnType*> type = types[0];
+
+	if (type.size() != 2) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type.back()->name);
+		throw err;
+	}
+
+	vector<int> fixarr_sizes;
+	PlnObjLitItemType item_type;
+	if (isFixedArray(arr, fixarr_sizes, item_type, 0)) {
+		fixarr_sizes.pop_back();
+		if (type.back()->obj_type == OT_FIXED_ARRAY) {
+			// check size
+			vector<int> target_sizes = *(type.back()->inf.fixedarray.sizes);
+			bool isCompatible = true;
+			if (target_sizes.size() == fixarr_sizes.size()) {
+				for (int i=0; i<target_sizes.size(); i++) {
+					if (target_sizes[i] != fixarr_sizes[i]) {
+						isCompatible = false;
+						break;
+					}
+				}
+
+			} else
+				isCompatible = false;
+
+			if (!isCompatible) {
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type.back()->name);
+				throw err;
+			}
+
+			// check float
+			if (type[0]->data_type != DT_FLOAT && item_type == OLI_FLO) {
+				PlnCompileError err(E_AllowedOnlyInteger);
+				throw err;
+			}
+		} else
+			BOOST_ASSERT(false);
+
+	} else
+		BOOST_ASSERT(false);
+	arr_type = types[0];
+}
+
 vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
 {
 	BOOST_ASSERT(arr.size());
+
+	if (arr_type.size()) {
+		return arr_type;
+	}
+
 	vector<int> fixarr_sizes;
 	PlnObjLitItemType item_type;
-
 	if (isFixedArray(arr, fixarr_sizes, item_type, 0)) {
 		BOOST_ASSERT(fixarr_sizes.back() == 0);
 		fixarr_sizes.pop_back();
