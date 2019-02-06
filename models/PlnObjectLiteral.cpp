@@ -15,8 +15,6 @@
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 
-bool nmigrate = false;
-
 // PlnObjectLiteralItem
 PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
 {

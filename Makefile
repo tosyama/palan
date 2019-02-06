@@ -16,7 +16,6 @@ SRCS=palan.cpp \
 	models/expressions/PlnBoolOperation.cpp \
 	models/expressions/PlnAssignment.cpp \
 	models/expressions/PlnArrayItem.cpp \
-	models/expressions/PlnArrayValue.cpp \
 	models/expressions/PlnClone.cpp \
 	models/expressions/assignitem/PlnAssignItem.cpp \
 	generators/PlnX86_64Generator.cpp \

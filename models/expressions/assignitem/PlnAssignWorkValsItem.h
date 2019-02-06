@@ -58,15 +58,7 @@ public:
 		int i=0;
 		for (auto &di: dsts) {
 			auto v = src_ex->values[i];
-			if (src_ex->type == ET_ARRAYVALUE) {
-				if (di.item->getAssginType() == ASGN_MOVE) {
-					PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
-					err.loc = src_ex->loc;
-					throw err;
-				}
-				di.item->setSrcEx(da, si, src_ex);
-
-			} else if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
+			if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
 				di.save_src_var = PlnVariable::createTempVar(da, *v.inf.wk_type, "save src");
 				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);
 

@@ -3,7 +3,7 @@
 /// Imprementation of all assignment item.
 ///
 /// @file	PlnAssignItem.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include <iostream>
 #include <boost/assert.hpp>
@@ -19,9 +19,7 @@
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
 #include "../PlnClone.h"
-#include "../PlnArrayValue.h"
 #include "PlnAssignItem.h"
-
 
 // PlnDstItem
 class PlnDstItem {
@@ -88,9 +86,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 			return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_FUNCCALL
-			|| ex->type == ET_CHAINCALL
-			|| ex->type == ET_ARRAYVALUE) {
+	if (ex->type == ET_FUNCCALL || ex->type == ET_CHAINCALL) {
 		return new PlnAssignWorkValsItem(ex);
 	}
 

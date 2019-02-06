@@ -21,7 +21,6 @@
 #include "models/PlnObjectLiteral.h"
 #include "models/PlnLoopStatement.h"
 #include "models/PlnConditionalBranch.h"
-#include "models/expressions/PlnArrayValue.h"
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnFunctionCall.h"
 #include "models/expressions/PlnAddOperation.h"
@@ -61,8 +60,6 @@ static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 
 #define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
 #define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
-
-extern bool nmigrate;
 
 PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
@@ -153,9 +150,6 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
 				default_val = buildExpression(param["default-val"], scope);
-				if (default_val->type == ET_ARRAYVALUE) {
-					static_cast<PlnArrayValue*>(default_val)->setDefaultType(CUR_MODULE);
-				}
 			}
 			f->addParam(param["name"], var_type, pm, default_val);
 			setLoc(f->parameters.back(), param);
@@ -454,102 +448,30 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		}
 
 	vector<PlnValue> vars;
-	if (!nmigrate) {
-		vector<vector<PlnType*>> types;
-		int init_ex_ind = 0;
-		int init_val_ind = 0;
-		for (json &var: var_init["vars"]) {
-			InferenceType infer = checkNeedsTypeInference(var["var-type"]);
-			if (infer != NO_INFER) {
-				if (init_ex_ind >= inits.size()) {
-					PlnCompileError err(E_AmbiguousVarType, var["name"]);
-					setLoc(&err, var);
-					throw err;
-				}
-			}
-
-			vector<PlnType*> t;
-
-			if (infer == TYPE_INFER) {
-				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
-			} else if (infer == ARR_INDEX_INFER) {
-				vector<int> sizes;
-				PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
-				if (val.type == VL_LIT_ARRAY) {
-					sizes = val.inf.arrValue->getArraySizes();
-				} else {
-					vector<PlnType*> atype = getDefaultType(val, CUR_MODULE);
-					for (PlnType* at: boost::adaptors::reverse(atype)) {
-						if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
-							for (int sz: *at->inf.fixedarray.sizes) {
-								sizes.push_back(sz);	
-							}
-						}
-					}
-				}
-				inferArrayIndex(var, sizes);
-				t = getVarType(var["var-type"], scope);
-				
-			} else {
-				t = getVarType(var["var-type"], scope);
-			}
-
-			PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
-			if (!v) {
-				PlnCompileError err(E_DuplicateVarName, var["name"]);
+	vector<vector<PlnType*>> types;
+	int init_ex_ind = 0;
+	int init_val_ind = 0;
+	for (json &var: var_init["vars"]) {
+		InferenceType infer = checkNeedsTypeInference(var["var-type"]);
+		if (infer != NO_INFER) {
+			if (init_ex_ind >= inits.size()) {
+				PlnCompileError err(E_AmbiguousVarType, var["name"]);
 				setLoc(&err, var);
 				throw err;
 			}
-			vars.push_back(v);
-			types.push_back(v->var_type);
-			if (var["move"].is_boolean() && var["move"] == true) {
-				vars.back().asgn_type = ASGN_MOVE;
-			} else {
-				vars.back().asgn_type = ASGN_COPY;
-			}
-
-			setLoc(v, var);
-
-			if (init_ex_ind < inits.size()) {
-				if (init_val_ind+1 < inits[init_ex_ind]->values.size()) {
-					init_val_ind++;
-				} else {
-					inits[init_ex_ind] = inits[init_ex_ind]->adjustTypes(types);
-					init_ex_ind++;
-					init_val_ind = 0;
-					types.clear();
-				}
-			}
 		}
-	}
 
-	if (nmigrate)  {
-		int init_ex_ind = 0;
-		int init_val_ind = 0;
-		for (json &var: var_init["vars"]) {
-			PlnExpression* init_ex = NULL;
-			PlnValue init_val;
-			InferenceType infer = checkNeedsTypeInference(var["var-type"]);
-			if (infer != NO_INFER) {
-				if (init_ex_ind >= inits.size()) {
-					PlnCompileError err(E_AmbiguousVarType, var["name"]);
-					setLoc(&err, var);
-					throw err;
-				}
-				init_ex = inits[init_ex_ind];
-				if (init_ex->type == ET_ARRAYVALUE) {
-					static_cast<PlnArrayValue*>(init_ex)->setDefaultType(CUR_MODULE);
-				}
-				init_val = init_ex->values[init_val_ind];
-			}
+		vector<PlnType*> t;
 
-			vector<PlnType*> t;
-			if (infer == TYPE_INFER) {
-				t = getDefaultType(init_val, CUR_MODULE);
-
-			} else if (infer == ARR_INDEX_INFER) {
-				vector<int> sizes;
-				vector<PlnType*> atype = getDefaultType(init_val, CUR_MODULE);
+		if (infer == TYPE_INFER) {
+			t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
+		} else if (infer == ARR_INDEX_INFER) {
+			vector<int> sizes;
+			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
+			if (val.type == VL_LIT_ARRAY) {
+				sizes = val.inf.arrValue->getArraySizes();
+			} else {
+				vector<PlnType*> atype = getDefaultType(val, CUR_MODULE);
 				for (PlnType* at: boost::adaptors::reverse(atype)) {
 					if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
 						for (int sz: *at->inf.fixedarray.sizes) {
@@ -557,36 +479,38 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 						}
 					}
 				}
-				inferArrayIndex(var, sizes);
-				t = getVarType(var["var-type"], scope);
+			}
+			inferArrayIndex(var, sizes);
+			t = getVarType(var["var-type"], scope);
 
+		} else {
+			t = getVarType(var["var-type"], scope);
+		}
+
+		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
+		if (!v) {
+			PlnCompileError err(E_DuplicateVarName, var["name"]);
+			setLoc(&err, var);
+			throw err;
+		}
+		vars.push_back(v);
+		types.push_back(v->var_type);
+		if (var["move"].is_boolean() && var["move"] == true) {
+			vars.back().asgn_type = ASGN_MOVE;
+		} else {
+			vars.back().asgn_type = ASGN_COPY;
+		}
+
+		setLoc(v, var);
+
+		if (init_ex_ind < inits.size()) {
+			if (init_val_ind+1 < inits[init_ex_ind]->values.size()) {
+				init_val_ind++;
 			} else {
-				t = getVarType(var["var-type"], scope);
-			}
-
-			PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
-
-			if (!v) {
-				PlnCompileError err(E_DuplicateVarName, var["name"]);
-				setLoc(&err, var);
-				throw err;
-			}
-			vars.push_back(v);
-			if (var["move"].is_boolean() && var["move"] == true) {
-				vars.back().asgn_type = ASGN_MOVE;
-			} else {
-				vars.back().asgn_type = ASGN_COPY;
-			}
-
-			setLoc(v, var);
-
-			if (init_ex_ind < inits.size()) {
-				if (init_val_ind+1 < inits[init_ex_ind]->values.size())
-					init_val_ind++;
-				else {
-					init_ex_ind++;
-					init_val_ind = 0;
-				}
+				inits[init_ex_ind] = inits[init_ex_ind]->adjustTypes(types);
+				init_ex_ind++;
+				init_val_ind = 0;
+				types.clear();
 			}
 		}
 	}
@@ -765,11 +689,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		}
 		assertAST(arg["exp"].is_object(), fcall);
 		PlnExpression *e = buildExpression(arg["exp"], scope);
-		if (nmigrate)
-			if (e->type == ET_ARRAYVALUE) {
-				// to use default type  for function search.
-				static_cast<PlnArrayValue*>(e)->setDefaultType(CUR_MODULE);
-			}
 
 		if (arg["move"].is_boolean() && arg["move"] == true) {
 			e->values[0].asgn_type = ASGN_MOVE;
@@ -780,12 +699,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 					err.loc = e->loc;
 					throw err;
 				}
-			}
-
-			if (nmigrate) if (e->type == ET_ARRAYVALUE) {
-				PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
-				err.loc = e->loc;
-				throw err;
 			}
 		}
 
@@ -802,31 +715,29 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
 
 		// Set default value and adjusting type.
-		if (!nmigrate) {
-			vector<vector<PlnType*>> types;
-			int arg_ex_ind = 0;
-			int arg_val_ind = 0;
-			for (int i=0; i<f->parameters.size(); i++) {
-				if (arg_ex_ind == args.size()) {
-					args.push_back(NULL);
-				}
-				
-				if (!args[arg_ex_ind]) {
-					PlnExpression* dexp = f->parameters[i]->dflt_value;
-					BOOST_ASSERT(dexp && dexp->type == ET_VALUE);
-					args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
-				}
+		vector<vector<PlnType*>> types;
+		int arg_ex_ind = 0;
+		int arg_val_ind = 0;
+		for (int i=0; i<f->parameters.size(); i++) {
+			if (arg_ex_ind == args.size()) {
+				args.push_back(NULL);
+			}
 
-				types.push_back(f->parameters[i]->var_type);
-				if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
-					arg_val_ind++;
+			if (!args[arg_ex_ind]) {
+				PlnExpression* dexp = f->parameters[i]->dflt_value;
+				BOOST_ASSERT(dexp && dexp->type == ET_VALUE);
+				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
+			}
 
-				} else {
-					args[arg_ex_ind] = args[arg_ex_ind]->adjustTypes(types);
-					arg_ex_ind++;
-					arg_val_ind = 0;
-					types.clear();
-				}
+			types.push_back(f->parameters[i]->var_type);
+			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
+				arg_val_ind++;
+
+			} else {
+				args[arg_ex_ind] = args[arg_ex_ind]->adjustTypes(types);
+				arg_ex_ind++;
+				arg_val_ind = 0;
+				types.clear();
 			}
 		}
 
@@ -934,9 +845,6 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 		} else
 			isLiteral = false;
 	}
-
-	if (nmigrate)
-		return new PlnArrayValue(exps);
 
 	if (isLiteral) {
 		vector<PlnObjectLiteralItem> items;

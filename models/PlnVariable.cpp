@@ -49,10 +49,6 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 			for (int i=0; i<ex->values.size(); ++i) {
 				if (var_i < vars.size()) {
-					if (ex->type == ET_ARRAYVALUE) {
-						ex->adjustType(vars[var_i].inf.var->var_type);
-					}
-
 					PlnType* src_type = ex->values[i].getType();	
 					PlnType* dst_type = vars[var_i].getType();
 					if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {

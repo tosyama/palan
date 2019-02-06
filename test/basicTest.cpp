@@ -1,8 +1,6 @@
 #include "testBase.h"
 #include <iostream>
 
-extern bool nmigrate;
-
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
 	string testcode;
