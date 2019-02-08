@@ -18,7 +18,7 @@ $ git clone --recursive https://github.com/tosyama/palan.git
 $ sudo make package
 $ make
 ```
-Note: `make package` installs [Boost], [Bison], [Flex] and [Catch].
+Note: `make package` installs [Boost], [Bison], [Flex] and [Catch]. You might need to install libfl-dev.
 
 [Boost]: http://boost.org
 [Bison]: https://www.gnu.org/software/bison/

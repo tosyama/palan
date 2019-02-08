@@ -338,4 +338,10 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "552_ambigfunc_err2";
 	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
+
+	testcode = "553_arrlit_type_err5";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3,4]'.");
+
+	testcode = "554_arrlit_type_err6";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 }

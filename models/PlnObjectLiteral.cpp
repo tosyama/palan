@@ -120,18 +120,17 @@ void PlnArrayLiteral::adjustTypes(const vector<vector<PlnType*>> &types)
 		} else
 			BOOST_ASSERT(false);
 
-	} else
-		BOOST_ASSERT(false);
+	} else {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type.back()->name);
+		throw err;
+	}
 	arr_type = types[0];
 }
 
 vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
 {
 	BOOST_ASSERT(arr.size());
-
-	if (arr_type.size()) {
-		return arr_type;
-	}
+	BOOST_ASSERT(arr_type.size()==0);
 
 	vector<int> fixarr_sizes;
 	PlnObjLitItemType item_type;
@@ -168,9 +167,10 @@ vector<int> PlnArrayLiteral::getArraySizes()
 		fixarr_sizes.pop_back();
 		return fixarr_sizes;
 	}
-	fixarr_sizes.resize(1);
-	fixarr_sizes[0] = arr.size();
-	return fixarr_sizes;
+	BOOST_ASSERT(false);
+	// fixarr_sizes.resize(1);
+	// fixarr_sizes[0] = arr.size();
+	// return fixarr_sizes;
 }
 
 PlnType* PlnArrayLiteral::getType()

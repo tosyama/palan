@@ -741,9 +741,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			}
 		}
 
-		for (int i=args.size(); i<f->parameters.size(); i++)
-			args.push_back(NULL);
-
 		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
