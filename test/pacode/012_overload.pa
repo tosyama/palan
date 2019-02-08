@@ -1,13 +1,14 @@
 ccall int32 printf();
 
-uint16 i16;
-int32 i32;
+uint16 i16 = 16;
+int32 i32 = 32;
 int32[10] ia;
 
 ov_func(ia>>);
 ov_func(i16);
 ov_func(i32);
 ov_func(i32, i16);
+ov_func(ret2u());
 
 func ov_func(int32[10] >> pa)
 {
@@ -26,5 +27,10 @@ func ov_func(uint16 pa)
 
 func ov_func(uint32 pa, uint32 pb)
 {
-	printf("(uint32,uint32)");
+	printf("(uint32 %d, uint32 %d)", pa, pb);
+}
+
+func ret2u() -> uint64 uint64
+{
+	return 1u,2u;
 }

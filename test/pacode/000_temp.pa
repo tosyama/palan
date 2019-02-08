@@ -6,6 +6,8 @@ a = [1,2,3][4,5,6];
  
 test(a);
 test();
+
+f2(f1());
  
 func test(int64[2,3] a) -> int64[2,3] a {
  	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
@@ -16,3 +18,11 @@ func test(int64[2] a = [10,20])
  	printf("%d%d", a[0], a[1]);
 }
 
+func f1() -> int64 int64
+{
+	return 1,2;
+}
+
+func f2(int64 a, int64 b)
+{
+}

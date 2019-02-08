@@ -707,7 +707,8 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			vector<vector<PlnType*>> types = { getDefaultType(e->values[0], CUR_MODULE) };
 			e = e->adjustTypes(types);
 		}
-		arg_vals.push_back(&e->values[0]);
+		for (PlnValue& val: e->values)
+			arg_vals.push_back(&val);
 		args.push_back(e);
 	}
 

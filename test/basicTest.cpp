@@ -84,7 +84,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "(int32[10])(uint16)(int32)(uint32,uint32)");
+	REQUIRE(exec(testcode) == "(int32[10])(uint16)(int32)"
+							"(uint32 32, uint32 16)(uint32 1, uint32 2)");
 
 	testcode = "013_chaincall";
 	REQUIRE(build(testcode) == "success");
