@@ -5,7 +5,7 @@
 /// e.g. ) funcion(a, b) -> c, d;
 ///
 /// @file	PlnFunctionCall.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -19,27 +19,9 @@
 #include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
 #include "PlnClone.h"
-#include "PlnArrayValue.h"
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
-
-static PlnExpression* createDefaultArg(PlnExpression* default_val)
-{
-	BOOST_ASSERT(default_val);
-
-	if (default_val->type == ET_VALUE) {
-		PlnValType vt = default_val->values[0].type;
-		if (vt == VL_LIT_INT8 || vt == VL_LIT_UINT8 || vt == VL_LIT_FLO8 || vt == VL_LIT_STR) {
-			return new PlnExpression(default_val->values[0]);
-		}
-	} else if (default_val->type == ET_ARRAYVALUE) {
-		PlnArrayValue* av = new PlnArrayValue(*static_cast<PlnArrayValue*>(default_val));
-		return av;
-	}
-
-	BOOST_ASSERT(false);
-}
 
 // PlnFunctionCall
 PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
@@ -57,17 +39,6 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	: PlnFunctionCall(f)
 {
 	arguments = move(args);
-	// Set dafault arguments if arg == NULL
-	int i=0;
-	for (auto &a: arguments) {
-		if (!a) {
-			BOOST_ASSERT(f->parameters[i]->dflt_value);
-			a = createDefaultArg(f->parameters[i]->dflt_value);
-		}
-		i+=a->values.size();
-	}
-
-	BOOST_ASSERT(i>=f->parameters.size());
 }
 
 PlnFunctionCall::~PlnFunctionCall()
@@ -126,7 +97,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 		if (i<f->parameters.size())
 			a->adjustType(f->parameters[i]->var_type);
 
-		for (auto v: a->values) {
+		for (auto &v: a->values) {
 			auto t = v.getType();
 			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
 
@@ -140,11 +111,9 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			}
 
 			PlnClone* clone = NULL;
-			if (ptr_type == PTR_PARAM_COPY && v.type == VL_VAR) {
-				clone = new PlnClone(da, v.inf.var->var_type, false);
-				a->data_places.push_back(clone->src_dp);
-			} else if (ptr_type == PTR_PARAM_COPY && v.type == VL_WORK) {
-				clone = new PlnClone(da, *v.inf.wk_type, false);
+			if (ptr_type == PTR_PARAM_COPY
+					&& (v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_ARRAY)) {
+				clone = new PlnClone(da, f->parameters[i]->var_type, false);
 				a->data_places.push_back(clone->src_dp);
 			} else {
 				a->data_places.push_back(arg_dps[i]);

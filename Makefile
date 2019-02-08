@@ -7,6 +7,7 @@ SRCS=palan.cpp \
 	models/PlnType.cpp models/PlnArray.cpp models/PlnGeneralObject.cpp \
 	models/PlnLoopStatement.cpp \
 	models/PlnConditionalBranch.cpp \
+	models/PlnObjectLiteral.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \
@@ -15,7 +16,6 @@ SRCS=palan.cpp \
 	models/expressions/PlnBoolOperation.cpp \
 	models/expressions/PlnAssignment.cpp \
 	models/expressions/PlnArrayItem.cpp \
-	models/expressions/PlnArrayValue.cpp \
 	models/expressions/PlnClone.cpp \
 	models/expressions/assignitem/PlnAssignItem.cpp \
 	generators/PlnX86_64Generator.cpp \

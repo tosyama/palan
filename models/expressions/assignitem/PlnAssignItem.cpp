@@ -3,7 +3,7 @@
 /// Imprementation of all assignment item.
 ///
 /// @file	PlnAssignItem.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include <iostream>
 #include <boost/assert.hpp>
@@ -19,9 +19,7 @@
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
 #include "../PlnClone.h"
-#include "../PlnArrayValue.h"
 #include "PlnAssignItem.h"
-
 
 // PlnDstItem
 class PlnDstItem {
@@ -53,6 +51,11 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_LIT_FLO8 || v.type == VL_LIT_STR) {
 			return new PlnAssignPrimitiveItem(ex);
 		}
+
+		if (v.type == VL_LIT_ARRAY) {
+			return new PlnAssignObjectRefItem(ex);
+		}
+
 		if (v.type == VL_VAR) {
 			int dt = ex->values[0].getType()->data_type;
 			if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
@@ -83,9 +86,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 			return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_FUNCCALL
-			|| ex->type == ET_CHAINCALL
-			|| ex->type == ET_ARRAYVALUE) {
+	if (ex->type == ET_FUNCCALL || ex->type == ET_CHAINCALL) {
 		return new PlnAssignWorkValsItem(ex);
 	}
 

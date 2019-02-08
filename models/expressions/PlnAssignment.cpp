@@ -4,7 +4,7 @@
 /// e.g.) 2 -> a;
 ///
 /// @file	PlnAssignment.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <iostream>
 #include <boost/assert.hpp>
@@ -18,7 +18,6 @@
 #include "../PlnVariable.h"
 #include "../PlnType.h"
 #include "PlnDivOperation.h"
-#include "PlnArrayValue.h"
 #include "assignitem/PlnAssignItem.h"
 
 #include "PlnArrayItem.h"

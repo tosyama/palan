@@ -1,11 +1,11 @@
 #!/bin/bash
 # Coverage check tool
 
-target="../generators/PlnX86_64Generator"
+# target="../generators/PlnX86_64Generator"
 # target="../generators/PlnX86_64DataAllocator"
 # target="../PlnDataAllocator"
-# target="../models/PlnVariable"
-# target="../PlnModelTreeBuilder"
+# target="../models/PlnObjectLiteral"
+target="../PlnModelTreeBuilder"
 # target="../models/expressions/PlnArrayValue"
 # target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}

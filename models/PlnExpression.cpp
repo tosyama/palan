@@ -12,9 +12,12 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
+#include "PlnObjectLiteral.h"
 #include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
+#include "../PlnMessage.h"
+#include "../PlnException.h"
 
 using std::to_string;
 using boost::adaptors::reverse;
@@ -29,9 +32,17 @@ PlnValue::PlnValue(int64_t intValue)
 
 PlnValue::PlnValue(const PlnValue &src)
 {
-	*this = src;
 	if (src.type == VL_LIT_STR) {
+		type = src.type;
+		asgn_type = src.asgn_type;
 		inf.strValue = new string(*src.inf.strValue);
+
+	} else if (src.type == VL_LIT_ARRAY) {
+		type = src.type;
+		asgn_type = src.asgn_type;
+		inf.arrValue = new PlnArrayLiteral(*src.inf.arrValue);
+	} else {
+		*this = src;
 	}
 }
 
@@ -53,6 +64,12 @@ PlnValue::PlnValue(string strValue)
 	inf.strValue = new string(strValue);
 }
 
+PlnValue::PlnValue(PlnArrayLiteral *arr)
+	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN)
+{
+	inf.arrValue = arr;
+}
+
 PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR), asgn_type(NO_ASGN)
 {
@@ -63,6 +80,9 @@ PlnValue::~PlnValue()
 {
 	if (type == VL_LIT_STR)
 		delete inf.strValue;
+	else if (type == VL_LIT_ARRAY)
+		delete inf.arrValue;
+
 }
 
 PlnType* PlnValue::getType()
@@ -76,6 +96,8 @@ PlnType* PlnValue::getType()
 			return PlnType::getFlo();
 		case VL_LIT_STR:
 			return PlnType::getReadOnlyCStr();
+		case VL_LIT_ARRAY:
+			return inf.arrValue->getType();
 		case VL_VAR:
 			return inf.var->var_type.back();
 		case VL_WORK:
@@ -103,6 +125,8 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 		case VL_LIT_STR:
 			return da.getROStrArrayDp(*inf.strValue);
 
+		case VL_LIT_ARRAY:
+			return inf.arrValue->getDataPlace(da);
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;
@@ -132,6 +156,22 @@ int PlnExpression::getDataType(int val_ind)
 {
 	BOOST_ASSERT(values.size() > val_ind && val_ind >= 0);
 	return values[val_ind].getType()->data_type;
+}
+
+PlnExpression* PlnExpression::adjustTypes(const vector<vector<PlnType*>> &types)
+{
+	if (type == ET_VALUE) {
+		BOOST_ASSERT(types.size()==1);
+		if (values[0].type == VL_LIT_ARRAY) {
+			try {
+				values[0].inf.arrValue->adjustTypes(types);
+			} catch (PlnCompileError& err) {
+				err.loc = loc;
+				throw err;
+			}
+		}
+	}
+	return this;
 }
 
 void PlnExpression::adjustType(const vector<PlnType*> &var_type)

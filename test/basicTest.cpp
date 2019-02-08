@@ -84,7 +84,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "012_overload";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "(int32[10])(uint16)(int32)(uint32,uint32)");
+	REQUIRE(exec(testcode) == "(int32[10])(uint16)(int32)"
+							"(uint32 32, uint32 16)(uint32 1, uint32 2)");
 
 	testcode = "013_chaincall";
 	REQUIRE(build(testcode) == "success");
@@ -320,11 +321,13 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "546_const_exp_err";
 	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
 
-	testcode = "547_constarr_exp_err";
-	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
+	// // not suport yet dynamic expression for array.
+	// testcode = "547_constarr_exp_err";
+	// REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
 
 	testcode = "548_constarr_exp_err2";
-	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
+	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
+	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
 
 	testcode = "549_constarr_mv_err";
 	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");
@@ -337,4 +340,10 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "552_ambigfunc_err2";
 	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
+
+	testcode = "553_arrlit_type_err5";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3,4]'.");
+
+	testcode = "554_arrlit_type_err6";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 }
