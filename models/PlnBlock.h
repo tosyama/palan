@@ -29,7 +29,7 @@ public:
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 
-	PlnVariable* declareVariable(const string& var_name, vector<PlnType*>& var_types, bool is_owner);
+	PlnVariable* declareVariable(const string& var_name, PlnType* var_type, bool is_owner);
 	PlnVariable* getVariable(const string& var_name);
 
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError

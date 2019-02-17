@@ -11,14 +11,14 @@
 #include "../../PlnGenerator.h"
 #include "PlnClone.h"
 
-PlnClone::PlnClone(PlnDataAllocator& da, vector<PlnType*> &var_type, bool keep_var)
+PlnClone::PlnClone(PlnDataAllocator& da, PlnType* var_type, bool keep_var)
 	: PlnExpression(ET_CLONE), free_ex(NULL), keep_var(keep_var)
 {
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
-	alloc_ex = var_type.back()->allocator->getAllocEx();
+	alloc_ex = var_type->allocator->getAllocEx();
 	alloc_ex->data_places.push_back(var->place);
 
-	copy_ex = var_type.back()->copyer->getCopyEx();
+	copy_ex = var_type->copyer->getCopyEx();
 	src_dp = copy_ex->srcDp(da);
 	copy_dst_dp = copy_ex->dstDp(da);
 }
@@ -44,7 +44,7 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnClone::finishFree(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(keep_var);
-	free_ex = var->var_type.back()->freer->getFreeEx(var);
+	free_ex = var->var_type->freer->getFreeEx(var);
 	free_ex->finish(da, si);
 	da.releaseDp(var->place);
 }

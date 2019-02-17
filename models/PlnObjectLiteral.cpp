@@ -14,6 +14,7 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
+#include "types/PlnFixedArrayType.h"
 
 // PlnObjectLiteralItem
 PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
@@ -78,23 +79,27 @@ static bool isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> 
 	return true;
 }
 
-void PlnArrayLiteral::adjustTypes(const vector<vector<PlnType*>> &types)
+void PlnArrayLiteral::adjustTypes(const vector<PlnType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
-	vector<PlnType*> type = types[0];
-
-	if (type.size() != 2) {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type.back()->name);
+	PlnType* type = types[0];
+	if (type->type != TP_FIXED_ARRAY) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		throw err;
+	}
+	PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
+	if (atype->item_type->data_type == DT_OBJECT_REF) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
 		throw err;
 	}
 
 	vector<int> fixarr_sizes;
-	PlnObjLitItemType item_type;
-	if (isFixedArray(arr, fixarr_sizes, item_type, 0)) {
+	PlnObjLitItemType lit_item_type;
+	if (isFixedArray(arr, fixarr_sizes, lit_item_type, 0)) {
 		fixarr_sizes.pop_back();
-		if (type.back()->obj_type == OT_FIXED_ARRAY) {
+		if (type->obj_type == OT_FIXED_ARRAY) {
 			// check size
-			vector<int> target_sizes = *(type.back()->inf.fixedarray.sizes);
+			vector<int> target_sizes = *(type->inf.fixedarray.sizes);
 			bool isCompatible = true;
 			if (target_sizes.size() == fixarr_sizes.size()) {
 				for (int i=0; i<target_sizes.size(); i++) {
@@ -108,20 +113,18 @@ void PlnArrayLiteral::adjustTypes(const vector<vector<PlnType*>> &types)
 				isCompatible = false;
 
 			if (!isCompatible) {
-				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type.back()->name);
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
 				throw err;
 			}
 
 			// check float
-			if (type[0]->data_type != DT_FLOAT && item_type == OLI_FLO) {
+			if (static_cast<PlnFixedArrayType*>(type)->item_type->data_type != DT_FLOAT && lit_item_type == OLI_FLO) {
 				PlnCompileError err(E_AllowedOnlyInteger);
 				throw err;
 			}
-		} else
-			BOOST_ASSERT(false);
-
+		}
 	} else {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type.back()->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
 		throw err;
 	}
 	arr_type = types[0];
@@ -130,7 +133,7 @@ void PlnArrayLiteral::adjustTypes(const vector<vector<PlnType*>> &types)
 vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
 {
 	BOOST_ASSERT(arr.size());
-	BOOST_ASSERT(arr_type.size()==0);
+	BOOST_ASSERT(arr_type==NULL);
 
 	vector<int> fixarr_sizes;
 	PlnObjLitItemType item_type;
@@ -151,7 +154,7 @@ vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
 		}
 
 		vector<PlnType*> type = itype;
-		type.push_back(module->getFixedArrayType(itype, fixarr_sizes));
+		type.push_back(module->getFixedArrayType(itype.back(), itype, fixarr_sizes));
 		return type;
 	}
 
@@ -175,8 +178,8 @@ vector<int> PlnArrayLiteral::getArraySizes()
 
 PlnType* PlnArrayLiteral::getType()
 {
-	BOOST_ASSERT(arr_type.size());
-	return arr_type.back();
+	BOOST_ASSERT(arr_type);
+	return arr_type;
 }
 
 template<typename T>
@@ -200,8 +203,9 @@ static void addAllNumerics(const PlnArrayLiteral* arr_lit, T& num_arr)
 
 PlnDataPlace* PlnArrayLiteral::getDataPlace(PlnDataAllocator& da)
 {
-	int ele_type = arr_type[0]->data_type;
-	int ele_size = arr_type[0]->size;
+	PlnType* item_type = static_cast<PlnFixedArrayType*>(arr_type)->item_type;
+	int ele_type = item_type->data_type;
+	int ele_size = item_type->size;
 
 	if (ele_type == DT_SINT || ele_type == DT_UINT) {
 		vector<int64_t> int_arr;

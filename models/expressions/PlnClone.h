@@ -14,7 +14,7 @@ public:
 	PlnVariable* var;
 	PlnDataPlace *src_dp;
 
-	PlnClone(PlnDataAllocator& da, vector<PlnType*> &var_type, bool keep_var);
+	PlnClone(PlnDataAllocator& da, PlnType* var_type, bool keep_var);
 	~PlnClone();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;

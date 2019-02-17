@@ -99,9 +99,9 @@ PlnType* PlnValue::getType()
 		case VL_LIT_ARRAY:
 			return inf.arrValue->getType();
 		case VL_VAR:
-			return inf.var->var_type.back();
+			return inf.var->var_type;
 		case VL_WORK:
-			return inf.wk_type->back();
+			return inf.wk_type;
 	}
 	BOOST_ASSERT(false);
 }
@@ -132,7 +132,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			PlnVariable *var = inf.var;
 			if (var->ptr_type & PTR_INDIRECT_ACCESS) {
 				if (!var->place) {
-					var->place = new PlnDataPlace(var->var_type.back()->size, var->var_type.back()->data_type);
+					var->place = new PlnDataPlace(var->var_type->size, var->var_type->data_type);
 					var->place->comment = &var->name;
 				}
 				return var->place;
@@ -158,7 +158,7 @@ int PlnExpression::getDataType(int val_ind)
 	return values[val_ind].getType()->data_type;
 }
 
-PlnExpression* PlnExpression::adjustTypes(const vector<vector<PlnType*>> &types)
+PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 {
 	if (type == ET_VALUE) {
 		BOOST_ASSERT(types.size()==1);
@@ -172,10 +172,6 @@ PlnExpression* PlnExpression::adjustTypes(const vector<vector<PlnType*>> &types)
 		}
 	}
 	return this;
-}
-
-void PlnExpression::adjustType(const vector<PlnType*> &var_type)
-{
 }
 
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)

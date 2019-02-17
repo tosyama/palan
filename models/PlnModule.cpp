@@ -13,8 +13,9 @@
 #include "PlnFunction.h"
 #include "PlnVariable.h"
 #include "PlnStatement.h"
-#include "PlnArray.h"
 #include "PlnGeneralObject.h"
+#include "types/PlnFixedArrayType.h"
+#include "PlnArray.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -54,27 +55,35 @@ string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*>
 	return fname;
 }
 
-PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes)
+PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<PlnType*> &item_type2, vector<int>& sizes)
 {
 	string name = PlnType::getFixedArrayName(item_type, sizes);
 	for (auto t: types) 
 		if (name == t->name) return t;
 
-	PlnType* it = item_type.back();
+	PlnType* it = item_type;
 	int item_size = it->size;
 	int alloc_size = item_size;
 	for (int s: sizes)
 		alloc_size *= s;
 
-	auto t = new PlnType();
+	auto t = new PlnFixedArrayType();
 	t->name = name;
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
+	t->item_type = item_type;
+
 	t->obj_type = OT_FIXED_ARRAY;
 	t->inf.obj.is_fixed_size = true;
 	t->inf.obj.alloc_size = alloc_size;
 	t->inf.fixedarray.sizes = new vector<int>(move(sizes));
 	t->inf.fixedarray.item_size = item_size;
+
+	if (alloc_size == 0) {
+		// row array reference.
+		types.push_back(t);
+		return t;
+	}
 
 	// set allocator & freer.
 	if (it->data_type != DT_OBJECT_REF) {
@@ -92,9 +101,9 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 				}
 			}
 
-			vector<PlnType*> type_def = item_type;
+			vector<PlnType*> type_def = item_type2;
 			type_def.push_back(t);
-			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, type_def);
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, type_def, this);
 			functions.push_back(alloc_func);
 
 			t->allocator = new PlnNoParamAllocator(alloc_func);
@@ -109,9 +118,9 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 				}
 			}
 
-			vector<PlnType*> type_def = item_type;
+			vector<PlnType*> type_def = item_type2;
 			type_def.push_back(t);
-			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, type_def);
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, type_def, this);
 			functions.push_back(free_func);
 
 			t->freer = new PlnSingleParamFreer(free_func);
@@ -126,9 +135,9 @@ PlnType* PlnModule::getFixedArrayType(vector<PlnType*> &item_type, vector<int>& 
 				}
 			}
 
-			vector<PlnType*> type_def = item_type;
+			vector<PlnType*> type_def = item_type2;
 			type_def.push_back(t);
-			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def);
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def, this);
 			functions.push_back(copy_func);
 			
 			t->copyer = new PlnTwoParamsCopyer(copy_func);

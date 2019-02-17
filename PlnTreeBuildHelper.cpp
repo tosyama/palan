@@ -4,6 +4,7 @@
 /// @copyright	2018 YAMAGUCHI Toshinobu 
 
 #include "PlnTreeBuildHelper.h"
+#include "models/PlnModule.h"
 #include "models/PlnType.h"
 #include "models/PlnBlock.h"
 #include "models/PlnExpression.h"
@@ -15,6 +16,7 @@
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnCmpOperation.h"
 #include "models/expressions/PlnFunctionCall.h"
+#include "models/types/PlnFixedArrayType.h"
 #include <boost/assert.hpp>
 
 namespace palan
@@ -22,8 +24,7 @@ namespace palan
 
 PlnVariable* declareUInt(PlnBlock* block, string name, uint64_t init_i)
 {
-	vector<PlnType*> t = { PlnType::getSint() };
-	PlnVariable *var = block->declareVariable(name, t, true);
+	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), true);
 	BOOST_ASSERT(var);
 	vector<PlnValue> vars = { var };
 
@@ -79,7 +80,7 @@ void exit(PlnBlock* block, uint64_t result)
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
-PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index)
+PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnModule *module)
 {
 	PlnValue var_val(var);
 	var_val.asgn_type = ASGN_COPY_REF;
@@ -87,10 +88,13 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index)
 	auto index_ex = new PlnExpression(index);
 	vector<PlnExpression*> inds = { index_ex };
 
-	vector<PlnType*> arr_type = var->var_type;
-	arr_type.back() = PlnType::getRawArray();
+	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type);
+	vector<int> raw_sizes = {0};
 
-	return new PlnArrayItem(arr_ex, inds, arr_type);
+	vector<PlnType*> tt = {farr_type->item_type};
+	PlnType* raw_arr_type = module->getFixedArrayType(farr_type->item_type, tt, raw_sizes);
+
+	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }
 
 PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, uint64_t i)

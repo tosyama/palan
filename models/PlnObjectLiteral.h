@@ -37,16 +37,18 @@ public:
 class PlnArrayLiteral
 {
 public:
-	vector<PlnType*> arr_type;
+	PlnType* arr_type;
 	vector<PlnObjectLiteralItem> arr;
 
-	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr) { this->arr = move(arr); }
+	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr)
+		: arr_type(NULL) { this->arr = move(arr); }
+
 	PlnArrayLiteral(const PlnArrayLiteral& src);
 
 	vector<PlnType*> getDefaultType(PlnModule *module);
 	vector<int> getArraySizes();
 
-	void adjustTypes(const vector<vector<PlnType*>> &types);
+	void adjustTypes(const vector<PlnType*> &types);
 	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
 };

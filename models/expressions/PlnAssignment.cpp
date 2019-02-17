@@ -120,10 +120,9 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 		for (int i=0; i<ex->values.size(); ++i) {
 			if (dst_i < lvals.size()) {
 				BOOST_ASSERT(lvals[dst_i]->values[0].type == VL_VAR);
-				ex->adjustType(lvals[dst_i]->values[0].inf.var->var_type);
-				
 				PlnType* src_type = ex->values[i].getType();	
 				PlnType* dst_type = lvals[dst_i]->values[0].getType();
+
 				if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
 					delete ai;
 					PlnCompileError err(E_IncompatibleTypeAssign, src_type->name, dst_type->name);

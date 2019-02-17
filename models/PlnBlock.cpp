@@ -51,7 +51,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_block = b;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>& var_type, bool is_owner)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -62,9 +62,9 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, vector<PlnType*>&
 	v->name = var_name;
 	v->container = NULL;
 
-	if (var_type.size() > 0) {
-		v->var_type = move(var_type);
-		if (v->var_type.back()->data_type == DT_OBJECT_REF) {
+	if (var_type) {
+		v->var_type = var_type;
+		if (v->var_type->data_type == DT_OBJECT_REF) {
 			v->ptr_type = is_owner ? PTR_REFERENCE | PTR_OWNERSHIP
 							: PTR_REFERENCE;
 		} else v->ptr_type = NO_PTR;
@@ -176,7 +176,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 						if (!p->dflt_value) goto next_func;
 					} else {
 						PlnType* a_type = arg_vals[i]->getType();
-						PlnTypeConvCap cap = p->var_type.back()->canConvFrom(a_type);
+						PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
 						if (cap == TC_CANT_CONV) goto next_func;
 
 						if (p->ptr_type == PTR_PARAM_MOVE && arg_vals[i]->asgn_type != ASGN_MOVE) {
@@ -225,7 +225,7 @@ PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& par
 			if (f->name == func_name && f->parameters.size() == param_types.size()) {
 
 				for (int i=0; i<param_types.size(); i++) {
-					string pt_name = f->parameters[i]->var_type.back()->name;
+					string pt_name = f->parameters[i]->var_type->name;
 					if (f->parameters[i]->ptr_type == PTR_PARAM_MOVE) {
 						pt_name += ">>";
 					}

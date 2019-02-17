@@ -1,10 +1,11 @@
 /// Type model class definition.
 ///
 /// @file	PlnType.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "PlnType.h"
+#include "types/PlnFixedArrayType.h"
 #include "PlnVariable.h"
 #include "PlnExpression.h"
 #include "../PlnConstants.h"
@@ -25,7 +26,7 @@ static PlnType* raw_array_type = NULL;
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 {
-	PlnAllocator* allocator= var->var_type.back()->allocator;
+	PlnAllocator* allocator= var->var_type->allocator;
 	BOOST_ASSERT(allocator);
 	return allocator->getAllocEx();
 }
@@ -33,14 +34,14 @@ PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 // PlnFreer
 PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 {
-	PlnFreer* freer = var->var_type.back()->freer;
+	PlnFreer* freer = var->var_type->freer;
 	BOOST_ASSERT(freer);
 	return freer->getFreeEx(new PlnExpression(var));
 }
 
 // PlnType
-PlnType::PlnType()
-	: obj_type(OT_UNKNOWN), allocator(NULL), freer(NULL)
+PlnType::PlnType(PlnTypeType type)
+	: type(type), obj_type(OT_UNKNOWN), allocator(NULL), freer(NULL), copyer(NULL)
 {
 }
 
@@ -291,7 +292,7 @@ PlnType* PlnType::getRawArray()
 	return raw_array_type;
 }
 
-string PlnType::getFixedArrayName(vector<PlnType*> &item_type, vector<int>& sizes)
+string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
 	for (int s: sizes) {
@@ -299,8 +300,12 @@ string PlnType::getFixedArrayName(vector<PlnType*> &item_type, vector<int>& size
 	}
 	arr_name.back() = ']';
 
-	string &item_name = item_type.front()->name;
-	string item_suffix = item_type.back()->name.substr(item_name.size());
+	PlnType *it = item_type;
+	while (it->type == TP_FIXED_ARRAY) {
+		it = static_cast<PlnFixedArrayType*>(it)->item_type;
+	}
+	string& item_name = it->name;
+	string item_suffix = item_type->name.substr(item_name.size());
 
 	return item_name + arr_name + item_suffix;
 }
