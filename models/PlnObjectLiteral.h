@@ -45,7 +45,7 @@ public:
 
 	PlnArrayLiteral(const PlnArrayLiteral& src);
 
-	vector<PlnType*> getDefaultType(PlnModule *module);
+	PlnType* getDefaultType(PlnModule *module);
 	vector<int> getArraySizes();
 
 	void adjustTypes(const vector<PlnType*> &types);

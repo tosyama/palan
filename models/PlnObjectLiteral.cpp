@@ -130,7 +130,7 @@ void PlnArrayLiteral::adjustTypes(const vector<PlnType*> &types)
 	arr_type = types[0];
 }
 
-vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
+PlnType* PlnArrayLiteral::getDefaultType(PlnModule *module)
 {
 	BOOST_ASSERT(arr.size());
 	BOOST_ASSERT(arr_type==NULL);
@@ -141,21 +141,19 @@ vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
 		BOOST_ASSERT(fixarr_sizes.back() == 0);
 		fixarr_sizes.pop_back();
 
-		vector<PlnType*> itype;
+		PlnType* itype;
 		switch(item_type) {
 			case OLI_SINT:
-				itype.push_back(PlnType::getSint()); break;
+				itype = PlnType::getSint(); break;
 			case OLI_UINT:
-				itype.push_back(PlnType::getUint()); break;
+				itype = PlnType::getUint(); break;
 			case OLI_FLO:
-				itype.push_back(PlnType::getFlo()); break;
+				itype = PlnType::getFlo(); break;
 			default:
 				BOOST_ASSERT(false);
 		}
 
-		vector<PlnType*> type = itype;
-		type.push_back(module->getFixedArrayType(itype.back(), fixarr_sizes));
-		return type;
+		return module->getFixedArrayType(itype, fixarr_sizes);
 	}
 
 	BOOST_ASSERT(false);

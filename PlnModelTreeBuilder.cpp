@@ -404,7 +404,7 @@ static PlnType* getDefaultType(PlnValue &val, PlnModule *module)
 	else if (val.type == VL_LIT_STR)
 		return PlnType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
-		return val.inf.arrValue->getDefaultType(module).back();
+		return val.inf.arrValue->getDefaultType(module);
 	else
 		BOOST_ASSERT(false);
 }
