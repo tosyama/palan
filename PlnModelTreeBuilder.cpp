@@ -28,6 +28,7 @@
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnBoolOperation.h"
 #include "models/expressions/PlnArrayItem.h"
+#include "models/types/PlnFixedArrayType.h"
 
 static void registerPrototype(json& proto, PlnScopeStack& scope);
 static void buildFunction(json& func, PlnScopeStack &scope, json& ast);
@@ -95,17 +96,18 @@ PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 	return module;
 }
 
-static vector<PlnType*> getVarType(json& var_type, PlnScopeStack& scope)
+static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 {
+	if (var_type.is_null()) return NULL;
+
 	PlnModule &module = *CUR_MODULE;
-	vector<PlnType*> ret_vt;
-	if (var_type.is_null()) return ret_vt;
+	PlnType* ret_vt;
 
 	assertAST(var_type.is_array(), var_type);
 	assertAST(var_type[0]["name"].is_string(), var_type);
 
 	string type_name = var_type[0]["name"];
-	ret_vt.push_back(module.getType(type_name));
+	ret_vt = module.getType(type_name);
 
 	for (int i=var_type.size()-1; i>0; --i) {
 		json &vt = var_type[i];
@@ -113,7 +115,7 @@ static vector<PlnType*> getVarType(json& var_type, PlnScopeStack& scope)
 
 		assertAST(type_name == "[]", vt);
 		assertAST(vt["sizes"].is_array(), vt);
-		
+
 		vector<int> sizes;
 		for (json& i: vt["sizes"]) {
 			PlnExpression* e = buildExpression(i, scope);
@@ -126,8 +128,9 @@ static vector<PlnType*> getVarType(json& var_type, PlnScopeStack& scope)
 			}
 		}
 		PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
-		ret_vt.push_back(arr_t);
+		ret_vt = arr_t;
 	}
+
 	return ret_vt;
 }
 
@@ -141,7 +144,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	if (ftype_str == "palan") {
 		f = new PlnFunction(FT_PLN, proto["name"]);
 		for (auto& param: proto["params"]) {
-			vector<PlnType*> var_type = getVarType(param["var-type"], scope);
+			PlnType *var_type = getVarType(param["var-type"], scope);
 			PlnPassingMethod pm = FPM_COPY;
 			if (param["move"].is_boolean()) {
 				if (param["move"] == true)
@@ -156,7 +159,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		}
 
 		for (auto& ret: proto["rets"]) {
-			vector<PlnType*> var_type = getVarType(ret["var-type"], scope);
+			PlnType *var_type = getVarType(ret["var-type"], scope);
 			string name;
 			if (ret["name"].is_string())
 				name = ret["name"];
@@ -178,8 +181,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		if (proto["ret-type"].is_string()) {
 			if (PlnType *t = module.getType(proto["ret-type"])) {
 				string rname = "";
-				vector<PlnType*> tv = { t };
-				f->addRetValue(rname, tv, false);
+				f->addRetValue(rname, t, false);
 			}
 		}
 		setLoc(f, proto);
@@ -190,8 +192,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		if (proto["ret-type"].is_string()) {
 			if(PlnType *t = module.getType(proto["ret-type"])) {
 				string rname = "";
-				vector<PlnType*> tv = { t };
-				f->addRetValue(rname, tv, false);
+				f->addRetValue(rname, t, false);
 			}
 		}
 		setLoc(f, proto);
@@ -202,9 +203,9 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	vector<string> param_types;
 	for (auto p: f->parameters) {
 		if (p->ptr_type == PTR_PARAM_MOVE) {
-			param_types.push_back(p->var_type.back()->name + ">>");
+			param_types.push_back(p->var_type->name + ">>");
 		} else {
-			param_types.push_back(p->var_type.back()->name);
+			param_types.push_back(p->var_type->name);
 		}
 	}
 
@@ -229,9 +230,9 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	string pre_name;
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
-		vector<PlnType*> var_type = getVarType(param["var-type"], scope);
-		if (var_type.size()) {
-			param_types.push_back(var_type.back()->name);
+		PlnType* var_type = getVarType(param["var-type"], scope);
+		if (var_type) {
+			param_types.push_back(var_type->name);
 			pre_name = param_types.back();
 			if (param["move"].is_boolean() && param["move"] == true) {
 				param_types.back() = pre_name + ">>";
@@ -388,20 +389,20 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 	return NO_INFER;
 }
 
-static vector<PlnType*> getDefaultType(PlnValue &val, PlnModule *module)
+static PlnType* getDefaultType(PlnValue &val, PlnModule *module)
 {
 	if (val.type == VL_VAR)
 		return val.inf.var->var_type;
 	else if (val.type == VL_LIT_INT8)
-		return { PlnType::getSint() };
+		return PlnType::getSint();
 	else if (val.type == VL_LIT_UINT8)
-		return { PlnType::getUint() };
+		return PlnType::getUint();
 	else if (val.type == VL_LIT_FLO8)
-		return { PlnType::getFlo() };
+		return PlnType::getFlo();
 	else if (val.type == VL_WORK)
-		return *val.inf.wk_type;
+		return val.inf.wk_type;
 	else if (val.type == VL_LIT_STR)
-		return { PlnType::getReadOnlyCStr() };
+		return PlnType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
 		return val.inf.arrValue->getDefaultType(module);
 	else
@@ -448,7 +449,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		}
 
 	vector<PlnValue> vars;
-	vector<vector<PlnType*>> types;
+	vector<PlnType*> types;
 	int init_ex_ind = 0;
 	int init_val_ind = 0;
 	for (json &var: var_init["vars"]) {
@@ -461,8 +462,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			}
 		}
 
-		vector<PlnType*> t;
-
+		PlnType* t;
 		if (infer == TYPE_INFER) {
 			t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
 		} else if (infer == ARR_INDEX_INFER) {
@@ -471,13 +471,13 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			if (val.type == VL_LIT_ARRAY) {
 				sizes = val.inf.arrValue->getArraySizes();
 			} else {
-				vector<PlnType*> atype = getDefaultType(val, CUR_MODULE);
-				for (PlnType* at: boost::adaptors::reverse(atype)) {
-					if (at->data_type == DT_OBJECT_REF && at->obj_type == OT_FIXED_ARRAY) {
-						for (int sz: *at->inf.fixedarray.sizes) {
-							sizes.push_back(sz);	
-						}
+				PlnType* t = getDefaultType(val, CUR_MODULE);
+				while (t->type == TP_FIXED_ARRAY) {
+					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(t);
+					for (int sz: *atype->inf.fixedarray.sizes) {
+						sizes.push_back(sz);	
 					}
+					t = atype->item_type;
 				}
 			}
 			inferArrayIndex(var, sizes);
@@ -704,7 +704,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 
 		// *** Temporaly for getFunc
 		if (e->type == ET_VALUE) {
-			vector<vector<PlnType*>> types = { getDefaultType(e->values[0], CUR_MODULE) };
+			vector<PlnType*> types = { getDefaultType(e->values[0], CUR_MODULE) };
 			e = e->adjustTypes(types);
 		}
 		for (PlnValue& val: e->values)
@@ -716,7 +716,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
 
 		// Set default value and adjusting type.
-		vector<vector<PlnType*>> types;
+		vector<PlnType*> types;
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
@@ -764,7 +764,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 	assertAST(dst.is_array(), asgn);
 
 	vector<PlnExpression*> dst_vals;
-	vector<vector<PlnType*>> types;
+	vector<PlnType*> types;
 
 	int src_ex_ind = 0;
 	int src_val_ind = 0;

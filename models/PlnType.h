@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -34,6 +34,11 @@ enum PlnTypeConvCap {
 	TC_CONV_OK = TC_SAME | TC_AUTO_CAST | TC_LOSTABLE_AUTO_CAST | TC_UP_CAST | TC_DOWN_CAST
 };
 
+enum PlnTypeType {
+	TP_PRIMITIVE,
+	TP_FIXED_ARRAY
+};
+
 enum PlnObjectType {
 	OT_UNKNOWN,
 	OT_FIXED_ARRAY
@@ -41,6 +46,7 @@ enum PlnObjectType {
 
 class PlnType {
 public:
+	PlnTypeType type;
 	int	data_type;
 	string name;
 	int size;
@@ -71,7 +77,7 @@ public:
 	};
 	vector<PlnTypeConvInf> conv_inf;
 
-	PlnType();
+	PlnType(PlnTypeType type=TP_PRIMITIVE);
 	PlnTypeConvCap canConvFrom(PlnType *src);
 
 	static vector<PlnType*> getBasicTypes();
@@ -81,7 +87,6 @@ public:
 	static PlnType* getFlo();
 	static PlnType* getReadOnlyCStr();
 	static PlnType* getObject();
-	static PlnType* getRawArray();
 
-	static string getFixedArrayName(vector<PlnType*> &item_type, vector<int>& sizes);
+	static string getFixedArrayName(PlnType* item_type, vector<int>& sizes);
 };

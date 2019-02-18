@@ -59,7 +59,7 @@ public:
 		for (auto &di: dsts) {
 			auto v = src_ex->values[i];
 			if (v.getType()->data_type == DT_OBJECT_REF && di.item->getAssginType() == ASGN_COPY) {
-				di.save_src_var = PlnVariable::createTempVar(da, *v.inf.wk_type, "save src");
+				di.save_src_var = PlnVariable::createTempVar(da, v.inf.wk_type, "save src");
 				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);
 
 				src_ex->data_places.push_back(di.save_src_var->place);

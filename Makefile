@@ -8,6 +8,7 @@ SRCS=palan.cpp \
 	models/PlnLoopStatement.cpp \
 	models/PlnConditionalBranch.cpp \
 	models/PlnObjectLiteral.cpp \
+	models/types/PlnFixedArrayType.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \
@@ -25,7 +26,7 @@ SRCS=palan.cpp \
 	PlnModelTreeBuilder.cpp
 
 OBJS=$(notdir $(SRCS:.cpp=.o))
-VPATH=.:objs:models:models/expressions:generators:models/expressions/assignitem
+VPATH=.:objs:models:models/expressions:generators:models/expressions/assignitem:models/types
 AST=ast/pat
 TEST=test/tester
 POST_TEST=test/cuitester

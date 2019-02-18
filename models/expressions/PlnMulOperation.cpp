@@ -97,13 +97,12 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = new vector<PlnType*>();
 	if (isFloat) {
-		v.inf.wk_type->push_back(PlnType::getFlo());
+		v.inf.wk_type = PlnType::getFlo();
 	} else if (isUnsigned) {
-		v.inf.wk_type->push_back(PlnType::getUint());
+		v.inf.wk_type = PlnType::getUint();
 	} else {
-		v.inf.wk_type->push_back(PlnType::getSint());
+		v.inf.wk_type = PlnType::getSint();
 	}
 	values.push_back(v);
 }

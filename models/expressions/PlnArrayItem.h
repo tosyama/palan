@@ -11,8 +11,7 @@ public:
 	PlnExpression* array_ex;
 	PlnExpression* index_ex;
 	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind);
-	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind,
-			vector<PlnType*> arr_type);
+	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind, PlnType* arr_type);
 	~PlnArrayItem();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;

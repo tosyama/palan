@@ -33,7 +33,7 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 {
 }
 
-PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init)
+PlnVariable* PlnFunction::addRetValue(const string& rname,PlnType* rtype, bool do_init)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname)
@@ -41,29 +41,26 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rty
 
 	for (auto p: parameters)
 		if (p->name == rname) {
-			if (!rtype.size()) 
+			if (!rtype) {
 				rtype = return_vals.back()->var_type;
-			if (p->var_type.size() != rtype.size())
+			}
+			if (p->var_type->name != rtype->name)
 				throw PlnCompileError(E_InvalidReturnValType, rname);
-
-			for (int i=0; i<rtype.size(); i++)
-				if (p->var_type[i] != rtype[i])
-					throw PlnCompileError(E_InvalidReturnValType, rname);
 
 			p->param_type = PRT_PARAM | PRT_RETVAL;
 
 			return_vals.push_back(p);
-			ret_dtypes.push_back(p->var_type.back()->data_type);
+			ret_dtypes.push_back(p->var_type->data_type);
 
 			return p;
 		}
 
 	auto ret_var = new PlnParameter();
 	ret_var->name = rname;
-	ret_var->var_type = rtype.size() ? move(rtype) : return_vals.back()->var_type;
+	ret_var->var_type = rtype ? rtype :  return_vals.back()->var_type;
 	ret_var->param_type = PRT_RETVAL;
 
-	auto t = ret_var->var_type.back();
+	auto t = ret_var->var_type;
 	if (t->data_type == DT_OBJECT_REF) {
 		if (do_init)
 			ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
@@ -82,18 +79,18 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, vector<PlnType*> &rty
 	return ret_var;
 }
 
-PlnParameter* PlnFunction::addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal)
+PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	for (auto p: parameters)
 		if (p->name == pname) return NULL;
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type = ptype.size() ? move(ptype) : parameters.back()->var_type;
+	param->var_type = ptype ? ptype : parameters.back()->var_type;
 	param->param_type = PRT_PARAM;
 	param->dflt_value = defaultVal;
 
-	auto t = param->var_type.back();
+	auto t = param->var_type;
 	if (t->data_type == DT_OBJECT_REF) {
 		if (pass_method == FPM_MOVEOWNER) 
 			param->ptr_type = PTR_PARAM_MOVE;
@@ -129,7 +126,7 @@ static string mangling(PlnFunction* f)
 	string seed = "";
 	for (auto p: f->parameters) {
 		seed += "|";
-		seed += p->var_type.back()->name;
+		seed += p->var_type->name;
 		seed += "." + to_string(p->ptr_type);
 	}
 	size_t hash = std::hash<string>{}(seed);
@@ -161,7 +158,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			auto arg_dps = da.prepareArgDps(FT_PLN, ret_dtypes, arg_dtypes, true);
 			BOOST_ASSERT(arg_dps.size() == parameters.size());
 			for (auto p: parameters) {
-				arg_dps[i]->data_type = p->var_type.back()->data_type;
+				arg_dps[i]->data_type = p->var_type->data_type;
 				da.allocDp(arg_dps[i]);
 				++i;
 			}
@@ -173,7 +170,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				if (p->ptr_type & PTR_OWNERSHIP)
 					si.push_owner_var(p);
 
-				PlnType *t = p->var_type.back();
+				PlnType *t = p->var_type;
 				auto dp = da.allocData(t->size, t->data_type);
 				dp->comment = &p->name;
 

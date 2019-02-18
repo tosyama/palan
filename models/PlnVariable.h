@@ -17,14 +17,14 @@ enum {
 
 class PlnVariable {
 public:
-	vector<PlnType*> var_type;
+	PlnType* var_type;
 	string name;
 	PlnDataPlace* place;
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
 	int ptr_type;
 	PlnLoc loc;
 
-	static PlnVariable* createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name);
+	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnType* var_type, string name);
 };
 
 enum {

@@ -1,10 +1,11 @@
 /// Type model class definition.
 ///
 /// @file	PlnType.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "PlnType.h"
+#include "types/PlnFixedArrayType.h"
 #include "PlnVariable.h"
 #include "PlnExpression.h"
 #include "../PlnConstants.h"
@@ -20,12 +21,11 @@ static PlnType* uint_type = NULL;
 static PlnType* flo_type = NULL;
 static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
-static PlnType* raw_array_type = NULL;
 
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 {
-	PlnAllocator* allocator= var->var_type.back()->allocator;
+	PlnAllocator* allocator= var->var_type->allocator;
 	BOOST_ASSERT(allocator);
 	return allocator->getAllocEx();
 }
@@ -33,14 +33,14 @@ PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 // PlnFreer
 PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 {
-	PlnFreer* freer = var->var_type.back()->freer;
+	PlnFreer* freer = var->var_type->freer;
 	BOOST_ASSERT(freer);
 	return freer->getFreeEx(new PlnExpression(var));
 }
 
 // PlnType
-PlnType::PlnType()
-	: obj_type(OT_UNKNOWN), allocator(NULL), freer(NULL)
+PlnType::PlnType(PlnTypeType type)
+	: type(type), obj_type(OT_UNKNOWN), allocator(NULL), freer(NULL), copyer(NULL)
 {
 }
 
@@ -123,18 +123,6 @@ static void initBasicTypes()
 	t->size = 8;
 	basic_types.push_back(t);
 	object_type = t;
-
-	t = new PlnType();
-	t->name = "[?]";
-	t->data_type = DT_OBJECT_REF;
-	t->size = 8;
-	t->inf.fixedarray.is_fixed_size = false;
-	t->inf.fixedarray.alloc_size = 0;
-	t->inf.fixedarray.item_size = 0;
-	t->inf.fixedarray.sizes = new vector<int>();
-	t->inf.fixedarray.sizes->push_back(0);
-	basic_types.push_back(t);
-	raw_array_type = t;
 
 	// Set type conversion info.
 	// sbyte
@@ -286,12 +274,7 @@ PlnType* PlnType::getObject()
 	return object_type;
 }
 
-PlnType* PlnType::getRawArray()
-{
-	return raw_array_type;
-}
-
-string PlnType::getFixedArrayName(vector<PlnType*> &item_type, vector<int>& sizes)
+string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
 	for (int s: sizes) {
@@ -299,8 +282,12 @@ string PlnType::getFixedArrayName(vector<PlnType*> &item_type, vector<int>& size
 	}
 	arr_name.back() = ']';
 
-	string &item_name = item_type.front()->name;
-	string item_suffix = item_type.back()->name.substr(item_name.size());
+	PlnType *it = item_type;
+	while (it->type == TP_FIXED_ARRAY) {
+		it = static_cast<PlnFixedArrayType*>(it)->item_type;
+	}
+	string& item_name = it->name;
+	string item_suffix = item_type->name.substr(item_name.size());
 
 	return item_name + arr_name + item_suffix;
 }

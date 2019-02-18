@@ -41,7 +41,7 @@ auto *o4 = *o2	// 参照のみ。o4がスコープはずれてもdeteteされな
 func2(x, y) -> x;
 
 // Policy: returnはrval, output用
-//	parameterは input / io用
+//	parameterは inp:ut / io用
 //	parameterのプリミティブ型(int等)は、基本コピー渡し、ioの場合は、参照渡しとなる。
 //	parameterのオブジェクト型(string等)は参照渡しのみ。
 

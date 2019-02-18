@@ -13,6 +13,7 @@
 #include "PlnAddOperation.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"
+#include "../types/PlnFixedArrayType.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
@@ -47,25 +48,25 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 
 // Can be any array type.
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind,
-	vector<PlnType*> arr_type)
+	PlnType* arr_type)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex)
 {
 	BOOST_ASSERT(item_ind.size());
-	//BOOST_ASSERT(array_ex->type == ET_VALUE);
 	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
 
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 
-	if (arr_type.size() <= 1) {
+	if (arr_type->type != TP_FIXED_ARRAY) {
 		PlnCompileError err(E_CantUseIndexHere, array_var->name);
 		throw err;
 	}
+	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(arr_type);
 
 	var->name = array_var->name + "[]";
-	var->var_type = arr_type;
-	var->var_type.pop_back();
-	if (var->var_type.back()->data_type == DT_OBJECT_REF) {
+	var->var_type = farr_type->item_type;
+
+	if (var->var_type->data_type == DT_OBJECT_REF) {
 		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
 	} else {
 		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
@@ -77,7 +78,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 
 	values.push_back(PlnValue(var));
 
-	auto arr_sizes = arr_type.back()->inf.fixedarray.sizes;
+	auto arr_sizes = arr_type->inf.fixedarray.sizes;
 	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
 	index_ex = getIndexExpression(item_ind.size()-1, 1, item_ind,*arr_sizes);
 	if (index_ex->type == ET_VALUE) {
@@ -104,7 +105,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto item_var = values[0].inf.var;
 	// PlnValue::getDataPlace may alloc dp.
 	if (!item_var->place) {
-		item_var->place = new PlnDataPlace(item_var->var_type.back()->size, item_var->var_type.back()->data_type);
+		item_var->place = new PlnDataPlace(item_var->var_type->size, item_var->var_type->data_type);
 		item_var->place->comment = &item_var->name;
 	}
 

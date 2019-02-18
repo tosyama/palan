@@ -24,7 +24,7 @@ public:
 	PlnModule();
 
 	PlnType* getType(const string& type_name);
-	PlnType* getFixedArrayType(vector<PlnType*> &item_type, vector<int>& sizes);
+	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);
 
 	int getJumpID();
 

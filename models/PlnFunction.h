@@ -41,8 +41,8 @@ public:
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
-	PlnVariable* addRetValue(const string& rname, vector<PlnType*> &rtype, bool do_init);
-	PlnParameter* addParam(const string& pname, vector<PlnType*> &ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal);
+	PlnVariable* addRetValue(const string& rname, PlnType* rtype, bool do_init);
+	PlnParameter* addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal);
 
 	void genAsmName();
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;

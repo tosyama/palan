@@ -30,7 +30,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 	for (auto rv: f->return_vals) {
 		PlnValue val;
 		val.type = VL_WORK;
-		val.inf.wk_type = new vector<PlnType*>(rv->var_type);
+		val.inf.wk_type = rv->var_type;
 		values.push_back(val);
 	}
 }
@@ -61,7 +61,7 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 		BOOST_ASSERT(f->parameters.size() == arg_data_types.size());
 		int i=0;
 		for (auto p: f->parameters) {
-			BOOST_ASSERT(p->var_type.back()->data_type == arg_data_types[i]);
+			BOOST_ASSERT(p->var_type->data_type == arg_data_types[i]);
 			arg_dps[i]->data_type = arg_data_types[i];
 			i++;
 		}
@@ -87,16 +87,13 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 	i = 0;
 	for (auto p: f->parameters) {
-		arg_dps[i]->data_type = p->var_type.back()->data_type;
+		arg_dps[i]->data_type = p->var_type->data_type;
 		++i;
 	}
 
 	i = 0;
 	int j = 0;
 	for (auto &a: args) {
-		if (i<f->parameters.size())
-			a->adjustType(f->parameters[i]->var_type);
-
 		for (auto &v: a->values) {
 			auto t = v.getType();
 			int ptr_type = (f->parameters.size()>i) ? f->parameters[i]->ptr_type : NO_PTR;
@@ -161,7 +158,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
 	int i = 0;
 	for (auto r: function->return_vals) {
-		ret_dps[i]->data_type = r->var_type.back()->data_type;
+		ret_dps[i]->data_type = r->var_type->data_type;
 		++i;
 	}
 	
@@ -283,8 +280,7 @@ static void initInternalFunctions()
 
 	f = new PlnFunction(FT_C, "malloc");
 	f->asm_name = f->name;
-	vector<PlnType*> ret_type = { PlnType::getObject() };
-	f->addRetValue(ret_name, ret_type, false);
+	f->addRetValue(ret_name, PlnType::getObject(), false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "free");

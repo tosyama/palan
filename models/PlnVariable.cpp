@@ -13,7 +13,6 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnArray.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -96,7 +95,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	int i=0;
 	for (auto vi: varinits) {
 		PlnVariable *v = vi.var;
-		auto t = v->var_type.back();
+		auto t = v->var_type;
 		v->place = da.allocData(t->size, t->data_type);
 		v->place->comment = &v->name;
 		if (v->ptr_type & PTR_OWNERSHIP) {
@@ -139,12 +138,12 @@ void PlnVarInit::gen(PlnGenerator& g)
 	}
 }
 
-PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, const vector<PlnType*> &var_type, string name)
+PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnType* var_type, string name)
 {
 	auto var = new PlnVariable();
 	var->var_type = var_type;
 	var->name = name;
-	PlnType *t = var_type.back();
+	PlnType *t = var_type;
 	var->place = da.prepareLocalVar(t->size, t->data_type);
 	var->place->comment = &var->name;
 	var->container = NULL;
