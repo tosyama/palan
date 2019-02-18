@@ -18,7 +18,6 @@ enum {
 class PlnVariable {
 public:
 	PlnType* var_type;
-	vector<PlnType*> var_type2;
 	string name;
 	PlnDataPlace* place;
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.

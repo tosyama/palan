@@ -55,7 +55,7 @@ string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*>
 	return fname;
 }
 
-PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<PlnType*> &item_type2, vector<int>& sizes)
+PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 {
 	string name = PlnType::getFixedArrayName(item_type, sizes);
 	for (auto t: types) 
@@ -100,10 +100,7 @@ PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<PlnType*> &item
 					BOOST_ASSERT(false);
 				}
 			}
-
-			vector<PlnType*> type_def = item_type2;
-			type_def.push_back(t);
-			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, type_def, this);
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, this);
 			functions.push_back(alloc_func);
 
 			t->allocator = new PlnNoParamAllocator(alloc_func);
@@ -117,10 +114,7 @@ PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<PlnType*> &item
 					BOOST_ASSERT(false);
 				}
 			}
-
-			vector<PlnType*> type_def = item_type2;
-			type_def.push_back(t);
-			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, type_def, this);
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, t, this);
 			functions.push_back(free_func);
 
 			t->freer = new PlnSingleParamFreer(free_func);
@@ -134,10 +128,7 @@ PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<PlnType*> &item
 					BOOST_ASSERT(false);
 				}
 			}
-
-			vector<PlnType*> type_def = item_type2;
-			type_def.push_back(t);
-			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, type_def, this);
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, t, this);
 			functions.push_back(copy_func);
 			
 			t->copyer = new PlnTwoParamsCopyer(copy_func);

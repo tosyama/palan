@@ -117,16 +117,12 @@ PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType 
 	
 	PlnValue v;
 	v.type = VL_WORK;
-	v.wk_type2 = new vector<PlnType*>();
 	if (isFloat) {
 		v.inf.wk_type = PlnType::getFlo();
-		v.wk_type2->push_back(PlnType::getFlo());
 	} else if (isUnsigned) {
 		v.inf.wk_type = PlnType::getUint();
-		v.wk_type2->push_back(PlnType::getUint());
 	} else {
 		v.inf.wk_type = PlnType::getSint();
-		v.wk_type2->push_back(PlnType::getSint());
 	}
 	values.push_back(v);
 }

@@ -155,16 +155,12 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 
 	PlnValue v;
 	v.type = VL_WORK;
-	v.wk_type2 = new vector<PlnType*>();
 	if (isFloat) {
 		v.inf.wk_type = PlnType::getFlo();
-		v.wk_type2->push_back(PlnType::getFlo());
 	} else if (isUnsigned) {
 		v.inf.wk_type = PlnType::getUint();
-		v.wk_type2->push_back(PlnType::getUint());
 	} else {
 		v.inf.wk_type = PlnType::getSint();
-		v.wk_type2->push_back(PlnType::getSint());
 	}
 	values.push_back(v);
 }
@@ -247,8 +243,6 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	PlnValue v;
 	v.type = VL_WORK;
 	v.inf.wk_type = e->values[0].getType();
-	v.wk_type2 = new vector<PlnType*>();
-	v.wk_type2->push_back(e->values[0].getType());
 	values.push_back(v);
 }
 

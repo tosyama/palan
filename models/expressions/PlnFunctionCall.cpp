@@ -31,7 +31,6 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 		PlnValue val;
 		val.type = VL_WORK;
 		val.inf.wk_type = rv->var_type;
-		val.wk_type2 = new vector<PlnType*>(rv->var_type2);
 		values.push_back(val);
 	}
 }

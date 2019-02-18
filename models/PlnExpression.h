@@ -85,7 +85,6 @@ public:
 		PlnVariable* var;
 		PlnType *wk_type;
 	} inf;
-	vector<PlnType*> *wk_type2;
 
 	PlnValue() : type(VL_UNKNOWN), asgn_type(NO_ASGN)  {};
 	PlnValue(const PlnValue &src);

@@ -19,20 +19,19 @@
 #include "expressions/PlnArrayItem.h"
 #include "expressions/PlnAssignment.h"
 
-PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, vector<PlnType*> &arr_type2, PlnModule* module)
+PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule* module)
 {
-	PlnType* t = arr_type;
 	PlnType* it = arr_type->item_type;
-	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
+	int item_num = arr_type->inf.obj.alloc_size / arr_type->inf.fixedarray.item_size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, t, false);
+	PlnVariable* ret_var = f->addRetValue(s1, arr_type, false);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
 	
-	palan::malloc(f->implement, ret_var, t->inf.obj.alloc_size);
+	palan::malloc(f->implement, ret_var, arr_type->inf.obj.alloc_size);
 
 	// add alloc code.
 	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
@@ -54,14 +53,13 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	return f;
 }
 
-PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, vector<PlnType*> &arr_type2, PlnModule *module)
+PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
 {
-	PlnType* arr_type = arr_type2.back();
-	PlnType* it = arr_type2[arr_type2.size()-2];
+	PlnType* it = arr_type->item_type;
 	int item_num = arr_type->inf.obj.alloc_size / arr_type->inf.fixedarray.item_size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
-	string s1 = "p1";
+	string s1 = "__p1";
 	f->addParam(s1, arr_type, FPM_REF, NULL);
 
 	f->implement = new PlnBlock();
@@ -73,7 +71,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, vector<PlnType*>
 	f->implement->statements.push_back(if_obj);
 
 	// Add free code.
-	PlnVariable* i = palan::declareUInt(ifblock, "i", 0);
+	PlnVariable* i = palan::declareUInt(ifblock, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(ifblock, i, item_num);
 	{
 		BOOST_ASSERT(it->freer);
@@ -89,23 +87,21 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, vector<PlnType*>
 	return f;
 }
 
-PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, vector<PlnType*> &arr_type, PlnModule *module)
+PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
 {
-	PlnType* t = arr_type.back();
-	PlnType* it = arr_type[arr_type.size()-2];
-	int item_num = t->inf.obj.alloc_size / t->inf.fixedarray.item_size;
+	PlnType* it = arr_type->item_type;
+	int item_num = arr_type->inf.obj.alloc_size / arr_type->inf.fixedarray.item_size;
 
-	vector<PlnType*> src_arr_type = arr_type;
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
-	string s1 = "p1", s2 = "p2";
-	f->addParam(s1, t, FPM_REF, NULL);
-	f->addParam(s2, src_arr_type.back(), FPM_REF, NULL);
+	string s1 = "__p1", s2 = "__p2";
+	f->addParam(s1, arr_type, FPM_REF, NULL);
+	f->addParam(s2, arr_type, FPM_REF, NULL);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
 
 	// Add copy code.
-	PlnVariable* i = palan::declareUInt(f->implement, "i", 0);
+	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
 	{
 		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0], i, module);

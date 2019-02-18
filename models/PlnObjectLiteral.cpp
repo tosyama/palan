@@ -154,7 +154,7 @@ vector<PlnType*> PlnArrayLiteral::getDefaultType(PlnModule *module)
 		}
 
 		vector<PlnType*> type = itype;
-		type.push_back(module->getFixedArrayType(itype.back(), itype, fixarr_sizes));
+		type.push_back(module->getFixedArrayType(itype.back(), fixarr_sizes));
 		return type;
 	}
 
