@@ -21,7 +21,6 @@ static PlnType* uint_type = NULL;
 static PlnType* flo_type = NULL;
 static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
-static PlnType* raw_array_type = NULL;
 
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
@@ -124,18 +123,6 @@ static void initBasicTypes()
 	t->size = 8;
 	basic_types.push_back(t);
 	object_type = t;
-
-	t = new PlnType();
-	t->name = "[?]";
-	t->data_type = DT_OBJECT_REF;
-	t->size = 8;
-	t->inf.fixedarray.is_fixed_size = false;
-	t->inf.fixedarray.alloc_size = 0;
-	t->inf.fixedarray.item_size = 0;
-	t->inf.fixedarray.sizes = new vector<int>();
-	t->inf.fixedarray.sizes->push_back(0);
-	basic_types.push_back(t);
-	raw_array_type = t;
 
 	// Set type conversion info.
 	// sbyte
@@ -285,11 +272,6 @@ PlnType* PlnType::getReadOnlyCStr()
 PlnType* PlnType::getObject()
 {
 	return object_type;
-}
-
-PlnType* PlnType::getRawArray()
-{
-	return raw_array_type;
 }
 
 string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
