@@ -2,6 +2,10 @@ language: C++
 sudo: required
 dist: trusty
 
+env:
+ global:
+  - COVERALLS_REPO_TOKEN=vqkCTuaT6CALS6yHvqMUFrplHcByvUmIx
+
 addons:
  apt:
   sources:
@@ -22,4 +26,3 @@ script:
 
 after_success:
  - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
- 
