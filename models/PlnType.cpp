@@ -301,11 +301,6 @@ PlnTypeConvCap PlnType::canConvFrom(PlnType *src)
 		if (ci.type == src)
 			return ci.capacity;
 
-	if (src == object_type) {
-		if (this->data_type == DT_OBJECT_REF) {
-			return TC_DOWN_CAST;
-		}
-	}
 	return TC_CANT_CONV;
 }
 

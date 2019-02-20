@@ -9,6 +9,7 @@ SRCS=palan.cpp \
 	models/PlnConditionalBranch.cpp \
 	models/PlnObjectLiteral.cpp \
 	models/types/PlnFixedArrayType.cpp \
+	models/types/PlnArrayValueType.cpp \
 	models/expressions/PlnFunctionCall.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \

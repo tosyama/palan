@@ -21,5 +21,5 @@ script:
  - make "CFLAGS=--coverage" "LDFLAGS=--coverage -lgcov"
 
 after_success:
- - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
+ - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT --repo-token vqkCTuaT6CALS6yHvqMUFrplHcByvUmIx
 
