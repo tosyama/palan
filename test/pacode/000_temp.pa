@@ -1,11 +1,12 @@
 ccall int32 printf();
 
 const A = 12.5;
-const ARR = [10,20];
+const ARR = [30,40];
 a = [1,2,3][4,5,6];
  
 test(a);
 test();
+test(ARR);
 
 f2(f1());
  

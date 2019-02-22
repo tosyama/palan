@@ -40,10 +40,9 @@ public:
 	PlnType* arr_type;
 	vector<PlnObjectLiteralItem> arr;
 
-	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr)
-		: arr_type(NULL) { this->arr = move(arr); }
-
+	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr);
 	PlnArrayLiteral(const PlnArrayLiteral& src);
+	~PlnArrayLiteral();
 
 	PlnType* getDefaultType(PlnModule *module);
 	vector<int> getArraySizes();
@@ -51,4 +50,10 @@ public:
 	void adjustTypes(const vector<PlnType*> &types);
 	PlnType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
+
+	/// return true - items is aixed array, false - not fixed array
+	/// sizes - Detected array sizes. Note added 0 last. [2,3] is [2,3,0]
+	/// item_type - Detected array element type. 
+	/// depth - for internal process (recursive call)
+	static bool isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> &fixarr_sizes, PlnObjLitItemType &item_type, int depth=0);
 };

@@ -36,7 +36,8 @@ enum PlnTypeConvCap {
 
 enum PlnTypeType {
 	TP_PRIMITIVE,
-	TP_FIXED_ARRAY
+	TP_FIXED_ARRAY,
+	TP_ARRAY_VALUE
 };
 
 enum PlnObjectType {

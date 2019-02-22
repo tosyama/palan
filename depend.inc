@@ -70,13 +70,14 @@ PlnObjectLiteral.o:  models/PlnType.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnObjectLiteral.h models/../PlnConstants.h \
 	models/../PlnDataAllocator.h models/../PlnMessage.h \
-	models/../PlnException.h models/types/PlnFixedArrayType.h
+	models/../PlnException.h models/types/PlnFixedArrayType.h \
+	models/types/PlnArrayValueType.h
 PlnFixedArrayType.o:  \
 	models/types/../PlnType.h models/types/../../PlnModel.h \
-	models/types/PlnFixedArrayType.h
+	models/types/PlnFixedArrayType.h models/types/PlnArrayValueType.h
 PlnArrayValueType.o:  \
 	models/types/../PlnType.h models/types/../../PlnModel.h \
-	models/types/PlnArrayValueType.h
+	models/types/PlnArrayValueType.h models/types/../PlnObjectLiteral.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \

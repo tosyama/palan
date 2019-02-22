@@ -15,6 +15,7 @@
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 #include "types/PlnFixedArrayType.h"
+#include "types/PlnArrayValueType.h"
 
 // PlnObjectLiteralItem
 PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
@@ -28,14 +29,32 @@ PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
 }
 
 // PlnArrayLiteral
+PlnArrayLiteral::PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr)
+{
+	this->arr = move(arr);
+	arr_type = new PlnArrayValueType(this);
+}
+
 PlnArrayLiteral::PlnArrayLiteral(const PlnArrayLiteral& src)
 {
 	for (auto &i: src.arr)
 		arr.push_back(i);
-	arr_type = src.arr_type;
+	if (src.arr_type->type == TP_ARRAY_VALUE) {
+		arr_type = new PlnArrayValueType(this);
+	} else {
+		arr_type = src.arr_type;
+	}
 }
 
-static bool isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> &fixarr_sizes, PlnObjLitItemType &item_type, int depth)
+PlnArrayLiteral::~PlnArrayLiteral()
+{
+	if (arr_type->type == TP_ARRAY_VALUE) {
+		BOOST_ASSERT(static_cast<PlnArrayValueType*>(arr_type)->arr_lit == this);
+		delete arr_type;
+	}
+}
+
+bool PlnArrayLiteral::isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> &fixarr_sizes, PlnObjLitItemType &item_type, int depth)
 {
 	if (depth >= fixarr_sizes.size()) {	// this is first element.
 		fixarr_sizes.push_back(items.size());
@@ -133,11 +152,11 @@ void PlnArrayLiteral::adjustTypes(const vector<PlnType*> &types)
 PlnType* PlnArrayLiteral::getDefaultType(PlnModule *module)
 {
 	BOOST_ASSERT(arr.size());
-	BOOST_ASSERT(arr_type==NULL);
+	BOOST_ASSERT(arr_type->type==TP_ARRAY_VALUE);
 
 	vector<int> fixarr_sizes;
 	PlnObjLitItemType item_type;
-	if (isFixedArray(arr, fixarr_sizes, item_type, 0)) {
+	if (isFixedArray(arr, fixarr_sizes, item_type)) {
 		BOOST_ASSERT(fixarr_sizes.back() == 0);
 		fixarr_sizes.pop_back();
 

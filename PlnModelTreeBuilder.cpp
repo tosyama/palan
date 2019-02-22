@@ -413,7 +413,6 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 {
 	json& var_type = var["var-type"];
 	
-	
 	int sz_i = 0;
 	for (json &vt: var_type) {
 		if (vt["name"] == "[]") {
@@ -703,10 +702,10 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		}
 
 		// *** Temporaly for getFunc
-		if (e->type == ET_VALUE) {
-			vector<PlnType*> types = { getDefaultType(e->values[0], CUR_MODULE) };
-			e = e->adjustTypes(types);
-		}
+		// if (e->type == ET_VALUE) {
+		// 	vector<PlnType*> types = { getDefaultType(e->values[0], CUR_MODULE) };
+		// 	e = e->adjustTypes(types);
+		// }
 		for (PlnValue& val: e->values)
 			arg_vals.push_back(&val);
 		args.push_back(e);
