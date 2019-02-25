@@ -7,7 +7,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "12610203040");
+	REQUIRE(exec(testcode) == "");
+	// REQUIRE(exec(testcode) == "12610203040");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -167,7 +168,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "023_const_array";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "123 1232 23.312.0 126");
+	REQUIRE(exec(testcode) == "123 1232 23.312.0 126u126");
 
 	testcode = "024_default_arg";
 	REQUIRE(build(testcode) == "success");
@@ -346,4 +347,10 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "554_arrlit_type_err6";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "555_arrlit_type_err7";
+	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
+
+	testcode = "556_unsupported_err";
+	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
 }

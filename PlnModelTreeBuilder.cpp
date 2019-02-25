@@ -463,7 +463,13 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 		PlnType* t;
 		if (infer == TYPE_INFER) {
-			t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
+			try {
+				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
+			} catch (PlnCompileError &err) {
+				err.loc = inits[init_ex_ind]->loc;
+				throw err;
+			}
+
 		} else if (infer == ARR_INDEX_INFER) {
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];

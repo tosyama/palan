@@ -73,8 +73,11 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 		case E_CUI_InvalidExecOpt:
 			f = "Excecute option use only with output option"; break;
 
+		case E_UnsuppotedGrammer:
+			f = "Unsupported grammer: %1%"; break;
+
 		default:
-			return (format("Unknown error. code:%1% - %2%, %3%")  % err_code % arg1 % arg2).str();
+			BOOST_ASSERT(false);
 	}
 	
 	string message;

@@ -3,6 +3,7 @@
 /// @file	PlnArrayValueType.cpp
 /// @copyright	2019 YAMAGUCHI Toshinobu 
 
+#include <boost/assert.hpp>
 #include "../PlnType.h"
 #include "PlnArrayValueType.h"
 #include "../PlnObjectLiteral.h"
@@ -14,7 +15,8 @@ PlnArrayValueType::PlnArrayValueType(PlnArrayLiteral* arr_lit)
 
 PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src)
 {
-	return TC_CANT_CONV;
+	BOOST_ASSERT(false);
+	//  return TC_CANT_CONV;
 }
 
 PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vector<int>& sizes)
@@ -31,8 +33,21 @@ PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vect
 				return TC_CANT_CONV;
 			}
 		}
+		
+		PlnType *def_itype;
+		switch (lit_item_type) {
+			case OLI_SINT:
+				def_itype = PlnType::getSint(); break;
+			case OLI_UINT:
+				def_itype = PlnType::getUint(); break;
+			case OLI_FLO:
+				def_itype = PlnType::getFlo(); break;
+			defalut:
+				BOOST_ASSERT(false);
+		}
 
-		return TC_AUTO_CAST;
+		return item_type->canConvFrom(def_itype);
+
 	} else {
 		return TC_CANT_CONV;
 	}

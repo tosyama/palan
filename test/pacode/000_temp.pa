@@ -4,9 +4,11 @@ const A = 12.5;
 const ARR = [30,40];
 a = [1,2,3][4,5,6];
  
-test(a);
-test();
-test(ARR);
+//test(a);
+// test();
+// test(ARR);
+// test([2,[1,2]]);
+// [2,[1,2]] -> a;
 
 f2(f1());
  
@@ -15,6 +17,11 @@ func test(int64[2,3] a) -> int64[2,3] a {
 }
  
 func test(int64[2] a = [10,20])
+{
+ 	printf("%d%d", a[0], a[1]);
+}
+
+func test(int32[2] a)
 {
  	printf("%d%d", a[0], a[1]);
 }

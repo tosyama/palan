@@ -175,7 +175,8 @@ PlnType* PlnArrayLiteral::getDefaultType(PlnModule *module)
 		return module->getFixedArrayType(itype, fixarr_sizes);
 	}
 
-	BOOST_ASSERT(false);
+	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
+	throw err;
 }
 
 vector<int> PlnArrayLiteral::getArraySizes()
