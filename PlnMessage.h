@@ -39,7 +39,10 @@ enum PlnErrCode {
 	// CUI errors
 	E_CUI_NoInputFile,
 	E_CUI_IncompatibleOpt,
-	E_CUI_InvalidExecOpt
+	E_CUI_InvalidExecOpt,
+
+	// Unsupported grammer
+	E_UnsuppotedGrammer // any, any
 };
 
 enum PlnHelpCode {

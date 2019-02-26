@@ -413,7 +413,6 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 {
 	json& var_type = var["var-type"];
 	
-	
 	int sz_i = 0;
 	for (json &vt: var_type) {
 		if (vt["name"] == "[]") {
@@ -464,7 +463,19 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 		PlnType* t;
 		if (infer == TYPE_INFER) {
-			t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
+			try {
+				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_MODULE);
+
+				// check type not support for var
+				if (t == PlnType::getReadOnlyCStr()) {
+					throw PlnCompileError(E_UnsuppotedGrammer, "Not supported type for variable.");
+				}
+
+			} catch (PlnCompileError &err) {
+				err.loc = inits[init_ex_ind]->loc;
+				throw err;
+			}
+
 		} else if (infer == ARR_INDEX_INFER) {
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
@@ -702,11 +713,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			}
 		}
 
-		// *** Temporaly for getFunc
-		if (e->type == ET_VALUE) {
-			vector<PlnType*> types = { getDefaultType(e->values[0], CUR_MODULE) };
-			e = e->adjustTypes(types);
-		}
 		for (PlnValue& val: e->values)
 			arg_vals.push_back(&val);
 		args.push_back(e);

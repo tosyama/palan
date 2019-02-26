@@ -41,6 +41,7 @@ PlnValue::PlnValue(const PlnValue &src)
 		type = src.type;
 		asgn_type = src.asgn_type;
 		inf.arrValue = new PlnArrayLiteral(*src.inf.arrValue);
+
 	} else {
 		*this = src;
 	}
