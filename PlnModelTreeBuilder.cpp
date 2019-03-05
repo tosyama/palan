@@ -28,6 +28,7 @@
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnBoolOperation.h"
 #include "models/expressions/PlnArrayItem.h"
+#include "models/expressions/PlnArrayValue.h"
 #include "models/types/PlnFixedArrayType.h"
 
 static void registerPrototype(json& proto, PlnScopeStack& scope);
@@ -851,43 +852,16 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 	}
 
 	if (isLiteral) {
-		vector<PlnObjectLiteralItem> items;
-		for (PlnExpression *exp: exps) {
-			BOOST_ASSERT(exp->type == ET_VALUE);
-			PlnValue v = exp->values[0];
-			switch (v.type) {
-			case VL_LIT_INT8:
-				items.push_back(v.inf.intValue);
-				delete exp;
-				break;
-			case VL_LIT_UINT8:
-				items.push_back(v.inf.uintValue);
-				delete exp;
-				break;
-			case VL_LIT_FLO8:
-				items.push_back(v.inf.floValue);
-				delete exp;
-				break;
-			case VL_LIT_ARRAY:
-				items.push_back(v.inf.arrValue);
-				v.inf.arrValue = NULL;
-				delete exp;
-				break;
-			default:
-				BOOST_ASSERT(false);
-			}
-		}
-
-		auto arr_lit = new PlnArrayLiteral(items); 
+		auto arr_lit = new PlnArrayLiteral(exps); 
 		return new PlnExpression(arr_lit);
+
 	} else { // not literal
-		PlnCompileError err(E_CantUseDynamicValue, PlnMessage::arrayValue());
-		setLoc(&err, arrval);
-		throw err;
+		return new PlnArrayValue(exps);
+
+		// PlnCompileError err(E_CantUseDynamicValue, PlnMessage::arrayValue());
+		// setLoc(&err, arrval);
+		// throw err;
 	}
-
-	BOOST_ASSERT(false);
-
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)

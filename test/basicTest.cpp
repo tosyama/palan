@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "11");
 	// REQUIRE(exec(testcode) == "12610203040");
 
 	testcode = "002_varint64";
@@ -256,8 +256,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "524_flo_mod_err";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'float number'.");
 
-	testcode = "525_notarrlit_err";
-	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
+	// testcode = "525_notarrlit_err";
+	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
 
 	testcode = "526_arrlit_noint_err";
 	REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
@@ -322,13 +322,11 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "546_const_exp_err";
 	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
 
-	// // not suport yet dynamic expression for array.
-	// testcode = "547_constarr_exp_err";
-	// REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
+	testcode = "547_constarr_exp_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
 
 	testcode = "548_constarr_exp_err2";
-	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
-	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
+	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
 
 	testcode = "549_constarr_mv_err";
 	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");

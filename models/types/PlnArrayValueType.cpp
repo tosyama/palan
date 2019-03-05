@@ -9,7 +9,12 @@
 #include "../PlnObjectLiteral.h"
 
 PlnArrayValueType::PlnArrayValueType(PlnArrayLiteral* arr_lit)
-	: PlnType(TP_ARRAY_VALUE), arr_lit(arr_lit)
+	: PlnType(TP_ARRAY_VALUE), arr_lit(arr_lit), arr_val(NULL)
+{
+}
+
+PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
+	: PlnType(TP_ARRAY_VALUE), arr_lit(NULL), arr_val(arr_val)
 {
 }
 
@@ -21,6 +26,9 @@ PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src)
 
 PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vector<int>& sizes)
 {
+	if (arr_val) {
+		return TC_AUTO_CAST;
+	}
 	vector<int> fixarr_sizes;
 	PlnObjLitItemType lit_item_type;
 	if (PlnArrayLiteral::isFixedArray(arr_lit->arr, fixarr_sizes, lit_item_type)) {

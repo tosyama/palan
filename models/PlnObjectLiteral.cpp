@@ -29,9 +29,34 @@ PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
 }
 
 // PlnArrayLiteral
-PlnArrayLiteral::PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr)
+PlnArrayLiteral::PlnArrayLiteral(vector<PlnExpression*> &exps)
 {
-	this->arr = move(arr);
+	for (PlnExpression *exp: exps) {
+		BOOST_ASSERT(exp->type == ET_VALUE);
+		PlnValue v = exp->values[0];
+		switch (v.type) {
+		case VL_LIT_INT8:
+			arr.push_back(v.inf.intValue);
+			delete exp;
+			break;
+		case VL_LIT_UINT8:
+			arr.push_back(v.inf.uintValue);
+			delete exp;
+			break;
+		case VL_LIT_FLO8:
+			arr.push_back(v.inf.floValue);
+			delete exp;
+			break;
+		case VL_LIT_ARRAY:
+			arr.push_back(v.inf.arrValue);
+			v.inf.arrValue = NULL;
+			delete exp;
+			break;
+		default:
+			BOOST_ASSERT(false);
+		}
+	}
+
 	arr_type = new PlnArrayValueType(this);
 }
 

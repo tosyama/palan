@@ -3,6 +3,11 @@ ccall int32 printf();
 const A = 12.5;
 const ARR = [30,40];
 a = [1,2,3][4,5,6];
+
+i = 11;
+int64[3] arr = [i,i,i];
+
+printf("%d", arr[0]);
  
 //test(a);
 // test();

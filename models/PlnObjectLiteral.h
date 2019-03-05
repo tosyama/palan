@@ -40,7 +40,7 @@ public:
 	PlnType* arr_type;
 	vector<PlnObjectLiteralItem> arr;
 
-	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr);
+	PlnArrayLiteral(vector<PlnExpression*> &exps);
 	PlnArrayLiteral(const PlnArrayLiteral& src);
 	~PlnArrayLiteral();
 
