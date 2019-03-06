@@ -40,31 +40,17 @@ enum PlnTypeType {
 	TP_ARRAY_VALUE
 };
 
-enum PlnObjectType {
-	OT_UNKNOWN,
-	OT_FIXED_ARRAY
-};
-
 class PlnType {
 public:
 	PlnTypeType type;
 	int	data_type;
 	string name;
 	int size;
-	PlnObjectType obj_type;
 	union {
 		struct {
 			bool is_fixed_size;
 			int alloc_size;
 		} obj;
-
-		struct {
-			bool is_fixed_size;
-			int alloc_size;
-			int item_size;
-			vector<int>* sizes;
-		} fixedarray;
-
 	} inf;
 
 	PlnAllocator *allocator;

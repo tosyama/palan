@@ -486,7 +486,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				PlnType* t = getDefaultType(val, CUR_MODULE);
 				while (t->type == TP_FIXED_ARRAY) {
 					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(t);
-					for (int sz: *atype->inf.fixedarray.sizes) {
+					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
 					t = atype->item_type;

@@ -22,7 +22,7 @@
 PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule* module)
 {
 	PlnType* it = arr_type->item_type;
-	int item_num = arr_type->inf.obj.alloc_size / arr_type->inf.fixedarray.item_size;
+	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
@@ -56,7 +56,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
 {
 	PlnType* it = arr_type->item_type;
-	int item_num = arr_type->inf.obj.alloc_size / arr_type->inf.fixedarray.item_size;
+	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
@@ -90,7 +90,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
 {
 	PlnType* it = arr_type->item_type;
-	int item_num = arr_type->inf.obj.alloc_size / arr_type->inf.fixedarray.item_size;
+	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";

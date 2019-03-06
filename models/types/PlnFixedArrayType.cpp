@@ -21,7 +21,7 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 	}
 
 	if (src->type == TP_ARRAY_VALUE) {
-		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type, *inf.fixedarray.sizes);
+		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type, sizes);
 	}
 
 	return TC_CANT_CONV;

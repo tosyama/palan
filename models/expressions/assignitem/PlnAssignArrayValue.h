@@ -39,25 +39,31 @@ public:
 	 	auto var_dp = da.getSeparatedDp(dst_ex->values[0].inf.var->place);
 		auto arr_type = static_cast<PlnFixedArrayType*>(dst_ex->values[0].inf.var->var_type);
 		auto item_type = arr_type->item_type;
+		static string cmt = "[]";
 		
-		PlnDataPlace *item_dp = new PlnDataPlace(8, DT_SINT);
-		
-		auto base_dp = da.prepareObjBasePtr();
-		auto index_dp = da.prepareObjIndexPtr(0);
-		da.setIndirectObjDp(item_dp, base_dp, index_dp);
-		
-		da.pushSrc(base_dp, var_dp, true);
-		item_dp->comment = new string("[0]");
-		src_ex->item_exps[0]->data_places.push_back(item_dp);
+		for (int i=0; i<src_ex->item_exps.size(); i++) {
+			PlnDataPlace *item_dp = new PlnDataPlace(item_type->size, item_type->data_type);
 
-		arr_item_dps.push_back(item_dp);
+			auto base_dp = da.prepareObjBasePtr();
+			auto index_dp = da.prepareObjIndexPtr(i);
+			da.setIndirectObjDp(item_dp, base_dp, index_dp);
+
+			da.pushSrc(base_dp, var_dp, false);
+			item_dp->comment = &cmt;
+			src_ex->item_exps[i]->data_places.push_back(item_dp);
+
+			arr_item_dps.push_back(item_dp);
+		}
 
 		src_ex->finish(da, si);
+		da.releaseDp(var_dp);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
- 		da.popSrc(arr_item_dps.back());
-		da.releaseDp(arr_item_dps.back());
+		for (auto item_dp: arr_item_dps) {
+			da.popSrc(item_dp);
+			da.releaseDp(item_dp);
+		}
 	}
 
 	void genS(PlnGenerator& g) override {
@@ -65,7 +71,8 @@ public:
 	}
 
 	void genD(PlnGenerator& g) override {
-		g.genLoadDp(arr_item_dps.back());
+		for (auto item_dp: arr_item_dps)
+			g.genLoadDp(item_dp);
 	}
 };
 

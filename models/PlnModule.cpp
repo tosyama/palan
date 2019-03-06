@@ -73,11 +73,9 @@ PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 	t->size = 8;
 	t->item_type = item_type;
 
-	t->obj_type = OT_FIXED_ARRAY;
 	t->inf.obj.is_fixed_size = true;
 	t->inf.obj.alloc_size = alloc_size;
-	t->inf.fixedarray.sizes = new vector<int>(move(sizes));
-	t->inf.fixedarray.item_size = item_size;
+	t->sizes = move(sizes);
 
 	if (alloc_size == 0) {
 		// row array reference.

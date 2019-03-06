@@ -141,9 +141,9 @@ void PlnArrayLiteral::adjustTypes(const vector<PlnType*> &types)
 	PlnObjLitItemType lit_item_type;
 	if (isFixedArray(arr, fixarr_sizes, lit_item_type, 0)) {
 		fixarr_sizes.pop_back();
-		if (type->obj_type == OT_FIXED_ARRAY) {
+		if (type->type == TP_FIXED_ARRAY) {
 			// check size
-			vector<int> target_sizes = *(type->inf.fixedarray.sizes);
+			vector<int> target_sizes = static_cast<PlnFixedArrayType*>(type)->sizes;
 			bool isCompatible = true;
 			if (target_sizes.size() == fixarr_sizes.size()) {
 				for (int i=0; i<target_sizes.size(); i++) {

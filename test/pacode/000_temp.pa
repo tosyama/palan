@@ -5,9 +5,11 @@ const ARR = [30,40];
 a = [1,2,3][4,5,6];
 
 i = 11;
-int64[3] arr = [i,i,i];
+int32[3] arr = [11,i,i+1];
 
-printf("%d", arr[0]);
+[i,i,12]->arr;
+
+printf("%d", arr[2]);
  
 //test(a);
 // test();
