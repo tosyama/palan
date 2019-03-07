@@ -857,10 +857,6 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 
 	} else { // not literal
 		return new PlnArrayValue(exps);
-
-		// PlnCompileError err(E_CantUseDynamicValue, PlnMessage::arrayValue());
-		// setLoc(&err, arrval);
-		// throw err;
 	}
 }
 
