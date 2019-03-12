@@ -11,16 +11,21 @@
 #include "../../PlnGenerator.h"
 #include "PlnClone.h"
 
-PlnClone::PlnClone(PlnDataAllocator& da, PlnType* var_type, bool keep_var)
-	: PlnExpression(ET_CLONE), free_ex(NULL), keep_var(keep_var)
+bool MIG = false;
+
+PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_type, bool keep_var)
+	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
 {
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
 	alloc_ex = var_type->allocator->getAllocEx();
 	alloc_ex->data_places.push_back(var->place);
 
-	copy_ex = var_type->copyer->getCopyEx();
-	src_dp = copy_ex->srcDp(da);
-	copy_dst_dp = copy_ex->dstDp(da);
+	if (src_ex->type != ET_ARRAYVALUE) {
+		copy_ex = var_type->copyer->getCopyEx();
+		src_ex->data_places.push_back(copy_ex->srcDp(da));
+		copy_dst_dp = copy_ex->dstDp(da);
+	}
+	this->src_ex = src_ex;
 }
 
 PlnClone::~PlnClone()
@@ -36,8 +41,15 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	alloc_ex->finish(da, si);
 	da.popSrc(var->place);
 
-	da.pushSrc(copy_dst_dp, var->place, false);
-	copy_ex->finish(da, si);
+	if (src_ex->type == ET_ARRAYVALUE) {
+		src_ex->data_places.push_back(var->place);
+		src_ex->finish(da, si);
+
+	} else {
+		da.pushSrc(copy_dst_dp, var->place, false);
+		copy_ex->finish(da, si);
+	}
+
 	da.pushSrc(data_places[0], var->place, !keep_var);
 }
 
@@ -53,8 +65,13 @@ void PlnClone::gen(PlnGenerator& g)
 {
 	alloc_ex->gen(g);
 	g.genLoadDp(var->place);
-	g.genSaveSrc(copy_dst_dp);
-	copy_ex->gen(g);
+	if (src_ex->type == ET_ARRAYVALUE) {
+		src_ex->gen(g);
+
+	} else {
+		g.genSaveSrc(copy_dst_dp);
+		copy_ex->gen(g);
+	}
 	g.genSaveSrc(data_places[0]);
 }
 

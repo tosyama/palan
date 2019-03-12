@@ -39,7 +39,7 @@ public:
 
 	int getDataType(int val_ind=0);
 
-	PlnExpression* adjustTypes(const vector<PlnType*> &types);
+	virtual PlnExpression* adjustTypes(const vector<PlnType*> &types);
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	virtual void gen(PlnGenerator& g);
 };

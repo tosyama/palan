@@ -7,8 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "11");
-	// REQUIRE(exec(testcode) == "12610203040");
+	REQUIRE(exec(testcode) == "121333");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -178,7 +177,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "025_array_value";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0");
+	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0\n"
+								"1423 162311 113142");
 }
 
 TEST_CASE("Compile error test", "[basic]")
