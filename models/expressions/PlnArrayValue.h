@@ -15,4 +15,11 @@ public:
 	PlnExpression* adjustTypes(const vector<PlnType*> &types) override;
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
+
+	void finishS(PlnDataAllocator& da, PlnScopeInfo& si);
+	void finishD(PlnDataAllocator& da, PlnScopeInfo& si);
+	void genS(PlnGenerator& g);
+	void genD(PlnGenerator& g);
+
+	static bool isFixedArray(const vector<PlnExpression*> &items, vector<int> &fixarr_sizes, int &item_type, int depth=0);
 };
