@@ -30,6 +30,7 @@
 #include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnArrayValue.h"
 #include "models/types/PlnFixedArrayType.h"
+#include "models/types/PlnArrayValueType.h"
 
 static void registerPrototype(json& proto, PlnScopeStack& scope);
 static void buildFunction(json& func, PlnScopeStack &scope, json& ast);
@@ -400,9 +401,13 @@ static PlnType* getDefaultType(PlnValue &val, PlnModule *module)
 		return PlnType::getUint();
 	else if (val.type == VL_LIT_FLO8)
 		return PlnType::getFlo();
-	else if (val.type == VL_WORK)
-		return val.inf.wk_type;
-	else if (val.type == VL_LIT_STR)
+	else if (val.type == VL_WORK) {
+		if (val.inf.wk_type->type == TP_ARRAY_VALUE) {
+			return static_cast<PlnArrayValueType*>(val.inf.wk_type)->getDefaultType(module);
+		} else {
+			return val.inf.wk_type;
+		}
+	} else if (val.type == VL_LIT_STR)
 		return PlnType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
 		return val.inf.arrValue->getDefaultType(module);

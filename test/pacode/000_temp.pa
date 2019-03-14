@@ -7,7 +7,9 @@ const ARR2 = [1,2,33];
 
 test(	[[i+1,i+2,3],
 		ARR2]	);
- 
+
+aa = [11,i];
+
 func test(int64[2] a = [10,20])
 {
   	printf("%d%d", a[0], a[1]);

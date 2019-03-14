@@ -18,6 +18,21 @@ const FARR = [11.1,22.2];
 flo32[3,2] f = [[1.1, 1.2], FARR, [33, i1+i2]];
 printf(" %.1f %.1f %.1f\n", f[0,0], f[1,1], f[2,1]);
 
+// type inference
+aa = [i1,2,3];
+printf("%d%d", aa[0], aa[2]);
+
+int32[,] bb, cc =
+	[i1,2,3]
+	[44,55,66],
+
+ 	[11,22,33]
+	[4,5,i2];
+printf(" %d%d %d%d", bb[0,0], bb[1,2], cc[0,0], cc[1,2]);
+
+// ff = [[1.1, 1.2], FARR, [33, i1+i2]];
+printf("\n");
+
 // assignment
 [3+i1, i2, 23] -> a;
 printf("%d%d ", a[0], a[2]);

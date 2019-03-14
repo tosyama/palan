@@ -178,6 +178,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "025_array_value";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0\n"
+								"113 1166 1112\n"
 								"1423 162311 113142");
 }
 

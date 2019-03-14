@@ -5,6 +5,7 @@
 
 #include <boost/assert.hpp>
 #include "../PlnType.h"
+#include "../PlnModule.h"
 #include "PlnArrayValueType.h"
 #include "../PlnObjectLiteral.h"
 #include "../expressions/PlnArrayValue.h"
@@ -18,6 +19,31 @@ PlnArrayValueType::PlnArrayValueType(PlnArrayLiteral* arr_lit)
 PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
 	: PlnType(TP_ARRAY_VALUE), arr_lit(NULL), arr_val(arr_val)
 {
+}
+
+PlnType* PlnArrayValueType::getDefaultType(PlnModule *module)
+{
+	BOOST_ASSERT(arr_val);
+	vector<int> fixarr_sizes;
+	int val_item_type;
+	if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, val_item_type)) {
+		BOOST_ASSERT(fixarr_sizes.back() == 0);
+		fixarr_sizes.pop_back();
+		PlnType* itype;
+		switch(val_item_type) {
+			case DT_SINT:
+				itype = PlnType::getSint(); break;
+			case DT_UINT:
+				itype = PlnType::getUint(); break;
+			case DT_FLOAT:
+				itype = PlnType::getFlo(); break;
+			default:
+				BOOST_ASSERT(false);
+		}
+
+		return module->getFixedArrayType(itype, fixarr_sizes);
+	}
+	BOOST_ASSERT(false);
 }
 
 PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src)
