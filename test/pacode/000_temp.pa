@@ -1,9 +1,15 @@
 ccall int32 printf();
 
-i = 11;
 const A = 12.5;
 const ARR = [30,40];
 const ARR2 = [1,2,33];
+const FARR = [11.1, 22.2];
+
+i = 11;
+i2 = 11;
+
+dd = [[1.1, 1.2], FARR, [33, i+i2]];
+ff = [[1.1, 1.2], FARR, [33, i+i2]];
 
 test(	[[i+1,i+2,3],
 		ARR2]	);

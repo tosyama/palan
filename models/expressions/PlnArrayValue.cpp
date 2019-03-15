@@ -136,7 +136,7 @@ static void pushDp2ArrayVal(PlnFixedArrayType* arr_type, int depth,
 
 void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	finishS(da, si);	
+	finishS(da, si);
 	finishD(da, si);	
 }
 

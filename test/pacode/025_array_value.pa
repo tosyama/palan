@@ -30,8 +30,8 @@ int32[,] bb, cc =
 	[4,5,i2];
 printf(" %d%d %d%d", bb[0,0], bb[1,2], cc[0,0], cc[1,2]);
 
-// ff = [[1.1, 1.2], FARR, [33, i1+i2]];
-printf("\n");
+ff = [[1.1, 1.2], FARR, [33, i1+i2]];
+printf(" %.1f %.1f %.1f\n", ff[0,0], ff[1,1], ff[2,1]);
 
 // assignment
 [3+i1, i2, 23] -> a;

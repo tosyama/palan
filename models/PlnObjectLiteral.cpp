@@ -63,10 +63,12 @@ PlnArrayLiteral::PlnArrayLiteral(const PlnArrayLiteral& src)
 		arr.push_back(i);
 	if (src.arr_type->type == TP_ARRAY_VALUE) {
 		arr_type = new PlnArrayValueType(this);
-		exps = src.exps;
 	} else {
 		arr_type = src.arr_type;
-		exps = src.exps;
+	}
+	for (auto ex: src.exps) {
+		BOOST_ASSERT(ex->values.size() == 1);
+		exps.push_back(new PlnExpression(ex->values[0]));
 	}
 }
 
@@ -76,6 +78,9 @@ PlnArrayLiteral::~PlnArrayLiteral()
 		BOOST_ASSERT(static_cast<PlnArrayValueType*>(arr_type)->arr_lit == this);
 		delete arr_type;
 	}
+
+	for (auto ex: exps)
+		delete ex;
 }
 
 bool PlnArrayLiteral::isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> &fixarr_sizes, PlnObjLitItemType &item_type, int depth)
