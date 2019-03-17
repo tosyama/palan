@@ -133,3 +133,28 @@ PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vect
 	}
 }
 
+vector<int> PlnArrayValueType::getArraySizes()
+{
+	if (arr_val) {
+		vector<int> fixarr_sizes;
+		int item_type;
+		if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, item_type)) {
+			BOOST_ASSERT(fixarr_sizes.back() == 0);
+			fixarr_sizes.pop_back();
+
+			return fixarr_sizes;
+		}
+
+	} else if (arr_lit) {
+		vector<int> fixarr_sizes;
+		PlnObjLitItemType item_type;
+		if (PlnArrayLiteral::isFixedArray(arr_lit->arr, fixarr_sizes, item_type)) {
+			BOOST_ASSERT(fixarr_sizes.back() == 0);
+			fixarr_sizes.pop_back();
+
+			return fixarr_sizes;
+		}
+
+	}
+	BOOST_ASSERT(false);
+}

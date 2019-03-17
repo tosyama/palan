@@ -14,7 +14,7 @@ public:
 	PlnTypeConvCap canConvFrom(PlnType *src) override;
 
 	PlnType* getDefaultType(PlnModule *module);
+	vector<int> getArraySizes();
 
 	PlnTypeConvCap checkCompatible(PlnType* item_type, const vector<int>& sizes);
 };
-

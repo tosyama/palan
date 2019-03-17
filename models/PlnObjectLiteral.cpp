@@ -208,21 +208,6 @@ PlnType* PlnArrayLiteral::getDefaultType(PlnModule *module)
 	throw err;
 }
 
-vector<int> PlnArrayLiteral::getArraySizes()
-{
-	vector<int> fixarr_sizes;
-	PlnObjLitItemType item_type;
-	if (isFixedArray(arr, fixarr_sizes, item_type, 0)) {
-		BOOST_ASSERT(fixarr_sizes.back() == 0);
-		fixarr_sizes.pop_back();
-		return fixarr_sizes;
-	}
-	BOOST_ASSERT(false);
-	// fixarr_sizes.resize(1);
-	// fixarr_sizes[0] = arr.size();
-	// return fixarr_sizes;
-}
-
 PlnType* PlnArrayLiteral::getType()
 {
 	BOOST_ASSERT(arr_type);

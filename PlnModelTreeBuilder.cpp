@@ -485,18 +485,20 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		} else if (infer == ARR_INDEX_INFER) {
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
-			if (val.type == VL_LIT_ARRAY) {
-				sizes = val.inf.arrValue->getArraySizes();
-			} else {
-				PlnType* t = getDefaultType(val, CUR_MODULE);
-				while (t->type == TP_FIXED_ARRAY) {
-					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(t);
+
+			PlnType *tt = val.getType();
+			if (tt->type == TP_FIXED_ARRAY) {
+				while (tt->type == TP_FIXED_ARRAY) {
+					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(tt);
 					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
-					t = atype->item_type;
+					tt = atype->item_type;
 				}
+			} else if (tt->type == TP_ARRAY_VALUE) {
+				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
 			}
+
 			inferArrayIndex(var, sizes);
 			t = getVarType(var["var-type"], scope);
 
