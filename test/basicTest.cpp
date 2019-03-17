@@ -178,8 +178,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "025_array_value";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0\n"
-								"113 1166 1112 1.1 22.2 23.0\n"
-								"1423 162311 113142");
+								"113 1166 1112 1.1 22.2 23.0 13\n"
+								"1423 162311 113142\n"
+								"11 13,11 13,22.2,");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -351,8 +352,9 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "554_arrlit_type_err6";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
-	testcode = "555_arrlit_type_err7";
-	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
+// inproper test.
+//	testcode = "555_arrlit_type_err7";
+//	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");

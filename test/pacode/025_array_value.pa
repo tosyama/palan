@@ -8,7 +8,6 @@ printf("%d%d", a[0], a[2]);
 int32[2,3] b, c =
 	[i1,2,3]
 	[44,55,66],
-
  	[11,22,33]
 	[4,5,i2];
 
@@ -25,13 +24,16 @@ printf("%d%d", aa[0], aa[2]);
 int32[,] bb, cc =
 	[i1,2,3]
 	[44,55,66],
-
  	[11,22,33]
 	[4,5,i2];
 printf(" %d%d %d%d", bb[0,0], bb[1,2], cc[0,0], cc[1,2]);
 
 ff = [[1.1, 1.2], FARR, [33, i1+i2]];
-printf(" %.1f %.1f %.1f\n", ff[0,0], ff[1,1], ff[2,1]);
+printf(" %.1f %.1f %.1f", ff[0,0], ff[1,1], ff[2,1]);
+
+u = 11u;
+uu = [u, 12u, 13u];
+printf(" %d\n", uu[2]);
 
 // assignment
 [3+i1, i2, 23] -> a;
@@ -43,10 +45,25 @@ printf("%d%d%d ", b[0,0], b[0,1], b[0,2]);
 
 byte[2,2,2] d;
 [[i1,12][21,22],[31,32][41,42]] -> d;
-printf("%d%d%d", d[0,0,0], d[1,0,0], d[1,1,1]);
+printf("%d%d%d\n", d[0,0,0], d[1,0,0], d[1,1,1]);
 
 func add(int64 a, b) -> int64 a
 {
 	a + b -> a;
 }
 
+// type compatible(overload)
+prnt([i1, i1+1, i1+2]);
+prnt([u, u+1u, u+2u]);
+prnt([i1+0.1,22.2]);
+
+
+func prnt(int64[3] a)
+{
+	printf("%d %d,", a[0],a[2]);
+}
+
+func prnt(flo64[2] f)
+{
+	printf("%.1f,", f[1]);
+}

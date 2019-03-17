@@ -82,7 +82,8 @@ static PlnTypeConvCap checkArrValCompati(PlnArrayValue* arr_val, PlnType* item_t
 		return item_type->canConvFrom(def_itype);
 
 	} else {
-		return TC_CANT_CONV;
+		BOOST_ASSERT(false);
+		// return TC_CANT_CONV;
 	}
 }
 
@@ -116,7 +117,8 @@ static PlnTypeConvCap checkArrLitCompati(PlnArrayLiteral* arr_lit, PlnType* item
 		return item_type->canConvFrom(def_itype);
 
 	} else {
-		return TC_CANT_CONV;
+		BOOST_ASSERT(false);
+//		return TC_CANT_CONV;
 	}
 }
 
