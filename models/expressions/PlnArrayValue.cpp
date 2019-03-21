@@ -82,7 +82,7 @@ bool PlnArrayValue::isFixedArray(const vector<PlnExpression*> &items, vector<int
 			} else if (it->data_type == DT_UINT) {
 				// Do nothing
 			} else if (it->data_type == DT_FLOAT) {
-				if (it->data_type == DT_SINT || it->data_type == DT_UINT)
+				if (item_type == DT_SINT || item_type == DT_UINT)
 					item_type = DT_FLOAT;
 			} else {
 				BOOST_ASSERT(false);

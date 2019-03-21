@@ -58,6 +58,9 @@ prnt([u, u+1u, u+2u]);
 prnt([i1+0.1,22.2]);
 
 
+prnt([u, u+1, i1+0.1]);
+prnt([u, u+0.2]);
+
 func prnt(int64[3] a)
 {
 	printf("%d %d,", a[0],a[2]);
