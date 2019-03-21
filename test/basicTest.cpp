@@ -268,18 +268,6 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "526_arrlit_noint_err";
 	REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
 
-	testcode = "527_arrlit_type_err";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2][3]'.");
-
-	testcode = "528_arrlit_type_err2";
-	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
-
-	testcode = "529_arrlit_type_err3";
-	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
-
-	testcode = "530_arrlit_type_err4";
-	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[3]'.");
-
 	testcode = "531_func_retval_err";
 	REQUIRE(build(testcode) == "0:4-4 Variable name 'b' already defined.");
 
@@ -328,15 +316,6 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "546_const_exp_err";
 	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
 
-	testcode = "547_constarr_exp_err";
-	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
-
-	testcode = "548_constarr_exp_err2";
-	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
-
-	testcode = "549_constarr_mv_err";
-	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");
-
 	testcode = "550_const_assign_err";
 	REQUIRE(build(testcode) == "0:3-3 Can't use constant value here.");
 
@@ -346,19 +325,71 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "552_ambigfunc_err2";
 	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
 
+	testcode = "557_unsupported_err2";
+	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported type for variable.");
+}
+
+TEST_CASE("Array description compile error test", "[basic]")
+{
+	string testcode;
+
+	// const
+	testcode = "547_constarr_exp_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'arr'.");
+
+	testcode = "548_constarr_exp_err2";
+	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
+
+	testcode = "549_constarr_mv_err";
+	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");
+
+	// array literal
+	testcode = "527_arrlit_type_err";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2][3]'.");
+
+	testcode = "528_arrlit_type_err2";
+	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
+
+	testcode = "529_arrlit_type_err3";
+	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "530_arrlit_type_err4";
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[3]'.");
+
 	testcode = "553_arrlit_type_err5";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3,4]'.");
 
 	testcode = "554_arrlit_type_err6";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
-// inproper test.
-//	testcode = "555_arrlit_type_err7";
-//	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
+	testcode = "555_arrlit_type_err7";
+	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: use only fixed array here.");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
 
-	testcode = "557_unsupported_err2";
-	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported type for variable.");
+	// array value
+	testcode = "558_arrval_type_err";
+	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "559_arrval_type_err2";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64'.");
+
+	testcode = "560_arrval_type_err3";
+	REQUIRE(build(testcode) == "0:3-4 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "561_arrval_type_err4";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[3]'.");
+
+	testcode = "562_arrval_type_err5";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3,4]'.");
+
+	testcode = "563_arrval_type_err6";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+
+	testcode = "564_arrval_type_err7";
+	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
+	
+	testcode = "565_unsupported_err3";
+	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
 }

@@ -9,6 +9,8 @@
 #include "PlnArrayValueType.h"
 #include "../PlnObjectLiteral.h"
 #include "../expressions/PlnArrayValue.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 #include "../../PlnConstants.h"
 
 PlnArrayValueType::PlnArrayValueType(PlnArrayLiteral* arr_lit)
@@ -43,7 +45,9 @@ PlnType* PlnArrayValueType::getDefaultType(PlnModule *module)
 
 		return module->getFixedArrayType(itype, fixarr_sizes);
 	}
-	BOOST_ASSERT(false);
+
+	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
+	throw err;
 }
 
 PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src)
@@ -82,8 +86,8 @@ static PlnTypeConvCap checkArrValCompati(PlnArrayValue* arr_val, PlnType* item_t
 		return item_type->canConvFrom(def_itype);
 
 	} else {
-		BOOST_ASSERT(false);
-		// return TC_CANT_CONV;
+		PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
+		throw err;
 	}
 }
 
@@ -117,8 +121,8 @@ static PlnTypeConvCap checkArrLitCompati(PlnArrayLiteral* arr_lit, PlnType* item
 		return item_type->canConvFrom(def_itype);
 
 	} else {
-		BOOST_ASSERT(false);
-//		return TC_CANT_CONV;
+		PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
+		throw err;
 	}
 }
 

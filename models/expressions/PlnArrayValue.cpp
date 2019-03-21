@@ -12,6 +12,8 @@
 #include "../../PlnConstants.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 static PlnArrayValue* convertArrLit2Value(PlnArrayLiteral* arr_lit)
 {
@@ -94,6 +96,47 @@ bool PlnArrayValue::isFixedArray(const vector<PlnExpression*> &items, vector<int
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
+	PlnType* type = types[0];
+	if (type->type != TP_FIXED_ARRAY) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		err.loc = loc;
+		throw err;
+	}
+	
+
+	vector<int> fixarr_sizes;
+	int val_item_type;
+	if (PlnArrayValue::isFixedArray(item_exps, fixarr_sizes, val_item_type)) {
+		BOOST_ASSERT(fixarr_sizes.back() == 0);
+		fixarr_sizes.pop_back();
+		if (type->type == TP_FIXED_ARRAY) {
+			// check size
+			vector<int> target_sizes = static_cast<PlnFixedArrayType*>(type)->sizes;
+			bool isCompatible = true;
+			if (target_sizes.size() == fixarr_sizes.size()) {
+				for (int i=0; i<target_sizes.size(); i++) {
+					if (target_sizes[i] != fixarr_sizes[i]) {
+						isCompatible = false;
+						break;
+					}
+				}
+
+			} else
+				isCompatible = false;
+
+			if (!isCompatible) {
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+				err.loc = loc;
+				throw err;
+			}
+		}
+
+	} else {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		err.loc = loc;
+		throw err;
+	}
+
 	delete values[0].inf.wk_type;
 
 	values[0].inf.wk_type = types[0];
