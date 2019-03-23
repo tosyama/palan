@@ -180,7 +180,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0\n"
 								"113 1166 1112 1.1 22.2 23.0 13\n"
 								"1423 162311 113142\n"
-								"11 13,11 13,22.2,11 11,11.2,");
+								"11 13,11 13,22.2,11 11,11.2,\n"
+								"11 12 13 4");
 }
 
 TEST_CASE("Compile error test", "[basic]")

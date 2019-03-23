@@ -50,11 +50,7 @@ PlnType* PlnArrayValueType::getDefaultType(PlnModule *module)
 	throw err;
 }
 
-PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src)
-{
-	BOOST_ASSERT(false);
-	//  return TC_CANT_CONV;
-}
+PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false); }
 
 static PlnTypeConvCap checkArrValCompati(PlnArrayValue* arr_val, PlnType* item_type, const vector<int>& sizes)
 {

@@ -32,6 +32,14 @@ PlnModule::PlnModule()
 	max_jmp_id = -1;
 }
 
+PlnModule::~PlnModule()
+{
+	for (auto f: functions)
+		delete f;
+	for (auto t: types)
+		delete t;
+}
+
 PlnType* PlnModule::getType(const string& type_name)
 {
 	auto t = std::find_if(types.begin(), types.end(),

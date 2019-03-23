@@ -29,7 +29,7 @@ public:
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
-		// dst_item->place = data_places[start_ind];
+		dst_ex->data_places.push_back(data_places[start_ind]);
 		return start_ind + 1;
 	}
 
@@ -42,6 +42,7 @@ public:
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		src_ex->finishD(da, si);
 		da.releaseDp(var_dp);
+		dst_ex->finish(da, si);
 	}
 
 	void genS(PlnGenerator& g) override {
@@ -50,6 +51,7 @@ public:
 
 	void genD(PlnGenerator& g) override {
 		src_ex->genD(g);
+		dst_ex->gen(g);
 	}
 };
 

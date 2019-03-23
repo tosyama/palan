@@ -157,7 +157,6 @@ int main(int argc, char* argv[])
 	for (string& fname: files) {
 		if (getExtention(fname) == "o") continue;
 
-		PlnModule *module;
 		{
 			FILE* outf;
 			json j;
@@ -208,7 +207,7 @@ int main(int argc, char* argv[])
 			try {
 				// Build palan model tree from AST.
 				PlnModelTreeBuilder modelTreeBuilder;
-				module = modelTreeBuilder.buildModule(j["ast"]);
+				PlnModule *module = modelTreeBuilder.buildModule(j["ast"]);
 				// free json object memory.
 				j.clear();
 
@@ -233,9 +232,12 @@ int main(int argc, char* argv[])
 					if (ret) return ret;
 
 					object_files.push_back(obj_file);
+
 				} else {
 					BOOST_ASSERT(false);
 				}
+
+				delete module;
 
 			} catch (PlnCompileError &err) {
 				if (as) pclose(as);
