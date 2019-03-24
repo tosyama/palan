@@ -982,7 +982,7 @@ void PlnX86_64Generator::genConvFMem(const PlnGenEntity* src, const PlnGenEntity
 	}
 }
 
-void PlnX86_64Generator::genConvIMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst)
+void PlnX86_64Generator::genConvIRegMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst)
 {
 	BOOST_ASSERT(dst->data_type == DT_FLOAT);
 	BOOST_ASSERT(dst->size == 4 || dst->size == 8);
@@ -1083,8 +1083,9 @@ void PlnX86_64Generator::genMove(const PlnGenEntity* dst, const PlnGenEntity* sr
 			&& src->size != dst->size) {
 		genConvFMem(src, dst);
 
-	} else if (is_src_mem && (is_src_sint || is_src_uint) && is_dst_mem && is_dst_flo) {
-		genConvIMem2FMem(src, dst);
+	} else if ((is_src_sint || is_src_uint) && is_dst_mem && is_dst_flo) {
+		BOOST_ASSERT(is_src_reg || is_src_mem);
+		genConvIRegMem2FMem(src, dst);
 
 	} else if (is_src_mem && is_src_flo && is_dst_mem && (is_dst_sint || is_dst_uint)) {
 		genConvFMem2IMem(src, dst);

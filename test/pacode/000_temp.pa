@@ -1,28 +1,36 @@
 ccall int32 printf();
 
+int64[] arr1 = [1,2,3];
+// int64[3] tarr1 = arr1;
+// int64[] arr11 = arr1;
+
+// flo32[,] arr2 = [1,2,3][4,5,6];
+
 const A = 12.5;
 const ARR = [30,40];
-a = [1,2,3][4,5,6];
- 
-//test(a);
-// test();
-// test(ARR);
-// test([2,[1,2]]);
-// [2,[1,2]] -> a;
+const ARR2 = [1,2,33];
+const FARR = [11.1, 22.2];
 
-// b = "abced";
+i = 11;
+i2 = 11;
 
-f2(f1());
- 
+dd = [[1.1, 1.2], FARR, [33, i+i2]];
+ff = [[1.1, 1.2], FARR, [33, i+i2]];
+
+test(	[[i+1,i+2,3],
+		ARR2]	);
+
+aa = [11,i];
+
+func test(int64[2] a = [10,20])
+{
+  	printf("%d%d", a[0], a[1]);
+}
+
 func test(int64[2,3] a) -> int64[2,3] a {
  	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
 }
  
-func test(int64[2] a = [10,20])
-{
- 	printf("%d%d", a[0], a[1]);
-}
-
 func test(int32[2] a)
 {
  	printf("%d%d", a[0], a[1]);

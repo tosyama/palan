@@ -7,12 +7,12 @@
 # target="../models/PlnObjectLiteral"
 # target="../PlnModelTreeBuilder"
 # target="../models/expressions/PlnArrayValue"
-target="../models/types/PlnArrayValueType"
-# target="../models/expressions/assignitem/PlnAssignItem"
+# target="../models/types/PlnArrayValueType"
+target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 #gcovs="${targetnm}.cpp"
-#gcovs="PlnAssignWorkValsItem.h"
-gcovs="PlnArrayValueType.h"
+gcovs="PlnAssignArrayValue.h"
+#gcovs="PlnArrayValueType.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov

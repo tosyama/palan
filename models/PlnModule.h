@@ -22,6 +22,7 @@ public:
 	vector<PlnType*> types;
 
 	PlnModule();
+	~PlnModule();
 
 	PlnType* getType(const string& type_name);
 	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);

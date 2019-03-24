@@ -19,6 +19,8 @@
 #include "../PlnDivOperation.h"
 #include "../PlnMemCopy.h"
 #include "../PlnClone.h"
+#include "../PlnArrayValue.h"
+#include "../../types/PlnFixedArrayType.h"
 #include "PlnAssignItem.h"
 
 // PlnDstItem
@@ -43,6 +45,7 @@ public:
 #include "PlnAssignObjectRefItem.h"
 #include "PlnAssignIndirectObjItem.h"
 #include "PlnChainAssignItem.h"
+#include "PlnAssignArrayValue.h"
 
 PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 {
@@ -103,6 +106,10 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 
 	if (ex->type == ET_ASSIGN) {
 		return new PlnChainAssignItem(ex);
+	}
+
+	if (ex->type == ET_ARRAYVALUE) {
+		return new PlnAssignArrayValue(ex);
 	}
 
 	BOOST_ASSERT(false);

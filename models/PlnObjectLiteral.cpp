@@ -29,9 +29,31 @@ PlnObjectLiteralItem::PlnObjectLiteralItem(const PlnObjectLiteralItem &src)
 }
 
 // PlnArrayLiteral
-PlnArrayLiteral::PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr)
+PlnArrayLiteral::PlnArrayLiteral(vector<PlnExpression*> &exps)
+	: exps(move(exps))
 {
-	this->arr = move(arr);
+	for (PlnExpression *exp: this->exps) {
+		BOOST_ASSERT(exp->type == ET_VALUE);
+		PlnValue v = exp->values[0];
+		switch (v.type) {
+		case VL_LIT_INT8:
+			arr.push_back(v.inf.intValue);
+			break;
+		case VL_LIT_UINT8:
+			arr.push_back(v.inf.uintValue);
+			break;
+		case VL_LIT_FLO8:
+			arr.push_back(v.inf.floValue);
+			break;
+		case VL_LIT_ARRAY:
+			arr.push_back(v.inf.arrValue);
+			v.inf.arrValue = NULL;
+			break;
+		default:
+			BOOST_ASSERT(false);
+		}
+	}
+
 	arr_type = new PlnArrayValueType(this);
 }
 
@@ -44,6 +66,10 @@ PlnArrayLiteral::PlnArrayLiteral(const PlnArrayLiteral& src)
 	} else {
 		arr_type = src.arr_type;
 	}
+	for (auto ex: src.exps) {
+		BOOST_ASSERT(ex->values.size() == 1);
+		exps.push_back(new PlnExpression(ex->values[0]));
+	}
 }
 
 PlnArrayLiteral::~PlnArrayLiteral()
@@ -52,6 +78,9 @@ PlnArrayLiteral::~PlnArrayLiteral()
 		BOOST_ASSERT(static_cast<PlnArrayValueType*>(arr_type)->arr_lit == this);
 		delete arr_type;
 	}
+
+	for (auto ex: exps)
+		delete ex;
 }
 
 bool PlnArrayLiteral::isFixedArray(const vector<PlnObjectLiteralItem> &items, vector<int> &fixarr_sizes, PlnObjLitItemType &item_type, int depth)
@@ -116,9 +145,9 @@ void PlnArrayLiteral::adjustTypes(const vector<PlnType*> &types)
 	PlnObjLitItemType lit_item_type;
 	if (isFixedArray(arr, fixarr_sizes, lit_item_type, 0)) {
 		fixarr_sizes.pop_back();
-		if (type->obj_type == OT_FIXED_ARRAY) {
+		if (type->type == TP_FIXED_ARRAY) {
 			// check size
-			vector<int> target_sizes = *(type->inf.fixedarray.sizes);
+			vector<int> target_sizes = static_cast<PlnFixedArrayType*>(type)->sizes;
 			bool isCompatible = true;
 			if (target_sizes.size() == fixarr_sizes.size()) {
 				for (int i=0; i<target_sizes.size(); i++) {
@@ -177,21 +206,6 @@ PlnType* PlnArrayLiteral::getDefaultType(PlnModule *module)
 
 	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
 	throw err;
-}
-
-vector<int> PlnArrayLiteral::getArraySizes()
-{
-	vector<int> fixarr_sizes;
-	PlnObjLitItemType item_type;
-	if (isFixedArray(arr, fixarr_sizes, item_type, 0)) {
-		BOOST_ASSERT(fixarr_sizes.back() == 0);
-		fixarr_sizes.pop_back();
-		return fixarr_sizes;
-	}
-	BOOST_ASSERT(false);
-	// fixarr_sizes.resize(1);
-	// fixarr_sizes[0] = arr.size();
-	// return fixarr_sizes;
 }
 
 PlnType* PlnArrayLiteral::getType()

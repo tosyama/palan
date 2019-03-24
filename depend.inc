@@ -77,7 +77,10 @@ PlnFixedArrayType.o:  \
 	models/types/PlnFixedArrayType.h models/types/PlnArrayValueType.h
 PlnArrayValueType.o:  \
 	models/types/../PlnType.h models/types/../../PlnModel.h \
-	models/types/PlnArrayValueType.h models/types/../PlnObjectLiteral.h
+	models/types/../PlnModule.h models/types/../PlnExpression.h \
+	models/types/PlnArrayValueType.h models/types/../PlnObjectLiteral.h \
+	models/types/../expressions/PlnArrayValue.h \
+	models/types/../../PlnConstants.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
@@ -151,6 +154,15 @@ PlnArrayItem.o:  \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnMessage.h \
 	models/expressions/../../PlnException.h
+PlnArrayValue.o:  \
+	models/expressions/../PlnType.h models/expressions/../../PlnModel.h \
+	models/expressions/PlnArrayValue.h models/expressions/../PlnExpression.h \
+	models/expressions/../types/PlnArrayValueType.h \
+	models/expressions/../types/PlnFixedArrayType.h \
+	models/expressions/../PlnObjectLiteral.h \
+	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h
 PlnClone.o:  \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h models/expressions/../PlnVariable.h \
@@ -172,12 +184,15 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/../PlnDivOperation.h \
 	models/expressions/assignitem/../PlnMemCopy.h \
 	models/expressions/assignitem/../PlnClone.h \
+	models/expressions/assignitem/../PlnArrayValue.h \
+	models/expressions/assignitem/../../types/PlnFixedArrayType.h \
 	models/expressions/assignitem/PlnAssignItem.h \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \
 	models/expressions/assignitem/PlnAssignWorkValsItem.h \
 	models/expressions/assignitem/PlnAssignObjectRefItem.h \
 	models/expressions/assignitem/PlnAssignIndirectObjItem.h \
 	models/expressions/assignitem/PlnChainAssignItem.h \
+	models/expressions/assignitem/PlnAssignArrayValue.h \
 	models/expressions/assignitem/PlnDstPrimitiveItem.h \
 	models/expressions/assignitem/PlnDstCopyObjectItem.h \
 	models/expressions/assignitem/PlnDstMoveObjectItem.h \
@@ -218,4 +233,5 @@ PlnModelTreeBuilder.o:  PlnModel.h \
 	models/expressions/PlnDivOperation.h \
 	models/expressions/PlnBoolOperation.h \
 	models/expressions/PlnCmpOperation.h models/expressions/PlnArrayItem.h \
-	models/types/PlnFixedArrayType.h
+	models/expressions/PlnArrayValue.h models/types/PlnFixedArrayType.h \
+	models/types/PlnArrayValueType.h

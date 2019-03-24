@@ -9,7 +9,7 @@
 // Expression: 
 enum PlnExprsnType {
 	ET_VALUE,
-	ET_ARRAYVALUE_OLD,
+	ET_ARRAYVALUE,
 	ET_FUNCCALL,
 	ET_ADD,
 	ET_MUL,
@@ -39,7 +39,7 @@ public:
 
 	int getDataType(int val_ind=0);
 
-	PlnExpression* adjustTypes(const vector<PlnType*> &types);
+	virtual PlnExpression* adjustTypes(const vector<PlnType*> &types);
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	virtual void gen(PlnGenerator& g);
 };

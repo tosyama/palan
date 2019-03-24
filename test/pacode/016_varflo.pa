@@ -30,7 +30,9 @@ uint64 u8, v8;
 i8, j8 -> showflo();
 u8, v8 -> showflo();
 f, d, ff, dd -> i8, j8, u8, v8;
-printf("%d %d %d %d\n", i8, j8, u8, v8);
+printf("%d %d %d %d ", i8, j8, u8, v8);
+i8+1 -> d;
+printf("%.1f\n", d);
 
 int32 i4, j4;
 -12, 13 -> i4, j4 -> f, d -> showflo();

@@ -28,7 +28,9 @@
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnBoolOperation.h"
 #include "models/expressions/PlnArrayItem.h"
+#include "models/expressions/PlnArrayValue.h"
 #include "models/types/PlnFixedArrayType.h"
+#include "models/types/PlnArrayValueType.h"
 
 static void registerPrototype(json& proto, PlnScopeStack& scope);
 static void buildFunction(json& func, PlnScopeStack &scope, json& ast);
@@ -399,9 +401,13 @@ static PlnType* getDefaultType(PlnValue &val, PlnModule *module)
 		return PlnType::getUint();
 	else if (val.type == VL_LIT_FLO8)
 		return PlnType::getFlo();
-	else if (val.type == VL_WORK)
-		return val.inf.wk_type;
-	else if (val.type == VL_LIT_STR)
+	else if (val.type == VL_WORK) {
+		if (val.inf.wk_type->type == TP_ARRAY_VALUE) {
+			return static_cast<PlnArrayValueType*>(val.inf.wk_type)->getDefaultType(module);
+		} else {
+			return val.inf.wk_type;
+		}
+	} else if (val.type == VL_LIT_STR)
 		return PlnType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
 		return val.inf.arrValue->getDefaultType(module);
@@ -479,18 +485,20 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		} else if (infer == ARR_INDEX_INFER) {
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
-			if (val.type == VL_LIT_ARRAY) {
-				sizes = val.inf.arrValue->getArraySizes();
-			} else {
-				PlnType* t = getDefaultType(val, CUR_MODULE);
-				while (t->type == TP_FIXED_ARRAY) {
-					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(t);
-					for (int sz: *atype->inf.fixedarray.sizes) {
+
+			PlnType *tt = val.getType();
+			if (tt->type == TP_FIXED_ARRAY) {
+				while (tt->type == TP_FIXED_ARRAY) {
+					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(tt);
+					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
-					t = atype->item_type;
+					tt = atype->item_type;
 				}
+			} else if (tt->type == TP_ARRAY_VALUE) {
+				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
 			}
+
 			inferArrayIndex(var, sizes);
 			t = getVarType(var["var-type"], scope);
 
@@ -851,43 +859,12 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 	}
 
 	if (isLiteral) {
-		vector<PlnObjectLiteralItem> items;
-		for (PlnExpression *exp: exps) {
-			BOOST_ASSERT(exp->type == ET_VALUE);
-			PlnValue v = exp->values[0];
-			switch (v.type) {
-			case VL_LIT_INT8:
-				items.push_back(v.inf.intValue);
-				delete exp;
-				break;
-			case VL_LIT_UINT8:
-				items.push_back(v.inf.uintValue);
-				delete exp;
-				break;
-			case VL_LIT_FLO8:
-				items.push_back(v.inf.floValue);
-				delete exp;
-				break;
-			case VL_LIT_ARRAY:
-				items.push_back(v.inf.arrValue);
-				v.inf.arrValue = NULL;
-				delete exp;
-				break;
-			default:
-				BOOST_ASSERT(false);
-			}
-		}
-
-		auto arr_lit = new PlnArrayLiteral(items); 
+		auto arr_lit = new PlnArrayLiteral(exps); 
 		return new PlnExpression(arr_lit);
+
 	} else { // not literal
-		PlnCompileError err(E_CantUseDynamicValue, PlnMessage::arrayValue());
-		setLoc(&err, arrval);
-		throw err;
+		return new PlnArrayValue(exps);
 	}
-
-	BOOST_ASSERT(false);
-
 }
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)

@@ -78,9 +78,9 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 
 	values.push_back(PlnValue(var));
 
-	auto arr_sizes = arr_type->inf.fixedarray.sizes;
-	BOOST_ASSERT(arr_sizes->size() == item_ind.size());
-	index_ex = getIndexExpression(item_ind.size()-1, 1, item_ind,*arr_sizes);
+	auto& arr_sizes = farr_type->sizes;
+	BOOST_ASSERT(arr_sizes.size() == item_ind.size());
+	index_ex = getIndexExpression(item_ind.size()-1, 1, item_ind, arr_sizes);
 	if (index_ex->type == ET_VALUE) {
 		if (index_ex->values[0].type == VL_LIT_UINT8) {
 			int64_t i = index_ex->values[0].inf.uintValue;

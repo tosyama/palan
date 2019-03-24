@@ -39,13 +39,13 @@ class PlnArrayLiteral
 public:
 	PlnType* arr_type;
 	vector<PlnObjectLiteralItem> arr;
+	vector<PlnExpression*> exps;
 
-	PlnArrayLiteral(vector<PlnObjectLiteralItem> &arr);
+	PlnArrayLiteral(vector<PlnExpression*> &exps);
 	PlnArrayLiteral(const PlnArrayLiteral& src);
 	~PlnArrayLiteral();
 
 	PlnType* getDefaultType(PlnModule *module);
-	vector<int> getArraySizes();
 
 	void adjustTypes(const vector<PlnType*> &types);
 	PlnType* getType();

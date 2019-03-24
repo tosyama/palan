@@ -108,15 +108,19 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			}
 
 			PlnClone* clone = NULL;
-			if (ptr_type == PTR_PARAM_COPY
-					&& (v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_ARRAY)) {
-				clone = new PlnClone(da, f->parameters[i]->var_type, false);
-				a->data_places.push_back(clone->src_dp);
-			} else {
-				a->data_places.push_back(arg_dps[i]);
-			}
-			clones.push_back(clone);
+			if (ptr_type == PTR_PARAM_COPY) {
+				if (a->type == ET_ARRAYVALUE) {
+					a = new PlnClone(da, a, f->parameters[i]->var_type, false);
 
+				} else if (v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_ARRAY) {
+					clone = new PlnClone(da, a, f->parameters[i]->var_type, false);
+
+				}
+			}
+			if (!clone)
+				a->data_places.push_back(arg_dps[i]);
+
+			clones.push_back(clone);
 			++i;
 		}
 
