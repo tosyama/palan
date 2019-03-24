@@ -40,7 +40,7 @@ PlnValue::PlnValue(const PlnValue &src)
 	} else if (src.type == VL_LIT_ARRAY) {
 		type = src.type;
 		asgn_type = src.asgn_type;
-		inf.arrValue = new PlnArrayLiteral(*src.inf.arrValue);
+		inf.arrValue2 = new PlnArrayLiteral(*src.inf.arrValue2);
 
 	} else {
 		*this = src;
@@ -68,7 +68,7 @@ PlnValue::PlnValue(string strValue)
 PlnValue::PlnValue(PlnArrayLiteral *arr)
 	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN)
 {
-	inf.arrValue = arr;
+	inf.arrValue2 = arr;
 }
 
 PlnValue::PlnValue(PlnVariable* var)
@@ -82,7 +82,7 @@ PlnValue::~PlnValue()
 	if (type == VL_LIT_STR)
 		delete inf.strValue;
 	else if (type == VL_LIT_ARRAY)
-		delete inf.arrValue;
+		delete inf.arrValue2;
 
 }
 
@@ -98,7 +98,7 @@ PlnType* PlnValue::getType()
 		case VL_LIT_STR:
 			return PlnType::getReadOnlyCStr();
 		case VL_LIT_ARRAY:
-			return inf.arrValue->getType();
+			return inf.arrValue2->getType();
 		case VL_VAR:
 			return inf.var->var_type;
 		case VL_WORK:
@@ -127,7 +127,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getROStrArrayDp(*inf.strValue);
 
 		case VL_LIT_ARRAY:
-			return inf.arrValue->getDataPlace(da);
+			return inf.arrValue2->getDataPlace(da);
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;
@@ -165,7 +165,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 		BOOST_ASSERT(types.size()==1);
 		if (values[0].type == VL_LIT_ARRAY) {
 			try {
-				values[0].inf.arrValue->adjustTypes(types);
+				values[0].inf.arrValue2->adjustTypes(types);
 			} catch (PlnCompileError& err) {
 				err.loc = loc;
 				throw err;

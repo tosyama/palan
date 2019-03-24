@@ -19,7 +19,7 @@ static PlnArrayValue* convertArrLit2Value(PlnArrayLiteral* arr_lit)
 {
 	for (auto& exp: arr_lit->exps) {
 		if (exp->values[0].type == VL_LIT_ARRAY) {
-			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue);
+			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue2);
 			delete exp;
 			exp = newexp;
 		}
@@ -38,7 +38,7 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps)
 	// Exchange array lit -> array value
 	for (auto& exp: item_exps) {
 		if (exp->values[0].type == VL_LIT_ARRAY) {
-			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue);
+			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue2);
 			delete exp;
 			exp = newexp;
 		}
@@ -102,7 +102,6 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 		err.loc = loc;
 		throw err;
 	}
-	
 
 	vector<int> fixarr_sizes;
 	int val_item_type;

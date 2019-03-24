@@ -81,7 +81,7 @@ public:
 		uint64_t uintValue;
 		double floValue;
 		string* strValue;
-		PlnArrayLiteral *arrValue;
+		PlnArrayLiteral *arrValue2;
 		PlnVariable* var;
 		PlnType *wk_type;
 	} inf;
