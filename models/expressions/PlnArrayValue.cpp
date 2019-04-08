@@ -18,7 +18,9 @@
 static PlnArrayValue* convertArrLit2Value(PlnArrayLiteral* arr_lit)
 {
 	for (auto& exp: arr_lit->exps) {
-		if (exp->values[0].type == VL_LIT_ARRAY) {
+		if (exp->values[0].type == VL_LIT_ARRAY)
+			BOOST_ASSERT(false);
+		if (exp->values[0].type == VL_LIT_ARRAY2) {
 			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue2);
 			delete exp;
 			exp = newexp;
@@ -38,11 +40,58 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps)
 	// Exchange array lit -> array value
 	for (auto& exp: item_exps) {
 		if (exp->values[0].type == VL_LIT_ARRAY) {
+			auto newexp = exp->values[0].inf.arrValue;
+			exp->values[0].inf.arrValue = NULL;
+			delete exp;
+			exp = newexp;
+		}
+		if (exp->values[0].type == VL_LIT_ARRAY2) {
 			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue2);
 			delete exp;
 			exp = newexp;
 		}
 	}
+}
+
+PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
+	: PlnExpression(ET_ARRAYVALUE)
+{
+	for (auto& exp: src.item_exps) {
+		PlnExpression *new_exp;
+		if (exp->type == ET_VALUE) {
+			PlnValue v = exp->values[0];
+			switch (v.type) {
+				case VL_LIT_INT8:
+					new_exp = new PlnExpression(v.inf.intValue);
+					break;
+				case VL_LIT_UINT8:
+					new_exp = new PlnExpression(v.inf.uintValue);
+					break;
+				case VL_LIT_FLO8:
+					new_exp = new PlnExpression(v.inf.floValue);
+					break;
+				case VL_LIT_ARRAY:
+					{
+						PlnArrayValue *new_arr_val = new PlnArrayValue(*v.inf.arrValue);
+						new_exp = new PlnExpression(PlnValue(new_arr_val));
+						break;
+					}
+				default:
+					BOOST_ASSERT(false);
+			}
+
+		} else if (exp->type == ET_ARRAYVALUE) {
+			new_exp = new PlnArrayValue(*static_cast<PlnArrayValue*>(exp));
+
+		} else
+			BOOST_ASSERT(false);
+		item_exps.push_back(new_exp);
+	}
+
+	PlnValue aval;
+	aval.type = VL_WORK;
+	aval.inf.wk_type = new PlnArrayValueType(this);
+	values.push_back(aval);
 }
 
 /// return true - items is aixed array, false - not fixed array
@@ -102,6 +151,11 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 		err.loc = loc;
 		throw err;
 	}
+	PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
+	if (atype->item_type->data_type == DT_OBJECT_REF) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		throw err;
+	}
 
 	vector<int> fixarr_sizes;
 	int val_item_type;
@@ -137,7 +191,6 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 	}
 
 	delete values[0].inf.wk_type;
-
 	values[0].inf.wk_type = types[0];
 
 	return this;
@@ -186,23 +239,28 @@ void PlnArrayValue::finishS(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	if (data_places.size()) {
 		BOOST_ASSERT(data_places.size() == 1);
-	 	auto var_dp = data_places[0];
+		PlnDataPlace *var_dp = data_places[0];
 		int var_index = 0;
 		auto arr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
 
 		pushDp2ArrayVal(arr_type, 0, var_dp, var_index, this, da, si);
 	}
 
-	for (auto exp: item_exps)
+	for (auto exp: item_exps) {
 		exp->finish(da, si);
+		if (exp->data_places.size()) {
+			da.popSrc(exp->data_places.back());
+			da.releaseDp(exp->data_places.back());
+		}
+	}
 }
 
 void PlnArrayValue::finishD(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	for (auto item_dp: arr_item_dps) {
-		da.popSrc(item_dp);
-		da.releaseDp(item_dp);
-	}
+//	for (auto item_dp: arr_item_dps) {
+//		da.popSrc(item_dp);
+//		da.releaseDp(item_dp);
+//	}
 }
 
 void PlnArrayValue::gen(PlnGenerator& g)
@@ -213,12 +271,15 @@ void PlnArrayValue::gen(PlnGenerator& g)
 
 void PlnArrayValue::genS(PlnGenerator& g)
 {
-	for (auto exp: item_exps)
+	for (auto exp: item_exps) {
 		exp->gen(g);
+		if (exp->data_places.size())
+			g.genLoadDp(exp->data_places.back());
+	}
 }
 
 void PlnArrayValue::genD(PlnGenerator& g)
 {
-	for (auto item_dp: arr_item_dps)
-		g.genLoadDp(item_dp);
+//	for (auto item_dp: arr_item_dps)
+//		g.genLoadDp(item_dp);
 }

@@ -59,6 +59,7 @@ enum PlnValType {
 	VL_LIT_FLO8,
 	VL_LIT_STR,
 	VL_LIT_ARRAY,
+	VL_LIT_ARRAY2,
 	VL_VAR,
 	VL_WORK
 };
@@ -71,6 +72,7 @@ enum PlnAsgnType {
 };
 
 class PlnArrayLiteral;
+class PlnArrayValue;
 class PlnValue {
 public:
 	PlnValType type;
@@ -80,9 +82,10 @@ public:
 		int64_t intValue;
 		uint64_t uintValue;
 		double floValue;
-		string* strValue;
+		string *strValue;
+		PlnArrayValue *arrValue;
 		PlnArrayLiteral *arrValue2;
-		PlnVariable* var;
+		PlnVariable *var;
 		PlnType *wk_type;
 	} inf;
 
@@ -92,6 +95,7 @@ public:
 	PlnValue(uint64_t uintValue);
 	PlnValue(double floValue);
 	PlnValue(string strValue);
+	PlnValue(PlnArrayValue *arr);
 	PlnValue(PlnArrayLiteral *arr);
 	PlnValue(PlnVariable* var);
 	~PlnValue();

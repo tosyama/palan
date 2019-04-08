@@ -1,46 +1,10 @@
 ccall int32 printf();
 
-int64[] arr1 = [1,2,3];
-// int64[3] tarr1 = arr1;
-// int64[] arr11 = arr1;
+// int16[4][3] arr2;
 
-// flo32[,] arr2 = [1,2,3][4,5,6];
+// [1,2,3] -> arr2[0];
+i = 2;
+int16[4][2,3] arr3;
+[i,2,(1->i)][4,5,6] -> arr3[i];
 
-const A = 12.5;
-const ARR = [30,40];
-const ARR2 = [1,2,33];
-const FARR = [11.1, 22.2];
-
-i = 11;
-i2 = 11;
-
-dd = [[1.1, 1.2], FARR, [33, i+i2]];
-ff = [[1.1, 1.2], FARR, [33, i+i2]];
-
-test(	[[i+1,i+2,3],
-		ARR2]	);
-
-aa = [11,i];
-
-func test(int64[2] a = [10,20])
-{
-  	printf("%d%d", a[0], a[1]);
-}
-
-func test(int64[2,3] a) -> int64[2,3] a {
- 	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
-}
- 
-func test(int32[2] a)
-{
- 	printf("%d%d", a[0], a[1]);
-}
-
-func f1() -> int64 int64
-{
-	return 1,2;
-}
-
-func f2(int64 a, int64 b)
-{
-}
+printf("%d\n", arr3[1][0,0]);

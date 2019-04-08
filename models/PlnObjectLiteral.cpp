@@ -46,6 +46,8 @@ PlnArrayLiteral::PlnArrayLiteral(vector<PlnExpression*> &exps)
 			arr.push_back(v.inf.floValue);
 			break;
 		case VL_LIT_ARRAY:
+			BOOST_ASSERT(false);
+		case VL_LIT_ARRAY2:
 			arr.push_back(v.inf.arrValue2);
 			v.inf.arrValue2 = NULL;
 			break;

@@ -10,8 +10,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "PlnClone.h"
-
-bool MIG = false;
+#include "PlnArrayValue.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_type, bool keep_var)
 	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)

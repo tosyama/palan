@@ -13,6 +13,7 @@
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnObjectLiteral.h"
+#include "expressions/PlnArrayValue.h"
 #include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
@@ -36,8 +37,13 @@ PlnValue::PlnValue(const PlnValue &src)
 		type = src.type;
 		asgn_type = src.asgn_type;
 		inf.strValue = new string(*src.inf.strValue);
-
+	
 	} else if (src.type == VL_LIT_ARRAY) {
+		type = src.type;
+		asgn_type = src.asgn_type;
+		inf.arrValue = new PlnArrayValue(*src.inf.arrValue);
+
+	} else if (src.type == VL_LIT_ARRAY2) {
 		type = src.type;
 		asgn_type = src.asgn_type;
 		inf.arrValue2 = new PlnArrayLiteral(*src.inf.arrValue2);
@@ -65,8 +71,14 @@ PlnValue::PlnValue(string strValue)
 	inf.strValue = new string(strValue);
 }
 
-PlnValue::PlnValue(PlnArrayLiteral *arr)
+PlnValue::PlnValue(PlnArrayValue *arr)
 	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN)
+{
+	inf.arrValue = arr;
+}
+
+PlnValue::PlnValue(PlnArrayLiteral *arr)
+	: type(VL_LIT_ARRAY2), asgn_type(NO_ASGN)
 {
 	inf.arrValue2 = arr;
 }
@@ -82,6 +94,8 @@ PlnValue::~PlnValue()
 	if (type == VL_LIT_STR)
 		delete inf.strValue;
 	else if (type == VL_LIT_ARRAY)
+		delete inf.arrValue;
+	else if (type == VL_LIT_ARRAY2)
 		delete inf.arrValue2;
 
 }
@@ -98,6 +112,8 @@ PlnType* PlnValue::getType()
 		case VL_LIT_STR:
 			return PlnType::getReadOnlyCStr();
 		case VL_LIT_ARRAY:
+			return inf.arrValue->values[0].getType();
+		case VL_LIT_ARRAY2:
 			return inf.arrValue2->getType();
 		case VL_VAR:
 			return inf.var->var_type;
@@ -127,6 +143,9 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getROStrArrayDp(*inf.strValue);
 
 		case VL_LIT_ARRAY:
+			BOOST_ASSERT(false);
+
+		case VL_LIT_ARRAY2:
 			return inf.arrValue2->getDataPlace(da);
 
 		case VL_VAR:
@@ -164,6 +183,14 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 	if (type == ET_VALUE) {
 		BOOST_ASSERT(types.size()==1);
 		if (values[0].type == VL_LIT_ARRAY) {
+			try {
+				values[0].inf.arrValue->adjustTypes(types);
+			} catch (PlnCompileError& err) {
+				err.loc = loc;
+				throw err;
+			}
+		}
+		if (values[0].type == VL_LIT_ARRAY2) {
 			try {
 				values[0].inf.arrValue2->adjustTypes(types);
 			} catch (PlnCompileError& err) {
