@@ -328,7 +328,6 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "557_unsupported_err2";
 	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported type for variable.");
-	return;
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

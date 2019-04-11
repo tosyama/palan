@@ -26,16 +26,17 @@ static PlnArrayValue* convertArrLit2Value(PlnArrayLiteral* arr_lit)
 			exp = newexp;
 		}
 	}
-	return new PlnArrayValue(arr_lit->exps);
+	return new PlnArrayValue(arr_lit->exps, true);
 }
 
-PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps)
-	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps))
+PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
+	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral)
 {
 	PlnValue aval;
 	aval.type = VL_WORK;
 	aval.inf.wk_type = new PlnArrayValueType(this);
 	values.push_back(aval);
+	isLiteral = true;
 
 	// Exchange array lit -> array value
 	for (auto& exp: item_exps) {
@@ -91,6 +92,7 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 	PlnValue aval;
 	aval.type = VL_WORK;
 	aval.inf.wk_type = new PlnArrayValueType(this);
+	isLiteral = src.isLiteral;
 	values.push_back(aval);
 }
 
@@ -235,10 +237,60 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	finishD(da, si);	
 }
 
+template<typename T>
+static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
+{
+	for (auto& exp: arr_val->item_exps) {
+		if (exp->type == ET_ARRAYVALUE) {
+			addAllNumerics(static_cast<PlnArrayValue*>(exp), num_arr);
+		} else if (exp->type == ET_VALUE) {
+			PlnValue& val = exp->values[0];
+			switch (val.type) {
+				case VL_LIT_INT8:
+					num_arr.push_back(val.inf.intValue); break;
+				case VL_LIT_UINT8:
+					num_arr.push_back(val.inf.uintValue); break;
+				case VL_LIT_FLO8:
+					num_arr.push_back(val.inf.floValue); break;
+				default:
+					BOOST_ASSERT(false);
+			}
+		} else
+			BOOST_ASSERT(false);
+	}
+}
+
 void PlnArrayValue::finishS(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	// Assign each element
 	if (data_places.size()) {
 		BOOST_ASSERT(data_places.size() == 1);
+		BOOST_ASSERT(values[0].inf.wk_type->type != TP_ARRAY_VALUE);
+
+		PlnType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type)->item_type;
+		int ele_type = item_type->data_type;
+		int ele_size = item_type->size;
+
+		// Copy at once.
+		if (isLiteral) {
+			PlnDataPlace* dp;
+			if (ele_type == DT_SINT || ele_type == DT_UINT) {
+				vector<int64_t> int_arr;
+				addAllNumerics(this, int_arr);
+				dp = da.getROIntArrayDp(int_arr, ele_size);	
+			} else if (ele_type == DT_FLOAT) {
+				vector<double> flo_arr;
+				addAllNumerics(this, flo_arr);
+				dp = da.getROFloArrayDp(flo_arr, ele_size);	
+			} else {
+				BOOST_ASSERT(false);
+			}
+
+			da.pushSrc(data_places[0], dp);
+			return;
+		} 
+
+		// Assign each item.
 		PlnDataPlace *var_dp = data_places[0];
 		int var_index = 0;
 		auto arr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
@@ -257,10 +309,6 @@ void PlnArrayValue::finishS(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnArrayValue::finishD(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-//	for (auto item_dp: arr_item_dps) {
-//		da.popSrc(item_dp);
-//		da.releaseDp(item_dp);
-//	}
 }
 
 void PlnArrayValue::gen(PlnGenerator& g)
@@ -280,6 +328,4 @@ void PlnArrayValue::genS(PlnGenerator& g)
 
 void PlnArrayValue::genD(PlnGenerator& g)
 {
-//	for (auto item_dp: arr_item_dps)
-//		g.genLoadDp(item_dp);
 }

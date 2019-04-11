@@ -864,12 +864,12 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 	if (isLiteral) {
 //		auto arr_lit = new PlnArrayLiteral(exps); 
 //		return new PlnExpression(arr_lit);
-		auto arr_val = new PlnArrayValue(exps); 
+		auto arr_val = new PlnArrayValue(exps, true); 
 		auto exp = new PlnExpression(arr_val);
 		setLoc(exp->values[0].inf.arrValue, arrval);
 		return exp;
 	} else { // not literal
-		return new PlnArrayValue(exps);
+		return new PlnArrayValue(exps, false);
 	}
 }
 

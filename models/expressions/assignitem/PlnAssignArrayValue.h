@@ -30,13 +30,19 @@ public:
 
 		BOOST_ASSERT(!need_save);
 
-		if (ex->type == ET_VALUE) {
-			dst_ex = ex;
-
-		} else {
-			BOOST_ASSERT(ex->type == ET_ARRAYITEM);
+		if (src_ex->isLiteral) {
 			dst_ex = ex;
 			dst_item = PlnDstItem::createDstItem(ex, need_save);
+
+		} else {
+			if (ex->type == ET_VALUE) {
+				dst_ex = ex;
+
+			} else {
+				BOOST_ASSERT(ex->type == ET_ARRAYITEM);
+				dst_ex = ex;
+				dst_item = PlnDstItem::createDstItem(ex, need_save);
+			}
 		}
 	}
 
@@ -52,38 +58,48 @@ public:
 			throw err;
 		}
 
-		if (dst_ex->type == ET_VALUE) {
-			PlnVariable* var = dst_ex->values[0].inf.var;
-			BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
-			if (si.get_lifetime(var) == VLT_FREED) {
-				PlnCompileError err(E_CantCopyFreedVar, var->name);
-				err.loc = dst_ex->loc;
-				throw err;
-			}
-			var_dp = da.getSeparatedDp(var->place);
-		
-		} else if (dst_ex->type == ET_ARRAYITEM) {
-			tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
-			alloc_ex = tmp_var->var_type->allocator->getAllocEx();
-			alloc_ex->data_places.push_back(tmp_var->place);
-			alloc_ex->finish(da, si);
-			da.popSrc(tmp_var->place);
-			var_dp = tmp_var->place;
-			free_ex = PlnFreer::getFreeEx(tmp_var);
-			tmp_var_ex = new PlnExpression(tmp_var);
-			dst_item->setSrcEx(da, si, tmp_var_ex);
+		if (src_ex->isLiteral) {
+			dst_item->setSrcEx(da, si, src_ex);
 
-		} else
-			BOOST_ASSERT(false);
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				PlnVariable* var = dst_ex->values[0].inf.var;
+				BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
+				if (si.get_lifetime(var) == VLT_FREED) {
+					PlnCompileError err(E_CantCopyFreedVar, var->name);
+					err.loc = dst_ex->loc;
+					throw err;
+				}
+				var_dp = da.getSeparatedDp(var->place);
+				src_ex->data_places.push_back(var_dp);
 
-		src_ex->data_places.push_back(var_dp);
+			} else if (dst_ex->type == ET_ARRAYITEM) {
+				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
+				alloc_ex = tmp_var->var_type->allocator->getAllocEx();
+				alloc_ex->data_places.push_back(tmp_var->place);
+				alloc_ex->finish(da, si);
+				da.popSrc(tmp_var->place);
+				var_dp = tmp_var->place;
+				free_ex = PlnFreer::getFreeEx(tmp_var);
+				tmp_var_ex = new PlnExpression(tmp_var);
+				dst_item->setSrcEx(da, si, tmp_var_ex);
+				src_ex->data_places.push_back(var_dp);
+
+			} else
+				BOOST_ASSERT(false);
+		}
+
 		src_ex->finishS(da, si);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
+		if (src_ex->isLiteral) {
+			dst_item->finish(da,si);
+			return;
+		}
 		if (!dst_item) dst_ex->finish(da, si);
 
-		src_ex->finishD(da, si);
+		// src_ex->finishD(da, si);
 		if (dst_item) {
 			tmp_var_ex->finish(da,si);
 			dst_item->finish(da,si);
@@ -102,6 +118,10 @@ public:
 	}
 
 	void genD(PlnGenerator& g) override {
+		if (src_ex->isLiteral) {
+			dst_item->gen(g);
+			return;
+		}
 		if (!dst_item) dst_ex->gen(g);
 		src_ex->genD(g);
 		if (dst_item) {

@@ -12,7 +12,7 @@ public:
 	vector<PlnDataPlace*> arr_item_dps;
 	bool isLiteral;
 	
-	PlnArrayValue(vector<PlnExpression*> &exps);
+	PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral);
 	PlnArrayValue(const PlnArrayValue& src);
 
 	PlnExpression* adjustTypes(const vector<PlnType*> &types) override;

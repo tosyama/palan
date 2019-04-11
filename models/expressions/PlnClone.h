@@ -12,6 +12,7 @@ class PlnClone : public PlnExpression
 
 public:
 	bool keep_var;
+	bool directAssign;
 	PlnVariable* var;
 
 	PlnClone(PlnDataAllocator& da, PlnExpression *src_ex, PlnType* var_type, bool keep_var);
