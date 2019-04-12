@@ -59,7 +59,6 @@ enum PlnValType {
 	VL_LIT_FLO8,
 	VL_LIT_STR,
 	VL_LIT_ARRAY,
-	VL_LIT_ARRAY2,
 	VL_VAR,
 	VL_WORK
 };
@@ -84,7 +83,6 @@ public:
 		double floValue;
 		string *strValue;
 		PlnArrayValue *arrValue;
-		PlnArrayLiteral *arrValue2;
 		PlnVariable *var;
 		PlnType *wk_type;
 	} inf;

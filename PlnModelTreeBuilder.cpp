@@ -18,7 +18,6 @@
 #include "models/PlnStatement.h"
 #include "models/PlnExpression.h"
 #include "models/PlnVariable.h"
-#include "models/PlnObjectLiteral.h"
 #include "models/PlnLoopStatement.h"
 #include "models/PlnConditionalBranch.h"
 #include "models/expressions/PlnAssignment.h"
@@ -410,9 +409,7 @@ static PlnType* getDefaultType(PlnValue &val, PlnModule *module)
 	} else if (val.type == VL_LIT_STR)
 		return PlnType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
-			return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type)->getDefaultType(module);
-	else if (val.type == VL_LIT_ARRAY2)
-		return val.inf.arrValue2->getDefaultType(module);
+		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type)->getDefaultType(module);
 	else
 		BOOST_ASSERT(false);
 }
@@ -715,8 +712,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			e->values[0].asgn_type = ASGN_MOVE;
 			// ??
 			if (e->type == ET_VALUE) {
-				if (e->values[0].type == VL_LIT_ARRAY ||
-						e->values[0].type == VL_LIT_ARRAY2) {
+				if (e->values[0].type == VL_LIT_ARRAY) {
 					PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
 					err.loc = e->loc;
 					throw err;
@@ -854,7 +850,7 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 		if (exp->type == ET_VALUE) {
 			int type = exp->values[0].type;
 			if (type != VL_LIT_INT8 && type != VL_LIT_UINT8 && type != VL_LIT_FLO8
-				&& type != VL_LIT_STR && type != VL_LIT_ARRAY && type != VL_LIT_ARRAY2) {
+				&& type != VL_LIT_STR && type != VL_LIT_ARRAY) {
 				isLiteral = false;
 			}
 		} else
@@ -862,8 +858,6 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 	}
 
 	if (isLiteral) {
-//		auto arr_lit = new PlnArrayLiteral(exps); 
-//		return new PlnExpression(arr_lit);
 		auto arr_val = new PlnArrayValue(exps, true); 
 		auto exp = new PlnExpression(arr_val);
 		setLoc(exp->values[0].inf.arrValue, arrval);

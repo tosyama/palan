@@ -8,26 +8,11 @@
 #include "PlnArrayValue.h"
 #include "../types/PlnArrayValueType.h"
 #include "../types/PlnFixedArrayType.h"
-#include "../PlnObjectLiteral.h"
 #include "../../PlnConstants.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
-
-static PlnArrayValue* convertArrLit2Value(PlnArrayLiteral* arr_lit)
-{
-	for (auto& exp: arr_lit->exps) {
-		if (exp->values[0].type == VL_LIT_ARRAY)
-			BOOST_ASSERT(false);
-		if (exp->values[0].type == VL_LIT_ARRAY2) {
-			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue2);
-			delete exp;
-			exp = newexp;
-		}
-	}
-	return new PlnArrayValue(arr_lit->exps, true);
-}
 
 PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral)
@@ -43,11 +28,6 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 		if (exp->values[0].type == VL_LIT_ARRAY) {
 			auto newexp = exp->values[0].inf.arrValue;
 			exp->values[0].inf.arrValue = NULL;
-			delete exp;
-			exp = newexp;
-		}
-		if (exp->values[0].type == VL_LIT_ARRAY2) {
-			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue2);
 			delete exp;
 			exp = newexp;
 		}

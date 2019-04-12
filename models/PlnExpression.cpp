@@ -12,7 +12,6 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnObjectLiteral.h"
 #include "expressions/PlnArrayValue.h"
 #include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
@@ -43,11 +42,6 @@ PlnValue::PlnValue(const PlnValue &src)
 		asgn_type = src.asgn_type;
 		inf.arrValue = new PlnArrayValue(*src.inf.arrValue);
 
-	} else if (src.type == VL_LIT_ARRAY2) {
-		type = src.type;
-		asgn_type = src.asgn_type;
-		inf.arrValue2 = new PlnArrayLiteral(*src.inf.arrValue2);
-
 	} else {
 		*this = src;
 	}
@@ -77,12 +71,6 @@ PlnValue::PlnValue(PlnArrayValue *arr)
 	inf.arrValue = arr;
 }
 
-PlnValue::PlnValue(PlnArrayLiteral *arr)
-	: type(VL_LIT_ARRAY2), asgn_type(NO_ASGN)
-{
-	inf.arrValue2 = arr;
-}
-
 PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR), asgn_type(NO_ASGN)
 {
@@ -95,9 +83,6 @@ PlnValue::~PlnValue()
 		delete inf.strValue;
 	else if (type == VL_LIT_ARRAY)
 		delete inf.arrValue;
-	else if (type == VL_LIT_ARRAY2)
-		delete inf.arrValue2;
-
 }
 
 PlnType* PlnValue::getType()
@@ -113,8 +98,6 @@ PlnType* PlnValue::getType()
 			return PlnType::getReadOnlyCStr();
 		case VL_LIT_ARRAY:
 			return inf.arrValue->values[0].getType();
-		case VL_LIT_ARRAY2:
-			return inf.arrValue2->getType();
 		case VL_VAR:
 			return inf.var->var_type;
 		case VL_WORK:
@@ -144,9 +127,6 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 
 		case VL_LIT_ARRAY:
 			BOOST_ASSERT(false);
-
-		case VL_LIT_ARRAY2:
-			return inf.arrValue2->getDataPlace(da);
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;
@@ -185,14 +165,6 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 		if (values[0].type == VL_LIT_ARRAY) {
 			try {
 				values[0].inf.arrValue->adjustTypes(types);
-			} catch (PlnCompileError& err) {
-				err.loc = loc;
-				throw err;
-			}
-		}
-		if (values[0].type == VL_LIT_ARRAY2) {
-			try {
-				values[0].inf.arrValue2->adjustTypes(types);
 			} catch (PlnCompileError& err) {
 				err.loc = loc;
 				throw err;

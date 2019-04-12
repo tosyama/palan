@@ -117,7 +117,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 					clone = new PlnClone(da, v.inf.arrValue, f->parameters[i]->var_type, false);
 					a = v.inf.arrValue;
 
-				} else if (v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_ARRAY || v.type == VL_LIT_ARRAY2) {
+				} else if (v.type == VL_VAR || v.type == VL_WORK) {
 					clone = new PlnClone(da, a, f->parameters[i]->var_type, false);
 
 				}

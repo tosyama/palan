@@ -60,10 +60,6 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 			// return new PlnAssignObjectRefItem(ex);
 		}
 
-		if (v.type == VL_LIT_ARRAY2) {
-			return new PlnAssignObjectRefItem(ex);
-		}
-
 		if (v.type == VL_VAR) {
 			int dt = ex->values[0].getType()->data_type;
 			if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {

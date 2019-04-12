@@ -111,7 +111,7 @@ void PlnBlock::declareConst(const string& name, PlnExpression *ex)
 	if (ex->type == ET_VALUE) {
 		int vtype = ex->values[0].type;
 		if (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8 || vtype == VL_LIT_FLO8
-			|| vtype == VL_LIT_STR || vtype == VL_LIT_ARRAY || vtype == VL_LIT_ARRAY2)
+			|| vtype == VL_LIT_STR || vtype == VL_LIT_ARRAY)
 			isConst = true;
 	}
 
