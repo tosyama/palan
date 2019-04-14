@@ -93,7 +93,7 @@ public:
 				BOOST_ASSERT(false);
 		}
 
-		src_ex->finishS(da, si);
+		src_ex->finish(da, si);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -118,7 +118,7 @@ public:
 			alloc_ex->gen(g);
 			g.genLoadDp(tmp_var->place);
 		}
-		src_ex->genS(g);
+		src_ex->gen(g);
 	}
 
 	void genD(PlnGenerator& g) override {
@@ -127,7 +127,7 @@ public:
 			return;
 		}
 		if (!dst_item) dst_ex->gen(g);
-		src_ex->genD(g);
+
 		if (dst_item) {
 			tmp_var_ex->gen(g);
 			dst_item->gen(g);

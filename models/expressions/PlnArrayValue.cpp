@@ -51,12 +51,6 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 				case VL_LIT_FLO8:
 					new_exp = new PlnExpression(v.inf.floValue);
 					break;
-				case VL_LIT_ARRAY:
-					{
-						PlnArrayValue *new_arr_val = new PlnArrayValue(*v.inf.arrValue);
-						new_exp = new PlnExpression(PlnValue(new_arr_val));
-						break;
-					}
 				default:
 					BOOST_ASSERT(false);
 			}
@@ -211,12 +205,6 @@ static void pushDp2ArrayVal(PlnFixedArrayType* arr_type, int depth,
 	}
 }
 
-void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
-{
-	finishS(da, si);
-	finishD(da, si);	
-}
-
 template<typename T>
 static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 {
@@ -240,7 +228,7 @@ static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 	}
 }
 
-void PlnArrayValue::finishS(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	// Assign each element
 	if (data_places.size()) {
@@ -287,17 +275,7 @@ void PlnArrayValue::finishS(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
-void PlnArrayValue::finishD(PlnDataAllocator& da, PlnScopeInfo& si)
-{
-}
-
 void PlnArrayValue::gen(PlnGenerator& g)
-{
-	genS(g);
-	genD(g);
-}
-
-void PlnArrayValue::genS(PlnGenerator& g)
 {
 	for (auto exp: item_exps) {
 		exp->gen(g);
@@ -306,6 +284,3 @@ void PlnArrayValue::genS(PlnGenerator& g)
 	}
 }
 
-void PlnArrayValue::genD(PlnGenerator& g)
-{
-}

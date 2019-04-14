@@ -19,12 +19,6 @@ public:
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 
-	void directAssignTo(PlnDataPlace* dst_var_dp);
-	void finishS(PlnDataAllocator& da, PlnScopeInfo& si);
-	void finishD(PlnDataAllocator& da, PlnScopeInfo& si);
-	void genS(PlnGenerator& g);
-	void genD(PlnGenerator& g);
-
 	/// return true - items is aixed array, false - not fixed array
 	/// sizes - Detected array sizes. Note added 0 last. [2,3] is [2,3,0]
 	/// item_type - Detected array element type. 
