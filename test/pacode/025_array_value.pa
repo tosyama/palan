@@ -69,6 +69,12 @@ int64[3] b1, b2;
 
 printf("%d %d %d %d", a1[0], a2[1], b1[0], b2[2]);
 
+i = 2;
+int16[4][2,3] arr3;
+[i,2,(1->i)][4,5,6] -> arr3[i];
+
+printf(" %d %d %d", arr3[1][0,0], arr3[1][0,2], arr3[1][1,2]);
+
 func prnt(int64[3] a)
 {
 	printf("%d %d,", a[0],a[2]);

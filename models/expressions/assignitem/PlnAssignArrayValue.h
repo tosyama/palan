@@ -58,18 +58,22 @@ public:
 			throw err;
 		}
 
+		if (dst_ex->type == ET_VALUE) {
+			PlnVariable* var = dst_ex->values[0].inf.var;
+			BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
+			if (si.get_lifetime(var) == VLT_FREED) {
+				PlnCompileError err(E_CantCopyFreedVar, var->name);
+				err.loc = dst_ex->loc;
+				throw err;
+			}
+		}
+
 		if (src_ex->isLiteral) {
 			dst_item->setSrcEx(da, si, src_ex);
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
 				PlnVariable* var = dst_ex->values[0].inf.var;
-				BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
-				if (si.get_lifetime(var) == VLT_FREED) {
-					PlnCompileError err(E_CantCopyFreedVar, var->name);
-					err.loc = dst_ex->loc;
-					throw err;
-				}
 				var_dp = da.getSeparatedDp(var->place);
 				src_ex->data_places.push_back(var_dp);
 
