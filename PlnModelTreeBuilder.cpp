@@ -18,7 +18,6 @@
 #include "models/PlnStatement.h"
 #include "models/PlnExpression.h"
 #include "models/PlnVariable.h"
-#include "models/PlnObjectLiteral.h"
 #include "models/PlnLoopStatement.h"
 #include "models/PlnConditionalBranch.h"
 #include "models/expressions/PlnAssignment.h"
@@ -410,7 +409,7 @@ static PlnType* getDefaultType(PlnValue &val, PlnModule *module)
 	} else if (val.type == VL_LIT_STR)
 		return PlnType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
-		return val.inf.arrValue->getDefaultType(module);
+		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type)->getDefaultType(module);
 	else
 		BOOST_ASSERT(false);
 }
@@ -859,11 +858,12 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 	}
 
 	if (isLiteral) {
-		auto arr_lit = new PlnArrayLiteral(exps); 
-		return new PlnExpression(arr_lit);
-
+		auto arr_val = new PlnArrayValue(exps, true); 
+		auto exp = new PlnExpression(arr_val);
+		setLoc(exp->values[0].inf.arrValue, arrval);
+		return exp;
 	} else { // not literal
-		return new PlnArrayValue(exps);
+		return new PlnArrayValue(exps, false);
 	}
 }
 

@@ -27,8 +27,6 @@ enum PlnErrCode {
 	E_DuplicateConstName,	// const name
 	E_CantUseOperatorHere,	// var name
 	E_CantUseIndexHere, // var name
-	E_CantUseDynamicValue, // sentence
-	E_AllowedOnlyInteger,	// none
 	E_AmbiguousVarType,	// var name
 	E_IncompatibleTypeInitVar, // var name
 	E_UndefinedConst, // const name

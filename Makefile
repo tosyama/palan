@@ -7,7 +7,6 @@ SRCS=palan.cpp \
 	models/PlnType.cpp models/PlnArray.cpp models/PlnGeneralObject.cpp \
 	models/PlnLoopStatement.cpp \
 	models/PlnConditionalBranch.cpp \
-	models/PlnObjectLiteral.cpp \
 	models/types/PlnFixedArrayType.cpp \
 	models/types/PlnArrayValueType.cpp \
 	models/expressions/PlnFunctionCall.cpp \

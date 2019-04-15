@@ -10,8 +10,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "PlnClone.h"
-
-bool MIG = false;
+#include "PlnArrayValue.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_type, bool keep_var)
 	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
@@ -20,7 +19,9 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_typ
 	alloc_ex = var_type->allocator->getAllocEx();
 	alloc_ex->data_places.push_back(var->place);
 
-	if (src_ex->type != ET_ARRAYVALUE) {
+	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->isLiteral);
+ 
+	if (!directAssign) {
 		copy_ex = var_type->copyer->getCopyEx();
 		src_ex->data_places.push_back(copy_ex->srcDp(da));
 		copy_dst_dp = copy_ex->dstDp(da);
@@ -41,7 +42,7 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	alloc_ex->finish(da, si);
 	da.popSrc(var->place);
 
-	if (src_ex->type == ET_ARRAYVALUE) {
+	if (directAssign) {
 		src_ex->data_places.push_back(var->place);
 		src_ex->finish(da, si);
 
@@ -65,7 +66,7 @@ void PlnClone::gen(PlnGenerator& g)
 {
 	alloc_ex->gen(g);
 	g.genLoadDp(var->place);
-	if (src_ex->type == ET_ARRAYVALUE) {
+	if (directAssign) {
 		src_ex->gen(g);
 
 	} else {

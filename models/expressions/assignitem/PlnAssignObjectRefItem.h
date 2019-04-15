@@ -16,11 +16,9 @@ class PlnAssignObjectRefItem : public PlnAssignItem
 public:
 	PlnAssignObjectRefItem(PlnExpression* ex)
 			: src_ex(ex), src_save(NULL), dst_item(NULL) {
-		if (ex->values[0].type == VL_VAR) {
-			BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
-			BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
-		} else
-			BOOST_ASSERT(ex->values[0].type == VL_LIT_ARRAY);
+		BOOST_ASSERT(ex->values[0].type == VL_VAR);
+		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
 	}
 
 	~PlnAssignObjectRefItem() {
@@ -54,11 +52,6 @@ public:
 			src_ex->finish(da, si);
 		}
 		if (assin_type == ASGN_MOVE) {
-			if (src_ex->values[0].type == VL_LIT_ARRAY) {
-				PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
-				err.loc = src_ex->loc;
-				throw err;
-			}
 			// Mark as freed variable.
 			auto var = src_ex->values[0].inf.var;
 			if (!si.exists_current(var))

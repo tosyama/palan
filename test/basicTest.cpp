@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "121333");
+	REQUIRE(exec(testcode) == "2");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -181,7 +181,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"113 1166 1112 1.1 22.2 23.0 13\n"
 								"1423 162311 113142\n"
 								"11 13,11 13,22.2,11 11,11.2,\n"
-								"11 12 13 4");
+								"11 12 13 4 2 1 6");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -266,8 +266,8 @@ TEST_CASE("Compile error test", "[basic]")
 	// testcode = "525_notarrlit_err";
 	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
 
-	testcode = "526_arrlit_noint_err";
-	REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
+	// testcode = "526_arrlit_noint_err";
+	// REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
 
 	testcode = "531_func_retval_err";
 	REQUIRE(build(testcode) == "0:4-4 Variable name 'b' already defined.");
@@ -328,6 +328,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "557_unsupported_err2";
 	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported type for variable.");
+
+	testcode = "566_copyfreevar_err4";
+	REQUIRE(build(testcode) == "finish:0:4-4 Can not copy to freed variable 'arr1'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

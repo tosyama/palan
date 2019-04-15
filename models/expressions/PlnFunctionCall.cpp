@@ -19,6 +19,7 @@
 #include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
 #include "PlnClone.h"
+#include "PlnArrayValue.h"
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
@@ -112,7 +113,11 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				if (a->type == ET_ARRAYVALUE) {
 					a = new PlnClone(da, a, f->parameters[i]->var_type, false);
 
-				} else if (v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_ARRAY) {
+				} else if (v.type == VL_LIT_ARRAY) {
+					clone = new PlnClone(da, v.inf.arrValue, f->parameters[i]->var_type, false);
+					a = v.inf.arrValue;
+
+				} else if (v.type == VL_VAR || v.type == VL_WORK) {
 					clone = new PlnClone(da, a, f->parameters[i]->var_type, false);
 
 				}

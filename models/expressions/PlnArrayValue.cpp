@@ -8,41 +8,66 @@
 #include "PlnArrayValue.h"
 #include "../types/PlnArrayValueType.h"
 #include "../types/PlnFixedArrayType.h"
-#include "../PlnObjectLiteral.h"
 #include "../../PlnConstants.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
 
-static PlnArrayValue* convertArrLit2Value(PlnArrayLiteral* arr_lit)
-{
-	for (auto& exp: arr_lit->exps) {
-		if (exp->values[0].type == VL_LIT_ARRAY) {
-			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue);
-			delete exp;
-			exp = newexp;
-		}
-	}
-	return new PlnArrayValue(arr_lit->exps);
-}
-
-PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps)
-	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps))
+PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
+	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral)
 {
 	PlnValue aval;
 	aval.type = VL_WORK;
 	aval.inf.wk_type = new PlnArrayValueType(this);
 	values.push_back(aval);
+	isLiteral = true;
 
 	// Exchange array lit -> array value
 	for (auto& exp: item_exps) {
 		if (exp->values[0].type == VL_LIT_ARRAY) {
-			auto newexp = convertArrLit2Value(exp->values[0].inf.arrValue);
+			auto newexp = exp->values[0].inf.arrValue;
+			exp->values[0].inf.arrValue = NULL;
 			delete exp;
 			exp = newexp;
 		}
 	}
+}
+
+PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
+	: PlnExpression(ET_ARRAYVALUE)
+{
+	for (auto& exp: src.item_exps) {
+		PlnExpression *new_exp;
+		if (exp->type == ET_VALUE) {
+			PlnValue v = exp->values[0];
+			switch (v.type) {
+				case VL_LIT_INT8:
+					new_exp = new PlnExpression(v.inf.intValue);
+					break;
+				case VL_LIT_UINT8:
+					new_exp = new PlnExpression(v.inf.uintValue);
+					break;
+				case VL_LIT_FLO8:
+					new_exp = new PlnExpression(v.inf.floValue);
+					break;
+				default:
+					BOOST_ASSERT(false);
+			}
+
+		} else if (exp->type == ET_ARRAYVALUE) {
+			new_exp = new PlnArrayValue(*static_cast<PlnArrayValue*>(exp));
+
+		} else
+			BOOST_ASSERT(false);
+		item_exps.push_back(new_exp);
+	}
+
+	PlnValue aval;
+	aval.type = VL_WORK;
+	aval.inf.wk_type = new PlnArrayValueType(this);
+	isLiteral = src.isLiteral;
+	values.push_back(aval);
 }
 
 /// return true - items is aixed array, false - not fixed array
@@ -102,7 +127,11 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 		err.loc = loc;
 		throw err;
 	}
-	
+	PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
+	if (atype->item_type->data_type == DT_OBJECT_REF) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		throw err;
+	}
 
 	vector<int> fixarr_sizes;
 	int val_item_type;
@@ -138,7 +167,6 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 	}
 
 	delete values[0].inf.wk_type;
-
 	values[0].inf.wk_type = types[0];
 
 	return this;
@@ -177,49 +205,82 @@ static void pushDp2ArrayVal(PlnFixedArrayType* arr_type, int depth,
 	}
 }
 
-void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+template<typename T>
+static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 {
-	finishS(da, si);
-	finishD(da, si);	
+	for (auto& exp: arr_val->item_exps) {
+		if (exp->type == ET_ARRAYVALUE) {
+			addAllNumerics(static_cast<PlnArrayValue*>(exp), num_arr);
+		} else if (exp->type == ET_VALUE) {
+			PlnValue& val = exp->values[0];
+			switch (val.type) {
+				case VL_LIT_INT8:
+					num_arr.push_back(val.inf.intValue); break;
+				case VL_LIT_UINT8:
+					num_arr.push_back(val.inf.uintValue); break;
+				case VL_LIT_FLO8:
+					num_arr.push_back(val.inf.floValue); break;
+				default:
+					BOOST_ASSERT(false);
+			}
+		} else
+			BOOST_ASSERT(false);
+	}
 }
 
-void PlnArrayValue::finishS(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	// Assign each element
 	if (data_places.size()) {
 		BOOST_ASSERT(data_places.size() == 1);
-	 	auto var_dp = data_places[0];
+		BOOST_ASSERT(values[0].inf.wk_type->type != TP_ARRAY_VALUE);
+
+		PlnType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type)->item_type;
+		int ele_type = item_type->data_type;
+		int ele_size = item_type->size;
+
+		// Copy at once.
+		if (isLiteral) {
+			PlnDataPlace* dp;
+			if (ele_type == DT_SINT || ele_type == DT_UINT) {
+				vector<int64_t> int_arr;
+				addAllNumerics(this, int_arr);
+				dp = da.getROIntArrayDp(int_arr, ele_size);	
+			} else if (ele_type == DT_FLOAT) {
+				vector<double> flo_arr;
+				addAllNumerics(this, flo_arr);
+				dp = da.getROFloArrayDp(flo_arr, ele_size);	
+			} else {
+				BOOST_ASSERT(false);
+			}
+
+			da.pushSrc(data_places[0], dp);
+			return;
+		} 
+
+		// Assign each item.
+		PlnDataPlace *var_dp = data_places[0];
 		int var_index = 0;
 		auto arr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
 
 		pushDp2ArrayVal(arr_type, 0, var_dp, var_index, this, da, si);
 	}
 
-	for (auto exp: item_exps)
+	for (auto exp: item_exps) {
 		exp->finish(da, si);
-}
-
-void PlnArrayValue::finishD(PlnDataAllocator& da, PlnScopeInfo& si)
-{
-	for (auto item_dp: arr_item_dps) {
-		da.popSrc(item_dp);
-		da.releaseDp(item_dp);
+		if (exp->data_places.size()) {
+			da.popSrc(exp->data_places.back());
+			da.releaseDp(exp->data_places.back());
+		}
 	}
 }
 
 void PlnArrayValue::gen(PlnGenerator& g)
 {
-	genS(g);
-	genD(g);
-}
-
-void PlnArrayValue::genS(PlnGenerator& g)
-{
-	for (auto exp: item_exps)
+	for (auto exp: item_exps) {
 		exp->gen(g);
+		if (exp->data_places.size())
+			g.genLoadDp(exp->data_places.back());
+	}
 }
 
-void PlnArrayValue::genD(PlnGenerator& g)
-{
-	for (auto item_dp: arr_item_dps)
-		g.genLoadDp(item_dp);
-}

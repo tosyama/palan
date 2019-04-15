@@ -12,7 +12,7 @@
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
-#include "PlnObjectLiteral.h"
+#include "expressions/PlnArrayValue.h"
 #include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
@@ -36,11 +36,11 @@ PlnValue::PlnValue(const PlnValue &src)
 		type = src.type;
 		asgn_type = src.asgn_type;
 		inf.strValue = new string(*src.inf.strValue);
-
+	
 	} else if (src.type == VL_LIT_ARRAY) {
 		type = src.type;
 		asgn_type = src.asgn_type;
-		inf.arrValue = new PlnArrayLiteral(*src.inf.arrValue);
+		inf.arrValue = new PlnArrayValue(*src.inf.arrValue);
 
 	} else {
 		*this = src;
@@ -65,7 +65,7 @@ PlnValue::PlnValue(string strValue)
 	inf.strValue = new string(strValue);
 }
 
-PlnValue::PlnValue(PlnArrayLiteral *arr)
+PlnValue::PlnValue(PlnArrayValue *arr)
 	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN)
 {
 	inf.arrValue = arr;
@@ -83,7 +83,6 @@ PlnValue::~PlnValue()
 		delete inf.strValue;
 	else if (type == VL_LIT_ARRAY)
 		delete inf.arrValue;
-
 }
 
 PlnType* PlnValue::getType()
@@ -98,7 +97,7 @@ PlnType* PlnValue::getType()
 		case VL_LIT_STR:
 			return PlnType::getReadOnlyCStr();
 		case VL_LIT_ARRAY:
-			return inf.arrValue->getType();
+			return inf.arrValue->values[0].getType();
 		case VL_VAR:
 			return inf.var->var_type;
 		case VL_WORK:
@@ -127,7 +126,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getROStrArrayDp(*inf.strValue);
 
 		case VL_LIT_ARRAY:
-			return inf.arrValue->getDataPlace(da);
+			BOOST_ASSERT(false);
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;

@@ -36,3 +36,9 @@ for i:5>>1 { print(i.str); }
 int arr[10] = (1..10);
 for i: arr { print(i.str); }
 
+{:s
+	for i:0..9 {
+		s::e = i; // same as int64 e; for { i->e;
+	}
+	10->e;
+}

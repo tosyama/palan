@@ -448,6 +448,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 {
 	if (dp->type == DP_SUBDP)
 		dp = dp->data.originalDp;
+
 	switch (dp->type) {
 		case DP_REG:
 		{
