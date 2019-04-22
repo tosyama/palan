@@ -21,6 +21,7 @@ public:
 	}
 
 	~PlnAssignArrayValue() {
+		// TODO: delete some.
 	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {

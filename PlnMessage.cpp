@@ -50,10 +50,6 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Can not use the operator for '%1%'."; break;
 		case E_CantUseIndexHere:
 			f = "Can not use the index operator for '%1%'."; break;
-//		case E_CantUseDynamicValue:
-//			f = "Can not use dynamic expression for '%1%'."; break;
-//		case E_AllowedOnlyInteger:
-//			f = "Only allowed to use integer here."; break;
 		case E_AmbiguousVarType:
 			f = "Type of variable '%1%' is ambiguous."; break;
 		case E_IncompatibleTypeInitVar:

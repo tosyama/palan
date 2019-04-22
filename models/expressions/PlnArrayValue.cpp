@@ -70,10 +70,6 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 	values.push_back(aval);
 }
 
-/// return true - items is aixed array, false - not fixed array
-/// sizes - Detected array sizes. Note added 0 last. [2,3] is [2,3,0]
-/// item_type - Detected array element type. 
-/// depth - for internal process (recursive call)
 bool PlnArrayValue::isFixedArray(const vector<PlnExpression*> &items, vector<int> &fixarr_sizes, int &item_type, int depth)
 {
 	if (depth >= fixarr_sizes.size()) {	// this is first element.
@@ -118,6 +114,33 @@ bool PlnArrayValue::isFixedArray(const vector<PlnExpression*> &items, vector<int
 	return true;
 }
 
+static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayType* atype, int depth=0)
+{
+	BOOST_ASSERT(depth < atype->sizes.size());
+	if (arr_val->item_exps.size() != atype->sizes[depth]) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->name);
+		err.loc = arr_val->loc;
+		throw err;
+	}
+
+	if (depth == atype->sizes.size()-1) { // check item
+		vector<PlnType*> types = { atype->item_type };
+		for (auto& exp: arr_val->item_exps) {
+			exp = exp->adjustTypes(types);
+		}
+
+	} else {
+		for (auto exp: arr_val->item_exps) {
+			if (exp->type != ET_ARRAYVALUE) {
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->name);
+				err.loc = arr_val->loc;
+				throw err;
+			}
+			adjustFixedArrayType(static_cast<PlnArrayValue*>(exp),atype,depth+1);
+		}
+	}
+}
+
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
@@ -127,47 +150,16 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 		err.loc = loc;
 		throw err;
 	}
+
 	PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
-	if (atype->item_type->data_type == DT_OBJECT_REF) {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
-		throw err;
-	}
 
-	vector<int> fixarr_sizes;
-	int val_item_type;
-	if (PlnArrayValue::isFixedArray(item_exps, fixarr_sizes, val_item_type)) {
-		BOOST_ASSERT(fixarr_sizes.back() == 0);
-		fixarr_sizes.pop_back();
-		if (type->type == TP_FIXED_ARRAY) {
-			// check size
-			vector<int> target_sizes = static_cast<PlnFixedArrayType*>(type)->sizes;
-			bool isCompatible = true;
-			if (target_sizes.size() == fixarr_sizes.size()) {
-				for (int i=0; i<target_sizes.size(); i++) {
-					if (target_sizes[i] != fixarr_sizes[i]) {
-						isCompatible = false;
-						break;
-					}
-				}
-
-			} else
-				isCompatible = false;
-
-			if (!isCompatible) {
-				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
-				err.loc = loc;
-				throw err;
-			}
-		}
-
-	} else {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
-		err.loc = loc;
-		throw err;
-	}
+	adjustFixedArrayType(this, atype);
 
 	delete values[0].inf.wk_type;
 	values[0].inf.wk_type = types[0];
+	if (atype->item_type->data_type == DT_OBJECT_REF) {
+		isLiteral = false;
+	}
 
 	return this;
 }
@@ -193,7 +185,6 @@ static void pushDp2ArrayVal(PlnFixedArrayType* arr_type, int depth,
 			item_dp->comment = &cmt;
 			exp->data_places.push_back(item_dp);
 
-			arr_val->arr_item_dps.push_back(item_dp);
 			var_index++;
 		}
 
@@ -238,7 +229,7 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		PlnType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type)->item_type;
 		int ele_type = item_type->data_type;
 		int ele_size = item_type->size;
-
+		
 		// Copy at once.
 		if (isLiteral) {
 			PlnDataPlace* dp;

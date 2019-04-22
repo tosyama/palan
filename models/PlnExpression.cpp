@@ -169,6 +169,13 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 				err.loc = loc;
 				throw err;
 			}
+		} else {
+			PlnType *vtype = values[0].getType();
+			if (types[0]->canConvFrom(vtype) == TC_CANT_CONV) {
+				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name, types[0]->name);
+				err.loc = loc;
+				throw err;
+			}
 		}
 	}
 	return this;

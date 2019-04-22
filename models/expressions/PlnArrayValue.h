@@ -9,7 +9,6 @@ class PlnArrayValue : public PlnExpression
 {
 public:
 	vector<PlnExpression *> item_exps;
-	vector<PlnDataPlace*> arr_item_dps;
 	bool isLiteral;
 	
 	PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral);

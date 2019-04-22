@@ -300,7 +300,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");
 
 	testcode = "541_varinit_type_err3";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64[3]' to 'int32[3]'.");
 
 	testcode = "542_asgnLRnum_err2";
 	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
@@ -349,7 +349,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 
 	// array literal
 	testcode = "527_arrlit_type_err";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2][3]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64' to 'int64[3]'.");
 
 	testcode = "528_arrlit_type_err2";
 	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
@@ -380,7 +380,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "560_arrval_type_err3";
-	REQUIRE(build(testcode) == "0:3-4 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "561_arrval_type_err4";
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[3]'.");
