@@ -19,7 +19,7 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_typ
 	alloc_ex = var_type->allocator->getAllocEx();
 	alloc_ex->data_places.push_back(var->place);
 
-	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->isLiteral);
+	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->doCopyFromStaticBuffer);
  
 	if (!directAssign) {
 		copy_ex = var_type->copyer->getCopyEx();
@@ -36,17 +36,19 @@ PlnClone::~PlnClone()
 	delete free_ex;
 }
 
+void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	alloc_ex->finish(da, si);
+	da.popSrc(var->place);
+	if (directAssign) {
+		src_ex->data_places.push_back(var->place);
+	}
+}
+
 void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() == 1);
-	alloc_ex->finish(da, si);
-	da.popSrc(var->place);
-
-	if (directAssign) {
-		src_ex->data_places.push_back(var->place);
-		src_ex->finish(da, si);
-
-	} else {
+	if (!directAssign) {
 		da.pushSrc(copy_dst_dp, var->place, false);
 		copy_ex->finish(da, si);
 	}
@@ -62,14 +64,15 @@ void PlnClone::finishFree(PlnDataAllocator& da, PlnScopeInfo& si)
 	da.releaseDp(var->place);
 }
 
-void PlnClone::gen(PlnGenerator& g)
+void PlnClone::genAlloc(PlnGenerator& g)
 {
 	alloc_ex->gen(g);
 	g.genLoadDp(var->place);
-	if (directAssign) {
-		src_ex->gen(g);
+}
 
-	} else {
+void PlnClone::gen(PlnGenerator& g)
+{
+	if (!directAssign) {
 		g.genSaveSrc(copy_dst_dp);
 		copy_ex->gen(g);
 	}

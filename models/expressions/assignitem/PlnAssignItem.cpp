@@ -20,6 +20,7 @@
 #include "../PlnMemCopy.h"
 #include "../PlnClone.h"
 #include "../PlnArrayValue.h"
+#include "../PlnArrayItem.h"
 #include "../../types/PlnFixedArrayType.h"
 #include "PlnAssignItem.h"
 
@@ -158,7 +159,11 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 				di = new PlnDstCopyObjectItem(ex);
 			} else if (at == ASGN_COPY_REF) {
 				di = new PlnDstPrimitiveItem(ex);
+			} else {
+				BOOST_ASSERT(false);
 			}
+		} else {
+			BOOST_ASSERT(false);
 		}
 	}
 

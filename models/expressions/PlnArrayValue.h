@@ -10,6 +10,7 @@ class PlnArrayValue : public PlnExpression
 public:
 	vector<PlnExpression *> item_exps;
 	bool isLiteral;
+	bool doCopyFromStaticBuffer;
 	
 	PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral);
 	PlnArrayValue(const PlnArrayValue& src);
@@ -17,6 +18,8 @@ public:
 	PlnExpression* adjustTypes(const vector<PlnType*> &types) override;
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
+
+	vector<PlnExpression*> getAllItems();
 
 	/// return true - items is aixed array, false - not fixed array
 	/// sizes - Detected array sizes. Note added 0 last. [2,3] is [2,3,0]

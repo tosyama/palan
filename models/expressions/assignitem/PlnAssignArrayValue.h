@@ -3,10 +3,15 @@
 /// @file	PlnAssignArrayValue.h
 /// @copyright	2019 YAMAGUCHI Toshinobu 
 
+static bool migrate = true;
+
 class PlnAssignArrayValue : public PlnAssignItem {
 	PlnArrayValue* src_ex;
 	PlnExpression* dst_ex;
 	PlnDataPlace* var_dp;
+
+	vector<PlnAssignItem*> assign_items;
+
 	PlnVariable* tmp_var;
 	PlnExpression* alloc_ex;
 	PlnExpression *free_ex;
@@ -28,23 +33,9 @@ public:
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].getType()->data_type == DT_OBJECT_REF);
-
 		BOOST_ASSERT(!need_save);
 
-		if (src_ex->isLiteral) {
-			dst_ex = ex;
-			dst_item = PlnDstItem::createDstItem(ex, need_save);
-
-		} else {
-			if (ex->type == ET_VALUE) {
-				dst_ex = ex;
-
-			} else {
-				BOOST_ASSERT(ex->type == ET_ARRAYITEM);
-				dst_ex = ex;
-				dst_item = PlnDstItem::createDstItem(ex, need_save);
-			}
-		}
+		dst_ex = ex;
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
@@ -69,16 +60,41 @@ public:
 			}
 		}
 
-		if (src_ex->isLiteral) {
+		if (src_ex->doCopyFromStaticBuffer) {
+			dst_item = PlnDstItem::createDstItem(dst_ex, false);
 			dst_item->setSrcEx(da, si, src_ex);
+			src_ex->finish(da, si);
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
-				PlnVariable* var = dst_ex->values[0].inf.var;
-				var_dp = da.getSeparatedDp(var->place);
-				src_ex->data_places.push_back(var_dp);
+				vector<PlnExpression*> val_items = src_ex->getAllItems();
+				vector<PlnExpression*> dst_items;
+
+				dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+				BOOST_ASSERT(val_items.size() == dst_items.size());
+
+				for (int i=0; i<val_items.size(); i++) {
+					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
+					dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					ai->addDstEx(dst_items[i], false);
+					assign_items.push_back(ai);
+				}
+
+				if (migrate) { // copy by assign
+					for (auto ai: assign_items) {
+						ai->finishS(da, si);
+					}
+				}
+
+				if (!migrate) { // copy inside of src_exp
+					PlnVariable* var = dst_ex->values[0].inf.var;
+					var_dp = da.getSeparatedDp(var->place);
+					src_ex->data_places.push_back(var_dp);
+					src_ex->finish(da, si);
+				}
 
 			} else if (dst_ex->type == ET_ARRAYITEM) {
+				dst_item = PlnDstItem::createDstItem(dst_ex, false);
 				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
 				alloc_ex = tmp_var->var_type->allocator->getAllocEx();
 				alloc_ex->data_places.push_back(tmp_var->place);
@@ -89,51 +105,81 @@ public:
 				tmp_var_ex = new PlnExpression(tmp_var);
 				dst_item->setSrcEx(da, si, tmp_var_ex);
 				src_ex->data_places.push_back(var_dp);
+				src_ex->finish(da, si);
 
 			} else
 				BOOST_ASSERT(false);
 		}
-
-		src_ex->finish(da, si);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		if (src_ex->isLiteral) {
+		if (src_ex->doCopyFromStaticBuffer) {
 			dst_item->finish(da,si);
-			return;
-		}
-		if (!dst_item) dst_ex->finish(da, si);
 
-		// src_ex->finishD(da, si);
-		if (dst_item) {
-			tmp_var_ex->finish(da,si);
-			dst_item->finish(da,si);
-		}
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				if (migrate) {
+					for (auto ai: assign_items) {
+						ai->finishD(da, si);
+					}
+				}
+				dst_ex->finish(da, si);
+				if (!migrate) da.releaseDp(var_dp);
 
-		if (free_ex) free_ex->finish(da, si);
-		da.releaseDp(var_dp);
+			} else if (dst_ex->type == ET_ARRAYITEM) {
+				tmp_var_ex->finish(da,si);
+				dst_item->finish(da,si);
+				free_ex->finish(da, si);
+				da.releaseDp(var_dp);
+			}
+
+		}
 	}
 
 	void genS(PlnGenerator& g) override {
-		if (alloc_ex) {
-			alloc_ex->gen(g);
-			g.genLoadDp(tmp_var->place);
+		if (src_ex->doCopyFromStaticBuffer) {
+			src_ex->gen(g);
+
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				if (migrate) {
+					for (auto ai: assign_items) {
+						ai->genS(g);
+					}
+				}
+				if (!migrate) {
+					src_ex->gen(g);
+				}
+
+			} else {
+				if (alloc_ex) {
+					alloc_ex->gen(g);
+					g.genLoadDp(tmp_var->place);
+				}
+				src_ex->gen(g);
+			}
 		}
-		src_ex->gen(g);
 	}
 
 	void genD(PlnGenerator& g) override {
-		if (src_ex->isLiteral) {
+		if (src_ex->doCopyFromStaticBuffer) {
 			dst_item->gen(g);
 			return;
-		}
-		if (!dst_item) dst_ex->gen(g);
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				if (migrate) {
+					for (auto ai: assign_items) {
+						ai->genD(g);
+					}
+				}
+				dst_ex->gen(g);
 
-		if (dst_item) {
-			tmp_var_ex->gen(g);
-			dst_item->gen(g);
+			} else {
+				tmp_var_ex->gen(g);
+				dst_item->gen(g);
+				free_ex->gen(g);
+			}
 		}
-		if (free_ex) free_ex->gen(g);
 	}
 };
 

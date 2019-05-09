@@ -21,7 +21,7 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 	aval.type = VL_WORK;
 	aval.inf.wk_type = new PlnArrayValueType(this);
 	values.push_back(aval);
-	isLiteral = true;
+	doCopyFromStaticBuffer = false;
 
 	// Exchange array lit -> array value
 	for (auto& exp: item_exps) {
@@ -67,6 +67,7 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 	aval.type = VL_WORK;
 	aval.inf.wk_type = new PlnArrayValueType(this);
 	isLiteral = src.isLiteral;
+	doCopyFromStaticBuffer = src.doCopyFromStaticBuffer;
 	values.push_back(aval);
 }
 
@@ -157,8 +158,8 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 
 	delete values[0].inf.wk_type;
 	values[0].inf.wk_type = types[0];
-	if (atype->item_type->data_type == DT_OBJECT_REF) {
-		isLiteral = false;
+	if (isLiteral && atype->item_type->data_type != DT_OBJECT_REF) {
+		doCopyFromStaticBuffer = true;
 	}
 
 	return this;
@@ -231,7 +232,7 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		int ele_size = item_type->size;
 		
 		// Copy at once.
-		if (isLiteral) {
+		if (doCopyFromStaticBuffer) {
 			PlnDataPlace* dp;
 			if (ele_type == DT_SINT || ele_type == DT_UINT) {
 				vector<int64_t> int_arr;
@@ -247,14 +248,15 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			da.pushSrc(data_places[0], dp);
 			return;
-		} 
+		} else { 
 
-		// Assign each item.
-		PlnDataPlace *var_dp = data_places[0];
-		int var_index = 0;
-		auto arr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
+			// Assign each item.
+			PlnDataPlace *var_dp = data_places[0];
+			int var_index = 0;
+			auto arr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
 
-		pushDp2ArrayVal(arr_type, 0, var_dp, var_index, this, da, si);
+			pushDp2ArrayVal(arr_type, 0, var_dp, var_index, this, da, si);
+		}
 	}
 
 	for (auto exp: item_exps) {
@@ -273,5 +275,32 @@ void PlnArrayValue::gen(PlnGenerator& g)
 		if (exp->data_places.size())
 			g.genLoadDp(exp->data_places.back());
 	}
+}
+
+static void pushArrayValItemExp(PlnArrayValue* arr_val, vector<int> &sizes, vector<PlnExpression*> &exps, int depth=0)
+{
+	BOOST_ASSERT(sizes.size()>depth);
+	BOOST_ASSERT(sizes[depth] == arr_val->item_exps.size());
+
+	if (depth == sizes.size()-1) {
+		exps.insert(exps.end(), arr_val->item_exps.begin(), arr_val->item_exps.end());
+
+	} else {
+		for (PlnExpression* item: arr_val->item_exps) {
+			BOOST_ASSERT(item->type == ET_ARRAYVALUE);
+			pushArrayValItemExp(static_cast<PlnArrayValue*>(item), sizes, exps, depth+1);
+		}
+
+	}
+}
+
+vector<PlnExpression*> PlnArrayValue::getAllItems()
+{
+	BOOST_ASSERT(values[0].inf.wk_type->type == TP_FIXED_ARRAY);
+	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
+	vector<PlnExpression*> items;
+	pushArrayValItemExp(this, farr_type->sizes, items);
+
+	return items;
 }
 
