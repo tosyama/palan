@@ -15,7 +15,7 @@
 #include "../../PlnException.h"
 
 PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
-	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral)
+	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral), gotExs(false)
 {
 	PlnValue aval;
 	aval.type = VL_WORK;
@@ -35,7 +35,7 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 }
 
 PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
-	: PlnExpression(ET_ARRAYVALUE)
+	: PlnExpression(ET_ARRAYVALUE), gotExs(false)
 {
 	for (auto& exp: src.item_exps) {
 		PlnExpression *new_exp;
@@ -222,6 +222,7 @@ static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 
 void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	BOOST_ASSERT(!gotExs); // temporaly
 	// Assign each element
 	if (data_places.size()) {
 		BOOST_ASSERT(data_places.size() == 1);
@@ -270,6 +271,7 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnArrayValue::gen(PlnGenerator& g)
 {
+	BOOST_ASSERT(!gotExs); // temporaly
 	for (auto exp: item_exps) {
 		exp->gen(g);
 		if (exp->data_places.size())
@@ -301,6 +303,7 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 	vector<PlnExpression*> items;
 	pushArrayValItemExp(this, farr_type->sizes, items);
 
+	gotExs = true;
 	return items;
 }
 

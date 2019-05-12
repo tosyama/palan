@@ -3,12 +3,9 @@
 /// @file	PlnAssignArrayValue.h
 /// @copyright	2019 YAMAGUCHI Toshinobu 
 
-static bool migrate = true;
-
 class PlnAssignArrayValue : public PlnAssignItem {
 	PlnArrayValue* src_ex;
 	PlnExpression* dst_ex;
-	PlnDataPlace* var_dp;
 
 	vector<PlnAssignItem*> assign_items;
 
@@ -68,9 +65,7 @@ public:
 		} else {
 			if (dst_ex->type == ET_VALUE) {
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
-				vector<PlnExpression*> dst_items;
-
-				dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
 				BOOST_ASSERT(val_items.size() == dst_items.size());
 
 				for (int i=0; i<val_items.size(); i++) {
@@ -80,32 +75,35 @@ public:
 					assign_items.push_back(ai);
 				}
 
-				if (migrate) { // copy by assign
-					for (auto ai: assign_items) {
-						ai->finishS(da, si);
-					}
-				}
-
-				if (!migrate) { // copy inside of src_exp
-					PlnVariable* var = dst_ex->values[0].inf.var;
-					var_dp = da.getSeparatedDp(var->place);
-					src_ex->data_places.push_back(var_dp);
-					src_ex->finish(da, si);
+				for (auto ai: assign_items) {
+					ai->finishS(da, si);
 				}
 
 			} else if (dst_ex->type == ET_ARRAYITEM) {
-				dst_item = PlnDstItem::createDstItem(dst_ex, false);
 				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
 				alloc_ex = tmp_var->var_type->allocator->getAllocEx();
 				alloc_ex->data_places.push_back(tmp_var->place);
 				alloc_ex->finish(da, si);
 				da.popSrc(tmp_var->place);
-				var_dp = tmp_var->place;
-				free_ex = PlnFreer::getFreeEx(tmp_var);
+
 				tmp_var_ex = new PlnExpression(tmp_var);
+				dst_item = PlnDstItem::createDstItem(dst_ex, false);
 				dst_item->setSrcEx(da, si, tmp_var_ex);
-				src_ex->data_places.push_back(var_dp);
-				src_ex->finish(da, si);
+
+				vector<PlnExpression*> val_items = src_ex->getAllItems();
+				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(tmp_var);
+				BOOST_ASSERT(val_items.size() == dst_items.size());
+				for (int i=0; i<val_items.size(); i++) {
+					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
+					dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					ai->addDstEx(dst_items[i], false);
+					assign_items.push_back(ai);
+				}
+
+				for (auto ai: assign_items) {
+					ai->finishS(da, si);
+					ai->finishD(da, si);
+				}
 
 			} else
 				BOOST_ASSERT(false);
@@ -118,21 +116,19 @@ public:
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
-				if (migrate) {
-					for (auto ai: assign_items) {
-						ai->finishD(da, si);
-					}
+				for (auto ai: assign_items) {
+					ai->finishD(da, si);
 				}
 				dst_ex->finish(da, si);
-				if (!migrate) da.releaseDp(var_dp);
 
 			} else if (dst_ex->type == ET_ARRAYITEM) {
 				tmp_var_ex->finish(da,si);
 				dst_item->finish(da,si);
-				free_ex->finish(da, si);
-				da.releaseDp(var_dp);
-			}
 
+				free_ex = PlnFreer::getFreeEx(tmp_var);
+				free_ex->finish(da, si);
+				da.releaseDp(tmp_var->place);
+			}
 		}
 	}
 
@@ -142,21 +138,18 @@ public:
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
-				if (migrate) {
-					for (auto ai: assign_items) {
-						ai->genS(g);
-					}
-				}
-				if (!migrate) {
-					src_ex->gen(g);
+				for (auto ai: assign_items) {
+					ai->genS(g);
 				}
 
 			} else {
-				if (alloc_ex) {
-					alloc_ex->gen(g);
-					g.genLoadDp(tmp_var->place);
+				alloc_ex->gen(g);
+				g.genLoadDp(tmp_var->place);
+
+				for (auto ai: assign_items) {
+					ai->genS(g);
+					ai->genD(g);
 				}
-				src_ex->gen(g);
 			}
 		}
 	}
@@ -167,10 +160,8 @@ public:
 			return;
 		} else {
 			if (dst_ex->type == ET_VALUE) {
-				if (migrate) {
-					for (auto ai: assign_items) {
-						ai->genD(g);
-					}
+				for (auto ai: assign_items) {
+					ai->genD(g);
 				}
 				dst_ex->gen(g);
 
