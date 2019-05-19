@@ -149,6 +149,7 @@ PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnType* var_type,
 	var->container = NULL;
 	var->ptr_type = (t->data_type == DT_OBJECT_REF) ?
 			PTR_REFERENCE : NO_PTR;
+	var->is_tmpvar = true;
 
 	return var;
 }

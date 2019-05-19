@@ -17,13 +17,21 @@ class PlnAssignArrayValue : public PlnAssignItem {
 
 public:
 	PlnAssignArrayValue(PlnExpression* ex)
-		: dst_ex(NULL), alloc_ex(NULL), dst_item(NULL), free_ex(NULL) {
+		: tmp_var(NULL), alloc_ex(NULL), dst_item(NULL), free_ex(NULL) {
 		BOOST_ASSERT(ex->type = ET_ARRAYVALUE);
 		src_ex = static_cast<PlnArrayValue*>(ex);
 	}
 
 	~PlnAssignArrayValue() {
-		// TODO: delete some.
+		if (tmp_var) {
+			delete tmp_var;
+			delete alloc_ex;
+			delete free_ex;
+			delete tmp_var_ex;
+		}
+		delete dst_item;
+		for (auto ai: assign_items)
+			delete ai;
 	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {

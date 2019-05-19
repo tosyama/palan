@@ -1,7 +1,7 @@
 /// PlnClone model class definition.
 ///
 /// @file	PlnClone.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../PlnExpression.h"
@@ -11,6 +11,8 @@
 #include "../../PlnGenerator.h"
 #include "PlnClone.h"
 #include "PlnArrayValue.h"
+#include "PlnArrayItem.h"
+#include "assignitem/PlnAssignItem.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_type, bool keep_var)
 	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
@@ -41,16 +43,33 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 	alloc_ex->finish(da, si);
 	da.popSrc(var->place);
 	if (directAssign) {
-		src_ex->data_places.push_back(var->place);
+		BOOST_ASSERT(src_ex->type == ET_ARRAYVALUE);
+		vector<PlnExpression*> val_items = static_cast<PlnArrayValue*>(src_ex)->getAllItems();
+		vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(var);
+		for (int i=0; i<val_items.size(); i++) {
+			PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
+			dst_items[i]->values[0].asgn_type = ASGN_COPY;
+			ai->addDstEx(dst_items[i], false);
+			assign_items.push_back(ai);
+		}
+
+		// src_ex->data_places.push_back(var->place);
 	}
 }
 
 void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() == 1);
-	if (!directAssign) {
+	if (directAssign) {
+		for (auto ai: assign_items) {
+			ai->finishS(da, si);
+			ai->finishD(da, si);
+		}
+
+	} else {
 		da.pushSrc(copy_dst_dp, var->place, false);
 		copy_ex->finish(da, si);
+
 	}
 
 	da.pushSrc(data_places[0], var->place, !keep_var);
@@ -72,7 +91,12 @@ void PlnClone::genAlloc(PlnGenerator& g)
 
 void PlnClone::gen(PlnGenerator& g)
 {
-	if (!directAssign) {
+	if (directAssign) {
+		for (auto ai: assign_items) {
+			ai->genS(g);
+			ai->genD(g);
+		}
+	} else {
 		g.genSaveSrc(copy_dst_dp);
 		copy_ex->gen(g);
 	}

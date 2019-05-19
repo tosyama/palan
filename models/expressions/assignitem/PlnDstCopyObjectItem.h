@@ -36,7 +36,7 @@ public:
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		PlnVariable* var = dst_ex->values[0].inf.var;
-		if (si.get_lifetime(var) == VLT_FREED) {
+		if ((!var->is_tmpvar) && si.get_lifetime(var) == VLT_FREED) {
 			PlnCompileError err(E_CantCopyFreedVar, var->name);
 			err.loc = dst_ex->loc;
 			throw err;

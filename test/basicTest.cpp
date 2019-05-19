@@ -182,6 +182,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"1423 162311 113142\n"
 								"11 13,11 13,22.2,11 11,11.2,\n"
 								"11 12 13 4 2 1 6");
+
+	testcode = "026_arrarr_value";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "1 22 26");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -367,7 +371,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "555_arrlit_type_err7";
-	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: use only fixed array here.");
+	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
@@ -392,7 +396,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "564_arrval_type_err7";
-	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
+	REQUIRE(build(testcode) == "0:2-2 Function 'test' was not declared in this scope.");
 	
 	testcode = "565_unsupported_err3";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");

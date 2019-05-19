@@ -7,7 +7,6 @@
 
 class PlnArrayValue : public PlnExpression
 {
-	bool gotExs;
 public:
 	vector<PlnExpression *> item_exps;
 	bool isLiteral;

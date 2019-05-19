@@ -9,6 +9,7 @@ class PlnClone : public PlnExpression
 	PlnDataPlace* copy_dst_dp;
 	PlnDeepCopyExpression *copy_ex;
 	PlnExpression *src_ex;
+	vector<PlnAssignItem*> assign_items;
 
 public:
 	bool keep_var;

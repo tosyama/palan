@@ -15,7 +15,7 @@
 #include "../../PlnException.h"
 
 PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
-	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral), gotExs(false)
+	: PlnExpression(ET_ARRAYVALUE), item_exps(move(exps)), isLiteral(isLiteral)
 {
 	PlnValue aval;
 	aval.type = VL_WORK;
@@ -35,7 +35,7 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 }
 
 PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
-	: PlnExpression(ET_ARRAYVALUE), gotExs(false)
+	: PlnExpression(ET_ARRAYVALUE)
 {
 	for (auto& exp: src.item_exps) {
 		PlnExpression *new_exp;
@@ -165,38 +165,6 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 	return this;
 }
 
-static void pushDp2ArrayVal(PlnFixedArrayType* arr_type, int depth,
-		PlnDataPlace* var_dp, int &var_index,  PlnArrayValue* arr_val,
-		PlnDataAllocator& da, PlnScopeInfo& si) {
-
-	BOOST_ASSERT(arr_type->sizes.size() > depth);
-	BOOST_ASSERT(arr_type->sizes[depth] == arr_val->item_exps.size());
-
-	if (arr_type->sizes.size()-1 == depth) {
-		auto item_type = arr_type->item_type;
-		static string cmt = "[]";
-		for (auto exp: arr_val->item_exps) {
-			PlnDataPlace *item_dp = new PlnDataPlace(item_type->size, item_type->data_type);
-
-			auto base_dp = da.prepareObjBasePtr();
-			auto index_dp = da.prepareObjIndexPtr(var_index);
-			da.setIndirectObjDp(item_dp, base_dp, index_dp);
-
-			da.pushSrc(base_dp, var_dp, false);
-			item_dp->comment = &cmt;
-			exp->data_places.push_back(item_dp);
-
-			var_index++;
-		}
-
-	} else {
-		for (auto exp: arr_val->item_exps) {
-			BOOST_ASSERT(exp->type == ET_ARRAYVALUE);
-			pushDp2ArrayVal(arr_type, depth+1, var_dp, var_index, static_cast<PlnArrayValue*>(exp), da, si);
-		}
-	}
-}
-
 template<typename T>
 static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 {
@@ -222,9 +190,9 @@ static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 
 void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	BOOST_ASSERT(!gotExs); // temporaly
 	// Assign each element
 	if (data_places.size()) {
+		BOOST_ASSERT(doCopyFromStaticBuffer);
 		BOOST_ASSERT(data_places.size() == 1);
 		BOOST_ASSERT(values[0].inf.wk_type->type != TP_ARRAY_VALUE);
 
@@ -233,31 +201,21 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		int ele_size = item_type->size;
 		
 		// Copy at once.
-		if (doCopyFromStaticBuffer) {
-			PlnDataPlace* dp;
-			if (ele_type == DT_SINT || ele_type == DT_UINT) {
-				vector<int64_t> int_arr;
-				addAllNumerics(this, int_arr);
-				dp = da.getROIntArrayDp(int_arr, ele_size);	
-			} else if (ele_type == DT_FLOAT) {
-				vector<double> flo_arr;
-				addAllNumerics(this, flo_arr);
-				dp = da.getROFloArrayDp(flo_arr, ele_size);	
-			} else {
-				BOOST_ASSERT(false);
-			}
-
-			da.pushSrc(data_places[0], dp);
-			return;
-		} else { 
-
-			// Assign each item.
-			PlnDataPlace *var_dp = data_places[0];
-			int var_index = 0;
-			auto arr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
-
-			pushDp2ArrayVal(arr_type, 0, var_dp, var_index, this, da, si);
+		PlnDataPlace* dp;
+		if (ele_type == DT_SINT || ele_type == DT_UINT) {
+			vector<int64_t> int_arr;
+			addAllNumerics(this, int_arr);
+			dp = da.getROIntArrayDp(int_arr, ele_size);	
+		} else if (ele_type == DT_FLOAT) {
+			vector<double> flo_arr;
+			addAllNumerics(this, flo_arr);
+			dp = da.getROFloArrayDp(flo_arr, ele_size);	
+		} else {
+			BOOST_ASSERT(false);
 		}
+
+		da.pushSrc(data_places[0], dp);
+		return;
 	}
 
 	for (auto exp: item_exps) {
@@ -271,7 +229,6 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnArrayValue::gen(PlnGenerator& g)
 {
-	BOOST_ASSERT(!gotExs); // temporaly
 	for (auto exp: item_exps) {
 		exp->gen(g);
 		if (exp->data_places.size())
@@ -291,9 +248,11 @@ static void pushArrayValItemExp(PlnArrayValue* arr_val, vector<int> &sizes, vect
 		for (PlnExpression* item: arr_val->item_exps) {
 			BOOST_ASSERT(item->type == ET_ARRAYVALUE);
 			pushArrayValItemExp(static_cast<PlnArrayValue*>(item), sizes, exps, depth+1);
+			delete item;
 		}
 
 	}
+	arr_val->item_exps.clear();
 }
 
 vector<PlnExpression*> PlnArrayValue::getAllItems()
@@ -303,7 +262,6 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 	vector<PlnExpression*> items;
 	pushArrayValItemExp(this, farr_type->sizes, items);
 
-	gotExs = true;
 	return items;
 }
 

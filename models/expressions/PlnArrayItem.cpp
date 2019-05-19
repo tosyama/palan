@@ -63,6 +63,7 @@ static PlnVariable* getArrayVar(PlnType *item_type, PlnExpression* array_ex)
 		var->container = array_var->container;
 	else
 		var->container = array_var;
+	var->is_tmpvar = var->container->is_tmpvar;
 	return var;
 }
 
