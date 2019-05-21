@@ -185,7 +185,9 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "026_arrarr_value";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1 22 26");
+	REQUIRE(exec(testcode) == "1 22 26\n2 1 21\n"
+								"1 8 12\n1 2 7\n"
+								"2 1 21");
 }
 
 TEST_CASE("Compile error test", "[basic]")
