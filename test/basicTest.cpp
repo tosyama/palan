@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2");
+	REQUIRE(exec(testcode) == "2\n3");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -173,15 +173,23 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "i34i12i32i13i12\n"
 								"i32i34i13i34\n"
-								"a22.2a42.2a24.4a44.4a5");
+								"a22.2a42.2a24.4a44.4a5\n"
+								"i32a42.2");
 
 	testcode = "025_array_value";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0\n"
-								"113 1166 1112 1.1 22.2 23.0 13\n"
+								"113 1166 1112 1.1 22.2 23.0 13 13\n"
 								"1423 162311 113142\n"
-								"11 13,11 13,22.2,11 11,11.2,\n"
-								"11 12 13 4 2 1 6");
+								"11 13,11 13,22.2,4 3,11 11,11.2,\n"
+								"11 12 13 4 2 1 6\n"
+								"3 1 ");
+
+	testcode = "026_arrarr_value";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "1 22 26\n2 1 21\n"
+								"1 8 12\n1 2 7\n"
+								"2 1 21");
 }
 
 TEST_CASE("Compile error test", "[basic]")
@@ -300,7 +308,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");
 
 	testcode = "541_varinit_type_err3";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64[3]' to 'int32[3]'.");
 
 	testcode = "542_asgnLRnum_err2";
 	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
@@ -349,7 +357,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 
 	// array literal
 	testcode = "527_arrlit_type_err";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2][3]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64' to 'int64[3]'.");
 
 	testcode = "528_arrlit_type_err2";
 	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
@@ -367,7 +375,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "555_arrlit_type_err7";
-	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: use only fixed array here.");
+	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
@@ -380,7 +388,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "560_arrval_type_err3";
-	REQUIRE(build(testcode) == "0:3-4 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "561_arrval_type_err4";
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[3]'.");
@@ -392,8 +400,14 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "564_arrval_type_err7";
-	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
+	REQUIRE(build(testcode) == "0:2-2 Function 'test' was not declared in this scope.");
 	
 	testcode = "565_unsupported_err3";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
+
+	testcode = "567_unsupported_err4";
+	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: use only fixed array here.");
+
+	testcode = "568_voiditem_err";
+	REQUIRE(build(testcode) == "0:2-2 Value is required here.");
 }

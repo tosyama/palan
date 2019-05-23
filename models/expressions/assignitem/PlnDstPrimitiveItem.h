@@ -44,7 +44,7 @@ public:
 			if (dst_ex->type == ET_VALUE) {
 				src_ex->data_places.push_back(dst_dp);
 
-			} else {	// e.g. ET_ARRAYITME. save_src_var is use also return value.
+			} else {	// e.g. ET_ARRAYITEM. save_src_var is use also return value.
 				PlnType* t = dst_ex->values[0].inf.var->var_type;
 				save_src_var = PlnVariable::createTempVar(da, t, "save src");
 				src_ex->data_places.push_back(save_src_var->place);

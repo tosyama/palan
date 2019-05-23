@@ -6,7 +6,9 @@
 class PlnAssignArrayValue : public PlnAssignItem {
 	PlnArrayValue* src_ex;
 	PlnExpression* dst_ex;
-	PlnDataPlace* var_dp;
+
+	vector<PlnAssignItem*> assign_items;
+
 	PlnVariable* tmp_var;
 	PlnExpression* alloc_ex;
 	PlnExpression *free_ex;
@@ -15,35 +17,30 @@ class PlnAssignArrayValue : public PlnAssignItem {
 
 public:
 	PlnAssignArrayValue(PlnExpression* ex)
-		: dst_ex(NULL), alloc_ex(NULL), dst_item(NULL), free_ex(NULL) {
+		: tmp_var(NULL), alloc_ex(NULL), dst_item(NULL), free_ex(NULL) {
 		BOOST_ASSERT(ex->type = ET_ARRAYVALUE);
 		src_ex = static_cast<PlnArrayValue*>(ex);
 	}
 
 	~PlnAssignArrayValue() {
+		if (tmp_var) {
+			delete tmp_var;
+			delete alloc_ex;
+			delete free_ex;
+			delete tmp_var_ex;
+		}
+		delete dst_item;
+		for (auto ai: assign_items)
+			delete ai;
 	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].getType()->data_type == DT_OBJECT_REF);
-
 		BOOST_ASSERT(!need_save);
 
-		if (src_ex->isLiteral) {
-			dst_ex = ex;
-			dst_item = PlnDstItem::createDstItem(ex, need_save);
-
-		} else {
-			if (ex->type == ET_VALUE) {
-				dst_ex = ex;
-
-			} else {
-				BOOST_ASSERT(ex->type == ET_ARRAYITEM);
-				dst_ex = ex;
-				dst_item = PlnDstItem::createDstItem(ex, need_save);
-			}
-		}
+		dst_ex = ex;
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
@@ -68,14 +65,27 @@ public:
 			}
 		}
 
-		if (src_ex->isLiteral) {
+		if (src_ex->doCopyFromStaticBuffer) {
+			dst_item = PlnDstItem::createDstItem(dst_ex, false);
 			dst_item->setSrcEx(da, si, src_ex);
+			src_ex->finish(da, si);
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
-				PlnVariable* var = dst_ex->values[0].inf.var;
-				var_dp = da.getSeparatedDp(var->place);
-				src_ex->data_places.push_back(var_dp);
+				vector<PlnExpression*> val_items = src_ex->getAllItems();
+				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+				BOOST_ASSERT(val_items.size() == dst_items.size());
+
+				for (int i=0; i<val_items.size(); i++) {
+					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
+					dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					ai->addDstEx(dst_items[i], false);
+					assign_items.push_back(ai);
+				}
+
+				for (auto ai: assign_items) {
+					ai->finishS(da, si);
+				}
 
 			} else if (dst_ex->type == ET_ARRAYITEM) {
 				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
@@ -83,56 +93,92 @@ public:
 				alloc_ex->data_places.push_back(tmp_var->place);
 				alloc_ex->finish(da, si);
 				da.popSrc(tmp_var->place);
-				var_dp = tmp_var->place;
-				free_ex = PlnFreer::getFreeEx(tmp_var);
+
 				tmp_var_ex = new PlnExpression(tmp_var);
+				dst_item = PlnDstItem::createDstItem(dst_ex, false);
 				dst_item->setSrcEx(da, si, tmp_var_ex);
-				src_ex->data_places.push_back(var_dp);
+
+				vector<PlnExpression*> val_items = src_ex->getAllItems();
+				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(tmp_var);
+				BOOST_ASSERT(val_items.size() == dst_items.size());
+				for (int i=0; i<val_items.size(); i++) {
+					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
+					dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					ai->addDstEx(dst_items[i], false);
+					assign_items.push_back(ai);
+				}
+
+				for (auto ai: assign_items) {
+					ai->finishS(da, si);
+					ai->finishD(da, si);
+				}
 
 			} else
 				BOOST_ASSERT(false);
 		}
-
-		src_ex->finish(da, si);
 	}
 
 	void finishD(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		if (src_ex->isLiteral) {
+		if (src_ex->doCopyFromStaticBuffer) {
 			dst_item->finish(da,si);
-			return;
-		}
-		if (!dst_item) dst_ex->finish(da, si);
 
-		// src_ex->finishD(da, si);
-		if (dst_item) {
-			tmp_var_ex->finish(da,si);
-			dst_item->finish(da,si);
-		}
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				for (auto ai: assign_items) {
+					ai->finishD(da, si);
+				}
+				dst_ex->finish(da, si);
 
-		if (free_ex) free_ex->finish(da, si);
-		da.releaseDp(var_dp);
+			} else if (dst_ex->type == ET_ARRAYITEM) {
+				tmp_var_ex->finish(da,si);
+				dst_item->finish(da,si);
+
+				free_ex = PlnFreer::getFreeEx(tmp_var);
+				free_ex->finish(da, si);
+				da.releaseDp(tmp_var->place);
+			}
+		}
 	}
 
 	void genS(PlnGenerator& g) override {
-		if (alloc_ex) {
-			alloc_ex->gen(g);
-			g.genLoadDp(tmp_var->place);
+		if (src_ex->doCopyFromStaticBuffer) {
+			src_ex->gen(g);
+
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				for (auto ai: assign_items) {
+					ai->genS(g);
+				}
+
+			} else {
+				alloc_ex->gen(g);
+				g.genLoadDp(tmp_var->place);
+
+				for (auto ai: assign_items) {
+					ai->genS(g);
+					ai->genD(g);
+				}
+			}
 		}
-		src_ex->gen(g);
 	}
 
 	void genD(PlnGenerator& g) override {
-		if (src_ex->isLiteral) {
+		if (src_ex->doCopyFromStaticBuffer) {
 			dst_item->gen(g);
 			return;
-		}
-		if (!dst_item) dst_ex->gen(g);
+		} else {
+			if (dst_ex->type == ET_VALUE) {
+				for (auto ai: assign_items) {
+					ai->genD(g);
+				}
+				dst_ex->gen(g);
 
-		if (dst_item) {
-			tmp_var_ex->gen(g);
-			dst_item->gen(g);
+			} else {
+				tmp_var_ex->gen(g);
+				dst_item->gen(g);
+				free_ex->gen(g);
+			}
 		}
-		if (free_ex) free_ex->gen(g);
 	}
 };
 

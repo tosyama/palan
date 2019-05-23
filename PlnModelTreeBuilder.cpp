@@ -830,6 +830,34 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 
 	try {
 		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arg_vals);
+
+		// Set default value and adjusting type.
+		vector<PlnType*> types;
+		int arg_ex_ind = 0;
+		int arg_val_ind = 0;
+		for (int i=0; i<f->parameters.size(); i++) {
+			if (arg_ex_ind == args.size()) {
+				args.push_back(NULL);
+			}
+
+			if (!args[arg_ex_ind]) {
+				PlnExpression* dexp = f->parameters[i]->dflt_value;
+				BOOST_ASSERT(dexp && dexp->type == ET_VALUE);
+				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
+			}
+
+			types.push_back(f->parameters[i]->var_type);
+			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
+				arg_val_ind++;
+
+			} else {
+				args[arg_ex_ind] = args[arg_ex_ind]->adjustTypes(types);
+				arg_ex_ind++;
+				arg_val_ind = 0;
+				types.clear();
+			}
+		}
+
 		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {

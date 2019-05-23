@@ -46,6 +46,28 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 {
 }
 
+static PlnVariable* getArrayVar(PlnType *item_type, PlnExpression* array_ex)
+{
+	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
+	auto var = new PlnVariable();
+	auto array_var = array_ex->values[0].inf.var;
+	var->name = array_var->name + "[]";
+	var->var_type = item_type;
+
+	if (var->var_type->data_type == DT_OBJECT_REF) {
+		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
+	} else {
+		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
+	}
+	if (array_var->container)
+		var->container = array_var->container;
+	else
+		var->container = array_var;
+	var->is_tmpvar = var->container->is_tmpvar;
+	return var;
+}
+
+
 // Can be any array type.
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind,
 	PlnType* arr_type)
@@ -62,21 +84,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 		throw err;
 	}
 	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(arr_type);
-
-	var->name = array_var->name + "[]";
-	var->var_type = farr_type->item_type;
-
-	if (var->var_type->data_type == DT_OBJECT_REF) {
-		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
-	} else {
-		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
-	}
-	if (array_var->container)
-		var->container = array_var->container;
-	else
-		var->container = array_var;
-
-	values.push_back(PlnValue(var));
+	values.push_back(getArrayVar(farr_type->item_type, array_ex));
 
 	auto& arr_sizes = farr_type->sizes;
 	BOOST_ASSERT(arr_sizes.size() == item_ind.size());
@@ -90,6 +98,12 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 			index_ex->values[0] = PlnValue(i);
 		}
 	}
+}
+
+PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, PlnExpression* index_ex, PlnType* item_type)
+	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex), index_ex(index_ex)
+{
+	values.push_back(getArrayVar(item_type, array_ex));
 }
 
 PlnArrayItem::~PlnArrayItem()
@@ -115,7 +129,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	PlnDataPlace *index_dp;
 	if (index_ex->type == ET_VALUE
-		&& index_ex->values[0].type == VL_LIT_INT8) {
+		&& (index_ex->values[0].type == VL_LIT_INT8 || index_ex->values[0].type == VL_LIT_UINT8)) {
 		index_dp = da.prepareObjIndexPtr(index_ex->values[0].inf.intValue);
 		delete index_ex;
 		index_ex = NULL;
@@ -147,3 +161,24 @@ void PlnArrayItem::gen(PlnGenerator& g)
 	}
 }
 
+vector<PlnExpression*> PlnArrayItem::getAllArrayItems(PlnVariable* var)
+{
+	BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
+	vector<PlnExpression*> items;
+	PlnFixedArrayType *atype = static_cast<PlnFixedArrayType*>(var->var_type);
+	vector<int> &sizes = atype->sizes;
+	int totalsize = 1;
+	for (int i=0; i<sizes.size(); i++) {
+		totalsize *= sizes[i];
+	}
+
+	for (uint64_t i=0; i<totalsize; i++) {
+		PlnExpression *item_ex, *array_ex, *index_ex;
+		array_ex = new PlnExpression(var);
+		index_ex = new PlnExpression(i);
+		item_ex = new PlnArrayItem(array_ex, index_ex, atype->item_type);
+		items.push_back(item_ex);
+	}
+
+	return items;
+}

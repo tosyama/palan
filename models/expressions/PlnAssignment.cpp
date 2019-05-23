@@ -123,12 +123,8 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 				PlnType* src_type = ex->values[i].getType();	
 				PlnType* dst_type = lvals[dst_i]->values[0].getType();
 
-				if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
-					delete ai;
-					PlnCompileError err(E_IncompatibleTypeAssign, src_type->name, dst_type->name);
-					err.loc = ex->loc;
-					throw err;
-				}
+				// Compatibility is assured at adjustTypes().
+				BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
 
 				bool need_save = false;
 				need_save = checkNeedToSave(expressions, exp_i, lvals, dst_i);
@@ -185,4 +181,3 @@ void PlnAssignment::gen(PlnGenerator& g)
 	for (auto ai: assgin_items)
 		ai->genD(g);
 }
-

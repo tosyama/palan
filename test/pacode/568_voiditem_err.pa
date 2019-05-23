@@ -1,0 +1,7 @@
+i=2;
+arr = [dd(1,2), 2, i+3];
+
+func dd(int64 a, b)
+{
+	printf("%d\n", a+b);
+}

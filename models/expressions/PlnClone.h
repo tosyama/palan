@@ -1,7 +1,7 @@
 /// PlnClone model class declaration.
 ///
 /// @file	PlnClone.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 class PlnClone : public PlnExpression
 {
@@ -9,6 +9,7 @@ class PlnClone : public PlnExpression
 	PlnDataPlace* copy_dst_dp;
 	PlnDeepCopyExpression *copy_ex;
 	PlnExpression *src_ex;
+	vector<PlnAssignItem*> assign_items;
 
 public:
 	bool keep_var;
@@ -18,8 +19,11 @@ public:
 	PlnClone(PlnDataAllocator& da, PlnExpression *src_ex, PlnType* var_type, bool keep_var);
 	~PlnClone();
 
+	void finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si);
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void finishFree(PlnDataAllocator& da, PlnScopeInfo& si);
+
+	void genAlloc(PlnGenerator& g);
 	void gen(PlnGenerator& g) override;
 	void genFree(PlnGenerator& g);
 };

@@ -166,7 +166,8 @@ PlnClone.o:  \
 	models/expressions/../PlnType.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h models/expressions/PlnClone.h \
-	models/expressions/PlnArrayValue.h
+	models/expressions/PlnArrayValue.h models/expressions/PlnArrayItem.h \
+	models/expressions/assignitem/PlnAssignItem.h
 PlnAssignItem.o:  \
 	models/expressions/assignitem/../PlnAssignment.h \
 	models/expressions/assignitem/../../PlnExpression.h \
@@ -183,6 +184,7 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/../PlnMemCopy.h \
 	models/expressions/assignitem/../PlnClone.h \
 	models/expressions/assignitem/../PlnArrayValue.h \
+	models/expressions/assignitem/../PlnArrayItem.h \
 	models/expressions/assignitem/../../types/PlnFixedArrayType.h \
 	models/expressions/assignitem/PlnAssignItem.h \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \

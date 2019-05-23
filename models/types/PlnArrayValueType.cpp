@@ -46,45 +46,62 @@ PlnType* PlnArrayValueType::getDefaultType(PlnModule *module)
 
 PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false); }
 
-static PlnTypeConvCap checkArrValCompati(PlnArrayValue* arr_val, PlnType* item_type, const vector<int>& sizes)
+inline PlnTypeConvCap lowCap(PlnTypeConvCap l, PlnTypeConvCap r)
 {
-	vector<int> fixarr_sizes;
-	int val_item_type;
-	if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, val_item_type)) {
-		fixarr_sizes.pop_back();
-		if (sizes.size() != fixarr_sizes.size())
-			return TC_CANT_CONV;
-		
-		for (int i=0; i<sizes.size(); i++) {
-			if (sizes[i] != fixarr_sizes[i]) {
+	BOOST_ASSERT(l!=TC_CANT_CONV);
+
+	if (l == TC_SAME) {
+		return r;
+	}
+
+	if (l == TC_AUTO_CAST) {
+		if (r != TC_SAME) return r;
+		return TC_AUTO_CAST;
+	}
+
+	if (l == TC_LOSTABLE_AUTO_CAST) {
+		if (r == TC_CANT_CONV) return TC_CANT_CONV;
+		return TC_LOSTABLE_AUTO_CAST;
+	}
+
+	BOOST_ASSERT(false);
+}
+
+static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* item_type, const vector<int>& sizes, int depth)
+{
+	int items_num = sizes[depth];
+	if (arr_val->item_exps.size() != items_num)
+		return TC_CANT_CONV;
+
+	PlnTypeConvCap result  = TC_SAME;
+	if (sizes.size() == (depth+1) ) {
+		// check item type conpatible 
+		for (auto exp: arr_val->item_exps) {
+			result = lowCap(result, item_type->canConvFrom(exp->values[0].getType()));
+			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
-			}
+		}
+		return result;
+
+	} else { 
+		for (auto exp: arr_val->item_exps) {
+			if (exp->type != ET_ARRAYVALUE)
+				return TC_CANT_CONV;
+
+			PlnArrayValue* item_arr_val = static_cast<PlnArrayValue*>(exp);
+			result = lowCap(result, checkFixedArrayItemTypes(item_arr_val, item_type, sizes, depth+1));
+			if (result == TC_CANT_CONV)
+				return TC_CANT_CONV;
 		}
 
-		PlnType *def_itype;
-		switch (val_item_type) {
-			case DT_SINT:
-				def_itype = PlnType::getSint(); break;
-			case DT_UINT:
-				def_itype = PlnType::getUint(); break;
-			case DT_FLOAT:
-				def_itype = PlnType::getFlo(); break;
-			defalut:
-				BOOST_ASSERT(false);
-		}
-
-		return item_type->canConvFrom(def_itype);
-
-	} else {
-		PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
-		throw err;
+		return result;
 	}
 }
 
 PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vector<int>& sizes)
 {
 	if (arr_val) {
-		return checkArrValCompati(arr_val, item_type, sizes);
+		return checkFixedArrayItemTypes(arr_val, item_type, sizes, 0);
 
 	} else {
 		BOOST_ASSERT(false);

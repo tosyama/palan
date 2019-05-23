@@ -110,10 +110,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 			PlnClone* clone = NULL;
 			if (ptr_type == PTR_PARAM_COPY) {
-				if (a->type == ET_ARRAYVALUE) {
-					a = new PlnClone(da, a, f->parameters[i]->var_type, false);
-
-				} else if (v.type == VL_LIT_ARRAY) {
+				if (v.type == VL_LIT_ARRAY) {
 					clone = new PlnClone(da, v.inf.arrValue, f->parameters[i]->var_type, false);
 					a = v.inf.arrValue;
 
@@ -122,7 +119,9 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 				}
 			}
-			if (!clone)
+			if (clone)
+				clone->finishAlloc(da, si);
+			else
 				a->data_places.push_back(arg_dps[i]);
 
 			clones.push_back(clone);
@@ -212,6 +211,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		{
 			int i=0;
 			for (auto arg: arguments) {
+				if (clones[i]) clones[i]->genAlloc(g);
 				arg->gen(g);
 				if (clones[i]) clones[i]->gen(g);
 				i++;
