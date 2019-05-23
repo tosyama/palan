@@ -32,8 +32,9 @@ ff = [[1.1, 1.2], FARR, [33, i1+i2]];
 printf(" %.1f %.1f %.1f", ff[0,0], ff[1,1], ff[2,1]);
 
 u = 11u;
-uu = [u, 12u, 13u];
-printf(" %d\n", uu[2]);
+u2 = [u, 12u, 13u];
+u3 = [u, 12u, 13];	// for default type inference signed int.
+printf(" %d %d\n", u2[2], u3[2]);
 
 // assignment
 [3+i1, i2, 23] -> a;
@@ -56,7 +57,7 @@ func add(int64 a, b) -> int64 a
 prnt([i1, i1+1, i1+2]);
 prnt([u, u+1u, u+2u]);
 prnt([i1+0.1,22.2]);
-
+prnt([b[1,0],i1,3]);
 
 prnt([u, u+1, i1+0.1]);
 prnt([u, u+0.2]);
@@ -75,6 +76,9 @@ int16[4][2,3] arr3;
 
 printf(" %d %d %d", arr3[1][0,0], arr3[1][0,2], arr3[1][1,2]);
 
+printf("\n");
+[prnt(i+2), 3, prnt(i)];
+
 func prnt(int64[3] a)
 {
 	printf("%d %d,", a[0],a[2]);
@@ -83,4 +87,9 @@ func prnt(int64[3] a)
 func prnt(flo64[2] f)
 {
 	printf("%.1f,", f[1]);
+}
+
+func prnt(int64 i)->int64 i
+{
+	printf("%d ", i);
 }

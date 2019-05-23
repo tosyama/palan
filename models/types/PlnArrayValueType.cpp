@@ -48,12 +48,10 @@ PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false
 
 inline PlnTypeConvCap lowCap(PlnTypeConvCap l, PlnTypeConvCap r)
 {
+	BOOST_ASSERT(l!=TC_CANT_CONV);
+
 	if (l == TC_SAME) {
 		return r;
-	}
-
-	if (l == TC_CANT_CONV) {
-		return TC_CANT_CONV;
 	}
 
 	if (l == TC_AUTO_CAST) {

@@ -21,6 +21,11 @@ arrayfunc(,[3.3,4.4]);
 arrayfunc([3,4],[3.3,4.4]);
 array2func();
 
+// chain call
+printf("\n");
+3->intfunc();
+[3,4]->arrayfunc();
+
 func intfunc(int32 a=1, b=2)
 {
 	printf("i%d%d", a, b);

@@ -25,6 +25,11 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 
 	// Exchange array lit -> array value
 	for (auto& exp: item_exps) {
+		if (!exp->values.size()) {
+			PlnCompileError err(E_ValueRequired);
+			err.loc = exp->loc;
+			throw err;
+		}
 		if (exp->values[0].type == VL_LIT_ARRAY) {
 			auto newexp = exp->values[0].inf.arrValue;
 			exp->values[0].inf.arrValue = NULL;
@@ -216,24 +221,20 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 		da.pushSrc(data_places[0], dp);
 		return;
-	}
 
-	for (auto exp: item_exps) {
-		exp->finish(da, si);
-		if (exp->data_places.size()) {
-			da.popSrc(exp->data_places.back());
-			da.releaseDp(exp->data_places.back());
+	} else {
+		for (auto exp: item_exps) {
+			exp->finish(da, si);
+			BOOST_ASSERT(!exp->data_places.size());
 		}
 	}
 }
 
 void PlnArrayValue::gen(PlnGenerator& g)
 {
-	for (auto exp: item_exps) {
-		exp->gen(g);
-		if (exp->data_places.size())
-			g.genLoadDp(exp->data_places.back());
-	}
+	if (!data_places.size())
+		for (auto exp: item_exps)
+			exp->gen(g);
 }
 
 static void pushArrayValItemExp(PlnArrayValue* arr_val, vector<int> &sizes, vector<PlnExpression*> &exps, int depth=0)

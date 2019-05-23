@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2");
+	REQUIRE(exec(testcode) == "2\n3");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -173,15 +173,17 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "i34i12i32i13i12\n"
 								"i32i34i13i34\n"
-								"a22.2a42.2a24.4a44.4a5");
+								"a22.2a42.2a24.4a44.4a5\n"
+								"i32a42.2");
 
 	testcode = "025_array_value";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "113 1166 1112 1.1 22.2 23.0\n"
-								"113 1166 1112 1.1 22.2 23.0 13\n"
+								"113 1166 1112 1.1 22.2 23.0 13 13\n"
 								"1423 162311 113142\n"
-								"11 13,11 13,22.2,11 11,11.2,\n"
-								"11 12 13 4 2 1 6");
+								"11 13,11 13,22.2,4 3,11 11,11.2,\n"
+								"11 12 13 4 2 1 6\n"
+								"3 1 ");
 
 	testcode = "026_arrarr_value";
 	REQUIRE(build(testcode) == "success");
@@ -402,4 +404,10 @@ TEST_CASE("Array description compile error test", "[basic]")
 	
 	testcode = "565_unsupported_err3";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
+
+	testcode = "567_unsupported_err4";
+	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: use only fixed array here.");
+
+	testcode = "568_voiditem_err";
+	REQUIRE(build(testcode) == "0:2-2 Value is required here.");
 }

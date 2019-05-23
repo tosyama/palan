@@ -50,12 +50,9 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 				if (var_i < vars.size()) {
 					PlnType* src_type = ex->values[i].getType();	
 					PlnType* dst_type = vars[var_i].getType();
-					if (dst_type->canConvFrom(src_type) == TC_CANT_CONV) {
-						delete ai;
-						PlnCompileError err(E_IncompatibleTypeInitVar, vars[var_i].inf.var->name);
-						err.loc = ex->loc;
-						throw err;
-					}
+
+					// Compatibility is assured at adjustTypes().
+					BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
 
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex);
