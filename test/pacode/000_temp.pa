@@ -1,27 +1,6 @@
 ccall int32 printf();
 
-i = 1;
-int16[2][2,3] arr3 = [[1,1,1][4,5,6],[i+1,2,1][4,5,6]];
+i = 100;
+int32[] a = [i,i+1];
 
-// printf("%d\n", arr3[1][0,0]);
-[[1,1,1][4,5,6],[i+1,2,1][4,5,6]]
- -> testfunc();
-
-// [2,3,4][5,6,7] -> test();
-
-[dd(1,2),2,i+3];
-
-func testfunc(int16[2][2,3] arr)
-{
-	printf("%d\n", arr[1][0,0]);
-}
-
-func test(int16[2,3] arr)
-{
-	printf("%d\n", arr[0,0]);
-}
-
-func dd(int64 a, b) -> int64 a
-{
-	printf("%d\n", a+b);
-}
+printf("%d %d", a[0],a[1]);
