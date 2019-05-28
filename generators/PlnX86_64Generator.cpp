@@ -45,6 +45,7 @@ inline int regid_of(const PlnGenEntity *e) {
 
 // Immediate operand (e.g. $10)
 inline PlnImmOperand* imm(int64_t value) { return new PlnImmOperand(value); }
+
 inline int64_t int64_of(const PlnGenEntity *e) {
 	return int64_of(e->ope);
 }

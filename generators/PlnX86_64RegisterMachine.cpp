@@ -164,9 +164,28 @@ const char* PlnLabelAdrsModeOperand::str(char* buf)
 	return buf;
 }
 
+class PlnOpeCode {
+public:
+	PlnX86_64Mnemonic mne;
+	PlnOperandInfo *src, *dst;
+	string comment;
+	PlnOpeCode(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
+		: mne(mne), src(src), dst(dst), comment(comment) {}
+};
+
+class PlnX86_64RegisterMachineImp
+{
+public:
+	bool has_call = false;
+	vector<PlnOpeCode> opecodes;
+	PlnX86_64RegisterMachineImp() {
+	};
+};
+
 static vector<const char*> mnes;
 
-PlnX86_64RegisterMachine::PlnX86_64RegisterMachine() : has_call(false), may_exist_rounding(0)
+PlnX86_64RegisterMachine::PlnX86_64RegisterMachine()
+	:  imp(new PlnX86_64RegisterMachineImp())
 {}
 
 static void initMnes()
@@ -265,37 +284,15 @@ static void initMnes()
 
 void PlnX86_64RegisterMachine::push(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
 {
-	opecodes.push_back({mne, src, dst, comment});
+	imp->opecodes.push_back({mne, src, dst, comment});
+
 	// collect optimise information.
-	if (mne == CALL) has_call = true;
-	else if (mne == MOVABSQ && may_exist_rounding==0 && int64_of(src)==4602678819172646912) {
-		may_exist_rounding = 1;	
-	} else if (mne == CVTTSD2SI && may_exist_rounding==1) {
-		may_exist_rounding = 2;	
-	}
+	if (mne == CALL) imp->has_call = true;
 }
 
 void PlnX86_64RegisterMachine::addComment(string comment)
 {
-	// BOOST_ASSERT(opecodes.back().comment == "");
-	opecodes.back().comment = comment;
-}
-
-void PlnX86_64RegisterMachine::removeStackArea()
-{
-	auto opec = opecodes.begin();
-	while (opec != opecodes.end()) {
-		if (opec->mne == SUBQ && opec->dst->type == OP_REG
-				&& regid_of(opec->dst) == RSP) {
-			opec = opecodes.erase(opec);
-		} else {
-			if (opec->mne == LEAVE) {
-				opec->mne = POPQ;
-				opec->src = new PlnRegOperand(RBP,8);
-			}
-			opec++;
-		}
-	}
+	imp->opecodes.back().comment = comment;
 }
 
 static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
@@ -322,22 +319,158 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 	return out;
 }
 
+// Optimazations
+static void removeStackArea(vector<PlnOpeCode> &opecodes);
+static void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes);
+
 void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 {
 	if (!mnes.size())
 		initMnes();
 
 	// Optimize
-	if (!has_call) removeStackArea();
+	if (!imp->has_call)
+		removeStackArea(imp->opecodes);
 
-	for (PlnOpeCode& oc: opecodes) {
+	removeOmittableMoveToReg(imp->opecodes);
+
+	for (PlnOpeCode& oc: imp->opecodes) {
 		os << oc << "\n";
 		delete oc.src;
 		delete oc.dst;
 	}
 	os.flush();
-	opecodes.clear();
+	imp->opecodes.clear();
 
-	has_call = false;
-	may_exist_rounding = 0;
+	imp->has_call = false;
+}
+
+void removeStackArea(vector<PlnOpeCode> &opecodes)
+{
+	auto opec = opecodes.begin();
+	while (opec != opecodes.end()) {
+		if (opec->mne == SUBQ && opec->dst->type == OP_REG
+				&& regid_of(opec->dst) == RSP) {
+			opec = opecodes.erase(opec);
+		} else {
+			if (opec->mne == LEAVE) {
+				opec->mne = POPQ;
+				opec->src = new PlnRegOperand(RBP,8);
+			}
+			opec++;
+		}
+	}
+}
+
+// Remove omiitalbe move.
+enum RegState {
+	RS_UNKONWN,
+	RS_IMM_INT,
+	RS_LOCAL_VAR
+};
+
+class Reg
+{
+public:
+	RegState state;
+	int displacement;
+	int size;
+};
+
+static void breakRegsInfo(Reg *regs)
+{
+	// Same as PlnX86_64DataAllocator.cpp
+	static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
+	for (int id: DSTRY_TBL) {
+		regs[id].state = RS_UNKONWN;
+	}
+}
+
+void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
+{
+	Reg regs[REG_NUM];
+	for (auto& r: regs)
+		r.state = RS_UNKONWN;
+	
+	auto opec = opecodes.begin();
+	while (opec != opecodes.end()) {
+		if (opec->dst) {	// 2 params
+			if (opec->dst->type == OP_REG) {
+				auto &reg = regs[regid_of(opec->dst)];
+				if (opec->mne == MOVQ) {
+					if (opec->src->type == OP_ADRS) {
+						auto src = static_cast<PlnAdrsModeOperand*>(opec->src);
+						if (src->base_regid == RBP && src->index_regid==-1) {
+							// Load local var to the register.
+							if (reg.state == RS_LOCAL_VAR && reg.size == 8
+									&& reg.displacement == src->displacement) {
+								opec = opecodes.erase(opec);
+								
+							} else {
+								reg.state = RS_LOCAL_VAR;
+								reg.size = 8;
+								reg.displacement = src->displacement;
+								opec++;
+							}
+							continue;
+						} 
+					}
+				}
+				reg.state = RS_UNKONWN;
+
+			} else if (opec->dst->type == OP_ADRS) {
+				auto dst = static_cast<PlnAdrsModeOperand*>(opec->dst);
+				if (dst->base_regid == RBP && dst->index_regid==-1) {
+					// local var update
+					for (auto& r: regs) {
+						if (r.state == RS_LOCAL_VAR && r.displacement == dst->displacement)
+							r.state = RS_UNKONWN;
+					}
+				}
+			}
+
+		} else if (opec->src) {	// 1 param
+			if (opec->src->type == OP_REG) {
+				switch (opec->mne) {
+					case INCQ: case DECQ: case NEGQ:
+					case SETE: case SETNE:
+					case SETL: case SETG: case SETLE: case SETGE:
+					case SETB: case SETA: case SETBE: case SETAE:
+						regs[regid_of(opec->src)].state = RS_UNKONWN;
+						break;
+					case IMULQ: case DIVQ: case CQTO: case IDIVQ:
+						regs[RAX].state = RS_UNKONWN;
+						regs[RDX].state = RS_UNKONWN;
+						break;
+					case POPQ:
+						regs[RSP].state = RS_UNKONWN;
+						break;
+					default: break;
+				}
+			} else if (opec->mne == CALL) {
+				breakRegsInfo(regs);
+			} else if (opec->mne == LABEL) {
+				// Clear all register value.
+				for (auto& r: regs)
+					r.state = RS_UNKONWN;
+			}
+
+		} else { // no param
+			switch (opec->mne) {
+				case SYSCALL: 
+					breakRegsInfo(regs);
+					break;
+				case REP_MOVSQ: case REP_MOVSL:
+				case REP_MOVSW: case REP_MOVSB:
+					regs[RSI].state = RS_UNKONWN;
+					regs[RDI].state = RS_UNKONWN;
+					regs[RCX].state = RS_UNKONWN;
+					break;
+				default:
+					break;
+			}
+		}
+
+		opec++;
+	}
 }

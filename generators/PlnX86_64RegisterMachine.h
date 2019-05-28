@@ -105,24 +105,13 @@ public:
 	const char* str(char* buf) override;
 };
 
-class PlnOpeCode {
-public:
-	PlnX86_64Mnemonic mne;
-	PlnOperandInfo *src, *dst;
-	string comment;
-	PlnOpeCode(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
-		: mne(mne), src(src), dst(dst), comment(comment) {}
-};
-
+class PlnX86_64RegisterMachineImp;
 class PlnX86_64RegisterMachine {
-	vector<PlnOpeCode> opecodes;
-	bool has_call;
-	int may_exist_rounding;
+	PlnX86_64RegisterMachineImp *imp;
 public:
 	PlnX86_64RegisterMachine();
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="");
 	void addComment(string comment);
-	void removeStackArea();
 	void popOpecodes(ostream& os);
 };
 
