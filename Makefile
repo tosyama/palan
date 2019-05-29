@@ -22,6 +22,7 @@ SRCS=palan.cpp \
 	models/expressions/assignitem/PlnAssignItem.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
+	generators/PlnX86_64RegisterMachine.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp \
 	PlnMessage.cpp PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
 	PlnModelTreeBuilder.cpp

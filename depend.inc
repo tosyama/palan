@@ -200,11 +200,16 @@ PlnAssignItem.o:  \
 PlnX86_64Generator.o:  \
 	generators/../PlnModel.h generators/../PlnConstants.h \
 	generators/PlnX86_64DataAllocator.h generators/../PlnDataAllocator.h \
-	generators/PlnX86_64Generator.h generators/../PlnGenerator.h
+	generators/PlnX86_64Generator.h generators/../PlnGenerator.h \
+	generators/PlnX86_64RegisterMachine.h
 PlnX86_64DataAllocator.o:  \
 	generators/../PlnConstants.h generators/../models/PlnVariable.h \
 	generators/../models/../PlnModel.h generators/../models/PlnType.h \
 	generators/PlnX86_64DataAllocator.h generators/../PlnDataAllocator.h
+PlnX86_64RegisterMachine.o:  \
+	generators/../PlnModel.h generators/PlnX86_64DataAllocator.h \
+	generators/../PlnDataAllocator.h generators/PlnX86_64Generator.h \
+	generators/../PlnGenerator.h generators/PlnX86_64RegisterMachine.h
 PlnDataAllocator.o:  PlnDataAllocator.h \
 	PlnConstants.h
 PlnGenerator.o:  PlnModel.h PlnDataAllocator.h \
