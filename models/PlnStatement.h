@@ -12,6 +12,7 @@ enum PlnStmtType {
 	ST_BLOCK,
 	ST_RETURN,
 	ST_WHILE,
+	ST_BREAK,
 	ST_IF
 };
 

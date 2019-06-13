@@ -21,6 +21,7 @@ public:
 	
 	PlnFunction* parent_func;
 	PlnBlock* parent_block;
+	PlnStatement* owner_stmt;
 	PlnLoc loc;
 
 	PlnBlock();
@@ -37,6 +38,8 @@ public:
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
+
+	void addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);

@@ -22,6 +22,8 @@ int yylex();
 %token KW_SYSCALL
 %token KW_RETURN
 %token KW_WHILE
+%token KW_BREAK
+%token KW_CONTINUE
 %token KW_IF
 %token KW_ELSE
 %token KW_CONST
@@ -127,6 +129,12 @@ block: '{' statements '}'
 while_statement: KW_WHILE st_expression block
 	;
 
+break_stmt: KW_BREAK
+	;
+
+continue_stmt: KW_CONTINUE
+	;
+
 if_statement: KW_IF st_expression block else_statement
 	;
 
@@ -152,6 +160,8 @@ semi_stmt: st_expression
 	| subdeclaration '=' expression
 	| const_def
 	| return_stmt
+	| break_stmt
+	| continue_stmt
 	;
 
 st_expression: expression

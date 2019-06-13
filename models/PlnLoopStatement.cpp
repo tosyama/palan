@@ -12,11 +12,11 @@
 #include "expressions/PlnCmpOperation.h"
 
 
-PlnWhileStatement::PlnWhileStatement
-	(PlnExpression* condition, PlnBlock* block, PlnBlock* parent)
+PlnWhileStatement::PlnWhileStatement(PlnExpression* condition, PlnBlock* block, PlnBlock* parent)
 	: cond_dp(NULL), jmp_start_id(0), jmp_end_id(0)
 {
 	type = ST_WHILE;
+	block->owner_stmt = this;
 	inf.block = block;
 	this->parent = parent;
 
@@ -64,3 +64,41 @@ void PlnWhileStatement::gen(PlnGenerator& g)
 	g.genJump(jmp_start_id, "");
 	g.genJumpLabel(jmp_end_id, "end while");
 }
+
+// PlnBreakStatement
+PlnBreakStatement::PlnBreakStatement(PlnStatement* target_stmt)
+	: target_stmt(target_stmt)
+{
+	type = ST_BREAK;
+}
+
+void PlnBreakStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	if (target_stmt->type == ST_WHILE) {
+		jmp_id = static_cast<PlnWhileStatement*>(target_stmt)->jmp_end_id;
+	} else
+		BOOST_ASSERT(false);
+		
+	BOOST_ASSERT(jmp_id > 0);
+
+	bool valid=false;
+	for (auto sitem=si.scope.rbegin(); sitem!=si.scope.rend(); sitem++) {
+		if (sitem->type == SC_BLOCK) {
+			sitem->inf.block->addFreeVars(free_vars, da, si);
+			if (sitem->inf.block->owner_stmt == target_stmt) {
+				valid = true;
+				break;
+			}
+		}
+	}
+	BOOST_ASSERT(valid);
+}
+
+void PlnBreakStatement::gen(PlnGenerator& g)
+{
+	for (auto free_var: free_vars)
+		free_var->gen(g);
+
+	g.genJump(jmp_id, "break");
+}
+
