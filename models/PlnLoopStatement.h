@@ -32,3 +32,17 @@ public:
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 };
+
+class PlnContinueStatement : public PlnStatement
+{
+public:
+	int jmp_id;
+	PlnStatement* target_stmt;
+	vector<PlnExpression*> free_vars;
+
+	PlnContinueStatement(PlnStatement* target_stmt);
+
+	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
+	void gen(PlnGenerator& g) override;
+};
+

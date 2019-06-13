@@ -41,6 +41,7 @@ static void registerConst(json& cnst, PlnScopeStack &scope);
 static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
 static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast);
+static PlnStatement* buildContinue(json& cntn, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast);
 static PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
@@ -350,6 +351,9 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 	} else if (type == "break") {
 		statement = buildBreak(stmt, scope, ast);
 
+	} else if (type == "continue") {
+		statement = buildContinue(stmt, scope, ast);
+
 	} else if (type == "if") {
 		statement = buildIf(stmt, scope, ast);
 
@@ -639,6 +643,27 @@ PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast)
 	}
 
 	return new PlnBreakStatement(stmt);
+}
+
+PlnStatement* buildContinue(json& cntn, PlnScopeStack& scope, json& ast)
+{
+	PlnStatement* stmt = NULL;
+	for (auto si=scope.rbegin(); si!=scope.rend(); ++si) {
+		if (si->type == SC_BLOCK) {
+			PlnStatement *s = si->inf.block->owner_stmt;
+			if (s && s->type == ST_WHILE) {
+				stmt = s;
+				break;
+			}
+		} else
+			break;
+	}
+
+	if (!stmt) {
+		BOOST_ASSERT(false);
+	}
+
+	return new PlnContinueStatement(stmt);
 }
 
 PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast)

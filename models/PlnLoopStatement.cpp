@@ -102,3 +102,40 @@ void PlnBreakStatement::gen(PlnGenerator& g)
 	g.genJump(jmp_id, "break");
 }
 
+// PlnContinueStatement
+PlnContinueStatement::PlnContinueStatement(PlnStatement* target_stmt)
+	: target_stmt(target_stmt)
+{
+	type = ST_CONTINUE;
+}
+
+void PlnContinueStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	if (target_stmt->type == ST_WHILE) {
+		jmp_id = static_cast<PlnWhileStatement*>(target_stmt)->jmp_start_id;
+	} else
+		BOOST_ASSERT(false);
+		
+	BOOST_ASSERT(jmp_id >= 0);
+
+	bool valid=false;
+	for (auto sitem=si.scope.rbegin(); sitem!=si.scope.rend(); sitem++) {
+		if (sitem->type == SC_BLOCK) {
+			sitem->inf.block->addFreeVars(free_vars, da, si);
+			if (sitem->inf.block->owner_stmt == target_stmt) {
+				valid = true;
+				break;
+			}
+		}
+	}
+	BOOST_ASSERT(valid);
+}
+
+void PlnContinueStatement::gen(PlnGenerator& g)
+{
+	for (auto free_var: free_vars)
+		free_var->gen(g);
+
+	g.genJump(jmp_id, "continue");
+}
+
