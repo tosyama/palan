@@ -1,0 +1,5 @@
+func test()
+{
+	a = 1;
+	break;
+}

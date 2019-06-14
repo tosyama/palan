@@ -44,7 +44,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "007_whiletest";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "0123456789321");
+	REQUIRE(exec(testcode) == "0123456789321\n"
+								"012345 1245\n"
+								"012345 1245");
+	CHECK(mcheck("mtrace007") == "+20 -20");
 
 	testcode = "008_iftest";
 	REQUIRE(build(testcode) == "success");
@@ -192,6 +195,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"2 1 21");
 }
 
+// Error file ID: 500-570
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -339,6 +343,12 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "566_copyfreevar_err4";
 	REQUIRE(build(testcode) == "finish:0:4-4 Can not copy to freed variable 'arr1'.");
+
+	testcode = "569_break_notinloop_err";
+	REQUIRE(build(testcode) == "0:4-4 The statement should be within loop.");
+
+	testcode = "570_continue_notinloop_err";
+	REQUIRE(build(testcode) == "0:4-4 The statement should be within loop.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

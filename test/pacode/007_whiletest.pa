@@ -1,4 +1,9 @@
 ccall int32 printf();
+ccall setenv();
+ccall mtrace();
+ccall muntrace();
+
+setenv("MALLOC_TRACE", "out/mtrace007", 1);
 
 int32 i=0;
 while i != 10 {
@@ -15,3 +20,50 @@ while(i) {
 	printf("%d", i);
 	i-1 -> i;
 }
+
+printf("\n");
+
+// break
+0->i;
+while i<10 {
+	printf("%d", i);
+	if i==5 { break }
+	i+1->i;
+}
+
+printf(" ");
+
+// continue
+0->i;
+while i<5 {
+	i+1->i;
+	if i==3 { continue }
+	printf("%d", i);
+}
+
+mtrace();
+printf("\n");
+
+// break
+0->i;
+while i<10 {
+	int32[3] a;
+	printf("%d", i);
+	if i==5 { break }
+	int32[3] b;
+	i+1->i;
+}
+
+printf(" ");
+
+// continue
+0->i;
+while i<5 {
+	int32[3] a;
+	i+1->i;
+	if i==3 { continue }
+	int32[3] b;
+	printf("%d", i);
+}
+
+muntrace();

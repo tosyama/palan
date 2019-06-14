@@ -639,7 +639,9 @@ PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast)
 	}
 
 	if (!stmt) {
-		BOOST_ASSERT(false);
+		PlnCompileError err(E_NotWithInLoop);
+		setLoc(&err, brk);
+		throw err;
 	}
 
 	return new PlnBreakStatement(stmt);
@@ -660,7 +662,9 @@ PlnStatement* buildContinue(json& cntn, PlnScopeStack& scope, json& ast)
 	}
 
 	if (!stmt) {
-		BOOST_ASSERT(false);
+		PlnCompileError err(E_NotWithInLoop);
+		setLoc(&err, cntn);
+		throw err;
 	}
 
 	return new PlnContinueStatement(stmt);

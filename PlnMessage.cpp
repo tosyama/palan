@@ -60,6 +60,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f  = "Can't use constant value here."; break;
 		case E_ValueRequired:
 			f = "Value is required here."; break;
+		case E_NotWithInLoop:
+			f = "The statement should be within loop."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;
