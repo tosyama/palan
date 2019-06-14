@@ -34,6 +34,7 @@ typedef std::vector<PlnScopeItem>	PlnScopeStack;
 
 // use for finishing
 enum PlnVarLifetime {
+	VLT_NOTEXIST,
 	VLT_UNKNOWN,
 	VLT_ALLOCED,
 	VLT_INITED,

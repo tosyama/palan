@@ -62,6 +62,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_SYSCALL	"syscall"
 %token KW_RETURN	"return"
 %token KW_WHILE	"while"
+%token KW_BREAK	"break"
+%token KW_CONTINUE	"continue"
 %token KW_IF	"if"
 %token KW_ELSE	"else"
 %token KW_CONST	"const"
@@ -85,7 +87,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	parameter default_value
 %type <json>	return_type	return_value
 %type <json>	statement semi_stmt
-%type <json>	st_expression block return_stmt
+%type <json>	st_expression block
+%type <json>	return_stmt break_stmt continue_stmt
 %type <json>	while_statement if_statement else_statement
 %type <json>	declaration subdeclaration const_def
 %type <json>	expression
@@ -400,6 +403,16 @@ semi_stmt: st_expression
 	}
 
 	| return_stmt
+	{
+		$$ = move($1);
+	}
+	
+	| break_stmt 
+	{
+		$$ = move($1);
+	}
+
+	| continue_stmt 
 	{
 		$$ = move($1);
 	}
@@ -975,6 +988,22 @@ return_stmt: KW_RETURN
 		};
 		$$ = move(ret);
 		LOC($$, @1);
+	}
+	;
+
+break_stmt: KW_BREAK
+	{
+		json ret = { {"stmt-type", "break"} };
+		$$ = move(ret);
+		LOC($$, @$);
+	}
+	;
+
+continue_stmt: KW_CONTINUE
+	{
+		json ret = { {"stmt-type", "continue"} };
+		$$ = move(ret);
+		LOC($$, @$);
 	}
 	;
 

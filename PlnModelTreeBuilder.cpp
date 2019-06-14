@@ -34,12 +34,14 @@
 static void registerPrototype(json& proto, PlnScopeStack& scope);
 static void buildFunction(json& func, PlnScopeStack &scope, json& ast);
 static PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast);
-static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast);
+static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast, PlnBlock* new_block = NULL);
 static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
 static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
 static void registerConst(json& cnst, PlnScopeStack &scope);
 static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
 static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast);
+static PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast);
+static PlnStatement* buildContinue(json& cntn, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast);
 static PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
@@ -295,9 +297,9 @@ static void prebuildBlock(json& stmts, PlnScopeStack& scope, json& ast)
 }
 
 
-PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast)
+PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast, PlnBlock* new_block)
 {
-	PlnBlock* block = new PlnBlock();
+	PlnBlock* block = new_block ? new_block : new PlnBlock();
 	switch (scope.back().type) {
 		case SC_MODULE: break;
 		case SC_FUNCTION:
@@ -345,6 +347,12 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 
 	} else if (type == "while") {
 		statement = buildWhile(stmt, scope, ast);
+	
+	} else if (type == "break") {
+		statement = buildBreak(stmt, scope, ast);
+
+	} else if (type == "continue") {
+		statement = buildContinue(stmt, scope, ast);
 
 	} else if (type == "if") {
 		statement = buildIf(stmt, scope, ast);
@@ -608,9 +616,58 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast)
 {
 	PlnExpression* cond = buildExpression(whl["cond"], scope);
-	PlnBlock* block = buildBlock(whl["block"]["stmts"], scope, ast);
-	setLoc(block, whl["block"]);
-	return new PlnWhileStatement(cond, block, CUR_BLOCK);
+	PlnBlock* stmts_block = new PlnBlock();
+	PlnWhileStatement* while_stmt = new PlnWhileStatement(cond, stmts_block, CUR_BLOCK);
+	buildBlock(whl["block"]["stmts"], scope, ast, stmts_block);
+	setLoc(stmts_block, whl["block"]);
+
+	return while_stmt;
+}
+
+PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast)
+{
+	PlnStatement* stmt = NULL;
+	for (auto si=scope.rbegin(); si!=scope.rend(); ++si) {
+		if (si->type == SC_BLOCK) {
+			PlnStatement *s = si->inf.block->owner_stmt;
+			if (s && s->type == ST_WHILE) {
+				stmt = s;
+				break;
+			}
+		} else
+			break;
+	}
+
+	if (!stmt) {
+		PlnCompileError err(E_NotWithInLoop);
+		setLoc(&err, brk);
+		throw err;
+	}
+
+	return new PlnBreakStatement(stmt);
+}
+
+PlnStatement* buildContinue(json& cntn, PlnScopeStack& scope, json& ast)
+{
+	PlnStatement* stmt = NULL;
+	for (auto si=scope.rbegin(); si!=scope.rend(); ++si) {
+		if (si->type == SC_BLOCK) {
+			PlnStatement *s = si->inf.block->owner_stmt;
+			if (s && s->type == ST_WHILE) {
+				stmt = s;
+				break;
+			}
+		} else
+			break;
+	}
+
+	if (!stmt) {
+		PlnCompileError err(E_NotWithInLoop);
+		setLoc(&err, cntn);
+		throw err;
+	}
+
+	return new PlnContinueStatement(stmt);
 }
 
 PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast)

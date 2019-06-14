@@ -23,7 +23,7 @@
 #include "../PlnException.h"
 
 PlnBlock::PlnBlock()
-	: parent_func(NULL), parent_block(NULL)
+	: parent_func(NULL), parent_block(NULL), owner_stmt(NULL)
 {
 }
 
@@ -244,14 +244,8 @@ next:	;
 	return NULL;
 }
 
-void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	si.push_scope(this);
-	for (auto s: statements) {
-		s->finish(da, si);
-		da.checkDataLeak();
-	}
-	
 	for (auto v: variables) {
 		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
 			auto lt = si.get_lifetime(v);
@@ -261,8 +255,21 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 				free_vars.push_back(free_var);
 			}
 		}
-		da.releaseDp(v->place);
 	}
+}
+
+void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	si.push_scope(this);
+	for (auto s: statements) {
+		s->finish(da, si);
+		da.checkDataLeak();
+	}
+	
+	addFreeVars(free_vars, da,si);
+	
+	for (auto v: variables)
+		da.releaseDp(v->place);
 	
 	si.pop_owner_vars(this);
 	si.pop_scope();

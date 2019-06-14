@@ -1,7 +1,7 @@
 /// PlnStatement model class declaration.
 ///
 /// @file	PlnStatement.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 #pragma once
 #include "../PlnModel.h"
 
@@ -12,6 +12,8 @@ enum PlnStmtType {
 	ST_BLOCK,
 	ST_RETURN,
 	ST_WHILE,
+	ST_BREAK,
+	ST_CONTINUE,
 	ST_IF
 };
 

@@ -36,6 +36,8 @@ enum {
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
 	KW_RETURN	= PlnParser::token::KW_RETURN,
 	KW_WHILE	= PlnParser::token::KW_WHILE,
+	KW_BREAK	= PlnParser::token::KW_BREAK,
+	KW_CONTINUE	= PlnParser::token::KW_CONTINUE,
 	KW_IF		= PlnParser::token::KW_IF,
 	KW_ELSE		= PlnParser::token::KW_ELSE,
 	KW_CONST	= PlnParser::token::KW_CONST,
@@ -110,6 +112,8 @@ syscall/{POST_KW}	{ return KW_SYSCALL; }
 func/{POST_KW}		{ return KW_FUNC; }
 return/{POST_KW}	{ return KW_RETURN; }
 while/{POST_KW}		{ return KW_WHILE; }
+break/{POST_KW}		{ return KW_BREAK; }
+continue/{POST_KW}	{ return KW_CONTINUE; }
 if/{POST_KW}		{ return KW_IF; }
 else/{POST_KW}		{ return KW_ELSE; }
 const/{POST_KW} 	{ return KW_CONST; }

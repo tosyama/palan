@@ -92,11 +92,15 @@ Statement
 	6. while - While loop statement
 		* cond\* - Condition expression
 		* block\* - Loop block model
-	7. if - If statement
+	7. break - Break statement
+		* label - Loop label to break
+	8. continue - Continue statement
+		* label - Loop label to continue
+	9. if - If statement
 		* cond\* - Condition expression
 		* block\* - If block model
 		* else - Else statement (block/if)
-	8. func-def - Function definition link
+	10. func-def - Function definition link
 		* id - Function id integer
 * loc - Location integer array
 
@@ -111,29 +115,29 @@ Expression
 		* val\* - Integer
 	2. lit-uint - Unsigned integer(64bit) literal
 		* val\* - Unsigned integer
-	2. lit-float - Floating point number(64bit) literal
+	3. lit-float - Floating point number(64bit) literal
 		* val\* - Floating point number
-	3. lit-str - String literal
+	4. lit-str - String literal
 		* val\* - String value
-	4. var - Variable/Constant expression
+	5. var - Variable/Constant expression
 		* base-var\* - Base variable/ constant vlue name string
 		* opes - Modified operator list
-	5. array-val - Array expression
+	6. array-val - Array expression
 		* vals\* - Item value expression list
-	6. asgn - Assignment expression
+	7. asgn - Assignment expression
 		* src-exps\* - Source expression list
 		* dst-vals\* - Destination value list
-	7. func-call - Function call expression
+	8. func-call - Function call expression
 		* func-name\* - Function name to call
 		* args\* - Argument list
-	8. chain-call - Chain function call expression
+	9. chain-call - Chain function call expression
 		* func-name\* - Function call expression 
 		* in-args\* - Input argument list
 		* args\* - Rest of argument list
-	9. binary operator
+	10. binary operator
 		* lval\* -	Left value expression
 		* rval\* -	Right value expression
-	10. unary operator
+	11. unary operator
 		* val\* -	Value expression
 * loc - Location integer array
 

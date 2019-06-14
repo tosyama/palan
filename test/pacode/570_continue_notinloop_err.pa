@@ -1,0 +1,5 @@
+{
+	int32 a;
+	while a<10 { a+1->a }
+	continue;
+}

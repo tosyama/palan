@@ -38,6 +38,9 @@ PlnVarLifetime PlnScopeInfo::get_lifetime(PlnVariable* v)
 				else return vi.var == v->container;
 			} );
 
-	BOOST_ASSERT(ov != owner_vars.rend());
+
+	if (ov == owner_vars.rend())
+		return VLT_NOTEXIST;
+
 	return (*ov).lifetime;
 }

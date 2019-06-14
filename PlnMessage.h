@@ -32,6 +32,7 @@ enum PlnErrCode {
 	E_UndefinedConst, // const name
 	E_CantUseConstHere, // none
 	E_ValueRequired, // none
+	E_NotWithInLoop, // none
 
 	E_InvalidAST,	// source name, line
 
