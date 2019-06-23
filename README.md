@@ -40,3 +40,7 @@ $ ./pac helloworld.pa -o a.out
 $ ./a.out
 Hello World!
 ```
+
+## Reference
+See wiki [Palan 0.2 Language Reference](https://github.com/tosyama/palan/wiki/Palan-0.2-Language-Reference).
+
