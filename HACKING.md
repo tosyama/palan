@@ -1,7 +1,7 @@
 Palan Hacking Guide & Design Memo
 ===================
 
-ver 0.2.0a
+ver 0.2.0
 
 Code Structure
 --------------
@@ -92,7 +92,7 @@ The gen() generates assembly code of the model to output stream.
 1. PlnModule - Root of model tree. It includes function definitions, type definition and top level block.
 2. PlnFunction - Function definition. Generally, stack/register management is reset by each function.
 3. PlnStatement - Statement become a unit to generate assembly code. Because there is not any passing data directly between statements.
-4. PlnBlock - Block statement includes a series of statements. Block manage local variables in the block.
+4. PlnBlock - Block statement includes a series of statements. Block manage local variables and functions in the block.
 5. PlnExpression - Expression returns values. Plain PlnExpression class manage Literal or variable.
 	Many descendant classes exist such as calculation/assignment expression.
 6. PlnAssignment - Assignment expression. PlnAssignment assign values to variables.
@@ -118,6 +118,10 @@ Generally, *values* are set up at constructor of the model.
 The *data_places* manage place and timing of passing data such as register.
 Parent expression set child's data_places before calling finish().
 
+*adjustTypes()* need to check compatibilty of type to store.
+Generate and return new expressions if needed.
+Throw compile error if types is not compatibe.
+
 Variable Model
 --------------
 PlnVariable represents variable. Not only local variable, also represents indirect object such as array item.
@@ -131,6 +135,13 @@ The member *ptr_type* is the flags that indicate following characteristics.
 
 The member *place* is data place of the variable stored.
 However, for general usage, use alias data place with getDataPlace() of expression class.
+
+Type information
+-----------------
+The type information are stored in PlnType instance.
+It has type name and compatibe information.
+To check compatibe of between types, use conConvFrom() method.
+The method used to decide calling function by checking arguments type in PlnBlock().i
 
 Data Allocator
 --------------
@@ -164,7 +175,7 @@ Generator
 ---------
 PlnGenerator(g) outputs assembly.
 Each model outputs it's assembly by using g.gen~() at its gen() method.
-May of g.gen~() are required PlnGenEntity to call.
+Many of g.gen~() are required PlnGenEntity to call.
 Entities includes environment dependent assembly information.
 g.getEntity() create the entity from dp.
 g.genSaveSrc() and g.genLoadDp() can be used at the timing of da.pushSrc() and da.popSrc().
