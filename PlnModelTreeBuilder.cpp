@@ -237,11 +237,11 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		if (var_type) {
 			param_types.push_back(var_type->name);
 			pre_name = param_types.back();
-			if (param["move"].is_boolean() && param["move"] == true) {
-				param_types.back() = pre_name + ">>";
-			}
 		} else {
 			param_types.push_back(pre_name);
+		}
+		if (param["move"].is_boolean() && param["move"] == true) {
+			param_types.back() = pre_name + ">>";
 		}
 	}
 

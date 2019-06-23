@@ -6,8 +6,9 @@
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
 # target="../PlnModelTreeBuilder"
-#target="../models/expressions/PlnArrayValue"
-target="../models/types/PlnArrayValueType"
+target="../PlnGenerator"
+# target="../models/expressions/PlnArrayValue"
+# target="../models/types/PlnArrayValueType"
 # target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
