@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "a");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -213,7 +213,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Variable 'abcd' was not declared in this scope.");
 
 	testcode = "504_copyfreevar_err";
-	REQUIRE(build(testcode) == "finish:0:6-6 Can not copy to freed variable 'arr2'.");
+	REQUIRE(build(testcode) == "finish:0:4-4 Can not copy to freed variable 'arr2'.");
 
 	testcode = "505_ambigfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");

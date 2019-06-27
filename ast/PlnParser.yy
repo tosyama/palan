@@ -68,6 +68,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_ELSE	"else"
 %token KW_CONST	"const"
 %token KW_AUTOTYPE	"var"
+%token KW_VARLENARG	"..."
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
 %token OPE_LE	"<="
@@ -219,6 +220,21 @@ return_value: type_def ID
 	;
 
 parameter_def: /* empty */ {}
+	| KW_VARLENARG
+	{
+		json varprm = {
+			{ "name", "..." }
+		};
+		$$.push_back(move(varprm));
+	}
+	| parameters ',' KW_VARLENARG
+	{
+		$$ = move($1);
+		json varprm = {
+			{ "name", "..." }
+		};
+		$$.push_back(move(varprm));
+	}
 	| parameters { $$ = move($1); }
 	;
 

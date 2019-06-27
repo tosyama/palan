@@ -38,11 +38,14 @@ public:
 	} inf;
 	PlnBlock* implement;
 	PlnBlock* parent;
+	bool has_varlen_arg;
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
 	PlnVariable* addRetValue(const string& rname, PlnType* rtype, bool do_init);
 	PlnParameter* addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal);
+
+	vector<string> getParamStrs() const;
 
 	void genAsmName();
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;

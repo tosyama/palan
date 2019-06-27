@@ -1,4 +1,4 @@
-ccall int32 printf();
+ccall int32 printf(...);
 
 i = 2;
 int16[2][2,3] arr = [[1,2,3][4,5,6],[21,20+i,23][24,25,26]];

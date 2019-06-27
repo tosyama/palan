@@ -1,5 +1,5 @@
 // Assignment swap values tests
-ccall int32 printf();
+ccall int32 printf(...);
 
 int32 i, j, k = 1, 2, 3;
 

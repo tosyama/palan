@@ -163,15 +163,20 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 	do {
 		for (auto f: b->funcs) {
 			if (f->name == func_name) {
-				if (f->parameters.size() < arg_vals.size()) {
-					// Excluded C and System call for now
-					if (f->type == FT_C || f->type == FT_SYS) return f;
+				if (!f->has_varlen_arg && f->parameters.size() < arg_vals.size()) {
+					// Excluded System call for now
+					if (f->type == FT_SYS) return f;
 					goto next_func;
 				}
 
 				int i=0;
 				bool do_cast = false;
 				for (auto p: f->parameters) {
+					if (p->name == "...") {
+						BOOST_ASSERT(i+1 == f->parameters.size());
+						break;
+					}
+
 					if (i+1>arg_vals.size() || !arg_vals[i]) {
 						if (!p->dflt_value) goto next_func;
 					} else {
@@ -223,19 +228,18 @@ PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& par
 	do {
 		for (auto f: b->funcs) {
 			if (f->name == func_name && f->parameters.size() == param_types.size()) {
+				vector<string> f_ptypes = f->getParamStrs();
+
+				if (f_ptypes.size() != param_types.size())
+					goto next;
 
 				for (int i=0; i<param_types.size(); i++) {
-					string pt_name = f->parameters[i]->var_type->name;
-					if (f->parameters[i]->ptr_type == PTR_PARAM_MOVE) {
-						pt_name += ">>";
-					}
-					if (pt_name != param_types[i]) {
+					if (f_ptypes[i] != param_types[i])
 						goto next;
-					}
 				}
 
 				BOOST_ASSERT(f->implement == NULL);
-				return f;
+				return f;	// found complete match
 			}
 next:	;
 		}

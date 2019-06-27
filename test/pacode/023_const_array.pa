@@ -1,4 +1,4 @@
-ccall int32 printf();
+ccall int32 printf(...);
 
 const ARR1 = [1,2,3];
 const ARR2 = [ARR1, ARR1];

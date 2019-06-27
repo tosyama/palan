@@ -28,6 +28,7 @@ int yylex();
 %token KW_ELSE
 %token KW_CONST
 %token KW_AUTOTYPE
+%token KW_VARLENARG
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -81,6 +82,8 @@ return_value: type_def ID
 	;
 
 parameter_def: /* empty */
+	| KW_VARLENARG
+	| parameters ',' KW_VARLENARG
 	| parameters
 	;
 

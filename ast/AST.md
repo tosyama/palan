@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Specification
 ========================================
 
-ver 0.2.0a
+ver 0.3.0a
 
 \* - Required  
 \# - Required if first item of list 
@@ -50,6 +50,11 @@ Parameter
 * var-type\# - Variable type list
 * move - Move ownership flag boolean
 * default-val - Default value expression
+* loc - Location integer array
+
+Parameter (Variable length)
+---------
+* name\* - string "..."
 * loc - Location integer array
 
 Return value

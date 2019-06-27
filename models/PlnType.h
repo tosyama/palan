@@ -75,6 +75,7 @@ public:
 	static PlnType* getFlo();
 	static PlnType* getReadOnlyCStr();
 	static PlnType* getObject();
+	static PlnType* getAny();
 
 	static string getFixedArrayName(PlnType* item_type, vector<int>& sizes);
 };

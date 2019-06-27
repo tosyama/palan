@@ -29,11 +29,11 @@ using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
 	:	type(func_type), name(func_name), retval_init(NULL), implement(NULL),
-		parent(NULL)
+		parent(NULL), has_varlen_arg(false)
 {
 }
 
-PlnVariable* PlnFunction::addRetValue(const string& rname,PlnType* rtype, bool do_init)
+PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool do_init)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname)
@@ -81,6 +81,12 @@ PlnVariable* PlnFunction::addRetValue(const string& rname,PlnType* rtype, bool d
 
 PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
+	BOOST_ASSERT(!has_varlen_arg);
+
+	if (pname == "...") {
+		has_varlen_arg = true;
+	}
+
 	for (auto p: parameters)
 		if (p->name == pname) return NULL;
 
@@ -104,9 +110,24 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPass
 	}
 
 	parameters.push_back(param);
-	arg_dtypes.push_back(t->data_type);
+	if (!has_varlen_arg)
+		arg_dtypes.push_back(t->data_type);
 
 	return	param;
+}
+
+vector<string> PlnFunction::getParamStrs() const
+{
+	vector<string> param_types;
+	for (auto p: parameters) {
+		string pname = p->var_type->name;
+		if (p->ptr_type == PTR_PARAM_MOVE) 
+			pname += ">>";
+		if (p->name == "...")
+			pname += "...";
+		param_types.push_back(pname);
+	}
+	return param_types;
 }
 
 static string mangling(PlnFunction* f)
@@ -149,7 +170,7 @@ void PlnFunction::genAsmName()
 
 void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	if (type == FT_PLN || type == FT_INLINE) {
+	if (type == FT_PLN) {
 		if (implement) {
 			si.push_scope(this);
 
@@ -229,6 +250,10 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			da.finish(save_regs, save_reg_dps);
 			inf.pln.stack_size = da.stack_size;
 		}
+	} else if (type == FT_C || type == FT_SYS) {
+		BOOST_ASSERT(!implement);
+	} else { // FT_INLINE
+		BOOST_ASSERT(false);
 	}
 }
 
@@ -260,6 +285,9 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genEndFunc();
 			break;
 		}
+
+		default: // FT_C, FT_SYS, FT_INLINE
+			break;
 	}
 }
 

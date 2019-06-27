@@ -181,6 +181,19 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 
 	} else if (ftype_str == "ccall") {
 		f = new PlnFunction(FT_C, proto["name"]);
+		int i=0;
+		for (auto& param: proto["params"]) {
+			if (param["name"] == "...") {
+				BOOST_ASSERT((i+1)==proto["params"].size());
+				f->addParam(param["name"], PlnType::getAny(), FPM_COPY, NULL);
+
+			} else {
+				PlnType *var_type = getVarType(param["var-type"], scope);
+				PlnPassingMethod pm = FPM_COPY;
+				f->addParam(param["name"], var_type, pm, NULL);
+			}
+			i++;
+		}
 		if (proto["ret-type"].is_string()) {
 			if (PlnType *t = module.getType(proto["ret-type"])) {
 				string rname = "";
@@ -203,14 +216,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	} else
 		assertAST(false, proto);
 	
-	vector<string> param_types;
-	for (auto p: f->parameters) {
-		if (p->ptr_type == PTR_PARAM_MOVE) {
-			param_types.push_back(p->var_type->name + ">>");
-		} else {
-			param_types.push_back(p->var_type->name);
-		}
-	}
+	vector<string> param_types = f->getParamStrs();
 
 	if (CUR_BLOCK->getFuncProto(f->name, param_types)) {
 		PlnCompileError err(E_DuplicateFunction, f->name);
@@ -234,15 +240,20 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
 		PlnType* var_type = getVarType(param["var-type"], scope);
+		string p_name;
 		if (var_type) {
-			param_types.push_back(var_type->name);
-			pre_name = param_types.back();
-		} else {
-			param_types.push_back(pre_name);
+			pre_name = var_type->name;
 		}
+		p_name = pre_name;
+
 		if (param["move"].is_boolean() && param["move"] == true) {
-			param_types.back() = pre_name + ">>";
+			p_name += ">>";
 		}
+		if (param["name"]=="...") {
+			p_name += "...";
+		}
+		param_types.push_back(p_name);
+
 	}
 
 	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);

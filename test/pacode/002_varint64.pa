@@ -1,4 +1,4 @@
-ccall int32 printf();
+ccall int32 printf(...);
 
 int64 a = 1;
 int64 b,c,d = 2,1+2,4;

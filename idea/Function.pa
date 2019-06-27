@@ -36,7 +36,7 @@ o1 ->> o2; // 所有権を取られたので、o1は無効(null代入). 以降o1
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
 
-auto *o4 = *o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
+o4 = &o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
 
 func2(x, y) -> x;
 
@@ -62,7 +62,7 @@ func swap(int sx, sy)
 }
 
 // object
-func funco(object o1, >>o2, >>o3, *o4, io o5)
+func funco(object o1, >>o2, >>o3, &o4, io o5)
 	-> object o2
 {
 	// o1 は rval input only.(clone would be created before func call and callee free it)

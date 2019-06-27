@@ -1,10 +1,12 @@
-ccall int32 printf();
+ccall int32 printf(...);
 
 a = [1,2,3];
 b = [1,2,3];
 c = [1,2,3];
 
 f(a, f(b, a>>)>>);
+
+printf("a");
 
 func f(int64[3] a, >>b) -> int64[3] b
 {

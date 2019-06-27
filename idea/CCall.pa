@@ -1,19 +1,20 @@
-ccall printf(byte[?] format, ...) -> int32;
-ccall sprintf(out, byte[?] format, ...) => byte[?] str -> int32;
-ccall scanf(byte[?] format, out) => ... -> int32;
-ccall sscanf(byte[?] str, byte[?] format, out) => ... -> int32;
-ccall strcpy(out, byte[?] src)-> byte[?] dst => byte[?];
+ccall int32 printf(byte[?] &format, ...);
+ccall int32 snprintf(out, int64 n, byte[?] &format, ... |> byte[?] dst);
+ccall int32 sprintf(out, byte[?] &format, ... |> byte[?] str);
+ccall int32 scanf(byte[?] &format, out |> ...);
+ccall int32 sscanf(byte[?] str, byte[?] &format, out |> ...);
+ccall byte[?] strcpy(out, byte[?] &src |> byte[?] dst);
 
-call sqlite3_open(byte[?] filename, out) => sqlite3* ppDb -> int32;
+ccall int32 sqlite3_open(byte[?] filename, out |> sqlite3 >>ppDb);
 
 byte[80] str;
 int32 result;
-sprintf("Hello world") => str -> result;
+sprintf("Hello world" |> str) -> result;
 
 flo64 d;
 int32 i;
-"1.23 5" -> sscanf("%f %d") => d, i -> result;
+"1.23 5" -> sscanf("%f %d" |> d, i) -> result;
 
-if (("1.23 5" -> sscanf("%f %d") => d, i) == 0) {
+if (("1.23 5" -> sscanf("%f %d" |> d, i) == 0) {
 	printf("err\n");
 }

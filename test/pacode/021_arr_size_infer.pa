@@ -1,4 +1,4 @@
-ccall int32 printf();
+ccall int32 printf(...);
 
 int64[] arr1 = [1,2,3];
 int64[3] tarr1 = arr1;
