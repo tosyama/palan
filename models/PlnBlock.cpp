@@ -8,6 +8,7 @@
 
 #include <boost/assert.hpp>
 #include <algorithm>
+#include <boost/algorithm/string/join.hpp>
 
 #include "PlnFunction.h"
 #include "PlnBlock.h"
@@ -156,6 +157,7 @@ PlnExpression* PlnBlock::getConst(const string& name)
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_vals)
 {
 	PlnFunction* matched_func = NULL;
+	vector<PlnFunction*> candidates;
 	int amviguous_count = 0; 
 	int is_perfect_match = false; 
 
@@ -163,7 +165,8 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 	do {
 		for (auto f: b->funcs) {
 			if (f->name == func_name) {
-				if (!f->has_varlen_arg && f->parameters.size() < arg_vals.size()) {
+				candidates.push_back(f);
+				if (f->va_arg_start<0 && f->parameters.size() < arg_vals.size()) {
 					// Excluded System call for now
 					if (f->type == FT_SYS) return f;
 					goto next_func;
@@ -174,6 +177,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 				for (auto p: f->parameters) {
 					if (p->name == "...") {
 						BOOST_ASSERT(i+1 == f->parameters.size());
+						candidates.pop_back();
 						break;
 					}
 
@@ -195,6 +199,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 					}
 					++i;
 				}
+				candidates.pop_back();
 
 				if (is_perfect_match) {
 					if (do_cast) goto next_func;
@@ -216,7 +221,15 @@ next_func:
 	
 	if (is_perfect_match || amviguous_count == 1) return matched_func;
 
-	if (!matched_func) throw PlnCompileError(E_UndefinedFunction, func_name);
+	if (!matched_func) {
+		if (candidates.size()) {
+			auto f = candidates[0];
+			string pdef = boost::algorithm::join(f->getParamStrs(), ", ");
+			string candidate_def = f->name + "(" + pdef + ")";
+			throw PlnCompileError(E_NoMatchingFunction, func_name, candidate_def);
+		}
+		throw PlnCompileError(E_UndefinedFunction, func_name);
+	}
 	// if (amviguous_count >= 0)
 	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 }

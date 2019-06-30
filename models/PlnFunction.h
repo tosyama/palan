@@ -1,7 +1,7 @@
 /// Function model declaration.
 ///
 /// @file	PlnFunction.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -38,7 +38,7 @@ public:
 	} inf;
 	PlnBlock* implement;
 	PlnBlock* parent;
-	bool has_varlen_arg;
+	int va_arg_start;
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);

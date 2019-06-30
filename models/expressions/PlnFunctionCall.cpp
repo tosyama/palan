@@ -62,6 +62,7 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 		BOOST_ASSERT(f->parameters.size() == arg_data_types.size());
 		int i=0;
 		for (auto p: f->parameters) {
+			BOOST_ASSERT(i<arg_dps.size());
 			BOOST_ASSERT(p->var_type->data_type == arg_data_types[i]);
 			arg_dps[i]->data_type = arg_data_types[i];
 			i++;
@@ -88,6 +89,10 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 	i = 0;
 	for (auto p: f->parameters) {
+		if (p->name == "...") {
+			continue;
+		}
+		BOOST_ASSERT(i<arg_dps.size());
 		arg_dps[i]->data_type = p->var_type->data_type;
 		++i;
 	}
@@ -227,7 +232,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto dp: arg_dps)
 				arg_dtypes.push_back(dp->data_type);
 
-			g.genCCall(function->asm_name, arg_dtypes, -1);
+			g.genCCall(function->asm_name, arg_dtypes, function->va_arg_start);
 
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);
@@ -270,7 +275,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto dp: arg_dps)
 				arg_dtypes.push_back(dp->data_type);
 
-			g.genCCall(function->asm_name, arg_dtypes, 0);
+			g.genCCall(function->asm_name, arg_dtypes, function->va_arg_start);
 
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);

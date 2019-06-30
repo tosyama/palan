@@ -24,5 +24,15 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type, sizes);
 	}
 
+	if (src == PlnType::getReadOnlyCStr()) {
+		if (item_type == PlnType::getByte() && sizes.size() == 1) {
+			if (sizes[0])
+				return TC_LOSTABLE_AUTO_CAST;
+			else
+				return TC_AUTO_CAST;
+
+		}
+	}
+
 	return TC_CANT_CONV;
 }

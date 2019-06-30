@@ -134,7 +134,7 @@ static void initBasicTypes()
 	object_type = t;
 
 	t = new AnyType();
-	t->name = "__any";
+	t->name = "";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;
 	basic_types.push_back(t);
@@ -260,10 +260,10 @@ vector<PlnType*> PlnType::getBasicTypes()
 	return basic_types;
 }
 
-// PlnType* PlnType::getByte()	// not use now
-// {
-// 	return byte_type;
-// }
+PlnType* PlnType::getByte()
+{
+ 	return byte_type;
+}
 
 PlnType* PlnType::getSint()
 {
@@ -299,7 +299,10 @@ string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
 	for (int s: sizes) {
-		arr_name = arr_name + to_string(s) + ",";
+		if (s)
+			arr_name = arr_name + to_string(s) + ",";
+		else
+			arr_name = arr_name + "?,";
 	}
 	arr_name.back() = ']';
 

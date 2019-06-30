@@ -29,7 +29,7 @@ using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
 	:	type(func_type), name(func_name), retval_init(NULL), implement(NULL),
-		parent(NULL), has_varlen_arg(false)
+		parent(NULL), va_arg_start(-1)
 {
 }
 
@@ -81,10 +81,10 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 
 PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
-	BOOST_ASSERT(!has_varlen_arg);
+	BOOST_ASSERT(va_arg_start<0);
 
 	if (pname == "...") {
-		has_varlen_arg = true;
+		va_arg_start = parameters.size();
 	}
 
 	for (auto p: parameters)
@@ -110,7 +110,7 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPass
 	}
 
 	parameters.push_back(param);
-	if (!has_varlen_arg)
+	if (va_arg_start<0)
 		arg_dtypes.push_back(t->data_type);
 
 	return	param;

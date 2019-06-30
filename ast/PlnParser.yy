@@ -80,7 +80,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_ARROW	"->>"
 %token ARROW	"->"
 
-%type <string>	single_return
+%type <string>	single_return pass_by
 %type <bool>	move_owner take_owner arrow_ope
 %type <vector<json>>	array_def array_sizes
 %type <json>	function_definition	palan_function_definition
@@ -117,7 +117,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
-%left '*' '/' '%'
+%left '*' '/' '%' '&'
 %left UMINUS '!'
 
 %start module	
@@ -244,14 +244,13 @@ parameters: parameter { $$.push_back($1); }
 		$$ = move($1);
 		$$.push_back($3);
 	}
-	| parameters ',' move_owner ID default_value
+	| parameters ',' pass_by ID default_value
 	{
 		$$ = move($1);
 		json prm = {
 			{ "name", $4 },
+			{ "pass-by", $3 }
 		};
-		if ($3)
-			prm["move"] = true;
 		if (!$5.is_null())
 			prm["default-val"] = move($5);
 
@@ -261,14 +260,13 @@ parameters: parameter { $$.push_back($1); }
 	}
 	;
 
-parameter: type_def move_owner ID default_value
+parameter: type_def pass_by ID default_value
 	{
 		json prm = {
 			{ "var-type", move($1) },
 			{ "name", move($3) },
+			{ "pass-by", $2 }
 		};
-		if ($2)
-			prm["move"] = true;
 		if (!$4.is_null())
 			prm["default-val"] = move($4);
 		$$ = move(prm);
@@ -279,6 +277,10 @@ parameter: type_def move_owner ID default_value
 move_owner: /* empty */	{ $$ = false; }
 	| DBL_GRTR { $$ = true; }
 	;
+
+pass_by: /* empty */ { $$ = "copy"; }
+	| DBL_GRTR { $$ = "move"; }
+	| '&' { $$ = "ro-ref"; }
 
 take_owner: /* empty */	{ $$ = false; }
 	| DBL_LESS { $$ = true; }
@@ -1084,6 +1086,17 @@ array_size: /* empty */
 	{
 		$$ = move($1);
 	}
+	
+	| '?'
+	{
+		json unknown_size = {
+			{"exp-type", "lit-int"},
+			{"val", 0}
+		};
+		$$ = move(unknown_size);
+		LOC($$, @$);
+	}
+	;
 
 array_item: '[' array_indexes ']'
 	{

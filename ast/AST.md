@@ -48,7 +48,7 @@ Parameter
 ---------
 * name\* - Parameter name string
 * var-type\# - Variable type list
-* move - Move ownership flag boolean
+* pass-by\* - Passing way string: "copy", "move", "ro-ref"
 * default-val - Default value expression
 * loc - Location integer array
 

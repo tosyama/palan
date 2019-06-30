@@ -49,7 +49,7 @@ int yylex();
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
-%left '*' '/' '%'
+%left '*' '/' '%' '&'
 %left UMINUS '!'
 
 %start module	
@@ -89,14 +89,19 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' move_owner ID default_value
+	| parameters ',' pass_by ID default_value
 	;
 
-parameter: type_def move_owner ID default_value
+parameter: type_def pass_by ID default_value
 	;
 
 move_owner: /* empty */
 	| DBL_GRTR
+	;
+
+pass_by: /* empty */
+	| DBL_GRTR
+	| '&'
 	;
 
 take_owner: /* empty */
@@ -278,6 +283,7 @@ array_sizes: array_size
 
 array_size: /* empty */
 	| expression
+	| '?'
 	;
 
 array_item: '[' array_indexes ']'

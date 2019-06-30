@@ -246,7 +246,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
 
 	testcode = "515_undefchainfunc_err";
-	REQUIRE(build(testcode) == "0:3-3 Function 'test' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'test'.\nCandidate: test(int32)");
 
 	testcode = "516_duplicate_const_err";
 	REQUIRE(build(testcode) == "0:4-4 Const name 'N' already defined.");
@@ -385,7 +385,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "555_arrlit_type_err7";
-	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:1-1 No matching function for call to 'test'.\nCandidate: test(int64[3])");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
@@ -410,7 +410,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "564_arrval_type_err7";
-	REQUIRE(build(testcode) == "0:2-2 Function 'test' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:2-2 No matching function for call to 'test'.\nCandidate: test(int64[3])");
 	
 	testcode = "565_unsupported_err3";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");

@@ -149,10 +149,12 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		for (auto& param: proto["params"]) {
 			PlnType *var_type = getVarType(param["var-type"], scope);
 			PlnPassingMethod pm = FPM_COPY;
-			if (param["move"].is_boolean()) {
-				if (param["move"] == true)
-					pm = FPM_MOVEOWNER;
+			if (param["pass-by"] == "move") {
+				pm = FPM_MOVEOWNER;
+			} else {
+				assertAST(param["pass-by"]=="copy", param);
 			}
+
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
 				default_val = buildExpression(param["default-val"], scope);
@@ -190,6 +192,11 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			} else {
 				PlnType *var_type = getVarType(param["var-type"], scope);
 				PlnPassingMethod pm = FPM_COPY;
+				if (param["pass-by"] == "ro-ref") {
+					pm = FPM_REF;
+				} else {
+					assertAST(param["pass-by"]=="copy", param);
+				}
 				f->addParam(param["name"], var_type, pm, NULL);
 			}
 			i++;
@@ -246,9 +253,10 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		}
 		p_name = pre_name;
 
-		if (param["move"].is_boolean() && param["move"] == true) {
+		if (param["pass-by"] == "move") {
 			p_name += ">>";
 		}
+
 		if (param["name"]=="...") {
 			p_name += "...";
 		}
@@ -801,6 +809,10 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
+			if (f->parameters[i]->name == "...") {
+				break;
+			}
+
 			if (arg_ex_ind == args.size()) {
 				args.push_back(NULL);
 			}

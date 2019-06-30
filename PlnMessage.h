@@ -11,6 +11,7 @@ using std::string;
 enum PlnErrCode {
 	E_UndefinedVariable, // var name
 	E_UndefinedFunction,	// func name
+	E_NoMatchingFunction,	// func name, candidates func
 	E_DuplicateVarName,	// var name
 	E_DuplicateFunction,	// func name
 	E_NumOfLRVariables,	// none
