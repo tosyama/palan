@@ -30,7 +30,7 @@ Note: `make package` installs [Boost], [Bison], [Flex] and [Catch]. You might ne
 $ vi helloworld.pa
 ```
 ```go
-ccall int32 printf(...);
+ccall printf(...);
 "Hello World!\n" -> printf();
 ```
 Note: write "ccall int32 printf();" if the verson 0.2 or less.

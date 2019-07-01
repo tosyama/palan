@@ -1,4 +1,4 @@
-ccall int32 printf(...);
+ccall printf(...);
 
 func func1(int64 a1, a2, a3) -> int64
 {

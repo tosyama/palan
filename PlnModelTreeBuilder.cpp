@@ -916,6 +916,10 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
+			if (f->parameters[i]->name == "...") {
+				break;
+			}
+
 			if (arg_ex_ind == args.size()) {
 				args.push_back(NULL);
 			}

@@ -293,39 +293,39 @@ default_value:	/* empty */	{  }
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID '(' parameter_def ')' ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def ')' single_return ';'
 	{
 		json ccall = {
 			{"func-type", "ccall"},
-			{"name", $3},
-			{"params", $5},
+			{"name", $2},
+			{"params", $4},
 		};
-		if ($2 != "")
-			ccall["ret-type"] = move($2);
+		if ($6 != "")
+			ccall["ret-type"] = move($6);
 		$$ = move(ccall);
 		LOC($$, @$);
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_return ';'
 	{
 		json syscall = {
 			{"func-type","syscall"},
 			{"call-id",$2},
-			{"name",$5},
-			{"params", $7}	
+			{"name",$4},
+			{"params", $6}	
 		};
-		if ($4 != "")
-			syscall["ret-type"] = move($4);
+		if ($8 != "")
+			syscall["ret-type"] = move($8);
 		$$ = move(syscall);
 		LOC($$, @$);
 	}
 	;
 
-single_return:  { }
-	| TYPENAME
+single_return: /* empty */ { }
+	| ARROW TYPENAME
 	{
-		$$ = move($1);
+		$$ = move($2);
 	}
 	;
 

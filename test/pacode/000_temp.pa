@@ -1,4 +1,4 @@
-ccall int32 printf(byte[?] &format, ...);
+ccall printf(byte[?] &format, ...) -> int32;
 
 a = [1,2,3];
 b = [1,2,3];

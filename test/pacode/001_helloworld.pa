@@ -1,5 +1,5 @@
-syscall 1: int64 write();
-ccall int32 printf(...);
+syscall 1: write() -> int64;
+ccall printf(...);
 
 int64 n = write(1, "Hello World!\n", 13);
 printf("%d", n);

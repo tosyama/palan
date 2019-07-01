@@ -115,14 +115,14 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID '(' parameter_def ')' ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def ')' single_return ';'
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_return ';'
 	;
 
 single_return: /* empty */
-	| type_def
+	| ARROW type_def
 	;
 
 function_definition: palan_function_definition

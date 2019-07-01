@@ -1,4 +1,4 @@
-ccall int64 printf(...);
+ccall printf(...);
 
 sbyte sb, byte ub = -128, 255;
 int16 sd, uint16 ud = -32768, 65535;

@@ -1,4 +1,4 @@
-ccall int32 printf(...);
+ccall printf(...);
 ccall setenv(...);
 ccall mtrace();
 ccall muntrace();
