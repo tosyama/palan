@@ -20,6 +20,17 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 		return TC_DOWN_CAST;
 	}
 
+	if (src->type == TP_FIXED_ARRAY) {
+		auto src_farr = static_cast<PlnFixedArrayType*>(src);
+		if (item_type == src_farr->item_type) {
+			if (!sizes[0]) {
+				return TC_AUTO_CAST;
+			} else if (!src_farr->sizes[0]) {
+				return TC_DOWN_CAST;
+			}
+		}
+	}
+
 	if (src->type == TP_ARRAY_VALUE) {
 		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type, sizes);
 	}

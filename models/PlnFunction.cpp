@@ -59,6 +59,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 	ret_var->name = rname;
 	ret_var->var_type = rtype ? rtype :  return_vals.back()->var_type;
 	ret_var->param_type = PRT_RETVAL;
+	ret_var->iomode = PIO_OUTPUT;
 
 	auto t = ret_var->var_type;
 	if (t->data_type == DT_OBJECT_REF) {
@@ -79,9 +80,10 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 	return ret_var;
 }
 
-PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal)
+PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(va_arg_start<0);
+	BOOST_ASSERT(ptype || (!ptype && parameters.size()));
 
 	if (pname == "...") {
 		va_arg_start = parameters.size();
@@ -94,6 +96,7 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, PlnPass
 	param->name = pname;
 	param->var_type = ptype ? ptype : parameters.back()->var_type;
 	param->param_type = PRT_PARAM;
+	param->iomode = iomode;
 	param->dflt_value = defaultVal;
 
 	auto t = param->var_type;

@@ -154,7 +154,7 @@ PlnExpression* PlnBlock::getConst(const string& name)
 	return NULL;
 }
 
-PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_vals)
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals)
 {
 	PlnFunction* matched_func = NULL;
 	vector<PlnFunction*> candidates;

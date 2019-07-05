@@ -52,7 +52,8 @@ enum {
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
-	DBL_ARROW	= PlnParser::token::DBL_ARROW
+	DBL_ARROW	= PlnParser::token::DBL_ARROW,
+	EQ_ARROW	= PlnParser::token::EQ_ARROW
 };
 
 static string& unescape(string& str);
@@ -72,7 +73,8 @@ DBL_LESS	"<<"
 DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"
+EQ_ARROW	"=>"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
@@ -150,6 +152,9 @@ var/{POST_KW} 	{ return KW_AUTOTYPE; }
 	}
 {ARROW} {
 		return ARROW;
+	}
+{EQ_ARROW} {
+		return EQ_ARROW;
 	}
 {DBL_LESS}	{
 		return DBL_LESS;

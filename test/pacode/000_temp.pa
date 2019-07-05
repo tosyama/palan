@@ -1,15 +1,16 @@
 ccall printf(byte[?] &format, ...) -> int32;
+ccall sprintf(byte[?] &data, &format, ...) -> int32;
+ccall strcpy(byte[?] >>dst, &src) -> byte[?];
+ccall sprintf_proto(@, &src, ... => byte[?] dst) -> int32;
 
-a = [1,2,3];
-b = [1,2,3];
-c = [1,2,3];
-
-f(a, f(b, a>>)>>);
 i = 0;
-printf("a");
 
-func f(int64[3] a, >>b) -> int64[3] b
-{
-	a[0]+b[0] -> a[0];
-}
+byte[10] str, str2;
+
+sprintf(str, "abc%d", i);
+// sprintf_proto("abc%d", i => str);
+
+str2 ->> strcpy(str) ->> str2;
+
+printf(str2);
 

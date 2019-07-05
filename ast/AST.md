@@ -38,17 +38,19 @@ Function
 		* rets\* - Return value list
 		* impl\* - Block model for function implemantation
 	2. ccall - C function prototype
-		* ret-type - Return value type string
+		* ret-type - Return value type string (deprecated)
+		* ret - Return value
 	3. syscall - System call prototype
 		* call-id\* - Integer to set %rax
-		* ret-type - Return value type string
+		* ret-type - Return value type string (deprecated)
+		* ret - Return value
 * loc - Location integer array
 
 Parameter
 ---------
 * name\* - Parameter name string
 * var-type\# - Variable type list
-* pass-by\* - Passing way string: "copy", "move", "ro-ref"
+* pass-by\* - Passing way string: "copy", "move", "ro-ref", "write"
 * default-val - Default value expression
 * loc - Location integer array
 
@@ -135,6 +137,7 @@ Expression
 	8. func-call - Function call expression
 		* func-name\* - Function name to call
 		* args\* - Argument list
+		* out-args\* - Argument list
 	9. chain-call - Chain function call expression
 		* func-name\* - Function call expression 
 		* in-args\* - Input argument list

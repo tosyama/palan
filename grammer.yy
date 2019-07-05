@@ -39,9 +39,10 @@ int yylex();
 %token DBL_GRTR
 %token DBL_ARROW
 %token ARROW
+%token EQ_ARROW
 
 %right '='
-%left ARROW DBL_ARROW
+%left ARROW DBL_ARROW EQ_ARROW
 %left ',' 
 %left OPE_OR
 %left OPE_AND
@@ -49,7 +50,7 @@ int yylex();
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
-%left '*' '/' '%' '&'
+%left '*' '/' '%' '&' '@'
 %left UMINUS '!'
 
 %start module	
@@ -92,7 +93,17 @@ parameters: parameter
 	| parameters ',' pass_by ID default_value
 	;
 
-parameter: type_def pass_by ID default_value
+parameter: '@'
+	| type_def pass_by ID default_value
+	;
+
+out_parameter_def:
+	| EQ_ARROW out_parameters
+	;
+
+out_parameters: type_def ID
+	| out_parameters ',' type_def ID
+	| out_parameters ',' ID
 	;
 
 move_owner: /* empty */
@@ -115,7 +126,7 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def ')' single_return ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return ';'
 	;
 
 syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_return ';'
@@ -203,6 +214,7 @@ expression:
 	;
 
 func_call: FUNC_ID '(' arguments ')'
+	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
 	;
 
 arguments: argument
@@ -211,6 +223,13 @@ arguments: argument
 
 argument: /* empty */
 	| expression move_owner
+	;
+
+out_arguments: out_argument
+	| out_arguments ',' out_argument
+	;
+
+out_argument: expression
 	;
 
 dst_vals: dst_val
@@ -271,7 +290,6 @@ var_type: KW_AUTOTYPE
 
 type_def: TYPENAME
 	| type_def array_def
-	| type_def '@'
 	;
 	
 array_def: '[' array_sizes ']'

@@ -79,8 +79,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_GRTR		">>"
 %token DBL_ARROW	"->>"
 %token ARROW	"->"
+%token EQ_ARROW	"=>"
 
-%type <string>	single_return pass_by
+%type <string>	pass_by
 %type <bool>	move_owner take_owner arrow_ope
 %type <vector<json>>	array_def array_sizes
 %type <json>	function_definition	palan_function_definition
@@ -98,8 +99,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	dst_val var_expression
 %type <json>	array_item array_size
 %type <vector<string>>	const_names
-%type <vector<json>>	var_type type_def
-%type <vector<json>>	parameter_def parameters
+%type <vector<json>>	var_type type_def single_return
+%type <vector<json>>	parameter_def out_parameter_def
+%type <vector<json>>	parameters out_parameters
 %type <vector<json>>	return_def
 %type <vector<json>>	return_types return_values
 %type <vector<json>>	arguments
@@ -272,6 +274,57 @@ parameter: type_def pass_by ID default_value
 		$$ = move(prm);
 		LOC($$, @$);
 	}
+
+	| '@'
+	{
+		json placeholder = {
+			{ "name", "@" },
+		};
+		$$ = move(placeholder);
+		LOC($$, @$);
+	}
+	;
+
+out_parameter_def: /* empty */ { }
+	| EQ_ARROW out_parameters
+	{
+		$$ = move($2);
+	}
+	;
+
+out_parameters: type_def ID
+	{
+		json prm = {
+			{ "var-type", move($1) },
+			{ "name", move($2) },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @2);
+		$$.push_back(move(prm));
+	}
+
+	| out_parameters ',' type_def ID
+	{
+		$$ = move($1);
+		json prm = {
+			{ "var-type", move($3) },
+			{ "name", move($4) },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @4);
+		$$.push_back(move(prm));
+	}
+
+	| out_parameters ',' ID
+	{
+		$$ = move($1);
+		json prm = {
+			{ "name", move($3) },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @3);
+		$$.push_back(move(prm));
+	}
 	;
 
 move_owner: /* empty */	{ $$ = false; }
@@ -293,15 +346,33 @@ default_value:	/* empty */	{  }
 	}
 	;
 
-ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def ')' single_return ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return ';'
 	{
+		vector<json> params = move($4);
+		int pind = 0;
+		for (json& out_param: $5) {
+			while (pind < params.size()) {
+				if (params[pind]["name"] == "@")
+					break;
+				pind++;
+			}
+
+			if (pind < params.size()) {
+				params[pind] = move(out_param);
+				pind++;
+			} else {
+				params.push_back(move(out_param));
+			}
+		}
+
 		json ccall = {
 			{"func-type", "ccall"},
 			{"name", $2},
-			{"params", $4},
+			{"params", move(params)},
 		};
-		if ($6 != "")
-			ccall["ret-type"] = move($6);
+		if ($7.size()) {
+			ccall["ret"] = $7;
+		}
 		$$ = move(ccall);
 		LOC($$, @$);
 	}
@@ -315,15 +386,16 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 			{"name",$4},
 			{"params", $6}	
 		};
-		if ($8 != "")
-			syscall["ret-type"] = move($8);
+		if ($8.size()) {
+			syscall["ret"] = $8;
+		}
 		$$ = move(syscall);
 		LOC($$, @$);
 	}
 	;
 
 single_return: /* empty */ { }
-	| ARROW TYPENAME
+	| ARROW type_def
 	{
 		$$ = move($2);
 	}

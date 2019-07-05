@@ -159,7 +159,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			if (param["default-val"].is_object()) {
 				default_val = buildExpression(param["default-val"], scope);
 			}
-			f->addParam(param["name"], var_type, pm, default_val);
+			f->addParam(param["name"], var_type, PIO_INPUT, pm, default_val);
 			setLoc(f->parameters.back(), param);
 		}
 
@@ -185,38 +185,51 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		f = new PlnFunction(FT_C, proto["name"]);
 		int i=0;
 		for (auto& param: proto["params"]) {
-			if (param["name"] == "...") {
+			if (param["name"] == "@") {
+				BOOST_ASSERT(false);
+
+			} else if (param["name"] == "...") {
 				BOOST_ASSERT((i+1)==proto["params"].size());
-				f->addParam(param["name"], PlnType::getAny(), FPM_COPY, NULL);
+				f->addParam(param["name"], PlnType::getAny(), PIO_INPUT, FPM_COPY, NULL);
 
 			} else {
 				PlnType *var_type = getVarType(param["var-type"], scope);
 				PlnPassingMethod pm = FPM_COPY;
-				if (param["pass-by"] == "ro-ref") {
+				int iomode = PIO_UNKNOWN;
+				if (param["pass-by"] == "move") {
+					pm = FPM_MOVEOWNER;
+					iomode = PIO_INPUT;
+
+				} else if (param["pass-by"] == "ro-ref") {
 					pm = FPM_REF;
+					iomode = PIO_INPUT;
+
+				} else if (param["pass-by"] == "write") {
+					pm = FPM_REF;
+					iomode = PIO_OUTPUT;
+
 				} else {
 					assertAST(param["pass-by"]=="copy", param);
+					iomode = PIO_INPUT;
 				}
-				f->addParam(param["name"], var_type, pm, NULL);
+				f->addParam(param["name"], var_type, iomode, pm, NULL);
 			}
 			i++;
 		}
-		if (proto["ret-type"].is_string()) {
-			if (PlnType *t = module.getType(proto["ret-type"])) {
-				string rname = "";
-				f->addRetValue(rname, t, false);
-			}
+		if (proto["ret"].is_array()) {
+			PlnType *t = getVarType(proto["ret"], scope);
+			string rname = "";
+			f->addRetValue(rname, t, false);
 		}
 		setLoc(f, proto);
 
 	} else if (ftype_str == "syscall") {
 		f = new PlnFunction(FT_SYS, proto["name"]);
 		f->inf.syscall.id = proto["call-id"];
-		if (proto["ret-type"].is_string()) {
-			if(PlnType *t = module.getType(proto["ret-type"])) {
-				string rname = "";
-				f->addRetValue(rname, t, false);
-			}
+		if (proto["ret"].is_array()) {
+			PlnType *t = getVarType(proto["ret"], scope);
+			string rname = "";
+			f->addRetValue(rname, t, false);
 		}
 		setLoc(f, proto);
 
