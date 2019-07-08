@@ -8,9 +8,9 @@ ver 0.3.0a
 
 Root
 ----
-* ast\* - AST model
-* errs	- Error message list
-* files - Source file list
+*	ast\* - AST model
+*	errs	- Error message list
+*	files - Source file list
 
 AST
 ---
@@ -137,11 +137,12 @@ Expression
 	8. func-call - Function call expression
 		* func-name\* - Function name to call
 		* args\* - Argument list
-		* out-args\* - Argument list
+		* out-args\* - Output argument list
 	9. chain-call - Chain function call expression
 		* func-name\* - Function call expression 
 		* in-args\* - Input argument list
 		* args\* - Rest of argument list
+		* out-args\* - Output argument list
 	10. binary operator
 		* lval\* -	Left value expression
 		* rval\* -	Right value expression

@@ -76,7 +76,6 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 	BOOST_ASSERT(item_ind.size());
 	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
 
-	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 
 	if (arr_type->type != TP_FIXED_ARRAY) {

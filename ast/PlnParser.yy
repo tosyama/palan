@@ -95,7 +95,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	declaration subdeclaration const_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
-%type <json>	argument literal chain_src
+%type <json>	argument out_argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item array_size
 %type <vector<string>>	const_names
@@ -104,7 +104,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<json>>	parameters out_parameters
 %type <vector<json>>	return_def
 %type <vector<json>>	return_types return_values
-%type <vector<json>>	arguments
+%type <vector<json>>	arguments out_arguments
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
 %type <vector<json>>	dst_vals array_val
@@ -757,10 +757,24 @@ expression:
 
 func_call: FUNC_ID '(' arguments ')'
 	{
+		vector<json> empty;
 		json func_call = {
 			{"exp-type", "func-call"},
 			{"func-name", $1},
-			{"args", $3}
+			{"args", $3},
+			{"out-args", empty }
+		};
+		$$ = move(func_call);
+		LOC($$, @$);
+	}
+
+	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
+	{
+		json func_call = {
+			{"exp-type", "func-call"},
+			{"func-name", $1},
+			{"args", $3},
+			{"out-args", $5}
 		};
 		$$ = move(func_call);
 		LOC($$, @$);
@@ -793,6 +807,23 @@ argument: /* empty */
 	{
 		$$["exp"] = move($1);
 		if ($2) $$["move"] = true;
+	}
+	;
+
+out_arguments: out_argument
+	{
+		$$.push_back(move($1));
+	}
+	| out_arguments ',' out_argument
+	{
+		$$ = move($1);
+		$$.push_back(move($3));
+	}
+	;
+
+out_argument: expression
+	{
+		$$["exp"] = move($1);
 	}
 	;
 
@@ -1000,6 +1031,7 @@ chain_call: expressions arrow_ope func_call
 			{"func-name", $3["func-name"]},
 			{"in-args", move(in_args)},
 			{"args", $3["args"]},
+			{"out-args", $3["out-args"]},
 		};
 		if ($2) c_call["in-args"][0]["move"] = true;
 		$$ = move(c_call);
@@ -1016,6 +1048,7 @@ chain_call: expressions arrow_ope func_call
 			{"func-name", $3["func-name"]},
 			{"in-args", move(in_args)},
 			{"args", $3["args"]},
+			{"out-args", $3["out-args"]},
 		};
 		if ($2) c_call["in-args"][0]["move"] = true;
 		$$ = move(c_call);

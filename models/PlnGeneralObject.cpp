@@ -17,7 +17,8 @@ PlnExpression* PlnSingleObjectAllocator::getAllocEx()
 {
 	PlnFunction *alloc_func = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
 	vector<PlnExpression*> args = { new PlnExpression(alloc_size) };
-	PlnFunctionCall *alloc_call = new PlnFunctionCall(alloc_func, args);
+	vector<PlnExpression*> out_args;
+	PlnFunctionCall *alloc_call = new PlnFunctionCall(alloc_func, args, out_args);
 
 	return alloc_call;
 }
@@ -27,7 +28,8 @@ PlnExpression* PlnSingleObjectFreer::getFreeEx(PlnExpression* free_var)
 {
 	PlnFunction *free_func = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
 	vector<PlnExpression*> args = { free_var };
-	PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
+	vector<PlnExpression*> out_args;
+	PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args, out_args);
 
 	return free_call;
 }
@@ -47,7 +49,8 @@ PlnDeepCopyExpression* PlnSingleObjectCopyer::getCopyEx()
 PlnExpression* PlnNoParamAllocator::getAllocEx()
 {
 	vector<PlnExpression*> args;
-	PlnFunctionCall *alloc_call = new PlnFunctionCall(alloc_func, args);
+	vector<PlnExpression*> out_args;
+	PlnFunctionCall *alloc_call = new PlnFunctionCall(alloc_func, args, out_args);
 
 	return alloc_call;
 }
@@ -56,7 +59,8 @@ PlnExpression* PlnNoParamAllocator::getAllocEx()
 PlnExpression* PlnSingleParamFreer::getFreeEx(PlnExpression* free_var)
 {
 	vector<PlnExpression*> args = { free_var };
-	PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args);
+	vector<PlnExpression*> out_args;
+	PlnFunctionCall *free_call = new PlnFunctionCall(free_func, args, out_args);
 
 	return free_call;
 }
@@ -100,7 +104,8 @@ public:
 PlnExpression* PlnTwoParamsCopyer::getCopyEx(PlnExpression* dst_var, PlnExpression* src_var)
 {
 	vector<PlnExpression*> args = { dst_var, src_var };
-	PlnFunctionCall *free_call = new PlnFunctionCall(copy_func, args);
+	vector<PlnExpression*> out_args;
+	PlnFunctionCall *free_call = new PlnFunctionCall(copy_func, args, out_args);
 
 	return free_call;
 }

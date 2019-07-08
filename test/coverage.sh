@@ -21,5 +21,5 @@ make LDFLAGS=-coverage -lgcov
 gcov ../objs/${targetnm}.gcda | grep -A 1 -E ${gcovs}
 
 rm ../objs/${targetnm}.*
-rm `ls ./*.gcov | grep -E -v ${gcovs}`
+rm $(ls ./*.gcov | grep -E -v ${gcovs})
 

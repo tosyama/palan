@@ -36,10 +36,11 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 	}
 }
 
-PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
+PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args, vector<PlnExpression*>& out_args)
 	: PlnFunctionCall(f)
 {
 	arguments = move(args);
+	out_arguments = move(out_args);
 }
 
 PlnFunctionCall::~PlnFunctionCall()

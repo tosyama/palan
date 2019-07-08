@@ -154,7 +154,7 @@ PlnExpression* PlnBlock::getConst(const string& name)
 	return NULL;
 }
 
-PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals)
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)
 {
 	PlnFunction* matched_func = NULL;
 	vector<PlnFunction*> candidates;
@@ -173,31 +173,49 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 				}
 
 				int i=0;
+				int oi=0;
 				bool do_cast = false;
 				for (auto p: f->parameters) {
+					bool is_output = p->iomode & PIO_OUTPUT;
 					if (p->name == "...") {
-						BOOST_ASSERT(i+1 == f->parameters.size());
-						candidates.pop_back();
-						break;
+						BOOST_ASSERT(i+oi+1 == f->parameters.size());
+						if ((is_output && i != arg_vals.size())
+								|| (!is_output && oi != out_arg_vals.size())) {
+							goto next_func;
+						}
+						break;	// matched
 					}
 
-					if (i+1>arg_vals.size() || !arg_vals[i]) {
-						if (!p->dflt_value) goto next_func;
+					PlnValue *arg_val;
+					if (is_output) {
+						if (oi >= out_arg_vals.size()) goto next_func;
+						arg_val = out_arg_vals[oi];
+						oi++;
+
 					} else {
-						PlnType* a_type = arg_vals[i]->getType();
-						PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
-						if (cap == TC_CANT_CONV) goto next_func;
-
-						if (p->ptr_type == PTR_PARAM_MOVE && arg_vals[i]->asgn_type != ASGN_MOVE) {
-							goto next_func;
+						if (i >= arg_vals.size() || !arg_vals[i]) {
+							if (!p->dflt_value) goto next_func;
+							// use default value
+							i++;
+							continue;
 						}
-						if (p->ptr_type != PTR_PARAM_MOVE && arg_vals[i]->asgn_type == ASGN_MOVE) {
-							goto next_func;
-						}
-
-						if (cap != TC_SAME) do_cast = true;
+						arg_val = arg_vals[i];
+						if (f->name == "sprintf_proto") cout << "i:" << i << endl;
+						i++;
 					}
-					++i;
+
+					PlnType* a_type = arg_val->getType();
+					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
+					if (cap == TC_CANT_CONV) goto next_func;
+
+					if (p->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {
+						goto next_func;
+					}
+					if (p->ptr_type != PTR_PARAM_MOVE && arg_val->asgn_type == ASGN_MOVE) {
+						goto next_func;
+					}
+
+					if (cap != TC_SAME) do_cast = true;
 				}
 				candidates.pop_back();
 

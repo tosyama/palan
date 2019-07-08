@@ -5,14 +5,14 @@ Palan is aiming simpler, safer and more enjoyable programming language alternati
 Current palan is very draft.
 
 ## Quick Start
-### Environment:
-* Ubuntu 14.04.5 LTS (64bit) or later(18.04.1 LTS)
-* g++ (gcc 5.5.0/as,ld) or later(gcc 7.3.0)
-* GNU Make
-* curl
-* git
+### Environment
+*	Ubuntu 14.04.5 LTS (64bit) or later(18.04.1 LTS)
+*	g++ (gcc 5.5.0/as,ld) or later(gcc 7.3.0)
+*	GNU Make
+*	curl
+*	git
 
-### Build Palan Compiler:
+### Build Palan Compiler
 ```sh
 $ git clone --recursive https://github.com/tosyama/palan.git
 $ sudo make package
@@ -20,12 +20,7 @@ $ make
 ```
 Note: `make package` installs [Boost], [Bison], [Flex] and [Catch]. You might need to install libfl-dev.
 
-[Boost]: http://boost.org
-[Bison]: https://www.gnu.org/software/bison/
-[Flex]: https://github.com/westes/flex
-[Catch]: https://github.com/philsquared/Catch 
-
-### Write Code:
+### Write Code
 ```sh
 $ vi helloworld.pa
 ```
@@ -35,7 +30,7 @@ ccall printf(...);
 ```
 Note: write "ccall int32 printf();" if the verson 0.2 or less.
 
-### Build and Run:
+### Build and Run
 ```sh
 $ ./pac helloworld.pa -o a.out
 $ ./a.out
@@ -44,4 +39,9 @@ Hello World!
 
 ## Reference
 See wiki [Palan 0.2 Language Reference](https://github.com/tosyama/palan/wiki/Palan-0.2-Language-Reference).
+
+[Boost]: http://boost.org
+[Bison]: https://www.gnu.org/software/bison/
+[Flex]: https://github.com/westes/flex
+[Catch]: https://github.com/philsquared/Catch 
 

@@ -124,7 +124,7 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 			PlnExpression* e = buildExpression(i, scope);
 
 			int vtype = e->values[0].type;
-			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8)) {
+			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8)) {
 				sizes.push_back(e->values[0].inf.uintValue);
 			} else {
 				BOOST_ASSERT(false);
@@ -787,6 +787,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	vector<PlnValue*> arg_vals;
 	assertAST(fcall["func-name"].is_string(), fcall);
 	assertAST(fcall["args"].is_array(), fcall);
+	assertAST(fcall["out-args"].is_array(), fcall);
 	for (auto& arg: fcall["args"]) {
 		if (arg.is_null()) {
 			// use default
@@ -814,14 +815,30 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		args.push_back(e);
 	}
 
+	vector<PlnExpression*> out_args;
+	vector<PlnValue*> out_arg_vals;
+	for (auto& arg: fcall["out-args"]) {
+		assertAST(arg["exp"].is_object(), fcall);
+		PlnExpression *e = buildExpression(arg["exp"], scope);
+
+		for (PlnValue& val: e->values)
+			out_arg_vals.push_back(&val);
+		out_args.push_back(e);
+	}
+
 	try {
-		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
+		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals, out_arg_vals);
 
 		// Set default value and adjusting type.
 		vector<PlnType*> types;
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
+			if (f->parameters[i]->iomode == PIO_OUTPUT) {
+				// TODO: output's adjust Types.
+				continue;
+			}
+
 			if (f->parameters[i]->name == "...") {
 				break;
 			}
@@ -848,7 +865,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			}
 		}
 
-		return new PlnFunctionCall(f, args);
+		return new PlnFunctionCall(f, args, out_args);
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, fcall);
@@ -921,14 +938,30 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 		}
 	}
 
+	vector<PlnExpression*> out_args;
+	vector<PlnValue*> out_arg_vals;
+	for (auto& arg: ccall["out-args"]) {
+		assertAST(arg["exp"].is_object(), ccall);
+		PlnExpression *e = buildExpression(arg["exp"], scope);
+
+		for (PlnValue& val: e->values)
+			out_arg_vals.push_back(&val);
+		out_args.push_back(e);
+	}
+
 	try {
-		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arg_vals);
+		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arg_vals, out_arg_vals);
 
 		// Set default value and adjusting type.
 		vector<PlnType*> types;
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
+			if (f->parameters[i]->iomode == PIO_OUTPUT) {
+				// TODO: output's adjust Types.
+				continue;
+			}
+
 			if (f->parameters[i]->name == "...") {
 				break;
 			}
@@ -955,7 +988,7 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 			}
 		}
 
-		return new PlnFunctionCall(f, args);
+		return new PlnFunctionCall(f, args, out_args);
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, ccall);
@@ -1031,7 +1064,7 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 					var_exp = new PlnArrayItem(var_exp, indexes);
 				} catch (PlnCompileError& err) {
 					setLoc(&err, var);
-					throw err;
+					throw;
 				}
 			}
 		}
