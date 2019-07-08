@@ -9,8 +9,8 @@ ver 0.3.0a
 Root
 ----
 *   ast\* - AST model
-*   errs	- Error message list
-*  	files - Source file list
+*   errs - Error message list
+*   files - Source file list
 
 AST
 ---
@@ -31,19 +31,25 @@ Source File
 Function
 --------
 *   id\* - Function ID integer
+
 *   name\* - Function name string
+
 *   params\* - Parameter list
+
 *   func-type\* - Function type string: "palan" "ccall" "syscall"
-	1. palan - Palan function definition
-		* rets\* - Return value list
-		* impl\* - Block model for function implemantation
-	2. ccall - C function prototype
-		* ret-type - Return value type string (deprecated)
-		* ret - Return value
-	3. syscall - System call prototype
-		* call-id\* - Integer to set %rax
-		* ret-type - Return value type string (deprecated)
-		* ret - Return value
+    1.  palan - Palan function definition
+        *   rets\* - Return value list
+        *   impl\* - Block model for function implemantation
+
+	2.  ccall - C function prototype
+        *   ret-type - Return value type string (deprecated)
+        *   ret - Return value
+
+    3.  syscall - System call prototype
+        *   call-id\* - Integer to set %rax
+        *   ret-type - Return value type string (deprecated)
+        *   ret - Return value
+
 *   loc - Location integer array
 
 Parameter
@@ -61,19 +67,22 @@ Parameter (Variable length)
 
 Return value
 ------------
-1. Anonymous return value
-	* var-type\* - Variable type list
-2. Standard return value
-	* var-type - Variable type list
-	* name\* - Return value name string
-* loc - Location integer array
+1.  Anonymous return value
+    *   var-type\* - Variable type list
+
+2.  Standard return value
+    *   var-type - Variable type list
+    *   name\* - Return value name string
+
+*   loc - Location integer array
 
 Variable Type
 -------------
 *   name\* - Type name string: "[]" any
-	1. [] - Fixed size array type
-		* sizes\* - Expression list (lit-int:-1 - size inference)
-	2. any - Specified variable type name
+    1.  [] - Fixed size array type
+        *   sizes\* - Expression list (lit-int:-1 - size inference)
+
+    2.  any - Specified variable type name
 
 Block
 ------
