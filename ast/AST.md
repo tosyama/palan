@@ -41,7 +41,7 @@ Function
         *   rets\* - Return value list
         *   impl\* - Block model for function implemantation
 
-	2.  ccall - C function prototype
+    2.  ccall - C function prototype
         *   ret-type - Return value type string (deprecated)
         *   ret - Return value
 
@@ -92,32 +92,42 @@ Block
 Statement
 ---------
 *   stmt-type\* - Statement type string:
-	"exp" "block" "var-init" "return" "while" "if" "func-def"
-	1. exp - Expression statement
-		* exp\* - Expression model
-	2. block - Block statement
-		* block\* - Block model
-	3. var-init - Variable declaration statement
-		* vars\* - Variable destination list
-		* inits - Variable initialize expression list
-	4. const - Constant value declaration statement
-		* names\* - Constant name string list
-		* values\* - Constant value expression list
-	5. return - Return value statement
-		* ret-vals - Return value expression list
-	6. while - While loop statement
-		* cond\* - Condition expression
-		* block\* - Loop block model
-	7. break - Break statement
-		* label - Loop label to break
-	8. continue - Continue statement
-		* label - Loop label to continue
-	9. if - If statement
-		* cond\* - Condition expression
-		* block\* - If block model
-		* else - Else statement (block/if)
-	10. func-def - Function definition link
-		* id - Function id integer
+    "exp" "block" "var-init" "return" "while" "if" "func-def"
+    1.  exp - Expression statement
+        *   exp\* - Expression model
+
+    2.  block - Block statement
+        *   block\* - Block model
+
+    3.  var-init - Variable declaration statement
+        *   vars\* - Variable destination list
+        *   inits - Variable initialize expression list
+
+    4.  const - Constant value declaration statement
+        *   names\* - Constant name string list
+        *   values\* - Constant value expression list
+
+    5.  return - Return value statement
+        *   ret-vals - Return value expression list
+
+    6.  while - While loop statement
+        *   cond\* - Condition expression
+        *   block\* - Loop block model
+
+    7.  break - Break statement
+        *   label - Loop label to break
+
+    8.  continue - Continue statement
+        *   label - Loop label to continue
+
+    9.  if - If statement
+        *   cond\* - Condition expression
+        *   block\* - If block model
+        *   else - Else statement (block/if)
+
+    10. func-def - Function definition link
+        *   id - Function id integer
+
 *   loc - Location integer array
 
 Expression
@@ -127,36 +137,47 @@ Expression
     "asgn" "func-call" "chain-call"
     birary operator ("+" "-" "*" "/" "%" "==" "!=" "<" ">" "<=" ">=" "&&" "||")
     unary operator ("uminus" "not")
-	1. lit-int - Integer(64bit) literal
-		* val\* - Integer
-	2. lit-uint - Unsigned integer(64bit) literal
-		* val\* - Unsigned integer
-	3. lit-float - Floating point number(64bit) literal
-		* val\* - Floating point number
-	4. lit-str - String literal
-		* val\* - String value
-	5. var - Variable/Constant expression
-		* base-var\* - Base variable/ constant vlue name string
-		* opes - Modified operator list
-	6. array-val - Array expression
-		* vals\* - Item value expression list
-	7. asgn - Assignment expression
-		* src-exps\* - Source expression list
-		* dst-vals\* - Destination value list
-	8. func-call - Function call expression
-		* func-name\* - Function name to call
-		* args\* - Argument list
-		* out-args\* - Output argument list
-	9. chain-call - Chain function call expression
-		* func-name\* - Function call expression 
-		* in-args\* - Input argument list
-		* args\* - Rest of argument list
-		* out-args\* - Output argument list
-	10. binary operator
-		* lval\* -	Left value expression
-		* rval\* -	Right value expression
-	11. unary operator
-		* val\* -	Value expression
+    1.  lit-int - Integer(64bit) literal
+        *   val\* - Integer
+
+    2.  lit-uint - Unsigned integer(64bit) literal
+        *   val\* - Unsigned integer
+
+    3.  lit-float - Floating point number(64bit) literal
+        *   val\* - Floating point number
+
+    4.  lit-str - String literal
+        *   val\* - String value
+
+    5.  var - Variable/Constant expression
+        *   base-var\* - Base variable/ constant vlue name string
+        *   opes - Modified operator list
+
+    6.  array-val - Array expression
+        *   vals\* - Item value expression list
+
+    7.  asgn - Assignment expression
+        *   src-exps\* - Source expression list
+        *   dst-vals\* - Destination value list
+
+    8.  func-call - Function call expression
+        *   func-name\* - Function name to call
+        *   args\* - Argument list
+        *   out-args\* - Output argument list
+
+    9.  chain-call - Chain function call expression
+        *   func-name\* - Function call expression 
+        *   in-args\* - Input argument list
+        *   args\* - Rest of argument list
+        *   out-args\* - Output argument list
+
+    10. binary operator
+        *   lval\* -	Left value expression
+        *   rval\* -	Right value expression
+
+    11. unary operator
+        *   val\* -	Value expression
+
 *   loc - Location integer array
 
 Destination Value
@@ -169,8 +190,8 @@ Destination Value
 Modified Operator
 -----------------
 *   ope-type\* - Operator type string: "index"
-	1. index - Numerical index
-		* indexes - Index expression list
+    1.  index - Numerical index
+        *   indexes - Index expression list
 
 Variable Declaration
 --------------------
