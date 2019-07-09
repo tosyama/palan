@@ -212,4 +212,3 @@ Location Array
 *   2\* - Begin column integer
 *   3\* - End line integer
 *   4\* - End column integer
-

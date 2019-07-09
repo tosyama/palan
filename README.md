@@ -14,15 +14,15 @@ Current palan is very draft.
 
 ### Build Palan Compiler
 ```sh
-$ git clone --recursive https://github.com/tosyama/palan.git
-$ sudo make package
-$ make
+git clone --recursive https://github.com/tosyama/palan.git
+sudo make package
+make
 ```
-Note: `make package` installs [Boost], [Bison], [Flex] and [Catch]. You might need to install libfl-dev.
+Note: `make package` installs [Boost][boost], [Bison][bison], [Flex][flex] and [Catch][catch]. You might need to install libfl-dev.
 
 ### Write Code
 ```sh
-$ vi helloworld.pa
+vi helloworld.pa
 ```
 ```go
 ccall printf(...);
@@ -32,16 +32,16 @@ Note: write "ccall int32 printf();" if the verson 0.2 or less.
 
 ### Build and Run
 ```sh
-$ ./pac helloworld.pa -o a.out
-$ ./a.out
+./pac helloworld.pa -o a.out
+./a.out
 Hello World!
 ```
 
 ## Reference
 See wiki [Palan 0.2 Language Reference](https://github.com/tosyama/palan/wiki/Palan-0.2-Language-Reference).
 
-[Boost]: http://boost.org
-[Bison]: https://www.gnu.org/software/bison/
-[Flex]: https://github.com/westes/flex
-[Catch]: https://github.com/philsquared/Catch 
+[boost]: http://boost.org
+[bison]: https://www.gnu.org/software/bison/
+[flex]: https://github.com/westes/flex
+[catch]: https://github.com/philsquared/Catch 
 

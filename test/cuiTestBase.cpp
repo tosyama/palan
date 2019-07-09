@@ -23,7 +23,7 @@ inline int getStatus(int ret_status)
 	}
 }
 
-void copy_file(const string from_file_name, const string to_file_name)
+void copy_file(const string from_file_name, const string &to_file_name)
 {
 	try {
 		ifstream is(from_file_name, ios::in | ios::binary);
@@ -40,12 +40,12 @@ void copy_file(const string from_file_name, const string to_file_name)
 	}
 }
 
-string build(string srcf)
+string build(const string &srcf)
 {
 	return exec_pac(srcf, "-o", srcf, "");
 }
 
-string exec_pac(string srcf, string preopt, string outf, string postopt)
+string exec_pac(string srcf, string preopt, string outf, const string &postopt)
 {
 	string log_file = "out/cui/" + (srcf != "" ? srcf : "log");
 
@@ -100,13 +100,13 @@ string getFileStr(string file_path)
 	return sstr.str();
 }
 
-string outstr(string srcf)
+string outstr(const string &srcf)
 {
 	string out_file = "out/cui/" + srcf + ".out";
 	return getFileStr(out_file);
 }
 
-string errstr(string srcf)
+string errstr(const string &srcf)
 {
 	string out_file = "out/cui/" + srcf + ".err";
 	return getFileStr(out_file);

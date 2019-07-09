@@ -72,7 +72,8 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 }
 
 static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
-	PlnFunction*f, vector<PlnExpression*> &args, vector<PlnClone*> &clones)
+	PlnFunction*f, vector<PlnExpression*> &args, vector<PlnExpression*> &out_args,
+	vector<PlnClone*> &clones)
 {
 	vector<int> arg_dtypes;
 	int i=0;
@@ -161,8 +162,8 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	int func_type = function->type;
 
-	if (arguments.size()) 
-		arg_dps = loadArgs(da, si, function, arguments, clones);
+	if (arguments.size()+out_arguments.size()) 
+		arg_dps = loadArgs(da, si, function, arguments, out_arguments, clones);
 
 	for (auto dp: arg_dps)
 		da.popSrc(dp);

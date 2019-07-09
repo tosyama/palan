@@ -56,7 +56,7 @@ test/tester - Auto test program using Catch C++ testing framework.
 Main Logic
 ----------
 1.  Get json AST with "pat" command.
-```
+```cpp
 	json j;
 	string cmd =  cmd_dir + "pat \"" + fname + "\"";
 	...
@@ -64,20 +64,20 @@ Main Logic
 ```
 
 2.  Build a model tree from json.
-```
+```cpp
 	PlnModule *module = modelTreeBuilder.buildModule(j["ast"]);
 ```
 
 3.  Finishing model tree with Data allocator, and set up passing data between models.
     *   Data Allocator - Provide allocation data method register and stack.
-```
+```cpp
 PlnX86_64DataAllocator allocator;
 module.finish(allocator);
 ```
 
 4.  Generate assembly data from model tree with Generator.
     *   Generator - Generate environment dependent assembly code.
-```
+```cpp
 PlnX86_64Generator generator(cout);
 module.gen(generator);
 ```
@@ -92,7 +92,7 @@ The model which have children calls the children's methods recursively.
 The finish() finishes the model. Simulate allocation of stack or register by using data allocator.  
 The gen() generates assembly code of the model to output stream.  
 
-### Typical models:  
+### Typical models 
 1.  PlnModule - Root of model tree. It includes function definitions, type definition and top level block.
 
 2.  PlnFunction - Function definition. Generally, stack/register management is reset by each function.
@@ -188,4 +188,3 @@ Many of g.gen~() are required PlnGenEntity to call.
 Entities includes environment dependent assembly information.
 g.getEntity() create the entity from dp.
 g.genSaveSrc() and g.genLoadDp() can be used at the timing of da.pushSrc() and da.popSrc().
-

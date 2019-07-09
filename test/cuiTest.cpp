@@ -10,7 +10,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 	vector<string> strs; 
 
 	// pac -h
-	REQUIRE(exec_pac("", "-h", "", "") == "success");
+	REQUIRE(exec_pac("", "-h", "", string("")) == "success");
 	str = outstr("log");
 	split(strs, str, is_any_of("\n"));
 	REQUIRE(strs.size() == 20);

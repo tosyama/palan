@@ -83,7 +83,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(va_arg_start<0);
-	BOOST_ASSERT(ptype || (!ptype && parameters.size()));
+	BOOST_ASSERT(ptype || parameters.size());
 
 	if (pname == "...") {
 		va_arg_start = parameters.size();

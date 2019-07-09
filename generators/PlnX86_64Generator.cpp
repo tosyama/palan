@@ -285,7 +285,6 @@ void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 		case CMP_A: jcmd = JBE; break;
 		case CMP_BE: jcmd = JA; break;
 		case CMP_AE: jcmd = JB; break;
-			break;
 
 		defalt:
 			BOOST_ASSERT(false);

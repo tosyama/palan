@@ -1135,7 +1135,7 @@ PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope)
 		return PlnDivOperation::create_mod(bex.l, bex.r);
 	} catch (PlnCompileError& err) {
 		setLoc(&err, mod);
-		throw err;
+		throw;
 	}
 }
 

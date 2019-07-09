@@ -13,7 +13,7 @@
 
 
 PlnWhileStatement::PlnWhileStatement(PlnExpression* condition, PlnBlock* block, PlnBlock* parent)
-	: cond_dp(NULL), jmp_start_id(0), jmp_end_id(0)
+	: cond_dp(NULL), jmp_start_id(-1), jmp_end_id(-1)
 {
 	type = ST_WHILE;
 	block->owner_stmt = this;
@@ -67,7 +67,7 @@ void PlnWhileStatement::gen(PlnGenerator& g)
 
 // PlnBreakStatement
 PlnBreakStatement::PlnBreakStatement(PlnStatement* target_stmt)
-	: target_stmt(target_stmt)
+	: target_stmt(target_stmt), jmp_id(-1)
 {
 	type = ST_BREAK;
 }
@@ -79,7 +79,7 @@ void PlnBreakStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	} else
 		BOOST_ASSERT(false);
 		
-	BOOST_ASSERT(jmp_id > 0);
+	BOOST_ASSERT(jmp_id >= 0);
 
 	bool valid=false;
 	for (auto sitem=si.scope.rbegin(); sitem!=si.scope.rend(); sitem++) {
@@ -104,7 +104,7 @@ void PlnBreakStatement::gen(PlnGenerator& g)
 
 // PlnContinueStatement
 PlnContinueStatement::PlnContinueStatement(PlnStatement* target_stmt)
-	: target_stmt(target_stmt)
+	: target_stmt(target_stmt), jmp_id(-1)
 {
 	type = ST_CONTINUE;
 }

@@ -38,7 +38,7 @@ int getStatus(int ret_status)
 	}
 }
 
-string build(string srcf)
+string build(const string &srcf)
 {
 	string ast_cmd = "../pat pacode/" + srcf + ".pa -i -o out/"+srcf+".json";
 	int ret = getStatus(system(ast_cmd.c_str()));
@@ -94,7 +94,7 @@ string build(string srcf)
 	return "success";
 }
 
-string exec_worker(string srcf)
+string exec_worker(const string &srcf)
 {
 	string cmd = "out/" + srcf;
 	FILE* p = popen(cmd.c_str(),"r");
@@ -136,7 +136,7 @@ string exec(string srcf)
 	return f.get();
 }
 
-string mcheck(string tracef)
+string mcheck(const string &tracef)
 {
 	ifstream f;
 	f.open("out/" + tracef);
