@@ -1,4 +1,4 @@
-syscall 1: write() -> int64;
+syscall 1: write(...) -> int64;
 ccall printf(...);
 
 int64 n = write(1, "Hello World!\n", 13);

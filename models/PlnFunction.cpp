@@ -29,7 +29,7 @@ using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
 	:	type(func_type), name(func_name), retval_init(NULL), implement(NULL),
-		parent(NULL), va_arg_start(-1)
+		parent(NULL), has_va_arg(false), num_in_param(0), num_out_param(0)
 {
 }
 
@@ -82,11 +82,11 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 
 PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
-	BOOST_ASSERT(va_arg_start<0);
+	BOOST_ASSERT(!has_va_arg);
 	BOOST_ASSERT(ptype || parameters.size());
 
 	if (pname == "...") {
-		va_arg_start = parameters.size();
+		has_va_arg = true;
 	}
 
 	for (auto p: parameters)
@@ -113,8 +113,11 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 	}
 
 	parameters.push_back(param);
-	if (va_arg_start<0)
+	if (!has_va_arg) {
 		arg_dtypes.push_back(t->data_type);
+		if (iomode & PIO_OUTPUT) num_out_param++;
+		else num_in_param++;
+	}
 
 	return	param;
 }

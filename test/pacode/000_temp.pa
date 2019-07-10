@@ -14,4 +14,3 @@ sprintf(str, "abc%d", i);
 str2 ->> strcpy(str) ->> str2;
 
 printf(str2);
-

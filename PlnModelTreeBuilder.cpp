@@ -144,6 +144,10 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	PlnFunction *f;
 	PlnModule &module = *CUR_MODULE;
 
+	assertAST(ftype_str == "palan"
+			|| ftype_str == "ccall"
+			|| ftype_str == "syscall", proto);
+
 	if (ftype_str == "palan") {
 		f = new PlnFunction(FT_PLN, proto["name"]);
 		for (auto& param: proto["params"]) {
@@ -181,8 +185,14 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		}
 		setLoc(f, proto);
 
-	} else if (ftype_str == "ccall") {
-		f = new PlnFunction(FT_C, proto["name"]);
+	} else {
+		if (ftype_str == "ccall") {
+			f = new PlnFunction(FT_C, proto["name"]);
+		} else { // if (ftype_str == "syscall")
+			f = new PlnFunction(FT_SYS, proto["name"]);
+			f->inf.syscall.id = proto["call-id"];
+		} 
+
 		int i=0;
 		for (auto& param: proto["params"]) {
 			if (param["name"] == "@") {
@@ -222,19 +232,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			f->addRetValue(rname, t, false);
 		}
 		setLoc(f, proto);
-
-	} else if (ftype_str == "syscall") {
-		f = new PlnFunction(FT_SYS, proto["name"]);
-		f->inf.syscall.id = proto["call-id"];
-		if (proto["ret"].is_array()) {
-			PlnType *t = getVarType(proto["ret"], scope);
-			string rname = "";
-			f->addRetValue(rname, t, false);
-		}
-		setLoc(f, proto);
-
-	} else
-		assertAST(false, proto);
+	}
 	
 	vector<string> param_types = f->getParamStrs();
 

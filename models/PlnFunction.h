@@ -45,7 +45,8 @@ public:
 	} inf;
 	PlnBlock* implement;
 	PlnBlock* parent;
-	int va_arg_start;
+	bool has_va_arg;
+	int num_in_param, num_out_param;
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);

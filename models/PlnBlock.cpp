@@ -166,9 +166,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 		for (auto f: b->funcs) {
 			if (f->name == func_name) {
 				candidates.push_back(f);
-				if (f->va_arg_start<0 && f->parameters.size() < arg_vals.size()) {
-					// Excluded System call for now
-					if (f->type == FT_SYS) return f;
+				if ((!f->has_va_arg) && f->parameters.size() < arg_vals.size()) {
 					goto next_func;
 				}
 

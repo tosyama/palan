@@ -75,21 +75,28 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 	PlnFunction*f, vector<PlnExpression*> &args, vector<PlnExpression*> &out_args,
 	vector<PlnClone*> &clones)
 {
-	vector<int> arg_dtypes;
-	int i=0;
-	for (auto a: args) {
-		for (auto v: a->values) {
-			if (i < f->arg_dtypes.size()) {
-				arg_dtypes.push_back(f->arg_dtypes[i]);
-			} else {
-				arg_dtypes.push_back(v.getType()->data_type);
+	vector<int> arg_dtypes = f->arg_dtypes;
+	if (f->has_va_arg) {
+		// Add variable arguments data types.
+		PlnParameter* va_arg = f->parameters.back();
+		BOOST_ASSERT(va_arg->name == "...");
+		bool is_output = va_arg->iomode & PIO_OUTPUT;
+		vector<PlnExpression*> &target_args = is_output ?  out_args : args;
+		int va_start = is_output ?  f->num_out_param : f->num_in_param;
+		BOOST_ASSERT(va_start >= 0);
+		int i=0;
+		for (auto a: target_args) {
+			for (auto v: a->values) {
+				if (i >= va_start)
+					arg_dtypes.push_back(v.getType()->data_type);
+				i++;
 			}
 		}
 	}
 
 	auto arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_dtypes, false);
 
-	i = 0;
+	int i = 0;
 	for (auto p: f->parameters) {
 		if (p->name == "...") {
 			continue;
@@ -234,7 +241,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto dp: arg_dps)
 				arg_dtypes.push_back(dp->data_type);
 
-			g.genCCall(function->asm_name, arg_dtypes, function->va_arg_start);
+			g.genCCall(function->asm_name, arg_dtypes, function->has_va_arg);
 
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);
@@ -277,7 +284,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto dp: arg_dps)
 				arg_dtypes.push_back(dp->data_type);
 
-			g.genCCall(function->asm_name, arg_dtypes, function->va_arg_start);
+			g.genCCall(function->asm_name, arg_dtypes, function->has_va_arg);
 
 			for (auto dp: data_places) 
 				g.genSaveSrc(dp);
@@ -294,17 +301,20 @@ static void initInternalFunctions()
 	PlnFunction* f;
 	string ret_name = "";
 
-	f = new PlnFunction(FT_C, "malloc");
-	f->asm_name = f->name;
+	f = new PlnFunction(FT_C, "__malloc");
+	f->asm_name = "malloc";
+	f->addParam("size", PlnType::getSint(), PIO_INPUT, FPM_COPY, NULL);
 	f->addRetValue(ret_name, PlnType::getObject(), false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
-	f = new PlnFunction(FT_C, "free");
-	f->asm_name = f->name;
+	f = new PlnFunction(FT_C, "__free");
+	f->asm_name = "free";
+	f->addParam("status", PlnType::getObject(), PIO_INPUT, FPM_REF, NULL);
 	internalFuncs[IFUNC_FREE] = f;
 
-	f = new PlnFunction(FT_C, "exit");
-	f->asm_name = f->name;
+	f = new PlnFunction(FT_C, "__exit");
+	f->asm_name = "exit";
+	f->addParam("status", PlnType::getSint(), PIO_INPUT, FPM_COPY, NULL);
 	internalFuncs[IFUNC_EXIT] = f;
 }
 

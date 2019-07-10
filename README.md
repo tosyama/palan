@@ -1,5 +1,6 @@
 # Palan
 [![Build Status](https://travis-ci.org/tosyama/palan.svg?branch=master)](https://travis-ci.org/tosyama/palan)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2161541a2f724976a51704fe75200d4a)](https://app.codacy.com/app/tosyama/palan?utm_source=github.com&utm_medium=referral&utm_content=tosyama/palan&utm_campaign=Badge_Grade_Dashboard)
 [![Coverage Status](https://img.shields.io/coveralls/github/tosyama/palan/master.svg)](https://coveralls.io/github/tosyama/palan?branch=master)  
 Palan is aiming simpler, safer and more enjoyable programming language alternative C.
 Current palan is very draft.
@@ -44,4 +45,3 @@ See wiki [Palan 0.2 Language Reference](https://github.com/tosyama/palan/wiki/Pa
 [bison]: https://www.gnu.org/software/bison/
 [flex]: https://github.com/westes/flex
 [catch]: https://github.com/philsquared/Catch 
-

@@ -59,7 +59,7 @@ public:
 	virtual void genSaveReg(int reg, PlnGenEntity* dst)=0;
 	virtual void genLoadReg(int reg, PlnGenEntity* src)=0;
 
-	virtual void genCCall(string& cfuncname, vector<int> &arg_dtypes, int va_arg_start=-1)=0;
+	virtual void genCCall(string& cfuncname, vector<int> &arg_dtypes, bool has_va_arg)=0;
 	virtual void genSysCall(int id, const string& comment)=0;
 	virtual void genReturn()=0;
 	virtual void genMainReturn()=0;

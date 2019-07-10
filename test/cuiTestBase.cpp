@@ -45,7 +45,7 @@ string build(const string &srcf)
 	return exec_pac(srcf, "-o", srcf, "");
 }
 
-string exec_pac(string srcf, string preopt, string outf, const string &postopt)
+string exec_pac(string srcf, const string &preopt, string outf, const string &postopt)
 {
 	string log_file = "out/cui/" + (srcf != "" ? srcf : "log");
 
