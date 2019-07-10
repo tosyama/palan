@@ -1,4 +1,5 @@
 # Palan
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2161541a2f724976a51704fe75200d4a)](https://app.codacy.com/app/tosyama/palan?utm_source=github.com&utm_medium=referral&utm_content=tosyama/palan&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/tosyama/palan.svg?branch=master)](https://travis-ci.org/tosyama/palan)
 [![Coverage Status](https://img.shields.io/coveralls/github/tosyama/palan/master.svg)](https://coveralls.io/github/tosyama/palan?branch=master)  
 Palan is aiming simpler, safer and more enjoyable programming language alternative C.
