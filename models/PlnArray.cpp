@@ -94,7 +94,7 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayTyp
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
-	f->addParam(s1, arr_type, PIO_OUTPUT, FPM_REF, NULL);
+	f->addParam(s1, arr_type, PIO_INPUT, FPM_REF, NULL);
 	f->addParam(s2, arr_type, PIO_INPUT, FPM_REF, NULL);
 
 	f->implement = new PlnBlock();

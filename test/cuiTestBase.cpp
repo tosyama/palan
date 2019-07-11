@@ -23,7 +23,7 @@ inline int getStatus(int ret_status)
 	}
 }
 
-void copy_file(const string from_file_name, const string &to_file_name)
+void copy_file(const string &from_file_name, const string &to_file_name)
 {
 	try {
 		ifstream is(from_file_name, ios::in | ios::binary);
