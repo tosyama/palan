@@ -166,7 +166,8 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 		for (auto f: b->funcs) {
 			if (f->name == func_name) {
 				candidates.push_back(f);
-				if ((!f->has_va_arg) && f->parameters.size() < arg_vals.size()) {
+				if ((!f->has_va_arg)
+						&& f->parameters.size() < (arg_vals.size()+out_arg_vals.size())) {
 					goto next_func;
 				}
 
@@ -198,7 +199,6 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 							continue;
 						}
 						arg_val = arg_vals[i];
-						if (f->name == "sprintf_proto") cout << "i:" << i << endl;
 						i++;
 					}
 

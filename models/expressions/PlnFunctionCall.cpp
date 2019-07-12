@@ -182,6 +182,11 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 	for (auto &a: out_args) {
 		for (auto &v: a->values) {
+			int data_type = v.getType()->data_type;
+			if (data_type != DT_OBJECT_REF) {
+				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
+				arg_dps[i]->load_address = true;
+			}
 			a->data_places.push_back(arg_dps[i]);
 			++i;
 		}

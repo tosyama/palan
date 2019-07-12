@@ -225,7 +225,8 @@ parameter_def: /* empty */ {}
 	| KW_VARLENARG
 	{
 		json varprm = {
-			{ "name", "..." }
+			{ "name", "..." },
+			{ "pass-by", "read" }
 		};
 		$$.push_back(move(varprm));
 	}
@@ -233,7 +234,8 @@ parameter_def: /* empty */ {}
 	{
 		$$ = move($1);
 		json varprm = {
-			{ "name", "..." }
+			{ "name", "..." },
+			{ "pass-by", "read" }
 		};
 		$$.push_back(move(varprm));
 	}
@@ -289,6 +291,27 @@ out_parameter_def: /* empty */ { }
 	| EQ_ARROW out_parameters
 	{
 		$$ = move($2);
+	}
+
+	| EQ_ARROW KW_VARLENARG 
+	{
+		json prm = {
+			{ "name", "..." },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @2);
+		$$.push_back(move(prm));
+	}
+
+	| EQ_ARROW out_parameters ',' KW_VARLENARG
+	{
+		$$ = move($2);
+		json prm = {
+			{ "name", "..." },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @4);
+		$$.push_back(move(prm));
 	}
 	;
 

@@ -99,6 +99,8 @@ parameter: '@'
 
 out_parameter_def:
 	| EQ_ARROW out_parameters
+	| EQ_ARROW out_parameters ',' KW_VARLENARG
+	| EQ_ARROW KW_VARLENARG
 	;
 
 out_parameters: type_def ID

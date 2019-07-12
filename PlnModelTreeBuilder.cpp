@@ -200,7 +200,15 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 
 			} else if (param["name"] == "...") {
 				BOOST_ASSERT((i+1)==proto["params"].size());
-				f->addParam(param["name"], PlnType::getAny(), PIO_INPUT, FPM_COPY, NULL);
+				int iomode = PIO_UNKNOWN;
+				if (param["pass-by"] == "read") {
+					iomode = PIO_INPUT;
+				} else {
+					assertAST(param["pass-by"] == "write", param);
+					iomode = PIO_OUTPUT;
+				}
+
+				f->addParam(param["name"], PlnType::getAny(), iomode, FPM_COPY, NULL);
 
 			} else {
 				PlnType *var_type = getVarType(param["var-type"], scope);

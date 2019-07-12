@@ -77,13 +77,20 @@ public:
 	virtual void genNullClear(vector<unique_ptr<PlnGenEntity>> &refs) = 0;
 	virtual void genMemCopy(int cp_unit, string& comment)=0;
 
-	void genLoadDp(PlnDataPlace* dp, bool load_save=true);
+	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
+
+	// How to use.
+	// 1. call genSaveSrc(dp) with source value dp first at expression that provide src value.
+	// 2. Case 1) call genLoadDp(dp, true) to load the source value to dp immediately.
+	//    Case 2) 1. genLoadDp(dp, false); load to dp that only not have save dp for preventing override registors.
+	//    		  2. genSaveDp(dp, false); load to dp that only have save dp. This call don't override registors.
 
 	// Save value to save area or store directory by case.
 	void genSaveSrc(PlnDataPlace* dp);
-	// Only save value to save area if indicated.
-	void genSaveDp(PlnDataPlace* dp);
 
-	virtual unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp)=0;
+	// Load value.
+	void genLoadDp(PlnDataPlace* dp, bool load_save=true);
+	// Load only from save value.
+	void genSaveDp(PlnDataPlace* dp);
 };
 

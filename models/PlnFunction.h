@@ -19,7 +19,7 @@ enum {
 	PIO_UNKNOWN = 0,
 	PIO_INPUT = 1,
 	PIO_OUTPUT = 2,
-	PIO_IO = 3,	// == PIO_INPUT | PIO_OUTPUT
+//	PIO_IO = 3,	// == PIO_INPUT | PIO_OUTPUT unused
 };
 
 class PlnFunction

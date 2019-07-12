@@ -56,7 +56,7 @@ Parameter
 ---------
 *   name\* - Parameter name string
 *   var-type\# - Variable type list
-*   pass-by\* - Passing way string: "copy", "move", "ro-ref", "write"
+*   pass-by\* - Passing way string: "copy", "move", "ro-ref", "read":for variable argument, "write"
 *   default-val - Default value expression
 *   loc - Location integer array
 
