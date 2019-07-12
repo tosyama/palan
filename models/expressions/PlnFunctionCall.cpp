@@ -88,8 +88,12 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 		int i=0;
 		for (auto a: target_args) {
 			for (auto v: a->values) {
-				if (i >= va_start)
-					arg_dtypes.push_back(v.getType()->data_type);
+				if (i >= va_start) {
+					if (is_output)
+						arg_dtypes.push_back(DT_OBJECT_REF);
+					else
+						arg_dtypes.push_back(v.getType()->data_type);
+				}
 				i++;
 			}
 		}

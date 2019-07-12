@@ -114,9 +114,13 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 
 	parameters.push_back(param);
 	if (!has_va_arg) {
-		arg_dtypes.push_back(t->data_type);
-		if (iomode & PIO_OUTPUT) num_out_param++;
-		else num_in_param++;
+		if (iomode & PIO_OUTPUT) {
+			num_out_param++;
+			arg_dtypes.push_back(DT_OBJECT_REF);
+		} else {
+			num_in_param++;
+			arg_dtypes.push_back(t->data_type);
+		}
 	}
 
 	return	param;

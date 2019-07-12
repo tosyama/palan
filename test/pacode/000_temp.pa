@@ -10,8 +10,8 @@ byte[10] str, str2;
 // sprintf(str, "abc%d", i);
 // sprintf("abc%d", i => str);
 
-flo32 f;
+flo64 f;
 // str2 ->> strcpy(str) ->> str2;
-"123" -> sscanf("%d" => i);
-printf("abc%d", i);
+"123.4" -> sscanf("%lf" => f);
+printf("abc%.1lf", f);
 
