@@ -1,5 +1,4 @@
 ccall printf(byte[?] &format, ...) -> int32;
-//ccall sprintf(byte[?] &s, &format, ...) -> int32;
 ccall sprintf(@, &src, ... => byte[?] dst) -> int32;
 ccall strcpy(byte[?] >>dst, &src) -> byte[?];
 ccall sscanf(byte[?] &str, &format => ...) -> int32;

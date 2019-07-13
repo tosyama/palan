@@ -193,6 +193,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "1 22 26\n2 1 21\n"
 								"1 8 12\n1 2 7\n"
 								"2 1 21");
+
+	testcode = "027_ccall";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "abc123def1.23\nbbaa 99 2.34");
 }
 
 // Error file ID: 500-570
