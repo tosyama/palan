@@ -48,9 +48,7 @@ PlnType::PlnType(PlnTypeType type)
 class AnyType : public PlnType {
 public:
 	AnyType() : PlnType(TP_PRIMITIVE) {}
-	PlnTypeConvCap canConvFrom(PlnType *src) override {
-		return TC_SAME;
-	}
+	PlnTypeConvCap canConvFrom(PlnType *src) override { BOOST_ASSERT(false); }
 };
 
 static void initBasicTypes()

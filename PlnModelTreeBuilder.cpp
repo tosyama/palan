@@ -151,13 +151,21 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	if (ftype_str == "palan") {
 		f = new PlnFunction(FT_PLN, proto["name"]);
 		for (auto& param: proto["params"]) {
+			if (param["name"] == "@" || param["name"] == "...") {
+				PlnCompileError err(E_UnsuppotedGrammer,"Not supported placeholder or variable argument at palan function.");
+				setLoc(&err, param);
+				throw err;
+			}
+
 			PlnType *var_type = getVarType(param["var-type"], scope);
-			PlnPassingMethod pm = FPM_COPY;
+			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy" , param)
+			PlnPassingMethod pm;
 			if (param["pass-by"] == "move") {
 				pm = FPM_MOVEOWNER;
-			} else {
-				assertAST(param["pass-by"]=="copy", param);
-			}
+			} else if (param["pass-by"] == "copy") {
+				pm = FPM_COPY;
+			} else
+				BOOST_ASSERT(false);
 
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
@@ -196,7 +204,9 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		int i=0;
 		for (auto& param: proto["params"]) {
 			if (param["name"] == "@") {
-				BOOST_ASSERT(false);
+				PlnCompileError err(E_NoMatchingParameter);
+				setLoc(&err, param);
+				throw err;
 
 			} else if (param["name"] == "...") {
 				BOOST_ASSERT((i+1)==proto["params"].size());
@@ -265,6 +275,7 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	string pre_name;
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
+		BOOST_ASSERT (param["name"]!="...");
 		PlnType* var_type = getVarType(param["var-type"], scope);
 		string p_name;
 		if (var_type) {
@@ -276,11 +287,7 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 			p_name += ">>";
 		}
 
-		if (param["name"]=="...") {
-			p_name += "...";
-		}
 		param_types.push_back(p_name);
-
 	}
 
 	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);

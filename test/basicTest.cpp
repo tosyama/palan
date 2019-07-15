@@ -199,7 +199,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abc123def1.23\nbbaa 99 2.34");
 }
 
-// Error file ID: 500-570
+// Error file ID: 500-572
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -353,6 +353,12 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "570_continue_notinloop_err";
 	REQUIRE(build(testcode) == "0:4-4 The statement should be within loop.");
+
+	testcode = "571_placehold_no_param_err";
+	REQUIRE(build(testcode) == "0:1-1 No matching output parameter for the placeholder.");
+
+	testcode = "572_unsupported_err3";
+	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported placeholder or variable argument at palan function.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

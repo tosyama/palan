@@ -228,6 +228,7 @@ parameter_def: /* empty */ {}
 			{ "name", "..." },
 			{ "pass-by", "read" }
 		};
+		LOC(varprm, @$);
 		$$.push_back(move(varprm));
 	}
 	| parameters ',' KW_VARLENARG
@@ -237,6 +238,7 @@ parameter_def: /* empty */ {}
 			{ "name", "..." },
 			{ "pass-by", "read" }
 		};
+		LOC(varprm, @3);
 		$$.push_back(move(varprm));
 	}
 	| parameters { $$ = move($1); }
