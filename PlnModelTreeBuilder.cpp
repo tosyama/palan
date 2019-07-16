@@ -1005,7 +1005,7 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, ccall);
-		throw err;
+		throw;
 	}
 }
 

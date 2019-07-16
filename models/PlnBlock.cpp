@@ -258,9 +258,7 @@ PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& par
 		for (auto f: b->funcs) {
 			if (f->name == func_name && f->parameters.size() == param_types.size()) {
 				vector<string> f_ptypes = f->getParamStrs();
-
-				if (f_ptypes.size() != param_types.size())
-					goto next;
+				BOOST_ASSERT(f_ptypes.size() == param_types.size());
 
 				for (int i=0; i<param_types.size(); i++) {
 					if (f_ptypes[i] != param_types[i])

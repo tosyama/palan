@@ -3,6 +3,7 @@
 /// @file	PlnFixedArrayType.cpp
 /// @copyright	2019 YAMAGUCHI Toshinobu 
 
+#include <boost/assert.hpp>
 #include "../PlnType.h"
 #include "PlnFixedArrayType.h"
 #include "PlnArrayValueType.h"
@@ -39,7 +40,7 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 		if (item_type == PlnType::getByte() && sizes.size() == 1) {
 			if (sizes[0])
 				return TC_LOSTABLE_AUTO_CAST;
-			else
+			else // byte[?]
 				return TC_AUTO_CAST;
 
 		}

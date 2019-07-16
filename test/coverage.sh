@@ -5,10 +5,11 @@
 # target="../generators/PlnX86_64DataAllocator"
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
-target="../PlnModelTreeBuilder"
+# target="../PlnModelTreeBuilder"
 # target="../PlnGenerator"
 # target="../models/expressions/PlnArrayValue"
 # target="../models/types/PlnArrayValueType"
+target="../models/types/PlnFixedArrayType"
 # target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"

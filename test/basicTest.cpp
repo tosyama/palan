@@ -196,7 +196,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "027_ccall";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "abc123def1.23\nbbaa 99 2.34");
+	REQUIRE(exec(testcode) == "abc123def1.23\nbbaa 99 2.34 7");
 }
 
 // Error file ID: 500-572
