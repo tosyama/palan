@@ -28,6 +28,7 @@ int yylex();
 %token KW_ELSE
 %token KW_CONST
 %token KW_AUTOTYPE
+%token KW_VARLENARG
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -38,9 +39,10 @@ int yylex();
 %token DBL_GRTR
 %token DBL_ARROW
 %token ARROW
+%token EQ_ARROW
 
 %right '='
-%left ARROW DBL_ARROW
+%left ARROW DBL_ARROW EQ_ARROW
 %left ',' 
 %left OPE_OR
 %left OPE_AND
@@ -48,7 +50,7 @@ int yylex();
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
-%left '*' '/' '%'
+%left '*' '/' '%' '&' '@'
 %left UMINUS '!'
 
 %start module	
@@ -81,19 +83,38 @@ return_value: type_def ID
 	;
 
 parameter_def: /* empty */
+	| KW_VARLENARG
+	| parameters ',' KW_VARLENARG
 	| parameters
 	;
 
 parameters: parameter
 	| parameters ',' parameter
-	| parameters ',' move_owner ID default_value
+	| parameters ',' pass_by ID default_value
 	;
 
-parameter: type_def move_owner ID default_value
+parameter: '@'
+	| type_def pass_by ID default_value
+	;
+
+out_parameter_def:
+	| EQ_ARROW out_parameters
+	| EQ_ARROW out_parameters ',' KW_VARLENARG
+	| EQ_ARROW KW_VARLENARG
+	;
+
+out_parameters: type_def ID
+	| out_parameters ',' type_def ID
+	| out_parameters ',' ID
 	;
 
 move_owner: /* empty */
 	| DBL_GRTR
+	;
+
+pass_by: /* empty */
+	| DBL_GRTR
+	| '&'
 	;
 
 take_owner: /* empty */
@@ -107,14 +128,14 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID '(' parameter_def ')' ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return ';'
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_return ';'
 	;
 
 single_return: /* empty */
-	| type_def
+	| ARROW type_def
 	;
 
 function_definition: palan_function_definition
@@ -195,6 +216,7 @@ expression:
 	;
 
 func_call: FUNC_ID '(' arguments ')'
+	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
 	;
 
 arguments: argument
@@ -203,6 +225,13 @@ arguments: argument
 
 argument: /* empty */
 	| expression move_owner
+	;
+
+out_arguments: out_argument
+	| out_arguments ',' out_argument
+	;
+
+out_argument: expression
 	;
 
 dst_vals: dst_val
@@ -263,7 +292,6 @@ var_type: KW_AUTOTYPE
 
 type_def: TYPENAME
 	| type_def array_def
-	| type_def '@'
 	;
 	
 array_def: '[' array_sizes ']'
@@ -275,6 +303,7 @@ array_sizes: array_size
 
 array_size: /* empty */
 	| expression
+	| '?'
 	;
 
 array_item: '[' array_indexes ']'

@@ -1,5 +1,5 @@
-ccall int32 printf();
-ccall setenv();
+ccall printf(...);
+ccall setenv(...);
 ccall mtrace();
 ccall muntrace();
 

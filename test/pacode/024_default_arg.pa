@@ -1,4 +1,4 @@
-ccall int32 printf();
+ccall printf(...);
 const A = 1;
 const B = [1.1, 2.2];
 

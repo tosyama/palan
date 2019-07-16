@@ -42,6 +42,7 @@ enum {
 	KW_ELSE		= PlnParser::token::KW_ELSE,
 	KW_CONST	= PlnParser::token::KW_CONST,
 	KW_AUTOTYPE = PlnParser::token::KW_AUTOTYPE,
+	KW_VARLENARG	= PlnParser::token::KW_VARLENARG,
 	OPE_EQ		= PlnParser::token::OPE_EQ,
 	OPE_NE		= PlnParser::token::OPE_NE,
 	OPE_LE		= PlnParser::token::OPE_LE,
@@ -51,7 +52,8 @@ enum {
 	DBL_LESS	= PlnParser::token::DBL_LESS,
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
-	DBL_ARROW	= PlnParser::token::DBL_ARROW
+	DBL_ARROW	= PlnParser::token::DBL_ARROW,
+	EQ_ARROW	= PlnParser::token::EQ_ARROW
 };
 
 static string& unescape(string& str);
@@ -71,7 +73,8 @@ DBL_LESS	"<<"
 DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"
+EQ_ARROW	"=>"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
@@ -118,6 +121,7 @@ if/{POST_KW}		{ return KW_IF; }
 else/{POST_KW}		{ return KW_ELSE; }
 const/{POST_KW} 	{ return KW_CONST; }
 var/{POST_KW} 	{ return KW_AUTOTYPE; }
+"..."	{ return KW_VARLENARG; }
 "=="	{ return OPE_EQ; }
 "!="	{ return OPE_NE; }
 "<="	{ return OPE_LE; }
@@ -148,6 +152,9 @@ var/{POST_KW} 	{ return KW_AUTOTYPE; }
 	}
 {ARROW} {
 		return ARROW;
+	}
+{EQ_ARROW} {
+		return EQ_ARROW;
 	}
 {DBL_LESS}	{
 		return DBL_LESS;

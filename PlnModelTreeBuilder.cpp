@@ -124,7 +124,7 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 			PlnExpression* e = buildExpression(i, scope);
 
 			int vtype = e->values[0].type;
-			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_INT8)) {
+			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8)) {
 				sizes.push_back(e->values[0].inf.uintValue);
 			} else {
 				BOOST_ASSERT(false);
@@ -144,20 +144,34 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	PlnFunction *f;
 	PlnModule &module = *CUR_MODULE;
 
+	assertAST(ftype_str == "palan"
+			|| ftype_str == "ccall"
+			|| ftype_str == "syscall", proto);
+
 	if (ftype_str == "palan") {
 		f = new PlnFunction(FT_PLN, proto["name"]);
 		for (auto& param: proto["params"]) {
-			PlnType *var_type = getVarType(param["var-type"], scope);
-			PlnPassingMethod pm = FPM_COPY;
-			if (param["move"].is_boolean()) {
-				if (param["move"] == true)
-					pm = FPM_MOVEOWNER;
+			if (param["name"] == "@" || param["name"] == "...") {
+				PlnCompileError err(E_UnsuppotedGrammer,"Not supported placeholder or variable argument at palan function.");
+				setLoc(&err, param);
+				throw err;
 			}
+
+			PlnType *var_type = getVarType(param["var-type"], scope);
+			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy" , param)
+			PlnPassingMethod pm;
+			if (param["pass-by"] == "move") {
+				pm = FPM_MOVEOWNER;
+			} else if (param["pass-by"] == "copy") {
+				pm = FPM_COPY;
+			} else
+				BOOST_ASSERT(false);
+
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
 				default_val = buildExpression(param["default-val"], scope);
 			}
-			f->addParam(param["name"], var_type, pm, default_val);
+			f->addParam(param["name"], var_type, PIO_INPUT, pm, default_val);
 			setLoc(f->parameters.back(), param);
 		}
 
@@ -179,38 +193,66 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		}
 		setLoc(f, proto);
 
-	} else if (ftype_str == "ccall") {
-		f = new PlnFunction(FT_C, proto["name"]);
-		if (proto["ret-type"].is_string()) {
-			if (PlnType *t = module.getType(proto["ret-type"])) {
-				string rname = "";
-				f->addRetValue(rname, t, false);
+	} else {
+		if (ftype_str == "ccall") {
+			f = new PlnFunction(FT_C, proto["name"]);
+		} else { // if (ftype_str == "syscall")
+			f = new PlnFunction(FT_SYS, proto["name"]);
+			f->inf.syscall.id = proto["call-id"];
+		} 
+
+		int i=0;
+		for (auto& param: proto["params"]) {
+			if (param["name"] == "@") {
+				PlnCompileError err(E_NoMatchingParameter);
+				setLoc(&err, param);
+				throw err;
+
+			} else if (param["name"] == "...") {
+				BOOST_ASSERT((i+1)==proto["params"].size());
+				int iomode = PIO_UNKNOWN;
+				if (param["pass-by"] == "read") {
+					iomode = PIO_INPUT;
+				} else {
+					assertAST(param["pass-by"] == "write", param);
+					iomode = PIO_OUTPUT;
+				}
+
+				f->addParam(param["name"], PlnType::getAny(), iomode, FPM_COPY, NULL);
+
+			} else {
+				PlnType *var_type = getVarType(param["var-type"], scope);
+				PlnPassingMethod pm = FPM_COPY;
+				int iomode = PIO_UNKNOWN;
+				if (param["pass-by"] == "move") {
+					pm = FPM_MOVEOWNER;
+					iomode = PIO_INPUT;
+
+				} else if (param["pass-by"] == "ro-ref") {
+					pm = FPM_REF;
+					iomode = PIO_INPUT;
+
+				} else if (param["pass-by"] == "write") {
+					pm = FPM_REF;
+					iomode = PIO_OUTPUT;
+
+				} else {
+					assertAST(param["pass-by"]=="copy", param);
+					iomode = PIO_INPUT;
+				}
+				f->addParam(param["name"], var_type, iomode, pm, NULL);
 			}
+			i++;
+		}
+		if (proto["ret"].is_array()) {
+			PlnType *t = getVarType(proto["ret"], scope);
+			string rname = "";
+			f->addRetValue(rname, t, false);
 		}
 		setLoc(f, proto);
-
-	} else if (ftype_str == "syscall") {
-		f = new PlnFunction(FT_SYS, proto["name"]);
-		f->inf.syscall.id = proto["call-id"];
-		if (proto["ret-type"].is_string()) {
-			if(PlnType *t = module.getType(proto["ret-type"])) {
-				string rname = "";
-				f->addRetValue(rname, t, false);
-			}
-		}
-		setLoc(f, proto);
-
-	} else
-		assertAST(false, proto);
-	
-	vector<string> param_types;
-	for (auto p: f->parameters) {
-		if (p->ptr_type == PTR_PARAM_MOVE) {
-			param_types.push_back(p->var_type->name + ">>");
-		} else {
-			param_types.push_back(p->var_type->name);
-		}
 	}
+	
+	vector<string> param_types = f->getParamStrs();
 
 	if (CUR_BLOCK->getFuncProto(f->name, param_types)) {
 		PlnCompileError err(E_DuplicateFunction, f->name);
@@ -233,16 +275,19 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	string pre_name;
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
+		BOOST_ASSERT (param["name"]!="...");
 		PlnType* var_type = getVarType(param["var-type"], scope);
+		string p_name;
 		if (var_type) {
-			param_types.push_back(var_type->name);
-			pre_name = param_types.back();
-		} else {
-			param_types.push_back(pre_name);
+			pre_name = var_type->name;
 		}
-		if (param["move"].is_boolean() && param["move"] == true) {
-			param_types.back() = pre_name + ">>";
+		p_name = pre_name;
+
+		if (param["pass-by"] == "move") {
+			p_name += ">>";
 		}
+
+		param_types.push_back(p_name);
 	}
 
 	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);
@@ -755,6 +800,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	vector<PlnValue*> arg_vals;
 	assertAST(fcall["func-name"].is_string(), fcall);
 	assertAST(fcall["args"].is_array(), fcall);
+	assertAST(fcall["out-args"].is_array(), fcall);
 	for (auto& arg: fcall["args"]) {
 		if (arg.is_null()) {
 			// use default
@@ -782,14 +828,34 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		args.push_back(e);
 	}
 
+	vector<PlnExpression*> out_args;
+	vector<PlnValue*> out_arg_vals;
+	for (auto& arg: fcall["out-args"]) {
+		assertAST(arg["exp"].is_object(), fcall);
+		PlnExpression *e = buildExpression(arg["exp"], scope);
+
+		for (PlnValue& val: e->values)
+			out_arg_vals.push_back(&val);
+		out_args.push_back(e);
+	}
+
 	try {
-		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals);
+		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals, out_arg_vals);
 
 		// Set default value and adjusting type.
 		vector<PlnType*> types;
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
+			if (f->parameters[i]->iomode == PIO_OUTPUT) {
+				// TODO: output's adjust Types.
+				continue;
+			}
+
+			if (f->parameters[i]->name == "...") {
+				break;
+			}
+
 			if (arg_ex_ind == args.size()) {
 				args.push_back(NULL);
 			}
@@ -812,7 +878,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			}
 		}
 
-		return new PlnFunctionCall(f, args);
+		return new PlnFunctionCall(f, args, out_args);
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, fcall);
@@ -885,14 +951,34 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 		}
 	}
 
+	vector<PlnExpression*> out_args;
+	vector<PlnValue*> out_arg_vals;
+	for (auto& arg: ccall["out-args"]) {
+		assertAST(arg["exp"].is_object(), ccall);
+		PlnExpression *e = buildExpression(arg["exp"], scope);
+
+		for (PlnValue& val: e->values)
+			out_arg_vals.push_back(&val);
+		out_args.push_back(e);
+	}
+
 	try {
-		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arg_vals);
+		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arg_vals, out_arg_vals);
 
 		// Set default value and adjusting type.
 		vector<PlnType*> types;
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
+			if (f->parameters[i]->iomode == PIO_OUTPUT) {
+				// TODO: output's adjust Types.
+				continue;
+			}
+
+			if (f->parameters[i]->name == "...") {
+				break;
+			}
+
 			if (arg_ex_ind == args.size()) {
 				args.push_back(NULL);
 			}
@@ -915,11 +1001,11 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 			}
 		}
 
-		return new PlnFunctionCall(f, args);
+		return new PlnFunctionCall(f, args, out_args);
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, ccall);
-		throw err;
+		throw;
 	}
 }
 
@@ -991,7 +1077,7 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 					var_exp = new PlnArrayItem(var_exp, indexes);
 				} catch (PlnCompileError& err) {
 					setLoc(&err, var);
-					throw err;
+					throw;
 				}
 			}
 		}
@@ -1062,7 +1148,7 @@ PlnExpression* buildModOperation(json& mod, PlnScopeStack &scope)
 		return PlnDivOperation::create_mod(bex.l, bex.r);
 	} catch (PlnCompileError& err) {
 		setLoc(&err, mod);
-		throw err;
+		throw;
 	}
 }
 

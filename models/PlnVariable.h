@@ -39,6 +39,7 @@ class PlnParameter : public PlnVariable {
 public:
 	PlnExpression* dflt_value;
 	int param_type;
+	int iomode;
 };
 
 class PlnAssignItem;

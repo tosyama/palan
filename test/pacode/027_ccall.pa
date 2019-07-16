@@ -1,0 +1,19 @@
+ccall printf(byte[?] &format, ...) -> int32;
+ccall sprintf(@, &src, ... => byte[?] dst) -> int32;
+ccall strcpy(byte[?] >>dst, &src) -> byte[?];
+ccall sscanf(byte[?] &str, &format => ...) -> int32;
+ccall strcat(byte[?] >>dst, &src) -> byte[?];
+ccall exit(int32 status);
+ccall strlen(byte[10] &str)->int32;
+
+byte[32] str1, str2;
+sprintf("abc%d%s%.2f\n", 123, "def" ,1.23 => str1);
+str2 ->> strcpy(str1) ->> str2;
+str2 -> printf();
+
+int32 i;
+flo32 f;
+"aa 99 bb 2.34" -> sscanf("%s %d %s %f" => str1, i, str2, f);
+str2 ->> strcat(str1) ->> str2;
+printf("%s %d %.2f %d", str2, i, f, strlen("str len"));
+exit(0);

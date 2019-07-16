@@ -115,7 +115,7 @@ PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
 		dp->data.reg.id = FARG_TBL[freg_ind];
 		dp->data.reg.offset = 0;
 
-	} else if (ret_dtypes[index] != DT_FLOAT && index <= 5) {
+	} else if (ret_dtypes[index] != DT_FLOAT && reg_ind <= 5) {
 		int regid;
 		if (func_type == FT_PLN || func_type == FT_C) {
 			regid = (ret_dtypes.size() == 1) ? RAX : ARG_TBL[index];

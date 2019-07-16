@@ -6,9 +6,10 @@
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
 # target="../PlnModelTreeBuilder"
-target="../PlnGenerator"
+# target="../PlnGenerator"
 # target="../models/expressions/PlnArrayValue"
 # target="../models/types/PlnArrayValueType"
+target="../models/types/PlnFixedArrayType"
 # target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
@@ -21,5 +22,5 @@ make LDFLAGS=-coverage -lgcov
 gcov ../objs/${targetnm}.gcda | grep -A 1 -E ${gcovs}
 
 rm ../objs/${targetnm}.*
-rm `ls ./*.gcov | grep -E -v ${gcovs}`
+rm $(ls ./*.gcov | grep -E -v ${gcovs})
 

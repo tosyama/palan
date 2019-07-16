@@ -1,19 +1,35 @@
-ccall printf(byte[?] format, ...) -> int32;
-ccall sprintf(out, byte[?] format, ...) => byte[?] str -> int32;
-ccall scanf(byte[?] format, out) => ... -> int32;
-ccall sscanf(byte[?] str, byte[?] format, out) => ... -> int32;
-ccall strcpy(out, byte[?] src)-> byte[?] dst => byte[?];
+ccall printf(byte[?] &format, ...) -> int32;
+ccall sprintf(@, byte[?] &format, ... => byte[?] str) -> int32;
+ccall scanf(byte[?] &format => ...) -> int32;
+ccall sscanf(byte[?] &str, byte[?] &format => ...) -> int32;
+ccall strcpy(byte[?] >>dst, byte[?] &src) -> byte[?];
 
-call sqlite3_open(byte[?] filename, out) => sqlite3* ppDb -> int32;
+ccall fopen(byte[?] &filename, &mode) -> FILE;
+ccall fclose(FILE >>stream) -> int32;
+
+ccall int32 sqlite3_open(byte[?] filename => sqlite3 db>>);
 
 byte[80] str;
 int32 result;
-sprintf("Hello world") => str -> result;
+"Hello Horld" -> sprintf(=>str) -> result;
+
+str ->> strcpy("TEST") ->> str;
+str.strcpy("TEST");
 
 flo64 d;
 int32 i;
-"1.23 5" -> sscanf("%f %d") => d, i -> result;
+"1.23 5", "%f %d" -> sscanf(=> d, i) -> result;
 
-if (("1.23 5" -> sscanf("%f %d") => d, i) == 0) {
+if (("1.23 5" -> sscanf("%f %d" => d, i)) == 0) {
 	printf("err\n");
 }
+
+FILE f <<= fopen("aa.txt","r");
+f ->> fclose();
+
+// if constructor = fopen. which is good?
+FILE f = {"aa.txt", "r"};
+FILE f = ("aa.txt", "r");
+FILE f = {filename: "aa.txt", mode: "r"};
+FILE f("aa.txt", "r");
+

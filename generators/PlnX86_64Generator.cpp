@@ -263,7 +263,6 @@ void PlnX86_64Generator::genTrueJump(int id, int cmp_type, string comment)
 		case CMP_A: jcmd = JA; break;
 		case CMP_BE: jcmd = JBE; break;
 		case CMP_AE: jcmd = JAE; break;
-			break;
 
 		defalt:
 			BOOST_ASSERT(false);
@@ -285,7 +284,6 @@ void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 		case CMP_A: jcmd = JBE; break;
 		case CMP_BE: jcmd = JA; break;
 		case CMP_AE: jcmd = JB; break;
-			break;
 
 		defalt:
 			BOOST_ASSERT(false);
@@ -367,9 +365,9 @@ void PlnX86_64Generator::genLoadReg(int regid, PlnGenEntity* src)
 }
 
 
-void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, int va_arg_start)
+void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, bool has_va_arg)
 {
-	if (va_arg_start >= 0) {
+	if (has_va_arg) {
 		int flo_cnt = 0;
 		for (auto dt: arg_dtypes)
 			if (dt == DT_FLOAT)

@@ -1,4 +1,4 @@
-ccall int32 printf();
+ccall printf(...);
 
 const N,M = 3, 9+2;
 const NN = N+3;

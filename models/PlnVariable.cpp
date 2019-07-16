@@ -122,7 +122,6 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnVarInit::gen(PlnGenerator& g)
 {
 	for (auto vi: varinits) {
-		PlnVariable *v = vi.var;
 		if (auto ex = vi.alloc_ex) {
 			ex->gen(g);
 			g.genLoadDp(ex->data_places[0]);

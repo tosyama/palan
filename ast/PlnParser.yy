@@ -68,6 +68,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_ELSE	"else"
 %token KW_CONST	"const"
 %token KW_AUTOTYPE	"var"
+%token KW_VARLENARG	"..."
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
 %token OPE_LE	"<="
@@ -78,8 +79,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_GRTR		">>"
 %token DBL_ARROW	"->>"
 %token ARROW	"->"
+%token EQ_ARROW	"=>"
 
-%type <string>	single_return
+%type <string>	pass_by
 %type <bool>	move_owner take_owner arrow_ope
 %type <vector<json>>	array_def array_sizes
 %type <json>	function_definition	palan_function_definition
@@ -93,15 +95,16 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	declaration subdeclaration const_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
-%type <json>	argument literal chain_src
+%type <json>	argument out_argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item array_size
 %type <vector<string>>	const_names
-%type <vector<json>>	var_type type_def
-%type <vector<json>>	parameter_def parameters
+%type <vector<json>>	var_type type_def single_return
+%type <vector<json>>	parameter_def out_parameter_def
+%type <vector<json>>	parameters out_parameters
 %type <vector<json>>	return_def
 %type <vector<json>>	return_types return_values
-%type <vector<json>>	arguments
+%type <vector<json>>	arguments out_arguments
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
 %type <vector<json>>	dst_vals array_val
@@ -116,7 +119,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
-%left '*' '/' '%'
+%left '*' '/' '%' '&'
 %left UMINUS '!'
 
 %start module	
@@ -219,6 +222,25 @@ return_value: type_def ID
 	;
 
 parameter_def: /* empty */ {}
+	| KW_VARLENARG
+	{
+		json varprm = {
+			{ "name", "..." },
+			{ "pass-by", "read" }
+		};
+		LOC(varprm, @$);
+		$$.push_back(move(varprm));
+	}
+	| parameters ',' KW_VARLENARG
+	{
+		$$ = move($1);
+		json varprm = {
+			{ "name", "..." },
+			{ "pass-by", "read" }
+		};
+		LOC(varprm, @3);
+		$$.push_back(move(varprm));
+	}
 	| parameters { $$ = move($1); }
 	;
 
@@ -228,14 +250,13 @@ parameters: parameter { $$.push_back($1); }
 		$$ = move($1);
 		$$.push_back($3);
 	}
-	| parameters ',' move_owner ID default_value
+	| parameters ',' pass_by ID default_value
 	{
 		$$ = move($1);
 		json prm = {
 			{ "name", $4 },
+			{ "pass-by", $3 }
 		};
-		if ($3)
-			prm["move"] = true;
 		if (!$5.is_null())
 			prm["default-val"] = move($5);
 
@@ -245,24 +266,99 @@ parameters: parameter { $$.push_back($1); }
 	}
 	;
 
-parameter: type_def move_owner ID default_value
+parameter: type_def pass_by ID default_value
 	{
 		json prm = {
 			{ "var-type", move($1) },
 			{ "name", move($3) },
+			{ "pass-by", $2 }
 		};
-		if ($2)
-			prm["move"] = true;
 		if (!$4.is_null())
 			prm["default-val"] = move($4);
 		$$ = move(prm);
 		LOC($$, @$);
+	}
+
+	| '@'
+	{
+		json placeholder = {
+			{ "name", "@" },
+		};
+		$$ = move(placeholder);
+		LOC($$, @$);
+	}
+	;
+
+out_parameter_def: /* empty */ { }
+	| EQ_ARROW out_parameters
+	{
+		$$ = move($2);
+	}
+
+	| EQ_ARROW KW_VARLENARG 
+	{
+		json prm = {
+			{ "name", "..." },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @2);
+		$$.push_back(move(prm));
+	}
+
+	| EQ_ARROW out_parameters ',' KW_VARLENARG
+	{
+		$$ = move($2);
+		json prm = {
+			{ "name", "..." },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @4);
+		$$.push_back(move(prm));
+	}
+	;
+
+out_parameters: type_def ID
+	{
+		json prm = {
+			{ "var-type", move($1) },
+			{ "name", move($2) },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @2);
+		$$.push_back(move(prm));
+	}
+
+	| out_parameters ',' type_def ID
+	{
+		$$ = move($1);
+		json prm = {
+			{ "var-type", move($3) },
+			{ "name", move($4) },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @4);
+		$$.push_back(move(prm));
+	}
+
+	| out_parameters ',' ID
+	{
+		$$ = move($1);
+		json prm = {
+			{ "name", move($3) },
+			{ "pass-by", "write" }
+		};
+		LOC(prm, @3);
+		$$.push_back(move(prm));
 	}
 	;
 
 move_owner: /* empty */	{ $$ = false; }
 	| DBL_GRTR { $$ = true; }
 	;
+
+pass_by: /* empty */ { $$ = "copy"; }
+	| DBL_GRTR { $$ = "move"; }
+	| '&' { $$ = "ro-ref"; }
 
 take_owner: /* empty */	{ $$ = false; }
 	| DBL_LESS { $$ = true; }
@@ -275,39 +371,58 @@ default_value:	/* empty */	{  }
 	}
 	;
 
-ccall_declaration: KW_CCALL single_return FUNC_ID '(' parameter_def ')' ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return ';'
 	{
+		vector<json> params = move($4);
+		int pind = 0;
+		for (json& out_param: $5) {
+			while (pind < params.size()) {
+				if (params[pind]["name"] == "@")
+					break;
+				pind++;
+			}
+
+			if (pind < params.size()) {
+				params[pind] = move(out_param);
+				pind++;
+			} else {
+				params.push_back(move(out_param));
+			}
+		}
+
 		json ccall = {
 			{"func-type", "ccall"},
-			{"name", $3},
-			{"params", $5},
+			{"name", $2},
+			{"params", move(params)},
 		};
-		if ($2 != "")
-			ccall["ret-type"] = move($2);
+		if ($7.size()) {
+			ccall["ret"] = $7;
+		}
 		$$ = move(ccall);
 		LOC($$, @$);
 	}
 	;
 
-syscall_definition: KW_SYSCALL INT ':' single_return FUNC_ID '(' parameter_def ')' ';'
+syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_return ';'
 	{
 		json syscall = {
 			{"func-type","syscall"},
 			{"call-id",$2},
-			{"name",$5},
-			{"params", $7}	
+			{"name",$4},
+			{"params", $6}	
 		};
-		if ($4 != "")
-			syscall["ret-type"] = move($4);
+		if ($8.size()) {
+			syscall["ret"] = $8;
+		}
 		$$ = move(syscall);
 		LOC($$, @$);
 	}
 	;
 
-single_return:  { }
-	| TYPENAME
+single_return: /* empty */ { }
+	| ARROW type_def
 	{
-		$$ = move($1);
+		$$ = move($2);
 	}
 	;
 
@@ -667,10 +782,24 @@ expression:
 
 func_call: FUNC_ID '(' arguments ')'
 	{
+		vector<json> empty;
 		json func_call = {
 			{"exp-type", "func-call"},
 			{"func-name", $1},
-			{"args", $3}
+			{"args", $3},
+			{"out-args", empty }
+		};
+		$$ = move(func_call);
+		LOC($$, @$);
+	}
+
+	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
+	{
+		json func_call = {
+			{"exp-type", "func-call"},
+			{"func-name", $1},
+			{"args", $3},
+			{"out-args", $5}
 		};
 		$$ = move(func_call);
 		LOC($$, @$);
@@ -703,6 +832,23 @@ argument: /* empty */
 	{
 		$$["exp"] = move($1);
 		if ($2) $$["move"] = true;
+	}
+	;
+
+out_arguments: out_argument
+	{
+		$$.push_back(move($1));
+	}
+	| out_arguments ',' out_argument
+	{
+		$$ = move($1);
+		$$.push_back(move($3));
+	}
+	;
+
+out_argument: expression
+	{
+		$$["exp"] = move($1);
 	}
 	;
 
@@ -910,6 +1056,7 @@ chain_call: expressions arrow_ope func_call
 			{"func-name", $3["func-name"]},
 			{"in-args", move(in_args)},
 			{"args", $3["args"]},
+			{"out-args", $3["out-args"]},
 		};
 		if ($2) c_call["in-args"][0]["move"] = true;
 		$$ = move(c_call);
@@ -926,6 +1073,7 @@ chain_call: expressions arrow_ope func_call
 			{"func-name", $3["func-name"]},
 			{"in-args", move(in_args)},
 			{"args", $3["args"]},
+			{"out-args", $3["out-args"]},
 		};
 		if ($2) c_call["in-args"][0]["move"] = true;
 		$$ = move(c_call);
@@ -1068,6 +1216,17 @@ array_size: /* empty */
 	{
 		$$ = move($1);
 	}
+	
+	| '?'
+	{
+		json unknown_size = {
+			{"exp-type", "lit-int"},
+			{"val", 0}
+		};
+		$$ = move(unknown_size);
+		LOC($$, @$);
+	}
+	;
 
 array_item: '[' array_indexes ']'
 	{

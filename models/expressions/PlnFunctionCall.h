@@ -1,7 +1,7 @@
 /// PlnFunctionCall model class declaration.
 ///
 /// @file	PlnFunctionCall.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnExpression.h"
 
@@ -18,6 +18,8 @@ class PlnClone;
 class PlnFunctionCall : public PlnExpression
 {
 	vector<PlnExpression*> arguments;
+	vector<PlnExpression*> out_arguments;
+
 	vector<PlnDataPlace*> ret_dps;
 	vector<PlnVariable*> free_vars;
 	vector<PlnExpression*> free_exs;
@@ -28,7 +30,7 @@ public:
 	vector<PlnDataPlace*> arg_dps;
 
 	PlnFunctionCall(PlnFunction* f);
-	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args);
+	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*> &args, vector<PlnExpression*> &out_args);
 	~PlnFunctionCall();
 
 	void loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types);

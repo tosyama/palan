@@ -1,7 +1,7 @@
 /// Function model declaration.
 ///
 /// @file	PlnFunction.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -13,6 +13,13 @@ enum PlnPassingMethod {
 	FPM_COPY,
 	FPM_MOVEOWNER,
 	FPM_REF
+};
+
+enum {
+	PIO_UNKNOWN = 0,
+	PIO_INPUT = 1,
+	PIO_OUTPUT = 2,
+//	PIO_IO = 3,	// == PIO_INPUT | PIO_OUTPUT unused
 };
 
 class PlnFunction
@@ -38,11 +45,15 @@ public:
 	} inf;
 	PlnBlock* implement;
 	PlnBlock* parent;
+	bool has_va_arg;
+	int num_in_param, num_out_param;
 
 	PlnFunction(int func_type, const string& func_name);
 	void setParent(PlnModule* parent_mod);
 	PlnVariable* addRetValue(const string& rname, PlnType* rtype, bool do_init);
-	PlnParameter* addParam(const string& pname, PlnType* ptype, PlnPassingMethod pass_method, PlnExpression* defaultVal);
+	PlnParameter* addParam(const string& pname, PlnType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
+
+	vector<string> getParamStrs() const;
 
 	void genAsmName();
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;

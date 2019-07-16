@@ -21,6 +21,7 @@ static PlnType* uint_type = NULL;
 static PlnType* flo_type = NULL;
 static PlnType* ro_cstr_type = NULL;
 static PlnType* object_type = NULL;
+static PlnType* any_type = NULL;
 
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
@@ -43,6 +44,12 @@ PlnType::PlnType(PlnTypeType type)
 	: type(type), allocator(NULL), freer(NULL), copyer(NULL)
 {
 }
+
+class AnyType : public PlnType {
+public:
+	AnyType() : PlnType(TP_PRIMITIVE) {}
+	PlnTypeConvCap canConvFrom(PlnType *src) override { BOOST_ASSERT(false); }
+};
 
 static void initBasicTypes()
 {
@@ -123,6 +130,13 @@ static void initBasicTypes()
 	t->size = 8;
 	basic_types.push_back(t);
 	object_type = t;
+
+	t = new AnyType();
+	t->name = "";
+	t->data_type = DT_UNKNOWN;
+	t->size = 0;
+	basic_types.push_back(t);
+	any_type = t;
 
 	// Set type conversion info.
 	// sbyte
@@ -244,10 +258,10 @@ vector<PlnType*> PlnType::getBasicTypes()
 	return basic_types;
 }
 
-// PlnType* PlnType::getByte()	// not use now
-// {
-// 	return byte_type;
-// }
+PlnType* PlnType::getByte()
+{
+ 	return byte_type;
+}
 
 PlnType* PlnType::getSint()
 {
@@ -274,11 +288,19 @@ PlnType* PlnType::getObject()
 	return object_type;
 }
 
+PlnType* PlnType::getAny()
+{
+	return any_type;
+}
+
 string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
 	for (int s: sizes) {
-		arr_name = arr_name + to_string(s) + ",";
+		if (s)
+			arr_name = arr_name + to_string(s) + ",";
+		else
+			arr_name = arr_name + "?,";
 	}
 	arr_name.back() = ']';
 

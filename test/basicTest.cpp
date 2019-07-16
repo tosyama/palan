@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "abc123.4");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -193,9 +193,13 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "1 22 26\n2 1 21\n"
 								"1 8 12\n1 2 7\n"
 								"2 1 21");
+
+	testcode = "027_ccall";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "abc123def1.23\nbbaa 99 2.34 7");
 }
 
-// Error file ID: 500-570
+// Error file ID: 500-572
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -213,7 +217,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Variable 'abcd' was not declared in this scope.");
 
 	testcode = "504_copyfreevar_err";
-	REQUIRE(build(testcode) == "finish:0:6-6 Can not copy to freed variable 'arr2'.");
+	REQUIRE(build(testcode) == "finish:0:4-4 Can not copy to freed variable 'arr2'.");
 
 	testcode = "505_ambigfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");
@@ -246,7 +250,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
 
 	testcode = "515_undefchainfunc_err";
-	REQUIRE(build(testcode) == "0:3-3 Function 'test' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'test'.\nCandidate: test(int32)");
 
 	testcode = "516_duplicate_const_err";
 	REQUIRE(build(testcode) == "0:4-4 Const name 'N' already defined.");
@@ -349,6 +353,12 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "570_continue_notinloop_err";
 	REQUIRE(build(testcode) == "0:4-4 The statement should be within loop.");
+
+	testcode = "571_placehold_no_param_err";
+	REQUIRE(build(testcode) == "0:1-1 No matching output parameter for the placeholder.");
+
+	testcode = "572_unsupported_err3";
+	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported placeholder or variable argument at palan function.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")
@@ -385,7 +395,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "555_arrlit_type_err7";
-	REQUIRE(build(testcode) == "0:1-1 Function 'test' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:1-1 No matching function for call to 'test'.\nCandidate: test(int64[3])");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
@@ -410,7 +420,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
 
 	testcode = "564_arrval_type_err7";
-	REQUIRE(build(testcode) == "0:2-2 Function 'test' was not declared in this scope.");
+	REQUIRE(build(testcode) == "0:2-2 No matching function for call to 'test'.\nCandidate: test(int64[3])");
 	
 	testcode = "565_unsupported_err3";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");

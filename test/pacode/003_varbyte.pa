@@ -1,4 +1,4 @@
-ccall int64 printf();
+ccall printf(...);
 
 byte a = 12;
 byte b = a+7;

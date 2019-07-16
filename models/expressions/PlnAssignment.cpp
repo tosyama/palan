@@ -126,8 +126,7 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 				// Compatibility is assured at adjustTypes().
 				BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
 
-				bool need_save = false;
-				need_save = checkNeedToSave(expressions, exp_i, lvals, dst_i);
+				bool need_save = checkNeedToSave(expressions, exp_i, lvals, dst_i);
 
 				ai->addDstEx(lvals[dst_i], need_save);
 				added = true;

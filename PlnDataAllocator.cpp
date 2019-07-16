@@ -248,6 +248,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int func_type, const vecto
 		static string cmt="arg";
 		dp->comment = &cmt;
 		dp->status = DS_READY_ASSIGN;
+		dp->data_type = arg_dtypes[i];
 		dps.push_back(dp);
 	}
 

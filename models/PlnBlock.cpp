@@ -8,6 +8,7 @@
 
 #include <boost/assert.hpp>
 #include <algorithm>
+#include <boost/algorithm/string/join.hpp>
 
 #include "PlnFunction.h"
 #include "PlnBlock.h"
@@ -153,9 +154,10 @@ PlnExpression* PlnBlock::getConst(const string& name)
 	return NULL;
 }
 
-PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_vals)
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)
 {
 	PlnFunction* matched_func = NULL;
+	vector<PlnFunction*> candidates;
 	int amviguous_count = 0; 
 	int is_perfect_match = false; 
 
@@ -163,33 +165,57 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*>& arg_v
 	do {
 		for (auto f: b->funcs) {
 			if (f->name == func_name) {
-				if (f->parameters.size() < arg_vals.size()) {
-					// Excluded C and System call for now
-					if (f->type == FT_C || f->type == FT_SYS) return f;
+				candidates.push_back(f);
+				if ((!f->has_va_arg)
+						&& f->parameters.size() < (arg_vals.size()+out_arg_vals.size())) {
 					goto next_func;
 				}
 
 				int i=0;
+				int oi=0;
 				bool do_cast = false;
 				for (auto p: f->parameters) {
-					if (i+1>arg_vals.size() || !arg_vals[i]) {
-						if (!p->dflt_value) goto next_func;
-					} else {
-						PlnType* a_type = arg_vals[i]->getType();
-						PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
-						if (cap == TC_CANT_CONV) goto next_func;
-
-						if (p->ptr_type == PTR_PARAM_MOVE && arg_vals[i]->asgn_type != ASGN_MOVE) {
+					bool is_output = p->iomode & PIO_OUTPUT;
+					if (p->name == "...") {
+						BOOST_ASSERT(i+oi+1 == f->parameters.size());
+						if ((is_output && i != arg_vals.size())
+								|| (!is_output && oi != out_arg_vals.size())) {
 							goto next_func;
 						}
-						if (p->ptr_type != PTR_PARAM_MOVE && arg_vals[i]->asgn_type == ASGN_MOVE) {
-							goto next_func;
-						}
-
-						if (cap != TC_SAME) do_cast = true;
+						break;	// matched
 					}
-					++i;
+
+					PlnValue *arg_val;
+					if (is_output) {
+						if (oi >= out_arg_vals.size()) goto next_func;
+						arg_val = out_arg_vals[oi];
+						oi++;
+
+					} else {
+						if (i >= arg_vals.size() || !arg_vals[i]) {
+							if (!p->dflt_value) goto next_func;
+							// use default value
+							i++;
+							continue;
+						}
+						arg_val = arg_vals[i];
+						i++;
+					}
+
+					PlnType* a_type = arg_val->getType();
+					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
+					if (cap == TC_CANT_CONV) goto next_func;
+
+					if (p->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {
+						goto next_func;
+					}
+					if (p->ptr_type != PTR_PARAM_MOVE && arg_val->asgn_type == ASGN_MOVE) {
+						goto next_func;
+					}
+
+					if (cap != TC_SAME) do_cast = true;
 				}
+				candidates.pop_back();
 
 				if (is_perfect_match) {
 					if (do_cast) goto next_func;
@@ -211,7 +237,15 @@ next_func:
 	
 	if (is_perfect_match || amviguous_count == 1) return matched_func;
 
-	if (!matched_func) throw PlnCompileError(E_UndefinedFunction, func_name);
+	if (!matched_func) {
+		if (candidates.size()) {
+			auto f = candidates[0];
+			string pdef = boost::algorithm::join(f->getParamStrs(), ", ");
+			string candidate_def = f->name + "(" + pdef + ")";
+			throw PlnCompileError(E_NoMatchingFunction, func_name, candidate_def);
+		}
+		throw PlnCompileError(E_UndefinedFunction, func_name);
+	}
 	// if (amviguous_count >= 0)
 	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 }
@@ -223,19 +257,16 @@ PlnFunction* PlnBlock::getFuncProto(const string& func_name, vector<string>& par
 	do {
 		for (auto f: b->funcs) {
 			if (f->name == func_name && f->parameters.size() == param_types.size()) {
+				vector<string> f_ptypes = f->getParamStrs();
+				BOOST_ASSERT(f_ptypes.size() == param_types.size());
 
 				for (int i=0; i<param_types.size(); i++) {
-					string pt_name = f->parameters[i]->var_type->name;
-					if (f->parameters[i]->ptr_type == PTR_PARAM_MOVE) {
-						pt_name += ">>";
-					}
-					if (pt_name != param_types[i]) {
+					if (f_ptypes[i] != param_types[i])
 						goto next;
-					}
 				}
 
 				BOOST_ASSERT(f->implement == NULL);
-				return f;
+				return f;	// found complete match
 			}
 next:	;
 		}

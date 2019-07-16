@@ -36,7 +36,7 @@ public:
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError
 	PlnExpression* getConst(const string& name);
 
-	PlnFunction* getFunc(const string& func_name, vector<PlnValue*>& arg_vals); // throw PlnCompileError
+	PlnFunction* getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
 
 	void addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si);

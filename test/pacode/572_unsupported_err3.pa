@@ -1,0 +1,3 @@
+func notsuppot_va(int32 n, ...)
+{
+}

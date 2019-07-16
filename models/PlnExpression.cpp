@@ -167,7 +167,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 				values[0].inf.arrValue->adjustTypes(types);
 			} catch (PlnCompileError& err) {
 				err.loc = loc;
-				throw err;
+				throw;
 			}
 		} else {
 			PlnType *vtype = values[0].getType();

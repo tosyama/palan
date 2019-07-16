@@ -297,7 +297,7 @@ void PlnX86_64RegisterMachine::addComment(string comment)
 
 static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 {
-	char buf1[256], buf2[256];
+	char buf[256];
 
 	if (oc.mne == COMMENT) {
 		if (oc.comment != "") out << "# " << oc.comment;
@@ -306,14 +306,14 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 
 	if (oc.mne == LABEL) {
 		BOOST_ASSERT(oc.src->type == OP_LBL);
-		out << oc.src->str(buf1) << ":";
+		out << oc.src->str(buf) << ":";
 		if (oc.comment != "") out << "	# " << oc.comment;
 		return out;
 	}
 
 	out << "	" << mnes[oc.mne];
-	if (oc.src) out << " " << oc.src->str(buf1);
-	if (oc.dst) out << ", " << oc.dst->str(buf2);
+	if (oc.src) out << " " << oc.src->str(buf);
+	if (oc.dst) out << ", " << oc.dst->str(buf);
 	if (oc.comment != "") out << "	# " << oc.comment;
 
 	return out;
