@@ -3,6 +3,8 @@ ccall sprintf(@, &src, ... => byte[?] dst) -> int32;
 ccall strcpy(byte[?] >>dst, &src) -> byte[?];
 ccall sscanf(byte[?] &str, &format => ...) -> int32;
 
+type FILE;
+
 i = 0;
 byte[10] str, str2;
 

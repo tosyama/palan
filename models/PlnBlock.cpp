@@ -154,6 +154,25 @@ PlnExpression* PlnBlock::getConst(const string& name)
 	return NULL;
 }
 
+void PlnBlock::declareType(const string& type_name)
+{
+}
+
+PlnType* PlnBlock::getType(const string& type_name)
+{
+	auto t = std::find_if(types.begin(), types.end(),
+		[type_name](PlnType* t) { return t->name == type_name; });
+
+	if (t != types.end())
+		return *t;
+	
+	if (PlnBlock* b = parentBlock(this)) {
+		return b->getType(type_name);
+	}
+
+	return NULL;
+}
+
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)
 {
 	PlnFunction* matched_func = NULL;

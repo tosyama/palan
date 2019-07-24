@@ -1,3 +1,4 @@
+type FILE;
 ccall printf(byte[?] &format, ...) -> int32;
 ccall sprintf(@, byte[?] &format, ... => byte[?] str) -> int32;
 ccall scanf(byte[?] &format => ...) -> int32;

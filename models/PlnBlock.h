@@ -17,6 +17,7 @@ public:
 		PlnExpression *ex;
 	};
 	vector<PlnConst> consts;
+	vector<PlnType*> types;
 	vector<PlnFunction*> funcs;
 	
 	PlnFunction* parent_func;
@@ -35,6 +36,9 @@ public:
 
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError
 	PlnExpression* getConst(const string& name);
+
+	void declareType(const string& type_name);
+	PlnType* getType(const string& type_name);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);

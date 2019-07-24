@@ -30,7 +30,7 @@ func ov_func(uint32 pa, uint32 pb)
 	printf("(uint32 %d, uint32 %d)", pa, pb);
 }
 
-func ret2u() -> uint64 uint64
+func ret2u() -> uint64, uint64
 {
 	return 1u,2u;
 }

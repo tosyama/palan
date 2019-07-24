@@ -28,6 +28,7 @@ PlnModule::PlnModule()
 {
 	types = PlnType::getBasicTypes();
 	toplevel = new PlnBlock();
+	toplevel->types = PlnType::getBasicTypes();
 	stack_size = 0;
 	max_jmp_id = -1;
 }
@@ -86,8 +87,9 @@ PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 	t->sizes = move(sizes);
 
 	if (alloc_size == 0) {
-		// row array reference.
+		// raw array reference.
 		types.push_back(t);
+		toplevel->types.push_back(t);
 		return t;
 	}
 
@@ -142,6 +144,7 @@ PlnType* PlnModule::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 	}
 
 	types.push_back(t);
+	toplevel->types.push_back(t);
 
 	return t;
 }

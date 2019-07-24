@@ -38,6 +38,7 @@ static PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast, PlnBlo
 static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
 static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
 static void registerConst(json& cnst, PlnScopeStack &scope);
+static void registerType(json& type, PlnScopeStack &scope);
 static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
 static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast);
@@ -93,7 +94,7 @@ PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 	scope.push_back(module);
 
 	if (stmts.is_array()) {
-		module->toplevel = buildBlock(stmts, scope, ast);
+		buildBlock(stmts, scope, ast, module->toplevel);
 	}
 
 	return module;
@@ -110,7 +111,8 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 	assertAST(var_type[0]["name"].is_string(), var_type);
 
 	string type_name = var_type[0]["name"];
-	ret_vt = module.getType(type_name);
+	ret_vt = CUR_BLOCK->getType(type_name);
+	BOOST_ASSERT(ret_vt);
 
 	for (int i=var_type.size()-1; i>0; --i) {
 		json &vt = var_type[i];
@@ -328,6 +330,8 @@ static void prebuildBlock(json& stmts, PlnScopeStack& scope, json& ast)
 		string type = stmt["stmt-type"];
 		if (type == "const") {
 			registerConst(stmt, scope);
+		} else if (type == "type-def") {
+			registerType(stmt, scope);
 		}
 	}
 
@@ -406,7 +410,9 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 		json& f = getFuncDef(ast, stmt["id"]);
 		if (f["func-type"] == "palan")
 			buildFunction(f, scope, ast);
-
+		return NULL;
+	
+	} else if (type == "type-def") {
 		return NULL;
 
 	} else {
@@ -631,6 +637,10 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 		}
 		i++;
 	}
+}
+
+void registerType(json& type, PlnScopeStack &scope)
+{
 }
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
