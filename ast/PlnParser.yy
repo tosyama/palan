@@ -82,8 +82,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token EQ_ARROW	"=>"
 
 %type <string>	pass_by
-%type <bool>	move_owner arrow_ope
-%type <vector<json>>	array_def array_sizes
+%type <bool>	move_owner take_owner arrow_ope
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
@@ -97,8 +96,9 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	assignment func_call chain_call term
 %type <json>	argument out_argument literal chain_src
 %type <json>	dst_val var_expression
-%type <json>	array_size
+%type <json>	array_item
 %type <vector<string>>	const_names
+%type <vector<json>>	array_items
 %type <vector<json>>	var_type type type_or_var single_return
 %type <vector<json>>	parameter_def out_parameter_def
 %type <vector<json>>	parameters out_parameters
@@ -500,30 +500,15 @@ semi_stmt: st_expression
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
- 	| ID '=' expression
+ 	| ID take_owner '=' expression
  	{
  		json var = {
  			{"name", move($1)},
  			{"var-type", vector<json>()}
  		};
- 		LOC(var, @1);
- 		vector<json> vars = { var };
- 		vector<json> inits = { $3 };
- 		json stmt = {
- 			{"stmt-type", "var-init"},
- 			{"vars", move(vars)},
- 			{"inits", move(inits)},
- 		};
- 		$$ = move(stmt);
- 		LOC($$, @$);
- 	}
- 	| ID DBL_LESS '=' expression
- 	{
- 		json var = {
- 			{"name", move($1)},
- 			{"var-type", vector<json>()},
- 			{"move", true}
- 		};
+		if ($2) {
+			var["move"] = true;
+		}
  		LOC(var, @1);
  		vector<json> vars = { var };
  		vector<json> inits = { $4 };
@@ -1101,44 +1086,35 @@ declarations: declaration
 	}
 	;
 
-declaration: var_type ID
+declaration: var_type ID take_owner
 	{
 		json dec = {
 			{"var-type", move($1)},
 			{"name", move($2)}
 		};
-		$$ = move(dec);
-		LOC($$, @$);
-	}
-	| var_type ID DBL_LESS
-	{
-		json dec = {
-			{"var-type", move($1)},
-			{"name", move($2)},
-			{"move", true}
-		};
+		if ($3) {
+			dec["move"] = true;
+		}
 		$$ = move(dec);
 		LOC($$, @$);
 	}
 	;
 
-subdeclaration: ID
+subdeclaration: ID take_owner
 	{
 		json dec = {
 			{"name", move($1)}
 		};
+		if ($2) {
+			dec["move"] = true;
+		}
 		$$ = move(dec);
 		LOC($$, @$);
 	}
-	| ID DBL_LESS
-	{
-		json dec = {
-			{"name", move($1)},
-			{"move", true}
-		};
-		$$ = move(dec);
-		LOC($$, @$);
-	}
+	;
+
+take_owner: /* empty */ { $$ = false; }
+	| DBL_LESS { $$ = true; }
 	;
 
 return_stmt: KW_RETURN
@@ -1185,6 +1161,27 @@ var_type: KW_AUTOTYPE	/* empty */
 
 type: type_or_var
 	{
+		for (json& t: $1) {
+			if (t["name"] == "[]") {
+				for (json& s: t["sizes"]) {
+					if (s["exp-type"] == "unknown") {
+						if (s["info"] == "?") {
+							s = {
+								{"exp-type", "lit-int"},
+								{"val", 0},
+								{"loc", s["loc"]}
+							};
+						} else if (s["info"] == "") {
+							s = {
+								{"exp-type", "lit-int"},
+								{"val", -1},
+								{"loc", s["loc"]}
+							};
+						}
+					}
+				}
+			}
+		}
 		$$ = move($1);
 	}
 	;
@@ -1196,39 +1193,33 @@ type_or_var: ID
 		};
 		$$.push_back(move(ptype));
 	}
-	| type_or_var array_def
+	| type_or_var '[' array_items ']'
 	{
 		json atype = {
 			{"name", "[]"},
-			{"sizes", move($2)}
+			{"sizes", move($3)}
 		};
 		$$ = move($1);
 		$$.push_back(move(atype));
 	}
 	;
 
-array_def: '[' array_sizes ']'
-	{
-		$$ = move($2);
-	}
-	;
-
-array_sizes: array_size
+array_items: array_item
 	{
 		$$.push_back($1);
 	}
-	| array_sizes ',' array_size 
+	| array_items ',' array_item
 	{
 		$$ = move($1);
 		$$.push_back($3);
 	}
 	;
 
-array_size: /* empty */
+array_item: /* empty */
 	{
 		json inference_size = {
-			{"exp-type", "lit-int"},
-			{"val", -1}
+			{"exp-type", "unknown"},
+			{"info", ""}
 		};
 		$$ = move(inference_size);
 		LOC($$, @$);
@@ -1239,11 +1230,11 @@ array_size: /* empty */
 	}
 	| '?'
 	{
-		json unknown_size = {
-			{"exp-type", "lit-int"},
-			{"val", 0}
+		json unknown = {
+			{"exp-type", "unknown"},
+			{"info", "?"}
 		};
-		$$ = move(unknown_size);
+		$$ = move(unknown);
 		LOC($$, @$);
 	}
 	;

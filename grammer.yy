@@ -176,12 +176,15 @@ semi_stmt: st_expression
 	| type_def
 	| declarations
 	| declarations '=' expressions
-	| ID '=' expression
-	| ID DBL_LESS '=' expression
+	| ID take_owner1 '=' expression 
 	| const_def
 	| return_stmt
 	| break_stmt
 	| continue_stmt
+	;
+
+take_owner1: /* empty */
+	| DBL_LESS
 	;
 
 st_expression: expression
@@ -277,12 +280,14 @@ declarations: declaration
 	| declarations ',' declaration 
 	;
 
-declaration: var_type ID
-	| var_type ID DBL_LESS
+declaration: var_type ID take_owner
 	;
 
-subdeclaration: ID
-	| ID DBL_LESS
+subdeclaration: ID take_owner
+	;
+
+take_owner: /* empty */
+	| DBL_LESS
 	;
 
 return_stmt: KW_RETURN
@@ -297,10 +302,7 @@ type: type_or_var
 	;
 
 type_or_var: ID
-	| type_or_var array_def
-	;
-	
-array_def: '[' array_items ']'
+	| type_or_var '[' array_items ']'
 	;
 
 array_items: array_item
