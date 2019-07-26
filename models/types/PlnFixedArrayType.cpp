@@ -4,12 +4,28 @@
 /// @copyright	2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include "../../PlnConstants.h"
 #include "../PlnType.h"
 #include "PlnFixedArrayType.h"
 #include "PlnArrayValueType.h"
 
 PlnFixedArrayType::PlnFixedArrayType() : PlnType(TP_FIXED_ARRAY)
 {
+}
+
+PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes)
+	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
+{
+	int alloc_size = item_type->size;
+	for (int s: sizes)
+		alloc_size *= s;
+
+	this->name = name;
+	this->data_type = DT_OBJECT_REF;
+	this->size = 8;
+	this->inf.obj.is_fixed_size = true;
+	this->inf.obj.alloc_size = alloc_size;
+	this->sizes = move(sizes);
 }
 
 PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)

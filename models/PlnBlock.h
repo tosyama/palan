@@ -39,6 +39,7 @@ public:
 
 	void declareType(const string& type_name);
 	PlnType* getType(const string& type_name);
+	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);

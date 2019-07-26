@@ -1,7 +1,7 @@
 /// Helper functions for building model tree directly.
 ///
 /// @file	PlnBuildTreeHelper.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include "PlnModel.h"
 
@@ -15,6 +15,7 @@ namespace palan
 	void exit(PlnBlock* block, uint64_t result);
 
 	PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnModule *module);
+	PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock *block);
 
 	PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, uint64_t i);
 }

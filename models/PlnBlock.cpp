@@ -8,14 +8,17 @@
 
 #include <boost/assert.hpp>
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/join.hpp>
 
 #include "PlnFunction.h"
+#include "PlnGeneralObject.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
-#include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnExpression.h"
+#include "types/PlnFixedArrayType.h"
+#include "PlnArray.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -171,6 +174,105 @@ PlnType* PlnBlock::getType(const string& type_name)
 	}
 
 	return NULL;
+}
+
+static string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
+{
+	string ret_name, arg_name;
+	for (auto t: ret_types)
+		ret_name += "_" + t->name;
+	for (auto t: arg_types)
+		arg_name += "_" + t->name;
+	boost::replace_all(fname, "_", "__");
+
+	fname = "_" + fname + ret_name + + "_" +arg_name;
+	boost::replace_all(fname, "[", "A_");
+	boost::replace_all(fname, "]", "_");
+	boost::replace_all(fname, ",", "_");
+	return fname;
+}
+
+PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
+{
+	bool found_item = false;
+	for (auto t: types)
+		if (item_type == t)
+			found_item = true;
+	
+	if (!found_item) {
+		if (PlnBlock* b = parentBlock(this)) {
+			return b->getFixedArrayType(item_type, sizes);
+		} else {
+			return NULL;
+		}
+	}
+
+	string name = PlnType::getFixedArrayName(item_type, sizes);
+	for (auto t: types) 
+		if (name == t->name) return t;
+	
+	auto t = new PlnFixedArrayType(name, item_type, sizes);
+	auto it = item_type;
+	int alloc_size = t->inf.obj.alloc_size;
+	
+	if (alloc_size == 0) {
+		// raw array reference.
+		types.push_back(t);
+		return t;
+	}
+
+	// set allocator & freer.
+	if (it->data_type != DT_OBJECT_REF) {
+		t->allocator = new PlnSingleObjectAllocator(alloc_size);
+		t->freer = new PlnSingleObjectFreer();
+		t->copyer = new PlnSingleObjectCopyer(alloc_size);
+
+	} else {
+		// allocator
+		{
+			string fname = createFuncName("new", {t}, {});
+			for (auto f: funcs) {
+				if (f->name == fname) {
+					BOOST_ASSERT(false);
+				}
+			}
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, this);
+			funcs.push_back(alloc_func);
+
+			t->allocator = new PlnNoParamAllocator(alloc_func);
+		}
+
+		// freer
+		{
+			string fname = createFuncName("del", {}, {t});
+			for (auto f: funcs) {
+				if (f->name == fname) {
+					BOOST_ASSERT(false);
+				}
+			}
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, t, this);
+			funcs.push_back(free_func);
+
+			t->freer = new PlnSingleParamFreer(free_func);
+		}
+
+		// copyer
+		{
+			string fname = createFuncName("cpy", {}, {t,t});
+			for (auto f: funcs) {
+				if (f->name == fname) {
+					BOOST_ASSERT(false);
+				}
+			}
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, t, this);
+			funcs.push_back(copy_func);
+			
+			t->copyer = new PlnTwoParamsCopyer(copy_func);
+		}
+	}
+
+	types.push_back(t);
+	return t;
 }
 
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)
