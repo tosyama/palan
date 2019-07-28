@@ -24,9 +24,8 @@ using namespace std;
 PlnModule::PlnModule()
 {
 	toplevel = new PlnBlock();
-	toplevel->types = PlnType::getBasicTypes();
+	PlnType::initBasicTypes();
 	toplevel->parent_module = this;
-	// stack_size = 0;
 	max_jmp_id = -1;
 }
 

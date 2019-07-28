@@ -42,6 +42,8 @@ PlnBlock::~PlnBlock()
 		delete stmt;
 	for (auto cons: consts)
 		delete cons.ex;
+	for (auto t: types)
+		delete t;
 }
 
 void PlnBlock::setParent(PlnFunction* f)
@@ -174,14 +176,29 @@ void PlnBlock::declareType(const string& type_name)
 
 PlnType* PlnBlock::getType(const string& type_name)
 {
-	auto t = std::find_if(types.begin(), types.end(),
-		[type_name](PlnType* t) { return t->name == type_name; });
+	// Crrent block
+	{
+		auto t = std::find_if(types.begin(), types.end(),
+				[type_name](PlnType* t) { return t->name == type_name; });
 
-	if (t != types.end())
-		return *t;
-	
+		if (t != types.end())
+			return *t;
+	}
+
+	// Parent block
 	if (PlnBlock* b = parentBlock(this)) {
 		return b->getType(type_name);
+	}
+
+	// Search default type if toplevel: paraentBlock(this) == NULL
+	{
+		vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
+
+		auto t = std::find_if(basic_types.begin(), basic_types.end(),
+				[type_name](PlnType* t) { return t->name == type_name; });
+
+		if (t != basic_types.end())
+			return *t;
 	}
 
 	return NULL;
@@ -213,8 +230,14 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 	if (!found_item) {
 		if (PlnBlock* b = parentBlock(this)) {
 			return b->getFixedArrayType(item_type, sizes);
-		} else {
-			return NULL;
+
+		} else { // toplevel
+			vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
+			for (auto t: basic_types)
+				if (item_type == t)
+					found_item = true;
+			if (!found_item)
+				return NULL;
 		}
 	}
 

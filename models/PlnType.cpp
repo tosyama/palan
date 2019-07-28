@@ -51,8 +51,13 @@ public:
 	PlnTypeConvCap canConvFrom(PlnType *src) override { BOOST_ASSERT(false); }
 };
 
-static void initBasicTypes()
+void PlnType::initBasicTypes()
 {
+	if (is_initialzed_type)
+		return;
+
+	is_initialzed_type = true;
+
 	PlnType* sbt = new PlnType();
 	sbt->name = "sbyte";
 	sbt->data_type = DT_SINT;
@@ -249,12 +254,10 @@ static void initBasicTypes()
 	f64t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
 	f64t->conv_inf.emplace_back(f32t, TC_AUTO_CAST);
 
-	is_initialzed_type = true;
 }
 
-vector<PlnType*> PlnType::getBasicTypes()
+vector<PlnType*>& PlnType::getBasicTypes()
 {
-	if (!is_initialzed_type) initBasicTypes();
 	return basic_types;
 }
 
