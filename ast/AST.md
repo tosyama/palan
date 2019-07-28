@@ -131,7 +131,7 @@ Statement
         *   id - Function id integer
 	
 	11. type-def - Type definition
-		*   name - Type name string
+        *   name - Type name string
 
 *   loc - Location integer array
 

@@ -953,10 +953,11 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 
 	try {
 		return new PlnAssignment(dst_vals, src_exps);
+
 	} catch (PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, asgn);
-		throw err;
+		throw;
 	}
 }
 
