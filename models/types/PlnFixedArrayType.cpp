@@ -9,10 +9,6 @@
 #include "PlnFixedArrayType.h"
 #include "PlnArrayValueType.h"
 
-PlnFixedArrayType::PlnFixedArrayType() : PlnType(TP_FIXED_ARRAY)
-{
-}
-
 PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes)
 	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
 {

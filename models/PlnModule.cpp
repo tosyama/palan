@@ -7,13 +7,12 @@
 /// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
-#include <boost/algorithm/string.hpp>
 #include "PlnModule.h"
 #include "PlnBlock.h"
 #include "PlnFunction.h"
 #include "PlnVariable.h"
 #include "PlnStatement.h"
-#include "PlnGeneralObject.h"
+#include "PlnType.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"

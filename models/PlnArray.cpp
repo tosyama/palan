@@ -8,7 +8,6 @@
 #include "../PlnConstants.h"
 #include "PlnType.h"
 #include "../PlnTreeBuildHelper.h"
-#include "PlnModule.h"
 #include "types/PlnFixedArrayType.h"
 #include "PlnArray.h"
 #include "PlnBlock.h"

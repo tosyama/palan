@@ -2,6 +2,9 @@ ccall printf(byte[?] &format, ...) -> int32;
 ccall sprintf(@, &src, ... => byte[?] dst) -> int32;
 ccall strcpy(byte[?] >>dst, &src) -> byte[?];
 ccall sscanf(byte[?] &str, &format => ...) -> int32;
+ccall fopen(byte[?] &filename, &mode) -> FILE;
+ccall fclose(FILE >>stream) -> int32;
+ccall fprintf(FILE &file, byte[?] &format, ...) -> int32;
 
 type FILE;
 
@@ -16,3 +19,6 @@ flo64 f;
 "123.4" -> sscanf("%lf" => f);
 printf("abc%.1lf", f);
 
+FILE file <<= fopen("outfile", "w");
+file->fprintf("This is test.");
+fclose(file>>);

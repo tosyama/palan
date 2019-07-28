@@ -645,6 +645,14 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 
 void registerType(json& type, PlnScopeStack &scope)
 {
+	string type_name = type["name"];
+	PlnType *cur_type = CUR_BLOCK->getType(type_name);
+	if (cur_type) {
+		BOOST_ASSERT(false);
+	}
+
+	// cur_type == NULL;
+	CUR_BLOCK->declareType(type_name);
 }
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)

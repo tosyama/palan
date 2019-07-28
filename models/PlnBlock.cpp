@@ -165,6 +165,11 @@ PlnExpression* PlnBlock::getConst(const string& name)
 
 void PlnBlock::declareType(const string& type_name)
 {
+	PlnType* t = new PlnType();
+	t->name = type_name;
+	t->data_type = DT_OBJECT_REF;
+	t->size = 8;
+	types.push_back(t);
 }
 
 PlnType* PlnBlock::getType(const string& type_name)
