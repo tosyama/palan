@@ -1,6 +1,5 @@
 #include "testBase.h"
 
-extern bool do_debug;
 TEST_CASE("basic algorithm code example.", "[algorithm]")
 {
 	string testcode;
@@ -13,9 +12,7 @@ TEST_CASE("basic algorithm code example.", "[algorithm]")
  	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "answer: 92");
 
-	do_debug = true;
 	testcode = "102_lsm";
  	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "-0.633, 1.204");
-	do_debug = false;
 }

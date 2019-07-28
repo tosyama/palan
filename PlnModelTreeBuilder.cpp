@@ -66,8 +66,6 @@ static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 #define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
 #define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
 
-bool do_debug = false;
-
 PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
 }
@@ -134,7 +132,6 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 				BOOST_ASSERT(false);
 			}
 		}
-		//PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
 		PlnType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes);
 		ret_vt = arr_t;
 	}
@@ -425,11 +422,6 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 	}
 	setLoc(statement, stmt);
 
-	if (do_debug) {
-		PlnBlock* toplevel = CUR_MODULE->toplevel;
-		BOOST_ASSERT(toplevel->types.size()<15);
-	}
-
 	return statement;
 }
 
@@ -527,11 +519,6 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 	int init_ex_ind = 0;
 	int init_val_ind = 0;
 	for (json &var: var_init["vars"]) {
-		if (do_debug) {
-			PlnBlock* toplevel = CUR_MODULE->toplevel;
-			BOOST_ASSERT(toplevel->types.size()<15);
-		}
-
 		InferenceType infer = checkNeedsTypeInference(var["var-type"]);
 		if (infer != NO_INFER) {
 			if (init_ex_ind >= inits.size()) {
@@ -545,10 +532,6 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		if (infer == TYPE_INFER) {
 			try {
 				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_BLOCK);
-				if (do_debug) {
-					PlnBlock* toplevel = CUR_MODULE->toplevel;
-					BOOST_ASSERT(toplevel->types.size()<15);
-				}
 
 				// check type not support for var
 				if (t == PlnType::getReadOnlyCStr()) {
@@ -579,22 +562,9 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 			inferArrayIndex(var, sizes);
 			t = getVarType(var["var-type"], scope);
-			if (do_debug) {
-				PlnBlock* toplevel = CUR_MODULE->toplevel;
-				BOOST_ASSERT(toplevel->types.size()<15);
-			}
 
 		} else {
 			t = getVarType(var["var-type"], scope);
-			if (do_debug) {
-				PlnBlock* toplevel = CUR_MODULE->toplevel;
-				BOOST_ASSERT(toplevel->types.size()<15);
-			}
-		}
-
-		if (do_debug) {
-			PlnBlock* toplevel = CUR_MODULE->toplevel;
-			BOOST_ASSERT(toplevel->types.size()<15);
 		}
 
 		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
@@ -622,10 +592,6 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				init_val_ind = 0;
 				types.clear();
 			}
-		}
-		if (do_debug) {
-			PlnBlock* toplevel = CUR_MODULE->toplevel;
-			BOOST_ASSERT(toplevel->types.size()<15);
 		}
 	}
 
@@ -849,11 +815,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 	assertAST(fcall["func-name"].is_string(), fcall);
 	assertAST(fcall["args"].is_array(), fcall);
 	assertAST(fcall["out-args"].is_array(), fcall);
-
-	if (do_debug) {
-		PlnBlock* toplevel = CUR_MODULE->toplevel;
-		BOOST_ASSERT(toplevel->types.size()<15);
-	}
 
 	for (auto& arg: fcall["args"]) {
 		if (arg.is_null()) {

@@ -13,19 +13,13 @@ class PlnModule
 {
 public:
 	PlnBlock* toplevel;
+	int max_jmp_id;
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
-	int max_jmp_id;
-
-	int stack_size;
 	vector<PlnFunction*> functions;
-	vector<PlnType*> types;
 
 	PlnModule();
 	~PlnModule();
-
-	PlnType* getType(const string& type_name);
-	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);
 
 	int getJumpID();
 

@@ -14,7 +14,6 @@ namespace palan
 	void free(PlnBlock* block, PlnVariable* var);
 	void exit(PlnBlock* block, uint64_t result);
 
-	PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnModule *module);
 	PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock *block);
 
 	PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, uint64_t i);
