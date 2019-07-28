@@ -77,6 +77,9 @@ string build(const string &srcf)
 		module->gen(allocator, generator);
 
 		as_output.close();
+
+		delete module;
+
 	} catch (PlnCompileError &err) {
 		return "finish:" + err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 	}

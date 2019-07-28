@@ -26,12 +26,12 @@ fclose(file>>);
 byte[10] str3;
 str3 ->> strcpy("aaa") ->> str3;
 
-// reffunc(str3);
-//  
-// func reffunc(byte[?] &str)
-// {
-//  	byte[10] str3;
-//  	str ->> strcpy("bbb") ->> str;
-// //	str3 -> str;
-//  	printf("%s", str);
-// } 
+reffunc(str3>>);
+ 
+func reffunc(byte[?] >>str)
+{
+ 	byte[10] str3;
+ 	str ->> strcpy("bbb") ->> str;
+	str3 -> str;
+ 	printf("%s", str);
+} 
