@@ -19,6 +19,7 @@
 #include "PlnExpression.h"
 #include "types/PlnFixedArrayType.h"
 #include "PlnArray.h"
+#include "PlnModule.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -47,7 +48,10 @@ void PlnBlock::setParent(PlnFunction* f)
 {
 	parent_func = f;
 	parent_block = NULL;
+
+	BOOST_ASSERT(f->parent);
 	parent_module = f->parent->parent_module;
+	BOOST_ASSERT(parent_module);
 }
 
 void PlnBlock::setParent(PlnBlock* b)
@@ -239,7 +243,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 				}
 			}
 			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, this);
-			funcs.push_back(alloc_func);
+			parent_module->functions.push_back(alloc_func);
 
 			t->allocator = new PlnNoParamAllocator(alloc_func);
 		}
@@ -253,7 +257,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 				}
 			}
 			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, t, this);
-			funcs.push_back(free_func);
+			parent_module->functions.push_back(free_func);
 
 			t->freer = new PlnSingleParamFreer(free_func);
 		}
@@ -267,8 +271,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 				}
 			}
 			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, t, this);
-			funcs.push_back(copy_func);
-			
+			parent_module->functions.push_back(copy_func);
 			t->copyer = new PlnTwoParamsCopyer(copy_func);
 		}
 	}
