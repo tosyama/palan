@@ -20,6 +20,8 @@
 #include "../../PlnScopeStack.h"
 #include "PlnClone.h"
 #include "PlnArrayValue.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
@@ -169,8 +171,15 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 		for (auto v: a->values) {
 			if (ptr_types[j] == PTR_PARAM_MOVE && v.type == VL_VAR) {
-				// Mark as freed variable.
 				auto var = v.inf.var;
+				// Check if variable can write.
+				if (!(var->ptr_type & PTR_OWNERSHIP)) {
+					PlnCompileError err(E_CantUseMoveOwnership, var->name);
+					err.loc = a->loc;
+					throw err;
+				}
+
+				// Mark as freed variable.
 				if (!si.exists_current(var))
 					si.push_owner_var(var);
 				si.set_lifetime(var, VLT_FREED);

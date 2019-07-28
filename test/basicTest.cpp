@@ -201,7 +201,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"2:This,is");
 }
 
-// Error file ID: 500-572
+// Error file ID: 500-575
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -281,8 +281,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "524_flo_mod_err";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'float number'.");
 
-	// testcode = "525_notarrlit_err";
-	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
+	testcode = "525_undeftype_err";
+	REQUIRE(build(testcode) == "0:2-2 Type 'int' was not declared in this scope.");
 
 	// testcode = "526_arrlit_noint_err";
 	// REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
@@ -361,6 +361,15 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "572_unsupported_err3";
 	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported placeholder or variable argument at palan function.");
+
+	testcode = "573_cantusemove_err2";
+	REQUIRE(build(testcode) == "finish:0:7-7 Can not use '>>' for 'aa'.");
+
+	testcode = "574_cantusemove_err3";
+	REQUIRE(build(testcode) == "0:9-9 Can not use '>>' for 'aa'.");
+
+	testcode = "575_copy2rovar_err";
+	REQUIRE(build(testcode) == "0:9-9 Can not copy to read only variable 'aa'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

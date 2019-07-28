@@ -1191,6 +1191,7 @@ type_or_var: ID
 		json ptype = {
 			{"name", $1}
 		};
+		LOC(ptype, @$);
 		$$.push_back(move(ptype));
 	}
 	| type_or_var '[' array_items ']'
@@ -1199,6 +1200,7 @@ type_or_var: ID
 			{"name", "[]"},
 			{"sizes", move($3)}
 		};
+		LOC(atype, @$);
 		$$ = move($1);
 		$$.push_back(move(atype));
 	}

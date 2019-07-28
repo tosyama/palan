@@ -236,8 +236,8 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 			for (auto t: basic_types)
 				if (item_type == t)
 					found_item = true;
-			if (!found_item)
-				return NULL;
+
+			BOOST_ASSERT(found_item);
 		}
 	}
 
@@ -252,6 +252,9 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 	if (alloc_size == 0) {
 		// raw array reference.
 		types.push_back(t);
+		if (it->data_type != DT_OBJECT_REF) {
+			t->freer = new PlnSingleObjectFreer();
+		}
 		return t;
 	}
 

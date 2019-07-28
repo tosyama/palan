@@ -84,6 +84,8 @@ Variable Type
 
     2.  any - Specified variable type name
 
+*   loc - Location integer array
+
 Block
 ------
 *   stmts\* - Statement list in the block

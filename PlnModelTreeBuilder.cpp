@@ -112,7 +112,11 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 
 	string type_name = var_type[0]["name"];
 	ret_vt = CUR_BLOCK->getType(type_name);
-	BOOST_ASSERT(ret_vt);
+	if (!ret_vt) {
+		PlnCompileError err(E_UndefinedType, type_name);
+		setLoc(&err, var_type[0]);
+		throw err;
+	}
 
 	for (int i=var_type.size()-1; i>0; --i) {
 		json &vt = var_type[i];
@@ -161,12 +165,15 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			}
 
 			PlnType *var_type = getVarType(param["var-type"], scope);
-			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy" , param)
+			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy" || param["pass-by"] == "ro-ref", param);
+
 			PlnPassingMethod pm;
 			if (param["pass-by"] == "move") {
 				pm = FPM_MOVEOWNER;
 			} else if (param["pass-by"] == "copy") {
 				pm = FPM_COPY;
+			} else if (param["pass-by"] == "ro-ref") {
+				pm = FPM_REF;
 			} else
 				BOOST_ASSERT(false);
 

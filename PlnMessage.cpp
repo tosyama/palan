@@ -18,6 +18,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f  = "Variable '%1%' was not declared in this scope."; break;
 		case E_UndefinedFunction:
 			f  = "Function '%1%' was not declared in this scope."; break;
+		case E_UndefinedType:
+			f  = "Type '%1%' was not declared in this scope."; break;
 		case E_NoMatchingFunction:
 			f  = "No matching function for call to '%1%'.\nCandidate: %2%"; break;
 		case E_DuplicateVarName:
@@ -36,6 +38,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Could not open file '%1%'."; break;
 		case E_CantCopyFreedVar:
 			f = "Can not copy to freed variable '%1%'."; break;
+		case E_CantCopyReadOnlyVar:
+			f = "Can not copy to read only variable '%1%'."; break;
 		case E_AmbiguousFuncCall:
 			f = "Ambiguous function call '%1%'."; break;
 		case E_IncompatibleTypeAssign:
