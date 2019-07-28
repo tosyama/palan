@@ -912,7 +912,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, fcall);
-		throw err;
+		throw;
 	}
 }
 

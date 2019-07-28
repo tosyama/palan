@@ -130,7 +130,7 @@ Statement
     10. func-def - Function definition link
         *   id - Function id integer
 	
-	11. type-def - Type definition
+    11. type-def - Type definition
         *   name - Type name string
 
 *   loc - Location integer array
