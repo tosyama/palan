@@ -49,7 +49,6 @@ public:
 	int num_in_param, num_out_param;
 
 	PlnFunction(int func_type, const string& func_name);
-	void setParent(PlnModule* parent_mod);
 	PlnVariable* addRetValue(const string& rname, PlnType* rtype, bool do_init);
 	PlnParameter* addParam(const string& pname, PlnType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
 

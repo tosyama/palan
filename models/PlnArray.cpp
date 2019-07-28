@@ -50,8 +50,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 		palan::incrementUInt(wblock, i, 1);
 	}
 
-	return f;
-}
+	return f; }
 
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
 {

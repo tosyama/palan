@@ -20,6 +20,7 @@ public:
 	vector<PlnType*> types;
 	vector<PlnFunction*> funcs;
 	
+	PlnModule* parent_module;
 	PlnFunction* parent_func;
 	PlnBlock* parent_block;
 	PlnStatement* owner_stmt;

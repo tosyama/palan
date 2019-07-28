@@ -27,7 +27,7 @@
 #include "../PlnException.h"
 
 PlnBlock::PlnBlock()
-	: parent_func(NULL), parent_block(NULL), owner_stmt(NULL)
+	: parent_module(NULL), parent_func(NULL), parent_block(NULL), owner_stmt(NULL)
 {
 }
 
@@ -47,12 +47,14 @@ void PlnBlock::setParent(PlnFunction* f)
 {
 	parent_func = f;
 	parent_block = NULL;
+	parent_module = f->parent->parent_module;
 }
 
 void PlnBlock::setParent(PlnBlock* b)
 {
 	parent_func = b->parent_func;
 	parent_block = b;
+	parent_module = b->parent_module;
 }
 
 PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool is_owner)

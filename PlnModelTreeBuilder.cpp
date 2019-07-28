@@ -132,7 +132,8 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 				BOOST_ASSERT(false);
 			}
 		}
-		PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
+		//PlnType* arr_t = module.getFixedArrayType(ret_vt, sizes);
+		PlnType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes);
 		ret_vt = arr_t;
 	}
 
@@ -152,6 +153,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 
 	if (ftype_str == "palan") {
 		f = new PlnFunction(FT_PLN, proto["name"]);
+		f->parent = CUR_BLOCK;
 		for (auto& param: proto["params"]) {
 			if (param["name"] == "@" || param["name"] == "...") {
 				PlnCompileError err(E_UnsuppotedGrammer,"Not supported placeholder or variable argument at palan function.");
@@ -202,6 +204,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			f = new PlnFunction(FT_SYS, proto["name"]);
 			f->inf.syscall.id = proto["call-id"];
 		} 
+		f->parent = CUR_BLOCK;
 
 		int i=0;
 		for (auto& param: proto["params"]) {
