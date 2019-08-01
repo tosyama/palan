@@ -272,7 +272,13 @@ chain_call: expressions arrow_ope func_call
 	| assignment arrow_ope func_call
 	;
 
-type_def: KW_TYPE ID ';'
+type_def: KW_TYPE ID
+	| KW_TYPE ID '{' struct_def '}'
+	;
+
+struct_def: type ID
+	| struct_def ';' type ID
+	| struct_def ';'
 	;
 
 declarations: declaration

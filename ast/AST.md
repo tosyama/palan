@@ -118,7 +118,7 @@ Statement
 
     7.  break - Break statement
         *   label - Loop label to break
-
+S
     8.  continue - Continue statement
         *   label - Loop label to continue
 
@@ -131,7 +131,9 @@ Statement
         *   id - Function id integer
 	
     11. type-def - Type definition
+        *   type - Type definition type string: "obj-ref", "struct"
         *   name - Type name string
+		*	memebers - Struct member list
 
 *   loc - Location integer array
 
@@ -212,6 +214,11 @@ Argument
 --------
 *   exp\* - Argument expression
 *   move - Move ownership flag boolean
+
+Struct member
+-------------
+*   type\# - Variable type list
+*   name\* - Variable name string
 
 Location Array
 --------------

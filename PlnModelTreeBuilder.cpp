@@ -659,7 +659,15 @@ void registerType(json& type, PlnScopeStack &scope)
 	}
 
 	// cur_type == NULL;
-	CUR_BLOCK->declareType(type_name);
+
+	if (type["type"] == "obj-ref") {
+		CUR_BLOCK->declareType(type_name);
+
+	} else if (type["type"] == "struct") {
+
+	} else {
+		BOOST_ASSERT(false);
+	}
 }
 
 PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)

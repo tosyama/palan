@@ -108,6 +108,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
 %type <vector<json>>	dst_vals array_val
+%type <vector<json>>	struct_def
 
 %right '='
 %left ARROW DBL_ARROW
@@ -1063,10 +1064,44 @@ type_def: KW_TYPE ID
 	{
 		json stmt = {
 			{"stmt-type", "type-def"},
+			{"type", "obj-ref"},
 			{"name", $2},
 		};
 		$$ = move(stmt);
 		LOC($$, @$);
+	}
+	| KW_TYPE ID '{' struct_def '}'
+	{
+		json stmt = {
+			{"stmt-type", "type-def"},
+			{"type", "struct"},
+			{"name", $2},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+	;
+
+struct_def: type ID
+	{
+		json member = {
+			{"type", $1},
+			{"name", $2},
+		};
+		$$.push_back(member);
+	}
+	| struct_def ';' type ID
+	{
+		$$ = move($1);
+		json member = {
+			{"type", $3},
+			{"name", $4},
+		};
+		$$.push_back(member);
+	}
+	| struct_def ';'
+	{
+		$$ = move($1);
 	}
 	;
 

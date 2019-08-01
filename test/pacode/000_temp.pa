@@ -7,6 +7,17 @@ ccall fclose(FILE >>stream) -> int32;
 ccall fprintf(FILE &file, byte[?] &format, ...) -> int32;
 
 type FILE;
+type tm {
+	int32 tm_sec;
+	int32 tm_min;
+	int32 tm_hour;
+	int32 tm_mday;
+	int32 tm_mon;
+	int32 tm_year;
+	int32 tm_wday;
+	int32 tm_yday;
+	int32 tm_isdst;
+};
 
 i = 0;
 byte[10] str, str2;
