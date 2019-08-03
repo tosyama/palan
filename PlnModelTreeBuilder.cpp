@@ -30,6 +30,7 @@
 #include "models/expressions/PlnArrayValue.h"
 #include "models/types/PlnFixedArrayType.h"
 #include "models/types/PlnArrayValueType.h"
+#include "models/types/PlnStructType.h"
 
 static void registerPrototype(json& proto, PlnScopeStack& scope);
 static void buildFunction(json& func, PlnScopeStack &scope, json& ast);
@@ -664,6 +665,16 @@ void registerType(json& type, PlnScopeStack &scope)
 		CUR_BLOCK->declareType(type_name);
 
 	} else if (type["type"] == "struct") {
+		assertAST(type["members"].is_array(), type);
+
+		vector<PlnStructMember*> members;
+		for (auto m: type["members"]) {
+			PlnType* t = getVarType(m["type"], scope);
+
+			auto member = new PlnStructMember(t, m["name"]);
+			members.push_back(member);
+		}
+		CUR_BLOCK->declareType(type_name, members);
 
 	} else {
 		BOOST_ASSERT(false);

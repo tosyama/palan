@@ -158,6 +158,14 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				}
 				clone = new PlnClone(da, a, v.getType(), false);
 			}
+
+			int data_type = v.getType()->data_type;
+			if (data_type != DT_OBJECT_REF && ptr_types[i]==PTR_REFERENCE) {
+				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
+				BOOST_ASSERT(v.type == VL_VAR);
+				arg_dps[i]->load_address = true;
+			}
+
 			if (clone)
 				clone->finishAlloc(da, si);
 			else

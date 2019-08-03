@@ -18,6 +18,7 @@
 #include "PlnVariable.h"
 #include "PlnExpression.h"
 #include "types/PlnFixedArrayType.h"
+#include "types/PlnStructType.h"
 #include "PlnArray.h"
 #include "PlnModule.h"
 #include "../PlnDataAllocator.h"
@@ -171,6 +172,12 @@ void PlnBlock::declareType(const string& type_name)
 	t->name = type_name;
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
+	types.push_back(t);
+}
+
+void PlnBlock::declareType(const string& type_name, vector<PlnStructMember*> &members)
+{
+	auto t = new PlnStructType(type_name, members);
 	types.push_back(t);
 }
 

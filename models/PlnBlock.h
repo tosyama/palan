@@ -6,6 +6,8 @@
 #include "../PlnModel.h"
 #include "PlnExpression.h"
 
+class PlnStructMember;
+
 // Block: Statements
 class PlnBlock {
 public:
@@ -39,6 +41,7 @@ public:
 	PlnExpression* getConst(const string& name);
 
 	void declareType(const string& type_name);
+	void declareType(const string& type_name, vector<PlnStructMember*>& members);
 	PlnType* getType(const string& type_name);
 	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);
 

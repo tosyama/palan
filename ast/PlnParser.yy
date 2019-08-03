@@ -1076,6 +1076,7 @@ type_def: KW_TYPE ID
 			{"stmt-type", "type-def"},
 			{"type", "struct"},
 			{"name", $2},
+			{"members", $4},
 		};
 		$$ = move(stmt);
 		LOC($$, @$);

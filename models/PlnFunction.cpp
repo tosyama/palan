@@ -109,7 +109,12 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 			param->ptr_type = PTR_REFERENCE;
 
 	} else {
-		param->ptr_type = NO_PTR;
+		if (pass_method == FPM_COPY)
+			param->ptr_type = NO_PTR;
+		else if (pass_method == FPM_REF)
+			param->ptr_type = PTR_REFERENCE;
+		else
+			BOOST_ASSERT(false);
 	}
 
 	parameters.push_back(param);
@@ -117,9 +122,14 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 		if (iomode & PIO_OUTPUT) {
 			num_out_param++;
 			arg_dtypes.push_back(DT_OBJECT_REF);
+
 		} else {
 			num_in_param++;
-			arg_dtypes.push_back(t->data_type);
+			if (t->data_type != DT_OBJECT_REF && param->ptr_type == PTR_REFERENCE) {
+				arg_dtypes.push_back(DT_OBJECT_REF);
+			} else {
+				arg_dtypes.push_back(t->data_type);
+			}
 		}
 	}
 

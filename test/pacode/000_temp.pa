@@ -5,6 +5,9 @@ ccall sscanf(byte[?] &str, &format => ...) -> int32;
 ccall fopen(byte[?] &filename, &mode) -> FILE;
 ccall fclose(FILE >>stream) -> int32;
 ccall fprintf(FILE &file, byte[?] &format, ...) -> int32;
+ccall time(uint64 tloc)->uint64;
+ccall ctime_r(uint64 &t => byte[?] result);
+ccall localtime_r(uint64 &t => tm result);
 
 type FILE;
 type tm {
@@ -17,7 +20,24 @@ type tm {
 	int32 tm_wday;
 	int32 tm_yday;
 	int32 tm_isdst;
+
+	int32 padding;
+
+	int64 tm_gmtoff;
+	int64 tm_zone;
 };
+
+{
+	uint64 t = time(0);
+	byte[80] buf;
+	tm tt;
+
+	// t->ctime_r(=> buf);
+	localtime_r(t => tt);
+
+//	printf("%s ", buf);
+}
+
 
 i = 0;
 byte[10] str, str2;
