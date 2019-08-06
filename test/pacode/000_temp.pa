@@ -21,8 +21,6 @@ type tm {
 	int32 tm_yday;
 	int32 tm_isdst;
 
-	int32 padding;
-
 	int64 tm_gmtoff;
 	int64 tm_zone;
 };

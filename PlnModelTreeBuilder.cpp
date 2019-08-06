@@ -702,7 +702,7 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 	} catch (PlnCompileError &err) {
 		if (err.loc.fid == -1)
 			setLoc(&err, ret);
-		throw err;
+		throw;
 	}
 }
 

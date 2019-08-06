@@ -10,7 +10,7 @@
 #include "PlnStructType.h"
 
 PlnStructMember::PlnStructMember(PlnType *type, string name)
-	: type(type), name(name)
+	: type(type), name(name), offset(0)
 {
 }
 
@@ -21,12 +21,29 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMember*> &membe
 	data_type = DT_OBJECT_REF;
 	size = 8;
 	int alloc_size = 0;
+	int max_member_size = 1;
 	bool has_object_member = false;
+
 	for (auto m: this->members) {
+		int member_size = m->type->size;
+		// padding
+		if (alloc_size % member_size) {
+			alloc_size = (alloc_size / member_size+1) * member_size;
+		}
+
+		if (member_size > max_member_size) {
+			max_member_size = member_size;
+		}
 		alloc_size += m->type->size;
+
 		if (m->type->data_type == DT_OBJECT_REF) {
 			has_object_member = true;
 		}
+	}
+
+	// last padding
+	if (alloc_size % max_member_size) {
+		alloc_size = (alloc_size / max_member_size+1) * max_member_size;
 	}
 
 	inf.obj.is_fixed_size = true;

@@ -118,7 +118,7 @@ Statement
 
     7.  break - Break statement
         *   label - Loop label to break
-S
+
     8.  continue - Continue statement
         *   label - Loop label to continue
 

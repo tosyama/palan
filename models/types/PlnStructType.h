@@ -7,6 +7,8 @@ class PlnStructMember {
 public:
 	PlnType* type;
 	string name;
+	int offset;
+
 	PlnStructMember(PlnType *type, string name);
 };
 
