@@ -140,7 +140,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 
 	auto item_dp = item_var->place;
-	da.setIndirectObjDp(item_dp, base_dp, index_dp);
+	da.setIndirectObjDp(item_dp, base_dp, index_dp, 0);
 	
 	if (data_places.size()) {
 		da.pushSrc(data_places[0], item_dp);

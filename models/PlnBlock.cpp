@@ -175,7 +175,7 @@ void PlnBlock::declareType(const string& type_name)
 	types.push_back(t);
 }
 
-void PlnBlock::declareType(const string& type_name, vector<PlnStructMember*> &members)
+void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
 	auto t = new PlnStructType(type_name, members);
 	types.push_back(t);

@@ -9,12 +9,12 @@
 #include "../PlnGeneralObject.h"
 #include "PlnStructType.h"
 
-PlnStructMember::PlnStructMember(PlnType *type, string name)
+PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
 	: type(type), name(name), offset(0)
 {
 }
 
-PlnStructType::PlnStructType(const string &name, vector<PlnStructMember*> &members)
+PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &members)
 	: PlnType(TP_STRUCT), members(move(members))
 {
 	this->name = name;
@@ -30,6 +30,8 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMember*> &membe
 		if (alloc_size % member_size) {
 			alloc_size = (alloc_size / member_size+1) * member_size;
 		}
+
+		m->offset = alloc_size;
 
 		if (member_size > max_member_size) {
 			max_member_size = member_size;
@@ -55,6 +57,12 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMember*> &membe
 		allocator = new PlnSingleObjectAllocator(alloc_size);
 		freer = new PlnSingleObjectFreer();
 	}
+}
+
+PlnStructType::~PlnStructType()
+{
+	for (auto member: members)
+		delete member;
 }
 
 PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {

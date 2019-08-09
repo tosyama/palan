@@ -308,6 +308,7 @@ type: type_or_var
 	;
 
 type_or_var: ID
+	| type_or_var '.' ID
 	| type_or_var '[' array_items ']'
 	;
 

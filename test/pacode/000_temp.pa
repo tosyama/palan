@@ -30,10 +30,14 @@ type tm {
 	byte[80] buf;
 	tm tt;
 
+
 	// t->ctime_r(=> buf);
 	localtime_r(t => tt);
 
-//	printf("%s ", buf);
+	1 -> tt.tm_sec;
+	int64 a = tt.tm_sec;
+
+	// printf("%d ", tt.tm_sec);
 }
 
 

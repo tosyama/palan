@@ -271,12 +271,12 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int func_type, vector<i
 	return dps;
 }
 
-void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp)
+void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement)
 {
 	dp->type = DP_INDRCT_OBJ;
 	dp->status = DS_ASSIGNED;
 
-	dp->data.indirect.displacement = 0;
+	dp->data.indirect.displacement = displacement;
 	dp->data.indirect.base_dp = base_dp;
 	dp->data.indirect.index_dp = index_dp;
 	dp->data.indirect.base_id = base_dp->data.reg.id;
@@ -285,9 +285,10 @@ void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 	if (index_dp) {
 		if (index_dp->type == DP_REG)
 			dp->data.indirect.index_id = index_dp->data.reg.id;
-		else if (index_dp->type == DP_LIT_INT)
+		else if (index_dp->type == DP_LIT_INT) {
+			BOOST_ASSERT(displacement == 0);
 			dp->data.indirect.displacement = index_dp->data.intValue * dp->size;
-		else
+		} else
 			BOOST_ASSERT(false);
 	}
 

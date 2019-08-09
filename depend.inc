@@ -19,10 +19,10 @@ PlnFunction.o:  models/PlnFunction.h \
 PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnGeneralObject.h models/PlnType.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
-	models/types/PlnFixedArrayType.h models/PlnArray.h models/PlnModule.h \
-	models/../PlnDataAllocator.h models/../PlnGenerator.h \
-	models/../PlnScopeStack.h models/../PlnConstants.h \
-	models/../PlnMessage.h models/../PlnException.h
+	models/types/PlnFixedArrayType.h models/types/PlnStructType.h \
+	models/PlnArray.h models/PlnModule.h models/../PlnDataAllocator.h \
+	models/../PlnGenerator.h models/../PlnScopeStack.h \
+	models/../PlnConstants.h models/../PlnMessage.h models/../PlnException.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
@@ -78,7 +78,8 @@ PlnArrayValueType.o:  \
 	models/types/../../PlnMessage.h models/types/../../PlnException.h \
 	models/types/../../PlnConstants.h
 PlnStructType.o:  \
-	models/types/../../PlnModel.h models/types/../PlnType.h \
+	models/types/../../PlnModel.h models/types/../../PlnConstants.h \
+	models/types/../PlnGeneralObject.h models/types/../PlnType.h \
 	models/types/PlnStructType.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
@@ -155,6 +156,13 @@ PlnArrayItem.o:  \
 	models/expressions/../../PlnGenerator.h \
 	models/expressions/../../PlnMessage.h \
 	models/expressions/../../PlnException.h
+PlnStructMember.o:  \
+	models/expressions/../../PlnConstants.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../PlnType.h models/expressions/../../PlnModel.h \
+	models/expressions/../types/PlnStructType.h \
+	models/expressions/../PlnVariable.h models/expressions/PlnStructMember.h \
+	models/expressions/../PlnExpression.h
 PlnArrayValue.o:  \
 	models/expressions/../PlnType.h models/expressions/../../PlnModel.h \
 	models/expressions/PlnArrayValue.h models/expressions/../PlnExpression.h \
@@ -242,5 +250,6 @@ PlnModelTreeBuilder.o:  PlnModel.h \
 	models/expressions/PlnDivOperation.h \
 	models/expressions/PlnBoolOperation.h \
 	models/expressions/PlnCmpOperation.h models/expressions/PlnArrayItem.h \
-	models/expressions/PlnArrayValue.h models/types/PlnFixedArrayType.h \
-	models/types/PlnArrayValueType.h models/types/PlnStructType.h
+	models/expressions/PlnStructMember.h models/expressions/PlnArrayValue.h \
+	models/types/PlnFixedArrayType.h models/types/PlnArrayValueType.h \
+	models/types/PlnStructType.h

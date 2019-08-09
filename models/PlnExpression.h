@@ -22,6 +22,7 @@ enum PlnExprsnType {
 	ET_CHAINCALL,
 	ET_CLONE,
 	ET_ARRAYITEM,
+	ET_STRUCTMEMBER,
 	ET_MCOPY
 };
 

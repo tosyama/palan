@@ -27,6 +27,7 @@
 #include "models/expressions/PlnDivOperation.h"
 #include "models/expressions/PlnBoolOperation.h"
 #include "models/expressions/PlnArrayItem.h"
+#include "models/expressions/PlnStructMember.h"
 #include "models/expressions/PlnArrayValue.h"
 #include "models/types/PlnFixedArrayType.h"
 #include "models/types/PlnArrayValueType.h"
@@ -667,11 +668,11 @@ void registerType(json& type, PlnScopeStack &scope)
 	} else if (type["type"] == "struct") {
 		assertAST(type["members"].is_array(), type);
 
-		vector<PlnStructMember*> members;
+		vector<PlnStructMemberDef*> members;
 		for (auto m: type["members"]) {
 			PlnType* t = getVarType(m["type"], scope);
 
-			auto member = new PlnStructMember(t, m["name"]);
+			auto member = new PlnStructMemberDef(t, m["name"]);
 			members.push_back(member);
 		}
 		CUR_BLOCK->declareType(type_name, members);
@@ -1117,7 +1118,7 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 	assertAST(var["opes"].is_array() || var["opes"].is_null(), var);
 	if (var["opes"].is_array()) {
 		for (json& ope: var["opes"]) {
-			assertAST(ope["ope-type"] == "index", ope);
+			assertAST(ope["ope-type"] == "index" || ope["ope-type"] == "member", ope);
 			if (ope["ope-type"]=="index") {
 				assertAST(ope["indexes"].is_array(), var);
 				vector<PlnExpression*> indexes;
@@ -1129,6 +1130,9 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 					setLoc(&err, var);
 					throw;
 				}
+
+			} else if (ope["ope-type"] == "member") {
+				var_exp = new PlnStructMember(var_exp, ope["member"]);
 			}
 		}
 	}

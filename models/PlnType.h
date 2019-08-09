@@ -66,7 +66,7 @@ public:
 	vector<PlnTypeConvInf> conv_inf;
 
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
-	virtual ~PlnType() {}
+	virtual ~PlnType();
 	virtual PlnTypeConvCap canConvFrom(PlnType *src);
 
 	static void initBasicTypes();

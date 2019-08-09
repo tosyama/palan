@@ -121,6 +121,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '+' '-'
 %left '*' '/' '%' '&'
 %left UMINUS '!'
+%left '.'
 
 %start module	
 
@@ -862,10 +863,11 @@ var_expression: type_or_var
 					};
 					opes.push_back(move(arri));
 				} else {
-					json ope = {
-						{"ope-type", "unknown"}
+					json struct_member = {
+						{"ope-type", "member"},
+						{"member", move($1[i]["name"])}
 					};
-					opes.push_back(move(ope));
+					opes.push_back(move(struct_member));
 				}
 			}
 			vexp["opes"] = move(opes);
@@ -1228,6 +1230,15 @@ type_or_var: ID
 			{"name", $1}
 		};
 		LOC(ptype, @$);
+		$$.push_back(move(ptype));
+	}
+	| type_or_var '.' ID
+	{
+		json ptype = {
+			{"name", $3}
+		};
+		LOC(ptype, @3);
+		$$ = move($1);
 		$$.push_back(move(ptype));
 	}
 	| type_or_var '[' array_items ']'

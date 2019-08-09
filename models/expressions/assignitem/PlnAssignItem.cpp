@@ -95,7 +95,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_ARRAYITEM) {
+	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
 		int dt = ex->values[0].getType()->data_type;
@@ -162,6 +162,17 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 			} else {
 				BOOST_ASSERT(false);
 			}
+		} else {
+			BOOST_ASSERT(false);
+		}
+
+	} else if (ex->type == ET_STRUCTMEMBER) {
+		BOOST_ASSERT(ex->values.size() == 1);
+		BOOST_ASSERT(ex->values[0].type == VL_VAR);
+		int dt = ex->values[0].getType()->data_type;
+		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
+			di = new PlnDstPrimitiveItem(ex);
+
 		} else {
 			BOOST_ASSERT(false);
 		}

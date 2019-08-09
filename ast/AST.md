@@ -199,9 +199,11 @@ Destination Value
 
 Modified Operator
 -----------------
-*   ope-type\* - Operator type string: "index"
+*   ope-type\* - Operator type string: "index", "member"
     1.  index - Numerical index
         *   indexes - Index expression list
+    2.  member - Struct member
+        *   member - Struct member string
 
 Variable Declaration
 --------------------
