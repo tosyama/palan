@@ -646,7 +646,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 
 		} catch (PlnCompileError &err) {
 			setLoc(&err, cnst);
-			throw err;
+			throw;
 		}
 		i++;
 	}

@@ -47,7 +47,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
 	}
 	if (struct_var->container)
-		struct_var->container = struct_var->container;
+		var->container = struct_var->container;
 	else
 		var->container = struct_var;
 	var->is_tmpvar = var->container->is_tmpvar;

@@ -39,13 +39,6 @@ PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 	return freer->getFreeEx(new PlnExpression(var));
 }
 
-// AnyType
-class AnyType : public PlnType {
-public:
-	AnyType() : PlnType(TP_PRIMITIVE) {}
-	PlnTypeConvCap canConvFrom(PlnType *src) override { BOOST_ASSERT(false); }
-};
-
 // PlnType
 PlnType::PlnType(PlnTypeType type)
 	: type(type), allocator(NULL), freer(NULL), copyer(NULL)
@@ -144,7 +137,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(t);
 	object_type = t;
 
-	t = new AnyType();
+	t = new PlnType();
 	t->name = "";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;

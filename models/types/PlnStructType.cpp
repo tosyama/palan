@@ -55,6 +55,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		BOOST_ASSERT(false);
 	else {
 		allocator = new PlnSingleObjectAllocator(alloc_size);
+		copyer = new PlnSingleObjectCopyer(alloc_size);
 		freer = new PlnSingleObjectFreer();
 	}
 }

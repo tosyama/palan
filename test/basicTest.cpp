@@ -199,6 +199,11 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abc123def1.23\n"
 								"bbaa 99 2.34 7\n"
 								"2:This,is");
+
+	testcode = "028_struct";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "32 1 64 1.23\n" "32 1 64 1.23 2112");
+	CHECK(mcheck("mtrace028") == "+2 -2");
 }
 
 // Error file ID: 500-575

@@ -133,7 +133,7 @@ Statement
     11. type-def - Type definition
         *   type - Type definition type string: "obj-ref", "struct"
         *   name - Type name string
-		*	memebers - Struct member list
+        *   memebers - Struct member list
 
 *   loc - Location integer array
 
@@ -202,6 +202,7 @@ Modified Operator
 *   ope-type\* - Operator type string: "index", "member"
     1.  index - Numerical index
         *   indexes - Index expression list
+
     2.  member - Struct member
         *   member - Struct member string
 
