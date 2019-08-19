@@ -9,8 +9,9 @@ enum {
 	NO_PTR = 1,
 	PTR_REFERENCE = 2,
 	PTR_OWNERSHIP = 4,
-	PTR_INDIRECT_ACCESS = 8,	// for class member / array item.
-	PTR_CLONE = 16,	// for parameter
+	PTR_INDIRECT_ACCESS = 8,	// for struct member / array item.
+	PTR_READONLY = 16,
+	PTR_CLONE = 32,	// for parameter
 	PTR_PARAM_MOVE = PTR_REFERENCE | PTR_OWNERSHIP,
 	PTR_PARAM_COPY = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE
 };
@@ -21,7 +22,7 @@ public:
 	string name;
 	PlnDataPlace* place;
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
-	int ptr_type;
+	uint64_t ptr_type;
 	bool is_tmpvar;
 	PlnLoc loc;
 

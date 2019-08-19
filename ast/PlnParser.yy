@@ -82,11 +82,11 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token EQ_ARROW	"=>"
 
 %type <string>	pass_by
-%type <bool>	move_owner take_owner arrow_ope
+%type <bool>	move_owner take_owner arrow_ope ro_ref
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
-%type <json>	return_type	return_value
+%type <json>	return_type	return_value single_return
 %type <json>	statement semi_stmt
 %type <json>	st_expression block
 %type <json>	return_stmt break_stmt continue_stmt
@@ -99,7 +99,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	array_item
 %type <vector<string>>	const_names
 %type <vector<json>>	array_items
-%type <vector<json>>	var_type type type_or_var single_return
+%type <vector<json>>	var_type type type_or_var
 %type <vector<json>>	parameter_def out_parameter_def
 %type <vector<json>>	parameters out_parameters
 %type <vector<json>>	return_def
@@ -403,7 +403,7 @@ ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' sing
 			{"name", $2},
 			{"params", move(params)},
 		};
-		if ($7.size()) {
+		if ($7.is_object()) {
 			ccall["ret"] = $7;
 		}
 		$$ = move(ccall);
@@ -419,7 +419,7 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 			{"name",$4},
 			{"params", $6}	
 		};
-		if ($8.size()) {
+		if ($8.is_object()) {
 			syscall["ret"] = $8;
 		}
 		$$ = move(syscall);
@@ -428,9 +428,16 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 	;
 
 single_return: /* empty */ { }
-	| ARROW type
+	| ARROW type ro_ref
 	{
-		$$ = move($2);
+		json retval = {
+			{"var-type", move($2)}
+		};
+		if ($3) {
+			retval["ro-ref"] = true;
+		}
+		$$ = move(retval);
+		LOC($$, @$);
 	}
 	;
 
@@ -1124,13 +1131,16 @@ declarations: declaration
 	}
 	;
 
-declaration: var_type ID take_owner
+declaration: var_type ro_ref ID take_owner
 	{
 		json dec = {
 			{"var-type", move($1)},
-			{"name", move($2)}
+			{"name", move($3)}
 		};
-		if ($3) {
+		if ($2) {
+			dec["ro-ref"] = true;
+		}
+		if ($4) {
 			dec["move"] = true;
 		}
 		$$ = move(dec);
@@ -1149,6 +1159,10 @@ subdeclaration: ID take_owner
 		$$ = move(dec);
 		LOC($$, @$);
 	}
+	;
+
+ro_ref:	/* empty */ { $$ = false; }
+	| '&' { $$ = true; }
 	;
 
 take_owner: /* empty */ { $$ = false; }

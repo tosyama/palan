@@ -34,6 +34,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 		PlnValue val;
 		val.type = VL_WORK;
 		val.inf.wk_type = rv->var_type;
+		val.is_readonly = rv->ptr_type & PTR_READONLY;
 		values.push_back(val);
 	}
 }
@@ -359,7 +360,7 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
 	f->addParam("size", PlnType::getSint(), PIO_INPUT, FPM_COPY, NULL);
-	f->addRetValue(ret_name, PlnType::getObject(), false);
+	f->addRetValue(ret_name, PlnType::getObject(), false, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");

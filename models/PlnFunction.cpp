@@ -33,7 +33,7 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 {
 }
 
-PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool do_init)
+PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool readonly, bool do_init)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname)
@@ -67,6 +67,10 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 			ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
 		else	
 			ret_var->ptr_type = PTR_REFERENCE;
+
+		if (readonly)
+			ret_var->ptr_type |= PTR_READONLY;
+
 	} else {
 		ret_var->ptr_type = NO_PTR;
 	}

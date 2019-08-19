@@ -113,7 +113,7 @@ Expression class has members *values* and *data_places*.
 They are used to exchange data between expressions.
 
 The *values* are information of returning values.
-It includes value type (e.g. literal integer/variable) and asgn_type.
+It includes value type (e.g. literal integer/variable), asgn_type and is_readonly.
 If asgn_type is not NO_LVL, the expression is destination of assignment.
 The asgn_type indicate following method of assignment.  
 
@@ -140,6 +140,7 @@ The member *ptr_type* is the flags that indicate following characteristics.
 *   PTR_REFERENCE - Variable to keep memory address.
 *   PTR_OWNERSHIP - Variable that has ownership of memory address.
 *   PTR_INDIRECT_ACCESS - Variable that indirect access memory. e.g.) array item.
+*   PTR_READONLY - The variable should not update or free. Mainly use for return value definition.
 *   PTR_CLONE - The parameter which need to be clone.
 
 The member *place* is data place of the variable stored.

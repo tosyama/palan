@@ -8,6 +8,7 @@ ccall fprintf(FILE &file, byte[?] &format, ...) -> int32;
 ccall time(uint64 tloc)->uint64;
 ccall ctime_r(uint64 &t => byte[?] result);
 ccall localtime_r(uint64 &t => tm result);
+ccall localtime(uint64 &t) -> tm&;
 
 type FILE;
 type tm {
@@ -30,9 +31,9 @@ type tm {
 	byte[80] buf;
 	tm tt;
 
-
 	// t->ctime_r(=> buf);
 	localtime_r(t => tt);
+	tm& t1 = localtime(t);
 
 	1 -> tt.tm_sec;
 	int64 a = tt.tm_sec;

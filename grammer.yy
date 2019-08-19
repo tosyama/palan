@@ -132,7 +132,7 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 	;
 
 single_return: /* empty */
-	| ARROW type
+	| ARROW type ro_ref
 	;
 
 function_definition: palan_function_definition
@@ -286,10 +286,14 @@ declarations: declaration
 	| declarations ',' declaration 
 	;
 
-declaration: var_type ID take_owner
+declaration: var_type ro_ref ID take_owner
 	;
 
 subdeclaration: ID take_owner
+	;
+
+ro_ref: /* empty */
+	| '&'
 	;
 
 take_owner: /* empty */

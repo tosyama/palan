@@ -42,12 +42,10 @@ Function
         *   impl\* - Block model for function implemantation
 
     2.  ccall - C function prototype
-        *   ret-type - Return value type string (deprecated)
         *   ret - Return value
 
     3.  syscall - System call prototype
         *   call-id\* - Integer to set %rax
-        *   ret-type - Return value type string (deprecated)
         *   ret - Return value
 
 *   loc - Location integer array
@@ -69,10 +67,12 @@ Return value
 ------------
 1.  Anonymous return value
     *   var-type\* - Variable type list
+    *   ro-ref - Read only reference boolean
 
 2.  Standard return value
     *   var-type - Variable type list
     *   name\* - Return value name string
+    *   ro-ref - Read only reference boolean
 
 *   loc - Location integer array
 
@@ -102,7 +102,7 @@ Statement
         *   block\* - Block model
 
     3.  var-init - Variable declaration statement
-        *   vars\* - Variable destination list
+        *   vars\* - Variable declaration list
         *   inits - Variable initialize expression list
 
     4.  const - Constant value declaration statement
@@ -211,6 +211,7 @@ Variable Declaration
 *   name\* - Variable name string
 *   var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
 *   move - Move ownership flag boolean
+*   ro-ref - Read only reference boolean
 *   loc - Location integer array
 
 Argument

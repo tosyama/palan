@@ -194,12 +194,12 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				name = ret["name"];
 
 			try {
-				f->addRetValue(name, var_type, true);
+				f->addRetValue(name, var_type, false, true);
 
 			} catch (PlnCompileError& err) {
 				if (err.loc.fid == -1)
 					setLoc(&err, ret);
-				throw err;
+				throw;
 			}
 			setLoc(f->return_vals.back(), ret);
 		}
@@ -257,10 +257,13 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			}
 			i++;
 		}
-		if (proto["ret"].is_array()) {
-			PlnType *t = getVarType(proto["ret"], scope);
+		if (proto["ret"].is_object()) {
+			PlnType *t = getVarType(proto["ret"]["var-type"], scope);
 			string rname = "";
-			f->addRetValue(rname, t, false);
+			bool is_readonly = false;
+			if (proto["ret"]["ro-ref"].is_boolean())
+				is_readonly = proto["ret"]["ro-ref"];
+			f->addRetValue(rname, t, is_readonly, false);
 		}
 		setLoc(f, proto);
 	}
@@ -549,7 +552,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 			} catch (PlnCompileError &err) {
 				err.loc = inits[init_ex_ind]->loc;
-				throw err;
+				throw;
 			}
 
 		} else if (infer == ARR_INDEX_INFER) {
@@ -576,7 +579,12 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			t = getVarType(var["var-type"], scope);
 		}
 
-		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, true);
+		bool is_owner = true;
+		if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
+			is_owner = false;
+		}
+
+		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_owner);
 		if (!v) {
 			PlnCompileError err(E_DuplicateVarName, var["name"]);
 			setLoc(&err, var);
@@ -586,6 +594,8 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		types.push_back(v->var_type);
 		if (var["move"].is_boolean() && var["move"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
+		} else if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
+			vars.back().asgn_type = ASGN_COPY_REF;
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
 		}
