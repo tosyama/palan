@@ -49,3 +49,4 @@ func copyParam(Test t)
 	99 -> t.i64;
 	99.9 -> t.f32;
 }
+

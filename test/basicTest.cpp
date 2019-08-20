@@ -198,7 +198,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "abc123def1.23\n"
 								"bbaa 99 2.34 7\n"
-								"2:This,is");
+								"2:This,is\n"
+								"smy");
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode) == "success");
@@ -206,7 +207,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	CHECK(mcheck("mtrace028") == "+2 -2");
 }
 
-// Error file ID: 500-575
+// Error file ID: 500-576
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -375,6 +376,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "575_copy2rovar_err";
 	REQUIRE(build(testcode) == "0:9-9 Can not copy to read only variable 'aa'.");
+
+	testcode = "576_nomember_err";
+	REQUIRE(build(testcode) == "0:7-7 Type 'nomem' has no member named 'x'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

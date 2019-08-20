@@ -37,6 +37,7 @@ enum PlnErrCode {
 	E_ValueRequired, // none
 	E_NotWithInLoop, // none
 	E_NoMatchingParameter,	// none
+	E_NoMemberName,	// type name, member name
 
 	E_InvalidAST,	// source name, line
 

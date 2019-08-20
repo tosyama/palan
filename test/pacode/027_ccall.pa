@@ -11,7 +11,22 @@ ccall fclose(FILE >>stream) -> int32;
 ccall fprintf(FILE &stream, byte[?] &format, ...) -> int32;
 ccall fscanf(FILE &stream, byte[?] &format => ...) -> int32;
 
+ccall time(uint64 tloc)->uint64;
+ccall localtime(uint64 &t) -> struct_tm&;
+
 type FILE;
+type struct_tm {
+	int32 tm_sec;
+	int32 tm_min;
+	int32 tm_hour;
+	int32 tm_mday;
+	int32 tm_mon;
+	int32 tm_year;
+	int32 tm_wday;
+	int32 tm_yday;
+	int32 tm_isdst;
+};
+
 const filename = "out/027_outfile.txt";
 
 byte[32] str1, str2;
@@ -34,6 +49,16 @@ fopen(filename, "r") ->> file;
 fscanf(file, "%s %s" => str1, str2) -> i;
 fclose(file>>);
 
-printf("%d:%s,%s", i, str1, str2);
+printf("%d:%s,%s\n", i, str1, str2);
+
+uint64 t = time(0);
+struct_tm& tm = localtime(t);
+struct_tm tm2 = localtime(t);
+
+if tm.tm_sec >= 0 && tm.tm_sec <= 59 { printf("s") } 
+if tm.tm_mon >= 0 && tm.tm_mon <= 11 { printf("m") } 
+if tm.tm_year >= 119 && tm.tm_year <= 200
+	&& tm.tm_year == tm2.tm_year { printf("y") }
 
 exit(0);
+

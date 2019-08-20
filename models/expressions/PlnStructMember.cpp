@@ -15,6 +15,8 @@
 #include "../types/PlnStructType.h"
 #include "../PlnVariable.h"
 #include "PlnStructMember.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	: PlnExpression(ET_STRUCTMEMBER), struct_ex(sturct_ex), def(NULL)
@@ -29,8 +31,11 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 				break;
 			}
 		}
-		BOOST_ASSERT(def);
 
+		if (!def) {
+			PlnCompileError err(E_NoMemberName, t->name, member_name);
+			throw err;
+		}
 
 	} else
 		BOOST_ASSERT(false);

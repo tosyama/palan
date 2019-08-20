@@ -70,6 +70,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "The statement should be within loop."; break;
 		case E_NoMatchingParameter:
 			f  = "No matching output parameter for the placeholder."; break;
+		case E_NoMemberName:
+			f = "Type '%1%' has no member named '%2%'."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

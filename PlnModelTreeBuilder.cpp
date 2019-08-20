@@ -1129,20 +1129,21 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 	if (var["opes"].is_array()) {
 		for (json& ope: var["opes"]) {
 			assertAST(ope["ope-type"] == "index" || ope["ope-type"] == "member", ope);
-			if (ope["ope-type"]=="index") {
-				assertAST(ope["indexes"].is_array(), var);
-				vector<PlnExpression*> indexes;
-				for (json& exp: ope["indexes"])
-					indexes.push_back(buildExpression(exp, scope));
-				try {
+			try {
+				if (ope["ope-type"]=="index") {
+					assertAST(ope["indexes"].is_array(), var);
+					vector<PlnExpression*> indexes;
+					for (json& exp: ope["indexes"])
+						indexes.push_back(buildExpression(exp, scope));
 					var_exp = new PlnArrayItem(var_exp, indexes);
-				} catch (PlnCompileError& err) {
-					setLoc(&err, var);
-					throw;
-				}
 
-			} else if (ope["ope-type"] == "member") {
-				var_exp = new PlnStructMember(var_exp, ope["member"]);
+				} else if (ope["ope-type"] == "member") {
+					var_exp = new PlnStructMember(var_exp, ope["member"]);
+					setLoc(var_exp, var);
+				}
+			} catch (PlnCompileError& err) {
+				setLoc(&err, var);
+				throw;
 			}
 		}
 	}
