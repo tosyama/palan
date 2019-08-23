@@ -66,7 +66,12 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex, i);
 
-					ai->addDstEx(var_ex, false);
+					try {
+						ai->addDstEx(var_ex, false);
+					} catch (PlnCompileError &err) {
+						err.loc = var_ex->loc;
+						throw;
+					}
 
 					++var_i;
 				}

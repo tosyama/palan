@@ -37,9 +37,20 @@ public:
 
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(ex->values.size() == 1);
-		auto v = ex->values[0];
+		BOOST_ASSERT(src_ex->values.size() > dsts.size());
 
-		BOOST_ASSERT(v.type == VL_VAR);
+		auto& dstv = ex->values[0];
+		BOOST_ASSERT(dstv.type == VL_VAR);
+
+		auto& srcv = src_ex->values[dsts.size()];
+		if (srcv.is_cantfree
+				&& dstv.inf.var->ptr_type & PTR_OWNERSHIP
+				&& dstv.asgn_type == ASGN_MOVE) {
+			// For the case that return value is readonly ref but move ownership value.
+			// e.g.) struct_tm t <<= localtime(); // ccall localtime->struct_tm&
+			PlnCompileError err(E_CantUseMoveOwnership, dstv.inf.var->name);
+			throw err;
+		}
 
 		dsts.push_back( {PlnDstItem::createDstItem(ex, need_save), NULL, NULL, NULL} );
 	}
@@ -59,7 +70,7 @@ public:
 		for (auto &di: dsts) {
 			auto& v = src_ex->values[i];
 			if (v.getType()->data_type == DT_OBJECT_REF
-					&& (!v.is_readonly)
+					&& (!v.is_cantfree)
 					&& di.item->getAssginType() == ASGN_COPY) {
 				di.save_src_var = PlnVariable::createTempVar(da, v.inf.wk_type, "save src");
 				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);

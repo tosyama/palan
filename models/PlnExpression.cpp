@@ -24,7 +24,7 @@ using boost::adaptors::reverse;
 
 // PlnValue
 PlnValue::PlnValue(int64_t intValue)
-	: type(VL_LIT_INT8), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_INT8), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
 {
 	inf.intValue = intValue;
 }
@@ -32,44 +32,35 @@ PlnValue::PlnValue(int64_t intValue)
 
 PlnValue::PlnValue(const PlnValue &src)
 {
+	*this = src;
 	if (src.type == VL_LIT_STR) {
-		type = src.type;
-		asgn_type = src.asgn_type;
-		is_readonly = src.is_readonly;
 		inf.strValue = new string(*src.inf.strValue);
-	
 	} else if (src.type == VL_LIT_ARRAY) {
-		type = src.type;
-		asgn_type = src.asgn_type;
-		is_readonly = src.is_readonly;
 		inf.arrValue = new PlnArrayValue(*src.inf.arrValue);
-
-	} else {
-		*this = src;
 	}
 }
 
 PlnValue::PlnValue(uint64_t uintValue)
-	: type(VL_LIT_UINT8), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_UINT8), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
 
 {
 	inf.uintValue = uintValue;
 }
 
 PlnValue::PlnValue(double floValue)
-	: type(VL_LIT_FLO8), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_FLO8), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
 {
 	inf.floValue = floValue;
 }
 
 PlnValue::PlnValue(string strValue)
-	: type(VL_LIT_STR), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_STR), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
 {
 	inf.strValue = new string(strValue);
 }
 
 PlnValue::PlnValue(PlnArrayValue *arr)
-	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
 {
 	inf.arrValue = arr;
 }
@@ -82,6 +73,11 @@ PlnValue::PlnValue(PlnVariable* var)
 		is_readonly = true;
 	else
 		is_readonly = false;
+	
+	if (var->ptr_type & NO_PTR || !(var->ptr_type & PTR_OWNERSHIP))
+		is_cantfree = true;
+	else
+		is_cantfree = false;
 }
  
 PlnValue::~PlnValue()

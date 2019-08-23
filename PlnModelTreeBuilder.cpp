@@ -260,10 +260,19 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		if (proto["ret"].is_object()) {
 			PlnType *t = getVarType(proto["ret"]["var-type"], scope);
 			string rname = "";
-			bool is_readonly = false;
-			if (proto["ret"]["ro-ref"].is_boolean())
-				is_readonly = proto["ret"]["ro-ref"];
-			f->addRetValue(rname, t, is_readonly, false);
+			if (t->data_type == DT_OBJECT_REF) {
+				bool is_readonly = false;
+				bool do_init = true;
+				if (proto["ret"]["ro-ref"].is_boolean()) {
+					is_readonly = proto["ret"]["ro-ref"];
+					do_init = false;
+				}
+				f->addRetValue(rname, t, is_readonly, do_init);
+
+			} else {
+				f->addRetValue(rname, t, true, false);
+			}
+
 		}
 		setLoc(f, proto);
 	}
@@ -613,7 +622,6 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			}
 		}
 	}
-
 
 	if (inits.size()) {
 		return new PlnVarInit(vars, &inits);

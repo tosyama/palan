@@ -33,14 +33,13 @@ type tm {
 
 	// t->ctime_r(=> buf);
 	localtime_r(t => tt);
-	tm& t1 = localtime(t);
+	tm t1 = localtime(t);
 
 	1 -> tt.tm_sec;
 	int64 a = tt.tm_sec;
 
 	// printf("%d ", tt.tm_sec);
 }
-
 
 i = 0;
 byte[10] str, str2;

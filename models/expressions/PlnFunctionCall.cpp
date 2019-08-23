@@ -35,6 +35,8 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 		val.type = VL_WORK;
 		val.inf.wk_type = rv->var_type;
 		val.is_readonly = rv->ptr_type & PTR_READONLY;
+		val.is_cantfree = (rv->ptr_type & NO_PTR || !(rv->ptr_type & PTR_OWNERSHIP));
+		
 		values.push_back(val);
 	}
 }
