@@ -589,11 +589,13 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		}
 
 		bool is_owner = true;
+		bool is_readonly = false;
 		if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
 			is_owner = false;
+			is_readonly = true;
 		}
 
-		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_owner);
+		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_readonly, is_owner);
 		if (!v) {
 			PlnCompileError err(E_DuplicateVarName, var["name"]);
 			setLoc(&err, var);
@@ -976,6 +978,8 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 		dst_vals.push_back(buildDstValue(dval, scope));
 		BOOST_ASSERT(dst_vals.back()->values[0].type == VL_VAR);
 
+		BOOST_ASSERT(!dst_vals.back()->values[0].is_readonly);
+
 		types.push_back(dst_vals.back()->values[0].inf.var->var_type);
 		if (src_ex_ind < src_exps.size()) {
 			if (src_val_ind+1 < src_exps[src_ex_ind]->values.size()) {
@@ -1162,8 +1166,9 @@ PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 {
 	PlnExpression* var_exp = buildVariarble(dval, scope);
 
-	if (var_exp->values[0].type != VL_VAR) {
-		PlnCompileError err(E_CantUseConstHere);
+//	if (var_exp->values[0].type != VL_VAR) {
+	if (var_exp->values[0].is_readonly) {
+		PlnCompileError err(E_CantUseReadonlyExHere);
 		setLoc(&err, dval);
 		throw err;
 	}

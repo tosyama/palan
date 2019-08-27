@@ -21,7 +21,6 @@ enum PlnErrCode {
 	E_InvalidReturnValType, // var name
 	E_CouldnotOpenFile,	// file name
 	E_CantCopyFreedVar,	// var name
-	E_CantCopyReadOnlyVar,	// var name
 	E_AmbiguousFuncCall,	// func name
 	E_IncompatibleTypeAssign,	// src type, dst type
 	E_CantUseAtToplevel,	// statement
@@ -33,11 +32,11 @@ enum PlnErrCode {
 	E_AmbiguousVarType,	// var name
 	E_IncompatibleTypeInitVar, // var name
 	E_UndefinedConst, // const name
-	E_CantUseConstHere, // none
 	E_ValueRequired, // none
 	E_NotWithInLoop, // none
 	E_NoMatchingParameter,	// none
 	E_NoMemberName,	// type name, member name
+	E_CantUseReadonlyExHere,	// none
 
 	E_InvalidAST,	// source name, line
 

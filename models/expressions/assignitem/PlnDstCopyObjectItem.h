@@ -19,11 +19,6 @@ public:
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
 		auto var = dst_ex->values[0].inf.var;
-		if (!(var->ptr_type & PTR_OWNERSHIP)) {
-			PlnCompileError err(E_CantCopyReadOnlyVar, var->name);
-			err.loc = ex->loc;
-			throw err;
-		}
 	}
 
 	~PlnDstCopyObjectItem() {

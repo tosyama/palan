@@ -342,7 +342,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
 
 	testcode = "550_const_assign_err";
-	REQUIRE(build(testcode) == "0:3-3 Can't use constant value here.");
+	REQUIRE(build(testcode) == "0:3-3 Can't use read-only expression here.");
 
 	testcode = "551_constarr_mv_err2";
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
@@ -372,10 +372,10 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "finish:0:7-7 Can not use '>>' for 'aa'.");
 
 	testcode = "574_cantusemove_err3";
-	REQUIRE(build(testcode) == "0:9-9 Can not use '>>' for 'aa'.");
+	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
 
 	testcode = "575_copy2rovar_err";
-	REQUIRE(build(testcode) == "0:9-9 Can not copy to read only variable 'aa'.");
+	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
 
 	testcode = "576_nomember_err";
 	REQUIRE(build(testcode) == "0:7-7 Type 'nomem' has no member named 'x'.");

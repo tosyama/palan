@@ -110,7 +110,7 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 		else if (pass_method == FPM_COPY) // FMP_COPY
 			param->ptr_type = PTR_PARAM_COPY;
 		else // FMP_REF
-			param->ptr_type = PTR_REFERENCE;
+			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
 
 	} else {
 		if (pass_method == FPM_COPY)

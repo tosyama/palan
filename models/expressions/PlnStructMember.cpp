@@ -45,16 +45,19 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	auto struct_var = struct_ex->values[0].inf.var;
 	var->name = struct_var->name + "." + def->name;
 	var->var_type = def->type;
-
-	if (def->type->data_type == DT_OBJECT_REF) {
-		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
-	} else {
-		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
-	}
 	if (struct_var->container)
 		var->container = struct_var->container;
 	else
 		var->container = struct_var;
+	
+	if (def->type->data_type == DT_OBJECT_REF) {
+		var->ptr_type = PTR_REFERENCE | PTR_INDIRECT_ACCESS;
+		var->ptr_type |= var->container->ptr_type & (PTR_OWNERSHIP | PTR_READONLY);
+
+	} else {
+		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
+		var->ptr_type |= var->container->ptr_type & PTR_READONLY;
+	}
 	var->is_tmpvar = var->container->is_tmpvar;
 
 	values.push_back(var);

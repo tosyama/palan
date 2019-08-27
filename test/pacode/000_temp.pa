@@ -33,7 +33,7 @@ type tm {
 
 	// t->ctime_r(=> buf);
 	localtime_r(t => tt);
-	tm t1 = localtime(t);
+	tm& t1 = localtime(t);
 
 	1 -> tt.tm_sec;
 	int64 a = tt.tm_sec;
@@ -64,7 +64,7 @@ reffunc(str3);
 func reffunc(byte[?] &str)
 {
  	byte[10] str3;
-// 	str ->> strcpy("bbb") ->> str;
-//	str3 -> str;
+	// str ->> strcpy("bbb") ->> str;
+	// str3 -> str;
  	printf("%s", str);
 } 

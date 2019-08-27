@@ -1,6 +1,6 @@
 // nqueen: may not work..
 const MAX_N = 30;
-alias int int64;
+type int aliasof int64;
 
 int n;
 scanf("%d", &n);
@@ -18,19 +18,19 @@ func queen(int[#,] >> board, x, y)
 	int n = borad.size[0];
 	0 -> count;
 
-	for xx: x-1>>1 {
+	for xx--: x-1..1 {
 		if board[xx, y] {
 			return;
 		}
 	}
 
-	for xx: x-1>>1, y: y-1>>1 {
+	for xx--: x-1..1, y--: y-1..1 {
 		if board[xx, yy] {
 			return;
 		}
 	}
 
-	for xx: x-1>>1, yy: y+1..n {
+	for xx--: x-1..1, yy: y+1..n {
 		if board[xx, yy] {
 			return;
 		}

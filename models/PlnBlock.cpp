@@ -64,7 +64,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_module = b->parent_module;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool is_owner)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -78,9 +78,15 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 	if (var_type) {
 		v->var_type = var_type;
 		if (v->var_type->data_type == DT_OBJECT_REF) {
-			v->ptr_type = is_owner ? PTR_REFERENCE | PTR_OWNERSHIP
-							: PTR_REFERENCE;
-		} else v->ptr_type = NO_PTR;
+			v->ptr_type = PTR_REFERENCE;
+			if (is_owner)
+				v->ptr_type |= PTR_OWNERSHIP;
+		} else
+			v->ptr_type = NO_PTR;
+
+		if (readonly)
+			v->ptr_type |= PTR_READONLY;
+
 	} else {
 		v->var_type = variables.back()->var_type;
 		v->ptr_type = variables.back()->ptr_type;

@@ -8,7 +8,9 @@
 enum {
 	NO_PTR = 1,
 	PTR_REFERENCE = 2,
-	PTR_OWNERSHIP = 4,
+
+	PTR_OWNERSHIP = 4,	// for reference
+
 	PTR_INDIRECT_ACCESS = 8,	// for struct member / array item.
 	PTR_READONLY = 16,
 	PTR_CLONE = 32,	// for parameter

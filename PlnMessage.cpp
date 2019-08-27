@@ -38,8 +38,6 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Could not open file '%1%'."; break;
 		case E_CantCopyFreedVar:
 			f = "Can not copy to freed variable '%1%'."; break;
-		case E_CantCopyReadOnlyVar:
-			f = "Can not copy to read only variable '%1%'."; break;
 		case E_AmbiguousFuncCall:
 			f = "Ambiguous function call '%1%'."; break;
 		case E_IncompatibleTypeAssign:
@@ -62,8 +60,6 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Incompatible type to init variable '%1%'."; break;
 		case E_UndefinedConst:
 			f  = "Constant '%1%' was not declared in this scope."; break;
-		case E_CantUseConstHere:
-			f  = "Can't use constant value here."; break;
 		case E_ValueRequired:
 			f = "Value is required here."; break;
 		case E_NotWithInLoop:
@@ -72,6 +68,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f  = "No matching output parameter for the placeholder."; break;
 		case E_NoMemberName:
 			f = "Type '%1%' has no member named '%2%'."; break;
+		case E_CantUseReadonlyExHere:
+			f = "Can't use read-only expression here."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;
