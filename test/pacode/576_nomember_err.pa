@@ -1,0 +1,7 @@
+type nomem {
+	int64 a;
+	int64 b;
+};
+
+nomem s;
+10->s.x;

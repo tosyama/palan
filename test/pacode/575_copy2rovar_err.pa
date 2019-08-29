@@ -1,0 +1,10 @@
+int32[10] a;
+
+reffunc(a);
+
+func reffunc(int32[10] &aa)
+{
+	int32[10] bb;
+
+	bb -> aa;
+}

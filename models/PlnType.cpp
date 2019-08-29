@@ -45,14 +45,20 @@ PlnType::PlnType(PlnTypeType type)
 {
 }
 
-class AnyType : public PlnType {
-public:
-	AnyType() : PlnType(TP_PRIMITIVE) {}
-	PlnTypeConvCap canConvFrom(PlnType *src) override { BOOST_ASSERT(false); }
-};
-
-static void initBasicTypes()
+PlnType::~PlnType()
 {
+	delete allocator;
+	delete freer;
+	delete copyer;
+}
+
+void PlnType::initBasicTypes()
+{
+	if (is_initialzed_type)
+		return;
+
+	is_initialzed_type = true;
+
 	PlnType* sbt = new PlnType();
 	sbt->name = "sbyte";
 	sbt->data_type = DT_SINT;
@@ -131,7 +137,7 @@ static void initBasicTypes()
 	basic_types.push_back(t);
 	object_type = t;
 
-	t = new AnyType();
+	t = new PlnType();
 	t->name = "";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;
@@ -249,12 +255,10 @@ static void initBasicTypes()
 	f64t->conv_inf.emplace_back(u64t, TC_LOSTABLE_AUTO_CAST);
 	f64t->conv_inf.emplace_back(f32t, TC_AUTO_CAST);
 
-	is_initialzed_type = true;
 }
 
-vector<PlnType*> PlnType::getBasicTypes()
+vector<PlnType*>& PlnType::getBasicTypes()
 {
-	if (!is_initialzed_type) initBasicTypes();
 	return basic_types;
 }
 

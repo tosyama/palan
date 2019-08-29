@@ -1,0 +1,60 @@
+ccall printf(...);
+ccall setenv(...);
+ccall mtrace();
+ccall muntrace();
+
+type Test {
+	int32 i32;
+	byte b;
+	int64 i64;
+	flo32 f32;
+};
+
+int32 i, i2, i3, i4;
+flo64 f;
+
+setenv("MALLOC_TRACE", "out/mtrace028", 1);
+Test t2;
+mtrace();
+{
+	Test t;
+	initTest(t>>)->>t;
+	t.i32 -> i;
+	t.b -> i2;
+	t.i64 -> i3;
+	t.f32 -> f;
+
+	(t.i32 + t.b) * t.i64 -> i4;
+	
+	copyParam(t);
+	refParam(t);
+	t -> t2;
+}
+
+muntrace();
+printf("%d %d %d %.2f\n", t2.i32, t2.b, t2.i64, t2.f32);
+printf("%d %d %d %.2f %d", i, i2, i3, f, i4);
+
+func initTest(Test >>t) -> Test t
+{
+	32 -> t.i32;
+	1 -> t.b;
+	64 -> t.i64;
+	1.23 -> t.f32;
+}
+
+func copyParam(Test t)
+{
+	99 -> t.i32;
+	99 -> t.b;
+	99 -> t.i64;
+	99.9 -> t.f32;
+}
+
+func refParam(Test& t)
+{
+	if t.i32 != 32 {
+		printf("ng");
+	}
+}
+

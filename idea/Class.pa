@@ -1,3 +1,50 @@
+// Object pointer that not has details
+type FILE;
+type sqlite3;
+
+// Primitype type re-definition
+type int int32;
+type overwrite int int64;
+
+// struct
+type tm {int32 tm_sec, tm_min, tm_hour;}
+
+interface bar {
+	calc(bar b) -> int64;
+}
+
+// default implementation. it works like template.
+public func calc(bar b) -> int64
+{
+}
+
+type foo: bar {
+	int16 sec1;	// private
+	io int64 a;
+	out string s;
+	byte sec2;	// private
+	out int64 x; 
+}
+
+@Constractor
+func create_foo() -> foo
+{
+}
+
+public func calc(friend bar.foo f) -> int64
+{
+	friend foo z;
+	z.sec1 = 10;
+	return z.sec1 * f.sec2;
+}
+
+foo f;
+baa b = f;
+baa b <<= f;
+baa.foo b;
+b.foo.a = 10; // down cast
+
+// vv old idea
 export class foo {
 data:
 		int16 sec1;	// private
@@ -56,4 +103,3 @@ implement string {
 		return utl8_len(cstr);
 	}
 }
-

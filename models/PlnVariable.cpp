@@ -19,19 +19,28 @@
 #include "../PlnConstants.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
+#include "expressions/PlnFunctionCall.h"
 #include "expressions/assignitem/PlnAssignItem.h"
 
 // PlnVarInit
-static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* ex)
+static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* ex, int val_index)
 {
+	PlnVariable* v = val.inf.var;
+
+	// Replace copy to move
 	if (val.asgn_type == ASGN_COPY) {
-		PlnVariable* v = val.inf.var;
 		if (v->ptr_type & PTR_OWNERSHIP && ex->type == ET_FUNCCALL) {
-			val.asgn_type = ASGN_MOVE;
+			//TODO: need to check return value is readonly or not
+			PlnFunctionCall* fcall = static_cast<PlnFunctionCall*>(ex);
+			BOOST_ASSERT(val_index < fcall->function->return_vals.size());
+			if (!(fcall->function->return_vals[val_index]->ptr_type & PTR_READONLY))
+				val.asgn_type = ASGN_MOVE;
 		}
 	}
 
-	return new PlnExpression(val);
+	auto var_ex = new PlnExpression(val);
+	var_ex->loc = v->loc;
+	return var_ex;
 }
 
 PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
@@ -55,8 +64,14 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
 
 					// Note: vars'asgn_type is possible to update in this call. 
-					auto var_ex = createVarExpression(vars[var_i], ex);
-					ai->addDstEx(var_ex, false);
+					auto var_ex = createVarExpression(vars[var_i], ex, i);
+
+					try {
+						ai->addDstEx(var_ex, false);
+					} catch (PlnCompileError &err) {
+						err.loc = var_ex->loc;
+						throw;
+					}
 
 					++var_i;
 				}

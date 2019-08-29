@@ -3,7 +3,7 @@
 /// A single Dst variables of object reference for deep copy. 
 ///
 /// @file	PlnDstCopyObjectItem.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 class PlnDstCopyObjectItem : public PlnDstItem
 {
@@ -18,6 +18,7 @@ public:
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+		auto var = dst_ex->values[0].inf.var;
 	}
 
 	~PlnDstCopyObjectItem() {

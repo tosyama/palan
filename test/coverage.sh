@@ -5,16 +5,23 @@
 # target="../generators/PlnX86_64DataAllocator"
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
+# target="../models/PlnBlock"
+# target="../models/PlnModule"
+# target="../models/PlnType"
+# target="../PlnMessage"
 # target="../PlnModelTreeBuilder"
 # target="../PlnGenerator"
 # target="../models/expressions/PlnArrayValue"
+# target="../models/expressions/PlnFunctionCall"
 # target="../models/types/PlnArrayValueType"
-target="../models/types/PlnFixedArrayType"
-# target="../models/expressions/assignitem/PlnAssignItem"
+# target="../models/types/PlnFixedArrayType"
+target="../models/types/PlnStructType"
+#target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
 #gcovs="PlnAssignArrayValue.h"
 #gcovs="PlnArrayValueType.h"
+#gcovs="PlnDstCopyObjectItem.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov

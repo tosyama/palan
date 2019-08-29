@@ -1,0 +1,20 @@
+ccall printf(...);
+ccall time(uint64 tloc)->uint64;
+ccall localtime(uint64 &t) -> struct_tm&;
+
+type struct_tm {
+	int32 tm_sec;
+	int32 tm_min;
+	int32 tm_hour;
+	int32 tm_mday;
+	int32 tm_mon;
+	int32 tm_year;
+	int32 tm_wday;
+	int32 tm_yday;
+	int32 tm_isdst;
+};
+
+t = time(0);
+struct_tm stm <<=
+	localtime(t);
+

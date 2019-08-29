@@ -37,7 +37,8 @@ enum PlnTypeConvCap {
 enum PlnTypeType {
 	TP_PRIMITIVE,
 	TP_FIXED_ARRAY,
-	TP_ARRAY_VALUE
+	TP_ARRAY_VALUE,
+	TP_STRUCT
 };
 
 class PlnType {
@@ -65,10 +66,11 @@ public:
 	vector<PlnTypeConvInf> conv_inf;
 
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
-	virtual ~PlnType() {}
+	virtual ~PlnType();
 	virtual PlnTypeConvCap canConvFrom(PlnType *src);
 
-	static vector<PlnType*> getBasicTypes();
+	static void initBasicTypes();
+	static vector<PlnType*>& getBasicTypes();
 	static PlnType* getByte();
 	static PlnType* getSint();
 	static PlnType* getUint();

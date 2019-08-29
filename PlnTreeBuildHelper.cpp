@@ -1,10 +1,9 @@
 /// Helper functions for building model tree directly.
 ///
 /// @file	PlnTreeBuildHelper.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include "PlnTreeBuildHelper.h"
-#include "models/PlnModule.h"
 #include "models/PlnType.h"
 #include "models/PlnBlock.h"
 #include "models/PlnExpression.h"
@@ -24,7 +23,7 @@ namespace palan
 
 PlnVariable* declareUInt(PlnBlock* block, string name, uint64_t init_i)
 {
-	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), true);
+	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), false, true);
 	BOOST_ASSERT(var);
 	vector<PlnValue> vars = { var };
 
@@ -83,7 +82,7 @@ void exit(PlnBlock* block, uint64_t result)
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
-PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnModule *module)
+PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block)
 {
 	PlnValue var_val(var);
 	var_val.asgn_type = ASGN_COPY_REF;
@@ -94,7 +93,7 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnModule *modu
 	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type);
 	vector<int> raw_sizes = {0};
 
-	PlnType* raw_arr_type = module->getFixedArrayType(farr_type->item_type, raw_sizes);
+	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes);
 
 	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }

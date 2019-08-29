@@ -20,6 +20,8 @@
 #include "../../PlnScopeStack.h"
 #include "PlnClone.h"
 #include "PlnArrayValue.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 static PlnFunction* internalFuncs[IFUNC_NUM] = { NULL };
 static bool is_init_ifunc = false;
@@ -32,6 +34,9 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 		PlnValue val;
 		val.type = VL_WORK;
 		val.inf.wk_type = rv->var_type;
+		val.is_readonly = rv->ptr_type & PTR_READONLY;
+		val.is_cantfree = (rv->ptr_type & NO_PTR || !(rv->ptr_type & PTR_OWNERSHIP));
+		
 		values.push_back(val);
 	}
 }
@@ -156,6 +161,14 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				}
 				clone = new PlnClone(da, a, v.getType(), false);
 			}
+
+			int data_type = v.getType()->data_type;
+			if (data_type != DT_OBJECT_REF && ptr_types[i]==PTR_REFERENCE) {
+				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
+				BOOST_ASSERT(v.type == VL_VAR);
+				arg_dps[i]->load_address = true;
+			}
+
 			if (clone)
 				clone->finishAlloc(da, si);
 			else
@@ -169,8 +182,15 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 		for (auto v: a->values) {
 			if (ptr_types[j] == PTR_PARAM_MOVE && v.type == VL_VAR) {
-				// Mark as freed variable.
 				auto var = v.inf.var;
+				// Check if variable can write.
+				if (!(var->ptr_type & PTR_OWNERSHIP)) {
+					PlnCompileError err(E_CantUseMoveOwnership, var->name);
+					err.loc = a->loc;
+					throw err;
+				}
+
+				// Mark as freed variable.
 				if (!si.exists_current(var))
 					si.push_owner_var(var);
 				si.set_lifetime(var, VLT_FREED);
@@ -342,7 +362,7 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
 	f->addParam("size", PlnType::getSint(), PIO_INPUT, FPM_COPY, NULL);
-	f->addRetValue(ret_name, PlnType::getObject(), false);
+	f->addRetValue(ret_name, PlnType::getObject(), false, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");

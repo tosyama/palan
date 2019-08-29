@@ -6,7 +6,7 @@
 /// from this definition file by flex.
 ///
 /// @file	PlnLexer.ll
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <algorithm>
 #include "PlnParser.hpp"
@@ -30,7 +30,7 @@ enum {
 	STR			= PlnParser::token::STR,
 	ID			= PlnParser::token::ID,
 	FUNC_ID		= PlnParser::token::FUNC_ID,
-	TYPENAME	= PlnParser::token::TYPENAME,
+	KW_TYPE		= PlnParser::token::KW_TYPE,
 	KW_FUNC		= PlnParser::token::KW_FUNC,
 	KW_CCALL	= PlnParser::token::KW_CCALL,
 	KW_SYSCALL	= PlnParser::token::KW_SYSCALL,
@@ -74,7 +74,7 @@ DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
 EQ_ARROW	"=>"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
@@ -110,6 +110,7 @@ POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
 			lval.build<double>() = std::stod(yytext);
 			return FLOAT;
 		}
+type/{POST_KW}		{ return KW_TYPE; }
 ccall/{POST_KW}		{ return KW_CCALL; }
 syscall/{POST_KW}	{ return KW_SYSCALL; }
 func/{POST_KW}		{ return KW_FUNC; }
@@ -135,10 +136,6 @@ var/{POST_KW} 	{ return KW_AUTOTYPE; }
 	}
 {ID}	{
 		string id = yytext;
-		if (std::binary_search(typenames.begin(), typenames.end(), id)) {
-			lval.build<string>() = move(id);
-			return TYPENAME;
-		}
 		lval.build<string>() = move(id);
 		return ID;
 	}
@@ -228,11 +225,3 @@ void PlnLexer::set_filename(const string& filename)
 	cur_fid = filenames.size()-1;
 }
 
-void PlnLexer::push_typename(string name)
-{
-	// sort for binary_search. note: Trie is better.
-	auto ti=typenames.begin();
-	for(; ti != typenames.end(); ++ti)
-		if (*ti > name)  break;
-	typenames.insert(ti, name);
-}

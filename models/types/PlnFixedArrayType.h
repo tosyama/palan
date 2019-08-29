@@ -5,8 +5,9 @@
 
 class PlnFixedArrayType : public PlnType {
 public:
-	PlnFixedArrayType();
 	PlnType* item_type;
 	vector<int> sizes;
+
+	PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes);
 	PlnTypeConvCap canConvFrom(PlnType *src) override;
 };

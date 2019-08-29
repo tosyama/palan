@@ -8,14 +8,19 @@
 
 #include <boost/assert.hpp>
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/join.hpp>
 
 #include "PlnFunction.h"
+#include "PlnGeneralObject.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
-#include "PlnType.h"
 #include "PlnVariable.h"
 #include "PlnExpression.h"
+#include "types/PlnFixedArrayType.h"
+#include "types/PlnStructType.h"
+#include "PlnArray.h"
+#include "PlnModule.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
@@ -24,7 +29,7 @@
 #include "../PlnException.h"
 
 PlnBlock::PlnBlock()
-	: parent_func(NULL), parent_block(NULL), owner_stmt(NULL)
+	: parent_module(NULL), parent_func(NULL), parent_block(NULL), owner_stmt(NULL)
 {
 }
 
@@ -38,21 +43,28 @@ PlnBlock::~PlnBlock()
 		delete stmt;
 	for (auto cons: consts)
 		delete cons.ex;
+	for (auto t: types)
+		delete t;
 }
 
 void PlnBlock::setParent(PlnFunction* f)
 {
 	parent_func = f;
 	parent_block = NULL;
+
+	BOOST_ASSERT(f->parent);
+	parent_module = f->parent->parent_module;
+	BOOST_ASSERT(parent_module);
 }
 
 void PlnBlock::setParent(PlnBlock* b)
 {
 	parent_func = b->parent_func;
 	parent_block = b;
+	parent_module = b->parent_module;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool is_owner)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -66,9 +78,15 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 	if (var_type) {
 		v->var_type = var_type;
 		if (v->var_type->data_type == DT_OBJECT_REF) {
-			v->ptr_type = is_owner ? PTR_REFERENCE | PTR_OWNERSHIP
-							: PTR_REFERENCE;
-		} else v->ptr_type = NO_PTR;
+			v->ptr_type = PTR_REFERENCE;
+			if (is_owner)
+				v->ptr_type |= PTR_OWNERSHIP;
+		} else
+			v->ptr_type = NO_PTR;
+
+		if (readonly)
+			v->ptr_type |= PTR_READONLY;
+
 	} else {
 		v->var_type = variables.back()->var_type;
 		v->ptr_type = variables.back()->ptr_type;
@@ -152,6 +170,158 @@ PlnExpression* PlnBlock::getConst(const string& name)
 
 	} while (b = parentBlock(b));
 	return NULL;
+}
+
+void PlnBlock::declareType(const string& type_name)
+{
+	PlnType* t = new PlnType();
+	t->name = type_name;
+	t->data_type = DT_OBJECT_REF;
+	t->size = 8;
+	types.push_back(t);
+}
+
+void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
+{
+	auto t = new PlnStructType(type_name, members);
+	types.push_back(t);
+}
+
+PlnType* PlnBlock::getType(const string& type_name)
+{
+	// Crrent block
+	{
+		auto t = std::find_if(types.begin(), types.end(),
+				[type_name](PlnType* t) { return t->name == type_name; });
+
+		if (t != types.end())
+			return *t;
+	}
+
+	// Parent block
+	if (PlnBlock* b = parentBlock(this)) {
+		return b->getType(type_name);
+	}
+
+	// Search default type if toplevel: paraentBlock(this) == NULL
+	{
+		vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
+
+		auto t = std::find_if(basic_types.begin(), basic_types.end(),
+				[type_name](PlnType* t) { return t->name == type_name; });
+
+		if (t != basic_types.end())
+			return *t;
+	}
+
+	return NULL;
+}
+
+static string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
+{
+	string ret_name, arg_name;
+	for (auto t: ret_types)
+		ret_name += "_" + t->name;
+	for (auto t: arg_types)
+		arg_name += "_" + t->name;
+	boost::replace_all(fname, "_", "__");
+
+	fname = "_" + fname + ret_name + + "_" +arg_name;
+	boost::replace_all(fname, "[", "A_");
+	boost::replace_all(fname, "]", "_");
+	boost::replace_all(fname, ",", "_");
+	return fname;
+}
+
+PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
+{
+	bool found_item = false;
+	for (auto t: types)
+		if (item_type == t)
+			found_item = true;
+	
+	if (!found_item) {
+		if (PlnBlock* b = parentBlock(this)) {
+			return b->getFixedArrayType(item_type, sizes);
+
+		} else { // toplevel
+			vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
+			for (auto t: basic_types)
+				if (item_type == t)
+					found_item = true;
+
+			BOOST_ASSERT(found_item);
+		}
+	}
+
+	string name = PlnType::getFixedArrayName(item_type, sizes);
+	for (auto t: types) 
+		if (name == t->name) return t;
+	
+	auto t = new PlnFixedArrayType(name, item_type, sizes);
+	auto it = item_type;
+	int alloc_size = t->inf.obj.alloc_size;
+	
+	if (alloc_size == 0) {
+		// raw array reference.
+		types.push_back(t);
+		if (it->data_type != DT_OBJECT_REF) {
+			t->freer = new PlnSingleObjectFreer();
+		}
+		return t;
+	}
+
+	// set allocator & freer.
+	if (it->data_type != DT_OBJECT_REF) {
+		t->allocator = new PlnSingleObjectAllocator(alloc_size);
+		t->freer = new PlnSingleObjectFreer();
+		t->copyer = new PlnSingleObjectCopyer(alloc_size);
+
+	} else {
+		// allocator
+		{
+			string fname = createFuncName("new", {t}, {});
+			for (auto f: funcs) {
+				if (f->name == fname) {
+					BOOST_ASSERT(false);
+				}
+			}
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, this);
+			parent_module->functions.push_back(alloc_func);
+
+			t->allocator = new PlnNoParamAllocator(alloc_func);
+		}
+
+		// freer
+		{
+			string fname = createFuncName("del", {}, {t});
+			for (auto f: funcs) {
+				if (f->name == fname) {
+					BOOST_ASSERT(false);
+				}
+			}
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, t, this);
+			parent_module->functions.push_back(free_func);
+
+			t->freer = new PlnSingleParamFreer(free_func);
+		}
+
+		// copyer
+		{
+			string fname = createFuncName("cpy", {}, {t,t});
+			for (auto f: funcs) {
+				if (f->name == fname) {
+					BOOST_ASSERT(false);
+				}
+			}
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, t, this);
+			parent_module->functions.push_back(copy_func);
+			t->copyer = new PlnTwoParamsCopyer(copy_func);
+		}
+	}
+
+	types.push_back(t);
+	return t;
 }
 
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)

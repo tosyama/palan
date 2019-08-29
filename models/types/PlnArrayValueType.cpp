@@ -5,7 +5,8 @@
 
 #include <boost/assert.hpp>
 #include "../PlnType.h"
-#include "../PlnModule.h"
+// #include "../PlnModule.h"
+#include "../PlnBlock.h"
 #include "PlnArrayValueType.h"
 #include "../expressions/PlnArrayValue.h"
 #include "../../PlnMessage.h"
@@ -17,7 +18,7 @@ PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
 {
 }
 
-PlnType* PlnArrayValueType::getDefaultType(PlnModule *module)
+PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 {
 	BOOST_ASSERT(arr_val);
 	vector<int> fixarr_sizes;
@@ -37,7 +38,7 @@ PlnType* PlnArrayValueType::getDefaultType(PlnModule *module)
 				BOOST_ASSERT(false);
 		}
 
-		return module->getFixedArrayType(itype, fixarr_sizes);
+		return block->getFixedArrayType(itype, fixarr_sizes);
 	}
 
 	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");

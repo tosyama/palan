@@ -1,4 +1,4 @@
-for i: 0..9 {
+for i=0..9 {
 	print(i.str);
 }
 
@@ -9,7 +9,7 @@ while i<10 {
 }
 
 // break / continue
-for:out i: 0..9 {
+for:out i=0..9 {
 	for j; 0..9 {
 		if (i==8 && j==5) break out;
 		print(i.str "," j.str "\n");
@@ -17,7 +17,7 @@ for:out i: 0..9 {
 }
 
 // loop of loop
-for i:0..9 of j:0..9 {
+for i=0..9 of j=0..9 {
 	if (i==8 && j==5) break;
 }
 
@@ -30,14 +30,14 @@ while:out i<10 {
 }
 
 // forで :の場合は型省略(上位とかぶる場合は警告)
-for i:1..5 { print(i.str); }
-for i:5>>1 { print(i.str); }
+for i=1..5 { print(i.str); }
+for i--=5..1 { print(i.str); }
 
 int arr[10] = (1..10);
 for i: arr { print(i.str); }
 
 {:s
-	for i:0..9 {
+	for i=0..9 {
 		s::e = i; // same as int64 e; for { i->e;
 	}
 	10->e;

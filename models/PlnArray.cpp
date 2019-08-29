@@ -8,7 +8,6 @@
 #include "../PlnConstants.h"
 #include "PlnType.h"
 #include "../PlnTreeBuildHelper.h"
-#include "PlnModule.h"
 #include "types/PlnFixedArrayType.h"
 #include "PlnArray.h"
 #include "PlnBlock.h"
@@ -19,14 +18,15 @@
 #include "expressions/PlnArrayItem.h"
 #include "expressions/PlnAssignment.h"
 
-PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule* module)
+PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock* block)
 {
 	PlnType* it = arr_type->item_type;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	f->parent = block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, arr_type, false);
+	PlnVariable* ret_var = f->addRetValue(s1, arr_type, false, false);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
@@ -38,7 +38,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
 	{
 		BOOST_ASSERT(it->allocator);
-		PlnExpression* arr_item = palan::rawArrayItem(ret_var, i, module);
+		PlnExpression* arr_item = palan::rawArrayItem(ret_var, i, block);
 		arr_item->values[0].asgn_type = ASGN_COPY_REF;
 		vector<PlnExpression*> lvals = { arr_item };
 		PlnExpression* alloc_ex = it->allocator->getAllocEx();
@@ -53,7 +53,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	return f;
 }
 
-PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
+PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
 	PlnType* it = arr_type->item_type;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
@@ -61,6 +61,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
 	f->addParam(s1, arr_type, PIO_INPUT, FPM_REF, NULL);
+	f->parent = block;
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
@@ -75,7 +76,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	PlnBlock* wblock = palan::whileLess(ifblock, i, item_num);
 	{
 		BOOST_ASSERT(it->freer);
-		PlnExpression* arr_item = palan::rawArrayItem(f->parameters[0], i, module);
+		PlnExpression* arr_item = palan::rawArrayItem(f->parameters[0], i, block);
 		PlnExpression* free_item = it->freer->getFreeEx(arr_item);
 		wblock->statements.push_back(new PlnStatement(free_item, wblock));
 
@@ -87,12 +88,13 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	return f;
 }
 
-PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnModule *module)
+PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
 	PlnType* it = arr_type->item_type;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	f->parent = block;
 	string s1 = "__p1", s2 = "__p2";
 	f->addParam(s1, arr_type, PIO_INPUT, FPM_REF, NULL);
 	f->addParam(s2, arr_type, PIO_INPUT, FPM_REF, NULL);
@@ -104,8 +106,8 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayTyp
 	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
 	{
-		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0], i, module);
-		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1], i, module);
+		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0], i, block);
+		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1], i, block);
 		if (it->copyer) {
 			PlnExpression* copy_item = it->copyer->getCopyEx(dst_arr_item, src_arr_item);
 			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
@@ -116,3 +118,4 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayTyp
 
 	return f;
 }
+

@@ -14,27 +14,27 @@ Current palan is very draft.
 *   git
 
 ### Build Palan Compiler
-```sh
-git clone --recursive https://github.com/tosyama/palan.git
-sudo make package
-make
+```console
+$ git clone --recursive https://github.com/tosyama/palan.git
+$ sudo make package
+$ make
 ```
 Note: `make package` installs [Boost][boost], [Bison][bison], [Flex][flex] and [Catch][catch]. You might need to install libfl-dev.
 
 ### Write Code
-```sh
-vi helloworld.pa
+```console
+$ vi helloworld.pa
 ```
 ```go
 ccall printf(...);
 "Hello World!\n" -> printf();
 ```
-Note: write "ccall int32 printf();" if the verson 0.2 or less.
+Note: write "ccall int32 printf();" if the version 0.2 or less.
 
 ### Build and Run
-```sh
-./pac helloworld.pa -o a.out
-./a.out
+```console
+$ ./pac helloworld.pa -o a.out
+$ ./a.out
 Hello World!
 ```
 

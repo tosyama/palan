@@ -16,7 +16,7 @@ int yylex();
 %token STR
 %token ID
 %token FUNC_ID
-%token TYPENAME
+%token KW_TYPE
 %token KW_FUNC
 %token KW_CCALL
 %token KW_SYSCALL
@@ -68,10 +68,10 @@ return_def: /* empty */
 	;
 
 return_types: return_type
-	| return_types return_type
+	| return_types ',' return_type
 	;
 
-return_type: type_def
+return_type: type
 	;
 
 return_values: return_value
@@ -79,7 +79,7 @@ return_values: return_value
 	| return_values ',' ID
 	;
 
-return_value: type_def ID
+return_value: type ID
 	;
 
 parameter_def: /* empty */
@@ -90,11 +90,13 @@ parameter_def: /* empty */
 
 parameters: parameter
 	| parameters ',' parameter
+	| parameters ',' ID default_value
 	| parameters ',' pass_by ID default_value
 	;
 
 parameter: '@'
-	| type_def pass_by ID default_value
+	| type ID default_value
+	| type pass_by ID default_value
 	;
 
 out_parameter_def:
@@ -103,8 +105,8 @@ out_parameter_def:
 	| EQ_ARROW KW_VARLENARG
 	;
 
-out_parameters: type_def ID
-	| out_parameters ',' type_def ID
+out_parameters: type ID
+	| out_parameters ',' type ID
 	| out_parameters ',' ID
 	;
 
@@ -112,13 +114,8 @@ move_owner: /* empty */
 	| DBL_GRTR
 	;
 
-pass_by: /* empty */
-	| DBL_GRTR
+pass_by: DBL_GRTR
 	| '&'
-	;
-
-take_owner: /* empty */
-	| DBL_LESS
 	;
 
 default_value: /* empty */
@@ -135,7 +132,7 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 	;
 
 single_return: /* empty */
-	| ARROW type_def
+	| ARROW type ro_ref
 	;
 
 function_definition: palan_function_definition
@@ -176,13 +173,18 @@ statement: semi_stmt ';'
 	;
 
 semi_stmt: st_expression
+	| type_def
 	| declarations
 	| declarations '=' expressions
-	| subdeclaration '=' expression
+	| ID take_owner1 '=' expression 
 	| const_def
 	| return_stmt
 	| break_stmt
 	| continue_stmt
+	;
+
+take_owner1: /* empty */
+	| DBL_LESS
 	;
 
 st_expression: expression
@@ -238,11 +240,10 @@ dst_vals: dst_val
 	| dst_vals ',' dst_val
 	;
 
-dst_val: move_owner unary_expression 
+dst_val: move_owner var_expression
 	;
 
-unary_expression: ID
-	| unary_expression array_item
+var_expression: type_or_var
 	;
 
 array_val: '[' expressions ']'
@@ -252,7 +253,7 @@ array_val: '[' expressions ']'
 term: INT
 	| UINT
 	| STR
-	| unary_expression
+	| var_expression
 	| array_val
 	| '(' expression ')'
 	;
@@ -271,15 +272,32 @@ chain_call: expressions arrow_ope func_call
 	| assignment arrow_ope func_call
 	;
 
+type_def: KW_TYPE ID
+	| KW_TYPE ID '{' struct_def '}'
+	;
+
+struct_def: type ID
+	| struct_def ';' type ID
+	| struct_def ';'
+	;
+
 declarations: declaration
 	| declarations ',' subdeclaration 
 	| declarations ',' declaration 
 	;
 
-declaration: var_type ID take_owner
+declaration: var_type ro_ref ID take_owner
 	;
 
 subdeclaration: ID take_owner
+	;
+
+ro_ref: /* empty */
+	| '&'
+	;
+
+take_owner: /* empty */
+	| DBL_LESS
 	;
 
 return_stmt: KW_RETURN
@@ -287,33 +305,24 @@ return_stmt: KW_RETURN
 	;
 
 var_type: KW_AUTOTYPE
-	| type_def
+	| type
 	;
 
-type_def: TYPENAME
-	| type_def array_def
-	;
-	
-array_def: '[' array_sizes ']'
+type: type_or_var
 	;
 
-array_sizes: array_size
-	| array_sizes ',' array_size
+type_or_var: ID
+	| type_or_var '.' ID
+	| type_or_var '[' array_items ']'
 	;
 
-array_size: /* empty */
+array_items: array_item
+	| array_items ',' array_item
+	;
+
+array_item: /* empty */
 	| expression
 	| '?'
-	;
-
-array_item: '[' array_indexes ']'
-	;
-
-array_indexes: array_index
-	| array_indexes ',' array_index
-	;
-
-array_index: expression
 	;
 
 const_def: KW_CONST const_names '=' expressions;

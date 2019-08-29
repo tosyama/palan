@@ -45,7 +45,7 @@ public:
 
 			free_dp = new PlnDataPlace(8, DT_OBJECT_REF);
 			free_dp->comment = &addr_var->name;
-			da.setIndirectObjDp(free_dp, da.prepareObjBasePtr(), NULL);
+			da.setIndirectObjDp(free_dp, da.prepareObjBasePtr(), NULL, 0);
 
 			// for receiving value from src.
 			dst_dp = new PlnDataPlace(8, DT_OBJECT_REF);
@@ -82,7 +82,7 @@ public:
 			da.releaseDp(save4free_var->place);
 
 			// move src to dst
-			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL);
+			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL, 0);
 			da.pushSrc(dst_dp->data.indirect.base_dp, addr_var->place, false);
 			da.popSrc(dst_dp);
 			

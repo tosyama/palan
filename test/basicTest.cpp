@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "abc123.4");
+	REQUIRE(exec(testcode) == "abc123.4aaa");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -196,10 +196,18 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "027_ccall";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "abc123def1.23\nbbaa 99 2.34 7");
+	REQUIRE(exec(testcode) == "abc123def1.23\n"
+								"bbaa 99 2.34 7\n"
+								"2:This,is\n"
+								"smy");
+
+	testcode = "028_struct";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "32 1 64 1.23\n" "32 1 64 1.23 2112");
+	CHECK(mcheck("mtrace028") == "+2 -2");
 }
 
-// Error file ID: 500-572
+// Error file ID: 500-578
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -279,8 +287,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "524_flo_mod_err";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'float number'.");
 
-	// testcode = "525_notarrlit_err";
-	// REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for 'array value'.");
+	testcode = "525_undeftype_err";
+	REQUIRE(build(testcode) == "0:2-2 Type 'int' was not declared in this scope.");
 
 	// testcode = "526_arrlit_noint_err";
 	// REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
@@ -334,7 +342,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Function 'xfunc' was not declared in this scope.");
 
 	testcode = "550_const_assign_err";
-	REQUIRE(build(testcode) == "0:3-3 Can't use constant value here.");
+	REQUIRE(build(testcode) == "0:3-3 Can't use read-only expression here.");
 
 	testcode = "551_constarr_mv_err2";
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
@@ -359,6 +367,24 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "572_unsupported_err3";
 	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported placeholder or variable argument at palan function.");
+
+	testcode = "573_cantusemove_err2";
+	REQUIRE(build(testcode) == "finish:0:7-7 Can not use '>>' for 'aa'.");
+
+	testcode = "574_cantusemove_err3";
+	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
+
+	testcode = "575_copy2rovar_err";
+	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
+
+	testcode = "576_nomember_err";
+	REQUIRE(build(testcode) == "0:7-7 Type 'nomem' has no member named 'x'.");
+
+	testcode = "577_cantusemove_err4";
+	REQUIRE(build(testcode) == "0:18-18 Can not use '>>' for 'stm'.");
+
+	testcode = "578_structtype_err";
+	REQUIRE(build(testcode) == "0:7-7 Incompatible types in assignment of 'int64' to 'A'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

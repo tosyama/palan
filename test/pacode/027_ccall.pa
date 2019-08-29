@@ -6,6 +6,29 @@ ccall strcat(byte[?] >>dst, &src) -> byte[?];
 ccall exit(int32 status);
 ccall strlen(byte[10] &str)->int32;
 
+ccall fopen(byte[?] &filename, &mode) -> FILE;
+ccall fclose(FILE >>stream) -> int32;
+ccall fprintf(FILE &stream, byte[?] &format, ...) -> int32;
+ccall fscanf(FILE &stream, byte[?] &format => ...) -> int32;
+
+ccall time(uint64 tloc)->uint64;
+ccall localtime(uint64 &t) -> struct_tm&;
+
+type FILE;
+type struct_tm {
+	int32 tm_sec;
+	int32 tm_min;
+	int32 tm_hour;
+	int32 tm_mday;
+	int32 tm_mon;
+	int32 tm_year;
+	int32 tm_wday;
+	int32 tm_yday;
+	int32 tm_isdst;
+};
+
+const filename = "out/027_outfile.txt";
+
 byte[32] str1, str2;
 sprintf("abc%d%s%.2f\n", 123, "def" ,1.23 => str1);
 str2 ->> strcpy(str1) ->> str2;
@@ -15,5 +38,27 @@ int32 i;
 flo32 f;
 "aa 99 bb 2.34" -> sscanf("%s %d %s %f" => str1, i, str2, f);
 str2 ->> strcat(str1) ->> str2;
-printf("%s %d %.2f %d", str2, i, f, strlen("str len"));
+printf("%s %d %.2f %d\n", str2, i, f, strlen("str len"));
+
+
+FILE file <<= fopen(filename, "w");
+file->fprintf("This is test.");
+fclose(file>>);
+
+fopen(filename, "r") ->> file;
+fscanf(file, "%s %s" => str1, str2) -> i;
+fclose(file>>);
+
+printf("%d:%s,%s\n", i, str1, str2);
+
+uint64 t = time(0);
+struct_tm& tm = localtime(t);
+struct_tm tm2 = localtime(t);
+
+if tm.tm_sec >= 0 && tm.tm_sec <= 59 { printf("s") } 
+if tm.tm_mon >= 0 && tm.tm_mon <= 11 { printf("m") } 
+if tm.tm_year >= 119 && tm.tm_year <= 200
+	&& tm.tm_year == tm2.tm_year { printf("y") }
+
 exit(0);
+

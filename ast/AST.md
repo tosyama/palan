@@ -42,12 +42,10 @@ Function
         *   impl\* - Block model for function implemantation
 
     2.  ccall - C function prototype
-        *   ret-type - Return value type string (deprecated)
         *   ret - Return value
 
     3.  syscall - System call prototype
         *   call-id\* - Integer to set %rax
-        *   ret-type - Return value type string (deprecated)
         *   ret - Return value
 
 *   loc - Location integer array
@@ -69,10 +67,12 @@ Return value
 ------------
 1.  Anonymous return value
     *   var-type\* - Variable type list
+    *   ro-ref - Read only reference boolean
 
 2.  Standard return value
     *   var-type - Variable type list
     *   name\* - Return value name string
+    *   ro-ref - Read only reference boolean
 
 *   loc - Location integer array
 
@@ -83,6 +83,8 @@ Variable Type
         *   sizes\* - Expression list (lit-int:-1 - size inference)
 
     2.  any - Specified variable type name
+
+*   loc - Location integer array
 
 Block
 ------
@@ -100,7 +102,7 @@ Statement
         *   block\* - Block model
 
     3.  var-init - Variable declaration statement
-        *   vars\* - Variable destination list
+        *   vars\* - Variable declaration list
         *   inits - Variable initialize expression list
 
     4.  const - Constant value declaration statement
@@ -127,6 +129,11 @@ Statement
 
     10. func-def - Function definition link
         *   id - Function id integer
+	
+    11. type-def - Type definition
+        *   type - Type definition type string: "obj-ref", "struct"
+        *   name - Type name string
+        *   memebers - Struct member list
 
 *   loc - Location integer array
 
@@ -134,7 +141,7 @@ Expression
 ----------
 *   exp-type\* - Expression type string:
     "lit-int" "lit-uint" "lit-str" "var" "array-val"
-    "asgn" "func-call" "chain-call"
+    "asgn" "func-call" "chain-call" "unknown"
     birary operator ("+" "-" "*" "/" "%" "==" "!=" "<" ">" "<=" ">=" "&&" "||")
     unary operator ("uminus" "not")
     1.  lit-int - Integer(64bit) literal
@@ -177,6 +184,9 @@ Expression
 
     11. unary operator
         *   val\* -	Value expression
+	
+	12. unknown - Unknown expression. Reserved for internal process.
+	    *   info\* - expression information
 
 *   loc - Location integer array
 
@@ -189,21 +199,30 @@ Destination Value
 
 Modified Operator
 -----------------
-*   ope-type\* - Operator type string: "index"
+*   ope-type\* - Operator type string: "index", "member"
     1.  index - Numerical index
         *   indexes - Index expression list
+
+    2.  member - Struct member
+        *   member - Struct member string
 
 Variable Declaration
 --------------------
 *   name\* - Variable name string
 *   var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
 *   move - Move ownership flag boolean
+*   ro-ref - Read only reference boolean
 *   loc - Location integer array
 
 Argument
 --------
 *   exp\* - Argument expression
 *   move - Move ownership flag boolean
+
+Struct member
+-------------
+*   type\# - Variable type list
+*   name\* - Variable name string
 
 Location Array
 --------------

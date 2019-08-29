@@ -18,6 +18,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f  = "Variable '%1%' was not declared in this scope."; break;
 		case E_UndefinedFunction:
 			f  = "Function '%1%' was not declared in this scope."; break;
+		case E_UndefinedType:
+			f  = "Type '%1%' was not declared in this scope."; break;
 		case E_NoMatchingFunction:
 			f  = "No matching function for call to '%1%'.\nCandidate: %2%"; break;
 		case E_DuplicateVarName:
@@ -58,14 +60,16 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Incompatible type to init variable '%1%'."; break;
 		case E_UndefinedConst:
 			f  = "Constant '%1%' was not declared in this scope."; break;
-		case E_CantUseConstHere:
-			f  = "Can't use constant value here."; break;
 		case E_ValueRequired:
 			f = "Value is required here."; break;
 		case E_NotWithInLoop:
 			f = "The statement should be within loop."; break;
 		case E_NoMatchingParameter:
 			f  = "No matching output parameter for the placeholder."; break;
+		case E_NoMemberName:
+			f = "Type '%1%' has no member named '%2%'."; break;
+		case E_CantUseReadonlyExHere:
+			f = "Can't use read-only expression here."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

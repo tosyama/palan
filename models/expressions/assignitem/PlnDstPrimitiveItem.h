@@ -17,6 +17,7 @@ public:
 		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL) {
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
+
 		if (ex->values[0].asgn_type == ASGN_MOVE) {
 			PlnCompileError err(E_CantUseMoveOwnership, ex->values[0].inf.var->name);
 			err.loc = ex->loc;

@@ -11,6 +11,7 @@ using std::string;
 enum PlnErrCode {
 	E_UndefinedVariable, // var name
 	E_UndefinedFunction,	// func name
+	E_UndefinedType,	// type name
 	E_NoMatchingFunction,	// func name, candidates func
 	E_DuplicateVarName,	// var name
 	E_DuplicateFunction,	// func name
@@ -31,10 +32,11 @@ enum PlnErrCode {
 	E_AmbiguousVarType,	// var name
 	E_IncompatibleTypeInitVar, // var name
 	E_UndefinedConst, // const name
-	E_CantUseConstHere, // none
 	E_ValueRequired, // none
 	E_NotWithInLoop, // none
 	E_NoMatchingParameter,	// none
+	E_NoMemberName,	// type name, member name
+	E_CantUseReadonlyExHere,	// none
 
 	E_InvalidAST,	// source name, line
 

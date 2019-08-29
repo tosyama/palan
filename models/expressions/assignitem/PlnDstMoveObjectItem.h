@@ -4,7 +4,7 @@
 ///	before move ownership.
 ///
 /// @file	PlnDstMoveObjectItem.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 class PlnDstMoveObjectItem : public PlnDstItem
 {
@@ -20,6 +20,8 @@ public:
 		BOOST_ASSERT(ex->type == ET_VALUE);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+
+		auto var = dst_ex->values[0].inf.var;
 	}
 
 	~PlnDstMoveObjectItem() {
