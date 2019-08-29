@@ -207,7 +207,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	CHECK(mcheck("mtrace028") == "+2 -2");
 }
 
-// Error file ID: 500-577
+// Error file ID: 500-578
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -382,6 +382,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "577_cantusemove_err4";
 	REQUIRE(build(testcode) == "0:18-18 Can not use '>>' for 'stm'.");
+
+	testcode = "578_structtype_err";
+	REQUIRE(build(testcode) == "0:7-7 Incompatible types in assignment of 'int64' to 'A'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

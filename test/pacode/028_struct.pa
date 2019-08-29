@@ -27,6 +27,7 @@ mtrace();
 	(t.i32 + t.b) * t.i64 -> i4;
 	
 	copyParam(t);
+	refParam(t);
 	t -> t2;
 }
 
@@ -48,5 +49,12 @@ func copyParam(Test t)
 	99 -> t.b;
 	99 -> t.i64;
 	99.9 -> t.f32;
+}
+
+func refParam(Test& t)
+{
+	if t.i32 != 32 {
+		printf("ng");
+	}
 }
 
