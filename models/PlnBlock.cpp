@@ -187,6 +187,11 @@ void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> 
 	types.push_back(t);
 }
 
+void PlnBlock::declareAliasType(const string& type_name, const string& origtype_name)
+{
+	BOOST_ASSERT(false);
+}
+
 PlnType* PlnBlock::getType(const string& type_name)
 {
 	// Crrent block

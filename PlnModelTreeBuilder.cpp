@@ -696,6 +696,12 @@ void registerType(json& type, PlnScopeStack &scope)
 			members.push_back(member);
 		}
 		CUR_BLOCK->declareType(type_name, members);
+	
+	} else if (type["type"] == "alias") {
+		assertAST(type["orig-name"].is_string(), type);
+		string orig_name = type["orig-name"];
+
+		CUR_BLOCK->declareAliasType(type_name, orig_name);
 
 	} else {
 		BOOST_ASSERT(false);

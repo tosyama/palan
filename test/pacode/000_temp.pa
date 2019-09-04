@@ -25,6 +25,7 @@ type tm {
 	int64 tm_gmtoff;
 	int64 tm_zone;
 };
+type time_t = uint64;
 
 {
 	uint64 t = time(0);

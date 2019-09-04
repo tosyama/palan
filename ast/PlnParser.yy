@@ -1090,6 +1090,17 @@ type_def: KW_TYPE ID
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
+	| KW_TYPE ID '=' ID
+	{
+		json stmt = {
+			{"stmt-type", "type-def"},
+			{"type", "alias"},
+			{"name", $2},
+			{"orig-name", $4},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
 	;
 
 struct_def: type ID

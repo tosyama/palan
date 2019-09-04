@@ -274,6 +274,7 @@ chain_call: expressions arrow_ope func_call
 
 type_def: KW_TYPE ID
 	| KW_TYPE ID '{' struct_def '}'
+	| KW_TYPE ID '=' ID
 	;
 
 struct_def: type ID

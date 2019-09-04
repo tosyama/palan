@@ -131,9 +131,10 @@ Statement
         *   id - Function id integer
 	
     11. type-def - Type definition
-        *   type - Type definition type string: "obj-ref", "struct"
-        *   name - Type name string
+        *   type\* - Type definition type string: "obj-ref", "struct", "alias"
+        *   name\* - Type name string
         *   memebers - Struct member list
+        *   orig-name\* - Original type name string to alias
 
 *   loc - Location integer array
 
