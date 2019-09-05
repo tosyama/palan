@@ -20,9 +20,10 @@ PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/PlnGeneralObject.h models/PlnType.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
 	models/types/PlnFixedArrayType.h models/types/PlnStructType.h \
-	models/PlnArray.h models/PlnModule.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h models/../PlnScopeStack.h \
-	models/../PlnConstants.h models/../PlnMessage.h models/../PlnException.h
+	models/types/PlnAliasType.h models/PlnArray.h models/PlnModule.h \
+	models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h models/../PlnConstants.h \
+	models/../PlnMessage.h models/../PlnException.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
