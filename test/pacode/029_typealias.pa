@@ -1,0 +1,38 @@
+ccall printf(...) -> int32;
+
+type A {
+	int32 x;
+	int32 y;
+};
+
+type B = A;
+type Point = flo32[2];
+type int = int32;
+
+int x = test(66);
+printf("%d ", x);
+
+{
+	Point p = [33,44];
+	Point[3] p3 = [1,2][3,4][5,6];
+
+	printf("%.1f ", p3[1][1]);
+	p -> p3[1];
+	printf("%.1f ", p3[1][1]);
+
+	type C = B;
+	A a;
+	11,22 -> a.x, a.y;
+	B b = a;
+	printf("%d %d ", b.x, b.y);
+	C c;
+	33 -> a.x;
+	a -> b -> c;
+	printf("%d %d", c.x, c.y);
+}
+
+func test(int i) -> int i
+{
+	printf("%d ", i);
+	99 -> i;
+}

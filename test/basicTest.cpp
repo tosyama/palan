@@ -205,6 +205,10 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "32 1 64 1.23\n" "32 1 64 1.23 2112");
 	CHECK(mcheck("mtrace028") == "+2 -2");
+
+	testcode = "029_typealias";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
 // Error file ID: 500-578

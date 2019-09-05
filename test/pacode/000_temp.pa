@@ -5,8 +5,8 @@ ccall sscanf(byte[?] &str, &format => ...) -> int32;
 ccall fopen(byte[?] &filename, &mode) -> FILE;
 ccall fclose(FILE >>stream) -> int32;
 ccall fprintf(FILE &file, byte[?] &format, ...) -> int32;
-ccall time(uint64 tloc)->uint64;
-ccall ctime_r(uint64 &t => byte[?] result);
+ccall time(uint64 tloc)->time_t;
+ccall ctime_r(time_t &t => byte[?] result);
 ccall localtime_r(uint64 &t => tm result);
 ccall localtime(uint64 &t) -> tm&;
 
@@ -25,12 +25,23 @@ type tm {
 	int64 tm_gmtoff;
 	int64 tm_zone;
 };
+
 type time_t = uint64;
+type Point = flo64[3];
+type struct_tm = tm;
 
 {
-	uint64 t = time(0);
+	time_t t = time(0);
+	time_t[10] aa;
 	byte[80] buf;
 	tm tt;
+
+	Point p;
+	Point[2] p2;
+	flo64[2] x;
+
+	1.2 -> p[0];
+	1.2 -> p2[0][0];
 
 	// t->ctime_r(=> buf);
 	localtime_r(t => tt);

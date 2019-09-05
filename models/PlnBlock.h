@@ -42,7 +42,7 @@ public:
 
 	void declareType(const string& type_name);
 	void declareType(const string& type_name, vector<PlnStructMemberDef*>& members);
-	void declareAliasType(const string& type_name, const string& origtype_name);
+	void declareAliasType(const string& type_name, PlnType* orig_type);
 
 	PlnType* getType(const string& type_name);
 	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);

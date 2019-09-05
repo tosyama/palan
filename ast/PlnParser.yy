@@ -1090,13 +1090,13 @@ type_def: KW_TYPE ID
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
-	| KW_TYPE ID '=' ID
+	| KW_TYPE ID '=' type 
 	{
 		json stmt = {
 			{"stmt-type", "type-def"},
 			{"type", "alias"},
 			{"name", $2},
-			{"orig-name", $4},
+			{"var-type", $4},
 		};
 		$$ = move(stmt);
 		LOC($$, @$);

@@ -38,7 +38,8 @@ enum PlnTypeType {
 	TP_PRIMITIVE,
 	TP_FIXED_ARRAY,
 	TP_ARRAY_VALUE,
-	TP_STRUCT
+	TP_STRUCT,
+	TP_ALIAS
 };
 
 class PlnType {

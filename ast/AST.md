@@ -134,7 +134,7 @@ Statement
         *   type\* - Type definition type string: "obj-ref", "struct", "alias"
         *   name\* - Type name string
         *   memebers - Struct member list
-        *   orig-name\* - Original type name string to alias
+        *   var-type\* - Original variable type list to alias
 
 *   loc - Location integer array
 
