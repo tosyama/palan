@@ -11,6 +11,7 @@ Root
 *   ast\* - AST model
 *   errs - Error message list
 *   files - Source file list
+*   libs - Library list
 
 AST
 ---
@@ -27,6 +28,10 @@ Source File
 *   id\* - Source file ID integer
 *   name\* - Source file name string
 *   dir - Directory path string
+
+Library
+-----------
+*   name\* - Library name
 
 Function
 --------

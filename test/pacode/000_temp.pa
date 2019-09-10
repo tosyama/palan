@@ -1,82 +1,8 @@
 ccall printf(byte[?] &format, ...) -> int32;
-ccall sprintf(@, &src, ... => byte[?] dst) -> int32;
-ccall strcpy(byte[?] >>dst, &src) -> byte[?];
-ccall sscanf(byte[?] &str, &format => ...) -> int32;
-ccall fopen(byte[?] &filename, &mode) -> FILE;
-ccall fclose(FILE >>stream) -> int32;
-ccall fprintf(FILE &file, byte[?] &format, ...) -> int32;
-ccall time(uint64 tloc)->time_t;
-ccall ctime_r(time_t &t => byte[?] result);
-ccall localtime_r(uint64 &t => tm result);
-ccall localtime(uint64 &t) -> tm&;
 
-type FILE;
-type tm {
-	int32 tm_sec;
-	int32 tm_min;
-	int32 tm_hour;
-	int32 tm_mday;
-	int32 tm_mon;
-	int32 tm_year;
-	int32 tm_wday;
-	int32 tm_yday;
-	int32 tm_isdst;
+const aa = [1,2,3];
 
-	int64 tm_gmtoff;
-	int64 tm_zone;
-};
+test(aa);
 
-type time_t = uint64;
-type Point = flo64[3];
-type struct_tm = tm;
-
-{
-	time_t t = time(0);
-	time_t[10] aa;
-	byte[80] buf;
-	tm tt;
-
-	Point p;
-	Point[2] p2;
-	flo64[2] x;
-
-	1.2 -> p[0];
-	1.2 -> p2[0][0];
-
-	// t->ctime_r(=> buf);
-	localtime_r(t => tt);
-	tm& t1 = localtime(t);
-
-	1 -> tt.tm_sec;
-	int64 a = tt.tm_sec;
-
-	// printf("%d ", tt.tm_sec);
+func test(int32[3] &a) {
 }
-
-i = 0;
-byte[10] str, str2;
-
-// sprintf(str, "abc%d", i);
-// sprintf("abc%d", i => str);
-
-flo64 f;
-// str2 ->> strcpy(str) ->> str2;
-"123.4" -> sscanf("%lf" => f);
-printf("abc%.1lf", f);
-
-FILE file <<= fopen("outfile", "w");
-file->fprintf("This is test.");
-fclose(file>>);
-
-byte[10] str3;
-str3 ->> strcpy("aaa") ->> str3;
-
-reffunc(str3);
- 
-func reffunc(byte[?] &str)
-{
- 	byte[10] str3;
-	// str ->> strcpy("bbb") ->> str;
-	// str3 -> str;
- 	printf("%s", str);
-} 
