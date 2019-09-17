@@ -197,28 +197,8 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	// Assign each element
 	if (data_places.size()) {
-		BOOST_ASSERT(doCopyFromStaticBuffer);
 		BOOST_ASSERT(data_places.size() == 1);
-		BOOST_ASSERT(values[0].inf.wk_type->type != TP_ARRAY_VALUE);
-
-		PlnType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type)->item_type;
-		int ele_type = item_type->data_type;
-		int ele_size = item_type->size;
-		
-		// Copy at once.
-		PlnDataPlace* dp;
-		if (ele_type == DT_SINT || ele_type == DT_UINT) {
-			vector<int64_t> int_arr;
-			addAllNumerics(this, int_arr);
-			dp = da.getROIntArrayDp(int_arr, ele_size);	
-		} else if (ele_type == DT_FLOAT) {
-			vector<double> flo_arr;
-			addAllNumerics(this, flo_arr);
-			dp = da.getROFloArrayDp(flo_arr, ele_size);	
-		} else {
-			BOOST_ASSERT(false);
-		}
-
+ 		PlnDataPlace* dp = getROArrayDp(da);;
 		da.pushSrc(data_places[0], dp);
 		return;
 
@@ -264,5 +244,29 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 	pushArrayValItemExp(this, farr_type->sizes, items);
 
 	return items;
+}
+
+PlnDataPlace* PlnArrayValue::getROArrayDp(PlnDataAllocator& da)
+{
+	BOOST_ASSERT(doCopyFromStaticBuffer);
+	BOOST_ASSERT(values[0].inf.wk_type->type != TP_ARRAY_VALUE);
+
+	PlnType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type)->item_type;
+	int ele_type = item_type->data_type;
+	int ele_size = item_type->size;
+
+	PlnDataPlace* dp;
+	if (ele_type == DT_SINT || ele_type == DT_UINT) {
+		vector<int64_t> int_arr;
+		addAllNumerics(this, int_arr);
+		dp = da.getROIntArrayDp(int_arr, ele_size);	
+	} else if (ele_type == DT_FLOAT) {
+		vector<double> flo_arr;
+		addAllNumerics(this, flo_arr);
+		dp = da.getROFloArrayDp(flo_arr, ele_size);	
+	} else {
+		BOOST_ASSERT(false);
+	}
+	return dp;
 }
 

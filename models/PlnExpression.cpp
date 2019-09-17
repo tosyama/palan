@@ -129,7 +129,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getROStrArrayDp(*inf.strValue);
 
 		case VL_LIT_ARRAY:
-			BOOST_ASSERT(false);
+			return inf.arrValue->getROArrayDp(da);
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;

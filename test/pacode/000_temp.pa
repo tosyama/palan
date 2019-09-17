@@ -2,7 +2,9 @@ ccall printf(byte[?] &format, ...) -> int32;
 
 const aa = [1,2,3];
 
+// int32[3]& ra = aa;
 test(aa);
 
 func test(int32[3] &a) {
+	printf("%d", a[2]);
 }

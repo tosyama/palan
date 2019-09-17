@@ -11,11 +11,16 @@ syn keyword     paDeclaration       type var const func syscall ccall
 syn keyword     paConditional       if else
 syn keyword     paRepeat            while
 syn keyword     paStatement         return break continue
+syn match       paOperator          "[.,?!*+/%&\-<>=@\|]"
+syn match       paOperator          "[][()]"
+syn match       paDelimiter         "[{};]"
 
 hi def link     paConditional       Conditional
 hi def link     paDeclaration       Keyword
 hi def link     paRepeat            Repeat
 hi def link		paStatement			Statement
+hi def link		paOperator          Operator
+hi def link		paDelimiter         Delimiter
 
 syn keyword     paSIntType			sbyte int16 int32 int64 
 syn keyword     paUIntType          byte uint16 uint32 uint64 
