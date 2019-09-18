@@ -379,7 +379,7 @@ default_value:	/* empty */	{  }
 	}
 	;
 
-ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return at_lib';'
 	{
 		vector<json> params = move($4);
 		int pind = 0;
@@ -438,6 +438,14 @@ single_return: /* empty */ { }
 		}
 		$$ = move(retval);
 		LOC($$, @$);
+	}
+	;
+
+at_lib: /* empty */
+	| '@' ID
+	{
+		json lib = {{ "name", $2 }};
+		ast["ast"]["libs"].push_back(lib);
 	}
 	;
 
@@ -1086,6 +1094,17 @@ type_def: KW_TYPE ID
 			{"type", "struct"},
 			{"name", $2},
 			{"members", $4},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+	| KW_TYPE ID '=' type 
+	{
+		json stmt = {
+			{"stmt-type", "type-def"},
+			{"type", "alias"},
+			{"name", $2},
+			{"var-type", $4},
 		};
 		$$ = move(stmt);
 		LOC($$, @$);

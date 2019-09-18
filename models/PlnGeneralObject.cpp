@@ -69,7 +69,7 @@ PlnExpression* PlnSingleParamFreer::getFreeEx(PlnExpression* free_var)
 class PlnDeepCopyFuncCall : public PlnDeepCopyExpression {
 	PlnFunctionCall* fcall;
 public:
-	PlnDeepCopyFuncCall(PlnFunction* f)
+	explicit PlnDeepCopyFuncCall(PlnFunction* f)
 		: PlnDeepCopyExpression(ET_FUNCCALL) {
 			fcall = new PlnFunctionCall(f);
 	}

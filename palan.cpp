@@ -153,6 +153,7 @@ int main(int argc, char* argv[])
 	}
 
 	vector<string> files(vm["input-file"].as< vector<string> >());
+	vector<string> linklibs = {"c"};
 
 	for (string& fname: files) {
 		if (getExtention(fname) == "o") continue;
@@ -208,6 +209,17 @@ int main(int argc, char* argv[])
 				// Build palan model tree from AST.
 				PlnModelTreeBuilder modelTreeBuilder;
 				PlnModule *module = modelTreeBuilder.buildModule(j["ast"]);
+
+				// read libraries;
+				if (j["ast"]["libs"].is_array()) {
+					for (json lib: j["ast"]["libs"]) {
+						auto it = find(linklibs.begin(), linklibs.end(), lib["name"]);
+						if (it == linklibs.end()) {
+							linklibs.push_back(lib["name"]);
+						}
+					}
+				}
+
 				// free json object memory.
 				j.clear();
 
@@ -248,14 +260,19 @@ int main(int argc, char* argv[])
 			} // catch (json::exception& e) {
 			//	BOOST_ASSERT(false); // need to detect error before json error.
 			// }
+
 		}
+
 	}
 
 	if (do_link) {
 		string flist = join(object_files, " ");
 		if (!do_exec)
 			cout << "linking: " << out_file << endl;
-		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " -lc " + flist + " -lm";
+		string libs = "";
+		for (string libname: linklibs)
+			libs += " -l" + libname;
+		string cmd = "ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o " + out_file + " " + flist + libs;
 
 		int ret = getStatus(system(cmd.c_str()));
 		if (ret) return ret;

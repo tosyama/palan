@@ -79,6 +79,7 @@ printf(" %d %d %d", arr3[1][0,0], arr3[1][0,2], arr3[1][1,2]);
 printf("\n");
 [prnt(i+2), 3, prnt(i)];
 
+
 func prnt(int64[3] a)
 {
 	printf("%d %d,", a[0],a[2]);
@@ -92,4 +93,10 @@ func prnt(flo64[2] f)
 func prnt(int64 i)->int64 i
 {
 	printf("%d ", i);
+}
+
+prntref([1,2,3]);
+func prntref(int64[3] &a)
+{
+	printf("%d %d", a[0],a[2]);
 }

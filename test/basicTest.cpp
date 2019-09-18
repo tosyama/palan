@@ -7,7 +7,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "abc123.4aaa");
+	REQUIRE(exec(testcode) == "");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -186,7 +186,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"1423 162311 113142\n"
 								"11 13,11 13,22.2,4 3,11 11,11.2,\n"
 								"11 12 13 4 2 1 6\n"
-								"3 1 ");
+								"3 1 1 3");
 
 	testcode = "026_arrarr_value";
 	REQUIRE(build(testcode) == "success");
@@ -199,12 +199,16 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abc123def1.23\n"
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
-								"smy");
+								"smy0.33");
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "32 1 64 1.23\n" "32 1 64 1.23 2112");
 	CHECK(mcheck("mtrace028") == "+2 -2");
+
+	testcode = "029_typealias";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
 // Error file ID: 500-578

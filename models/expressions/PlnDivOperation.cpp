@@ -105,7 +105,7 @@ PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 }
 
 PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType dt)
-	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt)
+	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt), quotient(NULL), remainder(NULL)
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
 	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);

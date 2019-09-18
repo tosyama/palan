@@ -1,0 +1,371 @@
+// Imporvement memo
+// it should be override var def with type infernce to avoid misunderatanding of assign.
+// (other block/param)
+// struct initialize.
+// lib declaress group may be ccall @libname { ... } ? 
+// charactor value support 'q'
+// ccall func name alias
+// true/false
+// no hex/no bit calc.
+// c macro can't detect.
+// const array member access dyrectly
+// e.g. const ARR=[1,2,3]; a = ARR[i];
+// type for var name
+// it should be able to pass element address of array 
+//  e.g. int32[5,4] a; a[3,#] or a[3]
+//  ++/--
+// no error same param name in func def.
+
+// curses lib API
+ccall initscr()->WINDOW @ncursesw;
+ccall cbreak();
+ccall noecho();
+ccall timeout(int32 delay);
+ccall curs_set(int32 visibility);
+ccall keypad(WINDOW &win, byte bf)->int32;
+ccall newwin(int32 line, cols, begin_y, begin_x)->WINDOW;
+ccall getch()->int32;
+ccall box(WINDOW& win, byte verch, horch)->int32;
+ccall doupdate()->int32;
+ccall wnoutrefresh(WINDOW& win)->int32;
+ccall wmove(WINDOW& win, int32 y, x);
+ccall waddch(WINDOW& win, byte ch);
+ccall waddstr(WINDOW& win, byte[?]& str);
+ccall endwin();
+type WINDOW;
+const A_REVERSE = 262144;
+const KEY_DOWN = 258;
+const KEY_UP = 259;
+const KEY_LEFT = 260;
+const KEY_RIGHT = 261;
+
+// stdc lib
+ccall printf(byte[?] &format, ...) -> int32;
+ccall rand() -> int32;
+ccall nanosleep(timespec &req, int64 rem)->int32;
+
+type time_t = uint64;
+type timespec {
+	time_t tv_sec;
+	int32 tv_nsec;
+};
+
+// for my program
+const true, false = 1, 0;
+const FLD_H, FLD_W = 20, 10;
+const SPACE = 32;
+const I,J,L,T,S,Z,O = 0,1,2,3,4,5,6;
+const NUM_MINO = 7;
+type Field = byte[FLD_H,FLD_W];
+type Blocks = byte[NUM_MINO,4,4,4];
+
+Field field = newFld();
+const blocks = 
+	// I
+	[	[0,0,0,0][1,1,1,1][0,0,0,0][0,0,0,0],
+		[0,0,1,0][0,0,1,0][0,0,1,0][0,0,1,0],
+		[0,0,0,0][1,1,1,1][0,0,0,0][0,0,0,0],	
+		[0,0,1,0][0,0,1,0][0,0,1,0][0,0,1,0]	]
+	// J
+	[	[0,0,0,0][1,1,1,0][0,0,1,0][0,0,0,0],
+		[0,1,0,0][0,1,0,0][1,1,0,0][0,0,0,0],
+		[0,0,0,0][1,0,0,0][1,1,1,0][0,0,0,0],
+		[0,1,1,0][0,1,0,0][0,1,0,0][0,0,0,0]	]
+	// L
+	[	[0,0,0,0][1,1,1,0][1,0,0,0][0,0,0,0],
+		[0,1,0,0][0,1,0,0][0,1,1,0][0,0,0,0], 
+		[0,0,0,0][0,0,1,0][1,1,1,0][0,0,0,0],
+		[1,1,0,0][0,1,0,0][0,1,0,0][0,0,0,0]	]
+	// T
+	[	[0,0,0,0][1,1,1,0][0,1,0,0][0,0,0,0],
+		[1,0,0,0][1,1,0,0][1,0,0,0][0,0,0,0],
+		[0,0,0,0][0,1,0,0][1,1,1,0][0,0,0,0],
+		[0,0,1,0][0,1,1,0][0,0,1,0][0,0,0,0]	]
+	// S
+	[	[0,0,0,0][0,1,1,0][1,1,0,0][0,0,0,0],
+		[1,0,0,0][1,1,0,0][0,1,0,0][0,0,0,0],
+		[0,0,0,0][0,1,1,0][1,1,0,0][0,0,0,0],
+		[1,0,0,0][1,1,0,0][0,1,0,0][0,0,0,0]	]
+	// Z
+	[	[0,0,0,0][1,1,0,0][0,1,1,0][0,0,0,0],
+		[0,0,1,0][0,1,1,0][0,1,0,0][0,0,0,0],
+		[0,0,0,0][1,1,0,0][0,1,1,0][0,0,0,0],
+		[0,0,1,0][0,1,1,0][0,1,0,0][0,0,0,0]	]
+	// O
+	[	[0,0,0,0][0,1,1,0][0,1,1,0][0,0,0,0],
+		[0,0,0,0][0,1,1,0][0,1,1,0][0,0,0,0],
+		[0,0,0,0][0,1,1,0][0,1,1,0][0,0,0,0],
+		[0,0,0,0][0,1,1,0][0,1,1,0][0,0,0,0]	]
+	;
+
+const start_y, start_x = -1,2;
+
+// start
+stdscr = initscr();
+cbreak();
+noecho();
+timeout(0);
+curs_set(0);
+keypad(stdscr, 1);
+
+stdscr->wmove(0,0);
+stdscr->waddstr("q:quit");
+
+fldwin = newwin(FLD_H+2, FLD_W*2+2, 1, 0);
+
+timespec ts;
+0, 10*1000*1000 -> ts.tv_sec, ts.tv_nsec;
+
+// event loop
+is_running = true;
+var by, bx = start_y, start_x;
+rotate = 0;
+gravity = 100;
+timer = 0;
+blk_type = rand() % NUM_MINO;
+is_falling = true;
+int32[FLD_H] del_mv_lineinf;
+deleted_lines = 0;
+
+while is_running {
+	const KEYQ = 113;
+	ch = getch();
+	if ch == KEYQ
+		{ false -> is_running }
+
+	fldwin->drawFld(field);
+
+	if is_falling {
+		if ch == KEY_LEFT {
+			if field,blocks,blk_type->tryMove(rotate,by,bx-1)
+				{ bx-1 -> bx }
+		} else if ch == KEY_RIGHT {
+			if field,blocks,blk_type->tryMove(rotate,by,bx+1)
+				{ bx+1 -> bx }
+		} else if ch == SPACE {
+			r = rotate + 1;
+			if r >= 4 { 0->r }
+			if field,blocks,blk_type->tryMove(r,by,bx)
+				{ r -> rotate }
+		} else if ch == KEY_UP {
+			while field,blocks,blk_type->tryMove(rotate,by+1,bx)
+				{ by+1 -> by }
+			false -> is_falling;
+			0->timer;
+		}
+
+		if (timer > gravity || ch == KEY_DOWN) {
+			if field,blocks,blk_type->tryMove(rotate, by+1, bx)
+				{ by+1 -> by }
+			else
+				{ false -> is_falling }
+
+			0->timer;
+		}
+		if !is_falling {
+			if by == start_y { false -> is_running }
+			field->>margeBlockToField(blocks, blk_type, rotate, by, bx) ->> field;
+			del_mv_lineinf ->> checkDelLine(field) ->> del_mv_lineinf;
+		}
+		fldwin,blocks,blk_type -> drawBlock(rotate,by,bx);
+
+	} else { // after dropped block
+		if timer == 1 {
+			int32 del_cnt;
+			field ->> delLine(del_mv_lineinf) ->> field, del_cnt;
+			deleted_lines + del_cnt -> deleted_lines;
+		} else if (timer > 10) {
+			field ->> mvLine(del_mv_lineinf) ->> field;
+			rand() % NUM_MINO -> blk_type;
+			0 -> rotate;
+			start_y, start_x -> by, bx;
+			true -> is_falling;
+		}
+	}
+
+	doupdate();
+	nanosleep(ts, 0);
+	timer+1 -> timer;
+}
+endwin();
+printf("Game Over: You deleted %d lines\n", deleted_lines);
+
+// end program
+
+func newFld() -> Field newfld
+{
+	int32 x,y = 0,0;
+	while y < FLD_H {
+		while x < FLD_W {
+			0->newfld[y,x];
+			1+x -> x;
+		}
+		1+y -> y;
+	}
+}
+
+func drawFld(WINDOW& win, Field& f)
+{
+	win->box(0,0);
+
+	y = 0;
+	while y < FLD_H {
+		win->wmove(1+y, 1);
+		x = 0;
+		while x < FLD_W {
+			if f[y,x] == 1 { win->draw1Block(y, x) }
+			else { win->delete1Block(y, x)	 }
+			1+x->x;
+		}
+		1+y->y;
+	}
+
+	win->wnoutrefresh();
+}
+
+func tryMove(Field& f, Blocks& blocks,
+		int32 tp, rotate, y, x) -> int32 can_move
+{
+	h = 0;
+	while h < 4 {
+		xx = x;
+		w = 0;
+		while w < 4 {
+			if blocks[tp, rotate, h, w] == 1 {
+				if xx < 0 || xx >= FLD_W || y>= FLD_H
+					{ return false }
+				if f[y,xx]!=0
+					{ return false }
+			}
+			1+w->w;
+			1+xx->xx;
+		}
+		1+h->h;
+		1+y->y;
+	}
+	return true;
+}
+
+func drawBlock(WINDOW& win, Blocks& blocks, int32 tp, rotate, y, x)
+{
+	h = 0;
+	while h < 4 {
+		xx = x;
+		w = 0;
+		while w < 4 {
+			if blocks[tp, rotate, h, w] == 1
+				{ win->draw1Block(y, xx) }
+			1+w->w;
+			1+xx->xx;
+		}
+		1+h->h;
+		1+y->y;
+	}
+	win->wnoutrefresh();
+}
+
+func draw1Block(WINDOW& win, int32 y, x) {
+	win->wmove(1+y, 1+x*2);
+	win->waddch(SPACE + A_REVERSE);
+	win->waddch(SPACE + A_REVERSE);
+}
+
+func delete1Block(WINDOW& win, int32 y, x) {
+	win->wmove(1+y, 1+x*2);
+	win->waddch(SPACE);
+	win->waddch(SPACE);
+}
+
+func margeBlockToField(Field >>f, Blocks& blocks, int32 tp, rotate, y, x) -> Field f
+{
+	h = 0;
+	while h < 4 {
+		xx = x;
+		w = 0;
+		while w < 4 {
+			if blocks[tp, rotate, h, w] == 1
+				{ 1->f[y,xx] }
+			1+w->w;
+			1+xx->xx;
+		}
+		1+h->h;
+		1+y->y;
+	}
+}
+
+func checkDelLine(int32[FLD_H] >>del_mv_lineinf, Field &field)
+	-> int32[FLD_H] del_mv_lineinf
+{
+	y = FLD_H-1;
+	del_count = 0;
+	while y >= 0 {
+		x = 0;
+		all_block = true;
+		while x < FLD_W {
+			if field[y,x] == 0 {
+				false -> all_block;
+				break;
+			}
+			x+1 -> x;
+		}
+		if all_block {
+			-1 -> del_mv_lineinf[y];
+			del_count+1 -> del_count;
+		} else {
+			y+del_count -> del_mv_lineinf[y];
+		}
+		y-1 -> y;
+	}
+}
+
+func delLine(Field >>field, int32[FLD_H] &del_mv_lineinf)
+	-> Field field, int32 del_cnt
+{
+	0 -> del_cnt;
+	y = FLD_H-1;
+	while y >= 0 {
+		if (del_mv_lineinf[y] == -1) {
+			x = 0;
+			del_cnt+1 -> del_cnt;
+			while x < FLD_W {
+				0->field[y,x];
+				x+1 -> x;
+			}
+		}
+		y-1 -> y;
+	}
+}
+
+func mvLine(Field >>field, int32[FLD_H] &del_mv_lineinf)
+	-> Field field
+{
+	if del_mv_lineinf[0] == 0
+		{ return }
+
+	del_cnt = 0;
+	y = FLD_H-1;
+	while y >= 0 {
+		mv_y = del_mv_lineinf[y];
+		if mv_y > 0 {
+			x = 0;
+			while x < FLD_W {
+				field[y,x]->field[mv_y, x];
+				x+1 -> x;
+			}
+		} else {
+			del_cnt+1 -> del_cnt;
+		}
+		y-1 -> y;
+	}
+
+	0 -> y;
+	while y < del_cnt {
+		x = 0;
+		while x < FLD_W {
+			0->field[y, x];
+			x+1 -> x;
+		}
+		y+1 -> y;
+	}
+}
+

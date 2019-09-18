@@ -11,6 +11,7 @@ Root
 *   ast\* - AST model
 *   errs - Error message list
 *   files - Source file list
+*   libs - Library list
 
 AST
 ---
@@ -27,6 +28,10 @@ Source File
 *   id\* - Source file ID integer
 *   name\* - Source file name string
 *   dir - Directory path string
+
+Library
+-----------
+*   name\* - Library name
 
 Function
 --------
@@ -131,9 +136,10 @@ Statement
         *   id - Function id integer
 	
     11. type-def - Type definition
-        *   type - Type definition type string: "obj-ref", "struct"
-        *   name - Type name string
+        *   type\* - Type definition type string: "obj-ref", "struct", "alias"
+        *   name\* - Type name string
         *   memebers - Struct member list
+        *   var-type\* - Original variable type list to alias
 
 *   loc - Location integer array
 

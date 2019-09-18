@@ -125,7 +125,7 @@ default_value: /* empty */
 	| '=' STR
 	;
 
-ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return ';'
+ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return at_lib';'
 	;
 
 syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_return ';'
@@ -133,6 +133,10 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 
 single_return: /* empty */
 	| ARROW type ro_ref
+	;
+
+at_lib: /* empty */
+	| '@' ID
 	;
 
 function_definition: palan_function_definition
@@ -274,6 +278,7 @@ chain_call: expressions arrow_ope func_call
 
 type_def: KW_TYPE ID
 	| KW_TYPE ID '{' struct_def '}'
+	| KW_TYPE ID '=' type 
 	;
 
 struct_def: type ID

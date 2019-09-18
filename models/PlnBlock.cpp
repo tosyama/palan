@@ -19,6 +19,7 @@
 #include "PlnExpression.h"
 #include "types/PlnFixedArrayType.h"
 #include "types/PlnStructType.h"
+#include "types/PlnAliasType.h"
 #include "PlnArray.h"
 #include "PlnModule.h"
 #include "../PlnDataAllocator.h"
@@ -70,6 +71,13 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 		if (v->name == var_name) return NULL;
 	for (auto c: consts)
 		if (c.name == var_name) return NULL;
+
+	if (parent_func) {
+		for (auto rv: parent_func->return_vals)
+			if (rv->name == var_name) return NULL;
+		for (auto p: parent_func->parameters)
+			if (p->name == var_name) return NULL;
+	}
 
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
@@ -187,6 +195,21 @@ void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> 
 	types.push_back(t);
 }
 
+void PlnBlock::declareAliasType(const string& type_name, PlnType* orig_type)
+{
+	BOOST_ASSERT(orig_type);
+
+	auto t = new PlnAliasType(type_name, orig_type);
+	types.push_back(t);
+}
+
+static PlnType* realType(PlnType *t) {
+	while (t && t->type == TP_ALIAS) {
+		t = static_cast<PlnAliasType*>(t)->orig_type;
+	}
+	return t;
+}
+
 PlnType* PlnBlock::getType(const string& type_name)
 {
 	// Crrent block
@@ -195,12 +218,12 @@ PlnType* PlnBlock::getType(const string& type_name)
 				[type_name](PlnType* t) { return t->name == type_name; });
 
 		if (t != types.end())
-			return *t;
+			return realType(*t);
 	}
 
 	// Parent block
 	if (PlnBlock* b = parentBlock(this)) {
-		return b->getType(type_name);
+		return realType(b->getType(type_name));
 	}
 
 	// Search default type if toplevel: paraentBlock(this) == NULL
@@ -211,7 +234,7 @@ PlnType* PlnBlock::getType(const string& type_name)
 				[type_name](PlnType* t) { return t->name == type_name; });
 
 		if (t != basic_types.end())
-			return *t;
+			return realType(*t);
 	}
 
 	return NULL;
