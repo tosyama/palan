@@ -14,6 +14,8 @@ ccall fscanf(FILE &stream, byte[?] &format => ...) -> int32;
 ccall time(uint64 tloc)->uint64;
 ccall localtime(uint64 &t) -> struct_tm&;
 
+ccall cos(flo64 x) -> flo64 @m;
+
 type FILE;
 type struct_tm {
 	int32 tm_sec;
@@ -60,5 +62,6 @@ if tm.tm_mon >= 0 && tm.tm_mon <= 11 { printf("m") }
 if tm.tm_year >= 119 && tm.tm_year <= 200
 	&& tm.tm_year == tm2.tm_year { printf("y") }
 
+printf("%.2lf", cos(1.23));
 exit(0);
 

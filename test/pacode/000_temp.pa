@@ -1,10 +1,10 @@
 ccall printf(byte[?] &format, ...) -> int32;
 
-const aa = [1,2,3];
+int32 i = 10;
 
-// int32[3]& ra = aa;
-test(aa);
+{
+	i = 50;
+}
 
-func test(int32[3] &a) {
-	printf("%d", a[2]);
+func test() -> int32 i {
 }
