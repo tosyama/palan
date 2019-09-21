@@ -389,6 +389,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "578_structtype_err";
 	REQUIRE(build(testcode) == "0:7-7 Incompatible types in assignment of 'int64' to 'A'.");
+
+	testcode = "579_dupinfervar_err2";
+	REQUIRE(build(testcode) == "0:3-3 Variable name 'i' already defined.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

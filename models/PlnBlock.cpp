@@ -65,18 +65,29 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_module = b->parent_module;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
 	for (auto c: consts)
 		if (c.name == var_name) return NULL;
-
+	
 	if (parent_func) {
 		for (auto rv: parent_func->return_vals)
 			if (rv->name == var_name) return NULL;
 		for (auto p: parent_func->parameters)
 			if (p->name == var_name) return NULL;
+	}
+
+	if (do_check_ancestor_blocks) {
+		PlnBlock *b = this->parent_block;
+		while (b) {
+			for (auto v: b->variables)
+				if (v->name == var_name) return NULL;
+			for (auto c: b->consts)
+				if (c.name == var_name) return NULL;
+			b = b->parent_block;
+		}
 	}
 
 	PlnVariable* v = new PlnVariable();
@@ -226,7 +237,7 @@ PlnType* PlnBlock::getType(const string& type_name)
 		return realType(b->getType(type_name));
 	}
 
-	// Search default type if toplevel: paraentBlock(this) == NULL
+	// Search default type if toplevel: parentBlock(this) == NULL
 	{
 		vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
 

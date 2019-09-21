@@ -590,12 +590,16 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 
 		bool is_owner = true;
 		bool is_readonly = false;
+		bool do_check_ancestor_blocks = false;
 		if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
 			is_owner = false;
 			is_readonly = true;
 		}
+		if (infer == TYPE_INFER) {
+			do_check_ancestor_blocks = true;
+		}
 
-		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_readonly, is_owner);
+		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_readonly, is_owner, do_check_ancestor_blocks);
 		if (!v) {
 			PlnCompileError err(E_DuplicateVarName, var["name"]);
 			setLoc(&err, var);

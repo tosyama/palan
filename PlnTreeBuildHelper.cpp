@@ -23,7 +23,7 @@ namespace palan
 
 PlnVariable* declareUInt(PlnBlock* block, string name, uint64_t init_i)
 {
-	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), false, true);
+	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), false, true, false);
 	BOOST_ASSERT(var);
 	vector<PlnValue> vars = { var };
 
