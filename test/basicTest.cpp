@@ -211,7 +211,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
-// Error file ID: 500-578
+// Error file ID: 500-580
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -389,6 +389,12 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "578_structtype_err";
 	REQUIRE(build(testcode) == "0:7-7 Incompatible types in assignment of 'int64' to 'A'.");
+
+	testcode = "579_dupinfervar_err2";
+	REQUIRE(build(testcode) == "0:3-3 Variable name 'i' already defined.");
+
+	testcode = "580_dupinfervar_err3";
+	REQUIRE(build(testcode) == "0:3-3 Variable name 'i' already defined.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

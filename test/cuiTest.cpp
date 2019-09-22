@@ -173,3 +173,11 @@ TEST_CASE("CUI basic err test.", "[cui]")
 	REQUIRE(outstr(testcode) == "");
 	REQUIRE(errstr(testcode) == "509_needret_err.pa:6: Return argument(s) can't be omitted at this function.\n");
 }
+
+TEST_CASE("sample code compile test.", "[cui]")
+{
+	string dir = "../samples/";
+	string testcode = "tetris";
+	REQUIRE(exec_pac(testcode, "-o", testcode, "", dir) == "success");
+	REQUIRE(outfile(testcode) == "exists");
+}

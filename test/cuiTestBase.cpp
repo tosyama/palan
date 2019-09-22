@@ -45,14 +45,15 @@ string build(const string &srcf)
 	return exec_pac(srcf, "-o", srcf, "");
 }
 
-string exec_pac(string srcf, const string &preopt, string outf, const string &postopt)
+string exec_pac(string srcf, const string &preopt, string outf,
+	const string &postopt, const string &srcdir)
 {
 	string log_file = "out/cui/" + (srcf != "" ? srcf : "log");
 
 	if (outf != "") 
 		outf = "out/cui/" + outf;
 	if (srcf != "") { 
-		copy_file("pacode/" + srcf + ".pa", "out/cui/" + srcf + ".pa");
+		copy_file(srcdir + srcf + ".pa", "out/cui/" + srcf + ".pa");
 		srcf = "out/cui/" + srcf + ".pa";
 	}
 

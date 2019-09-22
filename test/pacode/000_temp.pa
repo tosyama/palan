@@ -1,10 +1,8 @@
 ccall printf(byte[?] &format, ...) -> int32;
 
 int32 i = 10;
-
-{
-	i = 50;
-}
+int32 ii = 10;
 
 func test() -> int32 i {
+	ii=50;
 }

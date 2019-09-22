@@ -1,6 +1,4 @@
 // Imporvement memo
-// it should be override var def with type infernce to avoid misunderatanding of assign.
-// (other block/param)
 // struct initialize.
 // lib declaress group may be ccall @libname { ... } ? 
 // charactor value support 'q'
