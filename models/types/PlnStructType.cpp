@@ -6,7 +6,14 @@
 #include <boost/assert.hpp>
 #include "../../PlnModel.h"
 #include "../../PlnConstants.h"
+#include "../../PlnTreeBuildHelper.h"
 #include "../PlnGeneralObject.h"
+#include "../PlnFunction.h"
+#include "../PlnBlock.h"
+#include "../PlnModule.h"
+#include "../PlnStatement.h"
+#include "../expressions/PlnStructMember.h"
+#include "../expressions/PlnAssignment.h"
 #include "PlnStructType.h"
 
 PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
@@ -14,7 +21,41 @@ PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
 {
 }
 
-PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &members)
+PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+{
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+
+	f->parent = parent_block;
+	string s1 = "__p1";
+	PlnVariable* ret_var = f->addRetValue(s1, struct_type, false, false);
+
+	auto block = new PlnBlock();
+	block->setParent(f);
+	f->implement = block;
+
+	palan::malloc(f->implement, ret_var, struct_type->inf.obj.alloc_size);
+
+	for (PlnStructMemberDef* mdef: struct_type->members) {
+		if (mdef->type->data_type == DT_OBJECT_REF) {
+			PlnValue var_val(ret_var);
+
+			auto struct_ex = new PlnExpression(var_val);
+			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
+			member_ex->values[0].asgn_type = ASGN_COPY_REF;
+			vector<PlnExpression*> lvals = { member_ex };
+
+			PlnExpression* alloc_ex = mdef->type->allocator->getAllocEx();
+			vector<PlnExpression*> exps = { alloc_ex };
+
+			auto assign = new PlnAssignment(lvals, exps);
+			block->statements.push_back(new PlnStatement(assign, block));
+		}
+	}
+
+	return f;
+}
+
+PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent)
 	: PlnType(TP_STRUCT), members(move(members))
 {
 	this->name = name;
@@ -51,9 +92,17 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	inf.obj.is_fixed_size = true;
 	inf.obj.alloc_size = alloc_size;
 
-	if (has_object_member)
-		BOOST_ASSERT(false);
-	else {
+	if (has_object_member) {
+		// TODO
+		PlnFunction *alloc_func = createObjMemberStructAllocFunc(name, this, parent);
+
+		allocator = new PlnNoParamAllocator(alloc_func);
+		copyer = new PlnSingleObjectCopyer(alloc_size);
+		freer = new PlnSingleObjectFreer();
+
+		parent->parent_module->functions.push_back(alloc_func);
+
+	} else {
 		allocator = new PlnSingleObjectAllocator(alloc_size);
 		copyer = new PlnSingleObjectCopyer(alloc_size);
 		freer = new PlnSingleObjectFreer();
@@ -69,6 +118,10 @@ PlnStructType::~PlnStructType()
 PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 	if (this == src)
 		return TC_SAME;
+	
+	if (src == PlnType::getObject()) {
+		return TC_DOWN_CAST;
+	}
 	
 	return TC_CANT_CONV;
 }

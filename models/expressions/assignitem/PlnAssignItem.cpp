@@ -174,7 +174,12 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 			di = new PlnDstPrimitiveItem(ex);
 
 		} else {
-			BOOST_ASSERT(false);
+			int at = ex->values[0].asgn_type;
+			if (at == ASGN_COPY_REF) {
+				di = new PlnDstPrimitiveItem(ex);
+			} else {
+				BOOST_ASSERT(false);
+			}
 		}
 	}
 

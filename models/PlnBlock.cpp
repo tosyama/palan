@@ -202,7 +202,7 @@ void PlnBlock::declareType(const string& type_name)
 
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
-	auto t = new PlnStructType(type_name, members);
+	auto t = new PlnStructType(type_name, members, this);
 	types.push_back(t);
 }
 
