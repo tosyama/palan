@@ -7,13 +7,18 @@
 #include "../../PlnModel.h"
 #include "../../PlnConstants.h"
 #include "../../PlnTreeBuildHelper.h"
+#include "../../PlnDataAllocator.h"
+#include "../../PlnGenerator.h"
 #include "../PlnGeneralObject.h"
 #include "../PlnFunction.h"
 #include "../PlnBlock.h"
 #include "../PlnModule.h"
 #include "../PlnStatement.h"
+#include "../PlnVariable.h"
+#include "../PlnConditionalBranch.h"
 #include "../expressions/PlnStructMember.h"
 #include "../expressions/PlnAssignment.h"
+#include "../expressions/PlnMemCopy.h"
 #include "PlnStructType.h"
 
 PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
@@ -21,7 +26,7 @@ PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
 {
 }
 
-PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 
@@ -46,6 +51,73 @@ PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnStructTyp
 
 			PlnExpression* alloc_ex = mdef->type->allocator->getAllocEx();
 			vector<PlnExpression*> exps = { alloc_ex };
+
+			auto assign = new PlnAssignment(lvals, exps);
+			block->statements.push_back(new PlnStatement(assign, block));
+		}
+	}
+
+	return f;
+}
+
+static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+{
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	string s1 = "__p1";
+	f->addParam(s1, struct_type, PIO_INPUT, FPM_REF, NULL);
+	f->parent = parent_block;
+
+	auto block = new PlnBlock();
+	block->setParent(f);
+	f->implement = block;
+
+	// Return if object address is 0.
+	auto ifblock = new PlnBlock();
+	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]), ifblock, NULL, f->implement);
+	block->statements.push_back(if_obj);
+
+	for (PlnStructMemberDef* mdef: struct_type->members) {
+		if (mdef->type->data_type == DT_OBJECT_REF) {
+			PlnValue var_val(f->parameters[0]);
+			auto struct_ex = new PlnExpression(var_val);
+			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
+			PlnExpression* free_member = mdef->type->freer->getFreeEx(member_ex);
+			ifblock->statements.push_back(new PlnStatement(free_member, block));
+		}
+	}
+
+	palan::free(ifblock, f->parameters[0]);
+
+	return f;
+}
+
+static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+{
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	string s1 = "__p1", s2 = "__p2";
+	// dst
+	PlnVariable* dst_var = f->addParam(s1, struct_type, PIO_INPUT, FPM_REF, NULL);
+	// src
+	PlnVariable* src_var = f->addParam(s2, struct_type, PIO_INPUT, FPM_REF, NULL);
+	f->parent = parent_block;
+
+	auto block = new PlnBlock();
+	block->setParent(f);
+	f->implement = block;
+	
+	for (PlnStructMemberDef* mdef: struct_type->members) {
+			auto dst_struct_ex = new PlnExpression(dst_var);
+			auto dst_member_ex = new PlnStructMember(dst_struct_ex, mdef->name);
+
+			auto src_struct_ex = new PlnExpression(src_var);
+			auto src_member_ex = new PlnStructMember(src_struct_ex, mdef->name);
+		if (mdef->type->data_type == DT_OBJECT_REF) {
+			PlnExpression* copy_member = mdef->type->copyer->getCopyEx(dst_member_ex, src_member_ex);
+			block->statements.push_back(new PlnStatement(copy_member, block));
+
+		} else {
+			vector<PlnExpression*> lvals = { dst_member_ex };
+			vector<PlnExpression*> exps = { src_member_ex };
 
 			auto assign = new PlnAssignment(lvals, exps);
 			block->statements.push_back(new PlnStatement(assign, block));
@@ -93,14 +165,18 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	inf.obj.alloc_size = alloc_size;
 
 	if (has_object_member) {
-		// TODO
-		PlnFunction *alloc_func = createObjMemberStructAllocFunc(name, this, parent);
-
+		PlnFunction *alloc_func = createObjMemberStructAllocFunc("_new_" + name, this, parent);
 		allocator = new PlnNoParamAllocator(alloc_func);
-		copyer = new PlnSingleObjectCopyer(alloc_size);
-		freer = new PlnSingleObjectFreer();
+
+		PlnFunction *copy_func = createObjMemberStructCopyFunc("_copy_" + name, this, parent);
+		copyer = new PlnTwoParamsCopyer(copy_func);
+
+		PlnFunction *free_func = createObjMemberStructFreeFunc("_free_" + name, this, parent);
+		freer = new PlnSingleParamFreer(free_func);
 
 		parent->parent_module->functions.push_back(alloc_func);
+		parent->parent_module->functions.push_back(copy_func);
+		parent->parent_module->functions.push_back(free_func);
 
 	} else {
 		allocator = new PlnSingleObjectAllocator(alloc_size);

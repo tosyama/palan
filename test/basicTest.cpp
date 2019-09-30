@@ -203,15 +203,17 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "32 1 64 1.23\n" "32 1 64 1.23 2112");
-	CHECK(mcheck("mtrace028") == "+2 -2");
+	REQUIRE(exec(testcode) == "32 1 64 1.23\n"
+								"32 1 64 1.23 2112\n"
+								"32 1 64 5.55 5");
+	CHECK(mcheck("mtrace028") == "+9 -9");
 
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
-// Error file ID: 500-580
+// Error file ID: 500-581
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -395,6 +397,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "580_dupinfervar_err3";
 	REQUIRE(build(testcode) == "0:3-3 Variable name 'i' already defined.");
+
+	testcode = "581_duptype_err";
+	REQUIRE(build(testcode) == "0:10-12 Type name 'A' already defined.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

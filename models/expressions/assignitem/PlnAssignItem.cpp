@@ -173,10 +173,14 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			di = new PlnDstPrimitiveItem(ex);
 
-		} else {
+		} else {	// dt == DT_OBJECT_REF
 			int at = ex->values[0].asgn_type;
 			if (at == ASGN_COPY_REF) {
 				di = new PlnDstPrimitiveItem(ex);
+			} else if (at == ASGN_MOVE) {
+				di = new PlnDstMoveIndirectObjItem(ex);
+			} else if (at == ASGN_COPY) {
+				di = new PlnDstCopyObjectItem(ex);
 			} else {
 				BOOST_ASSERT(false);
 			}

@@ -70,6 +70,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Type '%1%' has no member named '%2%'."; break;
 		case E_CantUseReadonlyExHere:
 			f = "Can't use read-only expression here."; break;
+		case E_DuplicateTypeName:
+			f = "Type name '%1%' already defined."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

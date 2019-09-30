@@ -681,7 +681,9 @@ void registerType(json& type, PlnScopeStack &scope)
 	string type_name = type["name"];
 	PlnType *cur_type = CUR_BLOCK->getType(type_name);
 	if (cur_type) {
-		BOOST_ASSERT(false);
+		PlnCompileError err(E_DuplicateTypeName, type_name);
+		setLoc(&err, type);
+		throw err;
 	}
 
 	// cur_type == NULL;
