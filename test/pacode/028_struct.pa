@@ -17,7 +17,7 @@ type Test2 {
 };
 
 int32 i, i2, i3, i4;
-int32 j, j2, j3, j4;
+int32 j, j2, j3, j4, j5;
 flo64 f, f2;
 
 setenv("MALLOC_TRACE", "out/mtrace028", 1);
@@ -37,7 +37,7 @@ mtrace();
 	refParam(t);
 	t -> t2;
 
-	Test2 tt, tt2;
+	Test2 tt, tt2, tt3;
 
 	i -> tt.test.i32;
 	i2 -> tt.test.b;
@@ -57,12 +57,15 @@ mtrace();
 	ar ->> tt2.arr16;
 	tt2.arr16[4] -> j4;
 
+	tt2.arr16 -> tt3.arr16;
+	tt3.arr16[0] -> j5;
+
 }
 
 muntrace();
 printf("%d %d %d %.2f\n", t2.i32, t2.b, t2.i64, t2.f32);
 printf("%d %d %d %.2f %d\n", i, i2, i3, f, i4);
-printf("%d %d %d %.2f %d", j, j2, j3, f2, j4);
+printf("%d %d %d %.2f %d %d", j, j2, j3, f2, j4, j5);
 
 func initTest(Test >>t) -> Test t
 {

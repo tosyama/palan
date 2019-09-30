@@ -205,8 +205,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "32 1 64 1.23\n"
 								"32 1 64 1.23 2112\n"
-								"32 1 64 5.55 5");
-	CHECK(mcheck("mtrace028") == "+9 -9");
+								"32 1 64 5.55 5 1");
+	CHECK(mcheck("mtrace028") == "+12 -12");
 
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");
