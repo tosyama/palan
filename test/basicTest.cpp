@@ -205,15 +205,16 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "32 1 64 1.23\n"
 								"32 1 64 1.23 2112\n"
-								"32 1 64 5.55 5 1");
-	CHECK(mcheck("mtrace028") == "+12 -12");
+								"32 1 64 5.55 5 1\n"
+								"10 11");
+	CHECK(mcheck("mtrace028") == "+57 -57");
 
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
-// Error file ID: 500-581
+// Error file ID: 500-582
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -400,6 +401,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "581_duptype_err";
 	REQUIRE(build(testcode) == "0:10-12 Type name 'A' already defined.");
+
+	testcode = "582_nomember_err2";
+	REQUIRE(build(testcode) == "0:3-3 Type 'int32' has no member named 'x'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

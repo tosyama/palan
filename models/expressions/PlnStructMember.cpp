@@ -37,8 +37,10 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 			throw err;
 		}
 
-	} else
-		BOOST_ASSERT(false);
+	} else {
+		PlnCompileError err(E_NoMemberName, t->name, member_name);
+		throw err;
+	}
 
 	BOOST_ASSERT(struct_ex->values[0].type == VL_VAR);
 	auto var = new PlnVariable();
