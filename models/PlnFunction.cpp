@@ -303,6 +303,7 @@ void PlnFunction::gen(PlnGenerator &g)
 			if (retval_init)
 				retval_init->gen(g);
 
+
 			// TODO: if malloc failed.
 			
 			implement->gen(g);

@@ -37,6 +37,7 @@ enum PlnErrCode {
 	E_NoMatchingParameter,	// none
 	E_NoMemberName,	// type name, member name
 	E_CantUseReadonlyExHere,	// none
+	E_DuplicateTypeName,	// type name
 
 	E_InvalidAST,	// source name, line
 

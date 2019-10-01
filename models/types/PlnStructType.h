@@ -16,7 +16,7 @@ class PlnStructType : public PlnType {
 public:
 	vector<PlnStructMemberDef*> members;
 
-	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members);
+	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent);
 	~PlnStructType();
 	PlnTypeConvCap canConvFrom(PlnType *src) override;
 };

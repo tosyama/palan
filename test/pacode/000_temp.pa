@@ -1,8 +1,19 @@
 ccall printf(byte[?] &format, ...) -> int32;
 
-int32 i = 10;
-int32 ii = 10;
+type A {
+	int32 a;
+	int64 b;
+	int32[3] arr;
+};
 
-func test() -> int32 i {
-	ii=50;
+type B {
+	int32 x;
+	A aa;
+};
+
+{
+	A[2] aaa;
+	2 -> aaa[0].a;
+	aaa[0] -> aaa[1];
+	B[2] bbb;
 }

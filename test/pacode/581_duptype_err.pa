@@ -1,0 +1,12 @@
+type A {
+	int64 a;
+};
+
+type B {
+	int64 b;
+};
+
+
+type A {
+	flo64 a;
+};
