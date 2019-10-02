@@ -5,11 +5,15 @@
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
-#include "../PlnType.h"
+#include "../PlnGeneralObject.h"
+#include "../PlnModule.h"
+#include "../PlnBlock.h"
+#include "../PlnFunction.h"
 #include "PlnFixedArrayType.h"
 #include "PlnArrayValueType.h"
+#include "../PlnArray.h"
 
-PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes)
+PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes, PlnBlock* parent)
 	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
 {
 	int alloc_size = item_type->size;
@@ -22,6 +26,48 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<in
 	this->inf.obj.is_fixed_size = true;
 	this->inf.obj.alloc_size = alloc_size;
 	this->sizes = move(sizes);
+
+	auto it = item_type;
+	
+	if (alloc_size == 0) {
+		// raw array reference.
+		freer = new PlnSingleObjectFreer();
+		// TODO: confirm it's OK  when data_type is object.
+		return;
+	}
+
+	if (it->data_type != DT_OBJECT_REF) {
+		allocator = new PlnSingleObjectAllocator(alloc_size);
+		freer = new PlnSingleObjectFreer();
+		copyer = new PlnSingleObjectCopyer(alloc_size);
+
+	} else {
+		// allocator
+		{
+			string fname = PlnBlock::generateFuncName("new", {this}, {});
+			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, this, parent);
+			parent->parent_module->functions.push_back(alloc_func);
+
+			allocator = new PlnNoParamAllocator(alloc_func);
+		}
+
+		// freer
+		{
+			string fname = PlnBlock::generateFuncName("del", {}, {this});
+			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, this, parent);
+			parent->parent_module->functions.push_back(free_func);
+
+			freer = new PlnSingleParamFreer(free_func);
+		}
+
+		// copyer
+		{
+			string fname = PlnBlock::generateFuncName("cpy", {}, {this,this});
+			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, this, parent);
+			parent->parent_module->functions.push_back(copy_func);
+			copyer = new PlnTwoParamsCopyer(copy_func);
+		}
+	}
 }
 
 PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)

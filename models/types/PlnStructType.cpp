@@ -165,13 +165,16 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	inf.obj.alloc_size = alloc_size;
 
 	if (has_object_member) {
-		PlnFunction *alloc_func = createObjMemberStructAllocFunc("_new_" + name, this, parent);
+		string fname = PlnBlock::generateFuncName("new", {this}, {});
+		PlnFunction *alloc_func = createObjMemberStructAllocFunc(fname, this, parent);
 		allocator = new PlnNoParamAllocator(alloc_func);
 
-		PlnFunction *copy_func = createObjMemberStructCopyFunc("_copy_" + name, this, parent);
+		fname = PlnBlock::generateFuncName("copy", {}, {this,this});
+		PlnFunction *copy_func = createObjMemberStructCopyFunc(fname, this, parent);
 		copyer = new PlnTwoParamsCopyer(copy_func);
 
-		PlnFunction *free_func = createObjMemberStructFreeFunc("_free_" + name, this, parent);
+		fname = PlnBlock::generateFuncName("free", {}, {this});
+		PlnFunction *free_func = createObjMemberStructFreeFunc(fname, this, parent);
 		freer = new PlnSingleParamFreer(free_func);
 
 		parent->parent_module->functions.push_back(alloc_func);

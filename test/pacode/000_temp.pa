@@ -5,6 +5,3 @@ type A {
 	int64 b;
 	int32[3] aa;
 };
-
-{
-}

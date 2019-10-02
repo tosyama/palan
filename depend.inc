@@ -69,9 +69,12 @@ PlnConditionalBranch.o:  \
 	models/expressions/PlnCmpOperation.h \
 	models/expressions/../../PlnConstants.h
 PlnFixedArrayType.o:  \
-	models/types/../../PlnConstants.h models/types/../PlnType.h \
-	models/types/../../PlnModel.h models/types/PlnFixedArrayType.h \
-	models/types/PlnArrayValueType.h
+	models/types/../../PlnConstants.h models/types/../PlnGeneralObject.h \
+	models/types/../../PlnModel.h models/types/../PlnType.h \
+	models/types/../PlnModule.h models/types/../PlnExpression.h \
+	models/types/../PlnBlock.h models/types/../PlnFunction.h \
+	models/types/PlnFixedArrayType.h models/types/PlnArrayValueType.h \
+	models/types/../PlnArray.h
 PlnArrayValueType.o:  \
 	models/types/../PlnType.h models/types/../../PlnModel.h \
 	models/types/../PlnBlock.h models/types/../PlnExpression.h \
@@ -81,8 +84,16 @@ PlnArrayValueType.o:  \
 	models/types/../../PlnConstants.h
 PlnStructType.o:  \
 	models/types/../../PlnModel.h models/types/../../PlnConstants.h \
+	models/types/../../PlnTreeBuildHelper.h \
+	models/types/../../PlnDataAllocator.h models/types/../../PlnGenerator.h \
 	models/types/../PlnGeneralObject.h models/types/../PlnType.h \
-	models/types/PlnStructType.h
+	models/types/../PlnFunction.h models/types/../PlnBlock.h \
+	models/types/../PlnExpression.h models/types/../PlnModule.h \
+	models/types/../PlnStatement.h models/types/../PlnVariable.h \
+	models/types/../PlnConditionalBranch.h \
+	models/types/../expressions/PlnStructMember.h \
+	models/types/../expressions/PlnAssignment.h \
+	models/types/../expressions/PlnMemCopy.h models/types/PlnStructType.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \

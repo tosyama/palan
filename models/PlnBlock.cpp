@@ -251,7 +251,7 @@ PlnType* PlnBlock::getType(const string& type_name)
 	return NULL;
 }
 
-static string createFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
+string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
 {
 	string ret_name, arg_name;
 	for (auto t: ret_types)
@@ -292,68 +292,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 	for (auto t: types) 
 		if (name == t->name) return t;
 	
-	auto t = new PlnFixedArrayType(name, item_type, sizes);
-	auto it = item_type;
-	int alloc_size = t->inf.obj.alloc_size;
-	
-	if (alloc_size == 0) {
-		// raw array reference.
-		types.push_back(t);
-		if (it->data_type != DT_OBJECT_REF) {
-			t->freer = new PlnSingleObjectFreer();
-		}
-		return t;
-	}
-
-	// set allocator & freer.
-	if (it->data_type != DT_OBJECT_REF) {
-		t->allocator = new PlnSingleObjectAllocator(alloc_size);
-		t->freer = new PlnSingleObjectFreer();
-		t->copyer = new PlnSingleObjectCopyer(alloc_size);
-
-	} else {
-		// allocator
-		{
-			string fname = createFuncName("new", {t}, {});
-			for (auto f: funcs) {
-				if (f->name == fname) {
-					BOOST_ASSERT(false);
-				}
-			}
-			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, t, this);
-			parent_module->functions.push_back(alloc_func);
-
-			t->allocator = new PlnNoParamAllocator(alloc_func);
-		}
-
-		// freer
-		{
-			string fname = createFuncName("del", {}, {t});
-			for (auto f: funcs) {
-				if (f->name == fname) {
-					BOOST_ASSERT(false);
-				}
-			}
-			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, t, this);
-			parent_module->functions.push_back(free_func);
-
-			t->freer = new PlnSingleParamFreer(free_func);
-		}
-
-		// copyer
-		{
-			string fname = createFuncName("cpy", {}, {t,t});
-			for (auto f: funcs) {
-				if (f->name == fname) {
-					BOOST_ASSERT(false);
-				}
-			}
-			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, t, this);
-			parent_module->functions.push_back(copy_func);
-			t->copyer = new PlnTwoParamsCopyer(copy_func);
-		}
-	}
-
+	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
 	types.push_back(t);
 	return t;
 }
