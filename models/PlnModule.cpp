@@ -42,24 +42,15 @@ int PlnModule::getJumpID()
 
 void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 {
+	for (auto f : functions)
+		f->genAsmName();
+
 	PlnScopeInfo si;
 	si.scope.push_back(PlnScopeItem(this));
 
 	g.genSecReadOnlyData();
 	g.genSecText();
 
-	for (auto f : functions)
-		f->genAsmName();
-
-	for (auto f : functions) {
-		f->finish(da, si);
-		f->gen(g);
-		f->clear();
-		da.reset();
-	}
-	
-	BOOST_ASSERT(si.scope.size() == 1);
-	BOOST_ASSERT(si.owner_vars.size() == 0);
 	palan::exit(toplevel, 0);
 	toplevel->finish(da, si);
 	da.finish(save_regs, save_reg_dps);
@@ -79,10 +70,42 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 	
 	toplevel->gen(g);
 	da.reset();
-	delete toplevel;
-	toplevel = NULL;
-
 	g.genMainReturn();
 	g.genEndFunc();
+
+	// Generate assembly of only the functions called.
+	// Note: call_count will be incremented at FunctionCall finising.
+	while(true) {
+		PlnFunction *f = NULL;
+		for (auto func : functions) {
+			if (!func->generated && func->call_count > 0) {
+				f = func;
+				break;
+			}
+		}
+
+		if (!f) break;
+
+		f->finish(da, si);
+		f->gen(g);
+		f->clear();
+		da.reset();
+		f->generated = true;
+	}
+
+	for (auto f : functions) {
+		if (!f->generated) {
+			// Do only finishing to detect code error
+			f->finish(da, si);
+			f->clear();
+			da.reset();
+		}
+	}
+	
+	BOOST_ASSERT(si.scope.size() == 1);
+	BOOST_ASSERT(si.owner_vars.size() == 0);
+
+	delete toplevel;
+	toplevel = NULL;
 }
 

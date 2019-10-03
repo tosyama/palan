@@ -5,3 +5,14 @@ type A {
 	int64 b;
 	int32[3] aa;
 };
+
+{
+A[3] a, b;
+
+a -> b;
+}
+
+func test()
+{
+	a = 1;
+}

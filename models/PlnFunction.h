@@ -47,6 +47,8 @@ public:
 	PlnBlock* parent;
 	bool has_va_arg;
 	int num_in_param, num_out_param;
+	int call_count;
+	bool generated;
 
 	PlnFunction(int func_type, const string& func_name);
 	PlnVariable* addRetValue(const string& rname, PlnType* rtype, bool readonly, bool do_init);

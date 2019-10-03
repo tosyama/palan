@@ -29,7 +29,8 @@ using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
 	:	type(func_type), name(func_name), retval_init(NULL), implement(NULL),
-		parent(NULL), has_va_arg(false), num_in_param(0), num_out_param(0)
+		parent(NULL), has_va_arg(false), num_in_param(0), num_out_param(0),
+		call_count(0), generated(false)
 {
 }
 

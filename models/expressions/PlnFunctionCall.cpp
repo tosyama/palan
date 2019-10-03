@@ -275,6 +275,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnFunctionCall::gen(PlnGenerator &g)
 {
+	function->call_count++;
 	switch (function->type) {
 		case FT_PLN:
 		{
