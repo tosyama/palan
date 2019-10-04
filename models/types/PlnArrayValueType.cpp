@@ -5,7 +5,6 @@
 
 #include <boost/assert.hpp>
 #include "../PlnType.h"
-// #include "../PlnModule.h"
 #include "../PlnBlock.h"
 #include "PlnArrayValueType.h"
 #include "../expressions/PlnArrayValue.h"

@@ -57,7 +57,6 @@ public:
 
 		if (dst_ex->type == ET_VALUE) {
 			PlnVariable* var = dst_ex->values[0].inf.var;
-			BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
 			if (si.get_lifetime(var) == VLT_FREED) {
 				PlnCompileError err(E_CantCopyFreedVar, var->name);
 				err.loc = dst_ex->loc;
@@ -72,8 +71,18 @@ public:
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
+				PlnVariable* dst_var = dst_ex->values[0].inf.var;
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
-				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+				vector<PlnExpression*> dst_items;
+				if (dst_var->var_type->type == TP_FIXED_ARRAY) {
+					dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+
+				} else if (dst_var->var_type->type == TP_STRUCT) {
+					dst_items = PlnStructMember::getAllStructMembers(dst_ex->values[0].inf.var);
+
+				} else
+					BOOST_ASSERT(false);
+
 				BOOST_ASSERT(val_items.size() == dst_items.size());
 
 				for (int i=0; i<val_items.size(); i++) {

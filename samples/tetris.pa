@@ -111,8 +111,7 @@ stdscr->waddstr("q:quit");
 
 fldwin = newwin(FLD_H+2, FLD_W*2+2, 1, 0);
 
-timespec ts;
-0, 10*1000*1000 -> ts.tv_sec, ts.tv_nsec;
+timespec ts = [0, 10*1000*1000];
 
 // event loop
 is_running = true;

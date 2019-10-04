@@ -201,6 +201,11 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 	if (src == PlnType::getObject()) {
 		return TC_DOWN_CAST;
 	}
+
+	if (src->type == TP_ARRAY_VALUE) {
+		// TODO: need detail check.
+		return TC_SAME;
+	}
 	
 	return TC_CANT_CONV;
 }

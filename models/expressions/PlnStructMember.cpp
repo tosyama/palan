@@ -103,3 +103,17 @@ void PlnStructMember::gen(PlnGenerator& g)
 	}
 }
 
+vector<PlnExpression*> PlnStructMember::getAllStructMembers(PlnVariable* var)
+{
+	BOOST_ASSERT(var->var_type->type == TP_STRUCT);
+	vector<PlnExpression*> member_exs;
+
+	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type);
+	for (auto member: stype->members) {
+		PlnExpression* var_ex = new PlnExpression(var);
+		PlnExpression* member_ex = new PlnStructMember(var_ex, member->name);
+		member_exs.push_back(member_ex);
+	}
+
+	return member_exs;
+}
