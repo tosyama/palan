@@ -1,7 +1,7 @@
 /// Conditi Branch model classes declaration.
 ///
 /// @file	PlnConditionalBranch.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include "PlnStatement.h"
 
@@ -15,11 +15,10 @@ public:
 	PlnStatement* next;
 
 	PlnIfStatement(PlnExpression* condition, PlnBlock* block, PlnStatement* next, PlnBlock* parent);
+	PlnIfStatement(const PlnIfStatement &) = delete;
 	~PlnIfStatement();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 };
-
-
 

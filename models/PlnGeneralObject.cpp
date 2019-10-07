@@ -1,7 +1,7 @@
 /// Generic object utility definitions.
 ///
 /// @file	PlnGeneralObject.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnConstants.h"
 #include "expressions/PlnFunctionCall.h"
@@ -73,6 +73,8 @@ public:
 		: PlnDeepCopyExpression(ET_FUNCCALL) {
 			fcall = new PlnFunctionCall(f);
 	}
+
+	PlnDeepCopyFuncCall(const PlnDeepCopyFuncCall&) = delete;
 
 	PlnDataPlace* dstDp(PlnDataAllocator &da) override {
 		if (!fcall->arg_dps.size()) {

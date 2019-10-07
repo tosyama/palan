@@ -19,6 +19,7 @@ public:
 	vector<PlnFunction*> functions;
 
 	PlnModule();
+	PlnModule(const PlnModule&) = delete;
 	~PlnModule();
 
 	int getJumpID();
