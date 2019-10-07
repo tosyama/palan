@@ -214,7 +214,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
-// Error file ID: 500-582
+// Error file ID: 500-583
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -404,6 +404,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "582_nomember_err2";
 	REQUIRE(build(testcode) == "0:3-3 Type 'int32' has no member named 'x'.");
+
+	testcode = "583_structtype_err2";
+	REQUIRE(build(testcode) == "0:6-6 Incompatible types in assignment of 'array value' to 'AB'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

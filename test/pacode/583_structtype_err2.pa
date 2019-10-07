@@ -1,0 +1,6 @@
+type AB {
+	int32 a;
+	int64 b;
+};
+
+AB ab = [1,2,3];
