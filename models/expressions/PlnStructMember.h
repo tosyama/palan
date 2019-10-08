@@ -17,5 +17,7 @@ public:
 	
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
+
+	static vector<PlnExpression*> getAllStructMembers(PlnVariable* var);
 };
 

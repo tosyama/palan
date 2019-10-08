@@ -1,7 +1,7 @@
 /// PlnBoolOperation model class declaration.
 ///
 /// @file	PlnBoolOperation.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
 
 #include "PlnCmpOperation.h"
 
@@ -13,6 +13,7 @@ protected:
 	PlnCmpOperation *l, *r;
 public:
 	PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
+	PlnBoolOperation(const PlnBoolOperation&) = delete;
 	~PlnBoolOperation();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;

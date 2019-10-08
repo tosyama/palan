@@ -21,6 +21,7 @@
 #include "../PlnClone.h"
 #include "../PlnArrayValue.h"
 #include "../PlnArrayItem.h"
+#include "../PlnStructMember.h"
 #include "../../types/PlnFixedArrayType.h"
 #include "PlnAssignItem.h"
 

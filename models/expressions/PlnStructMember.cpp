@@ -37,8 +37,10 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 			throw err;
 		}
 
-	} else
-		BOOST_ASSERT(false);
+	} else {
+		PlnCompileError err(E_NoMemberName, t->name, member_name);
+		throw err;
+	}
 
 	BOOST_ASSERT(struct_ex->values[0].type == VL_VAR);
 	auto var = new PlnVariable();
@@ -81,6 +83,10 @@ void PlnStructMember::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto base_dp = da.prepareObjBasePtr();
 	struct_ex->data_places.push_back(base_dp);
 	struct_ex->finish(da, si);
+	if (struct_ex->values[0].inf.var->name == "bb[]") {
+		BOOST_ASSERT(base_dp->src_place);
+		BOOST_ASSERT(base_dp->src_place->type);
+	}
 
 	auto member_dp = member_var->place;
 	da.setIndirectObjDp(member_dp, base_dp, NULL, def->offset);
@@ -101,3 +107,17 @@ void PlnStructMember::gen(PlnGenerator& g)
 	}
 }
 
+vector<PlnExpression*> PlnStructMember::getAllStructMembers(PlnVariable* var)
+{
+	BOOST_ASSERT(var->var_type->type == TP_STRUCT);
+	vector<PlnExpression*> member_exs;
+
+	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type);
+	for (auto member: stype->members) {
+		PlnExpression* var_ex = new PlnExpression(var);
+		PlnExpression* member_ex = new PlnStructMember(var_ex, member->name);
+		member_exs.push_back(member_ex);
+	}
+
+	return member_exs;
+}

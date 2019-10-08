@@ -7,7 +7,13 @@ type int int32;
 type overwrite int int64;
 
 // struct
-type tm {int32 tm_sec, tm_min, tm_hour;}
+type struct_tm {int32 tm_sec, tm_min, tm_hour}
+// initialize
+struct_tm t = { tm_sec:10, tm_min:20, tm_hour:1 }
+struct_tm t2 = [10, 20, 1];
+// assign
+[10,20,1] -> t;
+({tm_sec:10, tm_min:20, tm_hour:1}) -> t;
 
 interface bar {
 	calc(bar b) -> int64;

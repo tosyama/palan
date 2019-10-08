@@ -8,6 +8,7 @@
 #include "PlnArrayValue.h"
 #include "../types/PlnArrayValueType.h"
 #include "../types/PlnFixedArrayType.h"
+#include "../types/PlnStructType.h"
 #include "../../PlnConstants.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
@@ -147,27 +148,51 @@ static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayType* atyp
 	}
 }
 
+static void adjustStructType(PlnArrayValue* arr_val, PlnStructType* stype)
+{
+	if (arr_val->item_exps.size() != stype->members.size()) {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), stype->name);
+		err.loc = arr_val->loc;
+		throw err;
+	}
+
+	int size = arr_val->item_exps.size();
+	for (int i=0; i<size; ++i) {
+		vector<PlnType*> types = { stype->members[i]->type };
+		PlnExpression* &exp = arr_val->item_exps[i];
+		exp = exp->adjustTypes(types);
+	}
+}
+
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
 	PlnType* type = types[0];
-	if (type->type != TP_FIXED_ARRAY) {
+	if (type->type == TP_FIXED_ARRAY)  {
+		PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
+		adjustFixedArrayType(this, atype);
+
+		delete values[0].inf.wk_type;	// PlnArrayValueType
+		values[0].inf.wk_type = types[0];
+		if (isLiteral && atype->item_type->data_type != DT_OBJECT_REF) {
+			doCopyFromStaticBuffer = true;
+		}
+		return this;
+
+	} else if (type->type == TP_STRUCT) {
+		PlnStructType* stype = static_cast<PlnStructType*>(type);
+		adjustStructType(this, stype);
+
+		delete values[0].inf.wk_type;	// PlnArrayValueType
+		values[0].inf.wk_type = types[0];
+
+		return this;
+
+	} else {
 		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
 		err.loc = loc;
 		throw err;
 	}
-
-	PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
-
-	adjustFixedArrayType(this, atype);
-
-	delete values[0].inf.wk_type;
-	values[0].inf.wk_type = types[0];
-	if (isLiteral && atype->item_type->data_type != DT_OBJECT_REF) {
-		doCopyFromStaticBuffer = true;
-	}
-
-	return this;
 }
 
 template<typename T>
@@ -238,10 +263,18 @@ static void pushArrayValItemExp(PlnArrayValue* arr_val, vector<int> &sizes, vect
 
 vector<PlnExpression*> PlnArrayValue::getAllItems()
 {
-	BOOST_ASSERT(values[0].inf.wk_type->type == TP_FIXED_ARRAY);
-	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
 	vector<PlnExpression*> items;
-	pushArrayValItemExp(this, farr_type->sizes, items);
+	if (values[0].inf.wk_type->type == TP_FIXED_ARRAY) {
+		PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type);
+		pushArrayValItemExp(this, farr_type->sizes, items);
+
+	} else if (values[0].inf.wk_type->type == TP_STRUCT) {
+		PlnStructType *struct_type = static_cast<PlnStructType*>(values[0].inf.wk_type);
+		vector<int> sizes = { static_cast<int>(struct_type->members.size()) };
+		pushArrayValItemExp(this, sizes, items);
+
+	} else
+		BOOST_ASSERT(false);
 
 	return items;
 }

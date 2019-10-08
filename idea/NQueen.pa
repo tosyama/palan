@@ -7,7 +7,7 @@ scanf("%d", &n);
 
 int[#n,n] board = 0;
 int count;
-queen(borad>>, 0, n) ->> board, count ;
+board.queen(0, n)-> count ;
 
 printf("answer: %d", count);
 
@@ -42,7 +42,7 @@ func queen(int[#,] >> board, x, y)
 	} else {
 		for yy: n>>1 {
 			int c;
-			board ->> queen(x+1, yy) ->> board, c;
+			board.queen(x+1, yy) -> c;
 			c +-> count;
 		}
 	}

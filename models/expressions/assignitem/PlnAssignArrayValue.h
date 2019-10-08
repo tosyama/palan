@@ -57,7 +57,6 @@ public:
 
 		if (dst_ex->type == ET_VALUE) {
 			PlnVariable* var = dst_ex->values[0].inf.var;
-			BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
 			if (si.get_lifetime(var) == VLT_FREED) {
 				PlnCompileError err(E_CantCopyFreedVar, var->name);
 				err.loc = dst_ex->loc;
@@ -72,8 +71,18 @@ public:
 
 		} else {
 			if (dst_ex->type == ET_VALUE) {
+				PlnVariable* dst_var = dst_ex->values[0].inf.var;
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
-				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+				vector<PlnExpression*> dst_items;
+				if (dst_var->var_type->type == TP_FIXED_ARRAY) {
+					dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
+
+				} else if (dst_var->var_type->type == TP_STRUCT) {
+					dst_items = PlnStructMember::getAllStructMembers(dst_ex->values[0].inf.var);
+
+				} else
+					BOOST_ASSERT(false);
+
 				BOOST_ASSERT(val_items.size() == dst_items.size());
 
 				for (int i=0; i<val_items.size(); i++) {
@@ -87,7 +96,8 @@ public:
 					ai->finishS(da, si);
 				}
 
-			} else if (dst_ex->type == ET_ARRAYITEM) {
+			} else if (dst_ex->type == ET_ARRAYITEM
+					|| dst_ex->type == ET_STRUCTMEMBER) {
 				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
 				alloc_ex = tmp_var->var_type->allocator->getAllocEx();
 				alloc_ex->data_places.push_back(tmp_var->place);
@@ -99,7 +109,16 @@ public:
 				dst_item->setSrcEx(da, si, tmp_var_ex);
 
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
-				vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(tmp_var);
+				vector<PlnExpression*> dst_items;
+				if (tmp_var->var_type->type == TP_FIXED_ARRAY) {
+					dst_items = PlnArrayItem::getAllArrayItems(tmp_var);
+
+				} else if (tmp_var->var_type->type == TP_STRUCT) {
+					dst_items = PlnStructMember::getAllStructMembers(tmp_var);
+
+				} else
+					BOOST_ASSERT(false);
+
 				BOOST_ASSERT(val_items.size() == dst_items.size());
 				for (int i=0; i<val_items.size(); i++) {
 					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
@@ -129,7 +148,7 @@ public:
 				}
 				dst_ex->finish(da, si);
 
-			} else if (dst_ex->type == ET_ARRAYITEM) {
+			} else if (dst_ex->type == ET_ARRAYITEM || dst_ex->type == ET_STRUCTMEMBER) {
 				tmp_var_ex->finish(da,si);
 				dst_item->finish(da,si);
 

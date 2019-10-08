@@ -12,6 +12,7 @@
 #include "PlnClone.h"
 #include "PlnArrayValue.h"
 #include "PlnArrayItem.h"
+#include "PlnStructMember.h"
 #include "assignitem/PlnAssignItem.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_type, bool keep_var)
@@ -45,7 +46,14 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (directAssign) {
 		BOOST_ASSERT(src_ex->type == ET_ARRAYVALUE);
 		vector<PlnExpression*> val_items = static_cast<PlnArrayValue*>(src_ex)->getAllItems();
-		vector<PlnExpression*> dst_items = PlnArrayItem::getAllArrayItems(var);
+		vector<PlnExpression*> dst_items;
+		if (var->var_type->type == TP_FIXED_ARRAY) {
+			dst_items = PlnArrayItem::getAllArrayItems(var);
+		} else if (var->var_type->type == TP_STRUCT) {
+			dst_items = PlnStructMember::getAllStructMembers(var);
+		} else
+			BOOST_ASSERT(false);
+
 		for (int i=0; i<val_items.size(); i++) {
 			PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
 			dst_items[i]->values[0].asgn_type = ASGN_COPY;

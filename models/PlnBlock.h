@@ -54,4 +54,6 @@ public:
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
+
+	static string generateFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types);
 };

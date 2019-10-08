@@ -19,11 +19,13 @@ type Test2 {
 int32 i, i2, i3, i4;
 int32 j, j2, j3, j4, j5;
 flo64 f, f2;
+int64 k, k2, k3;
 
 setenv("MALLOC_TRACE", "out/mtrace028", 1);
 Test t2;
 mtrace();
 {
+	// simple struct
 	Test t;
 	initTest(t>>)->>t;
 	t.i32 -> i;
@@ -37,6 +39,7 @@ mtrace();
 	refParam(t);
 	t -> t2;
 
+	// struct that have object member
 	Test2 tt, tt2, tt3;
 
 	i -> tt.test.i32;
@@ -46,8 +49,9 @@ mtrace();
 
 	tt -> tt2;
 
+	Test2 &reftt2 = tt2;
 	tt2.test.i32 -> j;
-	tt2.test.b -> j2;
+	reftt2.test.b -> j2;
 	tt2.test.i64 -> j3;
 
 	tt2.test ->> t;
@@ -60,12 +64,38 @@ mtrace();
 	tt2.arr16 -> tt3.arr16;
 	tt3.arr16[0] -> j5;
 
+	// struct array
+	Test[5] tarr;
+	10 -> tarr[0].f32;
+	tarr[0].f32 -> k;
+	
+	// complex struct array
+	x = 99;
+	const TEST2_VAL = [11, [21,22,23,24.4], [31,32,33,34,35] ];
+	const TEST2_VALx2 = [TEST2_VAL, TEST2_VAL];
+	Test2[2][3,2] cmplxarr =
+		[[TEST2_VALx2, TEST2_VALx2, TEST2_VALx2]]
+		[
+			[
+				TEST2_VALx2,TEST2_VALx2,
+				[ TEST2_VAL, [11, [21,22,23,24.4], [31,32,33,34,x]] ]
+			]
+		];
+
+	cmplxarr[0][1,1].test.i32-> k2;
+	cmplxarr[1][2,1].arr16[4]-> k3;
+
+	// ArrayValue for Test
+	copyParam([1,2,3,3.3]);
+	// ArrayValue for Test2
+	copyParam([1,[1,2,3,4],[1,2,3,4,5]]);
 }
 
 muntrace();
 printf("%d %d %d %.2f\n", t2.i32, t2.b, t2.i64, t2.f32);
 printf("%d %d %d %.2f %d\n", i, i2, i3, f, i4);
-printf("%d %d %d %.2f %d %d", j, j2, j3, f2, j4, j5);
+printf("%d %d %d %.2f %d %d\n", j, j2, j3, f2, j4, j5);
+printf("%d %d %d", k, k2, k3);
 
 func initTest(Test >>t) -> Test t
 {
@@ -82,6 +112,23 @@ func copyParam(Test t)
 	99 -> t.i64;
 	99.9 -> t.f32;
 }
+
+// Dummy
+func copyParam(Test2 t)
+{
+}
+
+type Test3 {
+	int32[2] a;
+	int32 b;
+	int32 c;
+	int32 d;
+};
+
+func copyParam(Test3 t)
+{
+}
+
 
 func refParam(Test& t)
 {
