@@ -46,27 +46,6 @@ PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 
 PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false); }
 
-inline PlnTypeConvCap lowCap(PlnTypeConvCap l, PlnTypeConvCap r)
-{
-	BOOST_ASSERT(l!=TC_CANT_CONV);
-
-	if (l == TC_SAME) {
-		return r;
-	}
-
-	if (l == TC_AUTO_CAST) {
-		if (r != TC_SAME) return r;
-		return TC_AUTO_CAST;
-	}
-
-	if (l == TC_LOSTABLE_AUTO_CAST) {
-		if (r == TC_CANT_CONV) return TC_CANT_CONV;
-		return TC_LOSTABLE_AUTO_CAST;
-	}
-
-	BOOST_ASSERT(false);
-}
-
 static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* item_type, const vector<int>& sizes, int depth)
 {
 	int items_num = sizes[depth];
@@ -77,7 +56,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* 
 	if (sizes.size() == (depth+1) ) {
 		// check item type conpatible 
 		for (auto exp: arr_val->item_exps) {
-			result = lowCap(result, item_type->canConvFrom(exp->values[0].getType()));
+			result = PlnType::lowCapacity(result, item_type->canConvFrom(exp->values[0].getType()));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}
@@ -89,7 +68,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* 
 				return TC_CANT_CONV;
 
 			PlnArrayValue* item_arr_val = static_cast<PlnArrayValue*>(exp);
-			result = lowCap(result, checkFixedArrayItemTypes(item_arr_val, item_type, sizes, depth+1));
+			result = PlnType::lowCapacity(result, checkFixedArrayItemTypes(item_arr_val, item_type, sizes, depth+1));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}

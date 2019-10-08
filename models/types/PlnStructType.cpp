@@ -19,7 +19,9 @@
 #include "../expressions/PlnStructMember.h"
 #include "../expressions/PlnAssignment.h"
 #include "../expressions/PlnMemCopy.h"
+#include "../expressions/PlnArrayValue.h"
 #include "PlnStructType.h"
+#include "PlnArrayValueType.h"
 
 PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
 	: type(type), name(name), offset(0)
@@ -203,8 +205,20 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 	}
 
 	if (src->type == TP_ARRAY_VALUE) {
-		// TODO: need detail check.
-		return TC_SAME;
+		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src)->arr_val;
+
+		if (arr_val->item_exps.size() != members.size())
+			return TC_CANT_CONV;
+
+		PlnTypeConvCap cap = TC_SAME;
+		int i = 0;
+		for (auto member: members) {
+			PlnType* src_type = arr_val->item_exps[i]->values[0].getType();
+			cap = PlnType::lowCapacity(cap, member->type->canConvFrom(src_type));
+			i++;
+		}
+
+		return cap;
 	}
 	
 	return TC_CANT_CONV;

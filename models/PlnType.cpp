@@ -330,3 +330,25 @@ PlnTypeConvCap PlnType::canConvFrom(PlnType *src)
 	return TC_CANT_CONV;
 }
 
+PlnTypeConvCap PlnType::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
+{
+	if (l == TC_SAME) {
+		return r;
+	}
+
+	if (l == TC_AUTO_CAST) {
+		if (r != TC_SAME) return r;
+		return TC_AUTO_CAST;
+	}
+
+	if (l == TC_LOSTABLE_AUTO_CAST) {
+		if (r == TC_CANT_CONV) return TC_CANT_CONV;
+		return TC_LOSTABLE_AUTO_CAST;
+	}
+
+	if (l == TC_CANT_CONV)
+		return TC_CANT_CONV;
+
+	BOOST_ASSERT(false);
+}
+

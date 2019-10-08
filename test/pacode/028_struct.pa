@@ -84,6 +84,11 @@ mtrace();
 
 	cmplxarr[0][1,1].test.i32-> k2;
 	cmplxarr[1][2,1].arr16[4]-> k3;
+
+	// ArrayValue for Test
+	copyParam([1,2,3,3.3]);
+	// ArrayValue for Test2
+	copyParam([1,[1,2,3,4],[1,2,3,4,5]]);
 }
 
 muntrace();
@@ -106,6 +111,11 @@ func copyParam(Test t)
 	99 -> t.b;
 	99 -> t.i64;
 	99.9 -> t.f32;
+}
+
+// Dummy
+func copyParam(Test2 t)
+{
 }
 
 func refParam(Test& t)

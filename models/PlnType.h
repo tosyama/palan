@@ -81,4 +81,5 @@ public:
 	static PlnType* getAny();
 
 	static string getFixedArrayName(PlnType* item_type, vector<int>& sizes);
+	static PlnTypeConvCap lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r);
 };
