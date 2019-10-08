@@ -118,6 +118,18 @@ func copyParam(Test2 t)
 {
 }
 
+type Test3 {
+	int32[2] a;
+	int32 b;
+	int32 c;
+	int32 d;
+};
+
+func copyParam(Test3 t)
+{
+}
+
+
 func refParam(Test& t)
 {
 	if t.i32 != 32 {
