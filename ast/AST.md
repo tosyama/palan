@@ -59,7 +59,7 @@ Parameter
 ---------
 *   name\* - Parameter name string
 *   var-type\# - Variable type list
-*   pass-by\* - Passing way string: "copy", "move", "ro-ref", "read":for variable argument, "write"
+*   pass-by\* - Passing way string: "copy", "move", "ro-ref"(obsolete), "read":for variable argument, "write"
 *   default-val - Default value expression
 *   loc - Location integer array
 
@@ -72,12 +72,12 @@ Return value
 ------------
 1.  Anonymous return value
     *   var-type\* - Variable type list
-    *   ro-ref - Read only reference boolean
+    *   ro-ref - Read only reference boolean(obsolute)
 
 2.  Standard return value
     *   var-type - Variable type list
     *   name\* - Return value name string
-    *   ro-ref - Read only reference boolean
+    *   ro-ref - Read only reference boolean(obsolute)
 
 *   loc - Location integer array
 
@@ -88,6 +88,10 @@ Variable Type
         *   sizes\* - Expression list (lit-int:-1 - size inference)
 
     2.  any - Specified variable type name
+
+*   mode\* - mode string: "rwo" "r--" 
+	1.  rwo - default: can read/write and owner (responsible for alloc/free)
+	2.  r-- - read-only and not owner
 
 *   loc - Location integer array
 
@@ -217,7 +221,7 @@ Variable Declaration
 *   name\* - Variable name string
 *   var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
 *   move - Move ownership flag boolean
-*   ro-ref - Read only reference boolean
+*   ro-ref - Read only reference boolean(obsolete)
 *   loc - Location integer array
 
 Argument
@@ -229,6 +233,7 @@ Struct member
 -------------
 *   type\# - Variable type list
 *   name\* - Variable name string
+*   ro-ref - Read only reference boolean(obsolete)
 
 Location Array
 --------------

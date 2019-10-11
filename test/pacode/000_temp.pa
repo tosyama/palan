@@ -1,9 +1,9 @@
-ccall printf(byte[?] &format, ...) -> int32;
+ccall printf(byte[?]@ format, ...) -> int32;
 
 type A {
 	int32 a;
 	int64 b;
-	int32[3,2] aa;
+	int32[3,2]@ aa;
 };
 
 type B {
@@ -11,17 +11,4 @@ type B {
 	int32 b;
 };
 
-int64 x = 10;
-
-A a = [12,x,[1,2][3,4][5,6]];
-
-[1,2,[5,6][7,8][9,10]] -> a;
-
-A[2] aa;
-	[	1,2,
-		[1,2][3,4][5,6]
-	]
-	[	3,4,
-		[11,12][13,14][x,16]
-	] -> aa;
 

@@ -23,8 +23,8 @@
 #include "PlnStructType.h"
 #include "PlnArrayValueType.h"
 
-PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
-	: type(type), name(name), offset(0)
+PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name, bool is_ro_ref)
+	: type(type), name(name), offset(0), is_ro_ref(is_ro_ref)
 {
 }
 

@@ -120,7 +120,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%' '&'
-%left UMINUS '!'
+%left UMINUS '!' '@'
 %left '.'
 
 %start module	
@@ -369,7 +369,7 @@ move_owner: /* empty */	{ $$ = false; }
 	;
 
 pass_by: DBL_GRTR { $$ = "move"; }
-	| '&' { $$ = "ro-ref"; }
+	| '@' { $$ = "ro-ref"; }
 	;
 
 default_value:	/* empty */	{  }
@@ -442,7 +442,7 @@ single_return: /* empty */ { }
 	;
 
 at_lib: /* empty */
-	| '@' ID
+	| ':' ID
 	{
 		json lib = {{ "name", $2 }};
 		ast["ast"]["libs"].push_back(lib);
@@ -1111,21 +1111,25 @@ type_def: KW_TYPE ID
 	}
 	;
 
-struct_def: type ID
+struct_def: type ro_ref ID
 	{
 		json member = {
 			{"type", $1},
-			{"name", $2},
+			{"name", $3},
 		};
+		if ($2)
+			member["ro-ref"] = true;
 		$$.push_back(member);
 	}
-	| struct_def ';' type ID
+	| struct_def ';' type ro_ref ID
 	{
 		$$ = move($1);
 		json member = {
 			{"type", $3},
-			{"name", $4},
+			{"name", $5},
 		};
+		if ($4)
+			member["ro-ref"] = true;
 		$$.push_back(member);
 	}
 	| struct_def ';'
@@ -1181,7 +1185,7 @@ subdeclaration: ID take_owner
 	;
 
 ro_ref:	/* empty */ { $$ = false; }
-	| '&' { $$ = true; }
+	| '@' { $$ = true; }
 	;
 
 take_owner: /* empty */ { $$ = false; }

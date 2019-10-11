@@ -697,8 +697,13 @@ void registerType(json& type, PlnScopeStack &scope)
 		vector<PlnStructMemberDef*> members;
 		for (auto m: type["members"]) {
 			PlnType* t = getVarType(m["type"], scope);
+			bool is_ro_ref = false;
 
-			auto member = new PlnStructMemberDef(t, m["name"]);
+			if (m["ro-ref"].is_boolean()) {
+				is_ro_ref = m["ro-ref"];
+			}
+
+			auto member = new PlnStructMemberDef(t, m["name"], is_ro_ref);
 			members.push_back(member);
 		}
 		CUR_BLOCK->declareType(type_name, members);

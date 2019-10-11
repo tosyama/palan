@@ -62,7 +62,7 @@ func swap(int sx, sy)
 }
 
 // object
-func funco(object o1, >>o2, >>o3, &o4, io o5)
+func funco(object o1, >>o2, >>o3, object@ o4, object io o5)
 	-> object o2
 {
 	// o1 は rval input only.(clone would be created before func call and callee free it)
