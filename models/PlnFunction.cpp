@@ -113,6 +113,11 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 		else // FMP_REF
 			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
 
+		if (t->mode == "r--") {
+			BOOST_ASSERT(pass_method != FPM_MOVEOWNER);
+			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
+		}
+
 	} else {
 		if (pass_method == FPM_COPY)
 			param->ptr_type = NO_PTR;

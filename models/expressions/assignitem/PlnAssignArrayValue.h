@@ -57,7 +57,7 @@ public:
 
 		if (dst_ex->type == ET_VALUE) {
 			PlnVariable* var = dst_ex->values[0].inf.var;
-			if (si.get_lifetime(var) == VLT_FREED) {
+			if (var->var_type->mode[2] == 'o' && si.get_lifetime(var) == VLT_FREED) {
 				PlnCompileError err(E_CantCopyFreedVar, var->name);
 				err.loc = dst_ex->loc;
 				throw err;

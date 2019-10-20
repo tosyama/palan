@@ -37,7 +37,7 @@ PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 				BOOST_ASSERT(false);
 		}
 
-		return block->getFixedArrayType(itype, fixarr_sizes);
+		return block->getFixedArrayType(itype, fixarr_sizes, "rwo");
 	}
 
 	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");

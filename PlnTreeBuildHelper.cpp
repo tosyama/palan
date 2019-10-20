@@ -93,7 +93,7 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type);
 	vector<int> raw_sizes = {0};
 
-	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes);
+	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes, "rw-");
 
 	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }

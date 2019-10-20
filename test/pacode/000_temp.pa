@@ -1,9 +1,9 @@
-ccall printf(byte[?]@ format, ...) -> int32;
+ccall printf(byte[?]@ &format, ...) -> int32;
 
 type A {
 	int32 a;
 	int64 b;
-	int32[3,2]@ aa;
+//	int32[3,2]@ &aa;
 };
 
 type B {
@@ -11,4 +11,10 @@ type B {
 	int32 b;
 };
 
+int32[3] xx;
+int16[3]@ x = [1,2,3];
 
+test(x);
+
+func test (int16[3]@ &x) {
+}

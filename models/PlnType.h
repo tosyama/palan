@@ -47,6 +47,7 @@ public:
 	PlnTypeType type;
 	int	data_type;
 	string name;
+	string mode;
 	int size;
 	union {
 		struct {
@@ -54,6 +55,11 @@ public:
 			int alloc_size;
 		} obj;
 	} inf;
+
+	// Cross referens of Type objects for each mode
+	PlnType* r_type;
+	// PlnType* rw_type;
+	PlnType* rwo_type;
 
 	PlnAllocator *allocator;
 	PlnFreer *freer;
@@ -69,6 +75,7 @@ public:
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
 	virtual ~PlnType();
 	virtual PlnTypeConvCap canConvFrom(PlnType *src);
+	virtual PlnType* getTypeWithMode(const string& mode);
 
 	static void initBasicTypes();
 	static vector<PlnType*>& getBasicTypes();

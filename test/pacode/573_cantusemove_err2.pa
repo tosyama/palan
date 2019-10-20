@@ -2,7 +2,7 @@ int32[10] a;
 
 reffunc(a);
 
-func reffunc(int32[10] @aa)
+func reffunc(int32[10]@ &aa)
 {
 	mvfunc(aa>>);
 }

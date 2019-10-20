@@ -369,7 +369,7 @@ move_owner: /* empty */	{ $$ = false; }
 	;
 
 pass_by: DBL_GRTR { $$ = "move"; }
-	| '@' { $$ = "ro-ref"; }
+	| '&' { $$ = "ro-ref"; }
 	;
 
 default_value:	/* empty */	{  }
@@ -1185,7 +1185,7 @@ subdeclaration: ID take_owner
 	;
 
 ro_ref:	/* empty */ { $$ = false; }
-	| '@' { $$ = true; }
+	| '&' { $$ = true; }
 	;
 
 take_owner: /* empty */ { $$ = false; }
@@ -1264,7 +1264,8 @@ type: type_or_var
 type_or_var: ID
 	{
 		json ptype = {
-			{"name", $1}
+			{"name", $1},
+			{"mode", "rwo"}
 		};
 		LOC(ptype, @$);
 		$$.push_back(move(ptype));
@@ -1272,7 +1273,8 @@ type_or_var: ID
 	| type_or_var '.' ID
 	{
 		json ptype = {
-			{"name", $3}
+			{"name", $3},
+			{"mode", "rwo"}
 		};
 		LOC(ptype, @3);
 		$$ = move($1);
@@ -1282,11 +1284,17 @@ type_or_var: ID
 	{
 		json atype = {
 			{"name", "[]"},
-			{"sizes", move($3)}
+			{"sizes", move($3)},
+			{"mode", "rwo"}
 		};
 		LOC(atype, @$);
 		$$ = move($1);
 		$$.push_back(move(atype));
+	}
+	| type_or_var '@'
+	{
+		$$ = move($1);
+		$$.back()["mode"] = "r--";
 	}
 	;
 

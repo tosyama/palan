@@ -68,6 +68,7 @@ static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 #define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
 #define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
 
+bool migrate = true;
 PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
 }
@@ -113,7 +114,8 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 	assertAST(var_type[0]["name"].is_string(), var_type);
 
 	string type_name = var_type[0]["name"];
-	ret_vt = CUR_BLOCK->getType(type_name);
+	string mode = var_type[0]["mode"];
+	ret_vt = CUR_BLOCK->getType(type_name, mode);
 	if (!ret_vt) {
 		PlnCompileError err(E_UndefinedType, type_name);
 		setLoc(&err, var_type[0]);
@@ -123,6 +125,7 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 	for (int i=var_type.size()-1; i>0; --i) {
 		json &vt = var_type[i];
 		type_name = vt["name"];
+		mode = vt["mode"];
 
 		assertAST(type_name == "[]", vt);
 		assertAST(vt["sizes"].is_array(), vt);
@@ -138,7 +141,7 @@ static PlnType* getVarType(json& var_type, PlnScopeStack& scope)
 				BOOST_ASSERT(false);
 			}
 		}
-		PlnType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes);
+		PlnType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);
 		ret_vt = arr_t;
 	}
 
@@ -174,7 +177,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				pm = FPM_MOVEOWNER;
 			} else if (param["pass-by"] == "copy") {
 				pm = FPM_COPY;
-			} else if (param["pass-by"] == "ro-ref") {
+			} else if (migrate && param["pass-by"] == "ro-ref") {
 				pm = FPM_REF;
 			} else
 				BOOST_ASSERT(false);
@@ -591,12 +594,14 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		bool is_owner = true;
 		bool is_readonly = false;
 		bool do_check_ancestor_blocks = false;
-		if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
-			is_owner = false;
-			is_readonly = true;
-		}
-		if (infer == TYPE_INFER) {
-			do_check_ancestor_blocks = true;
+		if (migrate) {
+			if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
+				is_owner = false;
+				is_readonly = true;
+			}
+			if (infer == TYPE_INFER) {
+				do_check_ancestor_blocks = true;
+			}
 		}
 
 		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_readonly, is_owner, do_check_ancestor_blocks);
@@ -607,9 +612,21 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		}
 		vars.push_back(v);
 		types.push_back(v->var_type);
+
+		if (migrate) { // deprecated
+			if (var["move"].is_boolean() && var["move"] == true) {
+				vars.back().asgn_type = ASGN_MOVE;
+			} else if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
+				vars.back().asgn_type = ASGN_COPY_REF;
+			} else {
+				vars.back().asgn_type = ASGN_COPY;
+			}
+		}
+
+		// set asgn_type
 		if (var["move"].is_boolean() && var["move"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
-		} else if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
+		} else if (v->var_type->data_type == DT_OBJECT_REF && v->var_type->mode == "r--") {
 			vars.back().asgn_type = ASGN_COPY_REF;
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
@@ -679,7 +696,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 void registerType(json& type, PlnScopeStack &scope)
 {
 	string type_name = type["name"];
-	PlnType *cur_type = CUR_BLOCK->getType(type_name);
+	PlnType *cur_type = CUR_BLOCK->getType(type_name, "rwo");
 	if (cur_type) {
 		PlnCompileError err(E_DuplicateTypeName, type_name);
 		setLoc(&err, type);
