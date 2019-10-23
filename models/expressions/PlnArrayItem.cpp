@@ -42,19 +42,20 @@ static PlnExpression* getIndexExpression(
 }
 
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind)
-	: PlnArrayItem(array_ex, item_ind, array_ex->values[0].inf.var->var_type)
+	: PlnArrayItem(array_ex, item_ind, array_ex->values[0].inf.var->var_type2)
 {
 }
 
-static PlnVariable* getArrayVar(PlnType *item_type, PlnExpression* array_ex)
+static PlnVariable* getArrayVar(PlnVarType *item_type, PlnExpression* array_ex)
 {
 	BOOST_ASSERT(array_ex->values[0].type == VL_VAR);
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 	var->name = array_var->name + "[]";
+	var->var_type2 = item_type->type->getTypeWithMode(item_type->mode);
 	var->var_type = item_type;
 
-	if (var->var_type->data_type == DT_OBJECT_REF) {
+	if (var->var_type->data_type() == DT_OBJECT_REF) {
 		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP | PTR_INDIRECT_ACCESS;
 	} else {
 		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
@@ -102,7 +103,7 @@ PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, PlnExpression* index_ex, PlnType* item_type)
 	: PlnExpression(ET_ARRAYITEM), array_ex(array_ex), index_ex(index_ex)
 {
-	values.push_back(getArrayVar(item_type, array_ex));
+	values.push_back(getArrayVar(item_type->getVarType(item_type->mode), array_ex));
 }
 
 PlnArrayItem::~PlnArrayItem()
@@ -118,7 +119,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto item_var = values[0].inf.var;
 	// PlnValue::getDataPlace may alloc dp.
 	if (!item_var->place) {
-		item_var->place = new PlnDataPlace(item_var->var_type->size, item_var->var_type->data_type);
+		item_var->place = new PlnDataPlace(item_var->var_type2->size, item_var->var_type2->data_type);
 		item_var->place->comment = &item_var->name;
 	}
 
@@ -162,9 +163,9 @@ void PlnArrayItem::gen(PlnGenerator& g)
 
 vector<PlnExpression*> PlnArrayItem::getAllArrayItems(PlnVariable* var)
 {
-	BOOST_ASSERT(var->var_type->type == TP_FIXED_ARRAY);
+	BOOST_ASSERT(var->var_type2->type == TP_FIXED_ARRAY);
 	vector<PlnExpression*> items;
-	PlnFixedArrayType *atype = static_cast<PlnFixedArrayType*>(var->var_type);
+	PlnFixedArrayType *atype = static_cast<PlnFixedArrayType*>(var->var_type2);
 	vector<int> &sizes = atype->sizes;
 	int totalsize = 1;
 	for (int i=0; i<sizes.size(); i++) {
@@ -175,7 +176,7 @@ vector<PlnExpression*> PlnArrayItem::getAllArrayItems(PlnVariable* var)
 		PlnExpression *item_ex, *array_ex, *index_ex;
 		array_ex = new PlnExpression(var);
 		index_ex = new PlnExpression(i);
-		item_ex = new PlnArrayItem(array_ex, index_ex, atype->item_type);
+		item_ex = new PlnArrayItem(array_ex, index_ex, atype->item_type2);
 		items.push_back(item_ex);
 	}
 

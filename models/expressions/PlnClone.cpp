@@ -48,9 +48,9 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(src_ex->type == ET_ARRAYVALUE);
 		vector<PlnExpression*> val_items = static_cast<PlnArrayValue*>(src_ex)->getAllItems();
 		vector<PlnExpression*> dst_items;
-		if (var->var_type->type == TP_FIXED_ARRAY) {
+		if (var->var_type2->type == TP_FIXED_ARRAY) {
 			dst_items = PlnArrayItem::getAllArrayItems(var);
-		} else if (var->var_type->type == TP_STRUCT) {
+		} else if (var->var_type2->type == TP_STRUCT) {
 			dst_items = PlnStructMember::getAllStructMembers(var);
 		} else
 			BOOST_ASSERT(false);
@@ -87,7 +87,7 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnClone::finishFree(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(keep_var);
-	free_ex = var->var_type->freer->getFreeEx(var);
+	free_ex = var->var_type2->freer->getFreeEx(var);
 	free_ex->finish(da, si);
 	da.releaseDp(var->place);
 }

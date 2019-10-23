@@ -20,15 +20,16 @@ enum {
 
 class PlnVariable {
 public:
-	PlnType* var_type;
+	PlnType* var_type2;
 	string name;
+	PlnVarType* var_type;
 	PlnDataPlace* place;
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
 	uint64_t ptr_type;
 	bool is_tmpvar;
 	PlnLoc loc;
 
-	PlnVariable(): var_type(NULL), place(NULL), container(NULL), is_tmpvar(false) {}
+	PlnVariable(): var_type2(NULL), var_type(NULL), place(NULL), container(NULL), is_tmpvar(false) {}
 
 	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnType* var_type, string name);
 };

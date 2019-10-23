@@ -57,7 +57,7 @@ public:
 
 		if (dst_ex->type == ET_VALUE) {
 			PlnVariable* var = dst_ex->values[0].inf.var;
-			if (var->var_type->mode[2] == 'o' && si.get_lifetime(var) == VLT_FREED) {
+			if (var->var_type2->mode[2] == 'o' && si.get_lifetime(var) == VLT_FREED) {
 				PlnCompileError err(E_CantCopyFreedVar, var->name);
 				err.loc = dst_ex->loc;
 				throw err;
@@ -70,7 +70,7 @@ public:
 			src_ex->finish(da, si);
 
 		} else {
-			PlnType* t = dst_ex->values[0].inf.var->var_type;
+			PlnType* t = dst_ex->values[0].inf.var->var_type2;
 			if (t->data_type == DT_OBJECT_REF && t->mode[2] != 'o') {
 				// case int32[3]@ a = [1,x];
 				BOOST_ASSERT(false);
@@ -80,10 +80,10 @@ public:
 				PlnVariable* dst_var = dst_ex->values[0].inf.var;
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
 				vector<PlnExpression*> dst_items;
-				if (dst_var->var_type->type == TP_FIXED_ARRAY) {
+				if (dst_var->var_type2->type == TP_FIXED_ARRAY) {
 					dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
 
-				} else if (dst_var->var_type->type == TP_STRUCT) {
+				} else if (dst_var->var_type2->type == TP_STRUCT) {
 					dst_items = PlnStructMember::getAllStructMembers(dst_ex->values[0].inf.var);
 
 				} else
@@ -108,8 +108,8 @@ public:
 
 			} else if (dst_ex->type == ET_ARRAYITEM
 					|| dst_ex->type == ET_STRUCTMEMBER) {
-				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
-				alloc_ex = tmp_var->var_type->allocator->getAllocEx();
+				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type2, "tmp var");
+				alloc_ex = tmp_var->var_type2->allocator->getAllocEx();
 				alloc_ex->data_places.push_back(tmp_var->place);
 				alloc_ex->finish(da, si);
 				da.popSrc(tmp_var->place);
@@ -120,10 +120,10 @@ public:
 
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
 				vector<PlnExpression*> dst_items;
-				if (tmp_var->var_type->type == TP_FIXED_ARRAY) {
+				if (tmp_var->var_type2->type == TP_FIXED_ARRAY) {
 					dst_items = PlnArrayItem::getAllArrayItems(tmp_var);
 
-				} else if (tmp_var->var_type->type == TP_STRUCT) {
+				} else if (tmp_var->var_type2->type == TP_STRUCT) {
 					dst_items = PlnStructMember::getAllStructMembers(tmp_var);
 
 				} else

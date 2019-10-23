@@ -42,12 +42,14 @@ enum PlnTypeType {
 	TP_ALIAS
 };
 
+class PlnVarType;
 class PlnType {
 public:
 	PlnTypeType type;
 	int	data_type;
 	string name;
 	string mode;
+	string default_mode;
 	int size;
 	union {
 		struct {
@@ -58,8 +60,8 @@ public:
 
 	// Cross referens of Type objects for each mode
 	PlnType* r_type;
-	// PlnType* rw_type;
 	PlnType* rwo_type;
+	vector<PlnVarType*> var_types;
 
 	PlnAllocator *allocator;
 	PlnFreer *freer;
@@ -77,6 +79,8 @@ public:
 	virtual PlnTypeConvCap canConvFrom(PlnType *src);
 	virtual PlnType* getTypeWithMode(const string& mode);
 
+	PlnVarType* getVarType(const string& mode);
+
 	static void initBasicTypes();
 	static vector<PlnType*>& getBasicTypes();
 	static PlnType* getByte();
@@ -87,6 +91,23 @@ public:
 	static PlnType* getObject();
 	static PlnType* getAny();
 
-	static string getFixedArrayName(PlnType* item_type, vector<int>& sizes);
+	static string getFixedArrayName(PlnVarType* item_type, vector<int>& sizes);
 	static PlnTypeConvCap lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r);
+};
+
+class PlnVarType {
+public:
+	PlnVarType(PlnType* type, const string &mode): type(type), mode(mode) {}
+	PlnType* type;
+	string mode;
+
+	const string& name() { return type->name; }
+	int data_type() { return type->data_type; }
+	int size() { return type->size; }
+	PlnExpression *getAllocEx() { return type->allocator->getAllocEx(); }
+	PlnExpression *getFreeEx(PlnExpression* free_var) { return type->freer->getFreeEx(free_var); }
+	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return type->copyer->getCopyEx(dst_var, src_var); }
+	PlnTypeConvCap canConvFrom(PlnVarType *src) {
+		return type->canConvFrom(src->type->getTypeWithMode(src->mode));
+	}
 };

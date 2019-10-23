@@ -46,7 +46,7 @@ public:
 		cpy_dst_dp = cpy_ex->dstDp(da);
 
 		if (place && dst_ex->type != ET_VALUE) {
-			tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
+			tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type2, "tmp var");
 			dst_ex->data_places.push_back(tmp_var->place);
 			tmp_var->place->do_clear_src = place->do_clear_src;
 			place->do_clear_src = false;

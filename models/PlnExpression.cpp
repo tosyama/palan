@@ -102,7 +102,7 @@ PlnType* PlnValue::getType()
 		case VL_LIT_ARRAY:
 			return inf.arrValue->values[0].getType();
 		case VL_VAR:
-			return inf.var->var_type;
+			return inf.var->var_type2;
 		case VL_WORK:
 			return inf.wk_type;
 	}
@@ -135,7 +135,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			PlnVariable *var = inf.var;
 			if (var->ptr_type & PTR_INDIRECT_ACCESS) {
 				if (!var->place) {
-					var->place = new PlnDataPlace(var->var_type->size, var->var_type->data_type);
+					var->place = new PlnDataPlace(var->var_type2->size, var->var_type2->data_type);
 					var->place->comment = &var->name;
 				}
 				return var->place;

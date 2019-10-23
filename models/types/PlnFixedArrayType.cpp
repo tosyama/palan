@@ -14,7 +14,7 @@
 #include "../PlnArray.h"
 
 PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes, PlnBlock* parent)
-	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
+	: PlnType(TP_FIXED_ARRAY), item_type2(item_type), item_type(item_type->getVarType(item_type->mode))
 {
 	int alloc_size = item_type->size;
 	for (int s: sizes)
@@ -27,7 +27,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<in
 	this->inf.obj.alloc_size = alloc_size;
 	this->sizes = move(sizes);
 
-	auto it = item_type;
+	auto it = this->item_type;
 	
 	if (alloc_size == 0) {
 		// raw array reference.
@@ -36,7 +36,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<in
 		return;
 	}
 
-	if (it->data_type != DT_OBJECT_REF) {
+	if (it->data_type() != DT_OBJECT_REF) {
 		allocator = new PlnSingleObjectAllocator(alloc_size);
 		freer = new PlnSingleObjectFreer();
 		copyer = new PlnSingleObjectCopyer(alloc_size);
@@ -72,7 +72,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnType* item_type, vector<in
 
 
 PlnFixedArrayType::PlnFixedArrayType(const PlnFixedArrayType* src, const string& mode)
-	: PlnType(TP_FIXED_ARRAY), item_type(src->item_type)
+	: PlnType(TP_FIXED_ARRAY), item_type2(src->item_type2), item_type(src->item_type)
 {
 	this->name = src->name;
 	this->data_type = src->data_type;
@@ -110,11 +110,11 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 	}
 
 	if (src->type == TP_ARRAY_VALUE) {
-		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type, sizes);
+		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type2, sizes);
 	}
 
 	if (src == PlnType::getReadOnlyCStr()) {
-		if (item_type == PlnType::getByte() && sizes.size() == 1) {
+		if (item_type->type == PlnType::getByte() && sizes.size() == 1) {
 			if (sizes[0])
 				return TC_LOSTABLE_AUTO_CAST;
 			else // byte[?]

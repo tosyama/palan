@@ -34,7 +34,7 @@ public:
 		auto lt = si.get_lifetime(dst_ex->values[0].inf.var);
 		if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 			// set destination address to save place.
-			PlnType* t = dst_ex->values[0].inf.var->var_type;
+			PlnType* t = dst_ex->values[0].inf.var->var_type2;
 			addr_var = PlnVariable::createTempVar(da, t, "(save addr)");
 			addr_var->place->load_address = true;
 			dst_ex->data_places.push_back(addr_var->place);

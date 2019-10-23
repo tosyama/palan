@@ -20,7 +20,7 @@
 
 PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock* block)
 {
-	PlnType* it = arr_type->item_type;
+	PlnType* it = arr_type->item_type->type;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
@@ -55,7 +55,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
-	PlnType* it = arr_type->item_type;
+	PlnType* it = arr_type->item_type->type;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
@@ -90,7 +90,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 
 PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
-	PlnType* it = arr_type->item_type;
+	PlnType* it = arr_type->item_type->type;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);

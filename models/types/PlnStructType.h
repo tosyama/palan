@@ -5,7 +5,7 @@
 
 class PlnStructMemberDef {
 public:
-	PlnType* type;
+	PlnVarType* type;
 	string name;
 	int offset;
 	bool is_ro_ref;

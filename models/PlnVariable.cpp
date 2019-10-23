@@ -107,7 +107,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	int i=0;
 	for (auto vi: varinits) {
 		PlnVariable *v = vi.var;
-		auto t = v->var_type;
+		auto t = v->var_type2;
 		v->place = da.allocData(t->size, t->data_type);
 		v->place->comment = &v->name;
 		if (v->ptr_type & PTR_OWNERSHIP) {
@@ -152,7 +152,7 @@ void PlnVarInit::gen(PlnGenerator& g)
 PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnType* var_type, string name)
 {
 	auto var = new PlnVariable();
-	var->var_type = var_type;
+	var->var_type2 = var_type;
 	var->name = name;
 	PlnType *t = var_type;
 	var->place = da.prepareLocalVar(t->size, t->data_type);

@@ -33,7 +33,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 	for (auto rv: f->return_vals) {
 		PlnValue val;
 		val.type = VL_WORK;
-		val.inf.wk_type = rv->var_type;
+		val.inf.wk_type = rv->var_type2;
 		val.is_readonly = rv->ptr_type & PTR_READONLY;
 		val.is_cantfree = (rv->ptr_type & NO_PTR || !(rv->ptr_type & PTR_OWNERSHIP));
 		
@@ -69,7 +69,7 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 		int i=0;
 		for (auto p: f->parameters) {
 			BOOST_ASSERT(i<arg_dps.size());
-			BOOST_ASSERT(p->var_type->data_type == arg_data_types[i]);
+			BOOST_ASSERT(p->var_type2->data_type == arg_data_types[i]);
 			arg_dps[i]->data_type = arg_data_types[i];
 			i++;
 		}
@@ -235,7 +235,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
 	int i = 0;
 	for (auto r: function->return_vals) {
-		ret_dps[i]->data_type = r->var_type->data_type;
+		ret_dps[i]->data_type = r->var_type2->data_type;
 		++i;
 	}
 	
@@ -243,7 +243,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.allocDp(ret_dps[i]);
 		if (i >= data_places.size()) {
 			if (function->return_vals[i]->ptr_type & PTR_OWNERSHIP) {
-				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i]->var_type, "ret" + std::to_string(i));
+				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i]->var_type2, "ret" + std::to_string(i));
 				PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
 
 				free_vars.push_back(tmp_var);

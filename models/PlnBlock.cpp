@@ -95,17 +95,18 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 	v->container = NULL;
 
 	if (!var_type) {
-		var_type = variables.back()->var_type;
+		var_type = variables.back()->var_type2;
 	}
 
-	v->var_type = var_type;
+	v->var_type2 = var_type;
+	v->var_type = var_type->getVarType(var_type->mode);
 
 	if (var_type->mode == "rir") {
 		is_owner = false;
 		readonly = true;
 	}
 
-	if (v->var_type->data_type == DT_OBJECT_REF) {
+	if (v->var_type->data_type() == DT_OBJECT_REF) {
 		v->ptr_type = PTR_REFERENCE;
 		if (is_owner)
 			v->ptr_type |= PTR_OWNERSHIP;
@@ -307,7 +308,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes, con
 		}
 	}
 
-	string name = PlnType::getFixedArrayName(item_type, sizes);
+	string name = PlnType::getFixedArrayName(item_type->getVarType(item_type->mode), sizes);
 	for (auto t: types) 
 		if (name == t->name) return t->getTypeWithMode(mode);
 ;
@@ -368,7 +369,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 					}
 
 					PlnType* a_type = arg_val->getType();
-					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
+					PlnTypeConvCap cap = p->var_type2->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
 					if (p->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {

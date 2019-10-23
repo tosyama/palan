@@ -24,7 +24,7 @@
 #include "PlnArrayValueType.h"
 
 PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name, bool is_ro_ref)
-	: type(type), name(name), offset(0), is_ro_ref(is_ro_ref)
+	: type(type->getVarType(type->mode)), name(name), offset(0), is_ro_ref(is_ro_ref)
 {
 }
 
@@ -43,7 +43,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 	palan::malloc(f->implement, ret_var, struct_type->inf.obj.alloc_size);
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
-		if (mdef->type->data_type == DT_OBJECT_REF) {
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
 			PlnValue var_val(ret_var);
 
 			auto struct_ex = new PlnExpression(var_val);
@@ -51,7 +51,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 			member_ex->values[0].asgn_type = ASGN_COPY_REF;
 			vector<PlnExpression*> lvals = { member_ex };
 
-			PlnExpression* alloc_ex = mdef->type->allocator->getAllocEx();
+			PlnExpression* alloc_ex = mdef->type->getAllocEx();
 			vector<PlnExpression*> exps = { alloc_ex };
 
 			auto assign = new PlnAssignment(lvals, exps);
@@ -79,11 +79,11 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 	block->statements.push_back(if_obj);
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
-		if (mdef->type->data_type == DT_OBJECT_REF) {
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
 			PlnValue var_val(f->parameters[0]);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			PlnExpression* free_member = mdef->type->freer->getFreeEx(member_ex);
+			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
 			ifblock->statements.push_back(new PlnStatement(free_member, block));
 		}
 	}
@@ -113,8 +113,8 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 
 			auto src_struct_ex = new PlnExpression(src_var);
 			auto src_member_ex = new PlnStructMember(src_struct_ex, mdef->name);
-		if (mdef->type->data_type == DT_OBJECT_REF) {
-			PlnExpression* copy_member = mdef->type->copyer->getCopyEx(dst_member_ex, src_member_ex);
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
+			PlnExpression* copy_member = mdef->type->getCopyEx(dst_member_ex, src_member_ex);
 			block->statements.push_back(new PlnStatement(copy_member, block));
 
 		} else {
@@ -140,7 +140,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	bool has_object_member = false;
 
 	for (auto m: this->members) {
-		int member_size = m->type->size;
+		int member_size = m->type->size();
 		// padding
 		if (alloc_size % member_size) {
 			alloc_size = (alloc_size / member_size+1) * member_size;
@@ -151,9 +151,9 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		if (member_size > max_member_size) {
 			max_member_size = member_size;
 		}
-		alloc_size += m->type->size;
+		alloc_size += m->type->size();
 
-		if (m->type->data_type == DT_OBJECT_REF && m->type->mode[2] == 'o') {
+		if (m->type->data_type() == DT_OBJECT_REF && m->type->mode[2] == 'o') {
 			has_object_member = true;
 		}
 	}
@@ -233,7 +233,8 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 		PlnTypeConvCap cap = TC_SAME;
 		int i = 0;
 		for (auto member: members) {
-			PlnType* src_type = arr_val->item_exps[i]->values[0].getType();
+			PlnType* src_type2 = arr_val->item_exps[i]->values[0].getType();
+			PlnVarType* src_type = arr_val->item_exps[i]->values[0].getType()->getVarType(src_type2->mode);
 			cap = PlnType::lowCapacity(cap, member->type->canConvFrom(src_type));
 			i++;
 		}

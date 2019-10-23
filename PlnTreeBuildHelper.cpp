@@ -90,10 +90,10 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 	auto index_ex = new PlnExpression(index);
 	vector<PlnExpression*> inds = { index_ex };
 
-	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type);
+	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type2);
 	vector<int> raw_sizes = {0};
 
-	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes, "rw-");
+	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type2, raw_sizes, "wmr");
 
 	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }

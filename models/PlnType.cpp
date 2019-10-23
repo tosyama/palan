@@ -26,7 +26,7 @@ static PlnType* any_type = NULL;
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 {
-	PlnAllocator* allocator= var->var_type->allocator;
+	PlnAllocator* allocator= var->var_type2->allocator;
 	BOOST_ASSERT(allocator);
 	return allocator->getAllocEx();
 }
@@ -34,7 +34,7 @@ PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 // PlnFreer
 PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 {
-	PlnFreer* freer = var->var_type->freer;
+	PlnFreer* freer = var->var_type2->freer;
 	BOOST_ASSERT(freer);
 	return freer->getFreeEx(new PlnExpression(var));
 }
@@ -63,6 +63,7 @@ void PlnType::initBasicTypes()
 	PlnType* sbt = new PlnType();
 	sbt->name = "sbyte";
 	sbt->mode = "wms";
+	sbt->default_mode = "wms";
 	sbt->data_type = DT_SINT;
 	sbt->size = 1;
 	basic_types.push_back(sbt);
@@ -70,6 +71,7 @@ void PlnType::initBasicTypes()
 	PlnType* bt = new PlnType();
 	bt->name = "byte";
 	bt->mode = "wms";
+	bt->default_mode = "wms";
 	bt->data_type = DT_UINT;
 	bt->size = 1;
 	basic_types.push_back(bt);
@@ -78,6 +80,7 @@ void PlnType::initBasicTypes()
 	PlnType* i16t = new PlnType();
 	i16t->name = "int16";
 	i16t->mode = "wms";
+	i16t->default_mode = "wms";
 	i16t->data_type = DT_SINT;
 	i16t->size = 2;
 	basic_types.push_back(i16t);
@@ -85,6 +88,7 @@ void PlnType::initBasicTypes()
 	PlnType* u16t = new PlnType();
 	u16t->name = "uint16";
 	u16t->mode = "wms";
+	u16t->default_mode = "wms";
 	u16t->data_type = DT_UINT;
 	u16t->size = 2;
 	basic_types.push_back(u16t);
@@ -92,6 +96,7 @@ void PlnType::initBasicTypes()
 	PlnType* i32t = new PlnType();
 	i32t->name = "int32";
 	i32t->mode = "wms";
+	i32t->default_mode = "wms";
 	i32t->data_type = DT_SINT;
 	i32t->size = 4;
 	basic_types.push_back(i32t);
@@ -99,6 +104,7 @@ void PlnType::initBasicTypes()
 	PlnType* u32t = new PlnType();
 	u32t->name = "uint32";
 	u32t->mode = "wms";
+	u32t->default_mode = "wms";
 	u32t->data_type = DT_UINT;
 	u32t->size = 4;
 	basic_types.push_back(u32t);
@@ -106,6 +112,7 @@ void PlnType::initBasicTypes()
 	PlnType* i64t = new PlnType();
 	i64t->name = "int64";
 	i64t->mode = "wms";
+	i64t->default_mode = "wms";
 	i64t->data_type = DT_SINT;
 	i64t->size = 8;
 	basic_types.push_back(i64t);
@@ -114,6 +121,7 @@ void PlnType::initBasicTypes()
 	PlnType* u64t = new PlnType();
 	u64t->name = "uint64";
 	u64t->mode = "wms";
+	u64t->default_mode = "wms";
 	u64t->data_type = DT_UINT;
 	u64t->size = 8;
 	basic_types.push_back(u64t);
@@ -122,6 +130,7 @@ void PlnType::initBasicTypes()
 	PlnType* f32t = new PlnType();
 	f32t->name = "flo32";
 	f32t->mode = "wms";
+	f32t->default_mode = "wms";
 	f32t->data_type = DT_FLOAT;
 	f32t->size = 4;
 	basic_types.push_back(f32t);
@@ -129,6 +138,7 @@ void PlnType::initBasicTypes()
 	PlnType* f64t = new PlnType();
 	f64t->name = "flo64";
 	f64t->mode = "wms";
+	f64t->default_mode = "wms";
 	f64t->data_type = DT_FLOAT;
 	f64t->size = 8;
 	basic_types.push_back(f64t);
@@ -137,6 +147,7 @@ void PlnType::initBasicTypes()
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
 	t->mode = "rir";
+	t->default_mode = "rir";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	basic_types.push_back(t);
@@ -145,6 +156,7 @@ void PlnType::initBasicTypes()
 	t = new PlnType();
 	t->name = "object";
 	t->mode = "wmr";
+	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	basic_types.push_back(t);
@@ -153,6 +165,7 @@ void PlnType::initBasicTypes()
 	t = new PlnType();
 	t->name = "";
 	t->mode = "---";
+	t->default_mode = "---";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;
 	basic_types.push_back(t);
@@ -311,7 +324,7 @@ PlnType* PlnType::getAny()
 	return any_type;
 }
 
-string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
+string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
 	for (int s: sizes) {
@@ -322,12 +335,12 @@ string PlnType::getFixedArrayName(PlnType* item_type, vector<int>& sizes)
 	}
 	arr_name.back() = ']';
 
-	PlnType *it = item_type;
-	while (it->type == TP_FIXED_ARRAY) {
-		it = static_cast<PlnFixedArrayType*>(it)->item_type;
+	PlnVarType *it = item_type;
+	while (it->type->type == TP_FIXED_ARRAY) {
+		it = static_cast<PlnFixedArrayType*>(it->type)->item_type;
 	}
-	string& item_name = it->name;
-	string item_suffix = item_type->name.substr(item_name.size());
+	const string& item_name = it->name();
+	string item_suffix = item_type->name().substr(item_name.size());
 
 	return item_name + arr_name + item_suffix;
 }
@@ -370,3 +383,16 @@ PlnType* PlnType::getTypeWithMode(const string& mode)
 {
 	return this;
 }
+
+PlnVarType* PlnType::getVarType(const string& mode)
+{
+	const string& search_mode = mode == "---" ? default_mode : mode;
+	for (PlnVarType* vt: var_types) {
+		if (vt->mode == search_mode)
+			return vt;
+	}
+	PlnVarType* var_type = new PlnVarType(this, mode);
+	var_types.push_back(var_type);
+	return var_type;
+}
+

@@ -479,7 +479,7 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 static PlnType* getDefaultType(PlnValue &val, PlnBlock *block)
 {
 	if (val.type == VL_VAR)
-		return val.inf.var->var_type;
+		return val.inf.var->var_type2;
 	else if (val.type == VL_LIT_INT8)
 		return PlnType::getSint();
 	else if (val.type == VL_LIT_UINT8)
@@ -578,7 +578,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
-					tt = atype->item_type;
+					tt = atype->item_type->type;
 				}
 			} else if (tt->type == TP_ARRAY_VALUE) {
 				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
@@ -611,7 +611,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			throw err;
 		}
 		vars.push_back(v);
-		types.push_back(v->var_type);
+		types.push_back(v->var_type2);
 
 		if (migrate) { // deprecated
 			if (var["move"].is_boolean() && var["move"] == true) {
@@ -626,7 +626,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		// set asgn_type
 		if (var["move"].is_boolean() && var["move"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
-		} else if (v->var_type->data_type == DT_OBJECT_REF && v->var_type->mode == "rir") {
+		} else if (v->var_type->data_type() == DT_OBJECT_REF && v->var_type->mode == "rir") {
 			vars.back().asgn_type = ASGN_COPY_REF;
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
@@ -971,7 +971,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
 			}
 
-			types.push_back(f->parameters[i]->var_type);
+			types.push_back(f->parameters[i]->var_type2);
 			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
 				arg_val_ind++;
 
@@ -1015,7 +1015,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 
 		BOOST_ASSERT(!dst_vals.back()->values[0].is_readonly);
 
-		types.push_back(dst_vals.back()->values[0].inf.var->var_type);
+		types.push_back(dst_vals.back()->values[0].inf.var->var_type2);
 		if (src_ex_ind < src_exps.size()) {
 			if (src_val_ind+1 < src_exps[src_ex_ind]->values.size()) {
 				src_val_ind++;
@@ -1097,7 +1097,7 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
 			}
 
-			types.push_back(f->parameters[i]->var_type);
+			types.push_back(f->parameters[i]->var_type2);
 			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
 				arg_val_ind++;
 
