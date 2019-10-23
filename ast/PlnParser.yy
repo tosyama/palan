@@ -1265,7 +1265,7 @@ type_or_var: ID
 	{
 		json ptype = {
 			{"name", $1},
-			{"mode", "rwo"}
+			{"mode", "---"}
 		};
 		LOC(ptype, @$);
 		$$.push_back(move(ptype));
@@ -1274,7 +1274,7 @@ type_or_var: ID
 	{
 		json ptype = {
 			{"name", $3},
-			{"mode", "rwo"}
+			{"mode", "---"}
 		};
 		LOC(ptype, @3);
 		$$ = move($1);
@@ -1285,7 +1285,7 @@ type_or_var: ID
 		json atype = {
 			{"name", "[]"},
 			{"sizes", move($3)},
-			{"mode", "rwo"}
+			{"mode", "---"}
 		};
 		LOC(atype, @$);
 		$$ = move($1);
@@ -1294,7 +1294,7 @@ type_or_var: ID
 	| type_or_var '@'
 	{
 		$$ = move($1);
-		$$.back()["mode"] = "r--";
+		$$.back()["mode"] = "rir";
 	}
 	;
 

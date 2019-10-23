@@ -100,7 +100,7 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 
 	v->var_type = var_type;
 
-	if (var_type->mode == "r--") {
+	if (var_type->mode == "rir") {
 		is_owner = false;
 		readonly = true;
 	}
@@ -199,7 +199,7 @@ void PlnBlock::declareType(const string& type_name)
 {
 	PlnType* t = new PlnType();
 	t->name = type_name;
-	t->mode = "rwo";
+	t->mode = "wmo";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	types.push_back(t);
@@ -208,7 +208,7 @@ void PlnBlock::declareType(const string& type_name)
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
 	auto t = new PlnStructType(type_name, members, this);
-	t->mode = "rwo";
+	t->mode = "wmo";
 	t->rwo_type = t;
 	types.push_back(t);
 }
@@ -313,7 +313,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes, con
 ;
 	
 	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
-	t->mode = "rwo";
+	t->mode = "wmo";
 	t->rwo_type = t;
 	types.push_back(t);
 	return t->getTypeWithMode(mode);

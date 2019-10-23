@@ -83,10 +83,6 @@ void PlnStructMember::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto base_dp = da.prepareObjBasePtr();
 	struct_ex->data_places.push_back(base_dp);
 	struct_ex->finish(da, si);
-	if (struct_ex->values[0].inf.var->name == "bb[]") {
-		BOOST_ASSERT(base_dp->src_place);
-		BOOST_ASSERT(base_dp->src_place->type);
-	}
 
 	auto member_dp = member_var->place;
 	da.setIndirectObjDp(member_dp, base_dp, NULL, def->offset);

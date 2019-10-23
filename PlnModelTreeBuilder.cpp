@@ -626,7 +626,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		// set asgn_type
 		if (var["move"].is_boolean() && var["move"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
-		} else if (v->var_type->data_type == DT_OBJECT_REF && v->var_type->mode == "r--") {
+		} else if (v->var_type->data_type == DT_OBJECT_REF && v->var_type->mode == "rir") {
 			vars.back().asgn_type = ASGN_COPY_REF;
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
@@ -696,7 +696,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 void registerType(json& type, PlnScopeStack &scope)
 {
 	string type_name = type["name"];
-	PlnType *cur_type = CUR_BLOCK->getType(type_name, "rwo");
+	PlnType *cur_type = CUR_BLOCK->getType(type_name, "wmo");
 	if (cur_type) {
 		PlnCompileError err(E_DuplicateTypeName, type_name);
 		setLoc(&err, type);

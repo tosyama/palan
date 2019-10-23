@@ -128,15 +128,15 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 
 PlnType* PlnFixedArrayType::getTypeWithMode(const string& mode)
 {
-	if (mode == "rwo") {
+	if (mode == "wmo" || mode == "---") {
 		BOOST_ASSERT(rwo_type);
 		return rwo_type;
 	}
 
-	if (mode == "r--") {
+	if (mode == "rir") {
 		if (r_type)
 			return r_type;
-		r_type = new PlnFixedArrayType(this, "r--");
+		r_type = new PlnFixedArrayType(this, mode);
 		r_type->rwo_type = this->rwo_type;
 		r_type->r_type = r_type;
 		return r_type;

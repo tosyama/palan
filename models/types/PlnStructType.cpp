@@ -153,7 +153,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		}
 		alloc_size += m->type->size;
 
-		if (m->type->data_type == DT_OBJECT_REF) {
+		if (m->type->data_type == DT_OBJECT_REF && m->type->mode[2] == 'o') {
 			has_object_member = true;
 		}
 	}
@@ -193,8 +193,8 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 PlnStructType::PlnStructType(const PlnStructType* src, const string& mode)
 	: PlnType(TP_STRUCT)
 {
-	BOOST_ASSERT(src->mode == "rwo");
-	BOOST_ASSERT(mode == "r--");
+	BOOST_ASSERT(src->mode == "wmo");
+	BOOST_ASSERT(mode == "rir");
 
 	name = src->name;
 	data_type = src->data_type;
@@ -246,14 +246,14 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 
 PlnType* PlnStructType::getTypeWithMode(const string& mode)
 {
-	if (mode == "rwo") {
+	if (mode == "---" || mode == "wmo") {
 		BOOST_ASSERT(rwo_type);
 		return rwo_type;
 	}
-	if (mode == "r--") {
+	if (mode == "rir") {
 		if (r_type)
 			return r_type;
-		r_type = new PlnStructType(this, "r--");
+		r_type = new PlnStructType(this, "rir");
 		r_type->rwo_type = this->rwo_type;
 		r_type->r_type = r_type;
 		return r_type;

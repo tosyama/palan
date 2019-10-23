@@ -62,14 +62,14 @@ void PlnType::initBasicTypes()
 
 	PlnType* sbt = new PlnType();
 	sbt->name = "sbyte";
-	sbt->mode = "rwo";
+	sbt->mode = "wms";
 	sbt->data_type = DT_SINT;
 	sbt->size = 1;
 	basic_types.push_back(sbt);
 
 	PlnType* bt = new PlnType();
 	bt->name = "byte";
-	bt->mode = "rwo";
+	bt->mode = "wms";
 	bt->data_type = DT_UINT;
 	bt->size = 1;
 	basic_types.push_back(bt);
@@ -77,35 +77,35 @@ void PlnType::initBasicTypes()
 
 	PlnType* i16t = new PlnType();
 	i16t->name = "int16";
-	i16t->mode = "rwo";
+	i16t->mode = "wms";
 	i16t->data_type = DT_SINT;
 	i16t->size = 2;
 	basic_types.push_back(i16t);
 
 	PlnType* u16t = new PlnType();
 	u16t->name = "uint16";
-	u16t->mode = "rwo";
+	u16t->mode = "wms";
 	u16t->data_type = DT_UINT;
 	u16t->size = 2;
 	basic_types.push_back(u16t);
 	
 	PlnType* i32t = new PlnType();
 	i32t->name = "int32";
-	i32t->mode = "rwo";
+	i32t->mode = "wms";
 	i32t->data_type = DT_SINT;
 	i32t->size = 4;
 	basic_types.push_back(i32t);
 
 	PlnType* u32t = new PlnType();
 	u32t->name = "uint32";
-	u32t->mode = "rwo";
+	u32t->mode = "wms";
 	u32t->data_type = DT_UINT;
 	u32t->size = 4;
 	basic_types.push_back(u32t);
 
 	PlnType* i64t = new PlnType();
 	i64t->name = "int64";
-	i64t->mode = "rwo";
+	i64t->mode = "wms";
 	i64t->data_type = DT_SINT;
 	i64t->size = 8;
 	basic_types.push_back(i64t);
@@ -113,7 +113,7 @@ void PlnType::initBasicTypes()
 
 	PlnType* u64t = new PlnType();
 	u64t->name = "uint64";
-	u64t->mode = "rwo";
+	u64t->mode = "wms";
 	u64t->data_type = DT_UINT;
 	u64t->size = 8;
 	basic_types.push_back(u64t);
@@ -121,14 +121,14 @@ void PlnType::initBasicTypes()
 
 	PlnType* f32t = new PlnType();
 	f32t->name = "flo32";
-	f32t->mode = "rwo";
+	f32t->mode = "wms";
 	f32t->data_type = DT_FLOAT;
 	f32t->size = 4;
 	basic_types.push_back(f32t);
 
 	PlnType* f64t = new PlnType();
 	f64t->name = "flo64";
-	f64t->mode = "rwo";
+	f64t->mode = "wms";
 	f64t->data_type = DT_FLOAT;
 	f64t->size = 8;
 	basic_types.push_back(f64t);
@@ -136,7 +136,7 @@ void PlnType::initBasicTypes()
 
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
-	t->mode = "r--";
+	t->mode = "rir";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	basic_types.push_back(t);
@@ -144,7 +144,7 @@ void PlnType::initBasicTypes()
 
 	t = new PlnType();
 	t->name = "object";
-	t->mode = "rw-";
+	t->mode = "wmr";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	basic_types.push_back(t);
@@ -152,7 +152,7 @@ void PlnType::initBasicTypes()
 
 	t = new PlnType();
 	t->name = "";
-	t->mode = "rw-";
+	t->mode = "---";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;
 	basic_types.push_back(t);

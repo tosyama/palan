@@ -113,7 +113,7 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 		else // FMP_REF
 			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
 
-		if (t->mode == "r--") {
+		if (t->mode == "rir") {
 			BOOST_ASSERT(pass_method != FPM_MOVEOWNER);
 			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
 		}
@@ -125,6 +125,10 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 			param->ptr_type = PTR_REFERENCE;
 		else
 			BOOST_ASSERT(false);
+
+		if (t->mode == "rir") {
+			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
+		}
 	}
 
 	parameters.push_back(param);

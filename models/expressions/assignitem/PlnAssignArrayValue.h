@@ -70,6 +70,12 @@ public:
 			src_ex->finish(da, si);
 
 		} else {
+			PlnType* t = dst_ex->values[0].inf.var->var_type;
+			if (t->data_type == DT_OBJECT_REF && t->mode[2] != 'o') {
+				// case int32[3]@ a = [1,x];
+				BOOST_ASSERT(false);
+			}
+
 			if (dst_ex->type == ET_VALUE) {
 				PlnVariable* dst_var = dst_ex->values[0].inf.var;
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
@@ -87,7 +93,11 @@ public:
 
 				for (int i=0; i<val_items.size(); i++) {
 					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
-					dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					PlnType* dt = dst_items[i]->values[0].getType();
+					if (dt->data_type == DT_OBJECT_REF && dt->mode[2] != 'o')
+						dst_items[i]->values[0].asgn_type = ASGN_COPY_REF;
+					else
+						dst_items[i]->values[0].asgn_type = ASGN_COPY;
 					ai->addDstEx(dst_items[i], false);
 					assign_items.push_back(ai);
 				}
