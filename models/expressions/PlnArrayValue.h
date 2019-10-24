@@ -15,7 +15,7 @@ public:
 	PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral);
 	PlnArrayValue(const PlnArrayValue& src);
 
-	PlnExpression* adjustTypes(const vector<PlnType*> &types) override;
+	PlnExpression* adjustTypes(const vector<PlnVarType*> &types) override;
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

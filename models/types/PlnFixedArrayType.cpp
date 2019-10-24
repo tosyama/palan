@@ -110,7 +110,7 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(PlnType *src)
 	}
 
 	if (src->type == TP_ARRAY_VALUE) {
-		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type2, sizes);
+		return static_cast<PlnArrayValueType*>(src)->checkCompatible(item_type, sizes);
 	}
 
 	if (src == PlnType::getReadOnlyCStr()) {

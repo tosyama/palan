@@ -201,6 +201,7 @@ void PlnBlock::declareType(const string& type_name)
 	PlnType* t = new PlnType();
 	t->name = type_name;
 	t->mode = "wmo";
+	t->default_mode = "wmo";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	types.push_back(t);
@@ -208,9 +209,7 @@ void PlnBlock::declareType(const string& type_name)
 
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
-	auto t = new PlnStructType(type_name, members, this);
-	t->mode = "wmo";
-	t->rwo_type = t;
+	auto t = new PlnStructType(type_name, members, this, "wmo");
 	types.push_back(t);
 }
 
@@ -315,6 +314,7 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes, con
 	
 	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
 	t->mode = "wmo";
+	t->default_mode = "wmo";
 	t->rwo_type = t;
 	types.push_back(t);
 	return t->getTypeWithMode(mode);
@@ -368,8 +368,8 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 						i++;
 					}
 
-					PlnType* a_type = arg_val->getType();
-					PlnTypeConvCap cap = p->var_type2->canConvFrom(a_type);
+					PlnVarType* a_type = arg_val->getType();
+					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
 					if (p->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {

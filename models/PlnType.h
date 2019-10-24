@@ -107,6 +107,7 @@ public:
 	PlnExpression *getAllocEx() { return type->allocator->getAllocEx(); }
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return type->freer->getFreeEx(free_var); }
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return type->copyer->getCopyEx(dst_var, src_var); }
+	PlnDeepCopyExpression* getCopyEx() { return type->copyer->getCopyEx(); }
 	PlnTypeConvCap canConvFrom(PlnVarType *src) {
 		return type->canConvFrom(src->type->getTypeWithMode(src->mode));
 	}

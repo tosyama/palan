@@ -199,7 +199,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abc123def1.23\n"
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
-								"smy0.33");
+								"smy0.33"); 
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode) == "success");

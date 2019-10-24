@@ -34,7 +34,7 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 {
 }
 
-PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool readonly, bool do_init)
+PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype, bool readonly, bool do_init)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname)
@@ -43,9 +43,9 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 	for (auto p: parameters)
 		if (p->name == rname) {
 			if (!rtype) {
-				rtype = return_vals.back()->var_type2;
+				rtype = return_vals.back()->var_type;
 			}
-			if (p->var_type->name() != rtype->name)
+			if (p->var_type->name() != rtype->name())
 				throw PlnCompileError(E_InvalidReturnValType, rname);
 
 			p->param_type = PRT_PARAM | PRT_RETVAL;
@@ -58,8 +58,8 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 
 	auto ret_var = new PlnParameter();
 	ret_var->name = rname;
-	ret_var->var_type2 = rtype ? rtype :  return_vals.back()->var_type2;
-	ret_var->var_type = rtype ? rtype->getVarType(rtype->mode) : return_vals.back()->var_type;
+	ret_var->var_type2 = rtype ? rtype->type->getTypeWithMode(rtype->mode) :  return_vals.back()->var_type2;
+	ret_var->var_type = rtype ? rtype : return_vals.back()->var_type;
 	ret_var->param_type = PRT_RETVAL;
 	ret_var->iomode = PIO_OUTPUT;
 
@@ -86,7 +86,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnType* rtype, bool 
 	return ret_var;
 }
 
-PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
+PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(!has_va_arg);
 	BOOST_ASSERT(ptype || parameters.size());
@@ -100,8 +100,8 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnType* ptype, int iom
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type2 = ptype ? ptype : parameters.back()->var_type2;
-	param->var_type = ptype ? ptype->getVarType(ptype->mode) : parameters.back()->var_type;
+	param->var_type2 = ptype ? ptype->type->getTypeWithMode(ptype->mode) : parameters.back()->var_type2;
+	param->var_type = ptype ? ptype : parameters.back()->var_type;
 	param->param_type = PRT_PARAM;
 	param->iomode = iomode;
 	param->dflt_value = defaultVal;

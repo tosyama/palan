@@ -20,7 +20,7 @@ PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType 
 	PlnValue v;
 	v.type = VL_WORK;
 	v.asgn_type = NO_ASGN;
-	v.inf.wk_type = PlnType::getSint();
+	v.inf.wk_type = PlnType::getSint()->getVarType("---");
 	values.push_back(v);
 }
 

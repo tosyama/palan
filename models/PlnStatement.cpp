@@ -115,7 +115,7 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 			}
 			for (auto&v: e->values) {
 				if (i < num_ret) {
-					PlnType* t = function->return_vals[i]->var_type2;
+					PlnVarType* t = function->return_vals[i]->var_type;
 					if (t->canConvFrom(v.getType()) == TC_CANT_CONV) {
 						PlnCompileError err(E_InvalidRetValues);
 						err.loc = e->loc;
@@ -149,7 +149,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	int i=0, j=0;
 	for (auto rt: function->return_vals) {
-		dps[i]->data_type = rt->var_type2->data_type;
+		dps[i]->data_type = rt->var_type->data_type();
 		i++;
 	}
 	

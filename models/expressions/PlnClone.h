@@ -16,7 +16,7 @@ public:
 	bool directAssign;
 	PlnVariable* var;
 
-	PlnClone(PlnDataAllocator& da, PlnExpression *src_ex, PlnType* var_type, bool keep_var);
+	PlnClone(PlnDataAllocator& da, PlnExpression *src_ex, PlnVarType* var_type, bool keep_var);
 	~PlnClone();
 
 	void finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si);

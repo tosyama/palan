@@ -42,7 +42,7 @@ public:
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		if (dst_item->getAssginType() == ASGN_COPY) {
 			if (dst_item->need_save) {
-				src_save = new PlnClone(da, src_ex, src_ex->values[0].inf.var->var_type2, true);
+				src_save = new PlnClone(da, src_ex, src_ex->values[0].inf.var->var_type, true);
 				dst_item->setSrcEx(da, si, src_save);
 				src_save->finishAlloc(da, si);
 				src_ex->finish(da, si);

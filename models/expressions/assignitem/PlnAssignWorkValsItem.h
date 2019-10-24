@@ -69,7 +69,7 @@ public:
 		int i=0;
 		for (auto &di: dsts) {
 			auto& v = src_ex->values[i];
-			if (v.getType()->data_type == DT_OBJECT_REF
+			if (v.getType()->data_type() == DT_OBJECT_REF
 					&& (!v.is_cantfree)
 					&& di.item->getAssginType() == ASGN_COPY) {
 				di.save_src_var = PlnVariable::createTempVar(da, v.inf.wk_type, "save src");

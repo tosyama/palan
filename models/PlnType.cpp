@@ -26,17 +26,13 @@ static PlnType* any_type = NULL;
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 {
-	PlnAllocator* allocator= var->var_type2->allocator;
-	BOOST_ASSERT(allocator);
-	return allocator->getAllocEx();
+	return var->var_type->getAllocEx();
 }
 
 // PlnFreer
 PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 {
-	PlnFreer* freer = var->var_type2->freer;
-	BOOST_ASSERT(freer);
-	return freer->getFreeEx(new PlnExpression(var));
+	return var->var_type->getFreeEx(new PlnExpression(var));
 }
 
 // PlnType
@@ -165,7 +161,7 @@ void PlnType::initBasicTypes()
 	t = new PlnType();
 	t->name = "";
 	t->mode = "---";
-	t->default_mode = "---";
+	t->default_mode = "wm-";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;
 	basic_types.push_back(t);
@@ -391,8 +387,9 @@ PlnVarType* PlnType::getVarType(const string& mode)
 		if (vt->mode == search_mode)
 			return vt;
 	}
-	PlnVarType* var_type = new PlnVarType(this, mode);
+	PlnVarType* var_type = new PlnVarType(this, search_mode);
 	var_types.push_back(var_type);
+
 	return var_type;
 }
 

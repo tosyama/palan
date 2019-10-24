@@ -57,8 +57,8 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 			for (int i=0; i<ex->values.size(); ++i) {
 				if (var_i < vars.size()) {
-					PlnType* src_type = ex->values[i].getType();	
-					PlnType* dst_type = vars[var_i].getType();
+					PlnVarType* src_type = ex->values[i].getType();
+					PlnVarType* dst_type = vars[var_i].getType();
 
 					// Compatibility is assured at adjustTypes().
 					BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
@@ -107,8 +107,8 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	int i=0;
 	for (auto vi: varinits) {
 		PlnVariable *v = vi.var;
-		auto t = v->var_type2;
-		v->place = da.allocData(t->size, t->data_type);
+		auto t = v->var_type;
+		v->place = da.allocData(t->size(), t->data_type());
 		v->place->comment = &v->name;
 		if (v->ptr_type & PTR_OWNERSHIP) {
 			si.push_owner_var(v);
@@ -149,16 +149,17 @@ void PlnVarInit::gen(PlnGenerator& g)
 	}
 }
 
-PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnType* var_type, string name)
+PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name)
 {
 	auto var = new PlnVariable();
-	var->var_type2 = var_type;
+	var->var_type2 = var_type->type->getTypeWithMode(var_type->mode);
+	var->var_type = var_type;
 	var->name = name;
-	PlnType *t = var_type;
-	var->place = da.prepareLocalVar(t->size, t->data_type);
+	PlnVarType *t = var_type;
+	var->place = da.prepareLocalVar(t->size(), t->data_type());
 	var->place->comment = &var->name;
 	var->container = NULL;
-	var->ptr_type = (t->data_type == DT_OBJECT_REF) ?
+	var->ptr_type = (t->data_type() == DT_OBJECT_REF) ?
 			PTR_REFERENCE : NO_PTR;
 	var->is_tmpvar = true;
 

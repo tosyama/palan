@@ -40,7 +40,7 @@ public:
 
 	int getDataType(int val_ind=0);
 
-	virtual PlnExpression* adjustTypes(const vector<PlnType*> &types);
+	virtual PlnExpression* adjustTypes(const vector<PlnVarType*> &types);
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	virtual void gen(PlnGenerator& g);
 };
@@ -87,7 +87,7 @@ public:
 		string *strValue;
 		PlnArrayValue *arrValue;
 		PlnVariable *var;
-		PlnType *wk_type;
+		PlnVarType *wk_type;
 	} inf;
 
 	PlnValue() : type(VL_UNKNOWN), asgn_type(NO_ASGN), is_readonly(false)  {};
@@ -101,6 +101,6 @@ public:
 	PlnValue(PlnVariable* var);
 	~PlnValue();
 
-	PlnType* getType();
+	PlnVarType* getType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
 };

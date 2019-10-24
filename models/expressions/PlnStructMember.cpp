@@ -22,7 +22,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	: PlnExpression(ET_STRUCTMEMBER), struct_ex(sturct_ex), def(NULL)
 {
 	BOOST_ASSERT(struct_ex->values.size() == 1);
-	PlnType *t = struct_ex->values[0].getType();
+	PlnType *t = struct_ex->values[0].getType()->type;
 	if (t->type == TP_STRUCT) {
 		PlnStructType *st = static_cast<PlnStructType*>(t);
 		for (auto md: st->members) {

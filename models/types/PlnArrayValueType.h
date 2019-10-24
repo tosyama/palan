@@ -14,5 +14,5 @@ public:
 	PlnType* getDefaultType(PlnBlock *block);
 	vector<int> getArraySizes();
 
-	PlnTypeConvCap checkCompatible(PlnType* item_type, const vector<int>& sizes);
+	PlnTypeConvCap checkCompatible(PlnVarType* item_type, const vector<int>& sizes);
 };

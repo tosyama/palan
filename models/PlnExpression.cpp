@@ -88,21 +88,21 @@ PlnValue::~PlnValue()
 		delete inf.arrValue;
 }
 
-PlnType* PlnValue::getType()
+PlnVarType* PlnValue::getType()
 {
 	switch(type) {
 		case VL_LIT_INT8:
-			return PlnType::getSint();
+			return PlnType::getSint()->getVarType("---");
 		case VL_LIT_UINT8:
-			return PlnType::getUint();
+			return PlnType::getUint()->getVarType("---");
 		case VL_LIT_FLO8:
-			return PlnType::getFlo();
+			return PlnType::getFlo()->getVarType("---");
 		case VL_LIT_STR:
-			return PlnType::getReadOnlyCStr();
+			return PlnType::getReadOnlyCStr()->getVarType("---");
 		case VL_LIT_ARRAY:
 			return inf.arrValue->values[0].getType();
 		case VL_VAR:
-			return inf.var->var_type2;
+			return inf.var->var_type;
 		case VL_WORK:
 			return inf.wk_type;
 	}
@@ -135,7 +135,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			PlnVariable *var = inf.var;
 			if (var->ptr_type & PTR_INDIRECT_ACCESS) {
 				if (!var->place) {
-					var->place = new PlnDataPlace(var->var_type2->size, var->var_type2->data_type);
+					var->place = new PlnDataPlace(var->var_type->size(), var->var_type->data_type());
 					var->place->comment = &var->name;
 				}
 				return var->place;
@@ -158,10 +158,10 @@ PlnExpression::~PlnExpression()
 int PlnExpression::getDataType(int val_ind)
 {
 	BOOST_ASSERT(values.size() > val_ind && val_ind >= 0);
-	return values[val_ind].getType()->data_type;
+	return values[val_ind].getType()->data_type();
 }
 
-PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
+PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 {
 	if (type == ET_VALUE) {
 		BOOST_ASSERT(types.size()==1);
@@ -173,9 +173,9 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnType*> &types)
 				throw;
 			}
 		} else {
-			PlnType *vtype = values[0].getType();
+			PlnVarType *vtype = values[0].getType();
 			if (types[0]->canConvFrom(vtype) == TC_CANT_CONV) {
-				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name, types[0]->name);
+				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
 				err.loc = loc;
 				throw err;
 			}

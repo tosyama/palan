@@ -15,6 +15,8 @@
 PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
 	: PlnType(TP_ARRAY_VALUE), arr_val(arr_val)
 {
+	this->mode = "rir";
+	this->default_mode = "rir";
 }
 
 PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
@@ -46,7 +48,7 @@ PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 
 PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false); }
 
-static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* item_type, const vector<int>& sizes, int depth)
+static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarType* item_type, const vector<int>& sizes, int depth)
 {
 	int items_num = sizes[depth];
 	if (arr_val->item_exps.size() != items_num)
@@ -77,7 +79,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* 
 	}
 }
 
-PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vector<int>& sizes)
+PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnVarType* item_type, const vector<int>& sizes)
 {
 	if (arr_val) {
 		return checkFixedArrayItemTypes(arr_val, item_type, sizes, 0);

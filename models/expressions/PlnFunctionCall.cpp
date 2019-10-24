@@ -33,7 +33,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 	for (auto rv: f->return_vals) {
 		PlnValue val;
 		val.type = VL_WORK;
-		val.inf.wk_type = rv->var_type2;
+		val.inf.wk_type = rv->var_type;
 		val.is_readonly = rv->ptr_type & PTR_READONLY;
 		val.is_cantfree = (rv->ptr_type & NO_PTR || !(rv->ptr_type & PTR_OWNERSHIP));
 		
@@ -69,7 +69,7 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_type
 		int i=0;
 		for (auto p: f->parameters) {
 			BOOST_ASSERT(i<arg_dps.size());
-			BOOST_ASSERT(p->var_type2->data_type == arg_data_types[i]);
+			BOOST_ASSERT(p->var_type->data_type() == arg_data_types[i]);
 			arg_dps[i]->data_type = arg_data_types[i];
 			i++;
 		}
@@ -97,7 +97,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 					if (is_output)
 						arg_dtypes.push_back(DT_OBJECT_REF);
 					else
-						arg_dtypes.push_back(v.getType()->data_type);
+						arg_dtypes.push_back(v.getType()->data_type());
 				}
 				i++;
 			}
@@ -162,8 +162,8 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				clone = new PlnClone(da, a, v.getType(), false);
 			}
 
-			int data_type = v.getType()->data_type;
-			if (data_type != DT_OBJECT_REF && ptr_types[i]==PTR_REFERENCE) {
+			int data_type = v.getType()->data_type();
+			if (data_type != DT_OBJECT_REF && (ptr_types[i] & PTR_REFERENCE)) {
 				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
 				BOOST_ASSERT(v.type == VL_VAR);
 				arg_dps[i]->load_address = true;
@@ -206,7 +206,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 	for (auto &a: out_args) {
 		for (auto &v: a->values) {
-			int data_type = v.getType()->data_type;
+			int data_type = v.getType()->data_type();
 			if (data_type != DT_OBJECT_REF) {
 				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
 				arg_dps[i]->load_address = true;
@@ -235,7 +235,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
 	int i = 0;
 	for (auto r: function->return_vals) {
-		ret_dps[i]->data_type = r->var_type2->data_type;
+		ret_dps[i]->data_type = r->var_type->data_type();
 		++i;
 	}
 	
@@ -243,7 +243,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.allocDp(ret_dps[i]);
 		if (i >= data_places.size()) {
 			if (function->return_vals[i]->ptr_type & PTR_OWNERSHIP) {
-				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i]->var_type2, "ret" + std::to_string(i));
+				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i]->var_type, "ret" + std::to_string(i));
 				PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
 
 				free_vars.push_back(tmp_var);
@@ -362,18 +362,18 @@ static void initInternalFunctions()
 
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
-	f->addParam("size", PlnType::getSint(), PIO_INPUT, FPM_COPY, NULL);
-	f->addRetValue(ret_name, PlnType::getObject(), false, false);
+	f->addParam("size", PlnType::getSint()->getVarType("---"), PIO_INPUT, FPM_COPY, NULL);
+	f->addRetValue(ret_name, PlnType::getObject()->getVarType("---"), false, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");
 	f->asm_name = "free";
-	f->addParam("status", PlnType::getObject(), PIO_INPUT, FPM_REF, NULL);
+	f->addParam("status", PlnType::getObject()->getVarType("---"), PIO_INPUT, FPM_REF, NULL);
 	internalFuncs[IFUNC_FREE] = f;
 
 	f = new PlnFunction(FT_C, "__exit");
 	f->asm_name = "exit";
-	f->addParam("status", PlnType::getSint(), PIO_INPUT, FPM_COPY, NULL);
+	f->addParam("status", PlnType::getSint()->getVarType("---"), PIO_INPUT, FPM_COPY, NULL);
 	internalFuncs[IFUNC_EXIT] = f;
 }
 

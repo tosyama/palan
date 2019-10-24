@@ -37,7 +37,7 @@ public:
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].getType()->data_type == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].getType()->data_type() == DT_OBJECT_REF);
 		BOOST_ASSERT(!need_save);
 
 		dst_ex = ex;
@@ -93,8 +93,8 @@ public:
 
 				for (int i=0; i<val_items.size(); i++) {
 					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
-					PlnType* dt = dst_items[i]->values[0].getType();
-					if (dt->data_type == DT_OBJECT_REF && dt->mode[2] != 'o')
+					PlnVarType* dt = dst_items[i]->values[0].getType();
+					if (dt->data_type() == DT_OBJECT_REF && dt->mode[2] != 'o')
 						dst_items[i]->values[0].asgn_type = ASGN_COPY_REF;
 					else
 						dst_items[i]->values[0].asgn_type = ASGN_COPY;
@@ -108,7 +108,7 @@ public:
 
 			} else if (dst_ex->type == ET_ARRAYITEM
 					|| dst_ex->type == ET_STRUCTMEMBER) {
-				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type2, "tmp var");
+				tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
 				alloc_ex = tmp_var->var_type2->allocator->getAllocEx();
 				alloc_ex->data_places.push_back(tmp_var->place);
 				alloc_ex->finish(da, si);

@@ -31,7 +31,7 @@ public:
 
 	PlnVariable(): var_type2(NULL), var_type(NULL), place(NULL), container(NULL), is_tmpvar(false) {}
 
-	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnType* var_type, string name);
+	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name);
 };
 
 enum {
