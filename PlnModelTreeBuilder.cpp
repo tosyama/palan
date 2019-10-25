@@ -115,8 +115,7 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 
 	string type_name = var_type[0]["name"];
 	string mode = var_type[0]["mode"];
-	PlnType *tmp = CUR_BLOCK->getType(type_name, mode);
-	ret_vt = tmp ? tmp->getVarType(mode) : NULL;
+	ret_vt = CUR_BLOCK->getType(type_name, mode);
 
 	if (!ret_vt) {
 		PlnCompileError err(E_UndefinedType, type_name);
@@ -143,7 +142,7 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 				BOOST_ASSERT(false);
 			}
 		}
-		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt->type->getTypeWithMode(ret_vt->mode), sizes, mode)->getVarType(mode);
+		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);
 		ret_vt = arr_t;
 	}
 
@@ -490,14 +489,14 @@ static PlnVarType* getDefaultType(PlnValue &val, PlnBlock *block)
 		return PlnType::getFlo()->getVarType("---");
 	else if (val.type == VL_WORK) {
 		if (val.inf.wk_type->type->type == TP_ARRAY_VALUE) {
-			return static_cast<PlnArrayValueType*>(val.inf.wk_type->type)->getDefaultType(block)->getVarType("---");
+			return static_cast<PlnArrayValueType*>(val.inf.wk_type->type)->getDefaultType(block);
 		} else {
 			return val.inf.wk_type;
 		}
 	} else if (val.type == VL_LIT_STR)
 		return PlnType::getReadOnlyCStr()->getVarType("---");
 	else if (val.type == VL_LIT_ARRAY)
-		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->type)->getDefaultType(block)->getVarType("---");
+		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->type)->getDefaultType(block);
 	else
 		BOOST_ASSERT(false);
 }
@@ -606,7 +605,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			}
 		}
 
-		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t?t->type->getTypeWithMode(t->mode):NULL, is_readonly, is_owner, do_check_ancestor_blocks);
+		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_readonly, is_owner, do_check_ancestor_blocks);
 		if (!v) {
 			PlnCompileError err(E_DuplicateVarName, var["name"]);
 			setLoc(&err, var);
@@ -698,7 +697,7 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 void registerType(json& type, PlnScopeStack &scope)
 {
 	string type_name = type["name"];
-	PlnType *cur_type = CUR_BLOCK->getType(type_name, "wmo");
+	PlnVarType *cur_type = CUR_BLOCK->getType(type_name, "---");
 	if (cur_type) {
 		PlnCompileError err(E_DuplicateTypeName, type_name);
 		setLoc(&err, type);
@@ -732,7 +731,7 @@ void registerType(json& type, PlnScopeStack &scope)
 		PlnVarType* t = getVarType(type["var-type"], scope);
 		string type_name = type["name"];
 
-		CUR_BLOCK->declareAliasType(type_name, t->type->getTypeWithMode(t->mode));
+		CUR_BLOCK->declareAliasType(type_name, t->type);
 
 	} else {
 		BOOST_ASSERT(false);

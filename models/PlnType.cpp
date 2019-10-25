@@ -37,8 +37,7 @@ PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 
 // PlnType
 PlnType::PlnType(PlnTypeType type)
-	: type(type), allocator(NULL), freer(NULL), copyer(NULL),
-		r_type(NULL), rwo_type(NULL)
+	: type(type), allocator(NULL), freer(NULL), copyer(NULL)
 {
 }
 
@@ -58,7 +57,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* sbt = new PlnType();
 	sbt->name = "sbyte";
-	sbt->mode = "wms";
 	sbt->default_mode = "wms";
 	sbt->data_type = DT_SINT;
 	sbt->size = 1;
@@ -66,7 +64,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* bt = new PlnType();
 	bt->name = "byte";
-	bt->mode = "wms";
 	bt->default_mode = "wms";
 	bt->data_type = DT_UINT;
 	bt->size = 1;
@@ -75,7 +72,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* i16t = new PlnType();
 	i16t->name = "int16";
-	i16t->mode = "wms";
 	i16t->default_mode = "wms";
 	i16t->data_type = DT_SINT;
 	i16t->size = 2;
@@ -83,7 +79,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* u16t = new PlnType();
 	u16t->name = "uint16";
-	u16t->mode = "wms";
 	u16t->default_mode = "wms";
 	u16t->data_type = DT_UINT;
 	u16t->size = 2;
@@ -91,7 +86,6 @@ void PlnType::initBasicTypes()
 	
 	PlnType* i32t = new PlnType();
 	i32t->name = "int32";
-	i32t->mode = "wms";
 	i32t->default_mode = "wms";
 	i32t->data_type = DT_SINT;
 	i32t->size = 4;
@@ -99,7 +93,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* u32t = new PlnType();
 	u32t->name = "uint32";
-	u32t->mode = "wms";
 	u32t->default_mode = "wms";
 	u32t->data_type = DT_UINT;
 	u32t->size = 4;
@@ -107,7 +100,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* i64t = new PlnType();
 	i64t->name = "int64";
-	i64t->mode = "wms";
 	i64t->default_mode = "wms";
 	i64t->data_type = DT_SINT;
 	i64t->size = 8;
@@ -116,7 +108,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* u64t = new PlnType();
 	u64t->name = "uint64";
-	u64t->mode = "wms";
 	u64t->default_mode = "wms";
 	u64t->data_type = DT_UINT;
 	u64t->size = 8;
@@ -125,7 +116,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* f32t = new PlnType();
 	f32t->name = "flo32";
-	f32t->mode = "wms";
 	f32t->default_mode = "wms";
 	f32t->data_type = DT_FLOAT;
 	f32t->size = 4;
@@ -133,7 +123,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* f64t = new PlnType();
 	f64t->name = "flo64";
-	f64t->mode = "wms";
 	f64t->default_mode = "wms";
 	f64t->data_type = DT_FLOAT;
 	f64t->size = 8;
@@ -142,7 +131,6 @@ void PlnType::initBasicTypes()
 
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
-	t->mode = "rir";
 	t->default_mode = "rir";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
@@ -151,7 +139,6 @@ void PlnType::initBasicTypes()
 
 	t = new PlnType();
 	t->name = "object";
-	t->mode = "wmr";
 	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
@@ -160,7 +147,6 @@ void PlnType::initBasicTypes()
 
 	t = new PlnType();
 	t->name = "";
-	t->mode = "---";
 	t->default_mode = "wm-";
 	t->data_type = DT_UNKNOWN;
 	t->size = 0;
@@ -341,13 +327,13 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	return item_name + arr_name + item_suffix;
 }
 
-PlnTypeConvCap PlnType::canConvFrom(PlnType *src)
+PlnTypeConvCap PlnType::canConvFrom(const string& mode, PlnVarType *src)
 {
-	if (this == src)
+	if (this == src->type)
 		return TC_SAME;
 	
 	for (auto ci: conv_inf)
-		if (ci.type == src)
+		if (ci.type == src->type)
 			return ci.capacity;
 
 	return TC_CANT_CONV;
@@ -373,11 +359,6 @@ PlnTypeConvCap PlnType::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
 		return TC_CANT_CONV;
 
 	BOOST_ASSERT(false);
-}
-
-PlnType* PlnType::getTypeWithMode(const string& mode)
-{
-	return this;
 }
 
 PlnVarType* PlnType::getVarType(const string& mode)

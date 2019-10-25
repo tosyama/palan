@@ -47,7 +47,6 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	auto struct_var = struct_ex->values[0].inf.var;
 	var->name = struct_var->name + "." + def->name;
 	var->var_type = def->type;
-	var->var_type2 = def->type->type->getTypeWithMode(def->type->mode);
 	if (struct_var->container)
 		var->container = struct_var->container;
 	else
@@ -77,7 +76,7 @@ void PlnStructMember::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	// PlnValue::getDataPlace may alloc dp.
 	if (!member_var->place) {
-		member_var->place = new PlnDataPlace(member_var->var_type2->size, member_var->var_type2->data_type);
+		member_var->place = new PlnDataPlace(member_var->var_type->size(), member_var->var_type->data_type());
 		member_var->place->comment = &member_var->name;
 	}
 
@@ -106,10 +105,10 @@ void PlnStructMember::gen(PlnGenerator& g)
 
 vector<PlnExpression*> PlnStructMember::getAllStructMembers(PlnVariable* var)
 {
-	BOOST_ASSERT(var->var_type2->type == TP_STRUCT);
+	BOOST_ASSERT(var->var_type->type->type == TP_STRUCT);
 	vector<PlnExpression*> member_exs;
 
-	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type2);
+	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type->type);
 	for (auto member: stype->members) {
 		PlnExpression* var_ex = new PlnExpression(var);
 		PlnExpression* member_ex = new PlnStructMember(var_ex, member->name);

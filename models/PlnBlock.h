@@ -34,7 +34,7 @@ public:
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 
-	PlnVariable* declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
+	PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
 	PlnVariable* getVariable(const string& var_name);
 
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError
@@ -44,8 +44,8 @@ public:
 	void declareType(const string& type_name, vector<PlnStructMemberDef*>& members);
 	void declareAliasType(const string& type_name, PlnType* orig_type);
 
-	PlnType* getType(const string& type_name, const string& mode);
-	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes, const string& mode);
+	PlnVarType* getType(const string& type_name, const string& mode);
+	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);

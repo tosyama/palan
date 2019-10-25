@@ -18,9 +18,7 @@ public:
 	vector<PlnStructMemberDef*> members;
 
 	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode);
-	PlnStructType(const PlnStructType* src, const string& mode);
 	~PlnStructType();
-	PlnTypeConvCap canConvFrom(PlnType *src) override;
-	PlnType* getTypeWithMode(const string& mode) override;
+	PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src) override;
 };
 

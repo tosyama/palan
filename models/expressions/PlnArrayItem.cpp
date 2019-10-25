@@ -52,7 +52,6 @@ static PlnVariable* getArrayVar(PlnVarType *item_type, PlnExpression* array_ex)
 	auto var = new PlnVariable();
 	auto array_var = array_ex->values[0].inf.var;
 	var->name = array_var->name + "[]";
-	var->var_type2 = item_type->type->getTypeWithMode(item_type->mode);
 	var->var_type = item_type;
 
 	if (var->var_type->data_type() == DT_OBJECT_REF) {
@@ -119,7 +118,7 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto item_var = values[0].inf.var;
 	// PlnValue::getDataPlace may alloc dp.
 	if (!item_var->place) {
-		item_var->place = new PlnDataPlace(item_var->var_type2->size, item_var->var_type2->data_type);
+		item_var->place = new PlnDataPlace(item_var->var_type->size(), item_var->var_type->data_type());
 		item_var->place->comment = &item_var->name;
 	}
 

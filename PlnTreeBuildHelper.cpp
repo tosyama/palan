@@ -23,7 +23,7 @@ namespace palan
 
 PlnVariable* declareUInt(PlnBlock* block, string name, uint64_t init_i)
 {
-	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), false, true, false);
+	PlnVariable *var = block->declareVariable(name, PlnType::getUint()->getVarType("---"), false, true, false);
 	BOOST_ASSERT(var);
 	vector<PlnValue> vars = { var };
 
@@ -93,9 +93,9 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type->type);
 	vector<int> raw_sizes = {0};
 
-	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type2, raw_sizes, "wmr");
+	PlnVarType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes, "wmr");
 
-	return new PlnArrayItem(arr_ex, inds, raw_arr_type->getVarType("wmr"));
+	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }
 
 PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, uint64_t i)

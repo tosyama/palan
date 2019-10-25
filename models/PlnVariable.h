@@ -20,7 +20,6 @@ enum {
 
 class PlnVariable {
 public:
-	PlnType* var_type2;
 	string name;
 	PlnVarType* var_type;
 	PlnDataPlace* place;
@@ -29,7 +28,7 @@ public:
 	bool is_tmpvar;
 	PlnLoc loc;
 
-	PlnVariable(): var_type2(NULL), var_type(NULL), place(NULL), container(NULL), is_tmpvar(false) {}
+	PlnVariable(): var_type(NULL), place(NULL), container(NULL), is_tmpvar(false) {}
 
 	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name);
 };

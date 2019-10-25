@@ -58,7 +58,6 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype, bo
 
 	auto ret_var = new PlnParameter();
 	ret_var->name = rname;
-	ret_var->var_type2 = rtype ? rtype->type->getTypeWithMode(rtype->mode) :  return_vals.back()->var_type2;
 	ret_var->var_type = rtype ? rtype : return_vals.back()->var_type;
 	ret_var->param_type = PRT_RETVAL;
 	ret_var->iomode = PIO_OUTPUT;
@@ -100,7 +99,6 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 
 	PlnParameter* param = new PlnParameter();
 	param->name = pname;
-	param->var_type2 = ptype ? ptype->type->getTypeWithMode(ptype->mode) : parameters.back()->var_type2;
 	param->var_type = ptype ? ptype : parameters.back()->var_type;
 	param->param_type = PRT_PARAM;
 	param->iomode = iomode;

@@ -152,7 +152,6 @@ void PlnVarInit::gen(PlnGenerator& g)
 PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name)
 {
 	auto var = new PlnVariable();
-	var->var_type2 = var_type->type->getTypeWithMode(var_type->mode);
 	var->var_type = var_type;
 	var->name = name;
 	PlnVarType *t = var_type;

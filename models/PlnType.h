@@ -48,7 +48,6 @@ public:
 	PlnTypeType type;
 	int	data_type;
 	string name;
-	string mode;
 	string default_mode;
 	int size;
 	union {
@@ -58,9 +57,6 @@ public:
 		} obj;
 	} inf;
 
-	// Cross referens of Type objects for each mode
-	PlnType* r_type;
-	PlnType* rwo_type;
 	vector<PlnVarType*> var_types;
 
 	PlnAllocator *allocator;
@@ -76,8 +72,7 @@ public:
 
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
 	virtual ~PlnType();
-	virtual PlnTypeConvCap canConvFrom(PlnType *src);
-	virtual PlnType* getTypeWithMode(const string& mode);
+	virtual PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src);
 
 	PlnVarType* getVarType(const string& mode);
 
@@ -108,7 +103,5 @@ public:
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return type->freer->getFreeEx(free_var); }
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return type->copyer->getCopyEx(dst_var, src_var); }
 	PlnDeepCopyExpression* getCopyEx() { return type->copyer->getCopyEx(); }
-	PlnTypeConvCap canConvFrom(PlnVarType *src) {
-		return type->canConvFrom(src->type->getTypeWithMode(src->mode));
-	}
+	PlnTypeConvCap canConvFrom(PlnVarType *src) { return type->canConvFrom(mode, src); }
 };

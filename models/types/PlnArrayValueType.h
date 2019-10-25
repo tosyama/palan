@@ -8,10 +8,9 @@ class PlnArrayValueType : public PlnType {
 public:
 	PlnArrayValue *arr_val;
 	PlnArrayValueType(PlnArrayValue* arr_val);
-	PlnTypeConvCap canConvFrom(PlnType *src) override;
+	PlnTypeConvCap canConvFrom(const string &mode, PlnVarType *src) override;
 
-	//PlnType* getDefaultType(PlnModule *module);
-	PlnType* getDefaultType(PlnBlock *block);
+	PlnVarType* getDefaultType(PlnBlock *block);
 	vector<int> getArraySizes();
 
 	PlnTypeConvCap checkCompatible(PlnVarType* item_type, const vector<int>& sizes);

@@ -5,12 +5,10 @@
 
 class PlnFixedArrayType : public PlnType {
 public:
-	PlnType* item_type2;
 	PlnVarType* item_type;
 	vector<int> sizes;
 
-	PlnFixedArrayType(string &name, PlnType* item_type, vector<int>& sizes, PlnBlock* parent);
-	PlnFixedArrayType(const PlnFixedArrayType* src, const string& mode);
-	PlnTypeConvCap canConvFrom(PlnType *src) override;
-	PlnType* getTypeWithMode(const string& mode) override;
+	PlnFixedArrayType(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent);
+//	PlnFixedArrayType(const PlnFixedArrayType* src, const string& mode);
+	PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src) override;
 };

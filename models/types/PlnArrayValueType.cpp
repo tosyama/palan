@@ -15,11 +15,10 @@
 PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
 	: PlnType(TP_ARRAY_VALUE), arr_val(arr_val)
 {
-	this->mode = "rir";
 	this->default_mode = "rir";
 }
 
-PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
+PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 {
 	BOOST_ASSERT(arr_val);
 	vector<int> fixarr_sizes;
@@ -27,26 +26,26 @@ PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 	if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, val_item_type)) {
 		BOOST_ASSERT(fixarr_sizes.back() == 0);
 		fixarr_sizes.pop_back();
-		PlnType* itype;
+		PlnVarType* itype;
 		switch(val_item_type) {
 			case DT_SINT:
-				itype = PlnType::getSint(); break;
+				itype = PlnType::getSint()->getVarType("---"); break;
 			case DT_UINT:
-				itype = PlnType::getUint(); break;
+				itype = PlnType::getUint()->getVarType("---"); break;
 			case DT_FLOAT:
-				itype = PlnType::getFlo(); break;
+				itype = PlnType::getFlo()->getVarType("---"); break;
 			default:
 				BOOST_ASSERT(false);
 		}
 
-		return block->getFixedArrayType(itype, fixarr_sizes, "wmo");
+		return block->getFixedArrayType(itype, fixarr_sizes, "---");
 	}
 
 	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
 	throw err;
 }
 
-PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false); }
+PlnTypeConvCap PlnArrayValueType::canConvFrom(const string& mode, PlnVarType *src) { BOOST_ASSERT(false); }
 
 static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarType* item_type, const vector<int>& sizes, int depth)
 {

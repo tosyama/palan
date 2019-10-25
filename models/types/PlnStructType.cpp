@@ -34,7 +34,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 
 	f->parent = parent_block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType(struct_type->mode), false, false);
+	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType("wmo"), false, false);
 
 	auto block = new PlnBlock();
 	block->setParent(f);
@@ -66,7 +66,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-	f->addParam(s1, struct_type->getVarType(struct_type->mode), PIO_INPUT, FPM_REF, NULL);
+	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_REF, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -98,9 +98,9 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
 	// dst
-	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType(struct_type->mode), PIO_INPUT, FPM_REF, NULL);
+	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wmr"), PIO_INPUT, FPM_REF, NULL);
 	// src
-	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType(struct_type->mode), PIO_INPUT, FPM_REF, NULL);
+	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_REF, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -137,10 +137,8 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	size = 8;
 	int alloc_size = 0;
 	int max_member_size = 1;
-	mode = default_mode;
 	this->default_mode = default_mode;
 	bool has_object_member = false;
-	rwo_type = this;
 
 	for (auto m: this->members) {
 		int member_size = m->type->size();
@@ -193,42 +191,22 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	}
 }
 
-PlnStructType::PlnStructType(const PlnStructType* src, const string& mode)
-	: PlnType(TP_STRUCT)
-{
-	BOOST_ASSERT(src->mode == "wmo");
-	BOOST_ASSERT(mode == "rir");
-
-	name = src->name;
-	data_type = src->data_type;
-	size = src->size;
-	inf.obj = src->inf.obj;
-	this->mode = mode;
-	members = src->members;
-}
-
 PlnStructType::~PlnStructType()
 {
 	for (auto member: members)
 		delete member;
 }
 
-PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
-	if (this == src)
+PlnTypeConvCap PlnStructType::canConvFrom(const string& mode, PlnVarType *src) {
+	if (this == src->type)
 		return TC_SAME;
-	
-	if (src == r_type)
-		return TC_AUTO_CAST;
-	
-	if (src == rwo_type)
-		return TC_AUTO_CAST;
 
-	if (src == PlnType::getObject()) {
+	if (src->type == PlnType::getObject()) {
 		return TC_DOWN_CAST;
 	}
 
-	if (src->type == TP_ARRAY_VALUE) {
-		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src)->arr_val;
+	if (src->type->type == TP_ARRAY_VALUE) {
+		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src->type)->arr_val;
 
 		if (arr_val->item_exps.size() != members.size())
 			return TC_CANT_CONV;
@@ -248,19 +226,3 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 	return TC_CANT_CONV;
 }
 
-PlnType* PlnStructType::getTypeWithMode(const string& mode)
-{
-	if (mode == "---" || mode == "wmo") {
-		BOOST_ASSERT(rwo_type);
-		return rwo_type;
-	}
-	if (mode == "rir") {
-		if (r_type)
-			return r_type;
-		r_type = new PlnStructType(this, "rir");
-		r_type->rwo_type = this->rwo_type;
-		r_type->r_type = r_type;
-		return r_type;
-	}
-	BOOST_ASSERT(false);
-}
