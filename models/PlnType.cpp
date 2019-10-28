@@ -318,8 +318,8 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	arr_name.back() = ']';
 
 	PlnVarType *it = item_type;
-	while (it->type->type == TP_FIXED_ARRAY) {
-		it = static_cast<PlnFixedArrayType*>(it->type)->item_type;
+	while (it->typeinf->type == TP_FIXED_ARRAY) {
+		it = static_cast<PlnFixedArrayType*>(it->typeinf)->item_type;
 	}
 	const string& item_name = it->name();
 	string item_suffix = item_type->name().substr(item_name.size());
@@ -329,11 +329,11 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 
 PlnTypeConvCap PlnType::canConvFrom(const string& mode, PlnVarType *src)
 {
-	if (this == src->type)
+	if (this == src->typeinf)
 		return TC_SAME;
 	
 	for (auto ci: conv_inf)
-		if (ci.type == src->type)
+		if (ci.type == src->typeinf)
 			return ci.capacity;
 
 	return TC_CANT_CONV;

@@ -97,7 +97,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 					if (is_output)
 						arg_dtypes.push_back(DT_OBJECT_REF);
 					else
-						arg_dtypes.push_back(v.getType()->data_type());
+						arg_dtypes.push_back(v.getVarType()->data_type());
 				}
 				i++;
 			}
@@ -159,10 +159,10 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				if (v.type == VL_LIT_ARRAY) {
 					a = v.inf.arrValue;
 				}
-				clone = new PlnClone(da, a, v.getType(), false);
+				clone = new PlnClone(da, a, v.getVarType(), false);
 			}
 
-			int data_type = v.getType()->data_type();
+			int data_type = v.getVarType()->data_type();
 			if (data_type != DT_OBJECT_REF && (ptr_types[i] & PTR_REFERENCE)) {
 				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
 				BOOST_ASSERT(v.type == VL_VAR);
@@ -206,7 +206,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 
 	for (auto &a: out_args) {
 		for (auto &v: a->values) {
-			int data_type = v.getType()->data_type();
+			int data_type = v.getVarType()->data_type();
 			if (data_type != DT_OBJECT_REF) {
 				BOOST_ASSERT(data_type == DT_SINT || data_type == DT_UINT || data_type == DT_FLOAT);
 				arg_dps[i]->load_address = true;
@@ -362,18 +362,18 @@ static void initInternalFunctions()
 
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
-	f->addParam("size", PlnType::getSint()->getVarType("---"), PIO_INPUT, FPM_COPY, NULL);
-	f->addRetValue(ret_name, PlnType::getObject()->getVarType("---"), false, false);
+	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_COPY, NULL);
+	f->addRetValue(ret_name, PlnType::getObject()->getVarType(), false, false);
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");
 	f->asm_name = "free";
-	f->addParam("status", PlnType::getObject()->getVarType("---"), PIO_INPUT, FPM_REF, NULL);
+	f->addParam("ptr", PlnType::getObject()->getVarType(), PIO_INPUT, FPM_COPY, NULL);
 	internalFuncs[IFUNC_FREE] = f;
 
 	f = new PlnFunction(FT_C, "__exit");
 	f->asm_name = "exit";
-	f->addParam("status", PlnType::getSint()->getVarType("---"), PIO_INPUT, FPM_COPY, NULL);
+	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_COPY, NULL);
 	internalFuncs[IFUNC_EXIT] = f;
 }
 

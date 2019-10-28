@@ -29,7 +29,7 @@ public:
 	PlnAsgnType getAssginType() override { return ASGN_COPY; }
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
-		cpy_ex = dst_ex->values[0].getType()->getCopyEx();
+		cpy_ex = dst_ex->values[0].getVarType()->getCopyEx();
 		src_ex->data_places.push_back(cpy_ex->srcDp(da));
 	}
 

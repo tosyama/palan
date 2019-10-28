@@ -88,19 +88,19 @@ PlnValue::~PlnValue()
 		delete inf.arrValue;
 }
 
-PlnVarType* PlnValue::getType()
+PlnVarType* PlnValue::getVarType()
 {
 	switch(type) {
 		case VL_LIT_INT8:
-			return PlnType::getSint()->getVarType("---");
+			return PlnType::getSint()->getVarType();
 		case VL_LIT_UINT8:
-			return PlnType::getUint()->getVarType("---");
+			return PlnType::getUint()->getVarType();
 		case VL_LIT_FLO8:
-			return PlnType::getFlo()->getVarType("---");
+			return PlnType::getFlo()->getVarType();
 		case VL_LIT_STR:
-			return PlnType::getReadOnlyCStr()->getVarType("---");
+			return PlnType::getReadOnlyCStr()->getVarType();
 		case VL_LIT_ARRAY:
-			return inf.arrValue->values[0].getType();
+			return inf.arrValue->values[0].getVarType();
 		case VL_VAR:
 			return inf.var->var_type;
 		case VL_WORK:
@@ -158,7 +158,7 @@ PlnExpression::~PlnExpression()
 int PlnExpression::getDataType(int val_ind)
 {
 	BOOST_ASSERT(values.size() > val_ind && val_ind >= 0);
-	return values[val_ind].getType()->data_type();
+	return values[val_ind].getVarType()->data_type();
 }
 
 PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
@@ -173,7 +173,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 				throw;
 			}
 		} else {
-			PlnVarType *vtype = values[0].getType();
+			PlnVarType *vtype = values[0].getVarType();
 			if (types[0]->canConvFrom(vtype) == TC_CANT_CONV) {
 				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
 				err.loc = loc;

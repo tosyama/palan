@@ -34,7 +34,8 @@ public:
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 
-	PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
+	//PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
+	PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks);
 	PlnVariable* getVariable(const string& var_name);
 
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError

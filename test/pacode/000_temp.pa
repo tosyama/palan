@@ -1,19 +1,12 @@
-ccall printf(byte[?]@ format, ...) -> int32;
-ccall fopen(byte[?]@ &filename, byte[?]@ &mode) -> FILE;
-ccall fclose(FILE >>stream) -> int32;
-ccall fprintf(FILE@ &stream, byte[?]@ &format, ...) -> int32;
-ccall time(uint64 tloc)->uint64;
-
-type FILE;
-type struct_tm {
-	int32 tm_sec;
-	int32 tm_min;
-	int32 tm_hour;
-	int32 tm_mday;
-	int32 tm_mon;
-	int32 tm_year;
-	int32 tm_wday;
-	int32 tm_yday;
-	int32 tm_isdst;
+type Test {
+	int32 a;
+	int32 b;
 };
+
+type Test2 {
+	int16[2]@ x;
+};
+
+Test t;
+Test2 t2 = [[1,2]];
 

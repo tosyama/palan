@@ -369,7 +369,6 @@ move_owner: /* empty */	{ $$ = false; }
 	;
 
 pass_by: DBL_GRTR { $$ = "move"; }
-	| '&' { $$ = "ro-ref"; }
 	;
 
 default_value:	/* empty */	{  }

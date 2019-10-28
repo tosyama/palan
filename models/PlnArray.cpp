@@ -20,7 +20,7 @@
 
 PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock* block)
 {
-	PlnType* it = arr_type->item_type->type;
+	PlnType* it = arr_type->item_type->typeinf;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
@@ -55,12 +55,12 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
-	PlnType* it = arr_type->item_type->type;
+	PlnType* it = arr_type->item_type->typeinf;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_REF, NULL);
+	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_COPY, NULL);
 	f->parent = block;
 
 	f->implement = new PlnBlock();
@@ -90,14 +90,14 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 
 PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
-	PlnType* it = arr_type->item_type->type;
+	PlnType* it = arr_type->item_type->typeinf;
 	int item_num = arr_type->inf.obj.alloc_size / it->size;
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
 	string s1 = "__p1", s2 = "__p2";
-	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_REF, NULL);
-	f->addParam(s2, arr_type->getVarType("rir"), PIO_INPUT, FPM_REF, NULL);
+	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_COPY, NULL);
+	f->addParam(s2, arr_type->getVarType("rir"), PIO_INPUT, FPM_COPY, NULL);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);

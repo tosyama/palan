@@ -65,7 +65,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_module = b->parent_module;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -100,10 +100,8 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_t
 
 	v->var_type = var_type;
 
-	if (var_type->mode == "rir") {
-		is_owner = false;
-		readonly = true;
-	}
+	bool readonly = var_type->mode[0] == 'r';
+	bool is_owner = var_type->mode[2] == 'o';
 
 	if (v->var_type->data_type() == DT_OBJECT_REF) {
 		v->ptr_type = PTR_REFERENCE;
@@ -363,7 +361,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 						i++;
 					}
 
-					PlnVarType* a_type = arg_val->getType();
+					PlnVarType* a_type = arg_val->getVarType();
 					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 

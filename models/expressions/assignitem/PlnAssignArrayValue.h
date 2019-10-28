@@ -37,7 +37,7 @@ public:
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].getType()->data_type() == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].getVarType()->data_type() == DT_OBJECT_REF);
 		BOOST_ASSERT(!need_save);
 
 		dst_ex = ex;
@@ -80,10 +80,10 @@ public:
 				PlnVariable* dst_var = dst_ex->values[0].inf.var;
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
 				vector<PlnExpression*> dst_items;
-				if (dst_var->var_type->type->type == TP_FIXED_ARRAY) {
+				if (dst_var->var_type->typeinf->type == TP_FIXED_ARRAY) {
 					dst_items = PlnArrayItem::getAllArrayItems(dst_ex->values[0].inf.var);
 
-				} else if (dst_var->var_type->type->type == TP_STRUCT) {
+				} else if (dst_var->var_type->typeinf->type == TP_STRUCT) {
 					dst_items = PlnStructMember::getAllStructMembers(dst_ex->values[0].inf.var);
 
 				} else
@@ -93,7 +93,7 @@ public:
 
 				for (int i=0; i<val_items.size(); i++) {
 					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
-					PlnVarType* dt = dst_items[i]->values[0].getType();
+					PlnVarType* dt = dst_items[i]->values[0].getVarType();
 					if (dt->data_type() == DT_OBJECT_REF && dt->mode[2] != 'o')
 						dst_items[i]->values[0].asgn_type = ASGN_COPY_REF;
 					else
@@ -120,10 +120,10 @@ public:
 
 				vector<PlnExpression*> val_items = src_ex->getAllItems();
 				vector<PlnExpression*> dst_items;
-				if (tmp_var->var_type->type->type == TP_FIXED_ARRAY) {
+				if (tmp_var->var_type->typeinf->type == TP_FIXED_ARRAY) {
 					dst_items = PlnArrayItem::getAllArrayItems(tmp_var);
 
-				} else if (tmp_var->var_type->type->type == TP_STRUCT) {
+				} else if (tmp_var->var_type->typeinf->type == TP_STRUCT) {
 					dst_items = PlnStructMember::getAllStructMembers(tmp_var);
 
 				} else

@@ -3,3 +3,4 @@ ccall printf(...);
 
 int64 n = write(1, "Hello World!\n", 13);
 printf("%d", n);
+

@@ -29,11 +29,11 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 		PlnVarType* itype;
 		switch(val_item_type) {
 			case DT_SINT:
-				itype = PlnType::getSint()->getVarType("---"); break;
+				itype = PlnType::getSint()->getVarType(); break;
 			case DT_UINT:
-				itype = PlnType::getUint()->getVarType("---"); break;
+				itype = PlnType::getUint()->getVarType(); break;
 			case DT_FLOAT:
-				itype = PlnType::getFlo()->getVarType("---"); break;
+				itype = PlnType::getFlo()->getVarType(); break;
 			default:
 				BOOST_ASSERT(false);
 		}
@@ -57,7 +57,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarTyp
 	if (sizes.size() == (depth+1) ) {
 		// check item type conpatible 
 		for (auto exp: arr_val->item_exps) {
-			result = PlnType::lowCapacity(result, item_type->canConvFrom(exp->values[0].getType()));
+			result = PlnType::lowCapacity(result, item_type->canConvFrom(exp->values[0].getVarType()));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}

@@ -22,7 +22,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	: PlnExpression(ET_STRUCTMEMBER), struct_ex(sturct_ex), def(NULL)
 {
 	BOOST_ASSERT(struct_ex->values.size() == 1);
-	PlnType *t = struct_ex->values[0].getType()->type;
+	PlnType *t = struct_ex->values[0].getVarType()->typeinf;
 	if (t->type == TP_STRUCT) {
 		PlnStructType *st = static_cast<PlnStructType*>(t);
 		for (auto md: st->members) {
@@ -105,10 +105,10 @@ void PlnStructMember::gen(PlnGenerator& g)
 
 vector<PlnExpression*> PlnStructMember::getAllStructMembers(PlnVariable* var)
 {
-	BOOST_ASSERT(var->var_type->type->type == TP_STRUCT);
+	BOOST_ASSERT(var->var_type->typeinf->type == TP_STRUCT);
 	vector<PlnExpression*> member_exs;
 
-	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type->type);
+	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type->typeinf);
 	for (auto member: stype->members) {
 		PlnExpression* var_ex = new PlnExpression(var);
 		PlnExpression* member_ex = new PlnStructMember(var_ex, member->name);

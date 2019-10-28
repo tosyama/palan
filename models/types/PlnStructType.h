@@ -8,9 +8,8 @@ public:
 	PlnVarType* type;
 	string name;
 	int offset;
-	bool is_ro_ref;
 
-	PlnStructMemberDef(PlnVarType *type, string name, bool is_ro_ref);
+	PlnStructMemberDef(PlnVarType *type, string name);
 };
 
 class PlnStructType : public PlnType {

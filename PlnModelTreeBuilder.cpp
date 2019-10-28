@@ -235,7 +235,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					iomode = PIO_OUTPUT;
 				}
 
-				f->addParam(param["name"], PlnType::getAny()->getVarType("---"), iomode, FPM_COPY, NULL);
+				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, FPM_COPY, NULL);
 
 			} else {
 				PlnVarType *var_type = getVarType(param["var-type"], scope);
@@ -250,7 +250,15 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					iomode = PIO_INPUT;
 
 				} else if (param["pass-by"] == "write") {
-					pm = FPM_REF;
+					if (var_type->mode[2] == 's' || var_type->mode[2] == 'o') { // stack
+						string w_mode = var_type->mode;
+						w_mode[2] = 'r';
+						var_type = var_type->typeinf->getVarType(w_mode);
+						pm = FPM_COPY;
+						
+					} else { // "r"? 
+						BOOST_ASSERT(false);
+					}
 					iomode = PIO_OUTPUT;
 
 				} else {
@@ -482,21 +490,21 @@ static PlnVarType* getDefaultType(PlnValue &val, PlnBlock *block)
 	if (val.type == VL_VAR)
 		return val.inf.var->var_type;
 	else if (val.type == VL_LIT_INT8)
-		return PlnType::getSint()->getVarType("---");
+		return PlnType::getSint()->getVarType();
 	else if (val.type == VL_LIT_UINT8)
-		return PlnType::getUint()->getVarType("---");
+		return PlnType::getUint()->getVarType();
 	else if (val.type == VL_LIT_FLO8)
-		return PlnType::getFlo()->getVarType("---");
+		return PlnType::getFlo()->getVarType();
 	else if (val.type == VL_WORK) {
-		if (val.inf.wk_type->type->type == TP_ARRAY_VALUE) {
-			return static_cast<PlnArrayValueType*>(val.inf.wk_type->type)->getDefaultType(block);
+		if (val.inf.wk_type->typeinf->type == TP_ARRAY_VALUE) {
+			return static_cast<PlnArrayValueType*>(val.inf.wk_type->typeinf)->getDefaultType(block);
 		} else {
 			return val.inf.wk_type;
 		}
 	} else if (val.type == VL_LIT_STR)
-		return PlnType::getReadOnlyCStr()->getVarType("---");
+		return PlnType::getReadOnlyCStr()->getVarType();
 	else if (val.type == VL_LIT_ARRAY)
-		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->type)->getDefaultType(block);
+		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->typeinf)->getDefaultType(block);
 	else
 		BOOST_ASSERT(false);
 }
@@ -559,7 +567,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_BLOCK);
 
 				// check type not support for var
-				if (t->type == PlnType::getReadOnlyCStr()) {
+				if (t->typeinf == PlnType::getReadOnlyCStr()) {
 					throw PlnCompileError(E_UnsuppotedGrammer, "Not supported type for variable.");
 				}
 
@@ -572,14 +580,14 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
 
-			PlnType *tt = val.getType()->type;
+			PlnType *tt = val.getVarType()->typeinf;
 			if (tt->type == TP_FIXED_ARRAY) {
 				while (tt->type == TP_FIXED_ARRAY) {
 					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(tt);
 					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
-					tt = atype->item_type->type;
+					tt = atype->item_type->typeinf;
 				}
 			} else if (tt->type == TP_ARRAY_VALUE) {
 				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
@@ -592,20 +600,9 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			t = getVarType(var["var-type"], scope);
 		}
 
-		bool is_owner = true;
-		bool is_readonly = false;
-		bool do_check_ancestor_blocks = false;
-		if (migrate) {
-			if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
-				is_owner = false;
-				is_readonly = true;
-			}
-			if (infer == TYPE_INFER) {
-				do_check_ancestor_blocks = true;
-			}
-		}
+		bool do_check_ancestor_blocks = (infer == TYPE_INFER);
 
-		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, is_readonly, is_owner, do_check_ancestor_blocks);
+		PlnVariable *v = CUR_BLOCK->declareVariable(var["name"], t, do_check_ancestor_blocks);
 		if (!v) {
 			PlnCompileError err(E_DuplicateVarName, var["name"]);
 			setLoc(&err, var);
@@ -614,20 +611,10 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		vars.push_back(v);
 		types.push_back(v->var_type);
 
-		if (migrate) { // deprecated
-			if (var["move"].is_boolean() && var["move"] == true) {
-				vars.back().asgn_type = ASGN_MOVE;
-			} else if (var["ro-ref"].is_boolean() && var["ro-ref"] == true) {
-				vars.back().asgn_type = ASGN_COPY_REF;
-			} else {
-				vars.back().asgn_type = ASGN_COPY;
-			}
-		}
-
 		// set asgn_type
 		if (var["move"].is_boolean() && var["move"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
-		} else if (v->var_type->data_type() == DT_OBJECT_REF && v->var_type->mode == "rir") {
+		} else if (v->var_type->data_type() == DT_OBJECT_REF && v->var_type->mode[2] == 'r') {
 			vars.back().asgn_type = ASGN_COPY_REF;
 		} else {
 			vars.back().asgn_type = ASGN_COPY;
@@ -697,14 +684,14 @@ void registerConst(json& cnst, PlnScopeStack &scope)
 void registerType(json& type, PlnScopeStack &scope)
 {
 	string type_name = type["name"];
-	PlnVarType *cur_type = CUR_BLOCK->getType(type_name, "---");
-	if (cur_type) {
-		PlnCompileError err(E_DuplicateTypeName, type_name);
-		setLoc(&err, type);
-		throw err;
+	{
+		PlnVarType *cur_type = CUR_BLOCK->getType(type_name, "---");
+		if (cur_type) {
+			PlnCompileError err(E_DuplicateTypeName, type_name);
+			setLoc(&err, type);
+			throw err;
+		}
 	}
-
-	// cur_type == NULL;
 
 	if (type["type"] == "obj-ref") {
 		CUR_BLOCK->declareType(type_name);
@@ -715,13 +702,8 @@ void registerType(json& type, PlnScopeStack &scope)
 		vector<PlnStructMemberDef*> members;
 		for (auto m: type["members"]) {
 			PlnVarType* t = getVarType(m["type"], scope);
-			bool is_ro_ref = false;
 
-			if (m["ro-ref"].is_boolean()) {
-				is_ro_ref = m["ro-ref"];
-			}
-
-			auto member = new PlnStructMemberDef(t, m["name"], is_ro_ref);
+			auto member = new PlnStructMemberDef(t, m["name"]);
 			members.push_back(member);
 		}
 		CUR_BLOCK->declareType(type_name, members);
@@ -731,7 +713,7 @@ void registerType(json& type, PlnScopeStack &scope)
 		PlnVarType* t = getVarType(type["var-type"], scope);
 		string type_name = type["name"];
 
-		CUR_BLOCK->declareAliasType(type_name, t->type);
+		CUR_BLOCK->declareAliasType(type_name, t->typeinf);
 
 	} else {
 		BOOST_ASSERT(false);

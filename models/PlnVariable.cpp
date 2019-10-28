@@ -57,8 +57,8 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 			for (int i=0; i<ex->values.size(); ++i) {
 				if (var_i < vars.size()) {
-					PlnVarType* src_type = ex->values[i].getType();
-					PlnVarType* dst_type = vars[var_i].getType();
+					PlnVarType* src_type = ex->values[i].getVarType();
+					PlnVarType* dst_type = vars[var_i].getVarType();
 
 					// Compatibility is assured at adjustTypes().
 					BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);

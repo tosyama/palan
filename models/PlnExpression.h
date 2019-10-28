@@ -101,6 +101,6 @@ public:
 	PlnValue(PlnVariable* var);
 	~PlnValue();
 
-	PlnVarType* getType();
+	PlnVarType* getVarType();
 	PlnDataPlace* getDataPlace(PlnDataAllocator& da);
 };

@@ -23,8 +23,8 @@
 #include "PlnStructType.h"
 #include "PlnArrayValueType.h"
 
-PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, string name, bool is_ro_ref)
-	: type(type), name(name), offset(0), is_ro_ref(is_ro_ref)
+PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, string name)
+	: type(type), name(name), offset(0)
 {
 }
 
@@ -66,7 +66,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_REF, NULL);
+	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_COPY, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -98,9 +98,9 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
 	// dst
-	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wmr"), PIO_INPUT, FPM_REF, NULL);
+	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wmr"), PIO_INPUT, FPM_COPY, NULL);
 	// src
-	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_REF, NULL);
+	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_COPY, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -198,15 +198,15 @@ PlnStructType::~PlnStructType()
 }
 
 PlnTypeConvCap PlnStructType::canConvFrom(const string& mode, PlnVarType *src) {
-	if (this == src->type)
+	if (this == src->typeinf)
 		return TC_SAME;
 
-	if (src->type == PlnType::getObject()) {
+	if (src->typeinf == PlnType::getObject()) {
 		return TC_DOWN_CAST;
 	}
 
-	if (src->type->type == TP_ARRAY_VALUE) {
-		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src->type)->arr_val;
+	if (src->typeinf->type == TP_ARRAY_VALUE) {
+		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src->typeinf)->arr_val;
 
 		if (arr_val->item_exps.size() != members.size())
 			return TC_CANT_CONV;
@@ -214,8 +214,7 @@ PlnTypeConvCap PlnStructType::canConvFrom(const string& mode, PlnVarType *src) {
 		PlnTypeConvCap cap = TC_SAME;
 		int i = 0;
 		for (auto member: members) {
-			// PlnType* src_type2 = arr_val->item_exps[i]->values[0].getType();
-			PlnVarType* src_type = arr_val->item_exps[i]->values[0].getType();
+			PlnVarType* src_type = arr_val->item_exps[i]->values[0].getVarType();
 			cap = PlnType::lowCapacity(cap, member->type->canConvFrom(src_type));
 			i++;
 		}

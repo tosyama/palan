@@ -74,7 +74,7 @@ public:
 	virtual ~PlnType();
 	virtual PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src);
 
-	PlnVarType* getVarType(const string& mode);
+	PlnVarType* getVarType(const string& mode = "---");
 
 	static void initBasicTypes();
 	static vector<PlnType*>& getBasicTypes();
@@ -92,16 +92,16 @@ public:
 
 class PlnVarType {
 public:
-	PlnVarType(PlnType* type, const string &mode): type(type), mode(mode) {}
-	PlnType* type;
+	PlnVarType(PlnType* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
+	PlnType* typeinf;
 	string mode;
 
-	const string& name() { return type->name; }
-	int data_type() { return type->data_type; }
-	int size() { return type->size; }
-	PlnExpression *getAllocEx() { return type->allocator->getAllocEx(); }
-	PlnExpression *getFreeEx(PlnExpression* free_var) { return type->freer->getFreeEx(free_var); }
-	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return type->copyer->getCopyEx(dst_var, src_var); }
-	PlnDeepCopyExpression* getCopyEx() { return type->copyer->getCopyEx(); }
-	PlnTypeConvCap canConvFrom(PlnVarType *src) { return type->canConvFrom(mode, src); }
+	const string& name() { return typeinf->name; }
+	int data_type() { return typeinf->data_type; }
+	int size() { return typeinf->size; }
+	PlnExpression *getAllocEx() { return typeinf->allocator->getAllocEx(); }
+	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
+	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return typeinf->copyer->getCopyEx(dst_var, src_var); }
+	PlnDeepCopyExpression* getCopyEx() { return typeinf->copyer->getCopyEx(); }
+	PlnTypeConvCap canConvFrom(PlnVarType *src) { return typeinf->canConvFrom(mode, src); }
 };
