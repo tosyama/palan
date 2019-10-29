@@ -171,15 +171,13 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			}
 
 			PlnVarType *var_type = getVarType(param["var-type"], scope);
-			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy" || param["pass-by"] == "ro-ref", param);
+			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy", param);
 
 			PlnPassingMethod pm;
 			if (param["pass-by"] == "move") {
 				pm = FPM_MOVEOWNER;
 			} else if (param["pass-by"] == "copy") {
 				pm = FPM_COPY;
-			} else if (migrate && param["pass-by"] == "ro-ref") {
-				pm = FPM_REF;
 			} else
 				BOOST_ASSERT(false);
 
@@ -198,7 +196,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				name = ret["name"];
 
 			try {
-				f->addRetValue(name, var_type, false, true);
+				f->addRetValue(name, var_type);
 
 			} catch (PlnCompileError& err) {
 				if (err.loc.fid == -1)
@@ -245,10 +243,6 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					pm = FPM_MOVEOWNER;
 					iomode = PIO_INPUT;
 
-				} else if (param["pass-by"] == "ro-ref") {
-					pm = FPM_REF;
-					iomode = PIO_INPUT;
-
 				} else if (param["pass-by"] == "write") {
 					if (var_type->mode[2] == 's' || var_type->mode[2] == 'o') { // stack
 						string w_mode = var_type->mode;
@@ -256,7 +250,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 						var_type = var_type->typeinf->getVarType(w_mode);
 						pm = FPM_COPY;
 						
-					} else { // "r"? 
+					} else { // "r"
 						BOOST_ASSERT(false);
 					}
 					iomode = PIO_OUTPUT;
@@ -272,18 +266,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		if (proto["ret"].is_object()) {
 			PlnVarType *t = getVarType(proto["ret"]["var-type"], scope);
 			string rname = "";
-			if (t->data_type() == DT_OBJECT_REF) {
-				bool is_readonly = false;
-				bool do_init = true;
-				if (proto["ret"]["ro-ref"].is_boolean()) {
-					is_readonly = proto["ret"]["ro-ref"];
-					do_init = false;
-				}
-				f->addRetValue(rname, t, is_readonly, do_init);
-
-			} else {
-				f->addRetValue(rname, t, true, false);
-			}
+			f->addRetValue(rname, t);
 
 		}
 		setLoc(f, proto);

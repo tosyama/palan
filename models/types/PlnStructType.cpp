@@ -34,7 +34,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 
 	f->parent = parent_block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType("wmo"), false, false);
+	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType("wmr"));
 
 	auto block = new PlnBlock();
 	block->setParent(f);

@@ -51,7 +51,8 @@ public:
 	bool generated;
 
 	PlnFunction(int func_type, const string& func_name);
-	PlnVariable* addRetValue(const string& rname, PlnVarType* rtype, bool readonly, bool do_init);
+	// PlnVariable* addRetValue(const string& rname, PlnVarType* rtype, bool readonly, bool do_init);
+	PlnVariable* addRetValue(const string& rname, PlnVarType* rtype);
 	PlnParameter* addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
 
 	vector<string> getParamStrs() const;

@@ -34,7 +34,7 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 {
 }
 
-PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype, bool readonly, bool do_init)
+PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 {
 	for (auto r: return_vals)
 		if (r->name != "" && r->name == rname)
@@ -63,7 +63,11 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype, bo
 	ret_var->iomode = PIO_OUTPUT;
 
 	auto t = ret_var->var_type;
+
 	if (t->data_type() == DT_OBJECT_REF) {
+		bool do_init = (t->mode[2] != 'r'); // not reference
+		bool readonly = (t->mode[0] == 'r');
+
 		if (do_init)
 			ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
 		else	

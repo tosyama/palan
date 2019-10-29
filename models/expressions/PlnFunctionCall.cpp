@@ -363,7 +363,7 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
 	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_COPY, NULL);
-	f->addRetValue(ret_name, PlnType::getObject()->getVarType(), false, false);
+	f->addRetValue(ret_name, PlnType::getObject()->getVarType());
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");

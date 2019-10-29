@@ -1,12 +1,18 @@
-type Test {
-	int32 a;
-	int32 b;
-};
+int32[3][4] a1;
+set_arrarr(a1>>) ->> a1;
 
-type Test2 {
-	int16[2]@ x;
-};
+func set_arrarr(int32[3][4] >>a) -> int32[3][4] a
+{
+	int32 i, j;
 
-Test t;
-Test2 t2 = [[1,2]];
+	0 -> i;
+	while i<3 {
+		0 -> j;
+		while j<4 {
+			i*4+j -> a[i][j];
+			j+1 -> j;
+		}
+		i+1 -> i;
+	}
+}
 

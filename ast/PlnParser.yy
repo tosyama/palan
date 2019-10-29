@@ -82,7 +82,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token EQ_ARROW	"=>"
 
 %type <string>	pass_by
-%type <bool>	move_owner take_owner arrow_ope ro_ref
+%type <bool>	move_owner take_owner arrow_ope
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
@@ -427,14 +427,11 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 	;
 
 single_return: /* empty */ { }
-	| ARROW type ro_ref
+	| ARROW type
 	{
 		json retval = {
 			{"var-type", move($2)}
 		};
-		if ($3) {
-			retval["ro-ref"] = true;
-		}
 		$$ = move(retval);
 		LOC($$, @$);
 	}
@@ -1110,25 +1107,21 @@ type_def: KW_TYPE ID
 	}
 	;
 
-struct_def: type ro_ref ID
+struct_def: type ID
 	{
 		json member = {
 			{"type", $1},
-			{"name", $3},
+			{"name", $2},
 		};
-		if ($2)
-			member["ro-ref"] = true;
 		$$.push_back(member);
 	}
-	| struct_def ';' type ro_ref ID
+	| struct_def ';' type ID
 	{
 		$$ = move($1);
 		json member = {
 			{"type", $3},
-			{"name", $5},
+			{"name", $4},
 		};
-		if ($4)
-			member["ro-ref"] = true;
 		$$.push_back(member);
 	}
 	| struct_def ';'
@@ -1153,16 +1146,13 @@ declarations: declaration
 	}
 	;
 
-declaration: var_type ro_ref ID take_owner
+declaration: var_type ID take_owner
 	{
 		json dec = {
 			{"var-type", move($1)},
-			{"name", move($3)}
+			{"name", move($2)}
 		};
-		if ($2) {
-			dec["ro-ref"] = true;
-		}
-		if ($4) {
+		if ($3) {
 			dec["move"] = true;
 		}
 		$$ = move(dec);
@@ -1181,10 +1171,6 @@ subdeclaration: ID take_owner
 		$$ = move(dec);
 		LOC($$, @$);
 	}
-	;
-
-ro_ref:	/* empty */ { $$ = false; }
-	| '&' { $$ = true; }
 	;
 
 take_owner: /* empty */ { $$ = false; }

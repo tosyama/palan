@@ -26,7 +26,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, arr_type->getVarType("wmo"), false, false);
+	PlnVariable* ret_var = f->addRetValue(s1, arr_type->getVarType("wmr"));
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);

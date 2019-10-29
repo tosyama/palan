@@ -12,7 +12,7 @@ ccall fprintf(FILE@ stream, byte[?]@ format, ...) -> int32;
 ccall fscanf(FILE@ stream, byte[?]@ format => ...) -> int32;
 
 ccall time(uint64 tloc)->uint64;
-ccall localtime(uint64@ t) -> struct_tm@ &;
+ccall localtime(uint64@ t) -> struct_tm@;
 
 ccall cos(flo64 x) -> flo64 :m;
 

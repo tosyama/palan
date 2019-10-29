@@ -1,6 +1,6 @@
 ccall printf(...);
 ccall time(uint64 tloc)->uint64;
-ccall localtime(uint64@ t) -> struct_tm@&;
+ccall localtime(uint64@ t) -> struct_tm@;
 
 type struct_tm {
 	int32 tm_sec;
