@@ -7,7 +7,7 @@ Current palan is very draft.
 
 ## Quick Start
 ### Environment
-*   Ubuntu 14.04.5 LTS (64bit) or later(18.04.1 LTS)
+*   Ubuntu 14.04.5 LTS (x86-64) or later(18.04.1 LTS)
 *   g++ (gcc 5.5.0/as,ld) or later(gcc 7.3.0)
 *   GNU Make
 *   curl
