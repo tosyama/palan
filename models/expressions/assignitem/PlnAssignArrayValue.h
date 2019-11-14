@@ -50,14 +50,14 @@ public:
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		if (dst_ex->values[0].asgn_type == ASGN_MOVE) {
-			PlnCompileError err(E_CantUseMoveOwnership, PlnMessage::arrayValue());
+			PlnCompileError err(E_CantUseMoveOwnershipFrom, PlnMessage::arrayValue());
 			err.loc = src_ex->loc;
 			throw err;
 		}
 
 		if (dst_ex->type == ET_VALUE) {
 			PlnVariable* var = dst_ex->values[0].inf.var;
-			if (var->var_type->mode[2] == 'o' && si.get_lifetime(var) == VLT_FREED) {
+			if (var->var_type->mode[2] == 'h' && si.get_lifetime(var) == VLT_FREED) {
 				PlnCompileError err(E_CantCopyFreedVar, var->name);
 				err.loc = dst_ex->loc;
 				throw err;
@@ -71,7 +71,7 @@ public:
 
 		} else {
 			PlnVarType* t = dst_ex->values[0].inf.var->var_type;
-			if (t->data_type() == DT_OBJECT_REF && t->mode[2] != 'o') {
+			if (t->data_type() == DT_OBJECT_REF && t->mode[2] != 'h') {
 				// case int32[3]@ a = [1,x];
 				BOOST_ASSERT(false);
 			}
@@ -94,7 +94,7 @@ public:
 				for (int i=0; i<val_items.size(); i++) {
 					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
 					PlnVarType* dt = dst_items[i]->values[0].getVarType();
-					if (dt->data_type() == DT_OBJECT_REF && dt->mode[2] != 'o')
+					if (dt->data_type() == DT_OBJECT_REF && dt->mode[2] != 'h')
 						dst_items[i]->values[0].asgn_type = ASGN_COPY_REF;
 					else
 						dst_items[i]->values[0].asgn_type = ASGN_COPY;

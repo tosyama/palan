@@ -34,7 +34,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 
 	f->parent = parent_block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType("wmr"));
+	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType("wcr"));
 
 	auto block = new PlnBlock();
 	block->setParent(f);
@@ -98,7 +98,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
 	// dst
-	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wmr"), PIO_INPUT, FPM_COPY, NULL);
+	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wcr"), PIO_INPUT, FPM_COPY, NULL);
 	// src
 	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_COPY, NULL);
 	f->parent = parent_block;
@@ -154,7 +154,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		}
 		alloc_size += m->type->size();
 
-		if (m->type->data_type() == DT_OBJECT_REF && m->type->mode[2] == 'o') {
+		if (m->type->data_type() == DT_OBJECT_REF && m->type->mode[ALLOC_MD] == 'h') {
 			has_object_member = true;
 		}
 	}

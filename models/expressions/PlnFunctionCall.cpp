@@ -35,7 +35,10 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 		val.type = VL_WORK;
 		val.inf.wk_type = rv->var_type;
 		val.is_readonly = rv->ptr_type & PTR_READONLY;
-		val.is_cantfree = (rv->ptr_type & NO_PTR || !(rv->ptr_type & PTR_OWNERSHIP));
+		if (rv->var_type->data_type() == DT_OBJECT_REF) {
+			val.is_cantfree =  (rv->var_type->mode[ALLOC_MD] == 'r');
+		} else 
+			val.is_cantfree = true;
 		
 		values.push_back(val);
 	}
@@ -185,7 +188,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				auto var = v.inf.var;
 				// Check if variable can write.
 				if (!(var->ptr_type & PTR_OWNERSHIP)) {
-					PlnCompileError err(E_CantUseMoveOwnership, var->name);
+					PlnCompileError err(E_CantUseMoveOwnershipFrom, var->name);
 					err.loc = a->loc;
 					throw err;
 				}

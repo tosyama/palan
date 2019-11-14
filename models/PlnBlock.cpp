@@ -100,8 +100,8 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_t
 
 	v->var_type = var_type;
 
-	bool readonly = var_type->mode[0] == 'r';
-	bool is_owner = var_type->mode[2] == 'o';
+	bool readonly = var_type->mode[ACCESS_MD] == 'r';
+	bool is_owner = var_type->mode[ALLOC_MD] == 'h' || var_type->mode[IDENTITY_MD] == 'm';
 
 	if (v->var_type->data_type() == DT_OBJECT_REF) {
 		v->ptr_type = PTR_REFERENCE;
@@ -197,7 +197,7 @@ void PlnBlock::declareType(const string& type_name)
 {
 	PlnType* t = new PlnType();
 	t->name = type_name;
-	t->default_mode = "wmo";
+	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	types.push_back(t);
@@ -205,7 +205,7 @@ void PlnBlock::declareType(const string& type_name)
 
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
-	auto t = new PlnStructType(type_name, members, this, "wmo");
+	auto t = new PlnStructType(type_name, members, this, "wmh");
 	types.push_back(t);
 }
 
@@ -308,7 +308,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 		if (name == t->name) return t->getVarType(mode);
 	
 	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
-	t->default_mode = "wmo";
+	t->default_mode = "wmh";
 	types.push_back(t);
 	return t->getVarType(mode);
 }

@@ -82,7 +82,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 	for (int i=0; i < vars.size(); ++i) {
 		PlnVariable* v = vars[i].inf.var;
 		PlnExpression* alloc_ex = NULL;
-		if (v->ptr_type & PTR_OWNERSHIP) {
+		if (v->var_type->mode[ALLOC_MD] == 'h') {
 			if (i >= var_i || vars[i].asgn_type == ASGN_COPY) {
 				alloc_ex = PlnAllocator::getAllocEx(v);
 			}

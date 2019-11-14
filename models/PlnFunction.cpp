@@ -65,8 +65,8 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	auto t = ret_var->var_type;
 
 	if (t->data_type() == DT_OBJECT_REF) {
-		bool do_init = (t->mode[2] != 'r'); // not reference
-		bool readonly = (t->mode[0] == 'r');
+		bool do_init = (t->mode[ALLOC_MD]=='h' || t->mode[IDENTITY_MD]=='m'); // not reference
+		bool readonly = (t->mode[ACCESS_MD] == 'r');
 
 		if (do_init)
 			ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
@@ -111,23 +111,24 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 	auto t = param->var_type;
 	if (t->data_type() == DT_OBJECT_REF) {
 		param->ptr_type = PTR_REFERENCE;
-		if (t->mode[0] == 'r') {
+		if (t->mode[ACCESS_MD] == 'r') {
 			BOOST_ASSERT(pass_method != FPM_MOVEOWNER);
 			param->ptr_type |= PTR_READONLY;
 		}
 
-		if (t->mode[2] == 'o') {
+		if (t->mode[ALLOC_MD] == 'h') {
 			param->ptr_type |= PTR_OWNERSHIP;
 		}
 
 		if (pass_method == FPM_MOVEOWNER) {
-			BOOST_ASSERT(t->mode[2] == 'o');
+			param->ptr_type |= PTR_OWNERSHIP;
+			BOOST_ASSERT(t->mode[IDENTITY_MD] == 'm');
 
 		} else if (pass_method == FPM_COPY) {
 			//param->ptr_type = PTR_PARAM_COPY;
-			if (t->mode[2] == 'o') {
+			if (t->mode[ALLOC_MD] == 'h') {
 				param->ptr_type |= PTR_CLONE;
-			} else if (t->mode[2] == 'r') {
+			} else if (t->mode[ALLOC_MD] == 'r') {
 			} else
 				BOOST_ASSERT(false);
 

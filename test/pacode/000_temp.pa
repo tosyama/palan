@@ -1,18 +1,20 @@
-int32[3][4] a1;
-set_arrarr(a1>>) ->> a1;
+ccall printf(...);
+ccall time(uint64 tloc)->uint64;
+ccall localtime(uint64@ t) -> struct_tm@;
 
-func set_arrarr(int32[3][4] >>a) -> int32[3][4] a
-{
-	int32 i, j;
+type struct_tm {
+	int32 tm_sec;
+	int32 tm_min;
+	int32 tm_hour;
+	int32 tm_mday;
+	int32 tm_mon;
+	int32 tm_year;
+	int32 tm_wday;
+	int32 tm_yday;
+	int32 tm_isdst;
+};
 
-	0 -> i;
-	while i<3 {
-		0 -> j;
-		while j<4 {
-			i*4+j -> a[i][j];
-			j+1 -> j;
-		}
-		i+1 -> i;
-	}
-}
+t = time(0);
+struct_tm stm =
+	localtime(t);
 

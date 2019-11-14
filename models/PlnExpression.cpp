@@ -92,13 +92,13 @@ PlnVarType* PlnValue::getVarType()
 {
 	switch(type) {
 		case VL_LIT_INT8:
-			return PlnType::getSint()->getVarType();
+			return PlnType::getSint()->getVarType("rin");
 		case VL_LIT_UINT8:
-			return PlnType::getUint()->getVarType();
+			return PlnType::getUint()->getVarType("rin");
 		case VL_LIT_FLO8:
-			return PlnType::getFlo()->getVarType();
+			return PlnType::getFlo()->getVarType("rin");
 		case VL_LIT_STR:
-			return PlnType::getReadOnlyCStr()->getVarType();
+			return PlnType::getReadOnlyCStr()->getVarType("rir");
 		case VL_LIT_ARRAY:
 			return inf.arrValue->values[0].getVarType();
 		case VL_VAR:

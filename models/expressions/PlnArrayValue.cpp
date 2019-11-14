@@ -21,6 +21,7 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 	PlnValue aval;
 	aval.type = VL_WORK;
 	PlnType* atype = new PlnArrayValueType(this);
+	atype->default_mode = "rni";
 	aval.inf.wk_type = atype->getVarType();
 	values.push_back(aval);
 	doCopyFromStaticBuffer = false;

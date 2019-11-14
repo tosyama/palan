@@ -24,7 +24,8 @@ enum PlnErrCode {
 	E_AmbiguousFuncCall,	// func name
 	E_IncompatibleTypeAssign,	// src type, dst type
 	E_CantUseAtToplevel,	// statement
-	E_CantUseMoveOwnership,	// var name
+	E_CantUseMoveOwnershipFrom,	// var name
+	E_CantUseMoveOwnershipTo,	// var name
 	E_CantDefineConst,	// const name
 	E_DuplicateConstName,	// const name
 	E_CantUseOperatorHere,	// var name
