@@ -29,7 +29,7 @@ static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* e
 
 	// Replace copy to move
 	if (val.asgn_type == ASGN_COPY) {
-		if (v->ptr_type & PTR_OWNERSHIP && ex->type == ET_FUNCCALL) {
+		if (v->var_type->mode[IDENTITY_MD]=='m' && ex->type == ET_FUNCCALL) {
 			//TODO: need to check return value is readonly or not
 			PlnFunctionCall* fcall = static_cast<PlnFunctionCall*>(ex);
 			BOOST_ASSERT(val_index < fcall->function->return_vals.size());
@@ -110,7 +110,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		auto t = v->var_type;
 		v->place = da.allocData(t->size(), t->data_type());
 		v->place->comment = &v->name;
-		if (v->ptr_type & PTR_OWNERSHIP) {
+		if (v->var_type->mode[IDENTITY_MD]=='m') {
 			si.push_owner_var(v);
 		}
 
@@ -119,7 +119,7 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			ex->data_places.push_back(dp);
 			ex->finish(da, si);
 			da.popSrc(dp);
-			if (v->ptr_type & PTR_OWNERSHIP) {
+			if (v->var_type->mode[IDENTITY_MD]=='m') {
 				si.set_lifetime(v, VLT_ALLOCED);
 			}
 		}

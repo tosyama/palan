@@ -382,7 +382,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:9-9 Can not move ownership to 'aa'.");
 
 	testcode = "575_copy2rovar_err";
-	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
+	REQUIRE(build(testcode) == "0:9-9 Can not copy to readonly variable 'aa'.");
 
 	testcode = "576_nomember_err";
 	REQUIRE(build(testcode) == "0:7-7 Type 'nomem' has no member named 'x'.");

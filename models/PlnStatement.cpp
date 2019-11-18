@@ -163,9 +163,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		e->finish(da, si);
 
 		// ret_vars is just used checking requirement of free varialbes.
-		if (e->type == ET_VALUE
-				&& e->values[0].type == VL_VAR
-				&& (e->values[0].inf.var->ptr_type & PTR_OWNERSHIP))
+		if (e->type == ET_VALUE && e->values[0].type == VL_VAR)
 		{
 			ret_vars.push_back(e->values[0].inf.var);
 		}
@@ -174,15 +172,17 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	// Create free varialbe expression.(variables in scope except returning)
 	if (si.owner_vars.size() > 0) {
 		for (auto &i: si.owner_vars) {
-			bool do_ret = false;
-			for (auto rv: ret_vars)
-				if (rv == i.var) {
-					do_ret = true;
-					break;
+			if (i.var->var_type->mode[ALLOC_MD]=='h') {
+				bool do_ret = false;
+				for (auto rv: ret_vars)
+					if (rv == i.var) {
+						do_ret = true;
+						break;
+					}
+				if (!do_ret) {
+					PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
+					free_vars.push_back(free_ex);
 				}
-			if (!do_ret) {
-				PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
-				free_vars.push_back(free_ex);
 			}
 		}
 	}

@@ -69,15 +69,12 @@ PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR), asgn_type(NO_ASGN)
 {
 	inf.var = var;
-	if (var->ptr_type & PTR_READONLY)
+	if (var->var_type->mode[ACCESS_MD] == 'r')
 		is_readonly = true;
 	else
 		is_readonly = false;
 	
-	if (var->ptr_type & NO_PTR || !(var->ptr_type & PTR_OWNERSHIP))
-		is_cantfree = true;
-	else
-		is_cantfree = false;
+	is_cantfree = var->var_type->mode[ALLOC_MD] != 'h';
 }
  
 PlnValue::~PlnValue()
@@ -133,7 +130,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;
-			if (var->ptr_type & PTR_INDIRECT_ACCESS) {
+			if (var->is_indirect) {
 				if (!var->place) {
 					var->place = new PlnDataPlace(var->var_type->size(), var->var_type->data_type());
 					var->place->comment = &var->name;

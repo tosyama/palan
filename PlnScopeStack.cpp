@@ -7,8 +7,10 @@
 #include <algorithm>
 
 #include "PlnModel.h"
+#include "models/PlnType.h"
 #include "models/PlnVariable.h"
 #include "PlnScopeStack.h"
+#include "PlnConstants.h"
 
 bool PlnScopeInfo::exists_current(PlnVariable* v)
 {
@@ -20,7 +22,7 @@ bool PlnScopeInfo::exists_current(PlnVariable* v)
 
 void PlnScopeInfo::set_lifetime(PlnVariable* v, PlnVarLifetime lt)
 {
-	BOOST_ASSERT(v->ptr_type & PTR_OWNERSHIP);
+	BOOST_ASSERT(v->var_type->mode[IDENTITY_MD] == 'm');
 	auto ov = std::find_if(owner_vars.rbegin(), owner_vars.rend(),
 			[v](PlnScopeVarInfo &vi) { return vi.var == v; } );
 
@@ -30,7 +32,7 @@ void PlnScopeInfo::set_lifetime(PlnVariable* v, PlnVarLifetime lt)
 
 PlnVarLifetime PlnScopeInfo::get_lifetime(PlnVariable* v)
 {
-	BOOST_ASSERT(v->ptr_type & PTR_OWNERSHIP);
+	BOOST_ASSERT(v->var_type->mode[IDENTITY_MD] == 'm');
 	auto ov = std::find_if(owner_vars.rbegin(), owner_vars.rend(),
 			[v](PlnScopeVarInfo &vi)
 			{
@@ -44,3 +46,4 @@ PlnVarLifetime PlnScopeInfo::get_lifetime(PlnVariable* v)
 
 	return (*ov).lifetime;
 }
+

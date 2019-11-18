@@ -1175,11 +1175,20 @@ PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 			throw err;
 		}
 		var_exp->values[0].asgn_type = ASGN_MOVE;
+
 	} else {
 		if (var_exp->values[0].getVarType()->mode[ACCESS_MD] == 'r') {
-			PlnCompileError err(E_CantUseReadonlyExHere);
-			setLoc(&err, dval);
-			throw err;
+			PlnValue& val = var_exp->values[0];
+			if (val.type == VL_VAR) {
+				PlnCompileError err(E_CantCopyToReadonly, var_exp->values[0].inf.var->name);
+				setLoc(&err, dval);
+				throw err;
+
+			} else { // const value
+				PlnCompileError err(E_CantUseReadonlyExHere);
+				setLoc(&err, dval);
+				throw err;
+			}
 		}
 		var_exp->values[0].asgn_type = ASGN_COPY;
 	}

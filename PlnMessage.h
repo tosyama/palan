@@ -26,6 +26,7 @@ enum PlnErrCode {
 	E_CantUseAtToplevel,	// statement
 	E_CantUseMoveOwnershipFrom,	// var name
 	E_CantUseMoveOwnershipTo,	// var name
+	E_CantCopyToReadonly,	// var name
 	E_CantDefineConst,	// const name
 	E_DuplicateConstName,	// const name
 	E_CantUseOperatorHere,	// var name

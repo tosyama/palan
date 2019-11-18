@@ -93,7 +93,9 @@ PlnStructType.o:  \
 	models/types/../PlnConditionalBranch.h \
 	models/types/../expressions/PlnStructMember.h \
 	models/types/../expressions/PlnAssignment.h \
-	models/types/../expressions/PlnMemCopy.h models/types/PlnStructType.h
+	models/types/../expressions/PlnMemCopy.h \
+	models/types/../expressions/PlnArrayValue.h models/types/PlnStructType.h \
+	models/types/PlnArrayValueType.h
 PlnFunctionCall.o:  \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/../PlnExpression.h \
@@ -184,6 +186,7 @@ PlnArrayValue.o:  \
 	models/expressions/PlnArrayValue.h models/expressions/../PlnExpression.h \
 	models/expressions/../types/PlnArrayValueType.h \
 	models/expressions/../types/PlnFixedArrayType.h \
+	models/expressions/../types/PlnStructType.h \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h \
@@ -196,6 +199,7 @@ PlnClone.o:  \
 	models/expressions/../../PlnDataAllocator.h \
 	models/expressions/../../PlnGenerator.h models/expressions/PlnClone.h \
 	models/expressions/PlnArrayValue.h models/expressions/PlnArrayItem.h \
+	models/expressions/PlnStructMember.h \
 	models/expressions/assignitem/PlnAssignItem.h
 PlnAssignItem.o:  \
 	models/expressions/assignitem/../PlnAssignment.h \
@@ -214,6 +218,7 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/../PlnClone.h \
 	models/expressions/assignitem/../PlnArrayValue.h \
 	models/expressions/assignitem/../PlnArrayItem.h \
+	models/expressions/assignitem/../PlnStructMember.h \
 	models/expressions/assignitem/../../types/PlnFixedArrayType.h \
 	models/expressions/assignitem/PlnAssignItem.h \
 	models/expressions/assignitem/PlnAssignPrimitiveItem.h \

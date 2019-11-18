@@ -18,7 +18,7 @@ public:
 			: src_ex(ex), src_save(NULL), dst_item(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
 		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
-		BOOST_ASSERT(!(ex->values[0].inf.var->ptr_type & PTR_INDIRECT_ACCESS));
+		BOOST_ASSERT(!(ex->values[0].inf.var->is_indirect));
 	}
 
 	~PlnAssignObjectRefItem() {

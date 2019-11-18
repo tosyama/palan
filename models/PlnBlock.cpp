@@ -437,7 +437,7 @@ next:	;
 void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	for (auto v: variables) {
-		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
+		if (parent_block && v->var_type->mode[ALLOC_MD]=='h') {
 			auto lt = si.get_lifetime(v);
 			if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 				PlnExpression* free_var = PlnFreer::getFreeEx(v);
@@ -471,9 +471,11 @@ void PlnBlock::gen(PlnGenerator& g)
 	{
 		// initalize all pointers.
 		vector<unique_ptr<PlnGenEntity>> refs;
-		for (auto v: variables) 
-			if (v->ptr_type & PTR_REFERENCE) 
+		for (auto v: variables) {
+			char alloc_mode = v->var_type->mode[ALLOC_MD];
+			if (alloc_mode == 'h' || alloc_mode == 'r')
 				refs.push_back(g.getEntity(v->place));
+		}
 
 		g.genNullClear(refs);
 	}

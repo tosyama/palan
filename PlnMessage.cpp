@@ -48,6 +48,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
  			f = "Can not move ownership from '%1%'."; break;
 		case E_CantUseMoveOwnershipTo:
  			f = "Can not move ownership to '%1%'."; break;
+		case E_CantCopyToReadonly:
+ 			f = "Can not copy to readonly variable '%1%'."; break;
 		case E_CantDefineConst:
 			f = "Can not use dynamic expression for const '%1%'."; break;
 		case E_DuplicateConstName:

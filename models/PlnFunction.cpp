@@ -152,7 +152,7 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 
 		} else {
 			num_in_param++;
-			if (t->data_type() != DT_OBJECT_REF && param->ptr_type == PTR_REFERENCE) {
+			if (t->data_type() != DT_OBJECT_REF && param->var_type->mode[ALLOC_MD] == 'r') {
 				arg_dtypes.push_back(DT_OBJECT_REF);
 			} else {
 				arg_dtypes.push_back(t->data_type());
@@ -235,7 +235,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			i = 0;
 			vector<PlnVariable*> for_release;
 			for (auto p: parameters) {
-				if (p->ptr_type & PTR_OWNERSHIP)
+				if (p->var_type->mode[IDENTITY_MD] == 'm')
 					si.push_owner_var(p);
 
 				PlnVarType *t = p->var_type;
