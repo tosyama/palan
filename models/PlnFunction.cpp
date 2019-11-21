@@ -2,7 +2,7 @@
 ///
 /// Function model mainly manage return values
 /// and paramater definition.
-/// e.g.) int ret1, int ret2 funcname(int arg1, int arg2) { ... }
+/// e.g.) func funcname(int arg1, arg2)->int32 ret1, ret2  { ... }
 ///
 /// @file	PlnFunction.cpp
 /// @copyright	2017-2019 YAMAGUCHI Toshinobu 
@@ -36,31 +36,27 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 
 PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 {
-	for (auto r: return_vals)
-		if (r->name != "" && r->name == rname)
+	for (auto& r: return_vals)
+		if (r.local_var->name != "" && r.local_var->name == rname)
 			throw PlnCompileError(E_DuplicateVarName, rname);
 
 	for (auto p: parameters)
-		if (p->name == rname) {
+		if (p->var->name == rname) {
 			if (!rtype) {
-				rtype = return_vals.back()->var_type;
+				rtype = return_vals.back().local_var->var_type;
 			}
-			if (p->var_type->name() != rtype->name())
+			if (p->var->var_type->name() != rtype->name())
 				throw PlnCompileError(E_InvalidReturnValType, rname);
 
-			p->param_type = PRT_PARAM | PRT_RETVAL;
+			return_vals.push_back({p->var, true});
+			ret_dtypes.push_back(p->var->var_type->data_type());
 
-			return_vals.push_back(p);
-			ret_dtypes.push_back(p->var_type->data_type());
-
-			return p;
+			return p->var;
 		}
 
-	auto ret_var = new PlnParameter();
+	auto ret_var = new PlnVariable();
 	ret_var->name = rname;
-	ret_var->var_type = rtype ? rtype : return_vals.back()->var_type;
-	ret_var->param_type = PRT_RETVAL;
-	ret_var->iomode = PIO_OUTPUT;
+	ret_var->var_type = rtype ? rtype : return_vals.back().local_var->var_type;
 
 	auto t = ret_var->var_type;
 
@@ -83,13 +79,13 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	if (rname == "")
 		ret_var->place = NULL;
 
-	return_vals.push_back(ret_var);
+	return_vals.push_back({ret_var, false});
 	ret_dtypes.push_back(t->data_type());
 
 	return ret_var;
 }
 
-PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
+PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(!has_va_arg);
 	BOOST_ASSERT(ptype || parameters.size());
@@ -99,35 +95,38 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 	}
 
 	for (auto p: parameters)
-		if (p->name == pname) return NULL;
+		if (p->var->name == pname) return NULL;
+
+	PlnVariable* param_var = new PlnVariable();
+	param_var->name = pname;
+	param_var->var_type = ptype ? ptype : parameters.back()->var->var_type;
 
 	PlnParameter* param = new PlnParameter();
-	param->name = pname;
-	param->var_type = ptype ? ptype : parameters.back()->var_type;
-	param->param_type = PRT_PARAM;
-	param->iomode = iomode;
+	param->var = param_var;
 	param->dflt_value = defaultVal;
+	param->iomode = iomode;
+	param->force_move = (pass_method == FPM_MOVEOWNER);
 
-	auto t = param->var_type;
+	auto t = param_var->var_type;
 	if (t->data_type() == DT_OBJECT_REF) {
-		param->ptr_type = PTR_REFERENCE;
+		param_var->ptr_type = PTR_REFERENCE;
 		if (t->mode[ACCESS_MD] == 'r') {
 			BOOST_ASSERT(pass_method != FPM_MOVEOWNER);
-			param->ptr_type |= PTR_READONLY;
+			param_var->ptr_type |= PTR_READONLY;
 		}
 
 		if (t->mode[ALLOC_MD] == 'h') {
-			param->ptr_type |= PTR_OWNERSHIP;
+			param_var->ptr_type |= PTR_OWNERSHIP;
 		}
 
 		if (pass_method == FPM_MOVEOWNER) {
-			param->ptr_type |= PTR_OWNERSHIP;
+			param_var->ptr_type |= PTR_OWNERSHIP;
 			BOOST_ASSERT(t->mode[IDENTITY_MD] == 'm');
 
 		} else if (pass_method == FPM_COPY) {
-			//param->ptr_type = PTR_PARAM_COPY;
+			//param_var->ptr_type = PTR_PARAM_COPY;
 			if (t->mode[ALLOC_MD] == 'h') {
-				param->ptr_type |= PTR_CLONE;
+				param_var->ptr_type |= PTR_CLONE;
 			} else if (t->mode[ALLOC_MD] == 'r') {
 			} else
 				BOOST_ASSERT(false);
@@ -138,13 +137,14 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 
 	} else {
 		BOOST_ASSERT(pass_method == FPM_COPY);
-		param->ptr_type = NO_PTR;
+		param_var->ptr_type = NO_PTR;
 		if (t->mode == "rir") {
-			param->ptr_type = PTR_REFERENCE | PTR_READONLY;
+			param_var->ptr_type = PTR_REFERENCE | PTR_READONLY;
 		}
 	}
 
 	parameters.push_back(param);
+
 	if (!has_va_arg) {
 		if (iomode & PIO_OUTPUT) {
 			num_out_param++;
@@ -152,7 +152,7 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 
 		} else {
 			num_in_param++;
-			if (t->data_type() != DT_OBJECT_REF && param->var_type->mode[ALLOC_MD] == 'r') {
+			if (t->data_type() != DT_OBJECT_REF && param_var->var_type->mode[ALLOC_MD] == 'r') {
 				arg_dtypes.push_back(DT_OBJECT_REF);
 			} else {
 				arg_dtypes.push_back(t->data_type());
@@ -160,17 +160,17 @@ PlnParameter* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int 
 		}
 	}
 
-	return	param;
+	return	param_var;
 }
 
 vector<string> PlnFunction::getParamStrs() const
 {
 	vector<string> param_types;
 	for (auto p: parameters) {
-		string pname = p->var_type->name();
-		if (p->ptr_type == PTR_PARAM_MOVE) 
+		string pname = p->var->var_type->name();
+		if (p->force_move) 
 			pname += ">>";
-		if (p->name == "...")
+		if (p->var->name == "...")
 			pname += "...";
 		param_types.push_back(pname);
 	}
@@ -194,9 +194,11 @@ static string mangling(PlnFunction* f)
 	string seed = "";
 	for (auto p: f->parameters) {
 		seed += "|";
-		seed += p->var_type->name();
-		seed += "." + to_string(p->ptr_type);
+		seed += p->var->var_type->name();
+		seed += "." + p->var->var_type->mode;
+		seed += "." + to_string(p->force_move);
 	}
+
 	size_t hash = std::hash<string>{}(seed);
 	string hash_str;
 
@@ -226,7 +228,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			auto arg_dps = da.prepareArgDps(FT_PLN, ret_dtypes, arg_dtypes, true);
 			BOOST_ASSERT(arg_dps.size() == parameters.size());
 			for (auto p: parameters) {
-				arg_dps[i]->data_type = p->var_type->data_type();
+				arg_dps[i]->data_type = p->var->var_type->data_type();
 				da.allocDp(arg_dps[i]);
 				++i;
 			}
@@ -235,19 +237,19 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			i = 0;
 			vector<PlnVariable*> for_release;
 			for (auto p: parameters) {
-				if (p->var_type->mode[IDENTITY_MD] == 'm')
-					si.push_owner_var(p);
+				if (p->var->var_type->mode[IDENTITY_MD] == 'm')
+					si.push_owner_var(p->var);
 
-				PlnVarType *t = p->var_type;
+				PlnVarType *t = p->var->var_type;
 				auto dp = da.allocData(t->size(), t->data_type());
-				dp->comment = &p->name;
+				dp->comment = &p->var->name;
 
 				da.pushSrc(dp, arg_dps[i]);
 				da.popSrc(dp);
 				BOOST_ASSERT(!dp->save_place);
 
-				p->place = dp;
-				for_release.push_back(p);
+				p->var->place = dp;
+				for_release.push_back(p->var);
 
 				i++;
 			}
@@ -255,13 +257,11 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			// Allocate return values.
 			{
 				vector<PlnValue> init_vals;
-				for (auto ret_var: return_vals) {
-					if (ret_var->name != "") {
-						if (!(static_cast<PlnParameter*>(ret_var)->param_type & PRT_PARAM)) {
-							PlnValue val(ret_var);
-							init_vals.push_back(val);
-							for_release.push_back(ret_var);
-						}
+				for (auto& ret_val: return_vals) {
+					if (!ret_val.is_share_with_param) {
+						PlnValue val(ret_val.local_var);
+						init_vals.push_back(val);
+						for_release.push_back(ret_val.local_var);
 					}
 				}
 				if (init_vals.size()) {
@@ -272,7 +272,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 			// Insert return statement to end of function if needed.
 			if (implement->statements.size() == 0 || implement->statements.back()->type != ST_RETURN) {
-				if (return_vals.size() > 0 && return_vals.front()->name == "") {
+				if (return_vals.size() > 0 && return_vals.front().local_var->name == "") {
 					PlnCompileError err(E_NeedRetValues);
 					err.loc = implement->loc;
 					err.loc.begin_line = err.loc.end_line;
@@ -320,12 +320,11 @@ void PlnFunction::gen(PlnGenerator &g)
  
 			for (auto p: parameters) {
 				// no genSaveSrc because always save_place == NULL.
-				g.genLoadDp(p->place);
+				g.genLoadDp(p->var->place);
 			}
 
 			if (retval_init)
 				retval_init->gen(g);
-
 
 			// TODO: if malloc failed.
 			

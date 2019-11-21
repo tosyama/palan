@@ -186,7 +186,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				default_val = buildExpression(param["default-val"], scope);
 			}
 			f->addParam(param["name"], var_type, PIO_INPUT, pm, default_val);
-			setLoc(f->parameters.back(), param);
+			setLoc(f->parameters.back()->var, param);
 		}
 
 		for (auto& ret: proto["rets"]) {
@@ -203,7 +203,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					setLoc(&err, ret);
 				throw;
 			}
-			setLoc(f->return_vals.back(), ret);
+			setLoc(f->return_vals.back().local_var, ret);
 		}
 		setLoc(f, proto);
 
@@ -922,7 +922,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 				continue;
 			}
 
-			if (f->parameters[i]->name == "...") {
+			if (f->parameters[i]->var->name == "...") {
 				break;
 			}
 
@@ -936,7 +936,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
 			}
 
-			types.push_back(f->parameters[i]->var_type);
+			types.push_back(f->parameters[i]->var->var_type);
 			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
 				arg_val_ind++;
 
@@ -1042,12 +1042,11 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 		int arg_ex_ind = 0;
 		int arg_val_ind = 0;
 		for (int i=0; i<f->parameters.size(); i++) {
-			if (f->parameters[i]->iomode == PIO_OUTPUT) {
-				// TODO: output's adjust Types.
+			if (f->parameters[i]->iomode == PIO_OUTPUT) { // TODO: output's adjust Types.
 				continue;
 			}
 
-			if (f->parameters[i]->name == "...") {
+			if (f->parameters[i]->var->name == "...") {
 				break;
 			}
 
@@ -1061,7 +1060,7 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
 			}
 
-			types.push_back(f->parameters[i]->var_type);
+			types.push_back(f->parameters[i]->var->var_type);
 			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
 				arg_val_ind++;
 

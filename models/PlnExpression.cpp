@@ -24,7 +24,7 @@ using boost::adaptors::reverse;
 
 // PlnValue
 PlnValue::PlnValue(int64_t intValue)
-	: type(VL_LIT_INT8), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
+	: type(VL_LIT_INT8), asgn_type(NO_ASGN), is_readonly(true)
 {
 	inf.intValue = intValue;
 }
@@ -41,26 +41,26 @@ PlnValue::PlnValue(const PlnValue &src)
 }
 
 PlnValue::PlnValue(uint64_t uintValue)
-	: type(VL_LIT_UINT8), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
+	: type(VL_LIT_UINT8), asgn_type(NO_ASGN), is_readonly(true)
 
 {
 	inf.uintValue = uintValue;
 }
 
 PlnValue::PlnValue(double floValue)
-	: type(VL_LIT_FLO8), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
+	: type(VL_LIT_FLO8), asgn_type(NO_ASGN), is_readonly(true)
 {
 	inf.floValue = floValue;
 }
 
 PlnValue::PlnValue(string strValue)
-	: type(VL_LIT_STR), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
+	: type(VL_LIT_STR), asgn_type(NO_ASGN), is_readonly(true)
 {
 	inf.strValue = new string(strValue);
 }
 
 PlnValue::PlnValue(PlnArrayValue *arr)
-	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN), is_readonly(true), is_cantfree(true)
+	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN), is_readonly(true)
 {
 	inf.arrValue = arr;
 }
@@ -73,8 +73,6 @@ PlnValue::PlnValue(PlnVariable* var)
 		is_readonly = true;
 	else
 		is_readonly = false;
-	
-	is_cantfree = var->var_type->mode[ALLOC_MD] != 'h';
 }
  
 PlnValue::~PlnValue()

@@ -33,7 +33,7 @@ static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* e
 			//TODO: need to check return value is readonly or not
 			PlnFunctionCall* fcall = static_cast<PlnFunctionCall*>(ex);
 			BOOST_ASSERT(val_index < fcall->function->return_vals.size());
-			if (!(fcall->function->return_vals[val_index]->ptr_type & PTR_READONLY))
+			if (!(fcall->function->return_vals[val_index].local_var->ptr_type & PTR_READONLY))
 				val.asgn_type = ASGN_MOVE;
 		}
 	}

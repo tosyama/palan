@@ -38,13 +38,6 @@ enum {
 	PRT_RETVAL = 2
 };
 
-class PlnParameter : public PlnVariable {
-public:
-	PlnExpression* dflt_value;
-	int param_type;
-	int iomode;
-};
-
 class PlnAssignItem;
 
 // Variable initialization

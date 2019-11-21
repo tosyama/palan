@@ -75,12 +75,12 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 
 	// Return if object address is 0.
 	auto ifblock = new PlnBlock();
-	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]), ifblock, NULL, f->implement);
+	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]->var), ifblock, NULL, f->implement);
 	block->statements.push_back(if_obj);
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
 		if (mdef->type->data_type() == DT_OBJECT_REF) {
-			PlnValue var_val(f->parameters[0]);
+			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
 			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
@@ -88,7 +88,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 		}
 	}
 
-	palan::free(ifblock, f->parameters[0]);
+	palan::free(ifblock, f->parameters[0]->var);
 
 	return f;
 }

@@ -97,14 +97,15 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 	
 	if (expressions.size()==0) {
 		if (function->return_vals.size() > 0) {
-			if (function->return_vals[0]->name == "") {
+			if (function->return_vals[0].local_var->name == "") {
 				deleteInstatnces(expressions);
 				PlnCompileError err(E_NeedRetValues);
 				throw err;
 			}
 
-			for (auto v: function->return_vals)
-				expressions.push_back(new PlnExpression(v));
+			for (auto& rv: function->return_vals) {
+				expressions.push_back(new PlnExpression(rv.local_var));
+			}
 		}
 	} else { // check only
 		int i=0;
@@ -115,7 +116,7 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 			}
 			for (auto&v: e->values) {
 				if (i < num_ret) {
-					PlnVarType* t = function->return_vals[i]->var_type;
+					PlnVarType* t = function->return_vals[i].local_var->var_type;
 					if (t->canConvFrom(v.getVarType()) == TC_CANT_CONV) {
 						PlnCompileError err(E_InvalidRetValues);
 						err.loc = e->loc;
@@ -148,8 +149,8 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	vector<PlnVariable*> ret_vars;
 
 	int i=0, j=0;
-	for (auto rt: function->return_vals) {
-		dps[i]->data_type = rt->var_type->data_type();
+	for (auto& rt: function->return_vals) {
+		dps[i]->data_type = rt.local_var->var_type->data_type();
 		i++;
 	}
 	

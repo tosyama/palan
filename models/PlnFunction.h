@@ -5,10 +5,6 @@
 
 #include "../PlnModel.h"
 
-enum PlnFncPrntType {
-	FP_MODULE
-};
-
 enum PlnPassingMethod {
 	FPM_COPY,
 	FPM_MOVEOWNER,
@@ -22,6 +18,23 @@ enum {
 //	PIO_IO = 3,	// == PIO_INPUT | PIO_OUTPUT unused
 };
 
+class PlnParameter {
+public:
+	PlnVariable* var;
+	PlnExpression* dflt_value;
+	int iomode;
+	bool force_move;
+};
+
+class PlnReturnValue {
+public:
+	PlnVariable* local_var;
+	bool is_share_with_param;
+
+	PlnReturnValue(PlnVariable *var, bool is_share_with_param)
+		: local_var(var), is_share_with_param(is_share_with_param) {}
+};
+
 class PlnFunction
 {
 public:
@@ -29,7 +42,7 @@ public:
 	string asm_name;
 	int type;
 	vector<PlnParameter*> parameters;
-	vector<PlnVariable*> return_vals;
+	vector<PlnReturnValue> return_vals;
 	PlnVarInit *retval_init;
 	vector<int> ret_dtypes, arg_dtypes;
 	vector<int> save_regs;
@@ -51,9 +64,8 @@ public:
 	bool generated;
 
 	PlnFunction(int func_type, const string& func_name);
-	// PlnVariable* addRetValue(const string& rname, PlnVarType* rtype, bool readonly, bool do_init);
 	PlnVariable* addRetValue(const string& rname, PlnVarType* rtype);
-	PlnParameter* addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
+	PlnVariable* addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
 
 	vector<string> getParamStrs() const;
 

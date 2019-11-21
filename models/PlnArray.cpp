@@ -67,8 +67,9 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	f->implement->setParent(f);
 
 	// Return if object address is 0.
+	auto p1_var = f->parameters[0]->var;
 	auto ifblock = new PlnBlock();
-	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]), ifblock, NULL, f->implement);
+	auto if_obj = new PlnIfStatement(new PlnExpression(p1_var), ifblock, NULL, f->implement);
 	f->implement->statements.push_back(if_obj);
 
 	// Add free code.
@@ -76,14 +77,14 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	PlnBlock* wblock = palan::whileLess(ifblock, i, item_num);
 	{
 		BOOST_ASSERT(it->freer);
-		PlnExpression* arr_item = palan::rawArrayItem(f->parameters[0], i, block);
+		PlnExpression* arr_item = palan::rawArrayItem(p1_var, i, block);
 		PlnExpression* free_item = it->freer->getFreeEx(arr_item);
 		wblock->statements.push_back(new PlnStatement(free_item, wblock));
 
 		palan::incrementUInt(wblock, i, 1);
 	}
 
-	palan::free(ifblock, f->parameters[0]);
+	palan::free(ifblock, p1_var);
 
 	return f;
 }
@@ -106,8 +107,8 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayTyp
 	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
 	{
-		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0], i, block);
-		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1], i, block);
+		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0]->var, i, block);
+		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1]->var, i, block);
 		if (it->copyer) {
 			PlnExpression* copy_item = it->copyer->getCopyEx(dst_arr_item, src_arr_item);
 			wblock->statements.push_back(new PlnStatement(copy_item, wblock));

@@ -73,10 +73,10 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_t
 		if (c.name == var_name) return NULL;
 	
 	if (parent_func) {
-		for (auto rv: parent_func->return_vals)
-			if (rv->name == var_name) return NULL;
+		for (auto&rv: parent_func->return_vals)
+			if (rv.local_var->name == var_name) return NULL;
 		for (auto p: parent_func->parameters)
-			if (p->name == var_name) return NULL;
+			if (p->var->name == var_name) return NULL;
 	}
 
 	if (do_check_ancestor_blocks) {
@@ -128,10 +128,10 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 		if (b->parent_block)
 			b = b->parent_block;
 		else if (b->parent_func) {
-			for (auto rv: parent_func->return_vals)
-				if (rv->name == var_name) return rv;
+			for (auto& rv: parent_func->return_vals)
+				if (rv.local_var->name == var_name) return rv.local_var;
 			for (auto p: parent_func->parameters)
-				if (p->name == var_name) return p;
+				if (p->var->name == var_name) return p->var;
 			return NULL;
 		} else
 			return NULL;
@@ -335,7 +335,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 				bool do_cast = false;
 				for (auto p: f->parameters) {
 					bool is_output = p->iomode & PIO_OUTPUT;
-					if (p->name == "...") {
+					if (p->var->name == "...") {
 						BOOST_ASSERT(i+oi+1 == f->parameters.size());
 						if ((is_output && i != arg_vals.size())
 								|| (!is_output && oi != out_arg_vals.size())) {
@@ -362,13 +362,14 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 					}
 
 					PlnVarType* a_type = arg_val->getVarType();
-					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
+					PlnTypeConvCap cap = p->var->var_type->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
-					if (p->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {
+					// if (p->var->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {
+					if (p->force_move && arg_val->asgn_type != ASGN_MOVE) {
 						goto next_func;
 					}
-					if (p->ptr_type != PTR_PARAM_MOVE && arg_val->asgn_type == ASGN_MOVE) {
+					if (!p->force_move && arg_val->asgn_type == ASGN_MOVE) {
 						goto next_func;
 					}
 

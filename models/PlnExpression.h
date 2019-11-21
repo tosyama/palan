@@ -78,7 +78,6 @@ public:
 	PlnValType type;
 	PlnAsgnType asgn_type;
 	bool is_readonly;	// if true, you should not update.
-	bool is_cantfree;	// if true, you should not free.
 	union {
 		int index;
 		int64_t intValue;
