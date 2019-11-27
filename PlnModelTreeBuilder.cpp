@@ -68,7 +68,6 @@ static PlnExpression* buildDstValue(json dval, PlnScopeStack &scope);
 #define throw_AST_err(j)	{ PlnCompileError err(E_InvalidAST, __FILE__, to_string(__LINE__)); setLoc(&err, j); throw err; }
 #define assertAST(check,j)	{ if (!(check)) throw_AST_err(j); }
 
-bool migrate = true;
 PlnModelTreeBuilder::PlnModelTreeBuilder()
 {
 }
@@ -882,6 +881,11 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		assertAST(arg["exp"].is_object(), fcall);
 		PlnExpression *e = buildExpression(arg["exp"], scope);
 
+		for (PlnValue& val: e->values) {
+			val.asgn_type = ASGN_COPY;
+			arg_vals.push_back(&val);
+		}
+
 		if (arg["move"].is_boolean() && arg["move"] == true) {
 			e->values[0].asgn_type = ASGN_MOVE;
 			if (e->type == ET_VALUE) {
@@ -893,8 +897,6 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			}
 		}
 
-		for (PlnValue& val: e->values)
-			arg_vals.push_back(&val);
 		args.push_back(e);
 	}
 
@@ -937,6 +939,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			}
 
 			types.push_back(f->parameters[i]->var->var_type);
+
 			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
 				arg_val_ind++;
 

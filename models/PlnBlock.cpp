@@ -365,7 +365,6 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 					PlnTypeConvCap cap = p->var->var_type->canConvFrom(a_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
-					// if (p->var->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {
 					if (p->force_move && arg_val->asgn_type != ASGN_MOVE) {
 						goto next_func;
 					}

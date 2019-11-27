@@ -48,7 +48,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 			if (p->var->var_type->name() != rtype->name())
 				throw PlnCompileError(E_InvalidReturnValType, rname);
 
-			return_vals.push_back({p->var, true});
+			return_vals.push_back({p->var, rtype, true});
 			ret_dtypes.push_back(p->var->var_type->data_type());
 
 			return p->var;
@@ -79,7 +79,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	if (rname == "")
 		ret_var->place = NULL;
 
-	return_vals.push_back({ret_var, false});
+	return_vals.push_back({ret_var, rtype, false});
 	ret_dtypes.push_back(t->data_type());
 
 	return ret_var;
@@ -104,6 +104,7 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 	PlnParameter* param = new PlnParameter();
 	param->var = param_var;
 	param->dflt_value = defaultVal;
+	param->index = parameters.size();
 	param->iomode = iomode;
 	param->force_move = (pass_method == FPM_MOVEOWNER);
 
@@ -124,7 +125,6 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 			BOOST_ASSERT(t->mode[IDENTITY_MD] == 'm');
 
 		} else if (pass_method == FPM_COPY) {
-			//param_var->ptr_type = PTR_PARAM_COPY;
 			if (t->mode[ALLOC_MD] == 'h') {
 				param_var->ptr_type |= PTR_CLONE;
 			} else if (t->mode[ALLOC_MD] == 'r') {

@@ -22,6 +22,7 @@ class PlnParameter {
 public:
 	PlnVariable* var;
 	PlnExpression* dflt_value;
+	int index;
 	int iomode;
 	bool force_move;
 };
@@ -29,10 +30,11 @@ public:
 class PlnReturnValue {
 public:
 	PlnVariable* local_var;
+	PlnVarType* var_type;
 	bool is_share_with_param;
 
-	PlnReturnValue(PlnVariable *var, bool is_share_with_param)
-		: local_var(var), is_share_with_param(is_share_with_param) {}
+	PlnReturnValue(PlnVariable *var, PlnVarType* var_type, bool is_share_with_param)
+		: local_var(var), var_type(var_type), is_share_with_param(is_share_with_param) {}
 };
 
 class PlnFunction

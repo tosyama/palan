@@ -14,15 +14,9 @@ class PlnDstPrimitiveItem : public PlnDstItem {
 
 public:
 	PlnDstPrimitiveItem(PlnExpression* ex)
-		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL) {
-
+			: dst_ex(ex), dst_dp(NULL), save_src_var(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-
-		if (ex->values[0].asgn_type == ASGN_MOVE) {
-			PlnCompileError err(E_CantUseMoveOwnershipTo, ex->values[0].inf.var->name);
-			err.loc = ex->loc;
-			throw err;
-		}
+		BOOST_ASSERT(ex->values[0].asgn_type != ASGN_MOVE);
 	 }
 
 	 ~PlnDstPrimitiveItem() {

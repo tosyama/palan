@@ -12,14 +12,33 @@ enum PlnInternalFuncType {
 	IFUNC_NUM
 };
 
+enum PlnArgOption {
+	AG_NONE = 0,
+	AG_MOVE
+};
+
 class PlnClone;
+
+class PlnArgValueInf {
+public:
+	PlnParameter* param;
+	PlnArgOption opt;
+	int va_idx; // not variable argument(va): -1, va: >=0 
+	PlnArgValueInf(PlnParameter* param)
+		: param(param), opt(AG_NONE), va_idx(-1) {}
+};
+
+class PlnArgument {
+public:
+	PlnExpression* exp;
+	vector<PlnArgValueInf> inf;
+	PlnArgument(PlnExpression* exp) : exp(exp) {}
+};
 
 // FunctionCall: Function Arguments;
 class PlnFunctionCall : public PlnExpression
 {
-	vector<PlnExpression*> arguments;
-	vector<PlnExpression*> out_arguments;
-
+	vector<PlnArgument> arguments;
 	vector<PlnDataPlace*> ret_dps;
 	vector<PlnVariable*> free_vars;
 	vector<PlnExpression*> free_exs;
