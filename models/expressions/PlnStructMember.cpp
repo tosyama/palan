@@ -51,15 +51,6 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 		var->container = struct_var->container;
 	else
 		var->container = struct_var;
-	
-	if (def->type->data_type() == DT_OBJECT_REF) {
-		var->ptr_type = PTR_REFERENCE;
-		var->ptr_type |= var->container->ptr_type & (PTR_OWNERSHIP | PTR_READONLY);
-
-	} else {
-		var->ptr_type = NO_PTR;
-		var->ptr_type |= var->container->ptr_type & PTR_READONLY;
-	}
 	var->is_indirect = true;
 	var->is_tmpvar = var->container->is_tmpvar;
 

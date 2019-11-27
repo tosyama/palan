@@ -33,8 +33,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 	for (auto& rv: f->return_vals) {
 		PlnValue val;
 		val.type = VL_WORK;
-		val.inf.wk_type = rv.local_var->var_type;
-		val.is_readonly = rv.local_var->ptr_type & PTR_READONLY;
+		val.inf.wk_type = rv.var_type;
 		values.push_back(val);
 	}
 }
@@ -251,7 +250,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (i=0; i<ret_dps.size(); ++i) {
 		da.allocDp(ret_dps[i]);
 		if (i >= data_places.size()) {
-			if (function->return_vals[i].local_var->ptr_type & PTR_OWNERSHIP) {
+			if (function->return_vals[i].var_type->mode[ALLOC_MD] == 'h') {
 				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i].local_var->var_type, "ret" + std::to_string(i));
 				PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
 

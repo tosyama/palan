@@ -5,25 +5,12 @@
 
 #include "../PlnModel.h"
 
-enum {
-	NO_PTR = 1,
-	PTR_REFERENCE = 2,
-
-	PTR_OWNERSHIP = 4,	// for reference
-
-	PTR_READONLY = 16,
-	PTR_CLONE = 32,	// for parameter
-	PTR_PARAM_MOVE = PTR_REFERENCE | PTR_OWNERSHIP,
-	PTR_PARAM_COPY = PTR_REFERENCE | PTR_OWNERSHIP | PTR_CLONE
-};
-
 class PlnVariable {
 public:
 	string name;
 	PlnVarType* var_type;
 	PlnDataPlace* place;
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
-	uint64_t ptr_type;
 	bool is_tmpvar;
 	bool is_indirect;
 	PlnLoc loc;

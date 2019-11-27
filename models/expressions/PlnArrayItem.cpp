@@ -54,11 +54,6 @@ static PlnVariable* getArrayVar(PlnVarType *item_type, PlnExpression* array_ex)
 	var->name = array_var->name + "[]";
 	var->var_type = item_type;
 
-	if (var->var_type->data_type() == DT_OBJECT_REF) {
-		var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-	} else {
-		var->ptr_type = NO_PTR;
-	}
 	var->is_indirect = true;
 	if (array_var->container)
 		var->container = array_var->container;

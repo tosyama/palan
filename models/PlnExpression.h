@@ -77,7 +77,6 @@ class PlnValue {
 public:
 	PlnValType type;
 	PlnAsgnType asgn_type;
-	bool is_readonly;	// if true, you should not update.
 	union {
 		int index;
 		int64_t intValue;
@@ -89,7 +88,7 @@ public:
 		PlnVarType *wk_type;
 	} inf;
 
-	PlnValue() : type(VL_UNKNOWN), asgn_type(NO_ASGN), is_readonly(false)  {};
+	PlnValue() : type(VL_UNKNOWN), asgn_type(NO_ASGN) {};
 	PlnValue(const PlnValue &src);
 	PlnValue(int64_t intValue);
 	PlnValue(uint64_t uintValue);

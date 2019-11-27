@@ -980,7 +980,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 	for (json& dval: dst) {
 		dst_vals.push_back(buildDstValue(dval, scope));
 		BOOST_ASSERT(dst_vals.back()->values[0].type == VL_VAR);
-		BOOST_ASSERT(!dst_vals.back()->values[0].is_readonly);
+		BOOST_ASSERT(dst_vals.back()->values[0].getVarType()->mode[ACCESS_MD] != 'r');
 
 		types.push_back(dst_vals.back()->values[0].inf.var->var_type);
 		if (src_ex_ind < src_exps.size()) {

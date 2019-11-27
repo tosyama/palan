@@ -43,7 +43,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	for (auto p: parameters)
 		if (p->var->name == rname) {
 			if (!rtype) {
-				rtype = return_vals.back().local_var->var_type;
+				rtype = return_vals.back().var_type;
 			}
 			if (p->var->var_type->name() != rtype->name())
 				throw PlnCompileError(E_InvalidReturnValType, rname);
@@ -56,31 +56,15 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 
 	auto ret_var = new PlnVariable();
 	ret_var->name = rname;
-	ret_var->var_type = rtype ? rtype : return_vals.back().local_var->var_type;
-
-	auto t = ret_var->var_type;
-
-	if (t->data_type() == DT_OBJECT_REF) {
-		bool do_init = (t->mode[ALLOC_MD]=='h' || t->mode[IDENTITY_MD]=='m'); // not reference
-		bool readonly = (t->mode[ACCESS_MD] == 'r');
-
-		if (do_init)
-			ret_var->ptr_type = PTR_REFERENCE | PTR_OWNERSHIP;
-		else	
-			ret_var->ptr_type = PTR_REFERENCE;
-
-		if (readonly)
-			ret_var->ptr_type |= PTR_READONLY;
-
-	} else {
-		ret_var->ptr_type = NO_PTR;
-	}
+	if (!rtype)
+		rtype = return_vals.back().var_type;
+	ret_var->var_type = rtype;
 
 	if (rname == "")
 		ret_var->place = NULL;
 
 	return_vals.push_back({ret_var, rtype, false});
-	ret_dtypes.push_back(t->data_type());
+	ret_dtypes.push_back(rtype->data_type());
 
 	return ret_var;
 }
@@ -108,41 +92,6 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 	param->iomode = iomode;
 	param->force_move = (pass_method == FPM_MOVEOWNER);
 
-	auto t = param_var->var_type;
-	if (t->data_type() == DT_OBJECT_REF) {
-		param_var->ptr_type = PTR_REFERENCE;
-		if (t->mode[ACCESS_MD] == 'r') {
-			BOOST_ASSERT(pass_method != FPM_MOVEOWNER);
-			param_var->ptr_type |= PTR_READONLY;
-		}
-
-		if (t->mode[ALLOC_MD] == 'h') {
-			param_var->ptr_type |= PTR_OWNERSHIP;
-		}
-
-		if (pass_method == FPM_MOVEOWNER) {
-			param_var->ptr_type |= PTR_OWNERSHIP;
-			BOOST_ASSERT(t->mode[IDENTITY_MD] == 'm');
-
-		} else if (pass_method == FPM_COPY) {
-			if (t->mode[ALLOC_MD] == 'h') {
-				param_var->ptr_type |= PTR_CLONE;
-			} else if (t->mode[ALLOC_MD] == 'r') {
-			} else
-				BOOST_ASSERT(false);
-
-		} else { // FMP_REF
-			BOOST_ASSERT(false);
-		}
-
-	} else {
-		BOOST_ASSERT(pass_method == FPM_COPY);
-		param_var->ptr_type = NO_PTR;
-		if (t->mode == "rir") {
-			param_var->ptr_type = PTR_REFERENCE | PTR_READONLY;
-		}
-	}
-
 	parameters.push_back(param);
 
 	if (!has_va_arg) {
@@ -151,6 +100,7 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 			arg_dtypes.push_back(DT_OBJECT_REF);
 
 		} else {
+			auto t = param_var->var_type;
 			num_in_param++;
 			if (t->data_type() != DT_OBJECT_REF && param_var->var_type->mode[ALLOC_MD] == 'r') {
 				arg_dtypes.push_back(DT_OBJECT_REF);

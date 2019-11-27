@@ -24,7 +24,7 @@ using boost::adaptors::reverse;
 
 // PlnValue
 PlnValue::PlnValue(int64_t intValue)
-	: type(VL_LIT_INT8), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_INT8), asgn_type(NO_ASGN)
 {
 	inf.intValue = intValue;
 }
@@ -41,26 +41,26 @@ PlnValue::PlnValue(const PlnValue &src)
 }
 
 PlnValue::PlnValue(uint64_t uintValue)
-	: type(VL_LIT_UINT8), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_UINT8), asgn_type(NO_ASGN)
 
 {
 	inf.uintValue = uintValue;
 }
 
 PlnValue::PlnValue(double floValue)
-	: type(VL_LIT_FLO8), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_FLO8), asgn_type(NO_ASGN)
 {
 	inf.floValue = floValue;
 }
 
 PlnValue::PlnValue(string strValue)
-	: type(VL_LIT_STR), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_STR), asgn_type(NO_ASGN)
 {
 	inf.strValue = new string(strValue);
 }
 
 PlnValue::PlnValue(PlnArrayValue *arr)
-	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN), is_readonly(true)
+	: type(VL_LIT_ARRAY), asgn_type(NO_ASGN)
 {
 	inf.arrValue = arr;
 }
@@ -69,10 +69,6 @@ PlnValue::PlnValue(PlnVariable* var)
 	: type(VL_VAR), asgn_type(NO_ASGN)
 {
 	inf.var = var;
-	if (var->var_type->mode[ACCESS_MD] == 'r')
-		is_readonly = true;
-	else
-		is_readonly = false;
 }
  
 PlnValue::~PlnValue()

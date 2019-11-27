@@ -93,25 +93,7 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_t
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 	v->container = NULL;
-
-	if (!var_type) {
-		var_type = variables.back()->var_type;
-	}
-
-	v->var_type = var_type;
-
-	bool readonly = var_type->mode[ACCESS_MD] == 'r';
-	bool is_owner = var_type->mode[ALLOC_MD] == 'h' || var_type->mode[IDENTITY_MD] == 'm';
-
-	if (v->var_type->data_type() == DT_OBJECT_REF) {
-		v->ptr_type = PTR_REFERENCE;
-		if (is_owner)
-			v->ptr_type |= PTR_OWNERSHIP;
-	} else
-		v->ptr_type = NO_PTR;
-
-	if (readonly)
-		v->ptr_type |= PTR_READONLY;
+	v->var_type = var_type ? var_type : variables.back()->var_type;
 
 	variables.push_back(v);
 
