@@ -227,7 +227,7 @@ Variable Declaration
 Argument
 --------
 *   exp\* - Argument expression
-*   move - Move ownership flag boolean
+*   move-src - Move ownership flag boolean
 
 Struct member
 -------------

@@ -865,93 +865,128 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 
 PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 {
-	vector<PlnExpression*> args;
-	vector<PlnValue*> arg_vals;
+	vector<PlnArgument> args;
 	assertAST(fcall["func-name"].is_string(), fcall);
 	assertAST(fcall["args"].is_array(), fcall);
 	assertAST(fcall["out-args"].is_array(), fcall);
 
 	for (auto& arg: fcall["args"]) {
 		if (arg.is_null()) {
-			// use default
-			arg_vals.push_back(NULL);
-			args.push_back(NULL);
+			args.push_back({NULL}); // use default
+			args.back().inf.push_back({PIO_INPUT});
 			continue;
 		}
 		assertAST(arg["exp"].is_object(), fcall);
 		PlnExpression *e = buildExpression(arg["exp"], scope);
 
+		args.push_back({e});
 		for (PlnValue& val: e->values) {
-			val.asgn_type = ASGN_COPY;
-			arg_vals.push_back(&val);
+			args.back().inf.push_back({PIO_INPUT});
 		}
 
-		if (arg["move"].is_boolean() && arg["move"] == true) {
-			e->values[0].asgn_type = ASGN_MOVE;
-			if (e->type == ET_VALUE) {
-				if (e->values[0].type == VL_LIT_ARRAY) {
-					PlnCompileError err(E_CantUseMoveOwnershipFrom, PlnMessage::arrayValue());
-					err.loc = e->loc;
-					throw err;
-				}
+		if (arg["move-src"].is_boolean() && arg["move-src"] == true) {
+			args.back().inf.back().opt = AG_MOVE;
+
+			if (e->type == ET_VALUE && e->values[0].type == VL_LIT_ARRAY) {
+				PlnCompileError err(E_CantUseMoveOwnershipFrom, PlnMessage::arrayValue());
+				err.loc = e->loc;
+				throw err;
 			}
 		}
-
-		args.push_back(e);
 	}
 
-	vector<PlnExpression*> out_args;
-	vector<PlnValue*> out_arg_vals;
 	for (auto& arg: fcall["out-args"]) {
 		assertAST(arg["exp"].is_object(), fcall);
 		PlnExpression *e = buildExpression(arg["exp"], scope);
+		args.push_back({e});
 
-		for (PlnValue& val: e->values)
-			out_arg_vals.push_back(&val);
-		out_args.push_back(e);
+		for (PlnValue& val: e->values) {
+			args.back().inf.push_back({PIO_OUTPUT});
+		}
 	}
 
 	try {
-		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arg_vals, out_arg_vals);
-
-		// Set default value and adjusting type.
-		vector<PlnVarType*> types;
-		int arg_ex_ind = 0;
-		int arg_val_ind = 0;
-		for (int i=0; i<f->parameters.size(); i++) {
-			if (f->parameters[i]->iomode == PIO_OUTPUT) {
-				// TODO: output's adjust Types.
+		vector<PlnArgInf> arginfs;
+		for (auto& arg: args) {
+			int vi = 0;
+			if (!arg.exp) {
+				arginfs.push_back({NULL, arg.inf[vi].iomode, arg.inf[vi].opt});
 				continue;
 			}
 
-			if (f->parameters[i]->var->name == "...") {
-				break;
-			}
-
-			if (arg_ex_ind == args.size()) {
-				args.push_back(NULL);
-			}
-
-			if (!args[arg_ex_ind]) {
-				PlnExpression* dexp = f->parameters[i]->dflt_value;
-				BOOST_ASSERT(dexp && dexp->type == ET_VALUE);
-				args[arg_ex_ind] = new PlnExpression(dexp->values[0]);
-			}
-
-			types.push_back(f->parameters[i]->var->var_type);
-
-			if (arg_val_ind+1 < args[arg_ex_ind]->values.size()) {
-				arg_val_ind++;
-
-			} else {
-				args[arg_ex_ind] = args[arg_ex_ind]->adjustTypes(types);
-				arg_ex_ind++;
-				arg_val_ind = 0;
-				types.clear();
+			for (auto& v: arg.exp->values) {
+				arginfs.push_back({v.getVarType(), arg.inf[vi].iomode, arg.inf[vi].opt});
+				vi++;
 			}
 		}
 
-		return new PlnFunctionCall(f, args, out_args);
+		PlnFunction* f = CUR_BLOCK->getFunc(fcall["func-name"], arginfs);
+
+		// Map parameter and argument and set default value
+		vector<PlnParameter*> params = f->parameters;
+		int va_index = 0;
+		for (auto& arg: args) {
+			if (arg.exp) {
+				for (auto& argvinf: arg.inf) {
+					// Search and set paramater
+					for (auto p = params.begin(); p != params.end(); ++p) {
+						if (argvinf.iomode == (*p)->iomode) {
+							argvinf.param = *p;
+							if ((*p)->var->name == "...") {
+								argvinf.va_idx = va_index;
+								va_index++;
+							} else
+								params.erase(p);
+							break;
+						}
+					}
+					BOOST_ASSERT(argvinf.param);
+				}
+
+			} else {
+				// Set default value
+				BOOST_ASSERT(params.size());
+				BOOST_ASSERT(params[0]->iomode == PIO_INPUT);
+				BOOST_ASSERT(params[0]->dflt_value);
+
+				PlnExpression* dexp = params[0]->dflt_value;
+				BOOST_ASSERT(dexp->type == ET_VALUE);
+				arg.exp = new PlnExpression(dexp->values[0]);
+				arg.inf[0].param = params[0];
+				params.erase(params.begin());
+			}
+		}
+
+		// Add remaining default values;
+		for (auto param: params) {
+			if (param->var->name == "...")
+				continue;
+			BOOST_ASSERT(param->dflt_value);
+			PlnExpression* dexp = param->dflt_value;
+			BOOST_ASSERT(dexp->type == ET_VALUE);
+		
+			args.push_back({new PlnExpression(dexp->values[0])});
+			args.back().inf.push_back({param, PIO_INPUT});
+		}
+
+		// Adjust types
+		for (auto& arg: args) {
+			bool do_adjust = true;
+			vector<PlnVarType*> types;
+
+			for (auto& argvinf: arg.inf) {
+				if (argvinf.param->var->name == "...") {
+					do_adjust = false;
+					break;
+				}
+				types.push_back(argvinf.param->var->var_type);
+			}
+
+			if (do_adjust)
+				arg.exp = arg.exp->adjustTypes(types);
+		}
+
+		return new PlnFunctionCall(f, args);
 
 	} catch (PlnCompileError& err) {
 		setLoc(&err, fcall);
@@ -1017,7 +1052,7 @@ PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 		for (auto& arg: ccall[aname]) {
 			assertAST(arg["exp"].is_object(), ccall);
 			args.push_back(buildExpression(arg["exp"], scope));
-			if (arg["move"].is_boolean() && arg["move"] == true) {
+			if (arg["move-src"].is_boolean() && arg["move-src"] == true) {
 				args.back()->values[0].asgn_type = ASGN_MOVE;
 			}
 			vector<PlnValue> &vals = args.back()->values;

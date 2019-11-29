@@ -8,6 +8,15 @@
 
 class PlnStructMemberDef;
 
+class PlnArgInf {
+public:
+	PlnVarType* var_type;
+	int iomode;
+	int opt;
+	PlnArgInf(PlnVarType* var_type, int iomode, int opt)
+		: var_type(var_type), iomode(iomode), opt(opt) {}
+};
+
 // Block: Statements
 class PlnBlock {
 public:
@@ -49,6 +58,7 @@ public:
 	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals); // throw PlnCompileError
+	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
 
 	void addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si);

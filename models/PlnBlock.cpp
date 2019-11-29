@@ -27,6 +27,7 @@
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
 #include "../PlnMessage.h"
+#include "expressions/PlnFunctionCall.h"
 #include "../PlnException.h"
 
 PlnBlock::PlnBlock()
@@ -293,6 +294,113 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	t->default_mode = "wmh";
 	types.push_back(t);
 	return t->getVarType(mode);
+}
+
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_infs)
+{
+	PlnFunction* matched_func = NULL;
+	vector<PlnFunction*> candidates;
+	int amviguous_count = 0; 
+	int is_perfect_match = false; 
+
+	PlnBlock* b = this;
+	do {
+		for (auto f: b->funcs) {
+			if (f->name == func_name) {
+				candidates.push_back(f);
+				if ((!f->has_va_arg) && f->parameters.size() < arg_infs.size()) {
+					goto next_func;
+				}
+
+				int ii=-1, oi=-1;
+				bool do_cast = false;
+
+				for (auto p: f->parameters) {
+					bool is_input = p->iomode == PIO_INPUT;
+					int ai;
+					if (is_input) {
+						// search next input
+						ii++;
+						for (; ii<arg_infs.size(); ++ii) {
+							if (arg_infs[ii].iomode == PIO_INPUT)
+								break;
+						}
+						ai = ii;
+
+					} else {
+						// search next input
+						oi++;
+						for (; oi<arg_infs.size(); ++oi) {
+							if (arg_infs[oi].iomode == PIO_OUTPUT)
+								break;
+						}
+						ai = oi;
+					}
+
+					if (p->var->name == "...") {
+						for (int i = (is_input ? oi : ii)+1; i<arg_infs.size();++i)
+							if (arg_infs[i].iomode != p->iomode)
+								goto next_func;
+
+						break;	// Matched
+					}
+
+					if (ai >= arg_infs.size() || !arg_infs[ai].var_type) {
+						if (!p->dflt_value) goto next_func;
+						else continue;	// variable argument or use default value
+					}
+
+					PlnArgInf& ainf = arg_infs[ai];
+
+					// Check conpatibilty of type.
+					PlnTypeConvCap cap = p->var->var_type->canConvFrom(ainf.var_type);
+					if (cap == TC_CANT_CONV) goto next_func;
+
+					if (p->force_move && ainf.opt != AG_MOVE) {
+						goto next_func;
+					}
+					if (!p->force_move && ainf.opt == AG_MOVE) {
+						goto next_func;
+					}
+
+					if (cap != TC_SAME) do_cast = true;
+				}
+
+				// Matched
+				candidates.pop_back();
+
+				if (is_perfect_match) {
+					if (do_cast) goto next_func;
+					else {// Existing another perfect match case is bug.
+						// The case func f() && func f(int31 a = 0) exists and try call func();
+						throw PlnCompileError(E_AmbiguousFuncCall, func_name);
+					}
+
+				} else {
+					matched_func = f;
+					if (do_cast) amviguous_count++;
+					else is_perfect_match = true;
+				}
+			}
+
+next_func:
+			;
+		}
+	} while (b = parentBlock(b));
+
+	if (is_perfect_match || amviguous_count == 1) return matched_func;
+
+	if (!matched_func) {
+		if (candidates.size()) {
+			auto f = candidates[0];
+			string pdef = boost::algorithm::join(f->getParamStrs(), ", ");
+			string candidate_def = f->name + "(" + pdef + ")";
+			throw PlnCompileError(E_NoMatchingFunction, func_name, candidate_def);
+		}
+		throw PlnCompileError(E_UndefinedFunction, func_name);
+	}
+	// if (amviguous_count >= 0)
+	throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 }
 
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)

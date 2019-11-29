@@ -38,6 +38,12 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f)
 	}
 }
 
+PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnArgument>& args)
+	: PlnFunctionCall(f)
+{
+	arguments = move(args);
+}
+
 PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args, vector<PlnExpression*>& out_args)
 	: PlnFunctionCall(f)
 {
@@ -59,7 +65,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args, v
 
 		auto &arg = arguments.back();
 		for (PlnValue& v: arg_ex->values) {
-			arg.inf.push_back({iparams[p_ind]});
+			arg.inf.push_back({iparams[p_ind], PIO_INPUT});
 			if (iparams[p_ind]->var->name == "...") {
 				arg.inf.back().va_idx = va_idx;
 				va_idx++;
@@ -78,7 +84,7 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args, v
 		arguments.push_back({arg_ex});
 		auto &arg = arguments.back();
 		for (PlnValue& v: arg_ex->values) {
-			arg.inf.push_back({oparams[p_ind]});
+			arg.inf.push_back({oparams[p_ind], PIO_OUTPUT});
 			if (oparams[p_ind]->var->name == "...") {
 				arg.inf.back().va_idx = va_idx;
 				va_idx++;

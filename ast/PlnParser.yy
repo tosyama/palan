@@ -819,7 +819,7 @@ argument: /* empty */
 	| expression move_owner
 	{
 		$$["exp"] = move($1);
-		if ($2) $$["move"] = true;
+		if ($2) $$["move-src"] = true;
 	}
 	;
 
@@ -1051,7 +1051,7 @@ chain_call: expressions arrow_ope func_call
 			{"args", $3["args"]},
 			{"out-args", $3["out-args"]},
 		};
-		if ($2) c_call["in-args"][0]["move"] = true;
+		if ($2) c_call["in-args"][0]["move-src"] = true;
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
@@ -1067,7 +1067,7 @@ chain_call: expressions arrow_ope func_call
 			{"args", $3["args"]},
 			{"out-args", $3["out-args"]},
 		};
-		if ($2) c_call["in-args"][0]["move"] = true;
+		if ($2) c_call["in-args"][0]["move-src"] = true;
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
