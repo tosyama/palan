@@ -35,7 +35,12 @@ class PlnArgument {
 public:
 	PlnExpression* exp;
 	vector<PlnArgValueInf> inf;
-	PlnArgument(PlnExpression* exp) : exp(exp) {}
+	PlnArgument(PlnExpression* exp) : exp(exp) { }
+	PlnArgument(PlnExpression* exp, int iomode) : exp(exp) {
+		int size = exp ? exp->values.size() : 1;
+		for (int i; i<size; ++i)
+			inf.push_back({NULL, iomode});
+	}
 };
 
 // FunctionCall: Function Arguments;
