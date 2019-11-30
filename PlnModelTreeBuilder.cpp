@@ -1042,130 +1042,15 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 
 PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope)
 {
-	vector<PlnArgument> args;
-	assertAST(ccall["func-name"].is_string(), ccall);
-	const char *anames[] = { "in-args", "args" };
+	auto &in_args = ccall["in-args"];
+	assertAST(in_args.is_array(), ccall);
 
-	for (auto aname: anames) {
-		assertAST(ccall[aname].is_array(), ccall);
-		for (auto& arg: ccall[aname]) {
-			if (arg.is_null()) {
-				// TODO: ^
-			}
-			assertAST(arg["exp"].is_object(), ccall);
-			PlnExpression *e = buildExpression(arg["exp"], scope);
+	auto &args = ccall["args"];
+	args.insert(args.begin(), in_args.begin(), in_args.end());
 
-			args.push_back({e});
-			for (PlnValue& val: e->values) {
-				args.back().inf.push_back({PIO_INPUT});
-			}
+	in_args.clear();
 
-			if (arg["move-src"].is_boolean() && arg["move-src"] == true) {
-				args.back().inf.back().opt = AG_MOVE;
-				if (e->type == ET_VALUE && e->values[0].type == VL_LIT_ARRAY) {
-					// TODO: ^
-				}
-			}
-		}
-	}
-
-	for (auto& arg: ccall["out-args"]) {
-		assertAST(arg["exp"].is_object(), ccall);
-		PlnExpression *e = buildExpression(arg["exp"], scope);
-		args.push_back({e});
-
-		for (PlnValue& val: e->values) {
-			args.back().inf.push_back({PIO_OUTPUT});
-		}
-	}
-
-	try {
-		vector<PlnArgInf> arginfs;
-		for (auto& arg: args) {
-			int vi = 0;
-			if (!arg.exp) {
-				arginfs.push_back({NULL, arg.inf[vi].iomode, arg.inf[vi].opt});
-				continue;
-			}
-
-			for (auto& v: arg.exp->values) {
-				arginfs.push_back({v.getVarType(), arg.inf[vi].iomode, arg.inf[vi].opt});
-				vi++;
-			}
-		}
-
-		PlnFunction* f = CUR_BLOCK->getFunc(ccall["func-name"], arginfs);
-
-		// Map parameter and argument and set default value
-		vector<PlnParameter*> params = f->parameters;
-		int va_index = 0;
-		for (auto& arg: args) {
-			if (arg.exp) {
-				for (auto& argvinf: arg.inf) {
-					// Search and set paramater
-					for (auto p = params.begin(); p != params.end(); ++p) {
-						if (argvinf.iomode == (*p)->iomode) {
-							argvinf.param = *p;
-							if ((*p)->var->name == "...") {
-								argvinf.va_idx = va_index;
-								va_index++;
-							} else
-								params.erase(p);
-							break;
-						}
-					}
-					BOOST_ASSERT(argvinf.param);
-				}
-
-			} else {
-				// Set default value
-				BOOST_ASSERT(params.size());
-				BOOST_ASSERT(params[0]->iomode == PIO_INPUT);
-				BOOST_ASSERT(params[0]->dflt_value);
-
-				PlnExpression* dexp = params[0]->dflt_value;
-				BOOST_ASSERT(dexp->type == ET_VALUE);
-				arg.exp = new PlnExpression(dexp->values[0]);
-				arg.inf[0].param = params[0];
-				params.erase(params.begin());
-			}
-		}
-
-		// Add remaining default values;
-		for (auto param: params) {
-			if (param->var->name == "...")
-				continue;
-			BOOST_ASSERT(param->dflt_value);
-			PlnExpression* dexp = param->dflt_value;
-			BOOST_ASSERT(dexp->type == ET_VALUE);
-		
-			args.push_back({new PlnExpression(dexp->values[0])});
-			args.back().inf.push_back({param, PIO_INPUT});
-		}
-
-		// Adjust types
-		for (auto& arg: args) {
-			bool do_adjust = true;
-			vector<PlnVarType*> types;
-
-			for (auto& argvinf: arg.inf) {
-				if (argvinf.param->var->name == "...") {
-					do_adjust = false;
-					break;
-				}
-				types.push_back(argvinf.param->var->var_type);
-			}
-
-			if (do_adjust)
-				arg.exp = arg.exp->adjustTypes(types);
-		}
-
-		return new PlnFunctionCall(f, args);
-
-	} catch (PlnCompileError& err) {
-		setLoc(&err, ccall);
-		throw;
-	}
+	return buildFuncCall(ccall, scope);
 }
 
 PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)

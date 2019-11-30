@@ -56,8 +56,7 @@ void malloc(PlnBlock* block, PlnVariable* var, uint64_t alloc_size)
 
 	PlnFunction* func_malloc = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
 	vector<PlnExpression*> args = { new PlnExpression(alloc_size) };
-	vector<PlnExpression*> out_args;
-	PlnFunctionCall *call_malloc= new PlnFunctionCall(func_malloc, args, out_args);
+	PlnFunctionCall *call_malloc= new PlnFunctionCall(func_malloc, args);
 
 	vector<PlnExpression*> exps = { call_malloc };
 
@@ -68,8 +67,7 @@ void free(PlnBlock* block, PlnVariable* var)
 {
 	PlnFunction* func_free = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
 	vector<PlnExpression*> args = { new PlnExpression(var) };
-	vector<PlnExpression*> out_args;
-	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args, out_args);
+	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args);
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
@@ -77,8 +75,7 @@ void exit(PlnBlock* block, uint64_t result)
 {
 	PlnFunction* func_free = PlnFunctionCall::getInternalFunc(IFUNC_EXIT);
 	vector<PlnExpression*> args = { new PlnExpression(result) };
-	vector<PlnExpression*> out_args;
-	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args, out_args);
+	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args);
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 

@@ -44,58 +44,19 @@ PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnArgument>& args)
 	arguments = move(args);
 }
 
-PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args, vector<PlnExpression*>& out_args)
+PlnFunctionCall::PlnFunctionCall(PlnFunction* f, vector<PlnExpression*>& args)
 	: PlnFunctionCall(f)
 {
-	vector<PlnParameter*> iparams;
-	vector<PlnParameter*> oparams;
-	for (auto p: f->parameters) {
-		if (p->iomode == PIO_INPUT) {
-			iparams.push_back(p);
-		} else if (p->iomode == PIO_OUTPUT) {
-			oparams.push_back(p);
-		} else
-			BOOST_ASSERT(false);
-	}
+	vector<PlnParameter*> &iparams = f->parameters;
+	BOOST_ASSERT(args.size() == iparams.size());
 
 	int p_ind = 0;
-	int va_idx = 0;
 	for (auto arg_ex: args) {
-		arguments.push_back({arg_ex});
-
-		auto &arg = arguments.back();
-		for (PlnValue& v: arg_ex->values) {
-			arg.inf.push_back({iparams[p_ind], PIO_INPUT});
-			if (iparams[p_ind]->var->name == "...") {
-				arg.inf.back().va_idx = va_idx;
-				va_idx++;
-			}
-			if (p_ind+1 < iparams.size()) {
-				p_ind++;
-			}
-		}
-		if (arg_ex->values[0].asgn_type == ASGN_MOVE) {
-			arg.inf[0].opt = AG_MOVE;
-		}
-	}
-
-	p_ind = 0;
-	for (auto arg_ex: out_args) {
+		BOOST_ASSERT(arg_ex->values.size() == 1);
 		arguments.push_back({arg_ex});
 		auto &arg = arguments.back();
-		for (PlnValue& v: arg_ex->values) {
-			arg.inf.push_back({oparams[p_ind], PIO_OUTPUT});
-			if (oparams[p_ind]->var->name == "...") {
-				arg.inf.back().va_idx = va_idx;
-				va_idx++;
-			}
-			if (p_ind+1 < oparams.size()) {
-				p_ind++;
-			}
-		}
-		if (arg_ex->values[0].asgn_type == ASGN_MOVE) {
-			arg.inf[0].opt = AG_MOVE;
-		}
+		arg.inf.push_back({iparams[p_ind], PIO_INPUT});
+		p_ind++;
 	}
 }
 
