@@ -43,17 +43,11 @@ public:
 		BOOST_ASSERT(dstv.type == VL_VAR);
 
 		auto& srcv = src_ex->values[dsts.size()];
-		if (srcv.getVarType()->mode[IDENTITY_MD] != 'm'
-				&& dstv.asgn_type == ASGN_MOVE) {
+		if (srcv.getVarType()->mode[IDENTITY_MD] != 'm' && dstv.asgn_type == ASGN_MOVE) {
 			// For the case that return value is readonly ref but move ownership value.
 			// e.g.) struct_tm t <<= localtime(); // ccall localtime->struct_tm@
-			string var_name;
-			if (srcv.type == VL_VAR) {
-				var_name = srcv.inf.var->name;
-			} else {
-				var_name = "source value";
-			}
-			PlnCompileError err(E_CantUseMoveOwnershipFrom, var_name);
+			BOOST_ASSERT(srcv.type == VL_WORK);
+			PlnCompileError err(E_CantUseMoveOwnershipFrom, "source value");
 			throw err;
 		}
 
