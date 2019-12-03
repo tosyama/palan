@@ -82,7 +82,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token EQ_ARROW	"=>"
 
 %type <string>	pass_by
-%type <bool>	move_owner take_owner arrow_ope ro_ref
+%type <bool>	move_owner take_owner arrow_ope
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
@@ -120,7 +120,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%' '&'
-%left UMINUS '!'
+%left UMINUS '!' '@'
 %left '.'
 
 %start module	
@@ -369,7 +369,6 @@ move_owner: /* empty */	{ $$ = false; }
 	;
 
 pass_by: DBL_GRTR { $$ = "move"; }
-	| '&' { $$ = "ro-ref"; }
 	;
 
 default_value:	/* empty */	{  }
@@ -428,21 +427,18 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 	;
 
 single_return: /* empty */ { }
-	| ARROW type ro_ref
+	| ARROW type
 	{
 		json retval = {
 			{"var-type", move($2)}
 		};
-		if ($3) {
-			retval["ro-ref"] = true;
-		}
 		$$ = move(retval);
 		LOC($$, @$);
 	}
 	;
 
 at_lib: /* empty */
-	| '@' ID
+	| ':' ID
 	{
 		json lib = {{ "name", $2 }};
 		ast["ast"]["libs"].push_back(lib);
@@ -823,7 +819,7 @@ argument: /* empty */
 	| expression move_owner
 	{
 		$$["exp"] = move($1);
-		if ($2) $$["move"] = true;
+		if ($2) $$["move-src"] = true;
 	}
 	;
 
@@ -1055,7 +1051,7 @@ chain_call: expressions arrow_ope func_call
 			{"args", $3["args"]},
 			{"out-args", $3["out-args"]},
 		};
-		if ($2) c_call["in-args"][0]["move"] = true;
+		if ($2) c_call["in-args"][0]["move-src"] = true;
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
@@ -1071,7 +1067,7 @@ chain_call: expressions arrow_ope func_call
 			{"args", $3["args"]},
 			{"out-args", $3["out-args"]},
 		};
-		if ($2) c_call["in-args"][0]["move"] = true;
+		if ($2) c_call["in-args"][0]["move-src"] = true;
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
@@ -1150,16 +1146,13 @@ declarations: declaration
 	}
 	;
 
-declaration: var_type ro_ref ID take_owner
+declaration: var_type ID take_owner
 	{
 		json dec = {
 			{"var-type", move($1)},
-			{"name", move($3)}
+			{"name", move($2)}
 		};
-		if ($2) {
-			dec["ro-ref"] = true;
-		}
-		if ($4) {
+		if ($3) {
 			dec["move"] = true;
 		}
 		$$ = move(dec);
@@ -1178,10 +1171,6 @@ subdeclaration: ID take_owner
 		$$ = move(dec);
 		LOC($$, @$);
 	}
-	;
-
-ro_ref:	/* empty */ { $$ = false; }
-	| '&' { $$ = true; }
 	;
 
 take_owner: /* empty */ { $$ = false; }
@@ -1260,7 +1249,8 @@ type: type_or_var
 type_or_var: ID
 	{
 		json ptype = {
-			{"name", $1}
+			{"name", $1},
+			{"mode", "---"}
 		};
 		LOC(ptype, @$);
 		$$.push_back(move(ptype));
@@ -1268,7 +1258,8 @@ type_or_var: ID
 	| type_or_var '.' ID
 	{
 		json ptype = {
-			{"name", $3}
+			{"name", $3},
+			{"mode", "---"}
 		};
 		LOC(ptype, @3);
 		$$ = move($1);
@@ -1278,11 +1269,17 @@ type_or_var: ID
 	{
 		json atype = {
 			{"name", "[]"},
-			{"sizes", move($3)}
+			{"sizes", move($3)},
+			{"mode", "---"}
 		};
 		LOC(atype, @$);
 		$$ = move($1);
 		$$.push_back(move(atype));
+	}
+	| type_or_var '@'
+	{
+		$$ = move($1);
+		$$.back()["mode"] = "rir";
 	}
 	;
 

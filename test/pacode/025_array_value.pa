@@ -96,7 +96,7 @@ func prnt(int64 i)->int64 i
 }
 
 prntref([1,2,3]);
-func prntref(int64[3] &a)
+func prntref(int64[3]@a)
 {
 	printf("%d %d", a[0],a[2]);
 }

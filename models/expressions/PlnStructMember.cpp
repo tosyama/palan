@@ -22,7 +22,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	: PlnExpression(ET_STRUCTMEMBER), struct_ex(sturct_ex), def(NULL)
 {
 	BOOST_ASSERT(struct_ex->values.size() == 1);
-	PlnType *t = struct_ex->values[0].getType();
+	PlnType *t = struct_ex->values[0].getVarType()->typeinf;
 	if (t->type == TP_STRUCT) {
 		PlnStructType *st = static_cast<PlnStructType*>(t);
 		for (auto md: st->members) {
@@ -51,15 +51,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 		var->container = struct_var->container;
 	else
 		var->container = struct_var;
-	
-	if (def->type->data_type == DT_OBJECT_REF) {
-		var->ptr_type = PTR_REFERENCE | PTR_INDIRECT_ACCESS;
-		var->ptr_type |= var->container->ptr_type & (PTR_OWNERSHIP | PTR_READONLY);
-
-	} else {
-		var->ptr_type = NO_PTR | PTR_INDIRECT_ACCESS;
-		var->ptr_type |= var->container->ptr_type & PTR_READONLY;
-	}
+	var->is_indirect = true;
 	var->is_tmpvar = var->container->is_tmpvar;
 
 	values.push_back(var);
@@ -76,17 +68,13 @@ void PlnStructMember::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	// PlnValue::getDataPlace may alloc dp.
 	if (!member_var->place) {
-		member_var->place = new PlnDataPlace(member_var->var_type->size, member_var->var_type->data_type);
+		member_var->place = new PlnDataPlace(member_var->var_type->size(), member_var->var_type->data_type());
 		member_var->place->comment = &member_var->name;
 	}
 
 	auto base_dp = da.prepareObjBasePtr();
 	struct_ex->data_places.push_back(base_dp);
 	struct_ex->finish(da, si);
-	if (struct_ex->values[0].inf.var->name == "bb[]") {
-		BOOST_ASSERT(base_dp->src_place);
-		BOOST_ASSERT(base_dp->src_place->type);
-	}
 
 	auto member_dp = member_var->place;
 	da.setIndirectObjDp(member_dp, base_dp, NULL, def->offset);
@@ -109,10 +97,10 @@ void PlnStructMember::gen(PlnGenerator& g)
 
 vector<PlnExpression*> PlnStructMember::getAllStructMembers(PlnVariable* var)
 {
-	BOOST_ASSERT(var->var_type->type == TP_STRUCT);
+	BOOST_ASSERT(var->var_type->typeinf->type == TP_STRUCT);
 	vector<PlnExpression*> member_exs;
 
-	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type);
+	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type->typeinf);
 	for (auto member: stype->members) {
 		PlnExpression* var_ex = new PlnExpression(var);
 		PlnExpression* member_ex = new PlnStructMember(var_ex, member->name);

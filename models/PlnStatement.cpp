@@ -97,14 +97,15 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 	
 	if (expressions.size()==0) {
 		if (function->return_vals.size() > 0) {
-			if (function->return_vals[0]->name == "") {
+			if (function->return_vals[0].local_var->name == "") {
 				deleteInstatnces(expressions);
 				PlnCompileError err(E_NeedRetValues);
 				throw err;
 			}
 
-			for (auto v: function->return_vals)
-				expressions.push_back(new PlnExpression(v));
+			for (auto& rv: function->return_vals) {
+				expressions.push_back(new PlnExpression(rv.local_var));
+			}
 		}
 	} else { // check only
 		int i=0;
@@ -115,8 +116,8 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 			}
 			for (auto&v: e->values) {
 				if (i < num_ret) {
-					PlnType* t = function->return_vals[i]->var_type;
-					if (t->canConvFrom(v.getType()) == TC_CANT_CONV) {
+					PlnVarType* t = function->return_vals[i].local_var->var_type;
+					if (t->canConvFrom(v.getVarType()) == TC_CANT_CONV) {
 						PlnCompileError err(E_InvalidRetValues);
 						err.loc = e->loc;
 						throw err;
@@ -148,8 +149,8 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	vector<PlnVariable*> ret_vars;
 
 	int i=0, j=0;
-	for (auto rt: function->return_vals) {
-		dps[i]->data_type = rt->var_type->data_type;
+	for (auto& rt: function->return_vals) {
+		dps[i]->data_type = rt.local_var->var_type->data_type();
 		i++;
 	}
 	
@@ -163,9 +164,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		e->finish(da, si);
 
 		// ret_vars is just used checking requirement of free varialbes.
-		if (e->type == ET_VALUE
-				&& e->values[0].type == VL_VAR
-				&& (e->values[0].inf.var->ptr_type & PTR_OWNERSHIP))
+		if (e->type == ET_VALUE && e->values[0].type == VL_VAR)
 		{
 			ret_vars.push_back(e->values[0].inf.var);
 		}
@@ -174,15 +173,17 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	// Create free varialbe expression.(variables in scope except returning)
 	if (si.owner_vars.size() > 0) {
 		for (auto &i: si.owner_vars) {
-			bool do_ret = false;
-			for (auto rv: ret_vars)
-				if (rv == i.var) {
-					do_ret = true;
-					break;
+			if (i.var->var_type->mode[ALLOC_MD]=='h') {
+				bool do_ret = false;
+				for (auto rv: ret_vars)
+					if (rv == i.var) {
+						do_ret = true;
+						break;
+					}
+				if (!do_ret) {
+					PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
+					free_vars.push_back(free_ex);
 				}
-			if (!do_ret) {
-				PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
-				free_vars.push_back(free_ex);
 			}
 		}
 	}

@@ -1,0 +1,121 @@
+Var type mode is expressed by 3 charactors.
+[Access Right:wro-][Identitiy:cin-][Allocation:osri-]
+
+[Access Right]
+Right of assignment for substantial value.
+ r: Read only.
+ w: Write and read.
+ o: Write only (for output). # reserved
+ -: Default. using only output json from parser.
+    Depend on type, 'w' in general.
+
+Rule example (for explaination. not palan grammer)
+premitive variable
+	int32(r) a=2; OK (init)
+	4->a; NG (assignment)
+	int32(w) b=4;
+	3->b; OK (assignment)
+	b ->> a; NG (move is not supported for premitive)
+	int32(r) a<<=b; NG (move is not supported for premitive)
+
+object variable (array/struct on heap owner)
+	int32(w)[2](r) a=[1,2]; OK (init)
+	int32(w)[2](w) b=[3,4]; OK (init)
+
+	[1,2] -> a; NG (assignment)
+	2 -> a[0]; OK (assignment for member)
+
+	a -> b; OK (assignment)
+	2 -> b[0]; OK (assignment for member)
+	b ->> a; OK (move)
+	a ->> b; OK (move)
+
+	int32(r)[2](r) c=[1,2]; OK (init)
+	2 -> c[0]; NG (assignment for member)
+
+	int32(r)[2](w) c=[1,2]; OK (init)
+
+	Note: operator [](array element) or .(struct member) can control access right.
+	e.g)
+	int32(w)[2](r) a=[1,2];
+	2 -> a[0]; NG ([] operator change right to 'r' by adupting container's right)
+
+parameter
+	same rule as premitive/object variable
+
+return value (shared parameter)
+	callee: same rule as parameter.
+	caller: read-only, access right is not used.
+
+return value
+	callee: same rule as premitive/object variable
+	caller: read-only, access right is not used.
+
+literal/const
+	r only. w is not allowed.
+	a(r) -> 2(r); NG
+	2(r) -> a(w); OK
+
+[Identity]
+Ideitity of the data.
+ m: Movable ideitity (can have ownership).
+ c: Changable ideitity (can't have ownership). # reserved
+ i: Keep same identity. (i.e. Keep same address of variable)
+ n: No ideitity. (i.e. immediate value)
+ -: Default. using only output json from parser.
+    Depend on type.
+
+premitive variable
+	i only. m/c is not allowed.
+	int32(i) a=2; OK (init)
+	4->a; OK (assignment)
+	int32(i) b=4;
+	b ->> a; NG (move is not supported for premitive)
+
+object variable (array/struct on heap owner)
+	int32(i)[2](m) a=[1,2]; OK (init)
+	int32(i)[2](i) b=[3,4]; OK (init)
+	int32(i)[2](m) c=[5,6]; OK (init)
+
+	[1,2] -> a; OK (Depend on access right)
+	2 -> a[0]; OK (Depend on access right)
+
+	a -> b; OK (Depend on access right)
+	2 -> b[0]; OK (Depend on access right)
+	b ->> a; NG (move: b should keep address. )
+	c ->> b; NG (move: b should keep address. )
+	a ->> c; OK (move)
+
+	Reference is i only. (c is not allowed currently)
+	int32(i)[2]@(i) d=[5,6]; OK (copy only Reference. reference for read only obj)
+	b -> d; OK (Deep copy. But depend on Access right/Basically readonly it is not allowed)
+	a ->> d; NG (reference can't take owner)
+
+	int32(i)[2]@(i) f=e; OK
+
+parameter
+	same rule as premitive/object variable
+
+return value (shared parameter)
+	callee: same rule as parameter.
+	caller: work object: m movable (if not move (using copy), should be free.
+			reference: i identity, should not be free. 
+			premitive: n No identity, because identity is not used.
+
+return value
+	callee: same rule as premitive/object variable.
+	caller: object: imutable, premitive: No identity, But identity is not used.
+
+literal/const
+	object: i
+	premitive: n
+
+[Allocation]
+Allocation/location of the data
+ h: Heap allocation. Address info is stored in stack. The variable has responsible to alloc/free).
+ s: Stack allocation.
+ r: Reference for the object. Address info is stored in stack. 
+ i: Immediate value. This value don't have address.
+ -: Default. using only output json from parser.
+    Depend on type.
+

@@ -98,11 +98,11 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	PlnValue v;
 	v.type = VL_WORK;
 	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo();
+		v.inf.wk_type = PlnType::getFlo()->getVarType();
 	} else if (isUnsigned) {
-		v.inf.wk_type = PlnType::getUint();
+		v.inf.wk_type = PlnType::getUint()->getVarType();
 	} else {
-		v.inf.wk_type = PlnType::getSint();
+		v.inf.wk_type = PlnType::getSint()->getVarType();
 	}
 	values.push_back(v);
 }
@@ -117,7 +117,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getType()->data_type);
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);

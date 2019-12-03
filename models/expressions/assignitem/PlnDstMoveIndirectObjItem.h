@@ -1,7 +1,7 @@
 /// Assignment Item class definition.
 ///
 /// @file	PlnDstMoveIndirectObjItem.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2019 YAMAGUCHI Toshinobu 
 
 class PlnDstMoveIndirectObjItem: public PlnDstItem
 {
@@ -19,7 +19,8 @@ public:
 	{
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & (PTR_REFERENCE | PTR_INDIRECT_ACCESS));
+		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].inf.var->is_indirect);
 	}
 
 	~PlnDstMoveIndirectObjItem() {
@@ -34,7 +35,7 @@ public:
 		auto lt = si.get_lifetime(dst_ex->values[0].inf.var);
 		if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 			// set destination address to save place.
-			PlnType* t = dst_ex->values[0].inf.var->var_type;
+			PlnVarType* t = dst_ex->values[0].inf.var->var_type;
 			addr_var = PlnVariable::createTempVar(da, t, "(save addr)");
 			addr_var->place->load_address = true;
 			dst_ex->data_places.push_back(addr_var->place);

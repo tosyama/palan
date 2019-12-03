@@ -17,7 +17,7 @@ public:
 		: dst_ex(ex), cpy_ex(NULL), cpy_dst_dp(NULL), tmp_var(NULL) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
 		auto var = dst_ex->values[0].inf.var;
 	}
 
@@ -29,9 +29,7 @@ public:
 	PlnAsgnType getAssginType() override { return ASGN_COPY; }
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
-		PlnType *t = dst_ex->values[0].getType();
-		auto copyer = t->copyer;
-		cpy_ex = copyer->getCopyEx();
+		cpy_ex = dst_ex->values[0].getVarType()->getCopyEx();
 		src_ex->data_places.push_back(cpy_ex->srcDp(da));
 	}
 

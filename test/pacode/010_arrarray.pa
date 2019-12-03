@@ -2,6 +2,7 @@ ccall printf(...);
 ccall setenv(...);
 ccall mtrace();
 ccall muntrace();
+ccall exit(int32 x);
 
 func set_arrarr(int32[3][4] >>a) -> int32[3][4] a
 {

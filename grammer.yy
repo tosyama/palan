@@ -49,7 +49,7 @@ int yylex();
 %left DBL_LESS DBL_GRTR
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
-%left '+' '-'
+%left '+' '-' '|'
 %left '*' '/' '%' '&' '@'
 %left UMINUS '!'
 
@@ -115,7 +115,6 @@ move_owner: /* empty */
 	;
 
 pass_by: DBL_GRTR
-	| '&'
 	;
 
 default_value: /* empty */
@@ -132,11 +131,11 @@ syscall_definition: KW_SYSCALL INT ':' FUNC_ID '(' parameter_def ')' single_retu
 	;
 
 single_return: /* empty */
-	| ARROW type ro_ref
+	| ARROW type
 	;
 
 at_lib: /* empty */
-	| '@' ID
+	| ':' ID
 	;
 
 function_definition: palan_function_definition
@@ -207,6 +206,8 @@ expression:
 	| expression '*' expression
 	| expression '/' expression
 	| expression '%' expression
+	| expression '|' expression
+	| expression '&' expression
 	| expression OPE_EQ expression
 	| expression OPE_NE expression
 	| expression '<' expression
@@ -266,7 +267,7 @@ assignment: expressions arrow_ope dst_vals
 	| assignment arrow_ope dst_vals
 	| chain_call arrow_ope dst_vals
 	;
-	
+
 arrow_ope: ARROW
 	| DBL_ARROW
 	;
@@ -291,14 +292,10 @@ declarations: declaration
 	| declarations ',' declaration 
 	;
 
-declaration: var_type ro_ref ID take_owner
+declaration: var_type ID take_owner
 	;
 
 subdeclaration: ID take_owner
-	;
-
-ro_ref: /* empty */
-	| '&'
 	;
 
 take_owner: /* empty */
@@ -319,6 +316,7 @@ type: type_or_var
 type_or_var: ID
 	| type_or_var '.' ID
 	| type_or_var '[' array_items ']'
+	| type_or_var '@'
 	;
 
 array_items: array_item

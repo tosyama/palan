@@ -71,6 +71,8 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 	toplevel->gen(g);
 	da.reset();
 	g.genMainReturn();
+	g.comment("end of toplevel");
+	g.comment("");
 	g.genEndFunc();
 
 	// Generate assembly of only the functions called.

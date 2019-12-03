@@ -23,7 +23,7 @@
 #include "PlnStructType.h"
 #include "PlnArrayValueType.h"
 
-PlnStructMemberDef::PlnStructMemberDef(PlnType *type, string name)
+PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, string name)
 	: type(type), name(name), offset(0)
 {
 }
@@ -34,7 +34,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 
 	f->parent = parent_block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, struct_type, false, false);
+	PlnVariable* ret_var = f->addRetValue(s1, struct_type->getVarType("wcr"));
 
 	auto block = new PlnBlock();
 	block->setParent(f);
@@ -43,7 +43,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 	palan::malloc(f->implement, ret_var, struct_type->inf.obj.alloc_size);
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
-		if (mdef->type->data_type == DT_OBJECT_REF) {
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
 			PlnValue var_val(ret_var);
 
 			auto struct_ex = new PlnExpression(var_val);
@@ -51,7 +51,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 			member_ex->values[0].asgn_type = ASGN_COPY_REF;
 			vector<PlnExpression*> lvals = { member_ex };
 
-			PlnExpression* alloc_ex = mdef->type->allocator->getAllocEx();
+			PlnExpression* alloc_ex = mdef->type->getAllocEx();
 			vector<PlnExpression*> exps = { alloc_ex };
 
 			auto assign = new PlnAssignment(lvals, exps);
@@ -66,7 +66,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-	f->addParam(s1, struct_type, PIO_INPUT, FPM_REF, NULL);
+	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_COPY, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -75,20 +75,20 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 
 	// Return if object address is 0.
 	auto ifblock = new PlnBlock();
-	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]), ifblock, NULL, f->implement);
+	auto if_obj = new PlnIfStatement(new PlnExpression(f->parameters[0]->var), ifblock, NULL, f->implement);
 	block->statements.push_back(if_obj);
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
-		if (mdef->type->data_type == DT_OBJECT_REF) {
-			PlnValue var_val(f->parameters[0]);
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
+			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			PlnExpression* free_member = mdef->type->freer->getFreeEx(member_ex);
+			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
 			ifblock->statements.push_back(new PlnStatement(free_member, block));
 		}
 	}
 
-	palan::free(ifblock, f->parameters[0]);
+	palan::free(ifblock, f->parameters[0]->var);
 
 	return f;
 }
@@ -98,9 +98,9 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
 	// dst
-	PlnVariable* dst_var = f->addParam(s1, struct_type, PIO_INPUT, FPM_REF, NULL);
+	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wcr"), PIO_INPUT, FPM_COPY, NULL);
 	// src
-	PlnVariable* src_var = f->addParam(s2, struct_type, PIO_INPUT, FPM_REF, NULL);
+	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_COPY, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -113,8 +113,8 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 
 			auto src_struct_ex = new PlnExpression(src_var);
 			auto src_member_ex = new PlnStructMember(src_struct_ex, mdef->name);
-		if (mdef->type->data_type == DT_OBJECT_REF) {
-			PlnExpression* copy_member = mdef->type->copyer->getCopyEx(dst_member_ex, src_member_ex);
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
+			PlnExpression* copy_member = mdef->type->getCopyEx(dst_member_ex, src_member_ex);
 			block->statements.push_back(new PlnStatement(copy_member, block));
 
 		} else {
@@ -129,7 +129,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStr
 	return f;
 }
 
-PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent)
+PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
 	: PlnType(TP_STRUCT), members(move(members))
 {
 	this->name = name;
@@ -137,10 +137,11 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	size = 8;
 	int alloc_size = 0;
 	int max_member_size = 1;
+	this->default_mode = default_mode;
 	bool has_object_member = false;
 
 	for (auto m: this->members) {
-		int member_size = m->type->size;
+		int member_size = m->type->size();
 		// padding
 		if (alloc_size % member_size) {
 			alloc_size = (alloc_size / member_size+1) * member_size;
@@ -151,9 +152,9 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		if (member_size > max_member_size) {
 			max_member_size = member_size;
 		}
-		alloc_size += m->type->size;
+		alloc_size += m->type->size();
 
-		if (m->type->data_type == DT_OBJECT_REF) {
+		if (m->type->data_type() == DT_OBJECT_REF && m->type->mode[ALLOC_MD] == 'h') {
 			has_object_member = true;
 		}
 	}
@@ -196,16 +197,16 @@ PlnStructType::~PlnStructType()
 		delete member;
 }
 
-PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
-	if (this == src)
+PlnTypeConvCap PlnStructType::canConvFrom(const string& mode, PlnVarType *src) {
+	if (this == src->typeinf)
 		return TC_SAME;
-	
-	if (src == PlnType::getObject()) {
+
+	if (src->typeinf == PlnType::getObject()) {
 		return TC_DOWN_CAST;
 	}
 
-	if (src->type == TP_ARRAY_VALUE) {
-		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src)->arr_val;
+	if (src->typeinf->type == TP_ARRAY_VALUE) {
+		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src->typeinf)->arr_val;
 
 		if (arr_val->item_exps.size() != members.size())
 			return TC_CANT_CONV;
@@ -213,7 +214,7 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 		PlnTypeConvCap cap = TC_SAME;
 		int i = 0;
 		for (auto member: members) {
-			PlnType* src_type = arr_val->item_exps[i]->values[0].getType();
+			PlnVarType* src_type = arr_val->item_exps[i]->values[0].getVarType();
 			cap = PlnType::lowCapacity(cap, member->type->canConvFrom(src_type));
 			i++;
 		}
@@ -223,3 +224,4 @@ PlnTypeConvCap PlnStructType::canConvFrom(PlnType *src) {
 	
 	return TC_CANT_CONV;
 }
+

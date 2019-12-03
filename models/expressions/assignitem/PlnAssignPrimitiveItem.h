@@ -20,7 +20,7 @@ public:
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].getType()->data_type != DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].getVarType()->data_type() != DT_OBJECT_REF);
 		dst_item = PlnDstItem::createDstItem(ex, need_save);
 	}
 

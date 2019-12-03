@@ -1,27 +1,15 @@
-ccall printf(byte[?] &format, ...) -> int32;
+ccall printf(...);
 
 type A {
-	int32 a;
-	int64 b;
-	int32[3,2] aa;
+	int32[2]@ arr;
+	int64 x;
 };
 
-type B {
-	int32 a;
-	int32 b;
-};
+int32[2] x;
 
-int64 x = 10;
+A a = [x, 3];
 
-A a = [12,x,[1,2][3,4][5,6]];
+//int32[3][2]@ xx = [1,2][3,4][5,6];
+// aa -> a.arr;
 
-[1,2,[5,6][7,8][9,10]] -> a;
-
-A[2] aa;
-	[	1,2,
-		[1,2][3,4][5,6]
-	]
-	[	3,4,
-		[11,12][13,14][x,16]
-	] -> aa;
-
+//int32[2]@ bb <<= aa;

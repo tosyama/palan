@@ -120,8 +120,8 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 		for (int i=0; i<ex->values.size(); ++i) {
 			if (dst_i < lvals.size()) {
 				BOOST_ASSERT(lvals[dst_i]->values[0].type == VL_VAR);
-				PlnType* src_type = ex->values[i].getType();	
-				PlnType* dst_type = lvals[dst_i]->values[0].getType();
+				PlnVarType* src_type = ex->values[i].getVarType();	
+				PlnVarType* dst_type = lvals[dst_i]->values[0].getVarType();
 
 				// Compatibility is assured at adjustTypes().
 				BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);

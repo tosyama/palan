@@ -175,8 +175,7 @@ static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 	}
 }
 
-void PlnX86_64DataAllocator::funcCalled(
-	vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type)
+void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_type)
 {
 	// TODO: use pupSrc().
 	for (auto dp: args) {

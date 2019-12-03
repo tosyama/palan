@@ -12,14 +12,41 @@ enum PlnInternalFuncType {
 	IFUNC_NUM
 };
 
+enum PlnArgOption {
+	AG_NONE = 0,
+	AG_MOVE
+};
+
 class PlnClone;
+
+class PlnArgValueInf {
+public:
+	PlnParameter* param;
+	int iomode; 
+	PlnArgOption opt;
+	int va_idx; // not variable argument(va): -1, va: >=0 
+	PlnArgValueInf(PlnParameter* param, int iomode)
+		: param(param), iomode(iomode), opt(AG_NONE), va_idx(-1) {}
+	PlnArgValueInf(int iomode)
+		: param(NULL), iomode(iomode), opt(AG_NONE), va_idx(-1) {}
+};
+
+class PlnArgument {
+public:
+	PlnExpression* exp;
+	vector<PlnArgValueInf> inf;
+	PlnArgument(PlnExpression* exp) : exp(exp) { }
+	PlnArgument(PlnExpression* exp, int iomode) : exp(exp) {
+		int size = exp ? exp->values.size() : 1;
+		for (int i; i<size; ++i)
+			inf.push_back({NULL, iomode});
+	}
+};
 
 // FunctionCall: Function Arguments;
 class PlnFunctionCall : public PlnExpression
 {
-	vector<PlnExpression*> arguments;
-	vector<PlnExpression*> out_arguments;
-
+	vector<PlnArgument> arguments;
 	vector<PlnDataPlace*> ret_dps;
 	vector<PlnVariable*> free_vars;
 	vector<PlnExpression*> free_exs;
@@ -30,7 +57,8 @@ public:
 	vector<PlnDataPlace*> arg_dps;
 
 	PlnFunctionCall(PlnFunction* f);
-	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*> &args, vector<PlnExpression*> &out_args);
+	PlnFunctionCall(PlnFunction* f, vector<PlnArgument> &args);
+	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*> &args);
 	~PlnFunctionCall();
 
 	void loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types);

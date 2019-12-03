@@ -44,8 +44,12 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Incompatible types in assignment of '%1%' to '%2%'."; break;
 		case E_CantUseAtToplevel:
 			f = "Can not use '%1%' at top level code."; break;
-		case E_CantUseMoveOwnership:
- 			f = "Can not use '>>' for '%1%'."; break;
+		case E_CantUseMoveOwnershipFrom:
+ 			f = "Can not move ownership from '%1%'."; break;
+		case E_CantUseMoveOwnershipTo:
+ 			f = "Can not move ownership to '%1%'."; break;
+		case E_CantCopyToReadonly:
+ 			f = "Can not copy to readonly variable '%1%'."; break;
 		case E_CantDefineConst:
 			f = "Can not use dynamic expression for const '%1%'."; break;
 		case E_DuplicateConstName:
@@ -72,6 +76,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Can't use read-only expression here."; break;
 		case E_DuplicateTypeName:
 			f = "Type name '%1%' already defined."; break;
+		case E_RequireVarInit:
+			f = "Require initialize expression for '%1%'."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

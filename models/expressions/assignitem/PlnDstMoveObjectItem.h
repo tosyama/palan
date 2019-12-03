@@ -19,7 +19,12 @@ public:
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->type == ET_VALUE);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].inf.var->ptr_type & PTR_REFERENCE);
+		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
+
+		if (ex->values[0].getVarType()->mode[IDENTITY_MD] != 'm') {
+			PlnCompileError err(E_CantUseMoveOwnershipTo, ex->values[0].inf.var->name);
+			throw err;
+		}
 
 		auto var = dst_ex->values[0].inf.var;
 	}

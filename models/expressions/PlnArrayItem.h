@@ -1,7 +1,7 @@
 /// PlnArrayItem model class declaration.
 ///
 /// @file	PlnArrayItem.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnExpression.h"
 
@@ -11,8 +11,8 @@ public:
 	PlnExpression* array_ex;
 	PlnExpression* index_ex;
 	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind);
-	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind, PlnType* arr_type);
-	PlnArrayItem(PlnExpression *array_ex, PlnExpression* index_ex, PlnType* item_type);
+	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind, PlnVarType* arr_type);
+	PlnArrayItem(PlnExpression *array_ex, PlnExpression* index_ex, PlnVarType* item_type);
 	~PlnArrayItem();
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;

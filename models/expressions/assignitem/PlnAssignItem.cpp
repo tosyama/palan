@@ -63,7 +63,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		}
 
 		if (v.type == VL_VAR) {
-			int dt = ex->values[0].getType()->data_type;
+			int dt = ex->values[0].getVarType()->data_type();
 			if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 				return new PlnAssignPrimitiveItem(ex);
 
@@ -78,8 +78,8 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
 		BOOST_ASSERT(v.type == VL_WORK);
-		PlnType* t = ex->values[0].inf.wk_type;
-		BOOST_ASSERT(t->data_type != DT_OBJECT_REF);
+		PlnVarType* t = ex->values[0].inf.wk_type;
+		BOOST_ASSERT(t->data_type() != DT_OBJECT_REF);
 
 		return new PlnAssignPrimitiveItem(ex);
 	}
@@ -99,7 +99,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		PlnValue v = ex->values[0];
-		int dt = ex->values[0].getType()->data_type;
+		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			return new PlnAssignPrimitiveItem(ex);
 		} else if (dt == DT_OBJECT_REF) {
@@ -130,8 +130,8 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 	if (ex->type == ET_VALUE) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		PlnType* t = ex->values[0].getType();
-		if (t->data_type == DT_OBJECT_REF) {
+		int dt = ex->values[0].getVarType()->data_type();
+		if (dt == DT_OBJECT_REF) {
 			auto asgn_type = ex->values[0].asgn_type;
 			if (asgn_type == ASGN_COPY) {
 				di = new PlnDstCopyObjectItem(ex);
@@ -148,7 +148,7 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 	else if (ex->type == ET_ARRAYITEM) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		int dt = ex->values[0].getType()->data_type;
+		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			di = new PlnDstPrimitiveItem(ex);
 
@@ -170,7 +170,7 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 	} else if (ex->type == ET_STRUCTMEMBER) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		int dt = ex->values[0].getType()->data_type;
+		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			di = new PlnDstPrimitiveItem(ex);
 

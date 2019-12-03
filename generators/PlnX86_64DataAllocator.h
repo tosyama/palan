@@ -29,7 +29,7 @@ protected:
 public:
 	PlnX86_64DataAllocator();
 
-	void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) override;
+	void funcCalled(vector<PlnDataPlace*>& args, int func_type) override;
 
 	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) override;
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len) override;

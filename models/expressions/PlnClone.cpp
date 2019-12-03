@@ -15,17 +15,18 @@
 #include "PlnStructMember.h"
 #include "assignitem/PlnAssignItem.h"
 
-PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnType* var_type, bool keep_var)
+PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_type, bool keep_var)
 	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
 {
+	var_type = var_type->typeinf->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
-	alloc_ex = var_type->allocator->getAllocEx();
+	alloc_ex = var_type->getAllocEx();
 	alloc_ex->data_places.push_back(var->place);
 
 	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->doCopyFromStaticBuffer);
  
 	if (!directAssign) {
-		copy_ex = var_type->copyer->getCopyEx();
+		copy_ex = var_type->getCopyEx();
 		src_ex->data_places.push_back(copy_ex->srcDp(da));
 		copy_dst_dp = copy_ex->dstDp(da);
 	}
@@ -47,9 +48,9 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(src_ex->type == ET_ARRAYVALUE);
 		vector<PlnExpression*> val_items = static_cast<PlnArrayValue*>(src_ex)->getAllItems();
 		vector<PlnExpression*> dst_items;
-		if (var->var_type->type == TP_FIXED_ARRAY) {
+		if (var->var_type->typeinf->type == TP_FIXED_ARRAY) {
 			dst_items = PlnArrayItem::getAllArrayItems(var);
-		} else if (var->var_type->type == TP_STRUCT) {
+		} else if (var->var_type->typeinf->type == TP_STRUCT) {
 			dst_items = PlnStructMember::getAllStructMembers(var);
 		} else
 			BOOST_ASSERT(false);
@@ -86,7 +87,7 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnClone::finishFree(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(keep_var);
-	free_ex = var->var_type->freer->getFreeEx(var);
+	free_ex = PlnFreer::getFreeEx(var);
 	free_ex->finish(da, si);
 	da.releaseDp(var->place);
 }

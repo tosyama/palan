@@ -1,20 +1,20 @@
-ccall printf(byte[?] &format, ...) -> int32;
-ccall sprintf(@, &src, ... => byte[?] dst) -> int32;
-ccall strcpy(byte[?] >>dst, &src) -> byte[?];
-ccall sscanf(byte[?] &str, &format => ...) -> int32;
-ccall strcat(byte[?] >>dst, &src) -> byte[?];
+ccall printf(byte[?]@ format, ...) -> int32;
+ccall sprintf(@, byte[?]@ src, ... => byte[?] dst) -> int32;
+ccall strcpy(byte[?] >>dst, byte[?]@ src) -> byte[?];
+ccall sscanf(byte[?]@ str, byte[?]@ format => ...) -> int32;
+ccall strcat(byte[?] >>dst, byte[?]@ src) -> byte[?];
 ccall exit(int32 status);
-ccall strlen(byte[10] &str)->int32;
+ccall strlen(byte[10]@ str)->int32;
 
-ccall fopen(byte[?] &filename, &mode) -> FILE;
+ccall fopen(byte[?]@ filename, byte[?]@ mode) -> FILE;
 ccall fclose(FILE >>stream) -> int32;
-ccall fprintf(FILE &stream, byte[?] &format, ...) -> int32;
-ccall fscanf(FILE &stream, byte[?] &format => ...) -> int32;
+ccall fprintf(FILE@ stream, byte[?]@ format, ...) -> int32;
+ccall fscanf(FILE@ stream, byte[?]@ format => ...) -> int32;
 
 ccall time(uint64 tloc)->uint64;
-ccall localtime(uint64 &t) -> struct_tm&;
+ccall localtime(uint64@ t) -> struct_tm@;
 
-ccall cos(flo64 x) -> flo64 @m;
+ccall cos(flo64 x) -> flo64 :m;
 
 type FILE;
 type struct_tm {
@@ -54,7 +54,7 @@ fclose(file>>);
 printf("%d:%s,%s\n", i, str1, str2);
 
 uint64 t = time(0);
-struct_tm& tm = localtime(t);
+struct_tm@ tm = localtime(t);
 struct_tm tm2 = localtime(t);
 
 if tm.tm_sec >= 0 && tm.tm_sec <= 59 { printf("s") } 

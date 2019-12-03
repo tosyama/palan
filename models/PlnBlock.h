@@ -8,6 +8,15 @@
 
 class PlnStructMemberDef;
 
+class PlnArgInf {
+public:
+	PlnVarType* var_type;
+	int iomode;
+	int opt;
+	PlnArgInf(PlnVarType* var_type, int iomode, int opt)
+		: var_type(var_type), iomode(iomode), opt(opt) {}
+};
+
 // Block: Statements
 class PlnBlock {
 public:
@@ -34,7 +43,8 @@ public:
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 
-	PlnVariable* declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
+	//PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
+	PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks);
 	PlnVariable* getVariable(const string& var_name);
 
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError
@@ -44,10 +54,10 @@ public:
 	void declareType(const string& type_name, vector<PlnStructMemberDef*>& members);
 	void declareAliasType(const string& type_name, PlnType* orig_type);
 
-	PlnType* getType(const string& type_name);
-	PlnType* getFixedArrayType(PlnType* item_type, vector<int>& sizes);
+	PlnVarType* getType(const string& type_name, const string& mode);
+	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
 
-	PlnFunction* getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals); // throw PlnCompileError
+	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
 
 	void addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si);

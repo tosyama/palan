@@ -199,7 +199,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abc123def1.23\n"
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
-								"smy0.33");
+								"smy0.33"); 
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode) == "success");
@@ -214,7 +214,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
 }
 
-// Error file ID: 500-583
+// Error file ID: 500-586
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -262,7 +262,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Number of left values did not match right values.");
 
 	testcode = "514_cantusemove_err";
-	REQUIRE(build(testcode) == "0:6-6 Can not use '>>' for 'arr2[]'.");
+	REQUIRE(build(testcode) == "0:6-6 Can not move ownership to 'arr2[]'.");
 
 	testcode = "515_undefchainfunc_err";
 	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'test'.\nCandidate: test(int32)");
@@ -352,7 +352,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Can't use read-only expression here.");
 
 	testcode = "551_constarr_mv_err2";
-	REQUIRE(build(testcode) == "finish:0:3-3 Can not use '>>' for 'array value'.");
+	REQUIRE(build(testcode) == "finish:0:3-3 Can not move ownership from 'array value'.");
 
 	testcode = "552_ambigfunc_err2";
 	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
@@ -376,19 +376,19 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported placeholder or variable argument at palan function.");
 
 	testcode = "573_cantusemove_err2";
-	REQUIRE(build(testcode) == "finish:0:7-7 Can not use '>>' for 'aa'.");
+	REQUIRE(build(testcode) == "finish:0:7-7 Can not move ownership from 'aa'.");
 
 	testcode = "574_cantusemove_err3";
-	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
+	REQUIRE(build(testcode) == "0:9-9 Can not move ownership to 'aa'.");
 
 	testcode = "575_copy2rovar_err";
-	REQUIRE(build(testcode) == "0:9-9 Can't use read-only expression here.");
+	REQUIRE(build(testcode) == "0:9-9 Can not copy to readonly variable 'aa'.");
 
 	testcode = "576_nomember_err";
 	REQUIRE(build(testcode) == "0:7-7 Type 'nomem' has no member named 'x'.");
 
 	testcode = "577_cantusemove_err4";
-	REQUIRE(build(testcode) == "0:18-18 Can not use '>>' for 'stm'.");
+	REQUIRE(build(testcode) == "0:18-18 Can not move ownership from 'source value'.");
 
 	testcode = "578_structtype_err";
 	REQUIRE(build(testcode) == "0:7-7 Incompatible types in assignment of 'int64' to 'A'.");
@@ -407,6 +407,15 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "583_structtype_err2";
 	REQUIRE(build(testcode) == "0:6-6 Incompatible types in assignment of 'array value' to 'AB'.");
+
+	testcode = "584_cantusemove_err5";
+	REQUIRE(build(testcode) == "0:3-3 Can not move ownership to 'b'.");
+
+	testcode = "585_needinit_err";
+	REQUIRE(build(testcode) == "0:2-2 Require initialize expression for 'b'.");
+
+	testcode = "586_needinit_err2";
+	REQUIRE(build(testcode) == "0:6-6 Require initialize expression for 'a'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")
@@ -421,7 +430,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Can not use dynamic expression for const 'arr'.");
 
 	testcode = "549_constarr_mv_err";
-	REQUIRE(build(testcode) == "0:5-5 Can not use '>>' for 'array value'.");
+	REQUIRE(build(testcode) == "0:5-5 Can not move ownership from 'array value'.");
 
 	// array literal
 	testcode = "527_arrlit_type_err";

@@ -27,6 +27,7 @@
 #include "../PlnScopeStack.h"
 #include "../PlnConstants.h"
 #include "../PlnMessage.h"
+#include "expressions/PlnFunctionCall.h"
 #include "../PlnException.h"
 
 PlnBlock::PlnBlock()
@@ -65,7 +66,7 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_module = b->parent_module;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks)
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks)
 {
 	for (auto v: variables)
 		if (v->name == var_name) return NULL;
@@ -73,10 +74,10 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 		if (c.name == var_name) return NULL;
 	
 	if (parent_func) {
-		for (auto rv: parent_func->return_vals)
-			if (rv->name == var_name) return NULL;
+		for (auto&rv: parent_func->return_vals)
+			if (rv.local_var->name == var_name) return NULL;
 		for (auto p: parent_func->parameters)
-			if (p->name == var_name) return NULL;
+			if (p->var->name == var_name) return NULL;
 	}
 
 	if (do_check_ancestor_blocks) {
@@ -93,23 +94,7 @@ PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnType* var_type
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 	v->container = NULL;
-
-	if (var_type) {
-		v->var_type = var_type;
-		if (v->var_type->data_type == DT_OBJECT_REF) {
-			v->ptr_type = PTR_REFERENCE;
-			if (is_owner)
-				v->ptr_type |= PTR_OWNERSHIP;
-		} else
-			v->ptr_type = NO_PTR;
-
-		if (readonly)
-			v->ptr_type |= PTR_READONLY;
-
-	} else {
-		v->var_type = variables.back()->var_type;
-		v->ptr_type = variables.back()->ptr_type;
-	}
+	v->var_type = var_type ? var_type : variables.back()->var_type;
 
 	variables.push_back(v);
 
@@ -126,10 +111,10 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 		if (b->parent_block)
 			b = b->parent_block;
 		else if (b->parent_func) {
-			for (auto rv: parent_func->return_vals)
-				if (rv->name == var_name) return rv;
+			for (auto& rv: parent_func->return_vals)
+				if (rv.local_var->name == var_name) return rv.local_var;
 			for (auto p: parent_func->parameters)
-				if (p->name == var_name) return p;
+				if (p->var->name == var_name) return p->var;
 			return NULL;
 		} else
 			return NULL;
@@ -195,6 +180,7 @@ void PlnBlock::declareType(const string& type_name)
 {
 	PlnType* t = new PlnType();
 	t->name = type_name;
+	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT_REF;
 	t->size = 8;
 	types.push_back(t);
@@ -202,7 +188,7 @@ void PlnBlock::declareType(const string& type_name)
 
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
-	auto t = new PlnStructType(type_name, members, this);
+	auto t = new PlnStructType(type_name, members, this, "wmh");
 	types.push_back(t);
 }
 
@@ -214,14 +200,14 @@ void PlnBlock::declareAliasType(const string& type_name, PlnType* orig_type)
 	types.push_back(t);
 }
 
-static PlnType* realType(PlnType *t) {
-	while (t && t->type == TP_ALIAS) {
+static PlnVarType* realType(PlnType *t, const string& mode) {
+	while (t->type == TP_ALIAS) {
 		t = static_cast<PlnAliasType*>(t)->orig_type;
 	}
-	return t;
+	return t->getVarType(mode);
 }
 
-PlnType* PlnBlock::getType(const string& type_name)
+PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 {
 	// Crrent block
 	{
@@ -229,23 +215,23 @@ PlnType* PlnBlock::getType(const string& type_name)
 				[type_name](PlnType* t) { return t->name == type_name; });
 
 		if (t != types.end())
-			return realType(*t);
+			return realType(*t, mode);
 	}
 
 	// Parent block
 	if (PlnBlock* b = parentBlock(this)) {
-		return realType(b->getType(type_name));
+		return b->getType(type_name, mode);
 	}
 
 	// Search default type if toplevel: parentBlock(this) == NULL
 	{
-		vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
+		vector<PlnType*> &basic_types = PlnType::getBasicTypes();
 
 		auto t = std::find_if(basic_types.begin(), basic_types.end(),
 				[type_name](PlnType* t) { return t->name == type_name; });
 
 		if (t != basic_types.end())
-			return realType(*t);
+			return realType(*t, mode);
 	}
 
 	return NULL;
@@ -267,22 +253,34 @@ string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vect
 	return fname;
 }
 
-PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
+PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode)
 {
 	bool found_item = false;
-	for (auto t: types)
-		if (item_type == t)
+	
+	// Find item from Crrent block
+	{
+		auto t = std::find_if(types.begin(), types.end(),
+				[item_type](PlnType* t) { return t->name == item_type->name(); });
+
+		if (t != types.end()) {
 			found_item = true;
+			BOOST_ASSERT(item_type == realType(*t, item_type->mode));
+		}
+	}
 	
 	if (!found_item) {
 		if (PlnBlock* b = parentBlock(this)) {
-			return b->getFixedArrayType(item_type, sizes);
+			return b->getFixedArrayType(item_type, sizes, mode);
 
 		} else { // toplevel
 			vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
-			for (auto t: basic_types)
-				if (item_type == t)
-					found_item = true;
+			auto t = std::find_if(basic_types.begin(), basic_types.end(),
+					[item_type](PlnType* t) { return t->name == item_type->name(); });
+
+			if (t != types.end()) {
+				found_item = true;
+				BOOST_ASSERT(item_type == realType(*t, item_type->mode));
+			}
 
 			BOOST_ASSERT(found_item);
 		}
@@ -290,14 +288,15 @@ PlnType* PlnBlock::getFixedArrayType(PlnType* item_type, vector<int>& sizes)
 
 	string name = PlnType::getFixedArrayName(item_type, sizes);
 	for (auto t: types) 
-		if (name == t->name) return t;
+		if (name == t->name) return t->getVarType(mode);
 	
 	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
+	t->default_mode = "wmh";
 	types.push_back(t);
-	return t;
+	return t->getVarType(mode);
 }
 
-PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_vals, vector<PlnValue*> &out_arg_vals)
+PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_infs)
 {
 	PlnFunction* matched_func = NULL;
 	vector<PlnFunction*> candidates;
@@ -309,61 +308,71 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 		for (auto f: b->funcs) {
 			if (f->name == func_name) {
 				candidates.push_back(f);
-				if ((!f->has_va_arg)
-						&& f->parameters.size() < (arg_vals.size()+out_arg_vals.size())) {
+				if ((!f->has_va_arg) && f->parameters.size() < arg_infs.size()) {
 					goto next_func;
 				}
 
-				int i=0;
-				int oi=0;
+				int ii=-1, oi=-1;
 				bool do_cast = false;
-				for (auto p: f->parameters) {
-					bool is_output = p->iomode & PIO_OUTPUT;
-					if (p->name == "...") {
-						BOOST_ASSERT(i+oi+1 == f->parameters.size());
-						if ((is_output && i != arg_vals.size())
-								|| (!is_output && oi != out_arg_vals.size())) {
-							goto next_func;
-						}
-						break;	// matched
-					}
 
-					PlnValue *arg_val;
-					if (is_output) {
-						if (oi >= out_arg_vals.size()) goto next_func;
-						arg_val = out_arg_vals[oi];
-						oi++;
+				for (auto p: f->parameters) {
+					bool is_input = p->iomode == PIO_INPUT;
+					int ai;
+					if (is_input) {
+						// search next input
+						ii++;
+						for (; ii<arg_infs.size(); ++ii) {
+							if (arg_infs[ii].iomode == PIO_INPUT)
+								break;
+						}
+						ai = ii;
 
 					} else {
-						if (i >= arg_vals.size() || !arg_vals[i]) {
-							if (!p->dflt_value) goto next_func;
-							// use default value
-							i++;
-							continue;
+						// search next input
+						oi++;
+						for (; oi<arg_infs.size(); ++oi) {
+							if (arg_infs[oi].iomode == PIO_OUTPUT)
+								break;
 						}
-						arg_val = arg_vals[i];
-						i++;
+						ai = oi;
 					}
 
-					PlnType* a_type = arg_val->getType();
-					PlnTypeConvCap cap = p->var_type->canConvFrom(a_type);
+					if (p->var->name == "...") {
+						for (int i = (is_input ? oi : ii)+1; i<arg_infs.size();++i)
+							if (arg_infs[i].iomode != p->iomode)
+								goto next_func;
+
+						break;	// Matched
+					}
+
+					if (ai >= arg_infs.size() || !arg_infs[ai].var_type) {
+						if (!p->dflt_value) goto next_func;
+						else continue;	// variable argument or use default value
+					}
+
+					PlnArgInf& ainf = arg_infs[ai];
+
+					// Check conpatibilty of type.
+					PlnTypeConvCap cap = p->var->var_type->canConvFrom(ainf.var_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
-					if (p->ptr_type == PTR_PARAM_MOVE && arg_val->asgn_type != ASGN_MOVE) {
+					if (p->force_move && ainf.opt != AG_MOVE) {
 						goto next_func;
 					}
-					if (p->ptr_type != PTR_PARAM_MOVE && arg_val->asgn_type == ASGN_MOVE) {
+					if (!p->force_move && ainf.opt == AG_MOVE) {
 						goto next_func;
 					}
 
 					if (cap != TC_SAME) do_cast = true;
 				}
+
+				// Matched
 				candidates.pop_back();
 
 				if (is_perfect_match) {
 					if (do_cast) goto next_func;
 					else {// Existing another perfect match case is bug.
-						// The case func f() && func f(int32 a = 0) exists and try call func();
+						// The case func f() && func f(int31 a = 0) exists and try call func();
 						throw PlnCompileError(E_AmbiguousFuncCall, func_name);
 					}
 
@@ -373,11 +382,12 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnValue*> &arg_v
 					else is_perfect_match = true;
 				}
 			}
+
 next_func:
 			;
 		}
 	} while (b = parentBlock(b));
-	
+
 	if (is_perfect_match || amviguous_count == 1) return matched_func;
 
 	if (!matched_func) {
@@ -421,7 +431,7 @@ next:	;
 void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	for (auto v: variables) {
-		if (parent_block && (v->ptr_type & PTR_OWNERSHIP)) {
+		if (parent_block && v->var_type->mode[ALLOC_MD]=='h') {
 			auto lt = si.get_lifetime(v);
 			if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
 				PlnExpression* free_var = PlnFreer::getFreeEx(v);
@@ -440,7 +450,7 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.checkDataLeak();
 	}
 	
-	addFreeVars(free_vars, da,si);
+	addFreeVars(free_vars, da, si);
 	
 	for (auto v: variables)
 		da.releaseDp(v->place);
@@ -455,9 +465,11 @@ void PlnBlock::gen(PlnGenerator& g)
 	{
 		// initalize all pointers.
 		vector<unique_ptr<PlnGenEntity>> refs;
-		for (auto v: variables) 
-			if (v->ptr_type & PTR_REFERENCE) 
+		for (auto v: variables) {
+			char alloc_mode = v->var_type->mode[ALLOC_MD];
+			if (alloc_mode == 'h' || alloc_mode == 'r')
 				refs.push_back(g.getEntity(v->place));
+		}
 
 		g.genNullClear(refs);
 	}

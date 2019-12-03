@@ -46,7 +46,7 @@ public:
 	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
 	void releaseDp(PlnDataPlace* dp);
 	virtual PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
-	virtual void funcCalled(vector<PlnDataPlace*>& args, vector<PlnVariable*>& rets, int func_type) = 0;
+	virtual void funcCalled(vector<PlnDataPlace*>& args, int func_type) = 0;
 	vector<PlnDataPlace*> prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee);
 	vector<PlnDataPlace*> prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee);
 

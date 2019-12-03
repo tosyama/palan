@@ -156,11 +156,11 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	PlnValue v;
 	v.type = VL_WORK;
 	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo();
+		v.inf.wk_type = PlnType::getFlo()->getVarType();
 	} else if (isUnsigned) {
-		v.inf.wk_type = PlnType::getUint();
+		v.inf.wk_type = PlnType::getUint()->getVarType();
 	} else {
-		v.inf.wk_type = PlnType::getSint();
+		v.inf.wk_type = PlnType::getSint()->getVarType();
 	}
 	values.push_back(v);
 }
@@ -175,7 +175,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getType()->data_type);
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
@@ -242,7 +242,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = e->values[0].getType();
+	v.inf.wk_type = e->values[0].getVarType();
 	values.push_back(v);
 }
 
@@ -253,7 +253,7 @@ PlnNegative::~PlnNegative()
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	auto dp = da.prepareAccumulator(values[0].getType()->data_type);
+	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type());
 	e->data_places.push_back(dp);
 	e->finish(da, si);
 	da.popSrc(dp);

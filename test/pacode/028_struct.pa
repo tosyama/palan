@@ -49,7 +49,7 @@ mtrace();
 
 	tt -> tt2;
 
-	Test2 &reftt2 = tt2;
+	Test2@ reftt2 = tt2;
 	tt2.test.i32 -> j;
 	reftt2.test.b -> j2;
 	tt2.test.i64 -> j3;
@@ -129,8 +129,7 @@ func copyParam(Test3 t)
 {
 }
 
-
-func refParam(Test& t)
+func refParam(Test@ t)
 {
 	if t.i32 != 32 {
 		printf("ng");

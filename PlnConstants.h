@@ -40,3 +40,9 @@ enum PlnCmpType {
 	CMP_CONST_FALSE
 };
 
+// Type mode
+enum PlnTypeMode {
+	ACCESS_MD = 0,
+	IDENTITY_MD = 1,
+	ALLOC_MD = 2
+};

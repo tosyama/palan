@@ -14,15 +14,9 @@ class PlnDstPrimitiveItem : public PlnDstItem {
 
 public:
 	PlnDstPrimitiveItem(PlnExpression* ex)
-		: dst_ex(ex), dst_dp(NULL), save_src_var(NULL) {
-
+			: dst_ex(ex), dst_dp(NULL), save_src_var(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-
-		if (ex->values[0].asgn_type == ASGN_MOVE) {
-			PlnCompileError err(E_CantUseMoveOwnership, ex->values[0].inf.var->name);
-			err.loc = ex->loc;
-			throw err;
-		}
+		BOOST_ASSERT(ex->values[0].asgn_type != ASGN_MOVE);
 	 }
 
 	 ~PlnDstPrimitiveItem() {
@@ -46,7 +40,7 @@ public:
 				src_ex->data_places.push_back(dst_dp);
 
 			} else {	// e.g. ET_ARRAYITEM. save_src_var is use also return value.
-				PlnType* t = dst_ex->values[0].inf.var->var_type;
+				PlnVarType* t = dst_ex->values[0].inf.var->var_type;
 				save_src_var = PlnVariable::createTempVar(da, t, "save src");
 				src_ex->data_places.push_back(save_src_var->place);
 			}

@@ -15,9 +15,10 @@
 PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
 	: PlnType(TP_ARRAY_VALUE), arr_val(arr_val)
 {
+	this->default_mode = "rir";
 }
 
-PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
+PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 {
 	BOOST_ASSERT(arr_val);
 	vector<int> fixarr_sizes;
@@ -25,28 +26,28 @@ PlnType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 	if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, val_item_type)) {
 		BOOST_ASSERT(fixarr_sizes.back() == 0);
 		fixarr_sizes.pop_back();
-		PlnType* itype;
+		PlnVarType* itype;
 		switch(val_item_type) {
 			case DT_SINT:
-				itype = PlnType::getSint(); break;
+				itype = PlnType::getSint()->getVarType(); break;
 			case DT_UINT:
-				itype = PlnType::getUint(); break;
+				itype = PlnType::getUint()->getVarType(); break;
 			case DT_FLOAT:
-				itype = PlnType::getFlo(); break;
+				itype = PlnType::getFlo()->getVarType(); break;
 			default:
 				BOOST_ASSERT(false);
 		}
 
-		return block->getFixedArrayType(itype, fixarr_sizes);
+		return block->getFixedArrayType(itype, fixarr_sizes, "---");
 	}
 
 	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
 	throw err;
 }
 
-PlnTypeConvCap PlnArrayValueType::canConvFrom(PlnType *src) { BOOST_ASSERT(false); }
+PlnTypeConvCap PlnArrayValueType::canConvFrom(const string& mode, PlnVarType *src) { BOOST_ASSERT(false); }
 
-static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* item_type, const vector<int>& sizes, int depth)
+static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarType* item_type, const vector<int>& sizes, int depth)
 {
 	int items_num = sizes[depth];
 	if (arr_val->item_exps.size() != items_num)
@@ -56,7 +57,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* 
 	if (sizes.size() == (depth+1) ) {
 		// check item type conpatible 
 		for (auto exp: arr_val->item_exps) {
-			result = PlnType::lowCapacity(result, item_type->canConvFrom(exp->values[0].getType()));
+			result = PlnType::lowCapacity(result, item_type->canConvFrom(exp->values[0].getVarType()));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}
@@ -77,7 +78,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnType* 
 	}
 }
 
-PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnType* item_type, const vector<int>& sizes)
+PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnVarType* item_type, const vector<int>& sizes)
 {
 	if (arr_val) {
 		return checkFixedArrayItemTypes(arr_val, item_type, sizes, 0);

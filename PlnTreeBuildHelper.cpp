@@ -23,7 +23,7 @@ namespace palan
 
 PlnVariable* declareUInt(PlnBlock* block, string name, uint64_t init_i)
 {
-	PlnVariable *var = block->declareVariable(name, PlnType::getUint(), false, true, false);
+	PlnVariable *var = block->declareVariable(name, PlnType::getUint()->getVarType(), false);
 	BOOST_ASSERT(var);
 	vector<PlnValue> vars = { var };
 
@@ -56,8 +56,7 @@ void malloc(PlnBlock* block, PlnVariable* var, uint64_t alloc_size)
 
 	PlnFunction* func_malloc = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
 	vector<PlnExpression*> args = { new PlnExpression(alloc_size) };
-	vector<PlnExpression*> out_args;
-	PlnFunctionCall *call_malloc= new PlnFunctionCall(func_malloc, args, out_args);
+	PlnFunctionCall *call_malloc= new PlnFunctionCall(func_malloc, args);
 
 	vector<PlnExpression*> exps = { call_malloc };
 
@@ -68,8 +67,7 @@ void free(PlnBlock* block, PlnVariable* var)
 {
 	PlnFunction* func_free = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
 	vector<PlnExpression*> args = { new PlnExpression(var) };
-	vector<PlnExpression*> out_args;
-	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args, out_args);
+	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args);
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
@@ -77,8 +75,7 @@ void exit(PlnBlock* block, uint64_t result)
 {
 	PlnFunction* func_free = PlnFunctionCall::getInternalFunc(IFUNC_EXIT);
 	vector<PlnExpression*> args = { new PlnExpression(result) };
-	vector<PlnExpression*> out_args;
-	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args, out_args);
+	PlnFunctionCall *call_free = new PlnFunctionCall(func_free, args);
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
@@ -90,10 +87,10 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 	auto index_ex = new PlnExpression(index);
 	vector<PlnExpression*> inds = { index_ex };
 
-	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type);
+	PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(var->var_type->typeinf);
 	vector<int> raw_sizes = {0};
 
-	PlnType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes);
+	PlnVarType* raw_arr_type = block->getFixedArrayType(farr_type->item_type, raw_sizes, "wmr");
 
 	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }

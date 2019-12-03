@@ -42,12 +42,12 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	REQUIRE(dps2.size() == 7);
 	REQUIRE(allocator.data_stack.size() == 7);
 	REQUIRE(allocator.arg_stack.size() == 1);
-	allocator.funcCalled(dps2, rets, FT_PLN);
+	allocator.funcCalled(dps2, FT_PLN);
 	REQUIRE(allocator.regs[RDI] == dps2[0]);
 	REQUIRE(dps2[0]->status==DS_RELEASED);
 	REQUIRE(dps2[6]->status==DS_RELEASED);
 
-	allocator.funcCalled(dps1, rets, FT_SYS);
+	allocator.funcCalled(dps1, FT_SYS);
 	REQUIRE(allocator.regs[RDI]->status == DS_RELEASED);
 	REQUIRE(dps1[0]->status==DS_RELEASED);
 	REQUIRE(dps1[5]->status==DS_RELEASED);
@@ -302,7 +302,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	for (auto dp: dp_prms)
 		da.allocDp(dp);
 
-	da.funcCalled(dp_prms, rets, FT_PLN);
+	da.funcCalled(dp_prms, FT_PLN);
 
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
