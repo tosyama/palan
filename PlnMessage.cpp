@@ -76,6 +76,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Can't use read-only expression here."; break;
 		case E_DuplicateTypeName:
 			f = "Type name '%1%' already defined."; break;
+		case E_RequireVarInit:
+			f = "Require initialize expression for '%1%'."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;

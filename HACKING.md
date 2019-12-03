@@ -87,105 +87,117 @@ module.gen(generator);
 Palan Model Tree<a name="PMT"></a>
 ----------------
 Palan model tree represents palan code structure to compile.
-The tree is built by PlnParser. Most models has finish() and gen().
+The tree is built by `PlnParser`. Most models has `finish()` and `gen()`.
 The model which have children calls the children's methods recursively.  
-The finish() finishes the model. Simulate allocation of stack or register by using data allocator.  
-The gen() generates assembly code of the model to output stream.  
+The `finish()` finishes the model. Simulate allocation of stack or register by using data allocator.  
+The `gen()` generates assembly code of the model to output stream.  
 
 ### Typical models 
-1.  PlnModule - Root of model tree. It includes function definitions, type definition and top level block.
+1.  `PlnModule` - Root of model tree. It includes function definitions, type definition and top level block.
 
-2.  PlnFunction - Function definition. Generally, stack/register management is reset by each function.
+2.  `PlnFunction` - Function definition. Generally, stack/register management is reset by each function.
 
-3.  PlnStatement - Statement become a unit to generate assembly code. Because there is not any passing data directly between statements.
+3.  `PlnStatement` - Statement become a unit to generate assembly code. Because there is not any passing data directly between statements.
 
-4.  PlnBlock - Block statement includes a series of statements. Block manage local variables and functions in the block.
+4.  `PlnBlock` - Block statement includes a series of statements. Block manage local variables and functions in the block.
 
-5.  PlnExpression - Expression returns values. Plain PlnExpression class manage Literal or variable.
+5.  `PlnExpression` - Expression returns values. Plain PlnExpression class manage Literal or variable.
     Many descendant classes exist such as calculation/assignment expression.
 
-6.  PlnAssignment - Assignment expression. PlnAssignment assign values to variables.
+6.  `PlnAssignment` - Assignment expression. It assign values to variables.
 
 Expression Model
 ----------------
 PlnExpression is base class of the model that has returning values.
-Expression class has members *values* and *data_places*.
+Expression class has members `values` and `data_places`.
 They are used to exchange data between expressions.
 
-The *values* are information of returning values.
-It includes value type (e.g. literal integer/variable), asgn_type and is_readonly.
-If asgn_type is not NO_LVL, the expression is destination of assignment.
-The asgn_type indicate following method of assignment.  
+The `values` are information of returning values.
+It includes value type (e.g. literal integer/variable) and `asgn_type`.
+If `asgn_type` is not `NO_ASGN`, the expression is destination of assignment.
+`asgn_type` indicate following method of assignment.  
 
-*   ASGN_COPY - Assign by coping memory data.
-*   ASGN_MOVE - Move ownership. Assign by coping memory address. Source variable is cleared null.
-*   ASGN_COPY_REF - Assign by copying memory address.
+*   `ASGN_COPY` - Assign by coping memory data.
+*   `ASGN_MOVE` - Move ownership. Assign by coping memory address. Source variable is cleared null.
+*   `ASGN_COPY_REF` - Assign by copying memory address.
 
-And *values* also have actual value of literal or pointer for variable objects in *inf* union member.
-Generally, *values* are set up at constructor of the model.
+`values` also have actual value of literal or pointer for variable objects in `inf` union member.
+Generally, `values` are set up at constructor of the model.
 
-The *data_places* manage place and timing of passing data such as register.
-Parent expression set child's data_places before calling finish().
+The `data_places` manage place and timing of passing data such as processer register.
+Parent expression set child's `data_places` before calling `finish()`.
 
-*adjustTypes()* need to check compatibilty of type to store.
-Generate and return new expressions if needed.
+`adjustTypes()` checks compatibilty of type to store and generate and return new expressions if needed.
 Throw compile error if types is not compatibe.
 
 Variable Model
 --------------
-PlnVariable represents variable. Not only local variable, also represents indirect object such as array item.
-The member *ptr_type* is the flags that indicate following characteristics.
-
-*   NO_PTR - Numeric variable.
-*   PTR_REFERENCE - Variable to keep memory address.
-*   PTR_OWNERSHIP - Variable that has ownership of memory address.
-*   PTR_INDIRECT_ACCESS - Variable that indirect access memory. e.g.) array item.
-*   PTR_READONLY - The variable should not update or free. Mainly use for return value definition.
-*   PTR_CLONE - The parameter which need to be clone.
-
-The member *place* is data place of the variable stored.
-However, for general usage, use alias data place with getDataPlace() of expression class.
+`PlnVariable` represents variable. Not only local variable, also represents indirect object such as array item.
+The member `var_type` is data type of the variable.
+The member `place` is data place of the variable stored.
+However, for general usage, use alias data place with `getDataPlace()` of expression class.
 
 Type information
 -----------------
-The type information are stored in PlnType instance.
-It has type name and compatibe information.
-To check compatibe of between types, use conConvFrom() method.
-The method used to decide calling function by checking arguments type in PlnBlock().i
+The type information are stored in `PlnVarType` instance.
+The member `typeinf` has basic infomation. It has type name and compatibe information.
+To check compatibe of between types, use `canConvFrom()` method. The method used to decide calling function by checking arguments type in `PlnBlock`.
+
+The member `mode` has additional information of the data on the context.
+It consist of 3 characters and each charactor indicates access right, identity and allocation.
+
+### Access right
+*   *r* - Read-only
+*   *w* - Write and read
+*   *o* - Write only for output (Reserved)
+
+### Data Identity
+*   *m* - Movable ownership
+*   *c* - Changeable identity (Reserved)
+*   *i* - Keep identity
+*   *n* - No identity
+
+### Allocation
+*   *h* - Heap allocation
+*   *s* - Stack allocation
+*   *r* - Reference of the data
+*   *i* - Immediate value
+
+The charactor *-* indicates default value. It's replaced to default value of the type by `getVarType()`.
 
 Data Allocator
 --------------
-PlnDataAllocator(da) manage usage of stack memory and registers.
-Each model create appropriate PlnDataPlace(dp) and simulate data operation
-using da in their finish(). dp should be created each operation,
-because dp has it's active period information.
+`PlnDataAllocator`(`da`) manage usage of stack memory and registers.
+Each model create appropriate `PlnDataPlace`(`dp`) and simulate data operation
+using da in their `finish()`. `dp` should be created each operation,
+because `dp` has it's active period information.
 
-Use da.allocData() to get dp for allocated stack data.
-New dp self or use da.prepare~() to get non allocated dp.
-da.allocDp() allocate such dp.
-Use da.releaseData() to release data which become out of the scope.
-Use da.funcCalled() to simulate function call.
+Use `da.allocData()` to get dp for allocated stack data.
+New dp self or use `da.prepare*()` to get non allocated `dp`.
+`da.allocDp()` allocate such `dp`.
+Use `da.releaseData()` to release data which become out of the scope.
+Use `da.funcCalled()` to simulate function call.
 
-To simulate exchange data between expressions, use da.pushSrc() and da.popSrc().
+To simulate and setup the exchange data between expressions, use `da.pushSrc()` and `da.popSrc()`.
 da will assign automatically stack space for saving if it predict that the using register would destroyed.
 
 Scope Information
 -----------------
-PlnScopeInfo(si) manage current scope and variables that has ownership during finish().
+`PlnScopeInfo`(`si`) manage current scope and variables that has ownership during `finish()`.
 The variables have their lifetime status.
-Each model update the lifetime status by si.set_lifetime() when update variable.
+Each model update the lifetime status by `si.set_lifetime()` when update variable.
 Followings lifetime status are available currently.
 
-*   VLT_UNKOWN - Declared but is not allocated memory.
-*   VLT_ALLOCED - Allocated the memory, but not initialized.
-*   VLT_INITED - Stored meaningful data.
-*   VLT_FREED - Lost ownership and cleared already. Don't need to free.
+*   `VLT_UNKOWN` - Declared but is not allocated memory.
+*   `VLT_ALLOCED` - Allocated the memory, but not initialized.
+*   `VLT_INITED` - Stored meaningful data.
+*   `VLT_FREED` - Lost ownership and cleared already. Don't need to free.
 
 Generator
 ---------
-PlnGenerator(g) outputs assembly.
-Each model outputs it's assembly by using g.gen~() at its gen() method.
-Many of g.gen~() are required PlnGenEntity to call.
+`PlnGenerator`(`g`) outputs assembly.
+Each model outputs it's assembly by using `g.gen*()` at its `gen()` method.
+Many of `g.gen*()` are required `PlnGenEntity` to call.
 Entities includes environment dependent assembly information.
-g.getEntity() create the entity from dp.
-g.genSaveSrc() and g.genLoadDp() can be used at the timing of da.pushSrc() and da.popSrc().
+`g.getEntity()` create the entity from `dp`.
+`g.genSaveSrc()` and `g.genLoadDp()` can be used at the timing of `da.pushSrc()` and `da.popSrc()`.

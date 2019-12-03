@@ -9,6 +9,5 @@ public:
 	vector<int> sizes;
 
 	PlnFixedArrayType(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent);
-//	PlnFixedArrayType(const PlnFixedArrayType* src, const string& mode);
 	PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src) override;
 };

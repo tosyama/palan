@@ -16,10 +16,11 @@ Current palan is very draft.
 ### Build Palan Compiler
 ```console
 $ git clone --recursive https://github.com/tosyama/palan.git
+$ cd palan
 $ sudo make package
 $ make
 ```
-Note: `make package` installs [Boost][boost], [Bison][bison], [Flex][flex] and [Catch][catch]. You might need to install libfl-dev.
+Note: `make package` installs [Boost][boost], [Bison][bison], [Flex][flex] and [Catch][catch]. You might need to install libfl-dev and libncursesw5-dev.
 
 ### Write Code
 ```console

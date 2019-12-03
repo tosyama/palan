@@ -129,7 +129,6 @@ func copyParam(Test3 t)
 {
 }
 
-
 func refParam(Test@ t)
 {
 	if t.i32 != 32 {

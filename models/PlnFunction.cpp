@@ -15,6 +15,8 @@
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnType.h"
+#include "types/PlnFixedArrayType.h"
+#include "types/PlnStructType.h"
 #include "PlnVariable.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
@@ -32,6 +34,27 @@ PlnFunction::PlnFunction(int func_type, const string &func_name)
 		parent(NULL), has_va_arg(false), num_in_param(0), num_out_param(0),
 		call_count(0), generated(false)
 {
+}
+
+static PlnVarType* getEditableVarTypeForLocal(PlnVarType* var_type, PlnBlock* block)
+{
+	string mode = var_type->mode;
+	if (mode[IDENTITY_MD] == 'i' && mode[ALLOC_MD] == 'r') {
+		mode[IDENTITY_MD] = 'c';
+	}
+
+	if (var_type->typeinf->type == TP_FIXED_ARRAY) {
+		// PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(var_type->typeinf);
+		// PlnVarType *editable_item_type = getEditableVarTypeForLocal(atype->item_type, block);
+		// vector<int> sizes = atype->sizes;
+		// var_type = block->getFixedArrayType(editable_item_type, sizes, mode);
+
+	} else if (var_type->typeinf->type == TP_STRUCT) {
+	} else if (var_type->typeinf->type == TP_PRIMITIVE) {
+	} else
+		BOOST_ASSERT(false);
+
+	return var_type->typeinf->getVarType(mode);
 }
 
 PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
@@ -58,7 +81,8 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	ret_var->name = rname;
 	if (!rtype)
 		rtype = return_vals.back().var_type;
-	ret_var->var_type = rtype;
+	
+	ret_var->var_type = getEditableVarTypeForLocal(rtype, parent);
 
 	if (rname == "")
 		ret_var->place = NULL;

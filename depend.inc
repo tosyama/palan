@@ -12,6 +12,7 @@ PlnModule.o:  models/PlnModule.h \
 PlnFunction.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnModule.h models/PlnExpression.h \
 	models/PlnBlock.h models/PlnStatement.h models/PlnType.h \
+	models/types/PlnFixedArrayType.h models/types/PlnStructType.h \
 	models/PlnVariable.h models/../PlnDataAllocator.h \
 	models/../PlnGenerator.h models/../PlnConstants.h \
 	models/../PlnScopeStack.h models/../PlnMessage.h \
@@ -23,7 +24,8 @@ PlnBlock.o:  models/PlnFunction.h models/../PlnModel.h \
 	models/types/PlnAliasType.h models/PlnArray.h models/PlnModule.h \
 	models/../PlnDataAllocator.h models/../PlnGenerator.h \
 	models/../PlnScopeStack.h models/../PlnConstants.h \
-	models/../PlnMessage.h models/../PlnException.h
+	models/../PlnMessage.h models/expressions/PlnFunctionCall.h \
+	models/../PlnException.h
 PlnStatement.o:  models/../PlnConstants.h \
 	models/PlnFunction.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnExpression.h models/PlnStatement.h models/PlnVariable.h \
@@ -37,9 +39,11 @@ PlnExpression.o:  models/PlnExpression.h \
 	models/../PlnMessage.h models/../PlnException.h
 PlnVariable.o:  models/PlnFunction.h \
 	models/../PlnModel.h models/PlnBlock.h models/PlnExpression.h \
-	models/PlnType.h models/PlnVariable.h models/../PlnDataAllocator.h \
-	models/../PlnGenerator.h models/../PlnScopeStack.h \
-	models/../PlnConstants.h models/../PlnMessage.h models/../PlnException.h \
+	models/PlnType.h models/types/PlnFixedArrayType.h \
+	models/types/PlnStructType.h models/PlnVariable.h \
+	models/../PlnDataAllocator.h models/../PlnGenerator.h \
+	models/../PlnScopeStack.h models/../PlnConstants.h \
+	models/../PlnMessage.h models/../PlnException.h \
 	models/expressions/PlnFunctionCall.h \
 	models/expressions/assignitem/PlnAssignItem.h
 PlnType.o:  models/PlnType.h models/../PlnModel.h \
@@ -256,8 +260,8 @@ PlnTreeBuildHelper.o:  PlnTreeBuildHelper.h \
 	models/expressions/PlnAssignment.h models/expressions/PlnCmpOperation.h \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/PlnFunctionCall.h models/types/PlnFixedArrayType.h
-PlnScopeStack.o:  PlnModel.h models/PlnVariable.h \
-	PlnScopeStack.h
+PlnScopeStack.o:  PlnModel.h models/PlnType.h \
+	models/PlnVariable.h PlnScopeStack.h PlnConstants.h
 PlnModelTreeBuilder.o:  PlnModel.h \
 	PlnModelTreeBuilder.h libs/json/single_include/nlohmann/json.hpp \
 	PlnScopeStack.h PlnConstants.h PlnMessage.h PlnException.h \

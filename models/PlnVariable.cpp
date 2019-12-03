@@ -12,6 +12,8 @@
 #include "PlnBlock.h"
 #include "PlnExpression.h"
 #include "PlnType.h"
+#include "types/PlnFixedArrayType.h"
+#include "types/PlnStructType.h"
 #include "PlnVariable.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
@@ -43,10 +45,29 @@ static inline PlnExpression *createVarExpression(PlnValue &val, PlnExpression* e
 	return var_ex;
 }
 
+static bool requireInit(PlnVarType* var_type)
+{
+	if (var_type->mode[IDENTITY_MD] == 'i' && var_type->mode[ALLOC_MD] == 'r')
+		return true;
+	
+	if (var_type->typeinf->type == TP_FIXED_ARRAY)
+		return requireInit(static_cast<PlnFixedArrayType*>(var_type->typeinf)->item_type);
+	
+	if (var_type->typeinf->type == TP_STRUCT) {
+		PlnStructType* stype = static_cast<PlnStructType*>(var_type->typeinf);
+		for (PlnStructMemberDef* member: stype->members) {
+			if (requireInit(member->type))
+				return true;
+		}
+	}
+
+	return false;
+}
+
 PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 {
 	int var_i=0;
-	if (inits)
+	if (inits) {
 		for (auto &ex: *inits) {
 			if (var_i >= vars.size()) {
 				// No any more assign.
@@ -78,6 +99,18 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			}
 			assgin_items.push_back(ai);
 		}
+	} else {
+		for (int i=0; i < vars.size(); ++i) {
+			PlnVarType* var_type = vars[i].inf.var->var_type;
+			// Check if needs initialization
+			if (requireInit(var_type)) {
+				BOOST_ASSERT(vars[i].inf.var->name != "__p1");
+				PlnCompileError err(E_RequireVarInit, vars[i].inf.var->name);
+				err.loc = vars[i].inf.var->loc;
+				throw err;
+			}
+		}
+	}
 
 	for (int i=0; i < vars.size(); ++i) {
 		PlnVariable* v = vars[i].inf.var;

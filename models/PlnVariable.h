@@ -20,11 +20,6 @@ public:
 	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name);
 };
 
-enum {
-	PRT_PARAM = 1,
-	PRT_RETVAL = 2
-};
-
 class PlnAssignItem;
 
 // Variable initialization

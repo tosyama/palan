@@ -40,6 +40,7 @@ enum PlnErrCode {
 	E_NoMemberName,	// type name, member name
 	E_CantUseReadonlyExHere,	// none
 	E_DuplicateTypeName,	// type name
+	E_RequireVarInit,	// var name
 
 	E_InvalidAST,	// source name, line
 
