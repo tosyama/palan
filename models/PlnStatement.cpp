@@ -1,7 +1,7 @@
 /// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
@@ -148,7 +148,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	vector<PlnDataPlace*> dps = da.prepareRetValDps(FT_PLN, function->ret_dtypes, function->arg_dtypes, true);
 	vector<PlnVariable*> ret_vars;
 
-	int i=0, j=0;
+	int i=0;
 	for (auto& rt: function->return_vals) {
 		dps[i]->data_type = rt.local_var->var_type->data_type();
 		i++;

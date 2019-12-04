@@ -172,7 +172,8 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			PlnVarType *var_type = getVarType(param["var-type"], scope);
 			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy", param);
 
-			PlnPassingMethod pm;
+			PlnPassingMethod pm = FPM_UNKNOWN;
+			
 			if (param["pass-by"] == "move") {
 				pm = FPM_MOVEOWNER;
 			} else if (param["pass-by"] == "copy") {
@@ -389,7 +390,7 @@ PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast, PlnBlock* new
 PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 {
 	string type = stmt["stmt-type"];
-	PlnStatement *statement;
+	PlnStatement *statement = NULL;
 
 	if (type == "exp") {
 		statement = new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
@@ -801,7 +802,7 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
 	assertAST(exp["exp-type"].is_string(), exp);
 	string type = exp["exp-type"];
-	PlnExpression *expression;
+	PlnExpression *expression = NULL;
 
 	if (type == "lit-int") {
 		assertAST(exp["val"].is_number_integer(), exp);

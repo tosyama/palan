@@ -6,6 +6,7 @@
 #include "../PlnModel.h"
 
 enum PlnPassingMethod {
+	FPM_UNKNOWN,
 	FPM_COPY,
 	FPM_MOVEOWNER,
 	FPM_REF
