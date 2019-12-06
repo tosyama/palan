@@ -212,9 +212,15 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "66 99 4.0 44.0 11 22 33 22");
+
+	testcode = "030_reference";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "2 5 3 5 9\n" "2");
+	CHECK(mcheck("mtrace030-1") == "+12 -12");
+	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
-// Error file ID: 500-586
+// Error file ID: 500-585
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -414,8 +420,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "585_needinit_err";
 	REQUIRE(build(testcode) == "0:2-2 Require initialize expression for 'b'.");
 
-	testcode = "586_needinit_err2";
-	REQUIRE(build(testcode) == "0:6-6 Require initialize expression for 'a'.");
+	testcode = "586_cantusemove_err6";
+	REQUIRE(build(testcode) == "finish:0:2-2 Can not move ownership to 'b'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

@@ -71,7 +71,7 @@ public:
 
 		} else {
 			PlnVarType* t = dst_ex->values[0].inf.var->var_type;
-			if (t->data_type() == DT_OBJECT_REF && t->mode[2] != 'h') {
+			if (t->data_type() == DT_OBJECT_REF && t->mode[ALLOC_MD] != 'h') {
 				// case int32[3]@ a = [1,x];
 				BOOST_ASSERT(false);
 			}
@@ -132,7 +132,13 @@ public:
 				BOOST_ASSERT(val_items.size() == dst_items.size());
 				for (int i=0; i<val_items.size(); i++) {
 					PlnAssignItem *ai = PlnAssignItem::createAssignItem(val_items[i]);
-					dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					if (dst_items[i]->values[0].getVarType()->mode[ALLOC_MD] == 'r') {
+						BOOST_ASSERT(dst_items[i]->values[0].getVarType()->mode == "rir");
+						dst_items[i]->values[0].asgn_type = ASGN_COPY_REF;
+					} else {
+						dst_items[i]->values[0].asgn_type = ASGN_COPY;
+					}
+				
 					ai->addDstEx(dst_items[i], false);
 					assign_items.push_back(ai);
 				}

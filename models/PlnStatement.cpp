@@ -117,7 +117,7 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 			for (auto&v: e->values) {
 				if (i < num_ret) {
 					PlnVarType* t = function->return_vals[i].local_var->var_type;
-					if (t->canConvFrom(v.getVarType()) == TC_CANT_CONV) {
+					if (t->canCopyFrom(v.getVarType()) == TC_CANT_CONV) {
 						PlnCompileError err(E_InvalidRetValues);
 						err.loc = e->loc;
 						throw err;

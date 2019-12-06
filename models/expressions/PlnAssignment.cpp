@@ -124,7 +124,7 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 				PlnVarType* dst_type = lvals[dst_i]->values[0].getVarType();
 
 				// Compatibility is assured at adjustTypes().
-				BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
+				BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
 
 				bool need_save = checkNeedToSave(expressions, exp_i, lvals, dst_i);
 

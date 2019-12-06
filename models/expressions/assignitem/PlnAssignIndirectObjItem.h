@@ -59,6 +59,10 @@ public:
 			dst_item->setSrcEx(da, si, src_ex);
 			src_ex->finish(da, si);
 
+		} else if (dst_item->getAssginType() == ASGN_COPY_REF) {
+			dst_item->setSrcEx(da, si, src_ex);
+			src_ex->finish(da, si);
+
 		} else {
 			BOOST_ASSERT(false);
 		}

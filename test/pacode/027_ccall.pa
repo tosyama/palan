@@ -31,9 +31,9 @@ type struct_tm {
 
 const filename = "out/027_outfile.txt";
 
-byte[32] str1, str2;
+byte[32] str1, str2buf;
 sprintf("abc%d%s%.2f\n", 123, "def" ,1.23 => str1);
-str2 ->> strcpy(str1) ->> str2;
+byte[?] str2 <<= (str2buf ->> strcpy(str1));
 str2 -> printf();
 
 int32 i;

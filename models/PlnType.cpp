@@ -324,10 +324,13 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	const string& item_name = it->name();
 	string item_suffix = item_type->name().substr(item_name.size());
 
+	if (item_type->mode == "rir")
+		item_suffix += "@";
+
 	return item_name + arr_name + item_suffix;
 }
 
-PlnTypeConvCap PlnType::canConvFrom(const string& mode, PlnVarType *src)
+PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src)
 {
 	if (this == src->typeinf)
 		return TC_SAME;
