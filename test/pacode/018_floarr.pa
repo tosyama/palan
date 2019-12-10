@@ -5,8 +5,8 @@ ccall muntrace();
 
 setenv("MALLOC_TRACE", "out/mtrace018", 1);
 // alloc only
-flo32[10] f;
-flo64[3] d1, d2;
+[10]flo32 f;
+[3]flo64 d1, d2;
 int32 i,j = 1,2;
 
 mtrace();
@@ -14,13 +14,13 @@ arr_func(d1>>) ->> d1;
 muntrace();
 printf("%.2f %.2f", d1[i], d1[j]);
 
-flo32[5,3] ff;
+[5,3]flo32 ff;
 d1[i],d1[j] -> ff[i,j], ff[j,i];
 printf(" %.2f %.2f", ff[i,j], ff[j,i]);
 
-func arr_func(flo64[3] >>da) -> flo64[3] da
+func arr_func([3]flo64 >>da) -> [3]flo64 da
 {
-	flo32[5] a;
+	[5]flo32 a;
 	1.8 -> a[0]; 2.5 -> a[3.5];
 	1.23 -> da[1];
 	3, da[a[0]]*a[0] -> a[0], da[a[3]];

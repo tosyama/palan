@@ -459,7 +459,7 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 		if (vt["name"] == "[]") {
 			assertAST(vt["sizes"].is_array(),vt);
 			for (json& sz: vt["sizes"]) {
-				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+				if (sz["exp-type"] == "unknown" && sz["info"] == "") {
 					return ARR_INDEX_INFER;
 				}
 			}
@@ -504,7 +504,8 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 				if (sz_i >= sizes.size()) {
 					goto sz_err;
 				}
-				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+				if (sz["exp-type"] == "unknown" && sz["info"] == "") {
+					sz["exp-type"] = "lit-int";
 					sz["val"] = sizes[sz_i];
 				}
 				sz_i++;

@@ -2,7 +2,7 @@ ccall printf(...);
 
 // init data.
 const N=10;
-int16[N] data = [0,4,8,3,7,2,6,1,5,0];
+[N]int16 data = [0,4,8,3,7,2,6,1,5,0];
 
 // sort
 printf("before:");
@@ -13,7 +13,7 @@ data ->> quicksort(0, N-1)
 	->> data
 	-> show();
 
-func show(int16[N] data)
+func show([N]int16 data)
 {
 	i=0;
 	while i<N {
@@ -23,8 +23,8 @@ func show(int16[N] data)
 	printf("\n");
 }
 
-func quicksort(int16[N] >>data, int32 left, right)
-	-> int16[N] data
+func quicksort([N]int16 >>data, int32 left, right)
+	-> [N]int16 data
 {
 	if left >= right { return }
 

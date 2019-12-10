@@ -11,7 +11,7 @@ printf("%d %d ", i, j);
 i,(j->i) -> j,k;
 printf("%d %d %d\n", i,j,k);
 
-int32[3] a, b, c = arr(0), arr(3), arr(6);
+[3]int32 a, b, c = arr(0), arr(3), arr(6);
 
 // mixed copy case 
 b, a[1] -> a, i;
@@ -47,7 +47,7 @@ printf("%d %d ", a[1], b[1]);
 a ->> a;
 printf("%d\n", a[1]);
 
-int32[2][3] aa, bb;
+[2][3]int32 aa, bb;
 arr(0) -> aa[1];
 arr(3) -> bb[0];
 
@@ -69,7 +69,7 @@ printf("%d %d ", aa[1][1], b[1]);
 	printf("%d %d\n", aa[1][1], b[1]);
 }
 
-func arr(int32 base) -> int32[3] a
+func arr(int32 base) -> [3]int32 a
 {
 	int32 i = 0;
 	while (i < 3) {

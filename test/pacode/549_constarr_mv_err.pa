@@ -1,4 +1,4 @@
-func mvfun(int64[3] >>arr)
+func mvfun([3]int64 >>arr)
 {
 }
 

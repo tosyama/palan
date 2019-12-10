@@ -1,6 +1,6 @@
 // testing freeed var check in block
 
-int64[3] arr;
+[3]int64 arr;
 {
 	arr1 <<= arr;
 	[1,2,3] -> arr;

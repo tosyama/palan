@@ -2,7 +2,7 @@ ccall printf(...);
 
 uint16 i16 = 16;
 int32 i32 = 32;
-int32[10] ia;
+[10]int32 ia;
 
 ov_func(ia>>);
 ov_func(i16);
@@ -10,7 +10,7 @@ ov_func(i32);
 ov_func(i32, i16);
 ov_func(ret2u());
 
-func ov_func(int32[10] >> pa)
+func ov_func([10]int32 >> pa)
 {
 	printf("(int32[10])");
 }

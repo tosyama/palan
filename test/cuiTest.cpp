@@ -51,6 +51,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 	REQUIRE(outfile(testcode + ".o") == "exists");
 	REQUIRE(outfile(testcode) == "exists");
 
+return;
 	// math library loading
 	testcode = "027_ccall";
 	REQUIRE(exec_pac(testcode, "", "", "") == "success");
@@ -174,7 +175,7 @@ TEST_CASE("CUI basic err test.", "[cui]")
 	REQUIRE(errstr(testcode) == "509_needret_err.pa:6: Return argument(s) can't be omitted at this function.\n");
 }
 
-TEST_CASE("sample code compile test.", "[cui]")
+TEST_CASE("sample code compile test.", "[cui][.]")
 {
 	string dir = "../samples/";
 	string testcode = "tetris";

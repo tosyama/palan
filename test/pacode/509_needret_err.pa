@@ -1,6 +1,6 @@
 ccall printf(...);
 
-func nonameret_func(int32[10] >> pa) -> int32
+func nonameret_func([10]int32 >> pa) -> int32
 {
 	printf("no retrun");
 }

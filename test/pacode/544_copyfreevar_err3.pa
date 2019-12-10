@@ -1,8 +1,8 @@
-int64[3] arr1 = [1,2,3];
+[3]int64 arr1 = [1,2,3];
 {
 	freearr(arr1>>) -> arr1;
 }
 
-func freearr(int64[3] >>arr) -> int64[3] arr
+func freearr([3]int64 >>arr) -> [3]int64 arr
 {
 }

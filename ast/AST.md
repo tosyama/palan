@@ -83,16 +83,13 @@ Variable Type
 -------------
 *   name\* - Type name string: "[]" any
     1.  [] - Fixed size array typet
-        *   sizes\* - Expression list (lit-int:-1 - size inference)
+        *   sizes\* - Expression list ({exp-type:unknown,info:""} - size inference)
 
     2.  any - Specified variable type name
 
-*   mode\* - mode string(read/write, mutable/imutable, stack/owner(object on heap)/ref/literal): "---" "rr-" "wo-"
-    1.  --- - dafault: depend on type. (basically same as wms/wmo/ril)
-    2.  rir - read-only reference (no alloc/free)
-    3.  wmo - read/write owner object (responsible alloc, free)
-    4.  wms - read/write owner variable on stack
-    5.  ril - read-only literal value
+*   mode\* - mode string(access right, identity, allocation):
+    1.  --- - dafault: depend on type
+    2.  rir - read-only reference
 
 *   loc - Location integer array
 

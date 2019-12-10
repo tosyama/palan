@@ -41,12 +41,12 @@ func intfunc3(int32 a=A, int64 b)
 	printf("i%d%d", a, b);
 }
 
-func arrayfunc(int64[2] a=[1,2], flo64[2] b=B)
+func arrayfunc([2]int64 a=[1,2], [2]flo64 b=B)
 {
 	printf("a%d%.1f", a[1], b[1]);
 }
 
-func array2func(int64[2,3] a=[1,2,3][4,5,6])
+func array2func([2,3]int64 a=[1,2,3][4,5,6])
 {
 	printf("a%d", a[1,1]);
 }
