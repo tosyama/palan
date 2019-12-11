@@ -7,23 +7,23 @@ setenv("MALLOC_TRACE", "out/mtrace030-1", 1);
 int32 i1,i2,i3,i4,i5;
 mtrace();
 {
-	int32[3]@ arr1 = [1,2,3];
+	@[3]int32 arr1 = [1,2,3];
 	arr1[1] -> i1;
 
-	int32[2][3]@ arr2 = [1,2,3][4,5,6];
+	[2]@[3]int32 arr2 = [1,2,3][4,5,6];
 	arr2[1][1] -> i2;
 
-	int32[3] arr3 = arr1;
+	[3]int32 arr3 = arr1;
 	arr3[2] -> i3;
 
-	int32[2][3] aaa = arr2;
+	[2][3]int32 aaa = arr2;
 
-	int32[1][2][3]@ x1 = [[1,2,3][4,5,6]];
-	int32[1][2][3] x2 = x1;
+	[1][2]@[3]int32 x1 = [[1,2,3][4,5,6]];
+	[1][2][3]int32 x2 = x1;
 	x2[0][1][1] -> i4;
 	9 -> x2[0][0][1];	// check writable.
 
-	int32[3]@ xx = x2[0][0];
+	@[3]int32 xx = x2[0][0];
 	xx[1] -> i5;
 }
 muntrace();
@@ -32,15 +32,15 @@ printf("%d %d %d %d %d\n", i1, i2, i3, i4, i5);
 
 type A {
 	int16 i;
-	int32[3]@ arr;
+	@[3]int32 arr;
 };
 
 setenv("MALLOC_TRACE", "out/mtrace030-2", 1);
 mtrace();
 {
 	A a = [3, [1,2,3]];
-	A@ b = a;
-	int32[3]@ aarr = b.arr;
+	@A b = a;
+	@[3]int32 aarr = b.arr;
 	aarr[1] -> i1;
 }
 muntrace();

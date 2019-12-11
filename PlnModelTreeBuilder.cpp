@@ -110,10 +110,10 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 	PlnVarType* ret_vt;
 
 	assertAST(var_type.is_array(), var_type);
-	assertAST(var_type[0]["name"].is_string(), var_type);
+	assertAST(var_type.back()["name"].is_string(), var_type);
 
-	string type_name = var_type[0]["name"];
-	string mode = var_type[0]["mode"];
+	string type_name = var_type.back()["name"];
+	string mode = var_type.back()["mode"];
 	ret_vt = CUR_BLOCK->getType(type_name, mode);
 
 	if (!ret_vt) {
@@ -122,7 +122,7 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 		throw err;
 	}
 
-	for (int i=var_type.size()-1; i>0; --i) {
+	for (int i=var_type.size()-2; i>=0; --i) {
 		json &vt = var_type[i];
 		type_name = vt["name"];
 		mode = vt["mode"];
@@ -132,6 +132,11 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 
 		vector<int> sizes;
 		for (json& i: vt["sizes"]) {
+			if (i["exp-type"]=="unknown" && i["info"]=="?") {
+				sizes.push_back(0u);
+				continue;
+			}
+
 			PlnExpression* e = buildExpression(i, scope);
 
 			int vtype = e->values[0].type;

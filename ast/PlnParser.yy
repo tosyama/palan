@@ -96,9 +96,12 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	assignment func_call chain_call term
 %type <json>	argument out_argument literal chain_src
 %type <json>	dst_val var_expression
-%type <json>	array_val array_item
+%type <json>	array_item
+%type <json>	array_val /* internal data {name,items,loc} */
 %type <vector<string>>	const_names
-%type <vector<json>>	ids
+%type <vector<json>>	ids array_vals var_affixes	/* internal data {name,items,loc} array */
+%type <vector<json>>	var_affixes_arr var_affixes_ref /* internal data {name,items,loc} structure */
+%type <vector<json>>	var_exp_ids var_exp_affixes
 %type <vector<json>>	array_items
 %type <vector<json>>	var_type type
 %type <vector<json>>	parameter_def out_parameter_def
@@ -108,7 +111,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<json>>	arguments out_arguments
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
-%type <vector<json>>	dst_vals array_vals
+%type <vector<json>>	dst_vals
 %type <vector<json>>	struct_def
 
 %right '='
@@ -856,37 +859,72 @@ dst_val: move_owner var_expression
 	{
 		$$ = move($2);
 		if ($1) $$["move"] = true;
-
 	}
 	;
 
-var_expression: ids
+var_expression: var_exp_ids
 	{
-		BOOST_ASSERT($1.size() == 1);
 		json vexp = {
-			{ "base-var", $1[0]["name"] },
+			{ "base-var", $1[0]["member"] },
 		};
+
+		$1.erase($1.begin());
+		if ($1.size())
+			vexp["opes"] = move($1);
+
  		LOC(vexp, @$);
 		$$ = move(vexp);
 	}
-	| ids array_vals
+	| var_exp_affixes
 	{
-		BOOST_ASSERT($1.size() == 1);
 		json vexp = {
-			{ "base-var", $1[0]["name"] },
+			{ "base-var", $1[0]["member"] },
 		};
-		vector<json> opes;
-		for (int i=0; i<$2.size(); i++) {
-			json arri = {
-				{"ope-type", "index"},
-				{"indexes", move($2[i]["items"])}
-			};
-			opes.push_back(move(arri));
-		}
-		
-		vexp["opes"] = move(opes);
+		$1.erase($1.begin());
+
+		BOOST_ASSERT($1.size());
+		vexp["opes"] = move($1);
+
  		LOC(vexp, @$);
 		$$ = move(vexp);
+	}
+	;
+
+var_exp_ids: ids
+	{
+		vector<json> opes;
+		for (auto& id: $1) {
+			json ope = {
+				{"ope-type", "member"},
+				{"member", move(id["name"])}
+			};
+			opes.push_back(move(ope));
+		}
+		$$ = move(opes);
+	}
+	| var_exp_affixes '.' ids
+	{
+		for (auto& id: $3) {
+			json ope = {
+				{"ope-type", "member"},
+				{"member", move(id["name"])}
+			};
+			$1.push_back(move(ope));
+		}
+		$$ = move($1);
+	}
+	;
+
+var_exp_affixes: var_exp_ids array_vals
+	{
+		for (auto& val: $2) {
+			json arri = {
+				{"ope-type", "index"},
+				{"indexes", move(val["items"])}
+			};
+			$1.push_back(move(arri));
+		}
+		$$ = move($1);
 	}
 	;
 
@@ -1104,6 +1142,7 @@ array_vals: array_val
 array_val: '[' array_items ']'
 	{
 		json arr_val = {
+			{"name", "[]"},
 			{"items", $2}
 		};
 		LOC(arr_val, @$);
@@ -1342,24 +1381,68 @@ type: ids
 
 		$$ = move($1);
 	}
-	| array_vals ids
+	| var_affixes ids
 	{
-		for (json& jid: $2) {
-			jid["mode"] = "---";
-			$$.push_back(jid);
+		string mode = "---";
+		for (json& ax: $1) {
+			if (ax["name"] == "@") {
+				mode = "rir";
+				continue;
+			} else if (ax["name"] == "[]") {
+				json jarr = {
+					{ "name", "[]" },
+					{ "sizes", move(ax["items"])},
+					{ "mode", mode },
+					{ "loc", move(ax["loc"]) }
+				};
+				$$.push_back(move(jarr));
+			}
+			mode = "---";
 		}
 
-		for (json& arr_val: $1) {
-			json jarr = {
-				{ "name", "[]" },
-				{ "sizes", move(arr_val["items"])},
-				{ "mode", "---" },
-				{ "loc", move(arr_val["loc"]) }
-			};
-			$$.push_back(move(jarr));
+		for (json& jid: $2) {
+			jid["mode"] = mode;
+			$$.push_back(move(jid));
+			mode = "---";
 		}
 	}
 	;
+
+var_affixes: var_affixes_arr { $$ = move($1); }
+	| var_affixes_ref { $$ = move($1); }
+	;
+
+var_affixes_arr: array_vals
+	{
+		$$ = move($1);
+	}
+	| var_affixes_ref array_vals
+	{
+		$$ = move($1);
+		for (json& av: $2)
+			$$.push_back(move(av));
+	}
+	;
+
+var_affixes_ref: '@'
+	{
+		json jref = {
+			{"name","@"}
+		};
+		LOC(jref, @$);
+		$$.push_back(jref);
+	}
+	| var_affixes_arr '@'
+	{
+		$$ = move($1);
+		json jref = {
+			{"name","@"}
+		};
+		LOC(jref, @$);
+		$$.push_back(jref);
+	}
+	;
+
 /*type_or_var
 	{
 		for (json& t: $1) {

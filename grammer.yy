@@ -328,12 +328,16 @@ type: ids
 	| var_affixes ids
 	;
 
-var_affixes: array_vals
+var_affixes: var_affixes_arr
+	| var_affixes_ref
+	;
+
+var_affixes_arr: array_vals
 	| var_affixes_ref array_vals
 	;
 
 var_affixes_ref: '@'
-	| array_vals '@'
+	| var_affixes_arr '@'
 	;
 
 array_items: array_item
