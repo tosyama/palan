@@ -244,7 +244,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Ambiguous function call 'ambi_func'.");
 
 	testcode = "506_assigntype_err";
-	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'int32[10]' to 'int32'.");
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of '[10]int32' to 'int32'.");
 
 	testcode = "507_toplvstmt_err";
 	REQUIRE(build(testcode) == "0:3-3 Can not use 'return' at top level code.");
@@ -337,7 +337,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");
 
 	testcode = "541_varinit_type_err3";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64[3]' to 'int32[3]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of '[3]int64' to '[3]int32'.");
 
 	testcode = "542_asgnLRnum_err2";
 	REQUIRE(build(testcode) == "0:3-3 Number of left values did not match right values.");
@@ -440,50 +440,50 @@ TEST_CASE("Array description compile error test", "[basic]")
 
 	// array literal
 	testcode = "527_arrlit_type_err";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64' to 'int64[3]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64' to '[3]int64'.");
 
 	testcode = "528_arrlit_type_err2";
 	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "529_arrlit_type_err3";
-	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
 
 	testcode = "530_arrlit_type_err4";
-	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[3]'.");
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to '[3]int64'.");
 
 	testcode = "553_arrlit_type_err5";
-	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3,4]'.");
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to '[2,3,4]int64'.");
 
 	testcode = "554_arrlit_type_err6";
-	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
 
 	testcode = "555_arrlit_type_err7";
-	REQUIRE(build(testcode) == "0:1-1 No matching function for call to 'test'.\nCandidate: test(int64[3])");
+	REQUIRE(build(testcode) == "0:1-1 No matching function for call to 'test'.\nCandidate: test([3]int64)");
 
 	testcode = "556_unsupported_err";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");
 
 	// array value
 	testcode = "558_arrval_type_err";
-	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
 
 	testcode = "559_arrval_type_err2";
 	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "560_arrval_type_err3";
-	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
 
 	testcode = "561_arrval_type_err4";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[3]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to '[3]int64'.");
 
 	testcode = "562_arrval_type_err5";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3,4]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to '[2,3,4]int64'.");
 
 	testcode = "563_arrval_type_err6";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64[2,3]'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
 
 	testcode = "564_arrval_type_err7";
-	REQUIRE(build(testcode) == "0:2-2 No matching function for call to 'test'.\nCandidate: test(int64[3])");
+	REQUIRE(build(testcode) == "0:2-2 No matching function for call to 'test'.\nCandidate: test([3]int64)");
 	
 	testcode = "565_unsupported_err3";
 	REQUIRE(build(testcode) == "0:2-2 Unsupported grammer: use only fixed array here.");

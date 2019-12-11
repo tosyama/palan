@@ -947,36 +947,6 @@ ids : ID
 	}
 	;
 
-/*type_or_var
-	{
-		json vexp = {
-			{ "base-var", $1[0]["name"] },
-		};
-
-		if ($1.size() >= 2) {
-			vector<json> opes;
-			for (int i=1; i<$1.size(); i++) {
-				if ($1[i]["name"] == "[]") {
-					json arri = {
-						{"ope-type", "index"},
-						{"indexes", move($1[i]["sizes"])}
-					};
-					opes.push_back(move(arri));
-				} else {
-					json struct_member = {
-						{"ope-type", "member"},
-						{"member", move($1[i]["name"])}
-					};
-					opes.push_back(move(struct_member));
-				}
-			}
-			vexp["opes"] = move(opes);
-		}
- 		LOC(vexp, @$);
-		$$ = move(vexp);
-	}
-	;*/
-
 term: literal
 	{
 		$$ = move($1);
@@ -1026,37 +996,6 @@ term: literal
 		}
 		LOC($$, @$);
 	}
-	/*| array_vals
-	{
-		if ($1.size() >= 2) {
-			bool three_dim = true;
-			for (json e: $1) {
-				if (e["exp-type"] != "array-val"
-						|| e["vals"].size() != 1
-						|| e["vals"][0]["exp-type"] != "array-val") {
-					three_dim = false;
-					break;
-				}
-			}
-
-			if (three_dim) {
-				for (int i=1; i<$1.size(); i++) {
-					$1[0]["vals"].push_back($1[i]["vals"][0]);
-				}
-				$$ = move($1[0]);
-
-			} else {
-				json arr_val = {
-					{"exp-type", "array-val"},
-					{"vals", $1}
-				};
-				$$ = move(arr_val);
-			}
-		} else {
-			$$ = move($1[0]);
-		}
-		LOC($$, @$);
-	}*/
 	| var_expression
 	{
 		$1["exp-type"] = "var";
@@ -1117,27 +1056,6 @@ array_vals: array_val
 		$$.push_back(move($2));
 	}
 	;
-
-/* '[' expressions ']'
-	{
-		json arr_val = {
-			{"exp-type", "array-val"},
-			{"vals", $2}
-		};
-		LOC(arr_val, @$);
-		$$.push_back(arr_val);
-	}
-	| array_vals '[' expressions ']'
-	{
-		$$ = move($1);
-		json arr_val = {
-			{"exp-type", "array-val"},
-			{"vals", $3}
-		};
-		LOC_BE(arr_val, @2, @4);
-		$$.push_back(arr_val);
-	}
-	;*/
 
 array_val: '[' array_items ']'
 	{
