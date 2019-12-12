@@ -53,8 +53,10 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 {
 	if (ex->type == ET_VALUE) {
 		PlnValue &v = ex->values[0];
-		if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_LIT_FLO8 || v.type == VL_LIT_STR) {
+		if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_LIT_FLO8) {
 			return new PlnAssignPrimitiveItem(ex);
+		} else if (v.type == VL_LIT_STR) {
+			return new PlnAssignObjectRefItem(ex);
 		}
 
 		if (v.type == VL_LIT_ARRAY) {

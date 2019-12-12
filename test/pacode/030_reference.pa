@@ -4,7 +4,10 @@ ccall mtrace();
 ccall muntrace();
 
 setenv("MALLOC_TRACE", "out/mtrace030-1", 1);
+
 int32 i1,i2,i3,i4,i5,i6;
+byte b1,b2,b3;
+
 mtrace();
 {
 	@[3]int32 arr1 = [1,2,3];
@@ -25,11 +28,19 @@ mtrace();
 
 	@[3]int32 xx = x2[0][0];
 	xx[1] -> i5;
-	refread(x1[0][1], 1) -> i6
+	refread(x1[0][1], 1) -> i6;
+
+	@[10]byte str = "test";
+	[2]@[10]byte strs = ["test1", "test2"];
+	[2]@[?]byte strs2 = ["test3", "test4"];
+	
+	str[2] -> b1;
+	strs[1][4] -> b2;
+	strs2[0][4] -> b3;
 }
 muntrace();
 
-printf("%d %d %d %d %d %d\n", i1, i2, i3, i4, i5, i6);
+printf("%d %d %d %d %d %d %c%c%c\n", i1, i2, i3, i4, i5, i6, b1,b2,b3);
 
 type A {
 	int16 i;

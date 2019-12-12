@@ -59,6 +59,9 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 				case VL_LIT_FLO8:
 					new_exp = new PlnExpression(v.inf.floValue);
 					break;
+				case VL_LIT_STR:
+					new_exp = new PlnExpression(*v.inf.strValue);
+					break;
 				default:
 					BOOST_ASSERT(false);
 			}

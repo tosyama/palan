@@ -192,7 +192,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "1 22 26\n2 1 21\n"
 								"1 8 12\n1 2 7\n"
-								"2 1 21");
+								"2 1 21\n"
+								"abc AZC");
 
 	testcode = "027_ccall";
 	REQUIRE(build(testcode) == "success");
@@ -215,8 +216,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "030_reference";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5 3 5 9 5\n" "2");
-	CHECK(mcheck("mtrace030-1") == "+12 -12");
+	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n" "2");
+	CHECK(mcheck("mtrace030-1") == "+14 -14");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
