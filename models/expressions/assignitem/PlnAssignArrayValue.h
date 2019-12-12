@@ -72,8 +72,10 @@ public:
 		} else {
 			PlnVarType* t = dst_ex->values[0].inf.var->var_type;
 			if (t->data_type() == DT_OBJECT_REF && t->mode[ALLOC_MD] != 'h') {
-				// case int32[3]@ a = [1,x];
-				BOOST_ASSERT(false);
+				// case @[3]int32 a = [1,x];
+				PlnCompileError err(E_CantUseDynamicVal, dst_ex->values[0].inf.var->name);
+				err.loc =  dst_ex->loc;
+				throw err;
 			}
 
 			if (dst_ex->type == ET_VALUE) {

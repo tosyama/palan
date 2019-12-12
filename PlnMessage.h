@@ -42,6 +42,7 @@ enum PlnErrCode {
 	E_DuplicateTypeName,	// type name
 	E_RequireVarInit,	// var name
 	E_UnexpectedToken,	// token
+	E_CantUseDynamicVal,	// var name
 
 	E_InvalidAST,	// source name, line
 

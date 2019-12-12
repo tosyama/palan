@@ -1,6 +1,5 @@
 ccall printf(...);
 int32 i2;
 
-@[10]byte x = "123452";
-[10]byte str = "abcdefg";
+// @[2][10]byte x = ["123452","acc"];
 
