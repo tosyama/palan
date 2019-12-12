@@ -1,6 +1,0 @@
-type A {
-	int32[2]@ arr;
-	int64 i;
-};
-
-A a;

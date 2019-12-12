@@ -1,7 +1,7 @@
 ccall exit();
 
-int32[3] arr, arr2;
-int32[2][3] aa, bb;
+[3]int32 arr, arr2;
+[2][3]int32 aa, bb;
 
 bb[0], arr[0] ->> aa[1], >>arr2[1];
 exit(0);

@@ -41,6 +41,7 @@ enum PlnErrCode {
 	E_CantUseReadonlyExHere,	// none
 	E_DuplicateTypeName,	// type name
 	E_RequireVarInit,	// var name
+	E_UnexpectedToken,	// token
 
 	E_InvalidAST,	// source name, line
 
@@ -70,6 +71,6 @@ public:
 	static string floatNumber();
 	static string arrayValue();
 
-	static string getErr(PlnErrCode err_code, string arg1="", string arg2="");
+	static string getErr(PlnErrCode err_code, string arg1="\x01", string arg2="\x01");
 	static const char* getHelp(PlnHelpCode help_code);
 };

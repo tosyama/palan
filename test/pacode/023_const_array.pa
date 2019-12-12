@@ -8,10 +8,10 @@ arr1 = ARR1;
 arr2 = ARR2;
 arr3 = ARR3;
 
-int32[3] arr11 = ARR1;
-int16[2,3] arr21 = ARR2;
-sbyte[2,2,3] arr31 = ARR3;
-sbyte[2,2,3] arr32;
+[3]int32 arr11 = ARR1;
+[2,3]int16 arr21 = ARR2;
+[2,2,3]sbyte arr31 = ARR3;
+[2,2,3]sbyte arr32;
 
 ARR3 -> arr32;
 
@@ -26,25 +26,25 @@ uarr1 = UARR1;
 farr1 = FARR1;
 mix = MIXARR;
 
-flo64[4,3] ff = mix;
+[4,3]flo64 ff = mix;
 
 printf("%d%.1f%.1f ", uarr1[1], farr1[2], mix[2,1]);
 
 arrayshow([1,2,3][4,5,6]);
 arrayshow([1u,2u,3u][4u,5u,6u]);
 
-func arrayshow(int64[2,3] a) {
+func arrayshow([2,3]int64 a) {
 	printf("%d%d%d", a[0,0], a[0,1], a[1,2]);
 }
 
-func arrayshow(uint64[2,3] a) {
+func arrayshow([2,3]uint64 a) {
 	printf("u%d%d%d", a[0,0], a[0,1], a[1,2]);
 }
 
-func arrayshow(int64[3] a) {
+func arrayshow([3]int64 a) {
 	printf("NG");
 }
 
-func arrayshow(uint64[2,4] a) {
+func arrayshow([2,4]uint64 a) {
 	printf("NG");
 }

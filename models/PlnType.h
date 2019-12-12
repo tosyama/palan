@@ -72,7 +72,7 @@ public:
 
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
 	virtual ~PlnType();
-	virtual PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src);
+	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src);
 
 	PlnVarType* getVarType(const string& mode = "---");
 
@@ -103,5 +103,5 @@ public:
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return typeinf->copyer->getCopyEx(dst_var, src_var); }
 	PlnDeepCopyExpression* getCopyEx() { return typeinf->copyer->getCopyEx(); }
-	PlnTypeConvCap canConvFrom(PlnVarType *src) { return typeinf->canConvFrom(mode, src); }
+	PlnTypeConvCap canCopyFrom(PlnVarType *src) { return typeinf->canCopyFrom(mode, src); }
 };

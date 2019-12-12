@@ -50,7 +50,7 @@ static bool requireInit(PlnVarType* var_type)
 	if (var_type->mode[IDENTITY_MD] == 'i' && var_type->mode[ALLOC_MD] == 'r')
 		return true;
 	
-	if (var_type->typeinf->type == TP_FIXED_ARRAY)
+	/*if (var_type->typeinf->type == TP_FIXED_ARRAY)
 		return requireInit(static_cast<PlnFixedArrayType*>(var_type->typeinf)->item_type);
 	
 	if (var_type->typeinf->type == TP_STRUCT) {
@@ -59,7 +59,7 @@ static bool requireInit(PlnVarType* var_type)
 			if (requireInit(member->type))
 				return true;
 		}
-	}
+	}*/
 
 	return false;
 }
@@ -82,7 +82,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					PlnVarType* dst_type = vars[var_i].getVarType();
 
 					// Compatibility is assured at adjustTypes().
-					BOOST_ASSERT(dst_type->canConvFrom(src_type) != TC_CANT_CONV);
+					BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
 
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex, i);

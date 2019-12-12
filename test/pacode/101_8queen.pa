@@ -2,7 +2,7 @@ ccall printf(...);
 
 const X,Y = 8,8;
 int32 count;
-byte[Y,X] board;
+[Y,X]byte board;
 
 board ->> initBoard()
 	->> queen(-1, -1)
@@ -10,8 +10,8 @@ board ->> initBoard()
 
 printf("answer: %d\n", count);
 
-func initBoard(byte[Y,X] >>board)
-	-> byte[Y,X] board
+func initBoard([Y,X]byte >>board)
+	-> [Y,X]byte board
 {
 	y = 0;
 	while y < Y {
@@ -24,8 +24,8 @@ func initBoard(byte[Y,X] >>board)
 	}
 }
 
-func queen(byte[Y,X] >>board, int32 x, y)
-	-> byte[Y,X] board, int32 count
+func queen([Y,X]byte >>board, int32 x, y)
+	-> [Y,X]byte board, int32 count
 {
 	0 -> count;
 

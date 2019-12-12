@@ -1,2 +1,2 @@
-func err_func(int64 a) -> int64[3] a
+func err_func(int64 a) -> [3]int64 a
 { }

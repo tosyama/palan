@@ -16,9 +16,9 @@ class PlnAssignObjectRefItem : public PlnAssignItem
 public:
 	PlnAssignObjectRefItem(PlnExpression* ex)
 			: src_ex(ex), src_save(NULL), dst_item(NULL) {
-		BOOST_ASSERT(ex->values[0].type == VL_VAR);
+		BOOST_ASSERT((ex->values[0].type == VL_VAR && !(ex->values[0].inf.var->is_indirect))
+				|| ex->values[0].type == VL_LIT_STR);
 		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
-		BOOST_ASSERT(!(ex->values[0].inf.var->is_indirect));
 	}
 
 	~PlnAssignObjectRefItem() {
@@ -28,8 +28,6 @@ public:
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);
-		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
 
 		dst_item = PlnDstItem::createDstItem(ex, need_save);
 	}

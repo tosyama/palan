@@ -1,7 +1,7 @@
 i = 12;
 test([i,[1,2],3]);
 
-func test(int64[3] arr)
+func test([3]int64 arr)
 {
 }
 

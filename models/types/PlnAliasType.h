@@ -14,5 +14,5 @@ public:
 		this->size = orig_type->size;
 	}
 
-	PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src) override { BOOST_ASSERT(false); }
+	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src) override { BOOST_ASSERT(false); }
 };

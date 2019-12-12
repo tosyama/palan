@@ -18,15 +18,15 @@ ccall cbreak();
 ccall noecho();
 ccall timeout(int32 delay);
 ccall curs_set(int32 visibility);
-ccall keypad(WINDOW@ win, byte bf)->int32;
+ccall keypad(@WINDOW win, byte bf)->int32;
 ccall newwin(int32 line, cols, begin_y, begin_x)->WINDOW;
 ccall getch()->int32;
-ccall box(WINDOW@ win, byte verch, horch)->int32;
+ccall box(@WINDOW win, byte verch, horch)->int32;
 ccall doupdate()->int32;
-ccall wnoutrefresh(WINDOW@ win)->int32;
-ccall wmove(WINDOW@ win, int32 y, x);
-ccall waddch(WINDOW@ win, byte ch);
-ccall waddstr(WINDOW@ win, byte[?]@ str);
+ccall wnoutrefresh(@WINDOW win)->int32;
+ccall wmove(@WINDOW win, int32 y, x);
+ccall waddch(@WINDOW win, byte ch);
+ccall waddstr(@WINDOW win, @[?]byte str);
 ccall endwin();
 type WINDOW;
 const A_REVERSE = 262144;
@@ -36,9 +36,9 @@ const KEY_LEFT = 260;
 const KEY_RIGHT = 261;
 
 // stdc lib
-ccall printf(byte[?]@ format, ...) -> int32;
+ccall printf(@[?]byte format, ...) -> int32;
 ccall rand() -> int32;
-ccall nanosleep(timespec@ req, int64 rem)->int32;
+ccall nanosleep(@timespec req, int64 rem)->int32;
 
 type time_t = uint64;
 type timespec {
@@ -52,8 +52,8 @@ const FLD_H, FLD_W = 20, 10;
 const SPACE = 32;
 const I,J,L,T,S,Z,O = 0,1,2,3,4,5,6;
 const NUM_MINO = 7;
-type Field = byte[FLD_H,FLD_W];
-type Blocks = byte[NUM_MINO,4,4,4];
+type Field = [FLD_H,FLD_W]byte;
+type Blocks = [NUM_MINO,4,4,4]byte;
 
 Field field = newFld();
 const blocks = 
@@ -119,7 +119,7 @@ gravity = 100;
 timer = 0;
 blk_type = rand() % NUM_MINO;
 is_falling = true;
-int32[FLD_H] del_mv_lineinf;
+[FLD_H]int32 del_mv_lineinf;
 deleted_lines = 0;
 
 while is_running {
@@ -199,7 +199,7 @@ func newFld() -> Field newfld
 	}
 }
 
-func drawFld(WINDOW@ win, Field@ f)
+func drawFld(@WINDOW win, @Field f)
 {
 	win->box(0,0);
 
@@ -218,7 +218,7 @@ func drawFld(WINDOW@ win, Field@ f)
 	win->wnoutrefresh();
 }
 
-func tryMove(Field@ f, Blocks@ blocks,
+func tryMove(@Field f, @Blocks blocks,
 		int32 tp, rotate, y, x) -> int32 can_move
 {
 	h = 0;
@@ -241,7 +241,7 @@ func tryMove(Field@ f, Blocks@ blocks,
 	return true;
 }
 
-func drawBlock(WINDOW@ win, Blocks@ blocks, int32 tp, rotate, y, x)
+func drawBlock(@WINDOW win, @Blocks blocks, int32 tp, rotate, y, x)
 {
 	h = 0;
 	while h < 4 {
@@ -259,19 +259,19 @@ func drawBlock(WINDOW@ win, Blocks@ blocks, int32 tp, rotate, y, x)
 	win->wnoutrefresh();
 }
 
-func draw1Block(WINDOW@ win, int32 y, x) {
+func draw1Block(@WINDOW win, int32 y, x) {
 	win->wmove(1+y, 1+x*2);
 	win->waddch(SPACE + A_REVERSE);
 	win->waddch(SPACE + A_REVERSE);
 }
 
-func delete1Block(WINDOW@ win, int32 y, x) {
+func delete1Block(@WINDOW win, int32 y, x) {
 	win->wmove(1+y, 1+x*2);
 	win->waddch(SPACE);
 	win->waddch(SPACE);
 }
 
-func margeBlockToField(Field >>f, Blocks@ blocks, int32 tp, rotate, y, x) -> Field f
+func margeBlockToField(Field >>f, @Blocks blocks, int32 tp, rotate, y, x) -> Field f
 {
 	h = 0;
 	while h < 4 {
@@ -288,8 +288,8 @@ func margeBlockToField(Field >>f, Blocks@ blocks, int32 tp, rotate, y, x) -> Fie
 	}
 }
 
-func checkDelLine(int32[FLD_H] >>del_mv_lineinf, Field@ field)
-	-> int32[FLD_H] del_mv_lineinf
+func checkDelLine([FLD_H]int32 >>del_mv_lineinf, @Field field)
+	-> [FLD_H]int32 del_mv_lineinf
 {
 	y = FLD_H-1;
 	del_count = 0;
@@ -313,7 +313,7 @@ func checkDelLine(int32[FLD_H] >>del_mv_lineinf, Field@ field)
 	}
 }
 
-func delLine(Field >>field, int32[FLD_H]@ del_mv_lineinf)
+func delLine(Field >>field, @[FLD_H]int32 del_mv_lineinf)
 	-> Field field, int32 del_cnt
 {
 	0 -> del_cnt;
@@ -331,7 +331,7 @@ func delLine(Field >>field, int32[FLD_H]@ del_mv_lineinf)
 	}
 }
 
-func mvLine(Field >>field, int32[FLD_H]@ del_mv_lineinf)
+func mvLine(Field >>field, @[FLD_H]int32 del_mv_lineinf)
 	-> Field field
 {
 	if del_mv_lineinf[0] == 0

@@ -1,15 +1,6 @@
 ccall printf(...);
+int32 i2;
 
-type A {
-	int32[2]@ arr;
-	int64 x;
-};
+@[10]byte x = "123452";
+[10]byte str = "abcdefg";
 
-int32[2] x;
-
-A a = [x, 3];
-
-//int32[3][2]@ xx = [1,2][3,4][5,6];
-// aa -> a.arr;
-
-//int32[2]@ bb <<= aa;

@@ -197,7 +197,7 @@ PlnStructType::~PlnStructType()
 		delete member;
 }
 
-PlnTypeConvCap PlnStructType::canConvFrom(const string& mode, PlnVarType *src) {
+PlnTypeConvCap PlnStructType::canCopyFrom(const string& mode, PlnVarType *src) {
 	if (this == src->typeinf)
 		return TC_SAME;
 
@@ -215,7 +215,7 @@ PlnTypeConvCap PlnStructType::canConvFrom(const string& mode, PlnVarType *src) {
 		int i = 0;
 		for (auto member: members) {
 			PlnVarType* src_type = arr_val->item_exps[i]->values[0].getVarType();
-			cap = PlnType::lowCapacity(cap, member->type->canConvFrom(src_type));
+			cap = PlnType::lowCapacity(cap, member->type->canCopyFrom(src_type));
 			i++;
 		}
 

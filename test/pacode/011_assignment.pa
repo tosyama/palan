@@ -9,7 +9,7 @@ int32 p1, p2, p3, p4, p5;
 1, 2u -> p1, p2;
 p1, p2 -> p3, p4;
 
-int32[2] p6;
+[2]int32 p6;
 
 printf("%d %d %d %d %d %d %d %d\n",
 	p1, p2, p3, p4, (5->p5), p5, (p5+1->p6[1]), p6[1]);
@@ -31,7 +31,7 @@ intfunc(p1, p2) -> p3, p4;
 printf("%d %d\n", p3, p4);
 
 // Object copy(single layer)
-int16[3] a1, a2, a3, a4;
+[3]int16 a1, a2, a3, a4;
 9 -> a1[2];
 // object copy
 a1 -> a2;
@@ -44,7 +44,7 @@ a1 ->> a3;
 printf("%d %d %d %d\n", a3[2], a2[2], a2[3], a1);
 
 // object copy 
-int32[5][2][3] arr, arr2;
+[5][2][3]int32 arr, arr2;
 int32 z=0;
 
 3->arr[1][0][2];
@@ -61,8 +61,8 @@ printf("%d %d %d %d %d %d\n",
 		p2, p3, p6[0], p6[1], p4, p5);
 
 {
-	byte[3] aa, bb, ee, ff;
-	byte[2][3] cc, dd;
+	[3]byte aa, bb, ee, ff;
+	[2][3]byte cc, dd;
 
 
 	3->aa[1];
@@ -109,7 +109,7 @@ printf("%d %d %d %d %d %d\n",
 }
 muntrace();
 
-func retbytes() -> byte[3] aa, bb , cc
+func retbytes() -> [3]byte aa, bb , cc
 {
 	2->aa[1];
 	7->bb[2];

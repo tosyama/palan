@@ -2,10 +2,10 @@ ccall printf(...);
 
 i1 = 11;
 i2 = 12;
-int64[3] a = [i1,2,3];
+[3]int64 a = [i1,2,3];
 printf("%d%d", a[0], a[2]);
 
-int32[2,3] b, c =
+[2,3]int32 b, c =
 	[i1,2,3]
 	[44,55,66],
  	[11,22,33]
@@ -14,14 +14,14 @@ int32[2,3] b, c =
 printf(" %d%d %d%d", b[0,0], b[1,2], c[0,0], c[1,2]);
 
 const FARR = [11.1,22.2];
-flo32[3,2] f = [[1.1, 1.2], FARR, [33, i1+i2]];
+[3,2]flo32 f = [[1.1, 1.2], FARR, [33, i1+i2]];
 printf(" %.1f %.1f %.1f\n", f[0,0], f[1,1], f[2,1]);
 
 // type inference
 aa = [i1,2,3];
 printf("%d%d", aa[0], aa[2]);
 
-int32[,] bb, cc =
+[,]int32 bb, cc =
 	[i1,2,3]
 	[44,55,66],
  	[11,22,33]
@@ -44,7 +44,7 @@ printf("%d%d ", a[0], a[2]);
 [4,5,6]	-> b;
 printf("%d%d%d ", b[0,0], b[0,1], b[0,2]);
 
-byte[2,2,2] d;
+[2,2,2]byte d;
 [[i1,12][21,22],[31,32][41,42]] -> d;
 printf("%d%d%d\n", d[0,0,0], d[1,0,0], d[1,1,1]);
 
@@ -64,14 +64,14 @@ prnt([u, u+0.2]);
 
 printf("\n");   
 
-int64[2] a1, a2;
-int64[3] b1, b2;
+[2]int64 a1, a2;
+[3]int64 b1, b2;
 [i1,i1+1], [i2+1,3,4] -> a1, b1 -> a2, b2;
 
 printf("%d %d %d %d", a1[0], a2[1], b1[0], b2[2]);
 
 i = 2;
-int16[4][2,3] arr3;
+[4][2,3]int16 arr3;
 [i,2,(1->i)][4,5,6] -> arr3[i];
 
 printf(" %d %d %d", arr3[1][0,0], arr3[1][0,2], arr3[1][1,2]);
@@ -80,12 +80,12 @@ printf("\n");
 [prnt(i+2), 3, prnt(i)];
 
 
-func prnt(int64[3] a)
+func prnt([3]int64 a)
 {
 	printf("%d %d,", a[0],a[2]);
 }
 
-func prnt(flo64[2] f)
+func prnt([2]flo64 f)
 {
 	printf("%.1f,", f[1]);
 }
@@ -96,7 +96,7 @@ func prnt(int64 i)->int64 i
 }
 
 prntref([1,2,3]);
-func prntref(int64[3]@a)
+func prntref(@[3]int64 a)
 {
 	printf("%d %d", a[0],a[2]);
 }

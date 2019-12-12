@@ -1,7 +1,7 @@
 /// x86-64 (Linux) data place management class definition.
 ///
 /// @file	PlnX86_64DataAllocator.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <cstddef>
@@ -292,11 +292,9 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 		return;
 	}
 
-	int regid = RDX;
-	auto pdp = regs[regid];
 	auto dp = new PlnDataPlace(8,ldp->data_type);
 	dp->type = DP_REG;
-	dp->data.reg.id = regid;
+	dp->data.reg.id = RDX;
 	allocDp(dp, false);
 
 	*quotient = ldp;

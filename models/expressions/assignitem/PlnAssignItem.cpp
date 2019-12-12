@@ -53,8 +53,10 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 {
 	if (ex->type == ET_VALUE) {
 		PlnValue &v = ex->values[0];
-		if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_LIT_FLO8 || v.type == VL_LIT_STR) {
+		if (v.type == VL_LIT_INT8 || v.type == VL_LIT_UINT8 || v.type == VL_LIT_FLO8) {
 			return new PlnAssignPrimitiveItem(ex);
+		} else if (v.type == VL_LIT_STR) {
+			return new PlnAssignObjectRefItem(ex);
 		}
 
 		if (v.type == VL_LIT_ARRAY) {
@@ -98,7 +100,6 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 
 	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER) {
 		BOOST_ASSERT(ex->values.size() == 1);
-		PlnValue v = ex->values[0];
 		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			return new PlnAssignPrimitiveItem(ex);

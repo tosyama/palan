@@ -141,7 +141,7 @@ Type information
 -----------------
 The type information are stored in `PlnVarType` instance.
 The member `typeinf` has basic infomation. It has type name and compatibe information.
-To check compatibe of between types, use `canConvFrom()` method. The method used to decide calling function by checking arguments type in `PlnBlock`.
+To check compatibility of between types, use `canCopyFrom()` method. The method used to decide calling function by checking arguments type in `PlnBlock`.
 
 The member `mode` has additional information of the data on the context.
 It consist of 3 characters and each charactor indicates access right, identity and allocation.

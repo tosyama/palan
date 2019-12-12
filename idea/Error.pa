@@ -36,7 +36,7 @@ do_somthing() !> err1;
 do_somthing() !> err2;
 
 !{	// errorblock. nomal flow can't into this block.
-	byte[] *message;	// can use only premitve or reference (ownership val is invaild at err1/err2)
+	@[]byte message;	// can use only premitve or reference (ownership val is invaild at err1/err2)
 	!>err1() { message = "error1" };
 	!>err2() { message = "error2" };
 	printf(stderr, "%s!\n", message);	// can share the error logic.

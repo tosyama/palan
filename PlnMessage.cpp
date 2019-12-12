@@ -78,6 +78,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Type name '%1%' already defined."; break;
 		case E_RequireVarInit:
 			f = "Require initialize expression for '%1%'."; break;
+		case E_UnexpectedToken:
+			f = "Unexpected token '%1%' was found."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%"; break;
@@ -97,9 +99,9 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 	}
 	
 	string message;
-	if (arg1 == "")
+	if (arg1 == "\x01")
 		message = f;
-	else if (arg2 == "")
+	else if (arg2 == "\x01")
 		message = (format(f) % arg1).str();
 	else
 		message = (format(f) % arg1 % arg2).str();

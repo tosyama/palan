@@ -110,10 +110,10 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 	PlnVarType* ret_vt;
 
 	assertAST(var_type.is_array(), var_type);
-	assertAST(var_type[0]["name"].is_string(), var_type);
+	assertAST(var_type.back()["name"].is_string(), var_type);
 
-	string type_name = var_type[0]["name"];
-	string mode = var_type[0]["mode"];
+	string type_name = var_type.back()["name"];
+	string mode = var_type.back()["mode"];
 	ret_vt = CUR_BLOCK->getType(type_name, mode);
 
 	if (!ret_vt) {
@@ -122,7 +122,7 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 		throw err;
 	}
 
-	for (int i=var_type.size()-1; i>0; --i) {
+	for (int i=var_type.size()-2; i>=0; --i) {
 		json &vt = var_type[i];
 		type_name = vt["name"];
 		mode = vt["mode"];
@@ -132,6 +132,11 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 
 		vector<int> sizes;
 		for (json& i: vt["sizes"]) {
+			if (i["exp-type"]=="token" && i["info"]=="?") {
+				sizes.push_back(0u);
+				continue;
+			}
+
 			PlnExpression* e = buildExpression(i, scope);
 
 			int vtype = e->values[0].type;
@@ -172,7 +177,8 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			PlnVarType *var_type = getVarType(param["var-type"], scope);
 			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy", param);
 
-			PlnPassingMethod pm;
+			PlnPassingMethod pm = FPM_UNKNOWN;
+			
 			if (param["pass-by"] == "move") {
 				pm = FPM_MOVEOWNER;
 			} else if (param["pass-by"] == "copy") {
@@ -389,7 +395,7 @@ PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast, PlnBlock* new
 PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 {
 	string type = stmt["stmt-type"];
-	PlnStatement *statement;
+	PlnStatement *statement = NULL;
 
 	if (type == "exp") {
 		statement = new PlnStatement(buildExpression(stmt["exp"], scope), CUR_BLOCK);
@@ -458,7 +464,7 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 		if (vt["name"] == "[]") {
 			assertAST(vt["sizes"].is_array(),vt);
 			for (json& sz: vt["sizes"]) {
-				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+				if (sz["exp-type"] == "token" && sz["info"] == "") {
 					return ARR_INDEX_INFER;
 				}
 			}
@@ -503,7 +509,8 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 				if (sz_i >= sizes.size()) {
 					goto sz_err;
 				}
-				if (sz["exp-type"] == "lit-int" && sz["val"] == -1) {
+				if (sz["exp-type"] == "token" && sz["info"] == "") {
+					sz["exp-type"] = "lit-int";
 					sz["val"] = sizes[sz_i];
 				}
 				sz_i++;
@@ -801,7 +808,7 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
 	assertAST(exp["exp-type"].is_string(), exp);
 	string type = exp["exp-type"];
-	PlnExpression *expression;
+	PlnExpression *expression = NULL;
 
 	if (type == "lit-int") {
 		assertAST(exp["val"].is_number_integer(), exp);
@@ -856,6 +863,12 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = buildNegativeOperation(exp, scope);
 	} else if (type == "not") {
 		expression = PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
+	} else if (type == "token") {
+		// token should be process before call this.
+		PlnCompileError err(E_UnexpectedToken, exp["info"]);
+		setLoc(&err, exp);
+		throw err;
+
 	} else {
 		assertAST(false, exp);
 	}

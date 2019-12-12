@@ -248,18 +248,32 @@ dst_vals: dst_val
 dst_val: move_owner var_expression
 	;
 
-var_expression: type_or_var
+var_expression: var_exp_ids
+	| var_exp_affixes
 	;
 
-array_val: '[' expressions ']'
-	| array_val '[' expressions ']'
+var_exp_ids: ids
+	| var_exp_affixes '.' ids
 	;
+
+ids: ID
+	| ids '.' ID
+	;
+
+var_exp_affixes: var_exp_ids var_affixes
+	;
+
+array_vals: array_val
+	| array_vals array_val
+	;
+
+array_val: '[' array_items ']'
 
 term: INT
 	| UINT
 	| STR
 	| var_expression
-	| array_val
+	| array_vals
 	| '(' expression ')'
 	;
 
@@ -310,13 +324,20 @@ var_type: KW_AUTOTYPE
 	| type
 	;
 
-type: type_or_var
+type: ids
+	| var_affixes ids
 	;
 
-type_or_var: ID
-	| type_or_var '.' ID
-	| type_or_var '[' array_items ']'
-	| type_or_var '@'
+var_affixes: var_affixes_arr
+	| var_affixes_ref
+	;
+
+var_affixes_arr: array_vals
+	| var_affixes_ref array_vals
+	;
+
+var_affixes_ref: '@'
+	| var_affixes_arr '@'
 	;
 
 array_items: array_item

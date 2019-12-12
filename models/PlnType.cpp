@@ -317,17 +317,27 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	}
 	arr_name.back() = ']';
 
-	PlnVarType *it = item_type;
+	string item_name = item_type->name();
+	if (item_type->mode == "rir")
+		item_name = "@" + item_name;
+	
+	return arr_name + item_name;
+
+	/*PlnVarType *it = item_type;
 	while (it->typeinf->type == TP_FIXED_ARRAY) {
 		it = static_cast<PlnFixedArrayType*>(it->typeinf)->item_type;
 	}
 	const string& item_name = it->name();
 	string item_suffix = item_type->name().substr(item_name.size());
 
+	if (item_type->mode == "rir")
+		item_suffix += "@";
+
 	return item_name + arr_name + item_suffix;
+	*/
 }
 
-PlnTypeConvCap PlnType::canConvFrom(const string& mode, PlnVarType *src)
+PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src)
 {
 	if (this == src->typeinf)
 		return TC_SAME;

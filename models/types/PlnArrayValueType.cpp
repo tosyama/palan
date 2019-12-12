@@ -45,7 +45,7 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 	throw err;
 }
 
-PlnTypeConvCap PlnArrayValueType::canConvFrom(const string& mode, PlnVarType *src) { BOOST_ASSERT(false); }
+PlnTypeConvCap PlnArrayValueType::canCopyFrom(const string& mode, PlnVarType *src) { BOOST_ASSERT(false); }
 
 static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarType* item_type, const vector<int>& sizes, int depth)
 {
@@ -57,7 +57,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarTyp
 	if (sizes.size() == (depth+1) ) {
 		// check item type conpatible 
 		for (auto exp: arr_val->item_exps) {
-			result = PlnType::lowCapacity(result, item_type->canConvFrom(exp->values[0].getVarType()));
+			result = PlnType::lowCapacity(result, item_type->canCopyFrom(exp->values[0].getVarType()));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}

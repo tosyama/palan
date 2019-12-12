@@ -18,6 +18,6 @@ public:
 
 	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode);
 	~PlnStructType();
-	PlnTypeConvCap canConvFrom(const string& mode, PlnVarType *src) override;
+	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src) override;
 };
 

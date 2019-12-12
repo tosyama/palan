@@ -97,9 +97,13 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	argument out_argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
+%type <json>	array_val /* internal data {name,items,loc} */
 %type <vector<string>>	const_names
+%type <vector<json>>	ids array_vals var_affixes	/* internal data {name,items,loc} array */
+%type <vector<json>>	var_affixes_arr var_affixes_ref /* internal data {name,items,loc} structure */
+%type <vector<json>>	var_exp_ids var_exp_affixes
 %type <vector<json>>	array_items
-%type <vector<json>>	var_type type type_or_var
+%type <vector<json>>	var_type type
 %type <vector<json>>	parameter_def out_parameter_def
 %type <vector<json>>	parameters out_parameters
 %type <vector<json>>	return_def
@@ -107,7 +111,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <vector<json>>	arguments out_arguments
 %type <vector<json>>	declarations
 %type <vector<json>>	statements expressions
-%type <vector<json>>	dst_vals array_val
+%type <vector<json>>	dst_vals
 %type <vector<json>>	struct_def
 
 %right '='
@@ -840,7 +844,7 @@ out_argument: expression
 	}
 	;
 
-dst_vals:  var_expression
+dst_vals: var_expression
 	{
 		$$.push_back(move($1));
 	}
@@ -855,36 +859,91 @@ dst_val: move_owner var_expression
 	{
 		$$ = move($2);
 		if ($1) $$["move"] = true;
-
 	}
+	;
 
-var_expression: type_or_var
+var_expression: var_exp_ids
 	{
 		json vexp = {
-			{ "base-var", $1[0]["name"] },
+			{ "base-var", $1[0]["member"] },
 		};
 
-		if ($1.size() >= 2) {
-			vector<json> opes;
-			for (int i=1; i<$1.size(); i++) {
-				if ($1[i]["name"] == "[]") {
-					json arri = {
-						{"ope-type", "index"},
-						{"indexes", move($1[i]["sizes"])}
-					};
-					opes.push_back(move(arri));
-				} else {
-					json struct_member = {
-						{"ope-type", "member"},
-						{"member", move($1[i]["name"])}
-					};
-					opes.push_back(move(struct_member));
-				}
-			}
-			vexp["opes"] = move(opes);
-		}
+		$1.erase($1.begin());
+		if ($1.size())
+			vexp["opes"] = move($1);
+
  		LOC(vexp, @$);
 		$$ = move(vexp);
+	}
+	| var_exp_affixes
+	{
+		json vexp = {
+			{ "base-var", $1[0]["member"] },
+		};
+		$1.erase($1.begin());
+
+		BOOST_ASSERT($1.size());
+		vexp["opes"] = move($1);
+
+ 		LOC(vexp, @$);
+		$$ = move(vexp);
+	}
+	;
+
+var_exp_ids: ids
+	{
+		vector<json> opes;
+		for (auto& id: $1) {
+			json ope = {
+				{"ope-type", "member"},
+				{"member", move(id["name"])}
+			};
+			opes.push_back(move(ope));
+		}
+		$$ = move(opes);
+	}
+	| var_exp_affixes '.' ids
+	{
+		for (auto& id: $3) {
+			json ope = {
+				{"ope-type", "member"},
+				{"member", move(id["name"])}
+			};
+			$1.push_back(move(ope));
+		}
+		$$ = move($1);
+	}
+	;
+
+var_exp_affixes: var_exp_ids array_vals
+	{
+		for (auto& val: $2) {
+			json arri = {
+				{"ope-type", "index"},
+				{"indexes", move(val["items"])}
+			};
+			$1.push_back(move(arri));
+		}
+		$$ = move($1);
+	}
+	;
+
+ids : ID
+	{
+		json jid = {
+			{ "name", $1 }
+		};
+ 		LOC(jid, @$);
+		$$.push_back(jid);
+	}
+	| ids '.' ID
+	{
+		$$ = move($1);
+		json jid = {
+			{ "name", $3 }
+		};
+ 		LOC(jid, @3);
+		$$.push_back(jid);
 	}
 	;
 
@@ -892,35 +951,48 @@ term: literal
 	{
 		$$ = move($1);
 	}
-
-	| array_val
+	| array_vals
 	{
 		if ($1.size() >= 2) {
 			bool three_dim = true;
-			for (json e: $1) {
-				if (e["exp-type"] != "array-val"
-						|| e["vals"].size() != 1
-						|| e["vals"][0]["exp-type"] != "array-val") {
+			for (json& e: $1) {
+				if (e["items"].size() != 1 || e["items"][0]["exp-type"] != "array-val") {
 					three_dim = false;
 					break;
 				}
 			}
 
+			vector<json> vals;
 			if (three_dim) {
-				for (int i=1; i<$1.size(); i++) {
-					$1[0]["vals"].push_back($1[i]["vals"][0]);
+				for (json& val: $1) {
+					json jval = {
+						{"exp-type", "array-val"},
+						{"vals", move(val["items"][0]["vals"])},
+						{"loc", move(val["items"][0]["loc"])}
+					};
+					vals.push_back(move(jval));
 				}
-				$$ = move($1[0]);
-
 			} else {
-				json arr_val = {
-					{"exp-type", "array-val"},
-					{"vals", $1}
-				};
-				$$ = move(arr_val);
+				for (json& val: $1) {
+					json jval = {
+						{"exp-type", "array-val"},
+						{"vals", move(val["items"])},
+						{"loc", move(val["loc"])}
+					};
+					vals.push_back(move(jval));
+				}
 			}
+			json arr_val = {
+				{"exp-type", "array-val"},
+				{"vals", move(vals)}
+			};
+			$$ = move(arr_val);
 		} else {
-			$$ = move($1[0]);
+			json arr_val = {
+				{"exp-type", "array-val"},
+				{"vals", $1[0]["items"]}
+			};
+			$$ = move(arr_val);
 		}
 		LOC($$, @$);
 	}
@@ -974,24 +1046,25 @@ literal: INT
 	}
 	;
 
-array_val: '[' expressions ']'
+array_vals: array_val
 	{
-		json arr_val = {
-			{"exp-type", "array-val"},
-			{"vals", $2}
-		};
-		LOC(arr_val, @$);
-		$$.push_back(arr_val);
+		$$.push_back(move($1));
 	}
-	| array_val '[' expressions ']'
+	| array_vals array_val
 	{
 		$$ = move($1);
+		$$.push_back(move($2));
+	}
+	;
+
+array_val: '[' array_items ']'
+	{
 		json arr_val = {
-			{"exp-type", "array-val"},
-			{"vals", $3}
+			{"name", "[]"},
+			{"items", $2}
 		};
-		LOC_BE(arr_val, @2, @4);
-		$$.push_back(arr_val);
+		LOC(arr_val, @$);
+		$$ = move(arr_val);
 	}
 	;
 
@@ -1219,7 +1292,76 @@ var_type: KW_AUTOTYPE	/* empty */
 	}
 	;
 
-type: type_or_var
+type: ids
+	{
+		for (json& t: $1)
+			t["mode"] = "---";
+
+		$$ = move($1);
+	}
+	| var_affixes ids
+	{
+		string mode = "---";
+		for (json& ax: $1) {
+			if (ax["name"] == "@") {
+				mode = "rir";
+				continue;
+			} else if (ax["name"] == "[]") {
+				json jarr = {
+					{ "name", "[]" },
+					{ "sizes", move(ax["items"])},
+					{ "mode", mode },
+					{ "loc", move(ax["loc"]) }
+				};
+				$$.push_back(move(jarr));
+			}
+			mode = "---";
+		}
+
+		for (json& jid: $2) {
+			jid["mode"] = mode;
+			$$.push_back(move(jid));
+			mode = "---";
+		}
+	}
+	;
+
+var_affixes: var_affixes_arr { $$ = move($1); }
+	| var_affixes_ref { $$ = move($1); }
+	;
+
+var_affixes_arr: array_vals
+	{
+		$$ = move($1);
+	}
+	| var_affixes_ref array_vals
+	{
+		$$ = move($1);
+		for (json& av: $2)
+			$$.push_back(move(av));
+	}
+	;
+
+var_affixes_ref: '@'
+	{
+		json jref = {
+			{"name","@"}
+		};
+		LOC(jref, @$);
+		$$.push_back(jref);
+	}
+	| var_affixes_arr '@'
+	{
+		$$ = move($1);
+		json jref = {
+			{"name","@"}
+		};
+		LOC(jref, @$);
+		$$.push_back(jref);
+	}
+	;
+
+/*type_or_var
 	{
 		for (json& t: $1) {
 			if (t["name"] == "[]") {
@@ -1281,7 +1423,7 @@ type_or_var: ID
 		$$ = move($1);
 		$$.back()["mode"] = "rir";
 	}
-	;
+	;*/
 
 array_items: array_item
 	{
@@ -1297,7 +1439,7 @@ array_items: array_item
 array_item: /* empty */
 	{
 		json inference_size = {
-			{"exp-type", "unknown"},
+			{"exp-type", "token"},
 			{"info", ""}
 		};
 		$$ = move(inference_size);
@@ -1310,7 +1452,7 @@ array_item: /* empty */
 	| '?'
 	{
 		json unknown = {
-			{"exp-type", "unknown"},
+			{"exp-type", "token"},
 			{"info", "?"}
 		};
 		$$ = move(unknown);

@@ -1,4 +1,4 @@
-int32[3] arr, arr2;
+[3]int32 arr, arr2;
 
 arr2 ->> arr;
 arr -> arr2;

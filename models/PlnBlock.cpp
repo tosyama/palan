@@ -250,6 +250,7 @@ string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vect
 	boost::replace_all(fname, "[", "A_");
 	boost::replace_all(fname, "]", "_");
 	boost::replace_all(fname, ",", "_");
+	boost::replace_all(fname, "@", "R_");
 	return fname;
 }
 
@@ -260,7 +261,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	// Find item from Crrent block
 	{
 		auto t = std::find_if(types.begin(), types.end(),
-				[item_type](PlnType* t) { return t->name == item_type->name(); });
+				[item_type](PlnType* t) { return t == item_type->typeinf; });
 
 		if (t != types.end()) {
 			found_item = true;
@@ -275,7 +276,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 		} else { // toplevel
 			vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
 			auto t = std::find_if(basic_types.begin(), basic_types.end(),
-					[item_type](PlnType* t) { return t->name == item_type->name(); });
+					[item_type](PlnType* t) { return t == item_type->typeinf; });
 
 			if (t != types.end()) {
 				found_item = true;
@@ -353,7 +354,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 					PlnArgInf& ainf = arg_infs[ai];
 
 					// Check conpatibilty of type.
-					PlnTypeConvCap cap = p->var->var_type->canConvFrom(ainf.var_type);
+					PlnTypeConvCap cap = p->var->var_type->canCopyFrom(ainf.var_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
 					if (p->force_move && ainf.opt != AG_MOVE) {

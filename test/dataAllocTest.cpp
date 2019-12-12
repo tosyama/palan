@@ -290,9 +290,6 @@ TEST_CASE("Data source and save management.", "[allocate]")
 		da.releaseDp(dst_arg[0]);
 	}
 //--- 
-	vector<PlnParameter*> params(3);
-	vector<PlnVariable*> rets(1);
-
 	auto dpv4 = da.allocData(4, DT_SINT);
 	auto dp_prms = da.prepareArgDps(FT_PLN, {DT_SINT}, {DT_SINT,DT_SINT,DT_SINT}, false);
 	

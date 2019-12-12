@@ -36,7 +36,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 		return;
 	}
 
-	if (it->data_type() != DT_OBJECT_REF) {
+	if (it->mode[ALLOC_MD] != 'h') {
 		allocator = new PlnSingleObjectAllocator(alloc_size);
 		freer = new PlnSingleObjectFreer();
 		copyer = new PlnSingleObjectCopyer(alloc_size);
@@ -70,7 +70,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	}
 }
 
-PlnTypeConvCap PlnFixedArrayType::canConvFrom(const string& mode, PlnVarType *src)
+PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *src)
 {
 	if (this == src->typeinf)
 		return TC_SAME;
@@ -82,10 +82,20 @@ PlnTypeConvCap PlnFixedArrayType::canConvFrom(const string& mode, PlnVarType *sr
 	if (src->typeinf->type == TP_FIXED_ARRAY) {
 		auto src_farr = static_cast<PlnFixedArrayType*>(src->typeinf);
 		if (item_type == src_farr->item_type) {
-			if (!sizes[0]) {
-				return TC_AUTO_CAST;
-			} else if (!src_farr->sizes[0]) {
-				return TC_DOWN_CAST;
+			if (!sizes[0]) {	// xx[n] -> xx[?]
+				return TC_AUTO_CAST; // It has risk to break data.
+			} else if (!src_farr->sizes[0]) {	// xx[?] -> xx[n]
+				BOOST_ASSERT(false);
+				// return TC_DOWN_CAST;
+			}
+		} else {	// Difference only mode of item.
+			if (sizes == src_farr->sizes) {
+				// return item_type->typeinf->canConvFrom(item_type->mode, src_farr->item_type);
+				if (item_type->typeinf == src_farr->item_type->typeinf)
+					return TC_AUTO_CAST;
+
+				if (item_type->typeinf->type == TP_FIXED_ARRAY)
+					return item_type->canCopyFrom(src_farr->item_type);
 			}
 		}
 	}

@@ -4,16 +4,16 @@ const N,M = 3, 9+2;
 const NN = N+3;
 printf(TEST_STR, M);
 
-byte[NN] a;
+[NN]byte a;
 f(a);
 
-func f(byte[N*2] n)
+func f([N*2]byte n)
 {
-	byte[5] arr;
+	[5]byte arr;
 	printf(TEST_STR, N);
 	arr -> f();
 
-	func f(byte[N] n) {
+	func f([N]byte n) {
 		printf(TEST_STR, N);
 		const TEST_STR = "test3 %d\n";
 	}

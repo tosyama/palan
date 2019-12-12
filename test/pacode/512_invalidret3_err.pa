@@ -1,6 +1,6 @@
 func invalidret() -> int32 int64
 {
-	int32[10] a;
+	[10]int32 a;
 	return a, 3;
 }
 

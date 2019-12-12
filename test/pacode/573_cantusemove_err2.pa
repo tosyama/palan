@@ -1,13 +1,13 @@
-int32[10] a;
+[10]int32 a;
 
 reffunc(a);
 
-func reffunc(int32[10]@ aa)
+func reffunc(@[10]int32 aa)
 {
 	mvfunc(aa>>);
 }
 
-func mvfunc(int32[10] >>aa)
+func mvfunc([10]int32 >>aa)
 {
 	
 }

@@ -9,7 +9,7 @@ print(x.str ":" y.str);
 // 関数を->でつなげれらる。
 
 string str1, str2 = "1\t2\t3", "3,4,5";
-string[] tmp = split(str1, "\t");
+[]string tmp = split(str1, "\t");
 join(tmp1, ",") -> str1;
 // こうかける↓
 str1 -> split("\t") -> join(",") -> str1;
@@ -21,11 +21,12 @@ str1->>replace("a", "b")->>str1, count;
 str1.replace("a","b") -> count;
 // 第一引数がコピーまたは変更なしの参照の場合にも"."は使えうるが採用しない."->"を使う。
 
-object o1, o3, o4;
+object o1, o3;
+@object o4;
 
-funco(o1,o2.clone, o3>>, *o2, io o4) ->> o1; // 所有を渡したので、o3は無効.
+funco(o1,o2.clone, o3>>, o4, io o5) ->> o1; // 所有を渡したので、o3は無効.
 					// 内部処理的にはo1の無効処理(null代入)は行わない。
-					// <<, *, ioは飾り。宣言をを意識させる+関数宣言後置の場合の推測に使用
+					// <<,  ioは飾り。宣言をを意識させる+関数宣言後置の場合の推測に使用
 					// 式を書く場合は、&(ab+b), *(x+3)
 					// 式により発生したテンポラリオブジェクトは
 					// *の場合のみ関数実行後delete.
@@ -36,7 +37,7 @@ o1 ->> o2; // 所有権を取られたので、o1は無効(null代入). 以降o1
 
 // o1.xx(); o3.xx(); // ここではこれはコンパイルエラーとなる
 
-o4 = &o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
+o4 = o2	// 参照のみ。o4がスコープはずれてもdeteteされない。
 
 func2(x, y) -> x;
 
@@ -62,7 +63,7 @@ func swap(int sx, sy)
 }
 
 // object
-func funco(object o1, >>o2, >>o3, object@ o4, object io o5)
+func funco(object o1, >>o2, >>o3, @object o4, object io o5)
 	-> object o2
 {
 	// o1 は rval input only.(clone would be created before func call and callee free it)

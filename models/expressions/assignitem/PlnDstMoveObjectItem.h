@@ -25,8 +25,6 @@ public:
 			PlnCompileError err(E_CantUseMoveOwnershipTo, ex->values[0].inf.var->name);
 			throw err;
 		}
-
-		auto var = dst_ex->values[0].inf.var;
 	}
 
 	~PlnDstMoveObjectItem() {
@@ -37,6 +35,15 @@ public:
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		int index = src_ex->data_places.size();
+
+		auto src_type = src_ex->values[index].getVarType();
+		auto dst_type = dst_ex->values[0].getVarType();
+		if (src_type->typeinf != dst_type->typeinf) {
+			PlnCompileError err(E_CantUseMoveOwnershipTo, dst_ex->values[0].inf.var->name);
+			err.loc = dst_ex->loc;
+			throw err;
+		}
+		
 		dst_dp = dst_ex->values[0].getDataPlace(da);
 		if (src_ex->values[index].type == VL_VAR
 				&& src_ex->values[index].inf.var != dst_ex->values[0].inf.var) {
