@@ -149,7 +149,7 @@ Expression
 ----------
 *   exp-type\* - Expression type string:
     "lit-int" "lit-uint" "lit-str" "var" "array-val"
-    "asgn" "func-call" "chain-call" "unknown"
+    "asgn" "func-call" "chain-call" "token"
     birary operator ("+" "-" "*" "/" "%" "==" "!=" "<" ">" "<=" ">=" "&&" "||")
     unary operator ("uminus" "not")
     1.  lit-int - Integer(64bit) literal
@@ -193,8 +193,8 @@ Expression
     11. unary operator
         *   val\* -	Value expression
 	
-	12. unknown - Unknown expression. Reserved for internal process.
-	    *   info\* - expression information
+	12. token - Token
+	    *   info\* - token information
 
 *   loc - Location integer array
 

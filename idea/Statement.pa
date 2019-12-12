@@ -43,7 +43,7 @@ for i=1:<=10 { // i is new variable. c: for (int i=1; i<=10; i++)
 for i--:10 { // i is new variable. c: for (int i=9; i>=0; i--)
 }
 
-int arr[10] = (1..10);
+[10]int arr = [1..10];
 for i: arr { print(i.str); }
 
 {:s

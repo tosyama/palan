@@ -215,12 +215,12 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "030_reference";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5 3 5 9\n" "2");
+	REQUIRE(exec(testcode) == "2 5 3 5 9 5\n" "2");
 	CHECK(mcheck("mtrace030-1") == "+12 -12");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
-// Error file ID: 500-585
+// Error file ID: 500-587
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -422,6 +422,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "586_cantusemove_err6";
 	REQUIRE(build(testcode) == "finish:0:2-2 Can not move ownership to 'b'.");
+
+	testcode = "587_arrind_token_err";
+	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

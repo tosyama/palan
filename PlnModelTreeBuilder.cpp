@@ -132,7 +132,7 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 
 		vector<int> sizes;
 		for (json& i: vt["sizes"]) {
-			if (i["exp-type"]=="unknown" && i["info"]=="?") {
+			if (i["exp-type"]=="token" && i["info"]=="?") {
 				sizes.push_back(0u);
 				continue;
 			}
@@ -464,7 +464,7 @@ static InferenceType checkNeedsTypeInference(json& var_type)
 		if (vt["name"] == "[]") {
 			assertAST(vt["sizes"].is_array(),vt);
 			for (json& sz: vt["sizes"]) {
-				if (sz["exp-type"] == "unknown" && sz["info"] == "") {
+				if (sz["exp-type"] == "token" && sz["info"] == "") {
 					return ARR_INDEX_INFER;
 				}
 			}
@@ -509,7 +509,7 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 				if (sz_i >= sizes.size()) {
 					goto sz_err;
 				}
-				if (sz["exp-type"] == "unknown" && sz["info"] == "") {
+				if (sz["exp-type"] == "token" && sz["info"] == "") {
 					sz["exp-type"] = "lit-int";
 					sz["val"] = sizes[sz_i];
 				}
@@ -863,6 +863,12 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = buildNegativeOperation(exp, scope);
 	} else if (type == "not") {
 		expression = PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
+	} else if (type == "token") {
+		// token should be process before call this.
+		PlnCompileError err(E_UnexpectedToken, exp["info"]);
+		setLoc(&err, exp);
+		throw err;
+
 	} else {
 		assertAST(false, exp);
 	}

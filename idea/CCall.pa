@@ -1,14 +1,14 @@
 type FILE;
-ccall printf(byte[?] &format, ...) -> int32;
-ccall sprintf(@, byte[?] &format, ... => byte[?] str) -> int32;
-ccall scanf(byte[?] &format => ...) -> int32;
-ccall sscanf(byte[?] &str, byte[?] &format => ...) -> int32;
-ccall strcpy(byte[?] >>dst, byte[?] &src) -> byte[?];
+ccall printf(@[?]byte format, ...) -> int32;
+ccall sprintf(@, @[?]byte format, ... => [?]byte str) -> int32;
+ccall scanf(@[?]byte format => ...) -> int32;
+ccall sscanf(@[?]byte str, @[?]byte format => ...) -> int32;
+ccall strcpy([?]byte >>dst, @[?]byte src) -> [?]byte;
 
-ccall fopen(byte[?] &filename, &mode) -> FILE;
+ccall fopen(@[?]byte filename, mode) -> FILE;
 ccall fclose(FILE >>stream) -> int32;
 
-ccall int32 sqlite3_open(byte[?] filename => sqlite3 db>>);
+ccall int32 sqlite3_open([?]byte filename => sqlite3 @db);
 
 byte[80] str;
 int32 result;

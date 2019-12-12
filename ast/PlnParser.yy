@@ -1439,7 +1439,7 @@ array_items: array_item
 array_item: /* empty */
 	{
 		json inference_size = {
-			{"exp-type", "unknown"},
+			{"exp-type", "token"},
 			{"info", ""}
 		};
 		$$ = move(inference_size);
@@ -1452,7 +1452,7 @@ array_item: /* empty */
 	| '?'
 	{
 		json unknown = {
-			{"exp-type", "unknown"},
+			{"exp-type", "token"},
 			{"info", "?"}
 		};
 		$$ = move(unknown);

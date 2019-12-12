@@ -3,15 +3,15 @@ const MAX_N = 30;
 type int aliasof int64;
 
 int n;
-scanf("%d", &n);
+scanf("%d" => n);
 
-int[#n,n] board = 0;
+[#n,n]int board = 0;
 int count;
-board.queen(0, n)-> count ;
+board.queen(0, n) -> count ;
 
 printf("answer: %d", count);
 
-func queen(int[#,] >> board, x, y)
+func queen([#,]int >> board, x, y)
 	-> board, int count
 {
 	assert(board.size[0] == borad.size[1]);
