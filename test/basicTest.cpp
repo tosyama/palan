@@ -221,7 +221,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
-// Error file ID: 500-587
+// Error file ID: 500-588
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -426,6 +426,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "587_arrind_token_err";
 	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");
+
+	testcode = "588_dynamic2ref_err";
+	REQUIRE(build(testcode) == "finish:0:1-1 Can not assign dynamic allocated value to 'x'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")
