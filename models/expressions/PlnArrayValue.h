@@ -22,6 +22,7 @@ public:
 
 	vector<PlnExpression*> getAllItems();
 	PlnDataPlace* getROArrayDp(PlnDataAllocator& da);	// for PlnExpression
+	PlnDataPlace* getROStructDp(PlnDataAllocator& da);	// for PlnExpression
 
 	/// return true - items is aixed array, false - not fixed array
 	/// sizes - Detected array sizes. Note added 0 last. [2,3] is [2,3,0]

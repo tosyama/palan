@@ -104,105 +104,160 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 }
 
 PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
-	: PlnGenerator(ostrm), require_align(false)
+	: PlnGenerator(ostrm), require_align(false), max_const_id(0)
 {
+}
+
+PlnX86_64Generator::~PlnX86_64Generator()
+{
+	for (ConstInfo& ci: const_buf) {
+		if (!ci.size)
+			delete ci.data.str;
+		if (ci.comment)
+			delete ci.comment;
+	}
 }
 
 int PlnX86_64Generator::registerFlo64Const(const PlnOperandInfo* constValue) {
 	BOOST_ASSERT(constValue->type == OP_IMM);
-	ConstInfo cinfo;
-	cinfo.generated = false;
-	cinfo.type = GCT_FLO64;
-	cinfo.data.q = int64_of(constValue);
 
-	int id=0;
-	for (ConstInfo ci: const_buf) {
-		if (ci.type == cinfo.type && ci.data.d == cinfo.data.d) {
-			return id;
+	union {
+		int64_t i;
+		double d;
+	} u;
+
+	u.i = int64_of(constValue);
+
+	for (ConstInfo& ci: const_buf) {
+		if (ci.size == 8 && ci.data.i == u.i) {
+			if (ci.id < 0) {
+				ci.id = max_const_id;
+				max_const_id++;
+			}
+			return ci.id;
 		}
-		id++;
 	}
-
+	
+	ConstInfo cinfo(8, 8, u.i);
+	cinfo.id = max_const_id;
+	max_const_id++;
+	cinfo.comment = new string(to_string(u.d));
 	const_buf.push_back(cinfo);
-	return id; 
+
+	return cinfo.id;
 }
 
-template <typename T>
-int findCinfo(T*& arr, PlnGenConstType type, vector<int64_t> &int_array, vector<PlnX86_64Generator::ConstInfo> &const_buf)
+static int calcNextAlign(int cur, int next)
 {
-	int id = 0;
-	for (auto cinfo: const_buf) {
-		if (cinfo.type == type && cinfo.size == int_array.size()) {
-			T* darr = (T*)cinfo.data.q_arr;
-			int i;
-			for (i=0; i<cinfo.size; i++)
-				if (darr[i] != int_array[i])
-					break;
-			if (i==cinfo.size) {
-				arr = NULL;
-				return id; // found same data xxto id;
-			}
-		}
-		id++;
-	}
-
-	arr = new T[int_array.size()];
-	for (int i=0; i<int_array.size(); i++)
-		arr[i] = int_array[i];
-	
-	return id;
+	cur += next;
+	if (cur & 1)
+		return 1;
+	if (cur & 2)
+		return 2;
+	if (cur & 4)
+		return 4;
+	return 8;
 }
 
 int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_size)
 {
-	ConstInfo cinfo;
-	cinfo.generated = false;
-	cinfo.size = int_array.size();
-	int id;
+	// search seme array
+	if (const_buf.size()) {
+		int align_i = 0;
+		int generated_i = const_buf[0].generated;
+		for (int i=0; i<const_buf.size(); i++) {
+			if (align_i < const_buf[i].alignment || generated_i != const_buf[i].generated) {
+				align_i = const_buf[i].alignment;
+				generated_i = const_buf[i].generated;
+			}
 
-	if (item_size == 8) {
-		cinfo.type = GCT_INT64_ARRAY;
-		id = findCinfo(cinfo.data.q_arr, cinfo.type, int_array, const_buf);
+			if (align_i >= 8) {
+				if ((const_buf.size() - i) < int_array.size())
+					break;
+				int j=i;
+				int generated = const_buf[i].generated;
+				bool matched = true;
+				bool first = true;
+				for (auto val: int_array) {
+					if (generated != const_buf[j].generated
+							|| val != const_buf[j].data.i
+							|| item_size != const_buf[j].size
+							|| (!first && const_buf[j].alignment != item_size)) {
+						matched = false;
+						break;
+					}
 
-	} else if (item_size == 4) {
-		cinfo.type = GCT_INT32_ARRAY;
-		id = findCinfo(cinfo.data.l_arr, cinfo.type, int_array, const_buf);
+					if (first) first = false;
+					j++;
+				}
 
-	} else if (item_size == 2) {
-		cinfo.type = GCT_INT16_ARRAY;
-		id = findCinfo(cinfo.data.s_arr, cinfo.type, int_array, const_buf);
+				if (matched) {
+					if (const_buf[i].id < 0) {
+						const_buf[i].id = max_const_id;
+						max_const_id++;
+					}
+					return const_buf[i].id;
+				}
+			}
+			align_i = calcNextAlign(align_i, const_buf[i].size);
+		}
+	}
 
-	} else if (item_size == 1) {
-		cinfo.type = GCT_INT8_ARRAY;
-		id = findCinfo(cinfo.data.b_arr, cinfo.type, int_array, const_buf);
-
-	} else
-		BOOST_ASSERT(false);	
-
-	if (cinfo.data.q_arr)
+	// register new array
+	int head = const_buf.size();
+	for (auto i: int_array) {
+		ConstInfo cinfo(item_size, item_size, i);
 		const_buf.push_back(cinfo);
+	}
 
-	return id;
+	const_buf[head].id = max_const_id;
+	const_buf[head].alignment = 8;
+	max_const_id++;
+
+	return  const_buf[head].id;
+}
+
+int PlnX86_64Generator::registerConstData(vector<PlnRoData> &rodata)
+{
+	// register new struct 
+	int head = const_buf.size();
+	for (auto data: rodata) {
+		int64_t val;
+		if (data.data_type == DT_SINT || data.data_type == DT_UINT) {
+			val = data.val.i;
+		} else if (data.data_type == DT_FLOAT) {
+			if (data.size == 4) {
+			} else if (data.size == 8) {
+			} else
+				BOOST_ASSERT(false);
+		} else
+			BOOST_ASSERT(false);
+
+		ConstInfo cinfo(data.size, data.alignment, val);
+		const_buf.push_back(cinfo);
+	}
+
+	const_buf[head].id = max_const_id;
+	const_buf[head].alignment = 8;
+	max_const_id++;
+
+	return  const_buf[head].id;
 }
 
 int PlnX86_64Generator::registerString(string& str)
 {
-	int id = 0;
-	for (auto cinfo: const_buf) {
-		if (cinfo.type == GCT_STRING) {
-			if ((*cinfo.data.str) == str)
-				return id;
+	for (ConstInfo& ci: const_buf) {
+		if (ci.size == 0 && (*ci.data.str == str)) {
+			BOOST_ASSERT(ci.id >= 0);
+			return ci.id;
 		}
-		id++;
 	}
 
-	ConstInfo cinfo;
-	cinfo.type = GCT_STRING;
-	cinfo.generated = false;
-	cinfo.data.str = new string(str);
+	ConstInfo cinfo(max_const_id, new string(str));
 	const_buf.push_back(cinfo);
 
-	return id;
+	max_const_id++;
+	return const_buf.back().id;
 }
 
 void PlnX86_64Generator::comment(const string s)
@@ -319,38 +374,41 @@ void PlnX86_64Generator::genEndFunc()
 {
 	m.popOpecodes(os);
 
-	int i = 0;
+	int alignment = 1;
 	for (ConstInfo &ci: const_buf) {
 		if (!ci.generated) {
-			os << "	.align 8" << endl;
-			os << ".LC" << i << ":" << endl;
-			if (ci.type == GCT_FLO64) {
-				os << "	.quad	" << ci.data.q << "	# " << ci.data.d << endl;
-			} else if (ci.type == GCT_INT64_ARRAY) {
-				for (int i=0; i<ci.size; i++) {
-					os << "	.quad	" << ci.data.q_arr[i] << endl;
-				}
-			} else if (ci.type == GCT_INT32_ARRAY) {
-				for (int i=0; i<ci.size; i++) {
-					os << "	.long	" << ci.data.l_arr[i] << endl;
-				}
-			} else if (ci.type == GCT_INT16_ARRAY) {
-				for (int i=0; i<ci.size; i++) {
-					os << "	.short	" << ci.data.s_arr[i] << endl;
-				}
-			} else if (ci.type == GCT_INT8_ARRAY) {
-				for (int i=0; i<ci.size; i++) {
-					os << "	.byte	" << int(ci.data.b_arr[i]) << endl;
-				}
-			} else if (ci.type == GCT_STRING) {
-				string ostr = replace_all_copy(*ci.data.str,"\n","\\n");
-				os << "	.string \"" << ostr << "\"" << endl;
-			} else {
-				BOOST_ASSERT(false);
+			if (alignment < ci.alignment) {
+				os << "	.align " << int(ci.alignment) << endl;
+				alignment = ci.alignment;
 			}
-			ci.generated = true;
+			if (ci.id >= 0)
+				os << ".LC" << ci.id << ":" << endl;
+
+			if (ci.size == 8) {
+				os << "	.quad	" << ci.data.i;
+				alignment = calcNextAlign(alignment, 8);
+			} else if (ci.size == 4) {
+				os << "	.long	" << ci.data.i;
+				alignment = calcNextAlign(alignment, 4);
+			} else if (ci.size == 2) {
+				os << "	.short	" << ci.data.i;
+				alignment = calcNextAlign(alignment, 2);
+			} else if (ci.size == 1) {
+				os << "	.byte	" << ci.data.i;
+				alignment = calcNextAlign(alignment, 1);
+			} else if (ci.size == 0) {	// string
+				string ostr = replace_all_copy(*ci.data.str,"\n","\\n");
+				os << "	.string \"" << ostr << "\"";
+				alignment = 1;
+			} else
+				BOOST_ASSERT(false);
+
+			if (ci.comment)
+				os << "\t# " << *ci.comment ;
+			os << endl;
+			
+			ci.generated++;
 		}
-		i++;
 	}
 }
 
@@ -363,7 +421,6 @@ void PlnX86_64Generator::genLoadReg(int regid, PlnGenEntity* src)
 {
 	m.push(MOVQ, ope(src), reg(regid));
 }
-
 
 void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, bool has_va_arg)
 {
@@ -1231,7 +1288,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->data_type = dp->data_type;
 		e->ope = imm(dp->data.intValue);
 
-	} else if (dp->type == DP_RO_DATA) {
+	} else if (dp->type == DP_RO_ARR) {
 		int id;
 		if (dp->data.ro.int_array) {
 			id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
@@ -1261,6 +1318,14 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			BOOST_ASSERT(dp->data.ro.str);
 			id = registerString(*dp->data.ro.str);
 		}
+		e->type = GA_MEM;
+		e->size = 8;
+		e->data_type = DT_OBJECT_REF;
+		e->ope = lbl("$.LC", id);
+
+	} else if (dp->type == DP_RO_DATA) {
+		int id;
+		id = registerConstData(*(dp->data.rodata));
 		e->type = GA_MEM;
 		e->size = 8;
 		e->data_type = DT_OBJECT_REF;

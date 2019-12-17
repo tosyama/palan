@@ -194,6 +194,10 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
 		values[0].inf.wk_type = types[0];
 
+		if (isLiteral && !stype->has_object_member) {
+			doCopyFromStaticBuffer = true;
+		}
+
 		return this;
 
 	} else {
@@ -229,13 +233,23 @@ static void addAllNumerics(PlnArrayValue* arr_val, T& num_arr)
 void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	// Assign each element
-	if (data_places.size()) {
+	if (doCopyFromStaticBuffer) {
 		BOOST_ASSERT(data_places.size() == 1);
- 		PlnDataPlace* dp = getROArrayDp(da);;
+		PlnType* type = values[0].inf.wk_type->typeinf;
+
+		PlnDataPlace* dp = NULL;
+		if (type->type == TP_FIXED_ARRAY)
+			dp = getROArrayDp(da);
+		else if (type->type == TP_STRUCT)
+			dp = getROStructDp(da);
+		else 
+			BOOST_ASSERT(false);
+
 		da.pushSrc(data_places[0], dp);
 		return;
 
 	} else {
+		// Assign each element
 		for (auto exp: item_exps) {
 			exp->finish(da, si);
 			BOOST_ASSERT(!exp->data_places.size());
@@ -290,7 +304,7 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 PlnDataPlace* PlnArrayValue::getROArrayDp(PlnDataAllocator& da)
 {
 	BOOST_ASSERT(doCopyFromStaticBuffer);
-	BOOST_ASSERT(values[0].inf.wk_type->typeinf->type != TP_ARRAY_VALUE);
+	BOOST_ASSERT(values[0].inf.wk_type->typeinf->type == TP_FIXED_ARRAY);
 
 	PlnVarType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type->typeinf)->item_type;
 	int ele_type = item_type->data_type();
@@ -311,3 +325,57 @@ PlnDataPlace* PlnArrayValue::getROArrayDp(PlnDataAllocator& da)
 	return dp;
 }
 
+static int calcAlign(int offset)
+{
+	if (offset & 1) return 1;
+	if (offset & 2) return 2;
+	if (offset & 4) return 4;
+	if (offset & 8) return 8;
+}
+
+int getInt(PlnExpression *exp) {
+	BOOST_ASSERT(exp->type == ET_VALUE);
+	PlnValue &val = exp->values[0];
+	if (val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8) {
+		return val.inf.intValue;
+	} else
+		BOOST_ASSERT(false);
+}
+
+double getFloat(PlnExpression *exp) {
+	BOOST_ASSERT(exp->type == ET_VALUE);
+	PlnValue &val = exp->values[0];
+	if (val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8) {
+		return val.inf.intValue;
+	} else if (val.type == VL_LIT_FLO8) {
+		return val.inf.floValue;;
+	} else
+		BOOST_ASSERT(false);
+}
+
+PlnDataPlace* PlnArrayValue::getROStructDp(PlnDataAllocator& da)
+{
+	BOOST_ASSERT(doCopyFromStaticBuffer);
+	BOOST_ASSERT(values[0].inf.wk_type->typeinf->type == TP_STRUCT);
+	PlnStructType* stype = static_cast<PlnStructType*>(values[0].inf.wk_type->typeinf);
+
+	vector<PlnRoData> rodata;
+	int i = 0;
+	for (auto member: stype->members) {
+		PlnRoData datainf;
+		datainf.data_type = member->type->data_type();
+		datainf.size = member->type->typeinf->size;
+		datainf.alignment = calcAlign(member->offset);
+		if (datainf.data_type == DT_SINT || datainf.data_type == DT_UINT) {
+			datainf.val.i = getInt(item_exps[i]);
+		} else if (datainf.data_type == DT_FLOAT) {
+			datainf.val.f = getFloat(item_exps[i]);
+		} else
+			BOOST_ASSERT(false);
+		
+		rodata.push_back(datainf);
+		i++;
+	}
+
+	return da.getRODataDp(rodata);
+}

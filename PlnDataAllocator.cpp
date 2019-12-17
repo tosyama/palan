@@ -328,7 +328,7 @@ PlnDataPlace* PlnDataAllocator::getLiteralFloDp(double floValue)
 PlnDataPlace* PlnDataAllocator::getROIntArrayDp(vector<int64_t> int_array, int item_size)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-	dp->type = DP_RO_DATA;
+	dp->type = DP_RO_ARR;
 	dp->status = DS_ASSIGNED;
 	dp->data.ro.item_size = item_size;
 	dp->data.ro.int_array = new vector<int64_t>(move(int_array));
@@ -345,7 +345,7 @@ PlnDataPlace* PlnDataAllocator::getROIntArrayDp(vector<int64_t> int_array, int i
 PlnDataPlace* PlnDataAllocator::getROFloArrayDp(vector<double> flo_array, int item_size)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-	dp->type = DP_RO_DATA;
+	dp->type = DP_RO_ARR;
 	dp->status = DS_ASSIGNED;
 	dp->data.ro.item_size = item_size;
 	dp->data.ro.int_array = NULL;
@@ -362,7 +362,7 @@ PlnDataPlace* PlnDataAllocator::getROFloArrayDp(vector<double> flo_array, int it
 PlnDataPlace* PlnDataAllocator::getROStrArrayDp(string &str)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-	dp->type = DP_RO_DATA;
+	dp->type = DP_RO_ARR;
 	dp->status = DS_ASSIGNED;
 	dp->data.ro.item_size = -1;
 	dp->data.ro.int_array = NULL;
@@ -371,6 +371,21 @@ PlnDataPlace* PlnDataAllocator::getROStrArrayDp(string &str)
 	dp->alloc_step = step;
 	dp->release_step = step;
 	static string cmt = "\"..\"";
+	dp->comment = &cmt;
+	all.push_back(dp);
+	return dp;
+}
+
+PlnDataPlace* PlnDataAllocator::getRODataDp(vector<PlnRoData>& rodata)
+{
+	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
+	dp->type = DP_RO_DATA;
+	dp->status = DS_ASSIGNED;
+	dp->data.rodata = new vector<PlnRoData>();
+	*(dp->data.rodata) = move(rodata);
+	dp->alloc_step = step;
+	dp->release_step = step;
+	static string cmt = "\"{..}\"";
 	dp->comment = &cmt;
 	all.push_back(dp);
 	return dp;
@@ -476,6 +491,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 			}
 			return false;
 		}
+		case DP_RO_ARR:
 		case DP_RO_DATA:
 		case DP_LIT_INT:
 		case DP_LIT_FLO:
@@ -610,8 +626,10 @@ PlnDataPlace::PlnDataPlace(int size, int data_type)
 
 PlnDataPlace::~PlnDataPlace()
 {
-	if (type == DP_RO_DATA && data.ro.int_array) {
-		delete data.ro.int_array;
+	if (type == DP_RO_ARR) {
+		if (data.ro.int_array) delete data.ro.int_array;
+		if (data.ro.flo_array) delete data.ro.flo_array;
+		if (data.ro.str) delete data.ro.str;
 	}
 }
 

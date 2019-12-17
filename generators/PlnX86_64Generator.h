@@ -18,15 +18,24 @@ enum PlnGenConstType {
 class PlnX86_64Generator : public PlnGenerator
 {
 	bool require_align;
+	int max_const_id;
 	struct ConstInfo {
-		PlnGenConstType type;
+		int id;	// -1: no id
+		int generated;	// 0: not generated, >0: generaed
+		int8_t size;	// integer:1,2,3,4,8  // string:0 
+		int8_t alignment;
 		union {
-			double d; int64_t q;
-			int64_t* q_arr; int32_t* l_arr; int16_t* s_arr; int8_t* b_arr;
-			string* str;
+			int64_t i;
+			string *str;
 		} data;
-		bool generated;
-		int size;
+		string* comment;
+
+		ConstInfo(int8_t size, int8_t alignment, int64_t data)
+			: id(-1), generated(0), comment(NULL), size(size), alignment(alignment)
+			{ this->data.i = data; }
+		ConstInfo(int id, string* str)
+			: id(id), generated(0), comment(NULL), size(0), alignment(8)
+			{ this->data.str = str; }
 	};
 	vector<ConstInfo> const_buf;
 	
@@ -52,9 +61,11 @@ class PlnX86_64Generator : public PlnGenerator
 	int registerFlo64Const(const PlnOperandInfo* constValue);
 	int registerConstArray(vector<int64_t> &int_array, int item_size);
 	int registerString(string &string);
+	int registerConstData(vector<PlnRoData> &rodata);
 
 public:
 	PlnX86_64Generator(ostream& ostrm);
+	~PlnX86_64Generator();
 	void comment(const string s) override;
 
 	void genSecReadOnlyData() override;
