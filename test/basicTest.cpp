@@ -1,5 +1,6 @@
 #include "testBase.h"
 #include <iostream>
+#include <fstream>
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
@@ -203,7 +204,19 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"smy0.33"); 
 
 	testcode = "028_struct";
-	REQUIRE(build(testcode) == "success");
+	string result = build(testcode);
+	 std::ifstream ifs("out/028_struct.s");
+	 std::string str;
+	 if (ifs.fail()) {
+		 std::cerr << "fail" << std::endl;
+	 }
+	 int i= 1;
+	 while (getline(ifs, str)) {
+		 if (i>600 && i <700)
+		 std::cout << i << " " <<  str  << std::endl;
+		 i++;
+	}
+	REQUIRE(result == "success");
 	REQUIRE(exec(testcode) == "32 1 64 1.23\n"
 								"32 1 64 1.23 2112\n"
 								"32 1 64 5.55 5 1\n"
