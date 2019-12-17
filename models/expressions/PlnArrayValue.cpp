@@ -330,7 +330,7 @@ static int calcAlign(int offset)
 	if (offset & 1) return 1;
 	if (offset & 2) return 2;
 	if (offset & 4) return 4;
-	if (offset & 8) return 8;
+	return 8;
 }
 
 int getInt(PlnExpression *exp) {
