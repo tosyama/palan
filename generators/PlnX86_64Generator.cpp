@@ -227,7 +227,21 @@ int PlnX86_64Generator::registerConstData(vector<PlnRoData> &rodata)
 			val = data.val.i;
 		} else if (data.data_type == DT_FLOAT) {
 			if (data.size == 4) {
+				union {
+					int32_t i;
+					float f;
+				} u;
+				u.f = data.val.f;
+				val = u.i;
+
 			} else if (data.size == 8) {
+				union {
+					int64_t i;
+					double f;
+				} u;
+				u.f = data.val.f;
+				val = u.i;
+
 			} else
 				BOOST_ASSERT(false);
 		} else
