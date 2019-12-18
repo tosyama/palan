@@ -47,6 +47,15 @@ type A {
 	@[3]int32 arr;
 };
 
+type B {
+	byte b1;
+	byte b2;
+	flo64 d;
+	flo32 f;
+};
+
+flo64 d, flo32 f;
+
 setenv("MALLOC_TRACE", "out/mtrace030-2", 1);
 mtrace();
 {
@@ -54,10 +63,15 @@ mtrace();
 	@A b = a;
 	@[3]int32 aarr = b.arr;
 	aarr[1] -> i1;
+
+	@B bb = [1,2,1.23,2.34];
+	bb.b2 -> b2;
+	bb.d -> d;
+	bb.f -> f;
 }
 muntrace();
 
-printf("%d", i1);
+printf("%d %d %.2f %.2f", i1, b2, d, f);
 
 func refread(@[3]int32 arr, int32 x) -> int32 i
 {

@@ -218,7 +218,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "030_reference";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n" "2");
+	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n"
+					"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+14 -14");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
