@@ -103,7 +103,7 @@ enum {
 	DP_INDRCT_OBJ,
 	DP_LIT_INT,
 	DP_LIT_FLO,
-	DP_RO_ARR,
+	DP_RO_STR,
 	DP_RO_DATA,
 
 	DP_SUBDP
@@ -145,7 +145,7 @@ public:
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		double floValue;
-		struct { int32_t item_size; vector<int64_t>* int_array; vector<double>* flo_array; string* str; } ro;
+		string *rostr;
 		vector<PlnRoData> *rodata;
 		PlnDataPlace *originalDp;
 	} data;

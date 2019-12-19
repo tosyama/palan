@@ -5,16 +5,6 @@
 
 #include "../PlnGenerator.h"
 
-enum PlnGenConstType {
-	GCT_FLO32,
-	GCT_FLO64,
-	GCT_INT8_ARRAY,
-	GCT_INT16_ARRAY,
-	GCT_INT32_ARRAY,
-	GCT_INT64_ARRAY,
-	GCT_STRING
-};
-
 class PlnX86_64Generator : public PlnGenerator
 {
 	bool require_align;
@@ -59,7 +49,6 @@ class PlnX86_64Generator : public PlnGenerator
 	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
 
 	int registerFlo64Const(const PlnOperandInfo* constValue);
-	int registerConstArray(vector<int64_t> &int_array, int item_size);
 	int registerString(string &string);
 	int registerConstData(vector<PlnRoData> &rodata);
 

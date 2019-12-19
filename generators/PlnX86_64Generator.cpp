@@ -159,68 +159,9 @@ static int calcNextAlign(int cur, int next)
 	return 8;
 }
 
-int PlnX86_64Generator::registerConstArray(vector<int64_t> &int_array, int item_size)
-{
-	// search seme array
-	if (const_buf.size()) {
-		int align_i = 0;
-		int generated_i = const_buf[0].generated;
-		for (int i=0; i<const_buf.size(); i++) {
-			if (align_i < const_buf[i].alignment || generated_i != const_buf[i].generated) {
-				align_i = const_buf[i].alignment;
-				generated_i = const_buf[i].generated;
-			}
-
-			if (align_i >= 8) {
-				if ((const_buf.size() - i) < int_array.size())
-					break;
-				int j=i;
-				int generated = const_buf[i].generated;
-				bool matched = true;
-				bool first = true;
-				for (auto val: int_array) {
-					if (generated != const_buf[j].generated
-							|| val != const_buf[j].data.i
-							|| item_size != const_buf[j].size
-							|| (!first && const_buf[j].alignment != item_size)) {
-						matched = false;
-						break;
-					}
-
-					if (first) first = false;
-					j++;
-				}
-
-				if (matched) {
-					if (const_buf[i].id < 0) {
-						const_buf[i].id = max_const_id;
-						max_const_id++;
-					}
-					return const_buf[i].id;
-				}
-			}
-			align_i = calcNextAlign(align_i, const_buf[i].size);
-		}
-	}
-
-	// register new array
-	int head = const_buf.size();
-	for (auto i: int_array) {
-		ConstInfo cinfo(item_size, item_size, i);
-		const_buf.push_back(cinfo);
-	}
-
-	const_buf[head].id = max_const_id;
-	const_buf[head].alignment = 8;
-	max_const_id++;
-
-	return  const_buf[head].id;
-}
-
 int PlnX86_64Generator::registerConstData(vector<PlnRoData> &rodata)
 {
-	// register new struct 
-	int head = const_buf.size();
+	vector<ConstInfo> cinfs;
 	for (auto data: rodata) {
 		int64_t val;
 		if (data.data_type == DT_SINT || data.data_type == DT_UINT) {
@@ -248,14 +189,61 @@ int PlnX86_64Generator::registerConstData(vector<PlnRoData> &rodata)
 			BOOST_ASSERT(false);
 
 		ConstInfo cinfo(data.size, data.alignment, val);
-		const_buf.push_back(cinfo);
+		cinfs.push_back(cinfo);
+	}
+	
+	if (const_buf.size()) {
+		int align_i = 0;
+		int generated_i = const_buf[0].generated;
+		for (int i=0; i<const_buf.size(); i++) {
+			if (align_i < const_buf[i].alignment || generated_i != const_buf[i].generated) {
+				align_i = const_buf[i].alignment;
+				generated_i = const_buf[i].generated;
+			}
+
+			if (align_i >= cinfs[0].alignment) {
+				if ((const_buf.size() - i) < cinfs.size())
+					break;
+				int j=i;
+				int generated = const_buf[i].generated;
+				bool matched = true;
+				bool first = true;
+				for (auto& cinf: cinfs) {
+					if (generated != const_buf[j].generated
+							|| cinf.data.i != const_buf[j].data.i
+							|| cinf.size != const_buf[j].size
+							|| (!first && cinf.alignment != const_buf[j].alignment)) {
+						matched = false;
+						break;
+					}
+					if (first) first = false;
+					j++;
+				}
+				if (matched) {
+					if (const_buf[i].id < 0) {
+						const_buf[i].id = max_const_id;
+						max_const_id++;
+					}
+					return const_buf[i].id;
+				}
+			}
+		}
 	}
 
-	const_buf[head].id = max_const_id;
-	const_buf[head].alignment = 8;
-	max_const_id++;
+	// add comment for float
+	BOOST_ASSERT(cinfs.size() == rodata.size());
+	for (int i=0; i<rodata.size(); ++i) {
+		if (rodata[i].data_type == DT_FLOAT) {
+			cinfs[i].comment = new string(to_string(rodata[i].val.f));
+		}
+	}
 
-	return  const_buf[head].id;
+	// register new const values
+	cinfs[0].id = max_const_id;
+	max_const_id++;
+	const_buf.insert(const_buf.end(), cinfs.begin(), cinfs.end());
+
+	return cinfs[0].id;
 }
 
 int PlnX86_64Generator::registerString(string& str)
@@ -1302,36 +1290,11 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->data_type = dp->data_type;
 		e->ope = imm(dp->data.intValue);
 
-	} else if (dp->type == DP_RO_ARR) {
+	} else if (dp->type == DP_RO_STR) {
 		int id;
-		if (dp->data.ro.int_array) {
-			id = registerConstArray(*(dp->data.ro.int_array), dp->data.ro.item_size);
-
-		} else if (dp->data.ro.flo_array) {
-			vector<int64_t> int_array;
-
-			if (dp->data.ro.item_size == 8) {
-				union { double d; int64_t i; } data;
-				for (double d: *(dp->data.ro.flo_array)) {
-					data.d = d;
-					int_array.push_back(data.i);
-				}
-			} else if (dp->data.ro.item_size == 4) {
-				union { float f; int32_t i; } data;
-				for (double d: *(dp->data.ro.flo_array)) {
-					data.f = d;
-					int_array.push_back(data.i);
-				}
-
-			} else {
-				BOOST_ASSERT(false);
-			}
-			id = registerConstArray(int_array, dp->data.ro.item_size);
-
-		} else {
-			BOOST_ASSERT(dp->data.ro.str);
-			id = registerString(*dp->data.ro.str);
-		}
+		BOOST_ASSERT(dp->data.rostr);
+		id = registerString(*dp->data.rostr);
+		 
 		e->type = GA_MEM;
 		e->size = 8;
 		e->data_type = DT_OBJECT_REF;
