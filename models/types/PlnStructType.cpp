@@ -138,7 +138,8 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	int alloc_size = 0;
 	int max_member_size = 1;
 	this->default_mode = default_mode;
-	bool has_object_member = false;
+	has_object_member = false;
+	bool need_alloc_func = false;
 
 	for (auto m: this->members) {
 		int member_size = m->type->size();
@@ -154,8 +155,10 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		}
 		alloc_size += m->type->size();
 
-		if (m->type->data_type() == DT_OBJECT_REF && m->type->mode[ALLOC_MD] == 'h') {
+		if (m->type->data_type() == DT_OBJECT_REF) {
 			has_object_member = true;
+			if (m->type->mode[ALLOC_MD] == 'h')
+				need_alloc_func = true;
 		}
 	}
 
@@ -167,7 +170,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	inf.obj.is_fixed_size = true;
 	inf.obj.alloc_size = alloc_size;
 
-	if (has_object_member) {
+	if (need_alloc_func) {
 		string fname = PlnBlock::generateFuncName("new", {this}, {});
 		PlnFunction *alloc_func = createObjMemberStructAllocFunc(fname, this, parent);
 		allocator = new PlnNoParamAllocator(alloc_func);

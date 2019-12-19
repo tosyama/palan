@@ -1,5 +1,6 @@
 #include "testBase.h"
 #include <iostream>
+#include <fstream>
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
@@ -193,7 +194,8 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "1 22 26\n2 1 21\n"
 								"1 8 12\n1 2 7\n"
 								"2 1 21\n"
-								"abc AZC");
+								"abc AZC\n"
+								"x 104 103");
 
 	testcode = "027_ccall";
 	REQUIRE(build(testcode) == "success");
@@ -203,12 +205,12 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 								"smy0.33"); 
 
 	testcode = "028_struct";
-	REQUIRE(build(testcode) == "success");
+	REQUIRE(build(testcode)== "success");
 	REQUIRE(exec(testcode) == "32 1 64 1.23\n"
 								"32 1 64 1.23 2112\n"
 								"32 1 64 5.55 5 1\n"
-								"10 21 99");
-	CHECK(mcheck("mtrace028") == "+149 -149");
+								"10 21 99 24.40 3.44");
+	CHECK(mcheck("mtrace028") == "+136 -136");
 
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");
@@ -216,12 +218,13 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "030_reference";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n" "2");
+	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n"
+					"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+14 -14");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
-// Error file ID: 500-587
+// Error file ID: 500-588
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -426,6 +429,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "587_arrind_token_err";
 	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");
+
+	testcode = "588_dynamic2ref_err";
+	REQUIRE(build(testcode) == "finish:0:1-1 Can not assign dynamic allocated value to 'x'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

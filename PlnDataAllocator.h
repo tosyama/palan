@@ -14,6 +14,17 @@ class PlnDataPlace;
 class PlnParameter;
 class PlnVariable;
 
+class PlnRoData {
+public:
+	int data_type;
+	int size;	// 1,2,4,8
+	int alignment;	// 1,2,4,8
+	union {
+		int64_t i;
+		double f;
+	} val;
+};
+
 class PlnDataAllocator
 {
 protected:
@@ -70,6 +81,7 @@ public:
 	PlnDataPlace* getROIntArrayDp(vector<int64_t> int_array, int item_size);
 	PlnDataPlace* getROFloArrayDp(vector<double> flo_array, int item_size);
 	PlnDataPlace* getROStrArrayDp(string& str);
+	PlnDataPlace* getRODataDp(vector<PlnRoData>& rodata);
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);
 
 	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
@@ -91,6 +103,7 @@ enum {
 	DP_INDRCT_OBJ,
 	DP_LIT_INT,
 	DP_LIT_FLO,
+	DP_RO_STR,
 	DP_RO_DATA,
 
 	DP_SUBDP
@@ -132,7 +145,8 @@ public:
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		double floValue;
-		struct { int32_t item_size; vector<int64_t>* int_array; vector<double>* flo_array; string* str; } ro;
+		string *rostr;
+		vector<PlnRoData> *rodata;
 		PlnDataPlace *originalDp;
 	} data;
 

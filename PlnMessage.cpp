@@ -80,9 +80,11 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Require initialize expression for '%1%'."; break;
 		case E_UnexpectedToken:
 			f = "Unexpected token '%1%' was found."; break;
+		case E_CantUseDynamicVal:
+			f = "Can not assign dynamic allocated value to '%1%'."; break;
 
 		case E_InvalidAST:
-			f = "Detected invalid AST at %1%:%2%"; break;
+			f = "Detected invalid AST at %1%:%2%."; break;
 
 		case E_CUI_NoInputFile:
 			f = "No input file"; break;

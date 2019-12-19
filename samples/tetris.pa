@@ -9,7 +9,7 @@
 // e.g. const ARR=[1,2,3]; a = ARR[i];
 // type for var name
 // it should be able to pass element address of array 
-//  e.g. int32[5,4] a; a[3,#] or a[3]
+//  e.g. [5,4]int32 a; a[3,#] or a[3]
 //  ++/--
 
 // curses lib API

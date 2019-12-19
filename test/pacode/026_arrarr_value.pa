@@ -18,10 +18,20 @@ printf("%d %d %d\n", arr3[0][0][0], arr3[0][0][1], arr3[1][0][0]);
 
 [2][10]byte strs = ["abc", "ABC"];
 90 -> strs[1][1]; // 'Z'
-printf("%s %s", strs[0], strs[1]);
+printf("%s %s\n", strs[0], strs[1]);
 
 func test([2][2,3]int16 arr)
 {
 	printf("%d %d %d\n",arr[0][0,0], arr[0][0,1], arr[1][0,0]);
 }
+
+[]int64 arr4 = [4607632778762754457, 4607632778762754458];
+int32 x = 1;
+if x < 1.1 { // comp int & flo generate RO value with shared arr4.
+	printf("x ");
+}
+
+[]int32 arr5 = [100, 101, 102, 103, 104];
+[]int32 arr6 = [102, 103]; // shared ro area case
+printf("%d %d", arr5[4], arr6[1]);
 
