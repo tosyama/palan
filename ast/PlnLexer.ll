@@ -43,6 +43,7 @@ enum {
 	KW_CONST	= PlnParser::token::KW_CONST,
 	KW_AUTOTYPE = PlnParser::token::KW_AUTOTYPE,
 	KW_VARLENARG	= PlnParser::token::KW_VARLENARG,
+	KW_EXTERN	= PlnParser::token::KW_EXTERN,
 	OPE_EQ		= PlnParser::token::OPE_EQ,
 	OPE_NE		= PlnParser::token::OPE_NE,
 	OPE_LE		= PlnParser::token::OPE_LE,
@@ -122,6 +123,7 @@ if/{POST_KW}		{ return KW_IF; }
 else/{POST_KW}		{ return KW_ELSE; }
 const/{POST_KW} 	{ return KW_CONST; }
 var/{POST_KW} 	{ return KW_AUTOTYPE; }
+extern/{POST_KW} 	{ return KW_EXTERN; }
 "..."	{ return KW_VARLENARG; }
 "=="	{ return OPE_EQ; }
 "!="	{ return OPE_NE; }

@@ -101,7 +101,7 @@ Block
 Statement
 ---------
 *   stmt-type\* - Statement type string:
-    "exp" "block" "var-init" "return" "while" "if" "func-def"
+    "exp" "block" "var-init" "return" "while" "if" "func-def" "extern-var"
     1.  exp - Expression statement
         *   exp\* - Expression model
 
@@ -136,12 +136,16 @@ Statement
 
     10. func-def - Function definition link
         *   id - Function id integer
-	
+
     11. type-def - Type definition
         *   type\* - Type definition type string: "obj-ref", "struct", "alias"
         *   name\* - Type name string
         *   memebers - Struct member list
         *   var-type\* - Original variable type list to alias
+
+    12. extern-var - Import extern global variables
+        *   var-type\* - Variable type list
+        *   names\* - variable name list
 
 *   loc - Location integer array
 

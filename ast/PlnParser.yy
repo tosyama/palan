@@ -69,6 +69,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token KW_CONST	"const"
 %token KW_AUTOTYPE	"var"
 %token KW_VARLENARG	"..."
+%token KW_EXTERN	"extern"
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
 %token OPE_LE	"<="
@@ -92,6 +93,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	return_stmt break_stmt continue_stmt
 %type <json>	while_statement if_statement else_statement
 %type <json>	type_def declaration subdeclaration const_def
+%type <json>	extern_var_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
 %type <json>	argument out_argument literal chain_src
@@ -495,6 +497,10 @@ semi_stmt: st_expression
 		LOC($$, @$);
 	}
 	| type_def 
+	{
+		$$ = move($1);
+	}
+	| extern_var_def
 	{
 		$$ = move($1);
 	}
@@ -1176,6 +1182,22 @@ type_def: KW_TYPE ID
 			{"var-type", $4},
 		};
 		$$ = move(stmt);
+		LOC($$, @$);
+	}
+	;
+
+extern_var_def: KW_EXTERN type ids
+	{
+		json stmt = {
+			{"stmt-type", "extern-var"},
+			{"var-type", $2},
+		};
+		$$ = move(stmt);
+		LOC($$, @$);
+	}
+	| extern_var_def ',' ids
+	{
+		$$ = move($1);
 		LOC($$, @$);
 	}
 	;

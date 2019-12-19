@@ -29,6 +29,7 @@ int yylex();
 %token KW_CONST
 %token KW_AUTOTYPE
 %token KW_VARLENARG
+%token KW_EXTERN
 %token OPE_EQ
 %token OPE_NE
 %token OPE_LE
@@ -177,6 +178,7 @@ statement: semi_stmt ';'
 
 semi_stmt: st_expression
 	| type_def
+	| extern_var_def
 	| declarations
 	| declarations '=' expressions
 	| ID take_owner1 '=' expression 
@@ -294,6 +296,10 @@ chain_call: expressions arrow_ope func_call
 type_def: KW_TYPE ID
 	| KW_TYPE ID '{' struct_def '}'
 	| KW_TYPE ID '=' type 
+	;
+
+extern_var_def: KW_EXTERN type ids
+	| extern_var_def ',' ids
 	;
 
 struct_def: type ID

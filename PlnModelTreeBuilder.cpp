@@ -438,6 +438,9 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 	} else if (type == "type-def") {
 		return NULL;
 
+	} else if (type == "extern-var") {
+		return NULL;
+
 	} else {
 		assertAST(false, stmt);
 	}

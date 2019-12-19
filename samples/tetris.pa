@@ -9,7 +9,7 @@
 // e.g. const ARR=[1,2,3]; a = ARR[i];
 // type for var name
 // it should be able to pass element address of array 
-//  e.g. [5,4]int32 a; a[3,#] or a[3]
+//  e.g. [5,4]int32 a; a[3,#] or a[3,] or a[3,:]
 //  ++/--
 
 // curses lib API
@@ -38,13 +38,9 @@ const KEY_RIGHT = 261;
 // stdc lib
 ccall printf(@[?]byte format, ...) -> int32;
 ccall rand() -> int32;
-ccall nanosleep(@timespec req, int64 rem)->int32;
 
-type time_t = uint64;
-type timespec {
-	time_t tv_sec;
-	int32 tv_nsec;
-};
+type useconds_t = uint32;
+ccall usleep(useconds_t usec)->int32;
 
 // for my program
 const true, false = 1, 0;
@@ -53,10 +49,10 @@ const SPACE = 32;
 const I,J,L,T,S,Z,O = 0,1,2,3,4,5,6;
 const NUM_MINO = 7;
 type Field = [FLD_H,FLD_W]byte;
-type Blocks = [NUM_MINO,4,4,4]byte;
-
 Field field = newFld();
-const blocks = 
+
+type Block = [4,4]byte;
+[NUM_MINO,4]@Block blocks = 
 	// I
 	[	[0,0,0,0][1,1,1,1][0,0,0,0][0,0,0,0],
 		[0,0,1,0][0,0,1,0][0,0,1,0][0,0,1,0],
@@ -109,8 +105,6 @@ stdscr->waddstr("q:quit");
 
 fldwin = newwin(FLD_H+2, FLD_W*2+2, 1, 0);
 
-timespec ts = [0, 10*1000*1000];
-
 // event loop
 is_running = true;
 var by, bx = start_y, start_x;
@@ -132,25 +126,25 @@ while is_running {
 
 	if is_falling {
 		if ch == KEY_LEFT {
-			if field,blocks,blk_type->tryMove(rotate,by,bx-1)
+			if field,blocks[blk_type,rotate]->tryMove(by,bx-1)
 				{ bx-1 -> bx }
 		} else if ch == KEY_RIGHT {
-			if field,blocks,blk_type->tryMove(rotate,by,bx+1)
+			if field,blocks[blk_type,rotate]->tryMove(by,bx+1)
 				{ bx+1 -> bx }
 		} else if ch == SPACE {
 			r = rotate + 1;
 			if r >= 4 { 0->r }
-			if field,blocks,blk_type->tryMove(r,by,bx)
+			if field,blocks[blk_type,r]->tryMove(by,bx)
 				{ r -> rotate }
 		} else if ch == KEY_UP {
-			while field,blocks,blk_type->tryMove(rotate,by+1,bx)
+			while field,blocks[blk_type,rotate]->tryMove(by+1,bx)
 				{ by+1 -> by }
 			false -> is_falling;
 			0->timer;
 		}
 
 		if (timer > gravity || ch == KEY_DOWN) {
-			if field,blocks,blk_type->tryMove(rotate, by+1, bx)
+			if field,blocks[blk_type,rotate]->tryMove(by+1,bx)
 				{ by+1 -> by }
 			else
 				{ false -> is_falling }
@@ -159,10 +153,10 @@ while is_running {
 		}
 		if !is_falling {
 			if by == start_y { false -> is_running }
-			field->>margeBlockToField(blocks, blk_type, rotate, by, bx) ->> field;
+			field->>margeBlockToField(blocks[blk_type,rotate], by, bx) ->> field;
 			del_mv_lineinf ->> checkDelLine(field) ->> del_mv_lineinf;
 		}
-		fldwin,blocks,blk_type -> drawBlock(rotate,by,bx);
+		fldwin,blocks[blk_type,rotate] -> drawBlock(by,bx);
 
 	} else { // after dropped block
 		if timer == 1 {
@@ -179,7 +173,7 @@ while is_running {
 	}
 
 	doupdate();
-	nanosleep(ts, 0);
+	usleep(10000);
 	timer+1 -> timer;
 }
 endwin();
@@ -218,15 +212,14 @@ func drawFld(@WINDOW win, @Field f)
 	win->wnoutrefresh();
 }
 
-func tryMove(@Field f, @Blocks blocks,
-		int32 tp, rotate, y, x) -> int32 can_move
+func tryMove(@Field f, @Block b, int32 y, x) -> int32 can_move
 {
 	h = 0;
 	while h < 4 {
 		xx = x;
 		w = 0;
 		while w < 4 {
-			if blocks[tp, rotate, h, w] == 1 {
+			if b[h,w] == 1 {
 				if xx < 0 || xx >= FLD_W || y>= FLD_H
 					{ return false }
 				if f[y,xx]!=0
@@ -241,14 +234,14 @@ func tryMove(@Field f, @Blocks blocks,
 	return true;
 }
 
-func drawBlock(@WINDOW win, @Blocks blocks, int32 tp, rotate, y, x)
+func drawBlock(@WINDOW win, @Block b, int32 y, x)
 {
 	h = 0;
 	while h < 4 {
 		xx = x;
 		w = 0;
 		while w < 4 {
-			if blocks[tp, rotate, h, w] == 1
+			if b[h, w] == 1
 				{ win->draw1Block(y, xx) }
 			1+w->w;
 			1+xx->xx;
@@ -271,14 +264,14 @@ func delete1Block(@WINDOW win, int32 y, x) {
 	win->waddch(SPACE);
 }
 
-func margeBlockToField(Field >>f, @Blocks blocks, int32 tp, rotate, y, x) -> Field f
+func margeBlockToField(Field >>f, @Block b, int32 y, x) -> Field f
 {
 	h = 0;
 	while h < 4 {
 		xx = x;
 		w = 0;
 		while w < 4 {
-			if blocks[tp, rotate, h, w] == 1
+			if b[h, w] == 1
 				{ 1->f[y,xx] }
 			1+w->w;
 			1+xx->xx;
