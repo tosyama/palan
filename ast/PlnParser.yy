@@ -1186,18 +1186,21 @@ type_def: KW_TYPE ID
 	}
 	;
 
-extern_var_def: KW_EXTERN type ids
+extern_var_def: KW_EXTERN type ID
 	{
+		vector<string> names = { $3 };
 		json stmt = {
 			{"stmt-type", "extern-var"},
 			{"var-type", $2},
+			{"names", names}
 		};
 		$$ = move(stmt);
 		LOC($$, @$);
 	}
-	| extern_var_def ',' ids
+	| extern_var_def ',' ID
 	{
 		$$ = move($1);
+		$$["names"].push_back($3);
 		LOC($$, @$);
 	}
 	;

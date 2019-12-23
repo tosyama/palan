@@ -1,13 +1,10 @@
-ccall printf(...);
 type FILE;
+extern @FILE stdout, stderr;
+ccall fprintf(@FILE file, @[?]byte format, ...);
 
-extern FILE stdin;
+fprintf(stdout, "test\n");
 
-type A { int32 i; int64 l; flo32 f; };
-type B { int32 i; int64 l; };
-type C { int64 l; flo32 f; };
-
-@A a = [1,2,1.23];
-@B b = [1,2];
-@C c = [2,1.23];
-
+func test()
+{
+	fprintf(stdout, "tes\n");
+}

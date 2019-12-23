@@ -22,6 +22,7 @@ class PlnBlock {
 public:
 	vector<PlnStatement*> statements;
 	vector<PlnVariable*> variables;
+	vector<PlnVariable*> globals;
 	vector<PlnExpression*> free_vars;
 	struct PlnConst {
 		string name;
@@ -43,9 +44,11 @@ public:
 	void setParent(PlnFunction* f);
 	void setParent(PlnBlock* b);
 
-	//PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool readonly, bool is_owner, bool do_check_ancestor_blocks);
 	PlnVariable* declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks);
 	PlnVariable* getVariable(const string& var_name);
+
+	PlnVariable* declareGlobalVariable(const string& var_name, PlnVarType* var_type, bool is_extern);
+	PlnVariable* getGlobalVariable(const string& var_name);
 
 	void declareConst(const string& name, PlnExpression *ex);	// throw PlnCompileError
 	PlnExpression* getConst(const string& name);

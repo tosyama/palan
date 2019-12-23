@@ -66,34 +66,41 @@ void PlnBlock::setParent(PlnBlock* b)
 	parent_module = b->parent_module;
 }
 
-PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks)
+static bool existsVar(PlnBlock* block, const string& var_name, bool do_check_ancestor_blocks)
 {
-	for (auto v: variables)
-		if (v->name == var_name) return NULL;
-	for (auto c: consts)
-		if (c.name == var_name) return NULL;
+	for (auto v: block->variables)
+		if (v->name == var_name) return true;
+	for (auto c: block->consts)
+		if (c.name == var_name) return true;
 	
-	if (parent_func) {
-		for (auto&rv: parent_func->return_vals)
-			if (rv.local_var->name == var_name) return NULL;
-		for (auto p: parent_func->parameters)
-			if (p->var->name == var_name) return NULL;
+	if (block->parent_func) {
+		for (auto&rv: block->parent_func->return_vals)
+			if (rv.local_var->name == var_name) return true;
+		for (auto p: block->parent_func->parameters)
+			if (p->var->name == var_name) return true;
 	}
 
 	if (do_check_ancestor_blocks) {
-		PlnBlock *b = this->parent_block;
+		PlnBlock *b = block->parent_block;
 		while (b) {
 			for (auto v: b->variables)
-				if (v->name == var_name) return NULL;
+				if (v->name == var_name) return true;
 			for (auto c: b->consts)
-				if (c.name == var_name) return NULL;
+				if (c.name == var_name) return true;
 			b = b->parent_block;
 		}
 	}
 
+	return false;
+}
+
+PlnVariable* PlnBlock::declareVariable(const string& var_name, PlnVarType* var_type, bool do_check_ancestor_blocks)
+{
+	if (existsVar(this, var_name, do_check_ancestor_blocks))
+		return NULL;
+
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
-	v->container = NULL;
 	v->var_type = var_type ? var_type : variables.back()->var_type;
 
 	variables.push_back(v);
@@ -108,23 +115,64 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 		for (auto v: b->variables)
 			if (v->name == var_name)
 				return v;
+		
+		for (auto v: b->globals)
+			if (v->name == var_name)
+				return v;
+
 		if (b->parent_block)
 			b = b->parent_block;
+
 		else if (b->parent_func) {
 			for (auto& rv: parent_func->return_vals)
 				if (rv.local_var->name == var_name) return rv.local_var;
 			for (auto p: parent_func->parameters)
 				if (p->var->name == var_name) return p->var;
-			return NULL;
+
+			return this->parent_func->parent->getGlobalVariable(var_name);
+
 		} else
-			return NULL;
-		// TODO: search grobal.
+			return NULL;;
 	}
+
+	BOOST_ASSERT(false);
+}
+
+PlnVariable* PlnBlock::declareGlobalVariable(const string& var_name, PlnVarType* var_type, bool is_extern)
+{
+	if (existsVar(this, var_name, false))
+		return NULL;
+	
+	if (getGlobalVariable(var_name))
+		return NULL;
+
+	PlnVariable* v = new PlnVariable();
+	v->name = var_name;
+	v->var_type = var_type;
+	v->is_global = true;
+
+	globals.push_back(v);
 }
 
 static PlnBlock* parentBlock(PlnBlock* block) {
 	if (block->parent_block) return block->parent_block;
 	if (block->parent_func) return block->parent_func->parent;
+	return NULL;
+}
+
+PlnVariable* PlnBlock::getGlobalVariable(const string& var_name)
+{
+	PlnBlock* b = this;
+	do {
+		auto global_var = find_if(b->globals.begin(), b->globals.end(),
+			[var_name](PlnVariable* v) { return v->name == var_name; } );
+
+		if (global_var != b->globals.end()) {
+			return *global_var;
+		}
+
+	} while (b = parentBlock(b));
+
 	return NULL;
 }
 
@@ -453,8 +501,11 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	
 	addFreeVars(free_vars, da, si);
 	
-	for (auto v: variables)
+	for (auto v: variables) {
+		if (v->is_global)
+			continue;
 		da.releaseDp(v->place);
+	}
 	
 	si.pop_owner_vars(this);
 	si.pop_scope();
@@ -467,6 +518,8 @@ void PlnBlock::gen(PlnGenerator& g)
 		// initalize all pointers.
 		vector<unique_ptr<PlnGenEntity>> refs;
 		for (auto v: variables) {
+			if (v->is_global)
+				continue;
 			char alloc_mode = v->var_type->mode[ALLOC_MD];
 			if (alloc_mode == 'h' || alloc_mode == 'r')
 				refs.push_back(g.getEntity(v->place));

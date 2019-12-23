@@ -130,6 +130,15 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 					var->place->comment = &var->name;
 				}
 				return var->place;
+
+			} else if (var->is_global) {
+				if (!var->place) {
+					PlnType* t = var->var_type->typeinf;
+					var->place = da.prepareGlobalVar(var->name, t->size, t->data_type);
+					var->place->comment = &var->name;
+				}
+				return da.getSeparatedDp(inf.var->place);
+
 			} else
 				return da.getSeparatedDp(inf.var->place);
 	}
