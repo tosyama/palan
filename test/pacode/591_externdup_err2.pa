@@ -1,0 +1,6 @@
+extern int64 x;
+
+{
+	extern int64 x; // OK
+	extern int64 x; // NG
+}

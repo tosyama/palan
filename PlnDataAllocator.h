@@ -50,6 +50,7 @@ public:
 	virtual ~PlnDataAllocator() { };
 
 	PlnDataPlace* prepareLocalVar(int size, int data_type);
+	PlnDataPlace* prepareGlobalVar(const string& name, int size, int data_type);
 	PlnDataPlace* allocData(int size, int data_type);
 	void allocData(PlnDataPlace* new_dp);
 	void allocSaveData(PlnDataPlace* dp, int alloc_step, int release_step);
@@ -98,6 +99,7 @@ enum {
 	DP_STK_BP,
 	DP_STK_SP,
 	DP_REG,
+	DP_GLBL,
 	DP_BYTES,
 
 	DP_INDRCT_OBJ,
@@ -146,6 +148,7 @@ public:
 		int64_t intValue;
 		double floValue;
 		string *rostr;
+		string *varName;
 		vector<PlnRoData> *rodata;
 		PlnDataPlace *originalDp;
 	} data;

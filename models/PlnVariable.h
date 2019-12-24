@@ -13,6 +13,8 @@ public:
 	PlnVariable* container;	// for indirect variable. a[2] -> container is a.
 	bool is_tmpvar;
 	bool is_indirect;
+	bool is_global;
+
 	PlnLoc loc;
 
 	PlnVariable(): var_type(NULL), place(NULL), container(NULL), is_tmpvar(false), is_indirect(false) {}

@@ -190,7 +190,6 @@ PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_ty
 	PlnVarType *t = var_type;
 	var->place = da.prepareLocalVar(t->size(), t->data_type());
 	var->place->comment = &var->name;
-	var->container = NULL;
 	var->is_tmpvar = true;
 
 	return var;

@@ -1,0 +1,12 @@
+extern flo64 x;
+
+{
+	extern flo64 x;	// OK;
+}
+{
+	int64 x = 10;	// OK; hiding global x.
+}
+
+{
+	x = 10;	// NG; override global x. foolproof.
+}

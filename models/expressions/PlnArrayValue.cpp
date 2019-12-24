@@ -71,6 +71,7 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 
 		} else
 			BOOST_ASSERT(false);
+		new_exp->loc = exp->loc;
 		item_exps.push_back(new_exp);
 	}
 
@@ -338,8 +339,11 @@ int getInt(PlnExpression *exp) {
 	PlnValue &val = exp->values[0];
 	if (val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8) {
 		return val.inf.intValue;
-	} else
-		BOOST_ASSERT(false);
+	} else {
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::floatNumber(), PlnType::getSint()->name);
+		err.loc = exp->loc;
+		throw err;
+	}
 }
 
 double getFloat(PlnExpression *exp) {

@@ -102,11 +102,11 @@ void PlnGenerator::genSaveDp(PlnDataPlace* dp) {
 		auto dste = getEntity(dp);
 		genMove(dste.get(), srce.get(), src_cmt + " -> " + dp->cmt());
 
-		BOOST_ASSERT(!dp->do_clear_src);
 		// Basically, save_place used for register usage confliction.
 		// do_clear_src used for variable on stack memory.
+		// and this case will happen at "f(arr>>, arr2[i]);".
 		// Following code not requrired because two condition don't occur same time.
-		//
+
 		//if (dp->do_clear_src) {
 		//	vector<unique_ptr<PlnGenEntity>> clr_es;
 		//	clr_es.push_back(getEntity(src_dp));

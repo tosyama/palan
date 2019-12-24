@@ -155,6 +155,16 @@ PlnDataPlace* PlnDataAllocator::prepareLocalVar(int size, int data_type)
 	return new_dp;
 }
 
+PlnDataPlace* PlnDataAllocator::prepareGlobalVar(const string& name, int size, int data_type)
+{
+	PlnDataPlace* new_dp = new PlnDataPlace(size, data_type);
+	new_dp->type = DP_GLBL;
+	new_dp->data.varName = new string(name);
+	new_dp->status = DS_ASSIGNED;
+
+	return new_dp;
+}
+
 PlnDataPlace* PlnDataAllocator::allocData(int size, int data_type)
 {
 	PlnDataPlace* new_dp = new PlnDataPlace(size, data_type);
@@ -506,6 +516,7 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 			}
 			return false;
 		}
+		case DP_GLBL:
 		case DP_RO_STR:
 		case DP_RO_DATA:
 		case DP_LIT_INT:

@@ -101,7 +101,7 @@ public:
 	int8_t base_regid;
 	PlnLabelAdrsModeOperand(string label, int base_regid) 
 		: PlnOperandInfo(OP_LBLADRS), label(label), base_regid(base_regid) {}
-	PlnOperandInfo* clone() override { BOOST_ASSERT(false); }
+	PlnOperandInfo* clone() override { return new PlnLabelAdrsModeOperand(label, base_regid); }
 	const char* str(char* buf) override;
 };
 

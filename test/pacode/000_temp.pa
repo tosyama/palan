@@ -1,35 +1,10 @@
-ccall printf(...);
+type FILE;
+extern @FILE stdout, stderr;
+ccall fprintf(@FILE file, @[?]byte format, ...);
 
-type A {
-	int32 x;
-	int64 y;
-};
+fprintf(stdout, "test\n");
 
-const Z = [1,2];
-const ZZ = [1.1,1.2];
-
-@A aa = Z;
-
-A aaa = Z;
-A z = Z;
-
-qq = ZZ;
-qq2 = ZZ;
-x = 3;
-if (x < 1.2)
-{}
-
-//[]int64 z = [4607632778762754457, 4607632778762754458];
-
-//@[]int64 b = [1,2,3,4];
-//@[]int64 a = [1,2];
-//@[]int64 c = [2,3];
-//@[]int32 d = [2,3,4];
-//int64 x=1;
-//if x < 1.1 {
-//}
-//if x < 1.1 {
-//}
-//if x < 1.2 {
-//}
-
+func test()
+{
+	fprintf(stdout, "tes\n");
+}

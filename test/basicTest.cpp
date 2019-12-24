@@ -8,7 +8,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "test");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -202,6 +202,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(exec(testcode) == "abc123def1.23\n"
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
+								"infunc\n"
 								"smy0.33"); 
 
 	testcode = "028_struct";
@@ -224,7 +225,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
-// Error file ID: 500-588
+// Error file ID: 500-591
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -432,6 +433,15 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "588_dynamic2ref_err";
 	REQUIRE(build(testcode) == "finish:0:1-1 Can not assign dynamic allocated value to 'x'.");
+
+	testcode = "589_structinit_err";
+	REQUIRE(build(testcode) == "finish:0:6-6 Incompatible types in assignment of 'float number' to 'int64'.");
+
+	testcode = "590_externdup_err";
+	REQUIRE(build(testcode) == "0:11-11 Variable name 'x' already defined.");
+
+	testcode = "591_externdup_err2";
+	REQUIRE(build(testcode) == "0:5-5 Variable name 'x' already defined.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

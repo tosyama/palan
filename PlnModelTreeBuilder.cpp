@@ -41,6 +41,7 @@ static PlnExpression* buildExpression(json& exp, PlnScopeStack &scope);
 static PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope);
 static void registerConst(json& cnst, PlnScopeStack &scope);
 static void registerType(json& type, PlnScopeStack &scope);
+static void registerExternVar(json& var, PlnScopeStack &scope);
 static PlnStatement* buildReturn(json& ret, PlnScopeStack& scope);
 static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast);
@@ -347,7 +348,7 @@ static json& getFuncDef(json& ast, int id)
 
 static void prebuildBlock(json& stmts, PlnScopeStack& scope, json& ast)
 {
-	// Register const
+	// Register const&type&extern
 	for (json& stmt: stmts) {
 		assertAST(stmt["stmt-type"].is_string(),stmt);
 		string type = stmt["stmt-type"];
@@ -355,6 +356,8 @@ static void prebuildBlock(json& stmts, PlnScopeStack& scope, json& ast)
 			registerConst(stmt, scope);
 		} else if (type == "type-def") {
 			registerType(stmt, scope);
+		} else if (type == "extern-var") {
+			registerExternVar(stmt, scope);
 		}
 	}
 
@@ -436,6 +439,9 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 		return NULL;
 	
 	} else if (type == "type-def") {
+		return NULL;
+
+	} else if (type == "extern-var") {
 		return NULL;
 
 	} else {
@@ -706,6 +712,19 @@ void registerType(json& type, PlnScopeStack &scope)
 
 	} else {
 		BOOST_ASSERT(false);
+	}
+}
+
+void registerExternVar(json& var, PlnScopeStack &scope)
+{
+	PlnVarType* t = getVarType(var["var-type"], scope);
+	for (const string& vname: var["names"]) {
+		PlnVariable *v = CUR_BLOCK->declareGlobalVariable(vname, t, true);
+		if (!v) {
+			PlnCompileError err(E_DuplicateVarName, vname);
+			setLoc(&err, var);
+			throw err;
+		}
 	}
 }
 

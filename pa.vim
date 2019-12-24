@@ -10,7 +10,7 @@ endif
 syn keyword     paDeclaration       type var const func syscall ccall
 syn keyword     paConditional       if else
 syn keyword     paRepeat            while
-syn keyword     paStatement         return break continue
+syn keyword     paStatement         return break continue extern
 syn match       paOperator          "[.,?!*+/%&\-<>=@\|]"
 syn match       paOperator          "[][()]"
 syn match       paDelimiter         "[{};]"
