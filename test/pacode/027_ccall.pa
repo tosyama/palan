@@ -53,6 +53,7 @@ fscanf(file, "%s %s" => str1, str2) -> i;
 fclose(file>>);
 
 stdout->fprintf("%d:%s,%s\n", i, str1, str2);
+infunc("infunc\n");
 
 uint64 t = time(0);
 @struct_tm tm = localtime(t);
@@ -66,3 +67,7 @@ if tm.tm_year >= 119 && tm.tm_year <= 200
 printf("%.2lf", cos(1.23));
 exit(0);
 
+func infunc(@[?]byte str)
+{
+	stdout->fprintf("%s", str);
+}

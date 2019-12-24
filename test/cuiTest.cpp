@@ -57,6 +57,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 	REQUIRE(outstr(testcode) == "abc123def1.23\n"
 	  							"bbaa 99 2.34 7\n"
 	    						"2:This,is\n"
+								"infunc\n"
 		  						"smy0.33");
 
 	// pac <input-file>

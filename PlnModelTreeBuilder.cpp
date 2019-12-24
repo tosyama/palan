@@ -719,7 +719,12 @@ void registerExternVar(json& var, PlnScopeStack &scope)
 {
 	PlnVarType* t = getVarType(var["var-type"], scope);
 	for (const string& vname: var["names"]) {
-		CUR_BLOCK->declareGlobalVariable(vname, t, true);
+		PlnVariable *v = CUR_BLOCK->declareGlobalVariable(vname, t, true);
+		if (!v) {
+			PlnCompileError err(E_DuplicateVarName, vname);
+			setLoc(&err, var);
+			throw err;
+		}
 	}
 }
 

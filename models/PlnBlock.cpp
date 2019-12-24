@@ -72,12 +72,15 @@ static bool existsVar(PlnBlock* block, const string& var_name, bool do_check_anc
 		if (v->name == var_name) return true;
 	for (auto c: block->consts)
 		if (c.name == var_name) return true;
+	for (auto g: block->globals)
+		if (g->name == var_name) return true;
 	
 	if (block->parent_func) {
 		for (auto&rv: block->parent_func->return_vals)
 			if (rv.local_var->name == var_name) return true;
 		for (auto p: block->parent_func->parameters)
 			if (p->var->name == var_name) return true;
+
 	}
 
 	if (do_check_ancestor_blocks) {
@@ -89,6 +92,11 @@ static bool existsVar(PlnBlock* block, const string& var_name, bool do_check_anc
 				if (c.name == var_name) return true;
 			b = b->parent_block;
 		}
+	}
+
+	if (do_check_ancestor_blocks) {
+		if (block->getGlobalVariable(var_name))
+			return true;
 	}
 
 	return false;
@@ -138,26 +146,25 @@ PlnVariable* PlnBlock::getVariable(const string& var_name)
 	BOOST_ASSERT(false);
 }
 
+static PlnBlock* parentBlock(PlnBlock* block)
+{
+	if (block->parent_block) return block->parent_block;
+	if (block->parent_func) return block->parent_func->parent;
+	return NULL;
+}
+
 PlnVariable* PlnBlock::declareGlobalVariable(const string& var_name, PlnVarType* var_type, bool is_extern)
 {
 	if (existsVar(this, var_name, false))
 		return NULL;
 	
-	if (getGlobalVariable(var_name))
-		return NULL;
-
 	PlnVariable* v = new PlnVariable();
 	v->name = var_name;
 	v->var_type = var_type;
 	v->is_global = true;
 
 	globals.push_back(v);
-}
-
-static PlnBlock* parentBlock(PlnBlock* block) {
-	if (block->parent_block) return block->parent_block;
-	if (block->parent_func) return block->parent_func->parent;
-	return NULL;
+	return v;
 }
 
 PlnVariable* PlnBlock::getGlobalVariable(const string& var_name)
