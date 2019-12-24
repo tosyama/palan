@@ -225,7 +225,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 }
 
-// Error file ID: 500-589
+// Error file ID: 500-591
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;

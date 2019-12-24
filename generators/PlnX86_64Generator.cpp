@@ -1313,7 +1313,6 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 		e->size = dp->size;
 		e->data_type = dp->data_type;
 		e->ope = lblval(*dp->data.varName);
-//		BOOST_ASSERT(false);
 
 	} else
 		BOOST_ASSERT(false);

@@ -155,6 +155,8 @@ static PlnBlock* parentBlock(PlnBlock* block)
 
 PlnVariable* PlnBlock::declareGlobalVariable(const string& var_name, PlnVarType* var_type, bool is_extern)
 {
+	BOOST_ASSERT(is_extern == true);	// false is not implemented yet.
+
 	if (existsVar(this, var_name, false))
 		return NULL;
 	
