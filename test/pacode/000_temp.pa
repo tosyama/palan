@@ -1,10 +1,13 @@
-type FILE;
-extern @FILE stdout, stderr;
-ccall fprintf(@FILE file, @[?]byte format, ...);
-
-fprintf(stdout, "test\n");
-
-func test()
-{
-	fprintf(stdout, "tes\n");
+func f1() {
+	int64 m = f2() + f3();
 }
+
+func f2() -> int64 n
+{
+}
+
+func f3() -> int64 m
+{
+}
+
+f1();

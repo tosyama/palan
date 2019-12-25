@@ -90,6 +90,7 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 
 		f->finish(da, si);
 		f->gen(g);
+		// BOOST_ASSERT(f->name!="f1");
 		f->clear();
 		da.reset();
 		f->generated = true;

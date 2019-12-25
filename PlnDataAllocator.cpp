@@ -271,7 +271,7 @@ vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int func_type, vector<i
 	vector<PlnDataPlace*> dps;
 
 	for (int i=0; i<ret_num; ++i) {
-		static string cmt="return";
+		static string cmt = "return";
 		auto dp = createReturnDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
 		dp->comment = &cmt;
 		dp->status = DS_READY_ASSIGN;
@@ -646,7 +646,7 @@ PlnDataPlace::PlnDataPlace(int size, int data_type)
 		previous(NULL), save_place(NULL), src_place(NULL),
 		size(size), data_type(data_type), release_src_pop(true), load_address(false), do_clear_src(false)
 {
-	static string emp="";
+	static string emp = "";
 	comment = &emp;
 }
 
@@ -685,7 +685,7 @@ bool PlnDataPlace::tryAllocBytes(PlnDataPlace* dp)
 	BOOST_ASSERT(type == DP_BYTES);
 	BOOST_ASSERT(dp->size <= 4);
 
-	int dp_size  = dp->size;
+	int dp_size = dp->size;
 	unsigned int alloc_bytes = getAllocBytesBits(dp->alloc_step, dp->release_step);
 	unsigned int flg;
 

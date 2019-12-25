@@ -35,11 +35,6 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 			dp->alloc_step = dp->release_step = step;
 			dp->previous = pdp;
 			regs[regid] = dp;
-			if (pdp && pdp->status != DS_RELEASED)
-				if (!pdp->save_place)  {
-					allocSaveData(pdp, pdp->alloc_step, pdp->release_step);
-					pdp->save_place->comment = new string("(save-" + pdp->cmt() + ")");
-				}
 		}
 	}
 }
@@ -177,7 +172,7 @@ static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 
 void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_type)
 {
-	// TODO: use pupSrc().
+	// TODO: use popSrc().
 	for (auto dp: args) {
 		dp->status = DS_RELEASED;
 		dp->release_step = step;

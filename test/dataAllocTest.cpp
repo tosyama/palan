@@ -63,7 +63,7 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	CHECK(dps1[0]->save_place->data.stack.offset == -24);	
 	CHECK(dps1[1]->save_place->data.stack.offset == -32);	
 	CHECK(dps1[5]->save_place->data.stack.offset == -56);	
-	CHECK(allocator.stack_size == 72);
+	CHECK(allocator.stack_size == 64);
 }
 
 TEST_CASE("Mixed bytes dateplace allocate unit test.", "[allocate]")
