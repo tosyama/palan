@@ -335,6 +335,44 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr(int staticIndex)
 	return getLiteralIntDp(staticIndex);
 }
 
+void PlnX86_64DataAllocator::optimizeRegAlloc()
+{
+	static vector<int> regids = {RDI, RSI, RDX, RCX, R8, R9, R10, R12, R13, R14, R15};
+
+	// select regid
+	int regid = -1;
+	for (int id: regids) {
+		if (!regs[id]) {
+			regid = id;
+			break;
+		}
+	}
+	
+	if (regid == -1) return;
+
+	// get first dp
+	if (data_stack.size()) {
+		int index = 0;
+		PlnDataPlace* dp = data_stack[index];
+		
+		if (dp->type != DP_BYTES && dp->data_type != DT_FLOAT && dp->size == 8) {
+			// pop from stack
+			data_stack[index] = dp->previous;
+			if (!data_stack[index]) {
+				data_stack.erase(data_stack.begin()+index);
+			}
+
+			// push to reg
+			dp->type = DP_REG;
+			dp->data.reg.id = regid;
+			dp->data.reg.offset = 0;
+
+			dp->previous = regs[regid];
+			regs[regid] = dp;
+		}
+	}
+}
+
 void PlnX86_64DataAllocator::checkDataLeak()
 {
 	PlnDataAllocator::checkDataLeak();

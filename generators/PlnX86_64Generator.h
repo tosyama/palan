@@ -28,6 +28,7 @@ class PlnX86_64Generator : public PlnGenerator
 			{ this->data.str = str; }
 	};
 	vector<ConstInfo> const_buf;
+	int func_stack_size;
 	
 	void moveMemToReg(const PlnGenEntity* mem, int reg);
 	void moveRegTo(int reg, const PlnGenEntity* dst);

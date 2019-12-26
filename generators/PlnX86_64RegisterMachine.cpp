@@ -60,6 +60,18 @@ static const char* r(int rt, int size)
 		tbl[R11][0] = "%r11b"; tbl[R11][1] = "%r11w";
 		tbl[R11][2] = "%r11d"; tbl[R11][3] = "%r11";
 
+		tbl[R12][0] = "%r12b"; tbl[R12][1] = "%r12w";
+		tbl[R12][2] = "%r12d"; tbl[R12][3] = "%r12";
+
+		tbl[R13][0] = "%r13b"; tbl[R13][1] = "%r13w";
+		tbl[R13][2] = "%r13d"; tbl[R13][3] = "%r13";
+
+		tbl[R14][0] = "%r14b"; tbl[R14][1] = "%r14w";
+		tbl[R14][2] = "%r14d"; tbl[R14][3] = "%r14";
+
+		tbl[R15][0] = "%r15b"; tbl[R15][1] = "%r15w";
+		tbl[R15][2] = "%r15d"; tbl[R15][3] = "%r15";
+
 		tbl[XMM0][0] = "%xmm0"; tbl[XMM0][1] = "%xmm0";
 		tbl[XMM0][2] = "%xmm0"; tbl[XMM0][3] = "%xmm0";
 
@@ -349,7 +361,7 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 {
 	auto opec = opecodes.begin();
 	while (opec != opecodes.end()) {
-		if (opec->mne == SUBQ && opec->dst->type == OP_REG
+		if ((opec->mne == SUBQ || opec->mne == ADDQ) && opec->dst->type == OP_REG
 				&& regid_of(opec->dst) == RSP) {
 			opec = opecodes.erase(opec);
 		} else {

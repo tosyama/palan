@@ -104,7 +104,7 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 }
 
 PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
-	: PlnGenerator(ostrm), require_align(false), max_const_id(0)
+	: PlnGenerator(ostrm), require_align(false), max_const_id(0), func_stack_size(0)
 {
 }
 
@@ -352,6 +352,7 @@ void PlnX86_64Generator::genEntryFunc()
 {
 	m.push(PUSHQ, reg(RBP));
 	m.push(MOVQ, reg(RSP), reg(RBP));
+	func_stack_size = 0;
 }
 
 void PlnX86_64Generator::genLocalVarArea(int size)
@@ -369,6 +370,7 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 			size = size + 8;
 	}
 
+	func_stack_size = size;
 	m.push(SUBQ, imm(size), reg(RSP));
 }
 
@@ -451,7 +453,9 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 
 void PlnX86_64Generator::genReturn()
 {
-	m.push(LEAVE);
+	if (func_stack_size)
+		m.push(ADDQ, imm(func_stack_size), reg(RSP));
+	m.push(POPQ, reg(RBP));	
 	m.push(RET);
 }
 

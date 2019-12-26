@@ -63,7 +63,6 @@ setenv("MALLOC_TRACE", "out/mtrace010", 1);
 mtrace();
 {
 	[3][4]int32 a1;
-
 	set_arrarr(a1>>) ->> a1;
 
 	[3][4]int32 a2 = inc_arrarr(a1);

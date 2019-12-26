@@ -1,13 +1,11 @@
-func f1() {
-	int64 m = f2() + f3();
-}
-
-func f2() -> int64 n
+func fib(int64 n) -> int64 n
 {
+	if n < 2 { return }
+	fib(n-2) + fib(n-1) -> n;
 }
 
-func f3() -> int64 m
-{
-}
+a = [0,1,2];
+b = [3,4,5];
 
-f1();
+10 -> b[a[2]];
+

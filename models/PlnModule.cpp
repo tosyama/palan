@@ -53,6 +53,7 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 
 	palan::exit(toplevel, 0);
 	toplevel->finish(da, si);
+//	da.optimizeRegAlloc();
 	da.finish(save_regs, save_reg_dps);
 	int stack_size = da.stack_size;
 
@@ -90,7 +91,6 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 
 		f->finish(da, si);
 		f->gen(g);
-		// BOOST_ASSERT(f->name!="f1");
 		f->clear();
 		da.reset();
 		f->generated = true;

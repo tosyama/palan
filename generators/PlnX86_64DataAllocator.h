@@ -1,7 +1,7 @@
 /// x86-64 (Linux) data allocation management class declaration.
 ///
 /// @file	PlnX86_64DataAllocator.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu
 
 #include "../PlnDataAllocator.h"
 
@@ -43,6 +43,9 @@ public:
 	PlnDataPlace* prepareObjBasePtr() override;
 	PlnDataPlace* prepareObjIndexPtr() override;
 	PlnDataPlace* prepareObjIndexPtr(int staticIndex) override;
+
+	// for optimization
+	void optimizeRegAlloc() override;
 
 	// for debug
 	void checkDataLeak() override;

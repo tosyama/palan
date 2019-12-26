@@ -77,6 +77,9 @@ public:
 	virtual PlnDataPlace* prepareObjIndexPtr(int staticIndex) = 0;
 	virtual void setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement);
 
+	// for optimization
+	virtual void optimizeRegAlloc() = 0;
+
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getLiteralFloDp(double floValue);
 	PlnDataPlace* getROIntArrayDp(vector<int64_t> int_array, int item_size);
