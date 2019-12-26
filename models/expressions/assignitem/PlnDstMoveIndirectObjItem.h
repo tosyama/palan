@@ -76,6 +76,7 @@ public:
 			// save old dst for free.
 			da.pushSrc(free_dp->data.indirect.base_dp, addr_var->place, false);
 			da.pushSrc(save4free_var->place, free_dp);
+			da.popSrc(free_dp->data.indirect.base_dp);
 			da.popSrc(save4free_var->place);
 
 			// execute free.	
@@ -96,14 +97,11 @@ public:
 			*/
 		}
 
-		if (place) {
-			dst_dp->data.indirect.base_dp->release_src_pop = true;
+		da.releaseDp(addr_var->place);
+		if (place)
 			da.pushSrc(place, dst_dp);
-
-		} else {
-			da.releaseDp(addr_var->place);
+		else
 			da.releaseDp(dst_dp);
-		}
 	}
 
 	void gen(PlnGenerator& g) override {
