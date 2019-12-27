@@ -4,7 +4,7 @@
 /// e.g.) a + b / a - b
 ///
 /// @file	PlnAddOperation.cpp
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -148,7 +148,7 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 }
 
 PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add)
-	: PlnExpression(ET_ADD), l(l), r(r), is_add(is_add)
+	: PlnExpression(ET_ADD), l(l), r(r), ldp(NULL), rdp(NULL), is_add(is_add), do_cross(false)
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
 	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
@@ -173,25 +173,53 @@ PlnAddOperation::~PlnAddOperation()
 
 void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	PlnDataPlace *ldp, *rdp;
+	// Optimize assumption
+	//	- lval:reg and rval:local var can be good performace.
+	// e.g.) value: local var or literal. x: other
+	//   case 1: x + value => x + value
+	//   case 2: value + x => x + value
+	//   case 3: x1 + x2 => x1->temp, x2 + temp  
+
 	// l => RAX
 	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
 
-	if (r->type == ET_VALUE) {
+	if (r->type == ET_VALUE) {	// case 1
 		rdp = r->values[0].getDataPlace(da);
+		l->data_places.push_back(ldp);
+		r->data_places.push_back(rdp);
+
+	} else if (is_add && l->type == ET_VALUE)  {	// case 2
+		PlnExpression *temp = l;
+		l = r;
+		r = temp;
+		rdp = r->values[0].getDataPlace(da);
+
+		l->data_places.push_back(ldp);
+		r->data_places.push_back(rdp);
+		
 	} else {
 		rdp = da.prepareLocalVar(8, r->getDataType());
 		static string cmt="(temp@add)";
 		rdp->comment = &cmt;
+
+		if (is_add) {	// case 3
+			l->data_places.push_back(rdp);
+			r->data_places.push_back(ldp);
+			do_cross = true;
+		} else {
+			l->data_places.push_back(ldp);
+			r->data_places.push_back(rdp);
+		}
 	}
 
-	l->data_places.push_back(ldp);
 	l->finish(da, si);
-	
-	r->data_places.push_back(rdp);
-	r->finish(da, si);
-
-	da.popSrc(rdp);
+	if (do_cross) {
+		da.popSrc(rdp);
+		r->finish(da, si);
+	} else {
+		r->finish(da, si);
+		da.popSrc(rdp);
+	}
 	da.popSrc(ldp);
 
 	auto result_dp = da.added(ldp, rdp);
@@ -204,12 +232,13 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnAddOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
-	r->gen(g);
-
-	auto ldp = l->data_places[0];
-	auto rdp = r->data_places[0];
-
-	g.genLoadDp(rdp);
+	if (do_cross) {
+		g.genLoadDp(rdp);
+		r->gen(g);
+	} else {
+		r->gen(g);
+		g.genLoadDp(rdp);
+	}
 	g.genLoadDp(ldp);
 
 	auto re = g.getEntity(rdp);

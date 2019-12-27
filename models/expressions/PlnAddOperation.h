@@ -1,16 +1,17 @@
 /// PlnAddOperation model class declaration.
 ///
 /// @file	PlnAddOperation.h
-/// @copyright	2017-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "../PlnExpression.h"
 
 class PlnAddOperation : public PlnExpression
 {
 public:
-	PlnExpression* l;
-	PlnExpression* r;
+	PlnExpression* l, *r;
+	PlnDataPlace *ldp, *rdp;
 	bool is_add;
+	bool do_cross;
 
 	PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add=true);
 	~PlnAddOperation();

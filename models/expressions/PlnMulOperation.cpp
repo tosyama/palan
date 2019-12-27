@@ -4,7 +4,7 @@
 /// e.g.) a * b
 ///
 /// @file	PlnMulOperation.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -91,7 +91,7 @@ PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
 }
 
 PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
-	: PlnExpression(ET_MUL), l(l), r(r)
+	: PlnExpression(ET_MUL), l(l), r(r), ldp(NULL), rdp(NULL), do_cross(false)
 {
 	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
 	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
@@ -115,27 +115,48 @@ PlnMulOperation::~PlnMulOperation()
 
 void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	PlnDataPlace *ldp, *rdp;
+	// Optimize assumption
+	//	- lval:reg and rval:local var can be good performace.
+	// e.g.) value: local var or literal. x: other
+	//   case 1: x * value => x * value
+	//   case 2: value * x => x * value
+	//   case 3: x1 * x2 => x1->temp, x2 * temp  
+
 	// l => RAX
 	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
 
-	if (r->type == ET_VALUE) {
+	if (r->type == ET_VALUE) {	// case 1
+		rdp = r->values[0].getDataPlace(da);
+		l->data_places.push_back(ldp);
+		r->data_places.push_back(rdp);
+
+	} else if (l->type == ET_VALUE) {	// case 2
+		PlnExpression *temp = l;
+		l = r;
+		r = temp;
 		rdp = r->values[0].getDataPlace(da);
 
-	} else {
+		l->data_places.push_back(ldp);
+		r->data_places.push_back(rdp);
+
+	} else {	// case 3
 		rdp = da.prepareLocalVar(8, r->getDataType());
-		static string cmt="(temp)";
+		static string cmt="(temp@mul)";
 		rdp->comment = &cmt;
 
+		l->data_places.push_back(rdp);
+		r->data_places.push_back(ldp);
+		do_cross = true;
 	}
 
-	l->data_places.push_back(ldp);
 	l->finish(da, si);
-
-	r->data_places.push_back(rdp);
-	r->finish(da, si);
-
-	da.popSrc(rdp);
+	if (do_cross) {
+		da.popSrc(rdp);
+		r->finish(da, si);
+	} else {
+		r->finish(da, si);
+		da.popSrc(rdp);
+	}
 	da.popSrc(ldp);
 
 	auto product = da.multiplied(ldp, rdp);
@@ -149,12 +170,14 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnMulOperation::gen(PlnGenerator& g)
 {
 	l->gen(g);
-	r->gen(g);
+	if (do_cross) {
+		g.genLoadDp(rdp);
+		r->gen(g);
 
-	auto ldp = l->data_places[0];
-	auto rdp = r->data_places[0];
-	
-	g.genLoadDp(rdp);
+	} else {
+		r->gen(g);
+		g.genLoadDp(rdp);
+	}
 	g.genLoadDp(ldp);
 
 	auto le = g.getEntity(ldp);

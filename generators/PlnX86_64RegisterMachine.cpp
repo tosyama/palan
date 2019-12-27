@@ -365,10 +365,11 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 				&& regid_of(opec->dst) == RSP) {
 			opec = opecodes.erase(opec);
 		} else {
-			if (opec->mne == LEAVE) {
-				opec->mne = POPQ;
-				opec->src = new PlnRegOperand(RBP,8);
-			}
+			// don't use leave any more
+			// if (opec->mne == LEAVE) {
+			// 	opec->mne = POPQ;
+			// 	opec->src = new PlnRegOperand(RBP,8);
+			// }
 			opec++;
 		}
 	}

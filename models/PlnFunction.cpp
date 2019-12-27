@@ -79,14 +79,12 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 
 	auto ret_var = new PlnVariable();
 	ret_var->name = rname;
+	ret_var->place = NULL;
+
 	if (!rtype)
 		rtype = return_vals.back().var_type;
 	
 	ret_var->var_type = getEditableVarTypeForLocal(rtype, parent);
-
-	if (rname == "")
-		ret_var->place = NULL;
-
 	return_vals.push_back({ret_var, rtype, false});
 	ret_dtypes.push_back(rtype->data_type());
 
@@ -232,7 +230,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			{
 				vector<PlnValue> init_vals;
 				for (auto& ret_val: return_vals) {
-					if (!ret_val.is_share_with_param) {
+					if (!ret_val.is_share_with_param && ret_val.local_var->name != "") {
 						PlnValue val(ret_val.local_var);
 						init_vals.push_back(val);
 						for_release.push_back(ret_val.local_var);

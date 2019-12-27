@@ -1,17 +1,12 @@
-func fib(int64 n) -> int64 n
+func fib(int64 n) -> int64
 {
-	if n < 2 { return }
-	fib(n-2) + fib(n-1) -> n;
+	if n < 2 { return n }
+	return fib(n-2) + fib(n-1);
 }
 
-a = [0,1,2];
-b = [3,4,5];
-[2][3]int64 c;
 
-10 -> b[a[2]];
+int64 a,b,c,d = 1,2,3,4;
 
-b ->> c[1];
-
-int64 j,i = 3,5;
+(a+d) * (b+c) -> d;
 
 fib(10);
