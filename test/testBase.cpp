@@ -9,7 +9,7 @@
 	#include <ext/stdio_sync_filebuf.h>    
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
-
+#include <boost/assert.hpp>
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../generators/PlnX86_64Generator.h"
 #include "../models/PlnModule.h"

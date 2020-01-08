@@ -212,7 +212,7 @@ void PlnX86_64DataAllocator::prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace*
 	src->data.reg.offset = 0;
 	src->comment = &scmt;
 
-	len = new PlnDataPlace(8, DT_OBJECT_REF);
+	len = new PlnDataPlace(8, DT_UINT);
 	len->type = DP_REG;
 	len->status = DS_READY_ASSIGN;
 	len->data.reg.id = RCX;
@@ -253,8 +253,12 @@ PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
+
+	rdp->access(step);
+	ldp->access(step);
 	releaseDp(rdp);
 	releaseDp(ldp);
+
 	auto result = prepareAccumulator(ldp->data_type);
 	allocDp(result);
 	return result;
@@ -265,6 +269,9 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
+
+	rdp->access(step);
+	ldp->access(step);
 	releaseDp(rdp);
 	releaseDp(ldp);
 	auto result = prepareAccumulator(ldp->data_type);
@@ -277,9 +284,11 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	BOOST_ASSERT(ldp->type == DP_REG && ldp->status == DS_ASSIGNED);
 	BOOST_ASSERT((rdp->type != DP_SUBDP && rdp->status == DS_ASSIGNED)
 		|| (rdp->type == DP_SUBDP && rdp->data.originalDp->status == DS_ASSIGNED));
+	rdp->access(step);
 	releaseDp(rdp);
 
 	if (ldp->data_type == DT_FLOAT) {
+		ldp->access(step);
 		releaseDp(ldp);
 		*quotient = prepareAccumulator(ldp->data_type);
 		*reminder = NULL;
@@ -335,26 +344,118 @@ PlnDataPlace* PlnX86_64DataAllocator::prepareObjIndexPtr(int staticIndex)
 	return getLiteralIntDp(staticIndex);
 }
 
-void PlnX86_64DataAllocator::optimizeRegAlloc()
-{
-	static vector<int> regids = {RDI, RSI, RDX, RCX, R8, R9, R10, R12, R13, R14, R15};
-
-	// select regid
-	int regid = -1;
-	for (int id: regids) {
-		if (!regs[id]) {
-			regid = id;
-			break;
+static int calcAccessScore(PlnDataPlace* dp) {
+	int score = 0;
+	while (dp) {
+		if (dp->type == DP_BYTES) {
+			for (auto bdp: *(dp->data.bytesData)) {
+				if (bdp->data.bytes.offset == 0)
+					score = bdp->access_count;
+			}
+		} else {
+			score += dp->access_count;
 		}
+		dp = dp->previous;
+	}
+	return score;
+}
+
+static PlnDataPlace* divideBytesDps(PlnDataPlace* dp, int regid)
+{
+	vector<PlnDataPlace*> divDps;
+	while (dp) {
+		if (dp->type == DP_BYTES) {
+			auto& bytesData = *dp->data.bytesData;
+			auto bdpi = bytesData.begin();
+			while(bdpi != bytesData.end()) {
+				BOOST_ASSERT((*bdpi)->type == DP_STK_BP);
+				BOOST_ASSERT((*bdpi)->type < 8);
+				BOOST_ASSERT((*bdpi)->data.bytes.parent_dp == dp);
+				if ((*bdpi)->data.bytes.offset != 0 || (*bdpi)->data_type == DT_FLOAT) {
+					divDps.push_back(*bdpi);
+					bdpi = bytesData.erase(bdpi);
+				} else {
+					(*bdpi)->type = DP_REG;
+					(*bdpi)->data.reg.id = regid;
+					(*bdpi)->data.reg.offset = 0;
+					bdpi++;
+				}
+			}
+		} else {
+			dp->type = DP_REG;
+			dp->data.reg.id = regid;
+			dp->data.reg.offset = 0;
+		}
+		dp = dp->previous;
 	}
 	
-	if (regid == -1) return;
+	PlnDataPlace *bytesDps = NULL;
+	if (divDps.size()) {
+		bytesDps = new PlnDataPlace(8, DT_UNKNOWN);
+		for (auto bdp: divDps)
+			bdp->data.bytes.parent_dp = bytesDps;
+		static string cmt = "bytes";
+		bytesDps->type = DP_BYTES;
+		bytesDps->data.bytesData = new vector<PlnDataPlace *>();
+		(*bytesDps->data.bytesData) = move(divDps);
+		bytesDps->comment = &cmt;
+		bytesDps->updateBytesDpStatus();
+	}
+	return bytesDps;
+}
 
-	// get first dp
+void PlnX86_64DataAllocator::optimizeRegAlloc()
+{
+	static vector<int> no_save_regids = {RAX, RDI, RSI, RDX, RCX, R8, R9, R10};
+	static vector<int> save_regids = {RBX, R12, R13, R14, R15};
+
 	if (data_stack.size()) {
-		int index = 0;
+		vector<int> scores(data_stack.size());
+		int max_score_index = 0;
+		int max_score = 0;
+		for (int i=0; i<data_stack.size(); i++) {
+			int score = calcAccessScore(data_stack[i]);
+			if (score > max_score) {
+				max_score_index = i;
+				max_score = score;
+			}
+			scores[i] = score;
+		}
+
+		// select register
+		int regid = -1;
+		for (int id: no_save_regids) {
+			if (!regs[id]) {
+				regid = id;
+				break;
+			}
+		}
+
+		if (regid == -1 && max_score >= 3) { // this case use the reg needs to save
+			for (int id: save_regids) {
+				if (!regs[id]) {
+					regid = id;
+					break;
+				}
+			}
+		}
+
+		if (regid == -1) return;
+
+		int index = max_score_index;
 		PlnDataPlace* dp = data_stack[index];
-		
+
+		if (!regs[regid]) {
+			PlnDataPlace *bytesDps = divideBytesDps(dp, regid);
+			regs[regid] = dp;
+			if (bytesDps) {
+				data_stack[index] = bytesDps;
+			} else {
+				data_stack.erase(data_stack.begin()+index);
+			}
+		}
+		return;
+
 		if (dp->type != DP_BYTES && dp->data_type != DT_FLOAT && dp->size == 8) {
 			// pop from stack
 			data_stack[index] = dp->previous;

@@ -76,6 +76,7 @@ void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
 		// genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
 
 		if (dp->load_address) {
+//			BOOST_ASSERT(false);
 			genLoadAddress(save.get(), srce.get(), "address of " + srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
 		} else {
 			genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);

@@ -7,6 +7,6 @@ func fib(int64 n) -> int64
 
 int64 a,b,c,d = 1,2,3,4;
 
-(a+d) * (b+c) -> d;
+a * (b+c) -> d;
 
 fib(10);

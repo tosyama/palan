@@ -589,6 +589,7 @@ void PlnDataAllocator::popSrc(PlnDataPlace* dp)
 			} else { 
 				allocSaveData(dp, src_place->alloc_step, step);
 				dp->save_place->comment = new string("(save-" + dp->cmt() + ")");
+				dp->save_place->access(step);
 			}
 		}
 	}
