@@ -54,7 +54,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "[if][elif][elif2][else][true]\n"
 							"0!=<<=1==<=>=2!=>>=\n"
-							"[uu][us]>tt010ttf");
+							"[us1][uu1]>tt010ttf");
 
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
@@ -150,7 +150,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "019_flocmp";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft ffttf\n"
-								"tftfft tfft fttf ftft fft\n"
+								"fffftt tfft fttf ftft fft\n"
 								"fftf fttfft fftft tftf tftf tftt\n"
 								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
 

@@ -1,12 +1,4 @@
-func fib(int64 n) -> int64
-{
-	if n < 2 { return n }
-	return fib(n-2) + fib(n-1);
-}
-
-
-int64 a,b,c,d = 1,2,3,4;
-
-a * (b+c) -> d;
-
-fib(10);
+ccall printf(...);
+int64 i1 = 9;
+int64 i2 = 9.5 + 0.6;
+const X = 9.5;

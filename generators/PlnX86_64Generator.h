@@ -32,17 +32,6 @@ class PlnX86_64Generator : public PlnGenerator
 	vector<ConstInfo> const_buf;
 	int func_stack_size;
 	
-	void moveMemToReg(const PlnGenEntity* mem, int reg);
-
-	void genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
-	void genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second);
-	void genCmpFRegFMem(const PlnGenEntity* first, const PlnGenEntity* second);
-
-	int genCmpI2F(const PlnGenEntity* first, const PlnGenEntity* second, int cmp_type);
-	void genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
-	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
-
-	int registerFlo64Const(const PlnOperandInfo* constValue);
 	int registerString(string &string);
 	int registerConstData(vector<PlnRoData> &rodata);
 
