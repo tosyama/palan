@@ -671,11 +671,23 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		case SREGU + DMEMI: case SREGU + DMEMU:
 			genInfos[0] = {movIntRegToMne[dstByte(pattern)]};
 			return 1;
-		// 4.
+		// 4.  e.g 2i->8i: MOVZWQ  8i->2i MOVZWQ 
 		case SREGI + DREGI: case SREGI + DREGU:
+			{
+				int sbi = srcByte(pattern);
+				int dbi = dstByte(pattern);
+				int i = sbi < dbi ? sbi : dbi;
+				genInfos[0] = {movSintMemToMne[i]};
+				return 1;
+			}
 		case SREGU + DREGI: case SREGU + DREGU:
-			genInfos[0] = {MOVQ};
-			return 1;
+			{
+				int sbi = srcByte(pattern);
+				int dbi = dstByte(pattern);
+				int i = sbi < dbi ? sbi : dbi;
+				genInfos[0] = {movUintMemToMne[i]};
+				return 1;
+			}
 
 	// immediate -> integer
 		// 1. imm -> regNi: MOVQ
@@ -716,7 +728,8 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[0] = {MOVSD};
 			return 1;
 		case SXMMF|S8 + DREGF|D8:	// 3
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVQ};
+			return 1;
 		case SXMMF|S8 + DXMMF|D4:	// 4
 			BOOST_ASSERT(false);
 		case SXMMF|S8 + DMEMF|D4:	// 5
@@ -754,6 +767,8 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[1] = {MOVQ};
 			return 2;
 		case SMEMF|S8 + DREGF|D8:	// 3
+			genInfos[0] = {MOVQ};
+			return 1;
 		case SMEMF|S8 + DXMMF|D4:	// 4
 			BOOST_ASSERT(false);
 		case SMEMF|S8 + DMEMF|D4:	// 5
@@ -780,7 +795,10 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[2] = {MOVSD};
 			return 3;
 		case SMEMF|S4 + DREGF|D8:	// 3
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVSS, XMM11};
+			genInfos[1] = {CVTSS2SD, XMM11};
+			genInfos[2] = {MOVQ};
+			return 3;
 		case SMEMF|S4 + DXMMF|D4:	// 4
 			genInfos[0] = {MOVSS};
 			return 1;
@@ -796,8 +814,25 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 2. reg8f->mem8f: MOVQ
 		// 3. reg8f->reg8f: MOVQ
 		// 4. reg8f->xmm4f: MOVQ(X11) + CVTSD2SS
-		// 5. reg8f->reg4f: MOVQ(X11) + CVTSD2SS(X11) + MOVQ
-		// 6. reg8f->mem4f: MOVQ(X11) + CVTSD2SS(X11) + MOVSS
+		// 5. reg8f->mem4f: MOVQ(X11) + CVTSD2SS(X11) + MOVSS
+		// 6. reg8f->reg4f: MOVQ(X11) + CVTSD2SS(X11) + MOVQ
+		case SREGF|S8 + DXMMF|D8:
+		case SREGF|S8 + DMEMF|D8:
+		case SREGF|S8 + DREGF|D8:
+			genInfos[0] = {MOVQ};
+			return 1;
+
+		case SREGF|S8 + DXMMF|D4:
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {CVTSD2SS};
+			return 2;
+		case SREGF|S8 + DMEMF|D4:
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {CVTSD2SS, XMM11};
+			genInfos[2] = {MOVSS};
+			return 3;
+		case SREGF|S8 + DREGF|D4:
+			BOOST_ASSERT(false);
 
 		// 1. reg4f->xmm4f: MOVQ
 		// 2. reg4f->mem4f: MOVL
@@ -805,12 +840,21 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 4. reg4f->xmm8f: MOVQ(X11) + CVTSS2SD 
 		// 5. reg4f->mem8f: MOVQ(X11) + CVTSS2SD(X11) + MOVQ
 		// 6. reg4f->reg8f: MOVQ(X11) + CVTSS2SD(X11) + MOVQ
+		case SREGF|S4 + DXMMF|D8:
+		case SREGF|S4 + DMEMF|D8:
+		case SREGF|S4 + DREGF|D8:
+		case SREGF|S4 + DXMMF|D4:
+		case SREGF|S4 + DMEMF|D4:
+		case SREGF|S4 + DREGF|D4:
+			BOOST_ASSERT(false);
 
 	// immediate -> float
 		// 1. imm -> xmm8f/xmm4f: MOVQ(R11) + MOVQ
 		// 2. imm -> mem8f/mem4f: MOVQ(R11) + MOVn
 		// 3. bigimm -> xmm8/xmm4: MOVABSQ(R11) + MOVQ
 		// 4. bigimm -> mem8f/mem4f: MOVABSQ(R11) + MOVn
+		// 5. imm -> reg8f/reg4f: MOVQ
+		// 6. bigimm -> reg8f/reg4f: MOVABSQ
 		// 1.
 		case SIMMF|S8 + DXMMF|D8:
 		case SIMMF|S8 + DXMMF|D4:
@@ -835,6 +879,15 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[0] = {MOVABSQ, R11};
 			genInfos[1] = {movIntRegToMne[dstByte(pattern)]};
 			return 2;
+		// 5.
+		case SIMMF|S8 + DREGF|D8:
+		case SIMMF|S8 + DREGF|D4:
+			BOOST_ASSERT(false);
+
+		case SBIGIMMF|S8 + DREGF|D8:
+		case SBIGIMMF|S8 + DREGF|D4:
+			genInfos[0] = {MOVABSQ};
+			return 1;
 
 	// float -> integer
 		// 1. xmm8f->memNi: CVTTSD2SI(R11) + MOVn
@@ -885,79 +938,134 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 2. reg8f->regNi: MOVQ(X11) + CVTTSD2SI
 		// 3. reg4f->memNi: MOVQ(X11) + CVTTSS2SI(R11) + MOVn
 		// 4. reg4f->regNi: MOVQ(X11) + CVTTSS2SI
+		// 1.
+		case SREGF|S8 + DMEMI:
+		case SREGF|S8 + DMEMU:
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {CVTTSD2SI, R11};
+			genInfos[2] = {movIntRegToMne[dstByte(pattern)]};
+			return 3;
+		// 2
+		case SREGF|S8 + DREGI:
+		case SREGF|S8 + DREGU:
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {CVTTSD2SI};
+			return 2;
+		// 3
+		case SREGF|S4 + DMEMI:
+		case SREGF|S4 + DMEMU:
+			BOOST_ASSERT(false);
+		// 4
+		case SREGF|S4 + DREGI:
+		case SREGF|S4 + DREGU:
+			BOOST_ASSERT(false);
 
 	// integer -> float
-		// 1. memNi->xmm8f: MOVn(R11) + CVTSI2SD
-		// 2. memNi->mem8f: MOVn(R11) + CVTSI2SD(X11) + MOVSD
-		// 3. memNi->reg8f: MOVn(R11) + CVTSI2SD(X11) + MOVQ
-		// 4. memNi->xmm4f: MOVn(R11) + CVTSI2SS
-		// 5. memNi->mem4f: MOVn(R11) + CVTSI2SS(X11) + MOVSS
-		// 6. memNi->reg4f: MOVn(R11) + CVTSI2SS(X11) + MOVQ
-		// 1.
-		case SMEMI + DXMMF|D8:
-			genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
-			genInfos[1] = {CVTSI2SD};
-			return 2;
-		case SMEMU + DXMMF|D8:
-			genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
-			genInfos[1] = {CVTSI2SD};
-			return 2;
-		// 2.
-		case SMEMI + DMEMF|D8:
-			genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
-			genInfos[1] = {CVTSI2SD, XMM11};
-			genInfos[2] = {MOVSD};
-			return 3;
-		case SMEMU + DMEMF|D8:
-			genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
-			genInfos[1] = {CVTSI2SD, XMM11};
-			genInfos[2] = {MOVSD};
-			return 3;
+		default:
+		{
+			// integer -> float
+			switch (maskIntSize(pattern)) {
+				// 1. reg8i->xmm8f: CVTSI2SD
+				// 2. reg8i->mem8f: CVTSI2SD(X11) + MOVSD
+				// 3. reg8i->reg8f: CVTSI2SD(X11) + MOVQ
+				// 4. reg8i->xmm4f: CVTSI2SS
+				// 5. reg8i->mem4f: CVTSI2SS(X11) + MOVSS
+				// 6. reg8i->reg4f: CVTSI2SS(X11) + MOVQ
+				// 1.
+				case SREGI|S8 + DXMMF|D8:
+					genInfos[0] = {CVTSI2SD};
+					return 1;
+				case SREGU|S8 + DXMMF|D8:
+					BOOST_ASSERT(false);
+				// 2.
+				case SREGI|S8 + DMEMF|D8:
+					genInfos[0] = {CVTSI2SD, XMM11};
+					genInfos[1] = {MOVSD};
+				return 2;
+				case SREGU|S8 + DMEMF|D8:
+					BOOST_ASSERT(false);
+				// 3.
+				case SREGI|S8 + DREGF|D8:
+				case SREGU|S8 + DREGF|D8:
+					genInfos[0] = {CVTSI2SD, XMM11};
+					genInfos[1] = {MOVQ};
+					return 2;
+				// 4.
+				case SREGI|S8 + DXMMF|D4:
+					BOOST_ASSERT(false);
+				// 5.
+				case SREGI|S8 + DMEMF|D4:
+					genInfos[0] = {CVTSI2SS, XMM11};
+					genInfos[1] = {MOVSS};
+					return 2;
+				case SREGU|S8 + DMEMF|D4:
+					BOOST_ASSERT(false);
+				// 6.
+				case SREGI|S8 + DREGF|D4:
+				case SREGU|S8 + DREGF|D4:
+				BOOST_ASSERT(false);
+			}
 
-		// 4.
-		case SMEMI + DXMMF|D4:
-			BOOST_ASSERT(false);
+			switch (maskIntSize(pattern)) {
+				// 1. memNi/reg1-4i->xmm8f: MOVn(R11) + CVTSI2SD
+				// 2. memNi/reg1-4i->mem8f: MOVn(R11) + CVTSI2SD(X11) + MOVSD
+				// 3. memNi/reg1-4i->reg8f: MOVn(R11) + CVTSI2SD(X11) + MOVQ
+				// 4. memNi/reg1-4i->xmm4f: MOVn(R11) + CVTSI2SS
+				// 5. memNi/reg1-4i->mem4f: MOVn(R11) + CVTSI2SS(X11) + MOVSS
+				// 6. memNi/reg1-4i->reg4f: MOVn(R11) + CVTSI2SS(X11) + MOVQ
+				// 1.
+				case SMEMI + DXMMF|D8: case SREGI + DXMMF|D8:
+					genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SD};
+					return 2;
+				case SMEMU + DXMMF|D8: case SREGU + DXMMF|D8:
+					genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SD};
+					return 2;
+					// 2.
+				case SMEMI + DMEMF|D8: case SREGI + DMEMF|D8:
+					genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SD, XMM11};
+					genInfos[2] = {MOVSD};
+					return 3;
+				case SMEMU + DMEMF|D8: case SREGU + DMEMF|D8:
+					genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SD, XMM11};
+					genInfos[2] = {MOVSD};
+					return 3;
+					// 3.
+				case SMEMI + DREGF|D8: case SREGI + DREGF|D8:
+					genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SD, XMM11};
+					genInfos[2] = {MOVQ};
+					return 3;
+				case SMEMU + DREGF|D8: case SREGU + DREGF|D8:
+					genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SD, XMM11};
+					genInfos[2] = {MOVQ};
+					return 3;
 
-		// 5.
-		case SMEMI + DMEMF|D4:
-			genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
-			genInfos[1] = {CVTSI2SS, XMM11};
-			genInfos[2] = {MOVSS};
-			return 3;
-		case SMEMU + DMEMF|D4:
-			genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
-			genInfos[1] = {CVTSI2SS, XMM11};
-			genInfos[2] = {MOVSS};
-			return 3;
-
-		// 1. regNi->xmm8f: CVTTSI2SD
-		// 2. regNi->mem8f: CVTTSI2SD(X11) + MOVSD
-		// 3. regNi->reg8f: CVTTSI2SD(X11) + MOVQ
-		// 4. regNi->xmm4f: CVTTSI2SS
-		// 5. regNi->mem4f: CVTTSI2SS(X11) + MOVSS
-		// 6. regNi->reg4f: CVTTSI2SS(X11) + MOVQ
-		// 1.
-		case SREGI + DXMMF|D8:
-			genInfos[0] = {CVTSI2SD};
-			return 1;
-		// 2.
-		case SREGI + DMEMF|D8:
-			genInfos[0] = {CVTSI2SD, XMM11};
-			genInfos[1] = {MOVSD};
-			return 2;
-		case SREGU + DMEMF|D8:
-			BOOST_ASSERT(false);
-		// 4.
-		case SREGI + DXMMF|D4:
-			BOOST_ASSERT(false);
-		// 5.
-		case SREGI + DMEMF|D4:
-			genInfos[0] = {CVTSI2SS, XMM11};
-			genInfos[1] = {MOVSS};
-			return 2;
-		case SREGU + DMEMF|D4:
-			BOOST_ASSERT(false);
-
+					// 4.
+				case SMEMI + DXMMF|D4: case SREGI + DXMMF|D4:
+				case SMEMU + DXMMF|D4: case SREGU + DXMMF|D4:
+					BOOST_ASSERT(false);
+					// 5.
+				case SMEMI + DMEMF|D4: case SREGI + DMEMF|D4:
+					genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SS, XMM11};
+					genInfos[2] = {MOVSS};
+					return 3;
+				case SMEMU + DMEMF|D4: case SREGU + DMEMF|D4:
+					genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SS, XMM11};
+					genInfos[2] = {MOVSS};
+					return 3;
+					// 6.
+				case SMEMI + DREGF|D4: case SREGI + DREGF|D4:
+				case SMEMU + DREGF|D4: case SREGU + DREGF|D4:
+					BOOST_ASSERT(false);
+			}
+		}
 	};
 
 	return 0;
@@ -995,17 +1103,47 @@ static void pushGenInfo(PlnX86_64RegisterMachine& m, GenInfo *ginf, int num, con
 			if (src_ope->type == OP_REG)
 				static_cast<PlnRegOperand*>(src_ope)->size = 4;
 
-		} else if (ginf->mnem == ADDQ
-				&& src_ope->type == OP_IMM && int64_of(src)==1) {
-			ginf->mnem = INCQ;
-			src_ope = dst_ope;
-			dst_ope = NULL;
+		} else if (ginf->mnem == MOVQ) {
+			if (dst_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 8;
 
-		} else if (ginf->mnem == SUBQ
-				&& src_ope->type == OP_IMM && int64_of(src)==1) {
-			ginf->mnem = DECQ;
-			src_ope = dst_ope;
-			dst_ope = NULL;
+		} else if (ginf->mnem == MOVSLQ) {
+			if (dst_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 4;
+
+		} else if (ginf->mnem == MOVSWQ || ginf->mnem == MOVZWQ) {
+			if (dst_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 2;
+
+		} else if (ginf->mnem == MOVSBQ || ginf->mnem == MOVZBQ) {
+			if (dst_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 1;
+
+		} else if (ginf->mnem == ADDQ) {
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 8;
+			else if (src_ope->type == OP_IMM && int64_of(src)==1) {
+				ginf->mnem = INCQ;
+				src_ope = dst_ope;
+				dst_ope = NULL;
+			}
+
+	 	} else if (ginf->mnem == SUBQ) {
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 8;
+			if (src_ope->type == OP_IMM && int64_of(src)==1) {
+				ginf->mnem = DECQ;
+				src_ope = dst_ope;
+				dst_ope = NULL;
+			}
 
 		} else if (ginf->mnem == DIVQ) {
 			m.push(MOVQ, imm(0), reg(RDX));
@@ -1014,8 +1152,10 @@ static void pushGenInfo(PlnX86_64RegisterMachine& m, GenInfo *ginf, int num, con
 		} else if (ginf->mnem == IDIVQ) {
 			m.push(CQTO);
 			dst_ope = NULL;
+		} else if (ginf->mnem == CMP) {
+			if (src_ope->type == OP_REG)
+				static_cast<PlnRegOperand*>(src_ope)->size = 8;
 		}
-
 		m.push(ginf->mnem, src_ope, dst_ope);
 
 		if (ginf->tmp_regid) {
@@ -1086,21 +1226,24 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		// 2. xmm8f + xmm4f: CVTSS2SD(X11) + ADDSD
 		// 3. xmm8f + mem8f: ADDSD
 		// 4. xmm8f + mem4f: MOVSS(X11) + CVTSS2SD(X11) + ADDSD
-		// 5. xmm8f + reg8f:
+		// 5. xmm8f + reg8f: MOVQ(X11) + ADDSD
 		// 6. xmm8f + reg4f:
-		case DXMMF|D8 + SXMMF|S8:
-		case DXMMF|D8 + SXMMF|S4:
+		case DXMMF|D8 + SXMMF|S8:	// 1
+		case DXMMF|D8 + SXMMF|S4:	// 2
 			BOOST_ASSERT(false);
-		case DXMMF|D8 + SMEMF|S8:
+		case DXMMF|D8 + SMEMF|S8:	// 3
 			genInfos[0] = {fmne};
 			return 1;
-		case DXMMF|D8 + SMEMF|S4:
+		case DXMMF|D8 + SMEMF|S4:	// 4
 			genInfos[0] = {MOVSS, XMM11};
 			genInfos[1] = {CVTSS2SD, XMM11};
 			genInfos[2] = {fmne};
 			return 3;
-		case DXMMF|D8 + SREGF|S8:
-		case DXMMF|D8 + SREGF|S4:
+		case DXMMF|D8 + SREGF|S8:	// 5
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {fmne};
+			return 2;
+		case DXMMF|D8 + SREGF|S4:	// 6
 			BOOST_ASSERT(false);
 
 	// float + integer
@@ -1171,8 +1314,8 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		// integer + integer
 			// 1. reg8i / immi: MOVQ(R11) + IDIVQ(CQTO + IDIVQ))
 			// 2. reg8i / bigimmi: MOVABSQ(R11) + IDIVQ(CQTO + IDIVQ))
-			// 3. reg8i / memNi: MOVNi(R11) + DIVQ(MOVQ 0,RDX + DIVQ)
-			// 4. reg8u / regNu: ?
+			// 3. reg8i / memNi: MOVNi(R11) + IDIVQ(MOVQ 0,RDX + DIVQ)
+			// 4. reg8i / regNi: ?
 			// 1.
 			case DREGI + SIMMI: case DREGI + SIMMU:
 			case DREGU + SIMMI:
@@ -1199,7 +1342,8 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			case DREGI + SREGI:
 			case DREGU + SREGI:
 			case DREGI + SREGU:
-				BOOST_ASSERT(false);
+				genInfos[0] = {IDIVQ};
+				return 1;
 		}
 
 	} else {
@@ -1208,6 +1352,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			// 2. reg8i + bigimm: ?
 			// 3. reg8i + mem8i: ADDQ
 			// 4. reg8i + mem4-1: MOVNi(R11) + ADDQ
+			// 5. reg8i + regNi: ADDQ
 
 			// 1.
 			case DREGI|D8 + SIMMI|S8: case DREGI|D8 + SIMMU|S8:
@@ -1238,10 +1383,23 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 				genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
 				genInfos[1] = {imne};
 				return 2;
+			// 5.
+			case DREGI|D8 + SREGI|S8: case DREGI|D8 + SREGI|S4:
+			case DREGI|D8 + SREGI|S2: case DREGI|D8 + SREGI|S1:
+
+			case DREGI|D8 + SREGU|S8: case DREGI|D8 + SREGU|S4:
+			case DREGI|D8 + SREGU|S2: case DREGI|D8 + SREGU|S1:
+
+			case DREGU|D8 + SREGI|S8: case DREGU|D8 + SREGI|S4:
+			case DREGU|D8 + SREGI|S2: case DREGU|D8 + SREGI|S1:
+
+			case DREGU|D8 + SREGU|S8: case DREGU|D8 + SREGU|S4:
+			case DREGU|D8 + SREGU|S2: case DREGU|D8 + SREGU|S1:
+				genInfos[0] = {imne};
+				return 1;
 		}
 	}
-
-	return 0;
+	BOOST_ASSERT(false);
 }
 
 static void genCalc(PlnX86_64RegisterMachine &m, CalcOperation calc, PlnGenEntity* tgt, PlnGenEntity* scnd, string& comment)
@@ -1329,7 +1487,9 @@ static int setCmp2GenInfo(int pattern, GenInfo genInfos[3], int &cmp_type)
 			genInfos[0] = {UCOMISD};
 			n = 1; break;
 		case DXMMF|D8 + SREGF|S8:	// 3
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {UCOMISD};
+			n = 2; break;
 		case DXMMF|D8 + SXMMF|S4:	// 4
 			genInfos[0] = {CVTSS2SD, XMM11};
 			genInfos[1] = {UCOMISD};

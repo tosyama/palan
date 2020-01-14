@@ -266,7 +266,9 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.pop_owner_vars(this);
 			si.pop_scope();
 
-//			da.optimizeRegAlloc();
+			if (do_opti_regalloc)
+				da.optimizeRegAlloc();
+
 			da.finish(save_regs, save_reg_dps);
 			inf.pln.stack_size = da.stack_size;
 		}
