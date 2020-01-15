@@ -43,7 +43,6 @@ flo32 f;
 str2 ->> strcat(str1) ->> str2;
 printf("%s %d %.2f %d\n", str2, i, f, strlen("str len"));
 
-
 FILE file <<= fopen(filename, "w");
 file->fprintf("This is test.");
 fclose(file>>);

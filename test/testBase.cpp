@@ -24,6 +24,8 @@ TEST_CASE ("Hello World", "[basic]")
 	REQUIRE(exec(testcode) == "Hello World!\n13");
 }
 
+bool disableOptimize = false;
+
 int clean()
 {
 	return system("rm -rf out/*");
@@ -59,17 +61,17 @@ string build(const string &srcf)
 		PlnModelTreeBuilder modelTreeBuilder;
 		try {
 			module = modelTreeBuilder.buildModule(j["ast"]);
+			module->do_opti_regalloc = !disableOptimize;
 		} catch (PlnCompileError &err) {
 			return err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 		}
 	}
 
-	string asmf = "out/" + srcf + ".s";
+	string asmf = "out/" + srcf + (disableOptimize ? "_noopt.s" : ".s");
 
 	// compile
 	try {
 		PlnX86_64DataAllocator allocator;
-		// module->finish(allocator);
 		ofstream as_output;
 		as_output.open(asmf, ios::out);
 

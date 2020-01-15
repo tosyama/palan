@@ -1,7 +1,7 @@
 /// Assembly code generator class definition.
 ///
 /// @file	PlnGenerator.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu
 
 #include <vector>
 #include <iostream>
@@ -12,19 +12,6 @@
 #include "PlnModel.h"
 #include "PlnDataAllocator.h"
 #include "PlnGenerator.h"
-
-static void preLoadDp(PlnGenerator &g, PlnDataPlace *dp)
-{
-	if (dp->type == DP_INDRCT_OBJ) {
-		auto base_dp = dp->data.indirect.base_dp;
-		auto index_dp = dp->data.indirect.index_dp;
-
-		if (base_dp) g.genLoadDp(base_dp, false);
-		if (index_dp && index_dp->type != DP_LIT_INT) g.genLoadDp(index_dp, false);
-		if (base_dp) g.genSaveDp(base_dp);
-		if (index_dp) g.genSaveDp(index_dp);
-	}
-}
 
 void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 {
@@ -38,12 +25,8 @@ void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 
 	} else {
 		src_dp = dp->src_place;
-		preLoadDp(*this, src_dp);
-
 		src_cmt = src_dp->cmt();
 	}
-
-	preLoadDp(*this, dp);
 
 	auto srce = getEntity(src_dp);
 	auto dste = getEntity(dp);
@@ -62,24 +45,19 @@ void PlnGenerator::genLoadDp(PlnDataPlace* dp, bool load_save)
 
 void PlnGenerator::genSaveSrc(PlnDataPlace* dp)
 {
-	auto savdp = dp->save_place;
-	if (savdp) {
+	auto save_dp = dp->save_place;
+	if (save_dp) {
 		auto src_dp = dp->src_place;
+		BOOST_ASSERT(src_dp);
 
-		preLoadDp(*this, src_dp);
-
-		auto srcdp = dp->src_place;
-		BOOST_ASSERT(srcdp);
-		auto save = getEntity(savdp);
-		auto srce = getEntity(srcdp);
-		string opt_cmt = (savdp == dp) ? " (accelerate)" : " for save";
-		// genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
+		auto save = getEntity(save_dp);
+		auto srce = getEntity(src_dp);
+		string opt_cmt = (save_dp == dp) ? " (accelerate)" : " for save";
 
 		if (dp->load_address) {
-//			BOOST_ASSERT(false);
-			genLoadAddress(save.get(), srce.get(), "address of " + srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
+			genLoadAddress(save.get(), srce.get(), "address of " + src_dp->cmt() + " -> " + save_dp->cmt() + opt_cmt);
 		} else {
-			genMove(save.get(), srce.get(), srcdp->cmt() + " -> " + savdp->cmt() + opt_cmt);
+			genMove(save.get(), srce.get(), src_dp->cmt() + " -> " + save_dp->cmt() + opt_cmt);
 			if (dp->do_clear_src) {
 				vector<unique_ptr<PlnGenEntity>> clr_es;
 				clr_es.push_back(getEntity(src_dp));
@@ -96,8 +74,6 @@ void PlnGenerator::genSaveDp(PlnDataPlace* dp) {
 
 		src_dp = dp->save_place;
 		src_cmt = dp->src_place->cmt() + src_dp->cmt();
-
-		preLoadDp(*this, dp);
 
 		auto srce = getEntity(src_dp);
 		auto dste = getEntity(dp);

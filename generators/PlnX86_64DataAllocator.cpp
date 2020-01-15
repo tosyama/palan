@@ -1,7 +1,7 @@
 /// x86-64 (Linux) data place management class definition.
 ///
 /// @file	PlnX86_64DataAllocator.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <cstddef>
@@ -17,6 +17,8 @@ using namespace std;
 static const int ARG_TBL[] = { RDI, RSI, RDX, RCX, R8, R9 };
 static const int FARG_TBL[] = { XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7 };
 static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
+static const int FDSTRY_TBL[] = { XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+									XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15};
 static const int SYSARG_TBL[] = { RDI, RSI, RDX, R10, R8, R9 };
 
 PlnX86_64DataAllocator::PlnX86_64DataAllocator()
@@ -27,6 +29,17 @@ PlnX86_64DataAllocator::PlnX86_64DataAllocator()
 void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 {
 	for (int regid: DSTRY_TBL) {
+		PlnDataPlace* pdp = regs[regid];
+		if (!pdp || (pdp->release_step != step)) {
+			PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+			dp->type = DP_REG;
+			dp->status = DS_RELEASED;
+			dp->alloc_step = dp->release_step = step;
+			dp->previous = pdp;
+			regs[regid] = dp;
+		}
+	}
+	for (int regid: FDSTRY_TBL) {
 		PlnDataPlace* pdp = regs[regid];
 		if (!pdp || (pdp->release_step != step)) {
 			PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
@@ -349,30 +362,33 @@ static int calcAccessScore(PlnDataPlace* dp) {
 	while (dp) {
 		if (dp->type == DP_BYTES) {
 			for (auto bdp: *(dp->data.bytesData)) {
-				if (bdp->data.bytes.offset == 0)
-					score = bdp->access_count;
+				if (bdp->data.bytes.offset == 0 && !bdp->need_address)
+					score = bdp->access_score;
 			}
-		} else {
-			score += dp->access_count;
+		} else if (!dp->need_address) {
+			score += dp->access_score;
 		}
 		dp = dp->previous;
 	}
 	return score;
 }
 
-static PlnDataPlace* divideBytesDps(PlnDataPlace* dp, int regid)
+static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 {
 	vector<PlnDataPlace*> divDps;
+	PlnDataPlace* dp = root_dp;
+	PlnDataPlace* pdp = NULL;
 	while (dp) {
 		if (dp->type == DP_BYTES) {
+			vector<PlnDataPlace*> divBytesDps;
 			auto& bytesData = *dp->data.bytesData;
 			auto bdpi = bytesData.begin();
 			while(bdpi != bytesData.end()) {
 				BOOST_ASSERT((*bdpi)->type == DP_STK_BP);
 				BOOST_ASSERT((*bdpi)->type < 8);
 				BOOST_ASSERT((*bdpi)->data.bytes.parent_dp == dp);
-				if ((*bdpi)->data.bytes.offset != 0 || (*bdpi)->data_type == DT_FLOAT) {
-					divDps.push_back(*bdpi);
+				if ((*bdpi)->need_address || (*bdpi)->data.bytes.offset != 0 || (*bdpi)->data_type == DT_FLOAT) {
+					divBytesDps.push_back(*bdpi);
 					bdpi = bytesData.erase(bdpi);
 				} else {
 					(*bdpi)->type = DP_REG;
@@ -381,27 +397,43 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* dp, int regid)
 					bdpi++;
 				}
 			}
+			if (divBytesDps.size()) {
+				PlnDataPlace* bytesDps = new PlnDataPlace(8, DT_UNKNOWN);
+				for (auto bdp: divBytesDps)
+					bdp->data.bytes.parent_dp = bytesDps;
+				static string cmt = "bytes";
+				bytesDps->type = DP_BYTES;
+				bytesDps->data.bytesData = new vector<PlnDataPlace *>();
+				for (auto bdp: divBytesDps) {
+					bool success = bytesDps->tryAllocBytes(bdp);
+					BOOST_ASSERT(success);
+				}
+				// (*bytesDps->data.bytesData) = move(divBytesDps);
+				bytesDps->comment = &cmt;
+				// bytesDps->updateBytesDpStatus();
+				divDps.push_back(bytesDps);
+			}
+		} else if (dp->need_address) {
+			if (pdp) pdp->previous = dp->previous;
+			else root_dp = dp->previous;
+			divDps.push_back(dp);
+
 		} else {
 			dp->type = DP_REG;
 			dp->data.reg.id = regid;
 			dp->data.reg.offset = 0;
+			pdp = dp;
 		}
 		dp = dp->previous;
 	}
-	
-	PlnDataPlace *bytesDps = NULL;
+
 	if (divDps.size()) {
-		bytesDps = new PlnDataPlace(8, DT_UNKNOWN);
-		for (auto bdp: divDps)
-			bdp->data.bytes.parent_dp = bytesDps;
-		static string cmt = "bytes";
-		bytesDps->type = DP_BYTES;
-		bytesDps->data.bytesData = new vector<PlnDataPlace *>();
-		(*bytesDps->data.bytesData) = move(divDps);
-		bytesDps->comment = &cmt;
-		bytesDps->updateBytesDpStatus();
-	}
-	return bytesDps;
+		for (int i=0; i<divDps.size()-1; ++i)
+			divDps[i]->previous = divDps[i+1];
+		divDps.back()->previous = NULL;
+		return divDps[0];
+	} else
+		return NULL;
 }
 
 void PlnX86_64DataAllocator::optimizeRegAlloc()
@@ -409,17 +441,20 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 	static vector<int> no_save_regids = {RAX, RDI, RSI, RDX, RCX, R8, R9, R10};
 	static vector<int> save_regids = {RBX, R12, R13, R14, R15};
 
-	if (data_stack.size()) {
-		vector<int> scores(data_stack.size());
+	vector<int> scores(data_stack.size());
+	for (int i=0; i<data_stack.size(); i++) {
+		scores[i] = calcAccessScore(data_stack[i]);
+	}
+
+	while (data_stack.size()) {
 		int max_score_index = 0;
 		int max_score = 0;
 		for (int i=0; i<data_stack.size(); i++) {
-			int score = calcAccessScore(data_stack[i]);
+			int score = scores[i];
 			if (score > max_score) {
 				max_score_index = i;
 				max_score = score;
 			}
-			scores[i] = score;
 		}
 
 		// select register
@@ -431,7 +466,7 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 			}
 		}
 
-		if (regid == -1 && max_score >= 3) { // this case use the reg needs to save
+		if (regid == -1 && max_score > 25) { // this case it can use the reg needs to save
 			for (int id: save_regids) {
 				if (!regs[id]) {
 					regid = id;
@@ -449,27 +484,13 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 			PlnDataPlace *bytesDps = divideBytesDps(dp, regid);
 			regs[regid] = dp;
 			if (bytesDps) {
+				scores[index] = calcAccessScore(bytesDps);
 				data_stack[index] = bytesDps;
+
 			} else {
+				scores.erase(scores.begin()+index);
 				data_stack.erase(data_stack.begin()+index);
 			}
-		}
-		return;
-
-		if (dp->type != DP_BYTES && dp->data_type != DT_FLOAT && dp->size == 8) {
-			// pop from stack
-			data_stack[index] = dp->previous;
-			if (!data_stack[index]) {
-				data_stack.erase(data_stack.begin()+index);
-			}
-
-			// push to reg
-			dp->type = DP_REG;
-			dp->data.reg.id = regid;
-			dp->data.reg.offset = 0;
-
-			dp->previous = regs[regid];
-			regs[regid] = dp;
 		}
 	}
 }

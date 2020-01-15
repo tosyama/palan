@@ -882,8 +882,9 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 5.
 		case SIMMF|S8 + DREGF|D8:
 		case SIMMF|S8 + DREGF|D4:
-			BOOST_ASSERT(false);
-
+			genInfos[0] = {MOVQ};
+			return 1;
+		// 6.
 		case SBIGIMMF|S8 + DREGF|D8:
 		case SBIGIMMF|S8 + DREGF|D4:
 			genInfos[0] = {MOVABSQ};
@@ -898,9 +899,22 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[0] = {CVTTSD2SI, R11};
 			genInfos[1] = {movIntRegToMne[dstByte(pattern)]};
 			return 2;
+		case SXMMF|S8 + DMEMU:
+			BOOST_ASSERT(false);
 		case SXMMF|S8 + DREGI:
+			if (pattern & D8) {
+				genInfos[0] = {CVTTSD2SI};
+				return 1;
+			} else {
+				BOOST_ASSERT(false);
+			}
+		case SXMMF|S8 + DREGU:
+			BOOST_ASSERT(false);
 		case SXMMF|S4 + DMEMI:
+		case SXMMF|S4 + DMEMU:
+			BOOST_ASSERT(false);
 		case SXMMF|S4 + DREGI:
+		case SXMMF|S4 + DREGU:
 			BOOST_ASSERT(false);
 
 		// 1. mem8f->memNi: MOVSD(X11) + CVTTSD2SI(R11) + MOVn
@@ -1071,6 +1085,12 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 	return 0;
 }
 
+inline void adjustRegSize(PlnOperandInfo* reg_ope, int size)
+{
+	if (reg_ope->type == OP_REG)
+		static_cast<PlnRegOperand*>(reg_ope)->size = size;
+}
+
 static void pushGenInfo(PlnX86_64RegisterMachine& m, GenInfo *ginf, int num, const PlnGenEntity* dst, const PlnGenEntity* src, string& comment)
 {
 	PlnOperandInfo* src_ope = NULL;
@@ -1088,62 +1108,41 @@ static void pushGenInfo(PlnX86_64RegisterMachine& m, GenInfo *ginf, int num, con
 		}
 
 		if (ginf->mnem == MOVB) {
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 1;
+			adjustRegSize(src_ope, 1);
+			adjustRegSize(dst_ope, 1);
 
 		} else if (ginf->mnem == MOVW) {
-			if (dst_ope->type == OP_REG);
-				static_cast<PlnRegOperand*>(dst_ope)->size = 2;
-			if (src_ope->type == OP_REG);
-				static_cast<PlnRegOperand*>(src_ope)->size = 2;
+			adjustRegSize(dst_ope, 2);
+			adjustRegSize(src_ope, 2);
 
 		} else if (ginf->mnem == MOVL) {
-			if (dst_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(dst_ope)->size = 4;
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 4;
+			adjustRegSize(dst_ope, 4);
+			adjustRegSize(src_ope, 4);
 
 		} else if (ginf->mnem == MOVQ) {
-			if (dst_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 8;
-
-		} else if (ginf->mnem == MOVSLQ) {
-			if (dst_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 4;
-
-		} else if (ginf->mnem == MOVSWQ || ginf->mnem == MOVZWQ) {
-			if (dst_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 2;
+			adjustRegSize(dst_ope, 8);
+			adjustRegSize(src_ope, 8);
 
 		} else if (ginf->mnem == MOVSBQ || ginf->mnem == MOVZBQ) {
-			if (dst_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(dst_ope)->size = 8;
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 1;
+			adjustRegSize(dst_ope, 8);
+			adjustRegSize(src_ope, 1);
+
+		} else if (ginf->mnem == MOVSWQ || ginf->mnem == MOVZWQ) {
+			adjustRegSize(dst_ope, 8);
+			adjustRegSize(src_ope, 2);
+
+		} else if (ginf->mnem == MOVSLQ) {
+			adjustRegSize(dst_ope, 8);
+			adjustRegSize(src_ope, 4);
 
 		} else if (ginf->mnem == ADDQ) {
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 8;
-			else if (src_ope->type == OP_IMM && int64_of(src)==1) {
-				ginf->mnem = INCQ;
-				src_ope = dst_ope;
-				dst_ope = NULL;
-			}
+			adjustRegSize(src_ope, 8);
 
 	 	} else if (ginf->mnem == SUBQ) {
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 8;
-			if (src_ope->type == OP_IMM && int64_of(src)==1) {
-				ginf->mnem = DECQ;
-				src_ope = dst_ope;
-				dst_ope = NULL;
-			}
+			adjustRegSize(src_ope, 8);
+
+		} else if (ginf->mnem == IMULQ) {
+			adjustRegSize(src_ope, 8);
 
 		} else if (ginf->mnem == DIVQ) {
 			m.push(MOVQ, imm(0), reg(RDX));
@@ -1152,10 +1151,11 @@ static void pushGenInfo(PlnX86_64RegisterMachine& m, GenInfo *ginf, int num, con
 		} else if (ginf->mnem == IDIVQ) {
 			m.push(CQTO);
 			dst_ope = NULL;
+
 		} else if (ginf->mnem == CMP) {
-			if (src_ope->type == OP_REG)
-				static_cast<PlnRegOperand*>(src_ope)->size = 8;
+			adjustRegSize(src_ope, 8);
 		}
+
 		m.push(ginf->mnem, src_ope, dst_ope);
 
 		if (ginf->tmp_regid) {
@@ -1248,19 +1248,17 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 
 	// float + integer
 		// 1. xmm8f + memNi: MOVn(R11) + CVTSI2SD(X11) + ADDSD
-		// 2. xmm8f + regNi:
+		// 2. xmm8f + regNi: MOVn(R11) + CVTSI2SD(X11) + ADDSD
 		// 1.
 		case DXMMF|D8 + SMEMI:
+		case DXMMF|D8 + SMEMU:
+		// 2.
+		case DXMMF|D8 + SREGI:
+		case DXMMF|D8 + SREGU:
 			genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
 			genInfos[1] = {CVTSI2SD, XMM11};
 			genInfos[2] = {fmne};
 			return 3;
-		case DXMMF|D8 + SMEMU:
-			BOOST_ASSERT(false);
-		// 2.
-		case DXMMF|D8 + SREGI:
-		case DXMMF|D8 + SREGU:
-			BOOST_ASSERT(false);
 
 	// float + immediate
 		// 1. xmm8f + imm: MOVQ(R11) + MOVQ(X11) + ADDSD
@@ -1287,7 +1285,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			// 1. reg8u / immu: MOVQ(R11) + DIVQ(MOVQ 0,RDX + DIVQ)
 			// 2. reg8u / bigimmu: MOVABSQ(R11) + DIVQ(MOVQ 0,RDX + DIVQ)
 			// 3. reg8u / memNu: MOVNi(R11) + DIVQ(MOVQ 0,RDX + DIVQ)
-			// 4. reg8u / regNu: ?
+			// 4. reg8u / regNu: MOVNi(R11) + DIVQ(MOVQ 0,RDX + DIVQ)
 			// 1.
 			case DREGU|D8 + SIMMU|S8:
 				genInfos[0] = {MOVQ, R11};
@@ -1299,15 +1297,14 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 				genInfos[1] = {DIVQ};
 				return 2;
 			// 3.
+			// 4.
 			case DREGU|D8 + SMEMU|S8: case DREGU|D8 + SMEMU|S4:
 			case DREGU|D8 + SMEMU|S2: case DREGU|D8 + SMEMU|S1:
+			case DREGU|D8 + SREGU|S8: case DREGU|D8 + SREGU|S4:
+			case DREGU|D8 + SREGU|S2: case DREGU|D8 + SREGU|S1:
 				genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
 				genInfos[1] = {DIVQ};
 				return 2;
-			// 4.
-			case DREGU|D8 + SREGU|S8: case DREGU|D8 + SREGU|S4:
-			case DREGU|D8 + SREGU|S2: case DREGU|D8 + SREGU|S1:
-				BOOST_ASSERT(false);
 		}
 
 		switch (maskIntSize(pattern)) {

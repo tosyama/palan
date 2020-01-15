@@ -8,3 +8,5 @@ int clean_ui();
 string build(const string &srcf);
 string exec(string srcf);
 string mcheck(const string &tracef);
+
+extern bool disableOptimize;

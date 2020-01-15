@@ -1,7 +1,7 @@
 /// x86-64 (Linux) register machine class definition.
 ///
 /// @file	PlnX86_64RegisterMachine.cpp
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -333,6 +333,7 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 // Optimazations
 static void removeStackArea(vector<PlnOpeCode> &opecodes);
 static void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes);
+static void asmOptimize(vector<PlnOpeCode> &opecodes);
 
 void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 {
@@ -344,6 +345,7 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 		removeStackArea(imp->opecodes);
 
 	removeOmittableMoveToReg(imp->opecodes);
+	asmOptimize(imp->opecodes);
 
 	for (PlnOpeCode& oc: imp->opecodes) {
 		os << oc << "\n";
@@ -365,10 +367,6 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 			opec = opecodes.erase(opec);
 		} else {
 			// don't use leave any more
-			// if (opec->mne == LEAVE) {
-			// 	opec->mne = POPQ;
-			// 	opec->src = new PlnRegOperand(RBP,8);
-			// }
 			opec++;
 		}
 	}
@@ -486,3 +484,31 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 		opec++;
 	}
 }
+
+void asmOptimize(vector<PlnOpeCode> &opecodes)
+{
+	auto opec = opecodes.begin();
+	while (opec != opecodes.end()) {
+		if (opec->mne == ADDQ) {
+			BOOST_ASSERT(opec->dst->type == OP_REG);
+			auto src = opec->src;
+			if (src->type == OP_IMM && int64_of(src)==1) {
+				opec->mne = INCQ;
+				opec->src = opec->dst;
+				opec->dst = NULL;
+				delete src;
+			}
+		} else if (opec->mne == SUBQ) {
+			BOOST_ASSERT(opec->dst->type == OP_REG);
+			auto src = opec->src;
+			if (src->type == OP_IMM && int64_of(src)==1) {
+				opec->mne = DECQ;
+				opec->src = opec->dst;
+				opec->dst = NULL;
+				delete src;
+			}
+		}
+		opec++;
+	}
+}
+

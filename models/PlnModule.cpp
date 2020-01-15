@@ -4,7 +4,7 @@
 /// Module includes function definitions and top level code.
 ///
 /// @file	PlnModule.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "PlnModule.h"
@@ -53,9 +53,9 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 
 	palan::exit(toplevel, 0);
 	toplevel->finish(da, si);
-	if (do_opti_regalloc);
+	if (do_opti_regalloc)
 		da.optimizeRegAlloc();
-	da.finish(save_regs, save_reg_dps);
+	da.finish(save_regs, save_reg_dps, false);
 	int stack_size = da.stack_size;
 
 	// gen toplevel as main function

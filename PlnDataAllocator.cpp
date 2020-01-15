@@ -1,7 +1,7 @@
 /// Register/Stack allocation class definition.
 ///
 /// @file	PlnDataAllocator.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <stdlib.h>
@@ -22,16 +22,16 @@ PlnDataAllocator::PlnDataAllocator(int regnum)
 
 void PlnDataAllocator::reset()
 {
-	all.insert(all.end(),data_stack.begin(),data_stack.end());
+	all.insert(all.end(), data_stack.begin(), data_stack.end());
 	data_stack.resize(0);
 
-	all.insert(all.end(),arg_stack.begin(),arg_stack.end());
+	all.insert(all.end(), arg_stack.begin(), arg_stack.end());
 	arg_stack.resize(0);
 
-	all.insert(all.end(),sub_dbs.begin(),sub_dbs.end());
+	all.insert(all.end(), sub_dbs.begin(), sub_dbs.end());
 	sub_dbs.resize(0);
 
-	all.insert(all.end(),regs.begin(),regs.end());
+	all.insert(all.end(), regs.begin(), regs.end());
 	for (auto& reg: regs) reg = NULL;
 
 	for (auto dp: all) delete dp;
@@ -83,14 +83,10 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 			auto aft_dp = data_stack[i]; 
 			if (canAlloc(aft_dp, alloc_step, release_step)) {
 				dp->data.stack.idx = i;
+
 				BOOST_ASSERT(!aft_dp);
-				/* if (aft_dp) {
-					dp->previous = aft_dp->previous;
-					aft_dp->previous = dp;
-				} else */ {
-					dp->previous = data_stack[i];
-					data_stack[i] = dp;
-				}
+				dp->previous = data_stack[i];
+				data_stack[i] = dp;
 				return;
 			}
 		}
@@ -131,13 +127,9 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 	if (free_index >= 0) {
 		dp->data.bytes.idx = free_index;
 		BOOST_ASSERT(!aft_dp);
-		/* if (aft_dp) {
-			dp_ctnr->previous = aft_dp->previous;
-			aft_dp->previous = dp_ctnr;
-		} else */ {
-			dp_ctnr->previous = data_stack[free_index];
-			data_stack[free_index] = dp_ctnr;
-		}
+		dp_ctnr->previous = data_stack[free_index];
+		data_stack[free_index] = dp_ctnr;
+
 	} else {
 		dp->data.bytes.idx = stack_size;
 		dp_ctnr->previous = NULL;
@@ -426,27 +418,34 @@ PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
 	return sub_dp;
 }
 
-void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &save_reg_dps)
+void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &save_reg_dps, bool do_save_reg)
 {
 	// Alloc register value save area.
-	save_regs = getRegsNeedSave();
-	for (int sr: save_regs) {
-		auto dp = new PlnDataPlace(8,DT_UINT);
-		dp->type = DP_STK_BP;
-		dp->data.stack.idx = data_stack.size();
-		dp->previous = NULL;
-		data_stack.push_back(dp);
-		save_reg_dps.push_back(dp);
+	if (do_save_reg) {
+		save_regs = getRegsNeedSave();
+		for (int sr: save_regs) {
+			static string save_reg_cmt = "reg save";
+			auto dp = new PlnDataPlace(8,DT_UINT);
+			dp->type = DP_STK_BP;
+			dp->data.stack.idx = data_stack.size();
+			dp->previous = NULL;
+			dp->comment = &save_reg_cmt;
+			data_stack.push_back(dp);
+			save_reg_dps.push_back(dp);
+		}
 	}
 
 	int offset = 0;
+	bool debug = false;
 	// Set offset from base stack pointer.
 	for (auto dp: data_stack) {
 		offset -= 8;
 		for (auto dpp=dp; dpp; dpp = dpp->previous) {
 			if (dpp->type == DP_BYTES) {
-				for (auto child: *dpp->data.bytesData) 
+				for (auto child: *dpp->data.bytesData) {
 					child->data.stack.offset = offset + child->data.bytes.offset;
+					if ((*child->comment) == "count") debug = true;
+				}
 			} else
 				dpp->data.stack.offset = offset;
 		}
@@ -622,9 +621,10 @@ void PlnDataAllocator::checkDataLeak()
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
 	: type(DP_UNKNOWN), status(DS_UNKNOWN),
-		access_count(0), alloc_step(0), release_step(INT_MAX),
+		access_score(0), alloc_step(0), release_step(INT_MAX),
 		previous(NULL), save_place(NULL), src_place(NULL),
-		size(size), data_type(data_type), release_src_pop(true), load_address(false), do_clear_src(false)
+		size(size), data_type(data_type), release_src_pop(true),
+		load_address(false), need_address(false), do_clear_src(false)
 {
 	static string emp = "";
 	comment = &emp;
@@ -711,9 +711,17 @@ void PlnDataPlace::updateBytesDpStatus()
 
 void PlnDataPlace::access(int32_t step)
 {
-	access_count++;
+	access_score+=10;
 	if (type == DP_SUBDP) {
-		data.originalDp->access_count++;
+		data.originalDp->access_score+=10;
+	}
+	if (load_address) {
+		// for register allocation info
+		BOOST_ASSERT(src_place);
+		if (src_place->type == DP_SUBDP)
+			src_place->data.originalDp->need_address = true;
+		else 
+			src_place->need_address = true;
 	}
 }
 

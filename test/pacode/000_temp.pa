@@ -1,4 +1,10 @@
 ccall printf(...);
-int64 i1 = 9;
-int64 i2 = 9.5 + 0.6;
-const X = 9.5;
+
+[3]int32 arr;
+[2][3]int32 arr2;
+
+10 -> arr[2];
+arr ->> arr2[1];
+
+printf("%d", arr2[1][2]);
+

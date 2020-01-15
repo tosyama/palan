@@ -2,13 +2,13 @@
 #include <iostream>
 #include <fstream>
 
-TEST_CASE("Normal case with simple grammer", "[basic]")
+void normalCaseTest()
 {
 	string testcode;
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "10");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -223,6 +223,14 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 					"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+14 -14");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
+}
+
+TEST_CASE("Normal case with simple grammer", "[basic]")
+{
+//	disableOptimize = true;
+//	normalCaseTest();
+//	disableOptimize = false;
+	normalCaseTest();
 }
 
 // Error file ID: 500-591

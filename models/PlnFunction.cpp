@@ -5,7 +5,7 @@
 /// e.g.) func funcname(int arg1, arg2)->int32 ret1, ret2  { ... }
 ///
 /// @file	PlnFunction.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>

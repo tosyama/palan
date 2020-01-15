@@ -91,7 +91,7 @@ public:
 	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
 	void popSrc(PlnDataPlace* dp);
 
-	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps);
+	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps, bool do_save_reg = true);
 
 	// for debug
 	virtual void checkDataLeak();
@@ -131,7 +131,7 @@ public:
 	char data_type;
 	char status;
 
-	int32_t access_count;
+	int32_t access_score;
 
 	int32_t alloc_step;
 	int32_t release_step;
@@ -139,6 +139,7 @@ public:
 
 	bool release_src_pop;
 	bool load_address;
+	bool need_address;
 	bool do_clear_src;
 
 	union {
