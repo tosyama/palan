@@ -363,7 +363,7 @@ static int calcAccessScore(PlnDataPlace* dp) {
 		if (dp->type == DP_BYTES) {
 			for (auto bdp: *(dp->data.bytesData)) {
 				if (bdp->data.bytes.offset == 0 && !bdp->need_address)
-					score = bdp->access_score;
+					score += bdp->access_score;
 			}
 		} else if (!dp->need_address) {
 			score += dp->access_score;
@@ -387,7 +387,7 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 				BOOST_ASSERT((*bdpi)->type == DP_STK_BP);
 				BOOST_ASSERT((*bdpi)->type < 8);
 				BOOST_ASSERT((*bdpi)->data.bytes.parent_dp == dp);
-				if ((*bdpi)->need_address || (*bdpi)->data.bytes.offset != 0 || (*bdpi)->data_type == DT_FLOAT) {
+				if ((*bdpi)->need_address || (*bdpi)->data.bytes.offset != 0) {
 					divBytesDps.push_back(*bdpi);
 					bdpi = bytesData.erase(bdpi);
 				} else {

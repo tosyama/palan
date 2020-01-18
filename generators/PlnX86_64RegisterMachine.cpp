@@ -376,23 +376,44 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 enum RegState {
 	RS_UNKONWN,
 	RS_IMM_INT,
-	RS_LOCAL_VAR
+	RS_STACK_VAR,
+	RS_REG_VAR
 };
 
 class Reg
 {
 public:
 	RegState state;
-	int displacement;
+	struct {
+		int displacement;
+		int regid;
+	} src;
 	int size;
 };
 
 static void breakRegsInfo(Reg *regs)
 {
 	// Same as PlnX86_64DataAllocator.cpp
-	static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
-	for (int id: DSTRY_TBL) {
+	static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11};
+	for (int id: DSTRY_TBL)
 		regs[id].state = RS_UNKONWN;
+	for (int id = XMM0; id<REG_NUM; id++)
+		regs[id].state = RS_UNKONWN;
+
+	for (int i=0; i<XMM0; i++) {
+		if (regs[i].state == RS_REG_VAR) {
+			auto &reg = regs[i];
+			if (reg.src.regid >= XMM0) {
+				reg.state = RS_UNKONWN;
+				continue;
+			}
+			for (int id: DSTRY_TBL) {
+				if (reg.src.regid == id) {
+					reg.state = RS_UNKONWN;
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -406,34 +427,58 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 	while (opec != opecodes.end()) {
 		if (opec->dst) {	// 2 params
 			if (opec->dst->type == OP_REG) {
-				auto &reg = regs[regid_of(opec->dst)];
+				int dst_regid = regid_of(opec->dst);
+				auto &reg = regs[dst_regid];
 				if (opec->mne == MOVQ) {
 					if (opec->src->type == OP_ADRS) {
 						auto src = static_cast<PlnAdrsModeOperand*>(opec->src);
 						if (src->base_regid == RBP && src->index_regid==-1) {
 							// Load local var to the register.
-							if (reg.state == RS_LOCAL_VAR && reg.size == 8
-									&& reg.displacement == src->displacement) {
+							if (reg.state == RS_STACK_VAR && reg.size == 8
+									&& reg.src.displacement == src->displacement) {
 								opec = opecodes.erase(opec);
+								continue;
 								
 							} else {
-								reg.state = RS_LOCAL_VAR;
+								reg.state = RS_STACK_VAR;
 								reg.size = 8;
-								reg.displacement = src->displacement;
-								opec++;
+								reg.src.displacement = src->displacement;
 							}
+						} else {
+							reg.state = RS_UNKONWN;
+						}
+					} else if (opec->src->type == OP_REG) {
+						auto src = static_cast<PlnRegOperand*>(opec->src);
+						if (reg.state == RS_REG_VAR && reg.src.regid == src->regid && reg.size == 8) {
+							opec = opecodes.erase(opec);
 							continue;
-						} 
+						}
+						reg.state = RS_REG_VAR;
+						reg.size = 8;
+						reg.src.regid = regid_of(opec->src);
+					} else {
+						reg.state = RS_UNKONWN;
+					}
+					opec++;
+				} else {
+					reg.state = RS_UNKONWN;
+					opec++;
+				}
+
+				for (int i=0; i<REG_NUM; i++) {
+					auto &r = regs[i];
+					if (r.state == RS_REG_VAR && r.src.regid == dst_regid && i != dst_regid) {
+						r.state = RS_UNKONWN;
 					}
 				}
-				reg.state = RS_UNKONWN;
-
+				continue;
+				// end of dst == reg
 			} else if (opec->dst->type == OP_ADRS) {
 				auto dst = static_cast<PlnAdrsModeOperand*>(opec->dst);
 				if (dst->base_regid == RBP && dst->index_regid==-1) {
 					// local var update
 					for (auto& r: regs) {
-						if (r.state == RS_LOCAL_VAR && r.displacement == dst->displacement)
+						if (r.state == RS_STACK_VAR && r.src.displacement == dst->displacement)
 							r.state = RS_UNKONWN;
 					}
 				}

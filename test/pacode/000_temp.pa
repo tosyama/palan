@@ -1,10 +1,16 @@
 ccall printf(...);
 
-[3]int32 arr;
-[2][3]int32 arr2;
+flo32 f = 3.14159265358979323846;
+flo64 d = 3.14159265358979323846;
 
-10 -> arr[2];
-arr ->> arr2[1];
+printf("10", f, d);
+showflo8(f, d);
+showflo8(d, f);
 
-printf("%d", arr2[1][2]);
+flo32 ff = f;
+flo64 dd = d;
+
+func showflo8(flo32 f, flo64 d)
+{
+}
 
