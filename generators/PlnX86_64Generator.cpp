@@ -802,8 +802,9 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[2] = {MOVQ};
 			return 3;
 		case SMEMF|S4 + DXMMF|D4:	// 4
-			genInfos[0] = {MOVSS};
-			return 1;
+			BOOST_ASSERT(false);
+//			genInfos[0] = {MOVSS};
+//			return 1;
 		case SMEMF|S4 + DMEMF|D4:	// 5
 			genInfos[0] = {MOVL, R11};
 			genInfos[1] = {MOVL};
@@ -826,9 +827,10 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			return 1;
 
 		case SREGF|S8 + DXMMF|D4:
-			genInfos[0] = {MOVQ, XMM11};
-			genInfos[1] = {CVTSD2SS};
-			return 2;
+			BOOST_ASSERT(false);
+//			genInfos[0] = {MOVQ, XMM11};
+//			genInfos[1] = {CVTSD2SS};
+//			return 2;
 		case SREGF|S8 + DMEMF|D4:
 			genInfos[0] = {MOVQ, XMM11};
 			genInfos[1] = {CVTSD2SS, XMM11};
@@ -875,10 +877,11 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 6. bigimm -> reg8f/reg4f: MOVABSQ
 		// 1.
 		case SIMMF|S8 + DXMMF|D8:
-		case SIMMF|S8 + DXMMF|D4:
 			genInfos[0] = {MOVQ, R11};
 			genInfos[1] = {MOVQ};
 			return 2;
+		case SIMMF|S8 + DXMMF|D4:
+			BOOST_ASSERT(false);
 		// 2.
 		case SIMMF|S8 + DMEMF|D8:
 		case SIMMF|S8 + DMEMF|D4:
@@ -887,10 +890,11 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			return 2;
 		// 3.
 		case SBIGIMMF|S8 + DXMMF|D8:
-		case SBIGIMMF|S8 + DXMMF|D4:
 			genInfos[0] = {MOVABSQ, R11};
 			genInfos[1] = {MOVQ};
 			return 2;
+		case SBIGIMMF|S8 + DXMMF|D4:
+			BOOST_ASSERT(false);
 		// 4.
 		case SBIGIMMF|S8 + DMEMF|D8:
 		case SBIGIMMF|S8 + DMEMF|D4:
@@ -1127,7 +1131,7 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		}
 	};
 
-	return 0;
+	BOOST_ASSERT(false);
 }
 
 inline void adjustRegSize(PlnOperandInfo* reg_ope, int size)
@@ -1533,9 +1537,10 @@ static int setCmp2GenInfo(int pattern, GenInfo genInfos[3], int &cmp_type)
 			genInfos[1] = {UCOMISD};
 			n = 2; break;
 		case DXMMF|D8 + SXMMF|S4:	// 4
-			genInfos[0] = {CVTSS2SD, XMM11};
-			genInfos[1] = {UCOMISD};
-			n = 2; break;
+			BOOST_ASSERT(false);
+//			genInfos[0] = {CVTSS2SD, XMM11};
+//			genInfos[1] = {UCOMISD};
+//			n = 2; break;
 		case DXMMF|D8 + SMEMF|S4:	// 5
 			genInfos[0] = {MOVSS, XMM11};
 			genInfos[1] = {CVTSS2SD, XMM11};
@@ -1576,34 +1581,49 @@ static int setCmp2GenInfo(int pattern, GenInfo genInfos[3], int &cmp_type)
 		// 4. reg8i == memNi: CMPn
 		// 1.
 		case DREGI + SIMMI: case DREGI + SIMMU:
-		case DREGU + SIMMI: case DREGU + SIMMU:
+		case DREGU + SIMMI: 
 			genInfos[0] = {CMPQ};
 			return 1;
+		case DREGU + SIMMU:
+			genInfos[0] = {CMPQ};
+			n = 1; break;
+
 		// 2
 		case DREGI + SBIGIMMI: case DREGI + SBIGIMMU:
-		case DREGU + SBIGIMMI: case DREGU + SBIGIMMU:
+		case DREGU + SBIGIMMI:
 			genInfos[0] = {MOVABSQ, R11};
 			genInfos[1] = {CMP};
 			return 2;
+		case DREGU + SBIGIMMU:
+			genInfos[0] = {MOVABSQ, R11};
+			genInfos[1] = {CMP};
+			n = 2; break;
 
 		// 3
 		case DREGI + SREGI: case DREGI + SREGU:
-		case DREGU + SREGI: case DREGU + SREGU:
+		case DREGU + SREGI:
 			genInfos[0] = {CMP};
 			return 1;
+		 case DREGU + SREGU:
+			genInfos[0] = {CMP};
+			n = 1; break;
 
 		// 4
 		case DREGI + SMEMI: case DREGU + SMEMI:
 			genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
 			genInfos[1] = {CMP};
 			return 2;
-		case DREGI + SMEMU: case DREGU + SMEMU:
+		case DREGI + SMEMU:
 			genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
 			genInfos[1] = {CMP};
 			return 2;
+		case DREGU + SMEMU:
+			genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
+			genInfos[1] = {CMP};
+			n = 2; break;
 	}
 
-	// for float
+	// for float and uint
 	switch (cmp_type) {
 		case CMP_L: cmp_type = CMP_B; break;
 		case CMP_G: cmp_type = CMP_A; break;

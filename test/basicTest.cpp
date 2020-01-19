@@ -227,9 +227,9 @@ void normalCaseTest()
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
 {
-//	disableOptimize = true;
-//	normalCaseTest();
-//	disableOptimize = false;
+	disableOptimize = true;
+	normalCaseTest();
+	disableOptimize = false;
 	normalCaseTest();
 }
 
