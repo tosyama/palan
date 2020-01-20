@@ -511,8 +511,6 @@ void PlnBlock::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	addFreeVars(free_vars, da, si);
 	
 	for (auto v: variables) {
-		if (v->is_global)
-			continue;
 		da.releaseDp(v->place);
 	}
 	
@@ -527,8 +525,6 @@ void PlnBlock::gen(PlnGenerator& g)
 		// initalize all pointers.
 		vector<unique_ptr<PlnGenEntity>> refs;
 		for (auto v: variables) {
-			if (v->is_global)
-				continue;
 			char alloc_mode = v->var_type->mode[ALLOC_MD];
 			if (alloc_mode == 'h' || alloc_mode == 'r')
 				refs.push_back(g.getEntity(v->place));
