@@ -223,6 +223,11 @@ void normalCaseTest()
 					"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+14 -14");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
+
+	testcode = "031_regalloc";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 38 161 8 TTT\n"
+						"3 17 5 17 3");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")

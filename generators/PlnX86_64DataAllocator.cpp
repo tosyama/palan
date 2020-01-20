@@ -361,10 +361,20 @@ static int calcAccessScore(PlnDataPlace* dp) {
 	int score = 0;
 	while (dp) {
 		if (dp->type == DP_BYTES) {
+			int scores[8] = {0};
 			for (auto bdp: *(dp->data.bytesData)) {
-				if (bdp->data.bytes.offset == 0 && !bdp->need_address)
-					score += bdp->access_score;
+				if (!bdp->need_address) {
+					BOOST_ASSERT(bdp->data.bytes.offset<8);
+					scores[bdp->data.bytes.offset] += bdp->access_score;
+				}
 			}
+			int max_score = 0;
+			for (int s: scores) {
+				if (s > max_score)
+					max_score = s;
+			}
+			score += max_score;
+
 		} else if (!dp->need_address) {
 			score += dp->access_score;
 		}
@@ -383,11 +393,34 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 			vector<PlnDataPlace*> divBytesDps;
 			auto& bytesData = *dp->data.bytesData;
 			auto bdpi = bytesData.begin();
+
+			// get offset to reg alloc.
+			int offset = 0;
+			{
+				int scores[8] = {0};
+				for (auto bdp: bytesData) {
+					if (!bdp->need_address) {
+						BOOST_ASSERT(bdp->data.bytes.offset<8);
+						scores[bdp->data.bytes.offset] += bdp->access_score;
+					}
+				}
+				int max_score = 0;
+				for (int i=0; i<8; i++) {
+					if (scores[i] > max_score) {
+						max_score = scores[i];
+						offset = i;
+					}
+				}
+			}
+
 			while(bdpi != bytesData.end()) {
 				BOOST_ASSERT((*bdpi)->type == DP_STK_BP);
 				BOOST_ASSERT((*bdpi)->type < 8);
 				BOOST_ASSERT((*bdpi)->data.bytes.parent_dp == dp);
-				if ((*bdpi)->need_address || (*bdpi)->data.bytes.offset != 0) {
+				if ((*bdpi)->need_address) {
+					divBytesDps.push_back(*bdpi);
+					bdpi = bytesData.erase(bdpi);
+				} else if ((*bdpi)->data.bytes.offset != offset) {
 					divBytesDps.push_back(*bdpi);
 					bdpi = bytesData.erase(bdpi);
 				} else {
@@ -399,8 +432,6 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 			}
 			if (divBytesDps.size()) {
 				PlnDataPlace* bytesDps = new PlnDataPlace(8, DT_UNKNOWN);
-				for (auto bdp: divBytesDps)
-					bdp->data.bytes.parent_dp = bytesDps;
 				static string cmt = "bytes";
 				bytesDps->type = DP_BYTES;
 				bytesDps->data.bytesData = new vector<PlnDataPlace *>();

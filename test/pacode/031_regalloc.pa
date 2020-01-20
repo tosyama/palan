@@ -1,0 +1,136 @@
+// Tests for registor allocation, they are detected from test coverage.
+ccall printf(...);
+ccall sscanf(@[?]byte str, @[?]byte format => ...) -> int32;
+
+printf("%.2f %d", regf4toint2());
+
+// float immediate
+flo64 d = 10.0;
+(d+1)*0.0 -> d;
+
+bigintope();
+mem2regf();
+flo2int();
+mem2regi();
+cmp();
+printf("\n");
+mem8();
+mem8_inv();
+
+func regf4toint2() -> flo32 ff, int32 z
+{
+	flo32 f = 1.23;
+	int16 i2 = 10;
+	uint16 u2 = 12;
+
+	// do some calloc for regalloc;
+	i2 + u2 + f -> ff;
+
+	f -> i2;
+	f -> u2;
+	i2 + u2 -> z;
+}
+
+func bigintope()
+{
+	int64 i = 10;
+	i - 9223372036854775807 -> i;
+	i % 9223372036854775807 -> i;
+	printf(" %d", i);
+}
+
+func mem2regf()
+{
+	flo32 memf, regf;
+	flo64 memd, regd;
+
+	sscanf("1.23 3.45", "%f %lf" => memf, memd);
+	memf -> regd;
+	2.1 -> regf;
+	regf * regf -> regf;
+	regf -> memd;
+
+	regd + 1.2 -> regd;
+	printf(" %.2f %.2f", regd, memd);
+
+	3.1 -> memd;
+	memd -> regf;
+}
+
+func flo2int()
+{
+	flo64 d = 32.6;
+	int16 i2 = 5;
+	byte b = 5;
+
+	i2 * i2 -> i2;	// dummy calc
+	d + 5.6 -> i2;
+	d + 128.6 -> b;
+
+	printf(" %d %d", i2, b);
+
+}
+
+
+func mem2regi()
+{
+	int64 regi = 256;
+	uint64 memu;
+
+	sscanf("32", "%ld" => memu);
+
+	regi / memu -> regi;
+	printf(" %d", regi);
+}
+
+func cmp()
+{
+	uint64 u = 64;
+	flo64 d = 64.1;
+
+	printf(" ");
+	if d > u { printf("T") }
+	else { printf("F") }
+	int64 i = 9223372036854775800;
+	i + 7 -> i;
+	if i > -9223372036854775807 { printf("T") }
+	else { printf("F") }
+
+	18446744073709551615u -> u;
+	if u > 9223372036854775800u { printf("T") }
+	else { printf("F") }
+}
+
+func mem8()
+{
+	{
+		int64 i1, i2;
+		sscanf("1 2", "%d %d" => i1, i2);
+		printf("%d ", i1+i2);
+	}
+	{
+		int64 j1, j2 = 3, 4;
+		j1 + j2 -> j2;
+		j2 + j1 -> j1;
+		printf("%d ", j1+j2);
+	}
+	{
+		int64 i1, i2;
+		sscanf("2 3", "%d %d" => i1, i2);
+		printf("%d ", i1+i2);
+	}
+}
+func mem8_inv()
+{
+	{
+		int64 j1, j2 = 3, 4;
+		j1 + j2 -> j2;
+		j2 + j1 -> j1;
+		printf("%d ", j1+j2);
+	}
+	{
+		int64 i1, i2;
+		sscanf("1 2", "%d %d" => i1, i2);
+		printf("%d", i1+i2);
+	}
+}
