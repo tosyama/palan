@@ -22,4 +22,3 @@ script:
 
 after_success:
  - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
- - cat test/out/031_regalloc.s
