@@ -1,12 +1,14 @@
 /// x86-64 (Linux) assembly generator class declaration.
 ///
 /// @file	PlnX86_64Generator.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include "../PlnGenerator.h"
+#include "PlnX86_64RegisterMachine.h"
 
 class PlnX86_64Generator : public PlnGenerator
 {
+	PlnX86_64RegisterMachine m;
 	bool require_align;
 	int max_const_id;
 	struct ConstInfo {
@@ -28,27 +30,8 @@ class PlnX86_64Generator : public PlnGenerator
 			{ this->data.str = str; }
 	};
 	vector<ConstInfo> const_buf;
+	int func_stack_size;
 	
-	void moveMemToReg(const PlnGenEntity* mem, int reg);
-	void moveRegTo(int reg, const PlnGenEntity* dst);
-
-	void genMoveFReg(const PlnGenEntity* src, const PlnGenEntity* dst);
-	void genConvFMem(const PlnGenEntity* src, const PlnGenEntity* dst);
-	void genConvIRegMem2FMem(const PlnGenEntity* src, const PlnGenEntity* dst);
-	void genConvFMem2IMem(const PlnGenEntity* src, const PlnGenEntity* dst);
-	void genConvFMem2IReg(const PlnGenEntity* src, const PlnGenEntity* dst);
-
-	PlnOperandInfo* genPreFloOperation(PlnGenEntity* tgt, PlnGenEntity* scnd);
-
-	void genCmpImmFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
-	void genCmpFMem(const PlnGenEntity* first, const PlnGenEntity* second);
-	void genCmpFRegFMem(const PlnGenEntity* first, const PlnGenEntity* second);
-
-	int genCmpI2F(const PlnGenEntity* first, const PlnGenEntity* second, int cmp_type);
-	void genCmpIMemFRegMem(const PlnGenEntity* first, const PlnGenEntity* second);
-	void genCmpIRegMemFImm(const PlnGenEntity* first, const PlnGenEntity* second);
-
-	int registerFlo64Const(const PlnOperandInfo* constValue);
 	int registerString(string &string);
 	int registerConstData(vector<PlnRoData> &rodata);
 

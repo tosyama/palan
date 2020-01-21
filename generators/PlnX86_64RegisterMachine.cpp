@@ -1,7 +1,7 @@
 /// x86-64 (Linux) register machine class definition.
 ///
 /// @file	PlnX86_64RegisterMachine.cpp
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -14,7 +14,6 @@
 #include "../PlnModel.h"
 #include "PlnX86_64DataAllocator.h"
 #include "PlnX86_64Generator.h"
-#include "PlnX86_64RegisterMachine.h"
 
 static const char* r(int rt, int size)
 {
@@ -59,6 +58,18 @@ static const char* r(int rt, int size)
 
 		tbl[R11][0] = "%r11b"; tbl[R11][1] = "%r11w";
 		tbl[R11][2] = "%r11d"; tbl[R11][3] = "%r11";
+
+		tbl[R12][0] = "%r12b"; tbl[R12][1] = "%r12w";
+		tbl[R12][2] = "%r12d"; tbl[R12][3] = "%r12";
+
+		tbl[R13][0] = "%r13b"; tbl[R13][1] = "%r13w";
+		tbl[R13][2] = "%r13d"; tbl[R13][3] = "%r13";
+
+		tbl[R14][0] = "%r14b"; tbl[R14][1] = "%r14w";
+		tbl[R14][2] = "%r14d"; tbl[R14][3] = "%r14";
+
+		tbl[R15][0] = "%r15b"; tbl[R15][1] = "%r15w";
+		tbl[R15][2] = "%r15d"; tbl[R15][3] = "%r15";
 
 		tbl[XMM0][0] = "%xmm0"; tbl[XMM0][1] = "%xmm0";
 		tbl[XMM0][2] = "%xmm0"; tbl[XMM0][3] = "%xmm0";
@@ -322,6 +333,7 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 // Optimazations
 static void removeStackArea(vector<PlnOpeCode> &opecodes);
 static void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes);
+static void asmOptimize(vector<PlnOpeCode> &opecodes);
 
 void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 {
@@ -333,6 +345,7 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 		removeStackArea(imp->opecodes);
 
 	removeOmittableMoveToReg(imp->opecodes);
+	asmOptimize(imp->opecodes);
 
 	for (PlnOpeCode& oc: imp->opecodes) {
 		os << oc << "\n";
@@ -349,14 +362,11 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 {
 	auto opec = opecodes.begin();
 	while (opec != opecodes.end()) {
-		if (opec->mne == SUBQ && opec->dst->type == OP_REG
+		if ((opec->mne == SUBQ || opec->mne == ADDQ) && opec->dst->type == OP_REG
 				&& regid_of(opec->dst) == RSP) {
 			opec = opecodes.erase(opec);
 		} else {
-			if (opec->mne == LEAVE) {
-				opec->mne = POPQ;
-				opec->src = new PlnRegOperand(RBP,8);
-			}
+			// don't use leave any more
 			opec++;
 		}
 	}
@@ -366,23 +376,44 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 enum RegState {
 	RS_UNKONWN,
 	RS_IMM_INT,
-	RS_LOCAL_VAR
+	RS_STACK_VAR,
+	RS_REG_VAR
 };
 
 class Reg
 {
 public:
 	RegState state;
-	int displacement;
+	struct {
+		int displacement;
+		int regid;
+	} src;
 	int size;
 };
 
 static void breakRegsInfo(Reg *regs)
 {
 	// Same as PlnX86_64DataAllocator.cpp
-	static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11 };
-	for (int id: DSTRY_TBL) {
+	static const int DSTRY_TBL[] = { RAX, RDI, RSI, RDX, RCX, R8, R9, R10, R11};
+	for (int id: DSTRY_TBL)
 		regs[id].state = RS_UNKONWN;
+	for (int id = XMM0; id<REG_NUM; id++)
+		regs[id].state = RS_UNKONWN;
+
+	for (int i=0; i<XMM0; i++) {
+		if (regs[i].state == RS_REG_VAR) {
+			auto &reg = regs[i];
+			if (reg.src.regid >= XMM0) {
+				reg.state = RS_UNKONWN;
+				continue;
+			}
+			for (int id: DSTRY_TBL) {
+				if (reg.src.regid == id) {
+					reg.state = RS_UNKONWN;
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -396,34 +427,58 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 	while (opec != opecodes.end()) {
 		if (opec->dst) {	// 2 params
 			if (opec->dst->type == OP_REG) {
-				auto &reg = regs[regid_of(opec->dst)];
+				int dst_regid = regid_of(opec->dst);
+				auto &reg = regs[dst_regid];
 				if (opec->mne == MOVQ) {
 					if (opec->src->type == OP_ADRS) {
 						auto src = static_cast<PlnAdrsModeOperand*>(opec->src);
 						if (src->base_regid == RBP && src->index_regid==-1) {
 							// Load local var to the register.
-							if (reg.state == RS_LOCAL_VAR && reg.size == 8
-									&& reg.displacement == src->displacement) {
+							if (reg.state == RS_STACK_VAR && reg.size == 8
+									&& reg.src.displacement == src->displacement) {
 								opec = opecodes.erase(opec);
+								continue;
 								
 							} else {
-								reg.state = RS_LOCAL_VAR;
+								reg.state = RS_STACK_VAR;
 								reg.size = 8;
-								reg.displacement = src->displacement;
-								opec++;
+								reg.src.displacement = src->displacement;
 							}
+						} else {
+							reg.state = RS_UNKONWN;
+						}
+					} else if (opec->src->type == OP_REG) {
+						auto src = static_cast<PlnRegOperand*>(opec->src);
+						if (reg.state == RS_REG_VAR && reg.src.regid == src->regid && reg.size == 8) {
+							opec = opecodes.erase(opec);
 							continue;
-						} 
+						}
+						reg.state = RS_REG_VAR;
+						reg.size = 8;
+						reg.src.regid = regid_of(opec->src);
+					} else {
+						reg.state = RS_UNKONWN;
+					}
+					opec++;
+				} else {
+					reg.state = RS_UNKONWN;
+					opec++;
+				}
+
+				for (int i=0; i<REG_NUM; i++) {
+					auto &r = regs[i];
+					if (r.state == RS_REG_VAR && r.src.regid == dst_regid && i != dst_regid) {
+						r.state = RS_UNKONWN;
 					}
 				}
-				reg.state = RS_UNKONWN;
-
+				continue;
+				// end of dst == reg
 			} else if (opec->dst->type == OP_ADRS) {
 				auto dst = static_cast<PlnAdrsModeOperand*>(opec->dst);
 				if (dst->base_regid == RBP && dst->index_regid==-1) {
 					// local var update
 					for (auto& r: regs) {
-						if (r.state == RS_LOCAL_VAR && r.displacement == dst->displacement)
+						if (r.state == RS_STACK_VAR && r.src.displacement == dst->displacement)
 							r.state = RS_UNKONWN;
 					}
 				}
@@ -474,3 +529,31 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 		opec++;
 	}
 }
+
+void asmOptimize(vector<PlnOpeCode> &opecodes)
+{
+	auto opec = opecodes.begin();
+	while (opec != opecodes.end()) {
+		if (opec->mne == ADDQ) {
+			BOOST_ASSERT(opec->dst->type == OP_REG);
+			auto src = opec->src;
+			if (src->type == OP_IMM && int64_of(src)==1) {
+				opec->mne = INCQ;
+				opec->src = opec->dst;
+				opec->dst = NULL;
+				delete src;
+			}
+		} else if (opec->mne == SUBQ) {
+			BOOST_ASSERT(opec->dst->type == OP_REG);
+			auto src = opec->src;
+			if (src->type == OP_IMM && int64_of(src)==1) {
+				opec->mne = DECQ;
+				opec->src = opec->dst;
+				opec->dst = NULL;
+				delete src;
+			}
+		}
+		opec++;
+	}
+}
+

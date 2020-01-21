@@ -14,6 +14,7 @@ class PlnModule
 public:
 	PlnBlock* toplevel;
 	int max_jmp_id;
+	bool do_opti_regalloc = true;
 	vector<int> save_regs;
 	vector<PlnDataPlace*> save_reg_dps;
 	vector<PlnFunction*> functions;

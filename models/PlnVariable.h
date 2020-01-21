@@ -17,7 +17,8 @@ public:
 
 	PlnLoc loc;
 
-	PlnVariable(): var_type(NULL), place(NULL), container(NULL), is_tmpvar(false), is_indirect(false) {}
+	PlnVariable(): var_type(NULL), place(NULL), container(NULL),
+		is_tmpvar(false), is_indirect(false), is_global(false) {}
 
 	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name);
 };

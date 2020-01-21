@@ -9,7 +9,7 @@
 	#include <ext/stdio_sync_filebuf.h>    
 	typedef __gnu_cxx::stdio_sync_filebuf<char> popen_filebuf;
 #endif
-
+#include <boost/assert.hpp>
 #include "../generators/PlnX86_64DataAllocator.h"
 #include "../generators/PlnX86_64Generator.h"
 #include "../models/PlnModule.h"
@@ -23,6 +23,8 @@ TEST_CASE ("Hello World", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "Hello World!\n13");
 }
+
+bool disableOptimize = false;
 
 int clean()
 {
@@ -59,17 +61,17 @@ string build(const string &srcf)
 		PlnModelTreeBuilder modelTreeBuilder;
 		try {
 			module = modelTreeBuilder.buildModule(j["ast"]);
+			module->do_opti_regalloc = !disableOptimize;
 		} catch (PlnCompileError &err) {
 			return err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
 		}
 	}
 
-	string asmf = "out/" + srcf + ".s";
+	string asmf = "out/" + srcf + (disableOptimize ? "_noopt.s" : ".s");
 
 	// compile
 	try {
 		PlnX86_64DataAllocator allocator;
-		// module->finish(allocator);
 		ofstream as_output;
 		as_output.open(asmf, ios::out);
 

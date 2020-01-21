@@ -173,6 +173,8 @@ void PlnVarInit::gen(PlnGenerator& g)
 		if (auto ex = vi.alloc_ex) {
 			ex->gen(g);
 			g.genLoadDp(ex->data_places[0]);
+		} else {
+			g.comment(vi.var->name);
 		}
 	}
 

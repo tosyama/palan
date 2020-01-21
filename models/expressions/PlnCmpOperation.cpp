@@ -4,7 +4,7 @@
 /// e.g.) a == b / a > b
 ///
 /// @file	PlnCmpOperation.cpp
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "PlnCmpOperation.h"
 #include "../../PlnDataAllocator.h"
@@ -42,20 +42,15 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		return;
 	}
 
-	bool alloc_acm = false;
 	PlnDataPlace *ldp, *rdp;
+	int acm_data_type = l->getDataType();
+	if (r->getDataType() == DT_FLOAT)
+		acm_data_type = DT_FLOAT;
 
-	if (l->type == ET_VALUE) {
-		ldp = l->values[0].getDataPlace(da);
-	} else {
-		ldp = da.prepareAccumulator(l->getDataType());
-		alloc_acm = true;
-	}
+	ldp = da.prepareAccumulator(acm_data_type);
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
-	} else if (!alloc_acm) {
-		rdp = da.prepareAccumulator(r->getDataType());
 	} else {
 		rdp = da.prepareLocalVar(8, r->getDataType());
 		static string cmt="(temp)";

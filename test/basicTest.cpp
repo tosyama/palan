@@ -2,18 +2,18 @@
 #include <iostream>
 #include <fstream>
 
-TEST_CASE("Normal case with simple grammer", "[basic]")
+void normalCaseTest()
 {
 	string testcode;
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "test");
+	REQUIRE(exec(testcode) == "10");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "5 -3 -5 6 6 8 1263\n"
-							"7 0 -10 1");
+							"7 0 -10 1 5 -5");
 
 	testcode = "003_varbyte";
 	REQUIRE(build(testcode) == "success");
@@ -54,7 +54,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "[if][elif][elif2][else][true]\n"
 							"0!=<<=1==<=>=2!=>>=\n"
-							"[uu][us]>tt010ttf");
+							"[us1][uu1]>tt010ttf");
 
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
@@ -150,7 +150,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	testcode = "019_flocmp";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft ffttf\n"
-								"tftfft tfft fttf ftft fft\n"
+								"fffftt tfft fttf ftft fft\n"
 								"fftf fttfft fftft tftf tftf tftt\n"
 								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
 
@@ -223,6 +223,19 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 					"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+14 -14");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
+
+	testcode = "031_regalloc";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 38 161 8 TTT\n"
+						"3 17 5 17 3");
+}
+
+TEST_CASE("Normal case with simple grammer", "[basic]")
+{
+	disableOptimize = true;
+	normalCaseTest();
+	disableOptimize = false;
+	normalCaseTest();
 }
 
 // Error file ID: 500-591

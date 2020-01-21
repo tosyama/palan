@@ -3,7 +3,7 @@
 /// e.g.) a || b / a && b
 ///
 /// @file	PlnBoolOperation.cpp
-/// @copyright	2018-2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
 
@@ -28,13 +28,13 @@ PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsn
 	values.push_back(v);
 
 	if (l->type != ET_CMP) {
-		this->l = new PlnCmpOperation(new PlnExpression(int64_t(0)), l, CMP_NE);
+		this->l = new PlnCmpOperation(l, new PlnExpression(int64_t(0)), CMP_NE);
 	} else {
 		this->l = static_cast<PlnCmpOperation*>(l);
 	}
 
 	if (r->type != ET_CMP) {
-		this->r = new PlnCmpOperation(new PlnExpression(int64_t(0)), r, CMP_NE);
+		this->r = new PlnCmpOperation(r, new PlnExpression(int64_t(0)), CMP_NE);
 	} else {
 		this->r = static_cast<PlnCmpOperation*>(r);
 	}
@@ -217,7 +217,7 @@ void PlnBoolOperation::gen(PlnGenerator& g)
 	if (lcmp_type == CMP_NE) {
 		// Case 8-1)
 		g.genMoveCmpFlag(result_e.get(), rcmp_type, "cmpflg -> " + result_dp->cmt());
-		gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+		gen_cmp_type = g.genCmp(result_e.get(), ze.get(), CMP_NE, result_dp->cmt() + " != 0");
 		g.genJumpLabel(jmp_l_id, type==ET_AND ? "end &&" : "end ||");
 
 	} else if (rcmp_type == CMP_NE) {
@@ -225,7 +225,7 @@ void PlnBoolOperation::gen(PlnGenerator& g)
 		g.genJump(jmp_r_id, "");
 		g.genJumpLabel(jmp_l_id, "");
 		g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
-		gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+		gen_cmp_type = g.genCmp(result_e.get(), ze.get(), CMP_NE, result_dp->cmt() + " != 0");
 		g.genJumpLabel(jmp_r_id, type==ET_AND ? "end &&" : "end ||");
 
 	} else {
@@ -235,7 +235,7 @@ void PlnBoolOperation::gen(PlnGenerator& g)
 		g.genJumpLabel(jmp_l_id, "");
 		g.genMoveCmpFlag(result_e.get(), lcmp_type, "cmpflg -> " + result_dp->cmt());
 		g.genJumpLabel(jmp_r_id, type==ET_AND ? "end &&" : "end ||");
-		gen_cmp_type = g.genCmp(ze.get(), result_e.get(), CMP_NE, result_dp->cmt() + " != 0");
+		gen_cmp_type = g.genCmp(result_e.get(), ze.get(), CMP_NE, result_dp->cmt() + " != 0");
 	}
 	BOOST_ASSERT(gen_cmp_type == CMP_NE);
 
@@ -274,5 +274,5 @@ PlnExpression* PlnBoolOperation::getNot(PlnExpression *e)
 		ce->cmp_type = cmp_type;
 		return ce;
 	}
-	return new PlnCmpOperation(new PlnExpression(int64_t(0)), e, CMP_EQ);
+	return new PlnCmpOperation(e, new PlnExpression(int64_t(0)), CMP_EQ);
 }

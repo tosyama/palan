@@ -27,7 +27,11 @@ a%c;
 1+2*c, 5/2*3%2, d/(-2)*5, a*b*(c-2)/(c-1)
 	-> a,b,c,d;
 
-printf("%d %d %d %d\n", a, b, c, d);
+int64 w,x,y,z = 1,2,3,4;
+w-(x*y) -> z;
+w*(x+y) -> w;	// value * (exp) case test
+
+printf("%d %d %d %d %d %d\n", a, b, c, d, w, z);
 
 
 func add(int64 a, b)

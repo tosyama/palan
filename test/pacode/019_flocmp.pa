@@ -89,7 +89,7 @@ if f1+2 > f2+4 { printf("t") } else { printf("f") }
 
 printf("\n");
 
-// fftf
+// tftf
 if d1 > f1 { printf("t") } else { printf("f") }
 // d1 != f1
 if d1 == f1 { printf("t") } else { printf("f") }

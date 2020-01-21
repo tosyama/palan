@@ -138,6 +138,10 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	auto item_dp = item_var->place;
 	da.setIndirectObjDp(item_dp, base_dp, index_dp, 0);
 	
+	da.popSrc(base_dp);
+	if (index_ex)
+		da.popSrc(index_dp);
+	
 	if (data_places.size()) {
 		da.pushSrc(data_places[0], item_dp);
 	}
@@ -146,10 +150,21 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnArrayItem::gen(PlnGenerator& g)
 {
 	// for lval & rval
+	PlnDataPlace* base_dp = array_ex->data_places[0];
 	array_ex->gen(g);
-	if (index_ex)
+
+	PlnDataPlace* index_dp = NULL;
+	if (index_ex) {
 		index_ex->gen(g);
-	
+		index_dp = index_ex->data_places[0];
+	}
+
+	g.genLoadDp(base_dp, false);
+	if (index_dp) g.genLoadDp(index_dp, false);
+
+	g.genSaveDp(base_dp);
+	if (index_dp) g.genSaveDp(index_dp);
+
 	// rval
 	if (data_places.size()) {
 		g.genSaveSrc(data_places[0]);

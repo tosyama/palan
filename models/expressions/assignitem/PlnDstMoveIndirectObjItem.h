@@ -1,7 +1,7 @@
 /// Assignment Item class definition.
 ///
 /// @file	PlnDstMoveIndirectObjItem.h
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 class PlnDstMoveIndirectObjItem: public PlnDstItem
 {
@@ -76,6 +76,7 @@ public:
 			// save old dst for free.
 			da.pushSrc(free_dp->data.indirect.base_dp, addr_var->place, false);
 			da.pushSrc(save4free_var->place, free_dp);
+			da.popSrc(free_dp->data.indirect.base_dp);
 			da.popSrc(save4free_var->place);
 
 			// execute free.	
@@ -85,6 +86,7 @@ public:
 			// move src to dst
 			da.setIndirectObjDp(dst_dp, da.prepareObjBasePtr(), NULL, 0);
 			da.pushSrc(dst_dp->data.indirect.base_dp, addr_var->place, false);
+			da.popSrc(dst_dp->data.indirect.base_dp);
 			da.popSrc(dst_dp);
 			
 		} else {
@@ -96,14 +98,11 @@ public:
 			*/
 		}
 
-		if (place) {
-			dst_dp->data.indirect.base_dp->release_src_pop = true;
+		da.releaseDp(addr_var->place);
+		if (place)
 			da.pushSrc(place, dst_dp);
-
-		} else {
-			da.releaseDp(addr_var->place);
+		else
 			da.releaseDp(dst_dp);
-		}
 	}
 
 	void gen(PlnGenerator& g) override {
@@ -112,10 +111,11 @@ public:
 			g.genLoadDp(addr_var->place);
 
 			g.genSaveSrc(free_dp->data.indirect.base_dp);
+			g.genLoadDp(free_dp->data.indirect.base_dp);
 			g.genLoadDp(save4free_var->place);
 			free_ex->gen(g);
 			
-			g.genSaveSrc(dst_dp->data.indirect.base_dp);
+			g.genLoadDp(dst_dp->data.indirect.base_dp);
 			g.genLoadDp(dst_dp);
 
 		} else {

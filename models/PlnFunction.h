@@ -65,6 +65,7 @@ public:
 	int num_in_param, num_out_param;
 	int call_count;
 	bool generated;
+	bool do_opti_regalloc = true;
 
 	PlnFunction(int func_type, const string& func_name);
 	PlnVariable* addRetValue(const string& rname, PlnVarType* rtype);

@@ -40,7 +40,7 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	for (auto dp: dps2)
 		allocator.allocDp(dp);	// stack[dp dp3 dp1save1 .. dp1save6 dp2arg1]	// ap1arg4 is not save
 	REQUIRE(dps2.size() == 7);
-	REQUIRE(allocator.data_stack.size() == 7);
+	REQUIRE(allocator.data_stack.size() == 2);
 	REQUIRE(allocator.arg_stack.size() == 1);
 	allocator.funcCalled(dps2, FT_PLN);
 	REQUIRE(allocator.regs[RDI] == dps2[0]);
@@ -60,10 +60,11 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	CHECK(dp2->data.stack.offset == -16);	
 	CHECK(dp3->data.stack.offset == -16);	
 	CHECK(dps2[6]->data.stack.offset == 0);	
-	CHECK(dps1[0]->save_place->data.stack.offset == -24);	
-	CHECK(dps1[1]->save_place->data.stack.offset == -32);	
-	CHECK(dps1[5]->save_place->data.stack.offset == -56);	
-	CHECK(allocator.stack_size == 72);
+
+	CHECK(dps1[0]->save_place == NULL);	
+	CHECK(dps1[1]->save_place == NULL);	
+	CHECK(dps1[5]->save_place == NULL);	
+	CHECK(allocator.stack_size == 24);
 }
 
 TEST_CASE("Mixed bytes dateplace allocate unit test.", "[allocate]")
