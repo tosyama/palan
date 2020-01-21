@@ -205,7 +205,7 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 		BOOST_ASSERT(false);
 
 	dp->status = DS_ASSIGNED;
-	auto pdp = dp->previous;
+	//auto pdp = dp->previous;
 	dp->alloc_step = step;
 
 	if (proceed_step) step++;
@@ -436,7 +436,6 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 	}
 
 	int offset = 0;
-	bool debug = false;
 	// Set offset from base stack pointer.
 	for (auto dp: data_stack) {
 		offset -= 8;
@@ -444,7 +443,6 @@ void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &sav
 			if (dpp->type == DP_BYTES) {
 				for (auto child: *dpp->data.bytesData) {
 					child->data.stack.offset = offset + child->data.bytes.offset;
-					if ((*child->comment) == "count") debug = true;
 				}
 			} else
 				dpp->data.stack.offset = offset;
