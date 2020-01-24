@@ -308,6 +308,12 @@ void PlnX86_64RegisterMachine::push(PlnX86_64Mnemonic mne, PlnOperandInfo *src, 
 	else if (mne == RET) imp->ret_num++;
 }
 
+void PlnX86_64RegisterMachine::reserve(int num)
+{
+	for (int i=0; i<num; i++)
+		imp->opecodes.push_back({MNE_NONE, NULL, NULL, ""});
+}
+
 void PlnX86_64RegisterMachine::addComment(string comment)
 {
 	imp->opecodes.back().comment = comment;
@@ -368,7 +374,8 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 	asmOptimize(imp->opecodes);
 
 	for (PlnOpeCode& oc: imp->opecodes) {
-		os << oc << "\n";
+		if (oc.mne != MNE_NONE)
+			os << oc << "\n";
 		delete oc.src;
 		delete oc.dst;
 	}
@@ -410,24 +417,22 @@ static void addRegSaveOpe(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &re
 			imm_ope->value = stack_size;
 
 			if (opec.mne == SUBQ) {
-				vector<PlnOpeCode> save_reg_opes;
 				for (auto &rmap: regmap) {
 					auto src = new PlnRegOperand(rmap[0], 8);
 					auto dst = new PlnAdrsModeOperand(RBP, -rmap[1], -1, 0);
-					save_reg_opes.push_back({MOVQ, src, dst, "save reg"});
+					i++;
+					BOOST_ASSERT(opecodes[i].mne == MNE_NONE); // reserved
+					opecodes[i] = {MOVQ, src, dst, "save reg"};
 				}
-				opecodes.insert(opecodes.begin()+i+1, save_reg_opes.begin(), save_reg_opes.end());
-				i+=save_reg_opes.size();
 
 			} else if (opec.mne == ADDQ) {
-				vector<PlnOpeCode> load_reg_opes;
 				for (auto &rmap: regmap) {
 					auto src = new PlnAdrsModeOperand(RBP, -rmap[1], -1, 0);
 					auto dst = new PlnRegOperand(rmap[0], 8);
-					load_reg_opes.push_back({MOVQ, src, dst, "load reg"});
+					i++;
+					BOOST_ASSERT(opecodes[i].mne == MNE_NONE); // reserved
+					opecodes[i] = {MOVQ, src, dst, "load reg"};
 				}
-				opecodes.insert(opecodes.begin()+i, load_reg_opes.begin(), load_reg_opes.end());
-				i+=load_reg_opes.size();
 			}
 		}
 		i++;
@@ -489,14 +494,10 @@ void addRegSaveWithAnalysis(vector<PlnOpeCode> &opecodes)
 
 void removeStackArea(vector<PlnOpeCode> &opecodes)
 {
-	auto opec = opecodes.begin();
-	while (opec != opecodes.end()) {
-		if ((opec->mne == SUBQ || opec->mne == ADDQ) && opec->dst->type == OP_REG
-				&& regid_of(opec->dst) == RSP) {
-			opec = opecodes.erase(opec);
-		} else {
-			// don't use leave any more
-			opec++;
+	for (auto &opec: opecodes) {
+		if ((opec.mne == SUBQ || opec.mne == ADDQ) && opec.dst->type == OP_REG
+				&& regid_of(opec.dst) == RSP) {
+			opec.mne = MNE_NONE;
 		}
 	}
 }
@@ -552,20 +553,22 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 	for (auto& r: regs)
 		r.state = RS_UNKONWN;
 	
-	auto opec = opecodes.begin();
-	while (opec != opecodes.end()) {
-		if (opec->dst) {	// 2 params
-			if (opec->dst->type == OP_REG) {
-				int dst_regid = regid_of(opec->dst);
+	for (auto &opec: opecodes) {
+		if (opec.mne == MNE_NONE)
+			continue;
+
+		if (opec.dst) {	// 2 params
+			if (opec.dst->type == OP_REG) {
+				int dst_regid = regid_of(opec.dst);
 				auto &reg = regs[dst_regid];
-				if (opec->mne == MOVQ) {
-					if (opec->src->type == OP_ADRS) {
-						auto src = static_cast<PlnAdrsModeOperand*>(opec->src);
+				if (opec.mne == MOVQ) {
+					if (opec.src->type == OP_ADRS) {
+						auto src = static_cast<PlnAdrsModeOperand*>(opec.src);
 						if (src->base_regid == RBP && src->index_regid==-1) {
 							// Load local var to the register.
 							if (reg.state == RS_STACK_VAR && reg.size == 8
 									&& reg.src.displacement == src->displacement) {
-								opec = opecodes.erase(opec);
+								opec.mne = MNE_NONE;
 								continue;
 								
 							} else {
@@ -576,22 +579,20 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 						} else {
 							reg.state = RS_UNKONWN;
 						}
-					} else if (opec->src->type == OP_REG) {
-						auto src = static_cast<PlnRegOperand*>(opec->src);
+					} else if (opec.src->type == OP_REG) {
+						auto src = static_cast<PlnRegOperand*>(opec.src);
 						if (reg.state == RS_REG_VAR && reg.src.regid == src->regid && reg.size == 8) {
-							opec = opecodes.erase(opec);
+							opec.mne = MNE_NONE;
 							continue;
 						}
 						reg.state = RS_REG_VAR;
 						reg.size = 8;
-						reg.src.regid = regid_of(opec->src);
+						reg.src.regid = regid_of(opec.src);
 					} else {
 						reg.state = RS_UNKONWN;
 					}
-					opec++;
 				} else {
 					reg.state = RS_UNKONWN;
-					opec++;
 				}
 
 				for (int i=0; i<REG_NUM; i++) {
@@ -602,8 +603,8 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 				}
 				continue;
 				// end of dst == reg
-			} else if (opec->dst->type == OP_ADRS) {
-				auto dst = static_cast<PlnAdrsModeOperand*>(opec->dst);
+			} else if (opec.dst->type == OP_ADRS) {
+				auto dst = static_cast<PlnAdrsModeOperand*>(opec.dst);
 				if (dst->base_regid == RBP && dst->index_regid==-1) {
 					// local var update
 					for (auto& r: regs) {
@@ -613,14 +614,14 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 				}
 			}
 
-		} else if (opec->src) {	// 1 param
-			if (opec->src->type == OP_REG) {
-				switch (opec->mne) {
+		} else if (opec.src) {	// 1 param
+			if (opec.src->type == OP_REG) {
+				switch (opec.mne) {
 					case INCQ: case DECQ: case NEGQ:
 					case SETE: case SETNE:
 					case SETL: case SETG: case SETLE: case SETGE:
 					case SETB: case SETA: case SETBE: case SETAE:
-						regs[regid_of(opec->src)].state = RS_UNKONWN;
+						regs[regid_of(opec.src)].state = RS_UNKONWN;
 						break;
 					case IMULQ: case DIVQ: case CQTO: case IDIVQ:
 						regs[RAX].state = RS_UNKONWN;
@@ -631,16 +632,16 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 						break;
 					default: break;
 				}
-			} else if (opec->mne == CALL) {
+			} else if (opec.mne == CALL) {
 				breakRegsInfo(regs);
-			} else if (opec->mne == LABEL) {
+			} else if (opec.mne == LABEL) {
 				// Clear all register value.
 				for (auto& r: regs)
 					r.state = RS_UNKONWN;
 			}
 
 		} else { // no param
-			switch (opec->mne) {
+			switch (opec.mne) {
 				case SYSCALL: 
 					breakRegsInfo(regs);
 					break;
@@ -654,8 +655,6 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 					break;
 			}
 		}
-
-		opec++;
 	}
 }
 
@@ -669,9 +668,7 @@ void asmOptimize(vector<PlnOpeCode> &opecodes)
 			if (src->type == OP_IMM) {
 				int64_t i = int64_of(src);	
 				if (i==0) {
-					delete opec->src;
-					delete opec->dst;
-					opec = opecodes.erase(opec);
+					opec->mne = MNE_NONE;
 					continue;
 				} else if (i==1) {
 					opec->mne = INCQ;
@@ -686,9 +683,7 @@ void asmOptimize(vector<PlnOpeCode> &opecodes)
 			if (src->type == OP_IMM) {
 				int64_t i = int64_of(src);	
 				if (i==0) {
-					delete opec->src;
-					delete opec->dst;
-					opec = opecodes.erase(opec);
+					opec->mne = MNE_NONE;
 					continue;
 				} else if (i==1) {
 					opec->mne = DECQ;
