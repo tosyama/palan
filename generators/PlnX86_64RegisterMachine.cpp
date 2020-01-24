@@ -4,6 +4,7 @@
 /// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <vector>
+#include <array>
 #include <iostream>
 #include <string>
 #include <string.h>
@@ -14,6 +15,8 @@
 #include "../PlnModel.h"
 #include "PlnX86_64DataAllocator.h"
 #include "PlnX86_64Generator.h"
+
+using std::array;
 
 static const char* r(int rt, int size)
 {
@@ -188,6 +191,8 @@ class PlnX86_64RegisterMachineImp
 {
 public:
 	bool has_call = false;
+	int ret_num = 0;
+	int requested_stack_size = 0;
 	vector<PlnOpeCode> opecodes;
 	PlnX86_64RegisterMachineImp() {
 	};
@@ -299,11 +304,18 @@ void PlnX86_64RegisterMachine::push(PlnX86_64Mnemonic mne, PlnOperandInfo *src, 
 
 	// collect optimise information.
 	if (mne == CALL) imp->has_call = true;
+	else if (mne == SYSCALL) imp->has_call = true;
+	else if (mne == RET) imp->ret_num++;
 }
 
 void PlnX86_64RegisterMachine::addComment(string comment)
 {
 	imp->opecodes.back().comment = comment;
+}
+
+void PlnX86_64RegisterMachine::memoRequestedStackSize(int size)
+{
+	imp->requested_stack_size = size;
 }
 
 static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
@@ -331,6 +343,8 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 }
 
 // Optimazations
+static void addRegSave(vector<PlnOpeCode> &opecodes, int cur_stacksize);
+static void addRegSaveWithAnalysis(vector<PlnOpeCode> &opecodes);
 static void removeStackArea(vector<PlnOpeCode> &opecodes);
 static void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes);
 static void asmOptimize(vector<PlnOpeCode> &opecodes);
@@ -339,6 +353,12 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 {
 	if (!mnes.size())
 		initMnes();
+
+	// Add registor save  // ret_num == 0: top level
+	if (imp->ret_num) addRegSave(imp->opecodes, imp->requested_stack_size);
+
+	//if (ret_num == 1) addRegSave(vector<PlnOpeCode> &opecodes);
+	//else if (ret_num >= 2) addRegSaveWithAnalysis(imp->opecodes);
 
 	// Optimize
 	if (!imp->has_call)
@@ -353,9 +373,118 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 		delete oc.dst;
 	}
 	os.flush();
+	// reset internal information.
 	imp->opecodes.clear();
-
 	imp->has_call = false;
+	imp->ret_num = 0;
+	imp->requested_stack_size = 0;
+}
+
+#define set_regid(x)	{int id=(x); if(!access_reg[id]) access_reg[id] = 1;}
+inline void recUsedReg(PlnOperandInfo *ope, char access_reg[])
+{
+	if (!ope) return;
+	if (ope->type == OP_REG) {
+		set_regid(regid_of(ope));
+	} else if (ope->type == OP_ADRS) {
+		auto addr_ope = static_cast<PlnAdrsModeOperand*>(ope);
+		set_regid(addr_ope->base_regid);
+		int regid = addr_ope->index_regid;
+		if (regid>0) set_regid(regid);
+	}
+}
+
+static void addRegSaveOpe(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &regmap)
+{
+	int stack_size = regmap.back()[1];
+
+	if (stack_size % 16)
+		stack_size += 8;
+	
+	int i=0;
+	while (i < opecodes.size()) {
+		PlnOpeCode &opec = opecodes[i];
+		if ((opec.mne == SUBQ || opec.mne == ADDQ) && opec.dst->type == OP_REG
+				&& regid_of(opec.dst) == RSP) {
+			auto imm_ope = static_cast<PlnImmOperand*>(opec.src);
+			imm_ope->value = stack_size;
+
+			if (opec.mne == SUBQ) {
+				vector<PlnOpeCode> save_reg_opes;
+				for (auto &rmap: regmap) {
+					auto src = new PlnRegOperand(rmap[0], 8);
+					auto dst = new PlnAdrsModeOperand(RBP, -rmap[1], -1, 0);
+					save_reg_opes.push_back({MOVQ, src, dst, "save reg"});
+				}
+				opecodes.insert(opecodes.begin()+i+1, save_reg_opes.begin(), save_reg_opes.end());
+				i+=save_reg_opes.size();
+
+			} else if (opec.mne == ADDQ) {
+				vector<PlnOpeCode> load_reg_opes;
+				for (auto &rmap: regmap) {
+					auto src = new PlnAdrsModeOperand(RBP, -rmap[1], -1, 0);
+					auto dst = new PlnRegOperand(rmap[0], 8);
+					load_reg_opes.push_back({MOVQ, src, dst, "load reg"});
+				}
+				opecodes.insert(opecodes.begin()+i, load_reg_opes.begin(), load_reg_opes.end());
+				i+=load_reg_opes.size();
+			}
+		}
+		i++;
+	}
+}
+
+static vector<int> save_regids = {RBX, R12, R13, R14, R15};
+void addRegSave(vector<PlnOpeCode> &opecodes, int cur_stacksize)
+{
+	char access_reg[REG_NUM] = {};
+	for (auto &opecode: opecodes) {
+		recUsedReg(opecode.src, access_reg);
+		recUsedReg(opecode.dst, access_reg);
+	}
+
+	vector<array<int,2>> regmap;
+	for (int sregid: save_regids) {
+		if (access_reg[sregid]) {
+			cur_stacksize += 8;
+			regmap.push_back({sregid, cur_stacksize});
+		}
+	}
+
+	if (!regmap.size())
+		return;
+	
+	addRegSaveOpe(opecodes, regmap);
+}
+
+enum RegAnalysisScopeType {
+	RAS_UNKNOWN,
+	END_BY_RETURN,
+	END_BY_JMP,
+	END_BY_COND_JMP,
+	TOP_LOOP
+};
+
+struct RegAnalysisScope
+{
+	RegAnalysisScopeType type;
+	vector<string> labels;
+	vector<string> jump_to_lables;
+	char access_reg[REG_NUM];
+	vector<int> next_index;
+};
+
+void addRegSaveWithAnalysis(vector<PlnOpeCode> &opecodes)
+{
+	struct LblInfo {string lbl; int ind;};
+	vector<LblInfo> label_info;
+	vector<RegAnalysisScope> reg_analys;
+	// build analysis data
+	for (int i=0; i<opecodes.size(); ++i) {
+		reg_analys.push_back({});
+		RegAnalysisScope &cur_scope = reg_analys.back();
+		cur_scope.type = RAS_UNKNOWN;
+	}
 }
 
 void removeStackArea(vector<PlnOpeCode> &opecodes)
@@ -537,20 +666,36 @@ void asmOptimize(vector<PlnOpeCode> &opecodes)
 		if (opec->mne == ADDQ) {
 			BOOST_ASSERT(opec->dst->type == OP_REG);
 			auto src = opec->src;
-			if (src->type == OP_IMM && int64_of(src)==1) {
-				opec->mne = INCQ;
-				opec->src = opec->dst;
-				opec->dst = NULL;
-				delete src;
+			if (src->type == OP_IMM) {
+				int64_t i = int64_of(src);	
+				if (i==0) {
+					delete opec->src;
+					delete opec->dst;
+					opec = opecodes.erase(opec);
+					continue;
+				} else if (i==1) {
+					opec->mne = INCQ;
+					opec->src = opec->dst;
+					opec->dst = NULL;
+					delete src;
+				}
 			}
 		} else if (opec->mne == SUBQ) {
 			BOOST_ASSERT(opec->dst->type == OP_REG);
 			auto src = opec->src;
-			if (src->type == OP_IMM && int64_of(src)==1) {
-				opec->mne = DECQ;
-				opec->src = opec->dst;
-				opec->dst = NULL;
-				delete src;
+			if (src->type == OP_IMM) {
+				int64_t i = int64_of(src);	
+				if (i==0) {
+					delete opec->src;
+					delete opec->dst;
+					opec = opecodes.erase(opec);
+					continue;
+				} else if (i==1) {
+					opec->mne = DECQ;
+					opec->src = opec->dst;
+					opec->dst = NULL;
+					delete src;
+				}
 			}
 		}
 		opec++;

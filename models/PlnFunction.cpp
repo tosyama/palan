@@ -269,7 +269,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			if (do_opti_regalloc)
 				da.optimizeRegAlloc();
 
-			da.finish(save_regs, save_reg_dps);
+			da.finish();
 			inf.pln.stack_size = da.stack_size;
 		}
 	} else if (type == FT_C || type == FT_SYS) {
@@ -288,10 +288,6 @@ void PlnFunction::gen(PlnGenerator &g)
 			g.genLabel(asm_name);
 			g.genEntryFunc();		
 			g.genLocalVarArea(inf.pln.stack_size);		
-			for (int i=0; i<save_regs.size(); ++i) {
-				auto sav_e = g.getEntity(save_reg_dps[i]);
-				g.genSaveReg(save_regs[i], sav_e.get());
-			}
  
 			for (auto p: parameters) {
 				// no genSaveSrc because always save_place == NULL.

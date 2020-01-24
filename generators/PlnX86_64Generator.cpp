@@ -323,6 +323,7 @@ void PlnX86_64Generator::genEntryFunc()
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
 	BOOST_ASSERT((size%8) == 0 && size >= 0);
+	m.memoRequestedStackSize(size);
 
 	if (require_align) {
 		if ((size-8) % 16)
@@ -330,7 +331,6 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 		require_align = false;
 
 	} else {
-		if (!size) return;
 		if ((size) % 16)
 			size = size + 8;
 	}
@@ -418,8 +418,7 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 
 void PlnX86_64Generator::genReturn()
 {
-	if (func_stack_size)
-		m.push(ADDQ, imm(func_stack_size), reg(RSP));
+	m.push(ADDQ, imm(func_stack_size), reg(RSP));
 	m.push(POPQ, reg(RBP));	
 	m.push(RET);
 }

@@ -1,7 +1,7 @@
 /// Register/Stack allocation class declaration.
 ///
 /// @file	PlnDataAllocator.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu
 
 #include <cstddef>
 #include <vector>
@@ -32,7 +32,6 @@ protected:
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
 	virtual PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
-	virtual vector<int> getRegsNeedSave()=0;
 	bool isDestroyed(PlnDataPlace* dp);
 
 public:
@@ -91,7 +90,7 @@ public:
 	void pushSrc(PlnDataPlace* dp, PlnDataPlace* src_dp, bool release_src_pop=true);
 	void popSrc(PlnDataPlace* dp);
 
-	void finish(vector<int>& save_regs, vector<PlnDataPlace*>& save_reg_dps, bool do_save_reg = true);
+	void finish();
 
 	// for debug
 	virtual void checkDataLeak();

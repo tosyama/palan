@@ -52,9 +52,7 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	REQUIRE(dps1[0]->status==DS_RELEASED);
 	REQUIRE(dps1[5]->status==DS_RELEASED);
 
-	vector<int> save_regs;
-	vector<PlnDataPlace*> save_reg_dps;
-	allocator.finish(save_regs, save_reg_dps);
+	allocator.finish();
 
 	CHECK(dp1->data.stack.offset == -8);	
 	CHECK(dp2->data.stack.offset == -16);	
@@ -166,9 +164,7 @@ TEST_CASE("Mixed bytes allocation test.", "[allocate]")
 	auto dp6=allocator.allocData(2, DT_SINT);
 	auto dp7=allocator.allocData(4, DT_SINT);
 
-	vector<int> save_regs;
-	vector<PlnDataPlace*> save_reg_dps;
-	allocator.finish(save_regs, save_reg_dps);
+	allocator.finish();
 
 	CHECK(allocator.stack_size == 16);
 	CHECK(dp1->data.stack.offset == -8);	
@@ -302,7 +298,5 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	da.funcCalled(dp_prms, FT_PLN);
 
-	vector<int> save_regs;
-	vector<PlnDataPlace*> save_reg_dps;
-	da.finish(save_regs, save_reg_dps);
+	da.finish();
 }

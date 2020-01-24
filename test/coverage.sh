@@ -2,7 +2,8 @@
 # Coverage check tool
 
 # target="../generators/PlnX86_64Generator"
-target="../generators/PlnX86_64DataAllocator"
+# target="../generators/PlnX86_64DataAllocator"
+target="../generators/PlnX86_64RegisterMachine"
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
 # target="../models/PlnBlock"

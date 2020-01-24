@@ -114,6 +114,7 @@ public:
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="");
 	void addComment(string comment);
 	void popOpecodes(ostream& os);
+	void memoRequestedStackSize(int size);
 };
 
 inline int regid_of(PlnOperandInfo *ope) {
