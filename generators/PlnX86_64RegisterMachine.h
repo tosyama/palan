@@ -86,9 +86,9 @@ public:
 
 // label operand (e.g. $.LC1)
 class PlnLabelOperand : public PlnOperandInfo {
+public:
 	string label;
 	int id;
-public:
 	PlnLabelOperand(string label, int id)
 		: PlnOperandInfo(OP_LBL), label(label), id(id) {}
 	PlnOperandInfo* clone() override { return new PlnLabelOperand(label, id); }
@@ -129,3 +129,8 @@ inline int64_t int64_of(const PlnOperandInfo* ope) {
 	return static_cast<const PlnImmOperand*>(ope)->value;
 }
 
+inline string string_of(const PlnOperandInfo* ope) {
+	BOOST_ASSERT(ope->type == OP_LBL);
+	auto lope = static_cast<const PlnLabelOperand*>(ope);
+	return lope->label + to_string(lope->id);
+}
