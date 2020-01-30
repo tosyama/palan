@@ -4,7 +4,6 @@
 /// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <vector>
-#include <array>
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -13,15 +12,11 @@
 #include <sstream>
 #include <boost/assert.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/range/algorithm_ext.hpp>
 #include "../PlnModel.h"
 #include "PlnX86_64DataAllocator.h"
 #include "PlnX86_64Generator.h"
-
-using std::array;
-using std::sort;
-using std::unique;
-using boost::remove_erase;
+#include "PlnX86_64RegisterMachineImp.h"
+#include "PlnX86_64RegisterSave.h"
 
 static const char* r(int rt, int size)
 {
@@ -183,26 +178,6 @@ const char* PlnLabelAdrsModeOperand::str(char* buf)
 	return buf;
 }
 
-class PlnOpeCode {
-public:
-	PlnX86_64Mnemonic mne;
-	PlnOperandInfo *src, *dst;
-	string comment;
-	PlnOpeCode(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
-		: mne(mne), src(src), dst(dst), comment(comment) {}
-};
-
-class PlnX86_64RegisterMachineImp
-{
-public:
-	bool has_call = false;
-	int ret_num = 0;
-	int requested_stack_size = 0;
-	vector<PlnOpeCode> opecodes;
-	PlnX86_64RegisterMachineImp() {
-	};
-};
-
 static vector<const char*> mnes;
 
 PlnX86_64RegisterMachine::PlnX86_64RegisterMachine()
@@ -354,8 +329,6 @@ static ostream& operator<<(ostream& out, const PlnOpeCode& oc)
 }
 
 // Optimazations
-static void addRegSave(vector<PlnOpeCode> &opecodes, int cur_stacksize);
-static void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize);
 static void removeStackArea(vector<PlnOpeCode> &opecodes);
 static void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes);
 static void asmOptimize(vector<PlnOpeCode> &opecodes);
@@ -388,333 +361,6 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 	imp->has_call = false;
 	imp->ret_num = 0;
 	imp->requested_stack_size = 0;
-}
-
-#define set_regid(x)	{int id=(x); if(!access_reg[id]) access_reg[id] = 1;}
-inline void recUsedReg(PlnOperandInfo *ope, char access_reg[])
-{
-	if (!ope) return;
-	if (ope->type == OP_REG) {
-		set_regid(regid_of(ope));
-	} else if (ope->type == OP_ADRS) {
-		auto addr_ope = static_cast<PlnAdrsModeOperand*>(ope);
-		set_regid(addr_ope->base_regid);
-		int regid = addr_ope->index_regid;
-		if (regid>0) set_regid(regid);
-	}
-}
-
-static void addRegSaveOpe(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &regmap)
-{
-	int stack_size = regmap.back()[1];
-
-	if (stack_size % 16)
-		stack_size += 8;
-	
-	int i=0;
-	while (i < opecodes.size()) {
-		PlnOpeCode &opec = opecodes[i];
-		if ((opec.mne == SUBQ || opec.mne == ADDQ) && opec.dst->type == OP_REG
-				&& regid_of(opec.dst) == RSP) {
-			auto imm_ope = static_cast<PlnImmOperand*>(opec.src);
-			imm_ope->value = stack_size;
-
-			if (opec.mne == SUBQ) {
-				for (auto &rmap: regmap) {
-					auto src = new PlnRegOperand(rmap[0], 8);
-					auto dst = new PlnAdrsModeOperand(RBP, -rmap[1], -1, 0);
-					i++;
-					BOOST_ASSERT(opecodes[i].mne == MNE_NONE); // reserved
-					opecodes[i] = {MOVQ, src, dst, "save reg"};
-				}
-
-			} else if (opec.mne == ADDQ) {
-				for (auto &rmap: regmap) {
-					auto src = new PlnAdrsModeOperand(RBP, -rmap[1], -1, 0);
-					auto dst = new PlnRegOperand(rmap[0], 8);
-					i++;
-					BOOST_ASSERT(opecodes[i].mne == MNE_NONE); // reserved
-					opecodes[i] = {MOVQ, src, dst, "load reg"};
-				}
-			}
-		}
-		i++;
-	}
-}
-
-static vector<int> save_regids = {RBX, R12, R13, R14, R15};
-void addRegSave(vector<PlnOpeCode> &opecodes, int cur_stacksize)
-{
-	char access_reg[REG_NUM] = {};
-	for (auto &opecode: opecodes) {
-		recUsedReg(opecode.src, access_reg);
-		recUsedReg(opecode.dst, access_reg);
-	}
-
-	vector<array<int,2>> regmap;
-	for (int sregid: save_regids) {
-		if (access_reg[sregid]) {
-			cur_stacksize += 8;
-			regmap.push_back({sregid, cur_stacksize});
-		}
-	}
-
-	if (!regmap.size())
-		return;
-	
-	addRegSaveOpe(opecodes, regmap);
-}
-
-// Control flow graph
-enum CFGStartType {
-	CFGS_Entry,
-	CFGS_Label,
-	CFGS_Merged,
-};
-enum CFGEndType {
-	CFGE_Next,
-	CFGE_Return,
-	CFGE_Jump,
-	CFGE_JumpCond,
-	CFGE_Merged,
-};
-
-struct RegUsedBlock
-{
-	int ind;
-	CFGStartType start_type;
-	CFGEndType end_type;
-
-	bool deleted = false;
-	
-	string start_label;
-	vector<string> inner_labels;
-	vector<string> jump_to_labels;
-	int ret_index = -1;
-	string merge_info = "";
-
-	char preaccess_reg[REG_NUM] = {};
-	char access_reg[REG_NUM] = {};
-
-	vector <RegUsedBlock*> next_blocks;
-	vector <RegUsedBlock*> previous_blocks;
-};
-
-static RegUsedBlock* searchLabledBlock(vector<RegUsedBlock*> &blocks, string &lable)
-{
-	for (auto b: blocks) {
-		if (b->start_type == CFGS_Label && b->start_label == lable)
-			return b;
-	}
-	return NULL;
-}
-
-static void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes)
-{
-	// output analize info
-	for (auto b: blocks) {
-		string info;
-		if (b->deleted)
-			info = "##";
-		info += to_string(b->ind) + ":";
-
-		// start
-		if (b->start_type == CFGS_Label) {
-			info += b->start_label+ ":";
-		} else {
-			info += "-:";
-		}
-		// end
-		if (b->end_type == CFGE_Return) {
-			info += "ret" + to_string(b->ret_index) + ":";
-		} else if (b->end_type == CFGE_JumpCond) {
-			info += "jpc:";
-		} else if (b->end_type == CFGE_Jump) {
-			info += "jmp:";
-		} else {
-			info += "-:";
-		}
-
-		// next
-		info += "[";
-		for (auto n: b->next_blocks) {
-			info += to_string(n->ind) + ",";
-		}
-		info += "]:[";
-
-		// previous
-		for (auto p: b->previous_blocks) {
-			info += to_string(p->ind) + ",";
-		}
-		info += "]:" + b->merge_info;
-		opecodes.push_back({COMMENT, NULL, NULL, info});
-	}
-}
-
-static void updateBlock(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* b2)
-{
-	bool replaced = false;
-	auto n = blocks.begin();
-	while (n != blocks.end()) {
-		if (*n == b1) {
-			if (replaced) {
-				n = blocks.erase(n);
-				continue;
-			}
-			replaced = true;
-		} else if (*n == b2) {
-			if (replaced) {
-				n = blocks.erase(n);
-				continue;
-			}
-			*n = b1;
-			replaced = true;
-		}
-		++n;
-	}
-}
-
-static void mergeBlocksVec(vector<RegUsedBlock*> &blocks1, vector<RegUsedBlock*> &blocks2)
-{
-	blocks1.insert(blocks1.end(), blocks2.begin(), blocks2.end());
-	sort(blocks1.begin(), blocks1.end(), [](const RegUsedBlock* l, const RegUsedBlock* r) { return l->ind < r->ind; });
-	blocks1.erase(unique(blocks1.begin(), blocks1.end()), blocks1.end());
-}
-
-static void mergeBlocks(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* b2)
-{
-	BOOST_ASSERT(b1 != b2);
-	mergeBlocksVec(b1->next_blocks, b2->next_blocks);
-	mergeBlocksVec(b1->previous_blocks, b2->previous_blocks);
-
-	remove_erase(b1->next_blocks, b2);
-	remove_erase(b1->next_blocks, b1);
-	remove_erase(b1->previous_blocks, b2);
-	remove_erase(b1->previous_blocks, b1);
-
-	b1->merge_info += to_string(b2->ind) + "," + b2->merge_info;
-
-	b2->deleted = true;
-
-	// update other block information
-	for (auto b: blocks) {
-		if (b->deleted || b == b1)
-			continue;
-		updateBlock(b->next_blocks, b1, b2);
-		updateBlock(b->previous_blocks, b1, b2);
-	}
-}
-
-void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
-{
-	vector<RegUsedBlock*> blocks;
-
-	RegUsedBlock* cur = NULL;
-	int retcount = 0;
-	int index = 0;
-
-	// create basic blocks
-	for (auto &opec: opecodes) {
-		if (opec.mne == COMMENT || opec.mne == MNE_NONE)
-			continue;
-
-		if (opec.mne == LABEL) {
-			auto new_block = new RegUsedBlock();
-			new_block->ind = index++;
-			new_block->start_type = CFGS_Label;
-			new_block->end_type = CFGE_Next;
-			new_block->start_label = string_of(opec.src);
-			cur = new_block;
-			blocks.push_back(cur);
-			continue;
-		}
-
-		if (!cur) {
-			auto new_block = new RegUsedBlock();
-			new_block->ind = index++;
-			new_block->start_type = CFGS_Entry;
-			new_block->end_type = CFGE_Next;
-			cur = new_block;
-			blocks.push_back(cur);
-		}
-
-		if (opec.mne == RET) {
-			BOOST_ASSERT(cur);
-			retcount++;
-			cur->end_type = CFGE_Return;
-			cur->ret_index = retcount;
-			cur = NULL;
-
-		} else if (opec.mne == JMP) {
-			cur->end_type = CFGE_Jump;
-			cur->jump_to_labels.push_back(string_of(opec.src));
-			cur = NULL;
-
-		} else if (opec.mne == JNE || opec.mne == JE
-				|| opec.mne == JGE || opec.mne == JLE
-				|| opec.mne == JG || opec.mne == JL
-				|| opec.mne == JAE || opec.mne == JBE
-				|| opec.mne == JA || opec.mne == JB) {
-			cur->end_type = CFGE_JumpCond;
-			cur->jump_to_labels.push_back(string_of(opec.src));
-			cur = NULL;
-		}
-	}
-
-	// build control flow graph
-	for (int i=0; i<blocks.size(); i++) {
-		auto b = blocks[i];
-		switch (b->end_type){
-			case CFGE_Next:
-				if ((i+1)<blocks.size()) {
-					b->next_blocks.push_back(blocks[i+1]);
-					blocks[i+1]->previous_blocks.push_back(b);
-				}
-				break;
-
-			case CFGE_JumpCond:
-				BOOST_ASSERT((i+1)<blocks.size());
-				b->next_blocks.push_back(blocks[i+1]);
-				blocks[i+1]->previous_blocks.push_back(b);
-			case CFGE_Jump:
-				BOOST_ASSERT(b->jump_to_labels.size() == 1);
-				RegUsedBlock* lblb = searchLabledBlock(blocks, b->jump_to_labels[0]);
-				BOOST_ASSERT(lblb);
-				b->next_blocks.push_back(lblb);
-				lblb->previous_blocks.push_back(b);
-				break;
-		}
-	}
-
-	showBlockInfo(blocks, opecodes);
-
-	// transform graph -> tree
-	for (int i=0; i<blocks.size(); i++) {
-		auto b = blocks[i];
-		if (b->deleted) continue;
-
-		auto &pblocks = b->previous_blocks;
-		while (pblocks.size() > 1) {
-			sort(pblocks.begin(), pblocks.end(), [](const RegUsedBlock* l, const RegUsedBlock* r) { return l->ind < r->ind; });
-			int pind = pblocks.back()->ind;
-			if (pind > b->ind) {
-				// merge with current block and last;
-				mergeBlocks(blocks, b, pblocks.back());
-			} else if (pind < b->ind) {
-				// merge with previous 2 blocks;
-				auto pb = *(pblocks.end()-2);
-				mergeBlocks(blocks, pb, pblocks.back());
-				if (pb->previous_blocks.size() > 1) {
-					// reverse loop index to pb
-					i = pb->ind - 1;
-				}
-			} else
-				BOOST_ASSERT(false);
-		}
-	}
-
-	showBlockInfo(blocks, opecodes);
-	addRegSave(opecodes, cur_stacksize);
 }
 
 void removeStackArea(vector<PlnOpeCode> &opecodes)
