@@ -10,7 +10,7 @@ public:
 	string comment;
 	int mark;
 	PlnOpeCode(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)
-		: mne(mne), src(src), dst(dst), comment(comment) {}
+		: mne(mne), src(src), dst(dst), comment(comment), mark(0) {}
 };
 
 class PlnX86_64RegisterMachineImp

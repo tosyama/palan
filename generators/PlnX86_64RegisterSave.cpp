@@ -60,8 +60,14 @@ struct RegUsedBlock {
 	vector <RegUsedBlock*> previous_blocks;
 };
 
+enum {
+	INSERT_BEFORE,
+	APPEND_AFTER,
+};
+
 struct SaveRegInfo {
 	int mark;
+	int method;
 	vector<int> regids;
 };
 
@@ -133,7 +139,7 @@ static void addRegSaveOpe(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &re
 					auto dst = new PlnRegOperand(rmap[0], 8);
 					i++;
 					BOOST_ASSERT(opecodes[i].mne == MNE_NONE); // reserved
-					opecodes[i] = {MOVQ, src, dst, "load reg"};
+					opecodes[i] = {MOVQ, src, dst, "restore reg"};
 				}
 			}
 		}
@@ -143,9 +149,11 @@ static void addRegSaveOpe(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &re
 
 static RegUsedBlock* searchLabledBlock(vector<RegUsedBlock*> &blocks, string &lable);
 static void mergeBlocks(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* b2);
-static void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
-static void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes);
-static void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
+static void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo, char access_reg[]);
+static void addRegSaveOpeFromAnalyzedInfo(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &regmap,
+				vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
+// static void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes);
+// static void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
 
 void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
 {
@@ -263,7 +271,7 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
 		}
 	}
 
-	showBlockInfo(blocks, opecodes);
+//	showBlockInfo(blocks, opecodes);
 
 	// transform graph -> tree
 	for (int i=0; i<blocks.size(); i++) {
@@ -308,15 +316,17 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
 		}
 	}
 
+	// create save and restore information from tree.
 	vector<SaveRegInfo> saveInfo;
 	vector<SaveRegInfo> restoreInfo;
+	char access_reg[REG_NUM] = {};
 	{
 		vector<RegUsedBlock*> bstack;
 		bstack.push_back(blocks[0]);
 		while (bstack.size()) {
 			auto b = bstack.back();
 			bstack.pop_back();
-			reflectUsingReg(b, saveInfo, restoreInfo);
+			reflectUsingReg(b, saveInfo, restoreInfo, access_reg);
 
 			for (auto nb: b->next_blocks)
 				bstack.push_back(nb);
@@ -324,9 +334,25 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
 		}
 	}
 
-	showBlockInfo(blocks, opecodes);
-	showSaveInfo(opecodes, saveInfo, restoreInfo);
-	addRegSave(opecodes, cur_stacksize);
+//	showBlockInfo(blocks, opecodes);
+//	showSaveInfo(opecodes, saveInfo, restoreInfo);
+
+	vector<array<int,2>> regmap;
+	int stack_pos = cur_stacksize;
+	for (int sregid: save_regids) {
+		if (access_reg[sregid]) {
+			stack_pos += 8;
+			regmap.push_back({sregid, stack_pos});
+		}
+	}
+
+	if (regmap.size()) {
+		addRegSaveOpeFromAnalyzedInfo(opecodes, regmap, saveInfo, restoreInfo);
+	}
+	
+
+	for (auto b: blocks)
+		delete b;
 }
 
 RegUsedBlock* searchLabledBlock(vector<RegUsedBlock*> &blocks, string &lable)
@@ -374,7 +400,7 @@ void mergeBlocks(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* 
 	}
 }
 
-void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo) {
+void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo, char access_reg[]) {
 	vector<int> regids;
 
 	if (b->start_type != CFGS_Merged) {
@@ -387,8 +413,10 @@ void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<Save
 		}
 	}
 
-	if (regids.size())
-		saveInfo.push_back({b->start_mark, regids});
+	if (regids.size()) {
+		int method = b->start_type == CFGS_Label ? APPEND_AFTER : INSERT_BEFORE;
+		saveInfo.push_back({b->start_mark, method, regids});
+	}
 
 	regids.clear();
 
@@ -399,11 +427,12 @@ void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<Save
 			if (ra & REG_USING) {
 				BOOST_ASSERT(ra & REG_SAVED);
 				regids.push_back(i);
+				access_reg[i] |= ra;
 			}
 		}
 
 		if (regids.size())
-			restoreInfo.push_back({b->end_mark, regids});
+			restoreInfo.push_back({b->end_mark, INSERT_BEFORE, regids});
 
 		return;
 	}
@@ -422,8 +451,10 @@ void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<Save
 		}
 	}
 
-	if (regids.size())
-		saveInfo.push_back({b->end_mark, regids});
+	if (regids.size()) {
+		int method = b->end_type == CFGE_Next ? APPEND_AFTER : INSERT_BEFORE;
+		saveInfo.push_back({b->end_mark, method, regids});
+	}
 
 	// refrect using reg info to next blocks.
 	for (auto nb: b->next_blocks) {
@@ -434,6 +465,92 @@ void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<Save
 			ra1 |= *ra2;
 			ra2++;
 		}
+	}
+}
+
+inline int offset(vector<array<int,2>> &regmap, int regid)
+{
+	for (auto &rmap:regmap)
+		if (rmap[0] == regid)
+			return -rmap[1];
+	BOOST_ASSERT(false);
+}
+
+void addRegSaveOpeFromAnalyzedInfo(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &regmap,
+		vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo)
+{
+	int stack_size = regmap.back()[1];
+
+	if (stack_size % 16)
+		stack_size += 8;
+	
+	BOOST_ASSERT(opecodes[0].mark == 1);
+	int i;
+	// special process at function begin
+	for (i=1; i<10; ++i) {
+		PlnOpeCode &opec = opecodes[i];
+		if (opec.mne == SUBQ && regid_of(opec.dst) == RSP) {
+			auto imm_ope = static_cast<PlnImmOperand*>(opec.src);
+			imm_ope->value = stack_size;
+			SaveRegInfo* sri = NULL;
+			for (auto &svinf: saveInfo) {
+				if (svinf.mark == 1) {
+					sri = &svinf;
+					break;
+				}
+			}
+			BOOST_ASSERT(sri);
+			for (int regid: sri->regids) {
+				auto src = new PlnRegOperand(regid, 8);
+				auto dst = new PlnAdrsModeOperand(RBP, offset(regmap,regid), -1, 0);
+				i++;
+				BOOST_ASSERT(opecodes[i].mne == MNE_NONE); // reserved
+				opecodes[i] = {MOVQ, src, dst, "save reg"};
+			}
+			break;
+		}
+	}
+	BOOST_ASSERT(i < 10);
+
+	while (i < opecodes.size()) {
+		PlnOpeCode &opec = opecodes[i];
+		if (opec.mark) {
+			for (auto &rsinf: restoreInfo) {
+				if (rsinf.mark == opec.mark) {
+					int j = i-7;
+					BOOST_ASSERT(opecodes[i].mne == RET);
+					BOOST_ASSERT(opecodes[j].mne == ADDQ && regid_of(opecodes[j].dst) == RSP);
+					auto imm_ope = static_cast<PlnImmOperand*>(opecodes[j].src);
+					imm_ope->value = stack_size;
+					for (int regid: rsinf.regids) {
+						j++;
+						auto src = new PlnAdrsModeOperand(RBP, offset(regmap,regid), -1, 0);
+						auto dst = new PlnRegOperand(regid, 8);
+						BOOST_ASSERT(opecodes[j].mne == MNE_NONE); // reserved
+						opecodes[j] = {MOVQ, src, dst, "restore reg"};
+					}
+					goto next_ope;
+				}
+			}
+			for (auto &svinf: saveInfo) {
+				if (svinf.mark == opec.mark) {
+					vector<PlnOpeCode> savecodes;
+					for (int regid: svinf.regids) {
+						auto src = new PlnRegOperand(regid, 8);
+						auto dst = new PlnAdrsModeOperand(RBP, offset(regmap,regid), -1, 0);
+						savecodes.push_back({MOVQ, src, dst, "save reg"});
+					}
+					auto ins_ite = opecodes.begin() + i;
+					if (svinf.method == APPEND_AFTER)
+						++ins_ite;
+					opecodes.insert(ins_ite, savecodes.begin(), savecodes.end());
+					i += savecodes.size();
+					goto next_ope;
+				}
+			}
+		}
+next_ope:
+		i++;
 	}
 }
 
@@ -467,7 +584,7 @@ void updateBlock(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* 
 	}
 }
 
-void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes)
+/* void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes)
 {
 	// output analize info
 	for (auto b: blocks) {
@@ -558,5 +675,5 @@ void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, v
 		info += "]";
 		opecodes.push_back({COMMENT, NULL, NULL, info});
 	}
-}
+} */
 
