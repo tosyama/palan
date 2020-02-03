@@ -361,7 +361,7 @@ RegUsedBlock* searchLabledBlock(vector<RegUsedBlock*> &blocks, string &lable)
 		if (b->start_type == CFGS_Label && b->start_label == lable)
 			return b;
 	}
-	return NULL;
+	BOOST_ASSERT(false);
 }
 
 static void mergeBlocksVec(vector<RegUsedBlock*> &blocks1, vector<RegUsedBlock*> &blocks2);
@@ -431,8 +431,8 @@ void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<Save
 			}
 		}
 
-		if (regids.size())
-			restoreInfo.push_back({b->end_mark, INSERT_BEFORE, regids});
+		// insert regardress of save regnum to reset statck size.
+		restoreInfo.push_back({b->end_mark, INSERT_BEFORE, regids});
 
 		return;
 	}
@@ -499,7 +499,8 @@ void addRegSaveOpeFromAnalyzedInfo(vector<PlnOpeCode> &opecodes, vector<array<in
 					break;
 				}
 			}
-			BOOST_ASSERT(sri);
+			if (!sri)
+				break;
 			for (int regid: sri->regids) {
 				auto src = new PlnRegOperand(regid, 8);
 				auto dst = new PlnAdrsModeOperand(RBP, offset(regmap,regid), -1, 0);

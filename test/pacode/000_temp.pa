@@ -4,9 +4,7 @@ opti_regsave(3);
 
 func opti_regsave(int64 i)
 {
-	if i == 0 {
-		return
-	}
+	if i == 0 { return }
 
 	n = 0;
 	m = 0;

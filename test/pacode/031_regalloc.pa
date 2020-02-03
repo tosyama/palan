@@ -1,6 +1,7 @@
 // Tests for registor allocation, they are detected from test coverage.
 ccall printf(...);
 ccall sscanf(@[?]byte str, @[?]byte format => ...) -> int32;
+ccall exit(int32 status);
 
 printf("%.2f %d", regf4toint2());
 
@@ -16,6 +17,11 @@ cmp();
 printf("\n");
 mem8();
 mem8_inv();
+multi_ret(0);
+multi_ret(1);
+multi_ret(8);
+
+exit(0);
 
 func regf4toint2() -> flo32 ff, int32 z
 {
@@ -120,6 +126,7 @@ func mem8()
 		printf("%d ", i1+i2);
 	}
 }
+
 func mem8_inv()
 {
 	{
@@ -133,4 +140,28 @@ func mem8_inv()
 		sscanf("1 2", "%d %d" => i1, i2);
 		printf("%d", i1+i2);
 	}
+}
+
+func multi_ret(int64 i) // reg save optimazation
+{
+	if i == 0 {
+		printf("A");
+		return
+	}
+
+	n = i;
+	m = 0;
+	while n < 9 {
+		n -> m;
+		n + 1 -> n;
+		if n == 2 { continue }
+		else if n == 8 { break }
+		else if n >= 9 {
+			printf("B");
+			return
+		}
+	}
+	m -> n;
+	i+1 -> i;
+	printf("C");
 }

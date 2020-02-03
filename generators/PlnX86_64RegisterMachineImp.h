@@ -1,6 +1,6 @@
 /// x86-64 (Linux) register machine inner class declaration.
 ///
-/// @file	PlnX86_64RegisterMachine.h
+/// @file	PlnX86_64RegisterMachineImp.h
 /// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 class PlnOpeCode {
