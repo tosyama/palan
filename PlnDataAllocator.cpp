@@ -205,7 +205,6 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 		BOOST_ASSERT(false);
 
 	dp->status = DS_ASSIGNED;
-	//auto pdp = dp->previous;
 	dp->alloc_step = step;
 
 	if (proceed_step) step++;
@@ -418,23 +417,8 @@ PlnDataPlace* PlnDataAllocator::getSeparatedDp(PlnDataPlace* dp)
 	return sub_dp;
 }
 
-void PlnDataAllocator::finish(vector<int> &save_regs, vector<PlnDataPlace*> &save_reg_dps, bool do_save_reg)
+void PlnDataAllocator::finish()
 {
-	// Alloc register value save area.
-	if (do_save_reg) {
-		save_regs = getRegsNeedSave();
-		for (int sr: save_regs) {
-			static string save_reg_cmt = "reg save";
-			auto dp = new PlnDataPlace(8,DT_UINT);
-			dp->type = DP_STK_BP;
-			dp->data.stack.idx = data_stack.size();
-			dp->previous = NULL;
-			dp->comment = &save_reg_cmt;
-			data_stack.push_back(dp);
-			save_reg_dps.push_back(dp);
-		}
-	}
-
 	int offset = 0;
 	// Set offset from base stack pointer.
 	for (auto dp: data_stack) {

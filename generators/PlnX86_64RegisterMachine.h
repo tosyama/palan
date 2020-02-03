@@ -40,7 +40,8 @@ enum PlnX86_64Mnemonic {
 	UCOMISD, UCOMISS,
 	XORPD, XORQ,
 
-	MNE_SIZE
+	MNE_SIZE,
+	MNE_NONE=-1
 };
 
 enum {
@@ -85,9 +86,9 @@ public:
 
 // label operand (e.g. $.LC1)
 class PlnLabelOperand : public PlnOperandInfo {
+public:
 	string label;
 	int id;
-public:
 	PlnLabelOperand(string label, int id)
 		: PlnOperandInfo(OP_LBL), label(label), id(id) {}
 	PlnOperandInfo* clone() override { return new PlnLabelOperand(label, id); }
@@ -112,8 +113,10 @@ public:
 	PlnX86_64RegisterMachine();
 	PlnX86_64RegisterMachine(const PlnX86_64RegisterMachine&) = delete;
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="");
+	void reserve(int num);
 	void addComment(string comment);
 	void popOpecodes(ostream& os);
+	void memoRequestedStackSize(int size);
 };
 
 inline int regid_of(PlnOperandInfo *ope) {
@@ -126,3 +129,8 @@ inline int64_t int64_of(const PlnOperandInfo* ope) {
 	return static_cast<const PlnImmOperand*>(ope)->value;
 }
 
+inline string string_of(const PlnOperandInfo* ope) {
+	BOOST_ASSERT(ope->type == OP_LBL);
+	auto lope = static_cast<const PlnLabelOperand*>(ope);
+	return lope->label + to_string(lope->id);
+}

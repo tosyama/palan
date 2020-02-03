@@ -323,6 +323,7 @@ void PlnX86_64Generator::genEntryFunc()
 void PlnX86_64Generator::genLocalVarArea(int size)
 {
 	BOOST_ASSERT((size%8) == 0 && size >= 0);
+	m.memoRequestedStackSize(size);
 
 	if (require_align) {
 		if ((size-8) % 16)
@@ -330,13 +331,13 @@ void PlnX86_64Generator::genLocalVarArea(int size)
 		require_align = false;
 
 	} else {
-		if (!size) return;
 		if ((size) % 16)
 			size = size + 8;
 	}
 
 	func_stack_size = size;
 	m.push(SUBQ, imm(size), reg(RSP));
+	m.reserve(5);	// for reg save
 }
 
 void PlnX86_64Generator::genEndFunc()
@@ -381,16 +382,6 @@ void PlnX86_64Generator::genEndFunc()
 	}
 }
 
-void PlnX86_64Generator::genSaveReg(int regid, PlnGenEntity* dst)
-{
-	m.push(MOVQ, reg(regid), ope(dst));
-}
-
-void PlnX86_64Generator::genLoadReg(int regid, PlnGenEntity* src)
-{
-	m.push(MOVQ, ope(src), reg(regid));
-}
-
 void PlnX86_64Generator::genCCall(string& cfuncname, vector<int> &arg_dtypes, bool has_va_arg)
 {
 	if (has_va_arg) {
@@ -418,8 +409,8 @@ void PlnX86_64Generator::genSysCall(int id, const string& comment)
 
 void PlnX86_64Generator::genReturn()
 {
-	if (func_stack_size)
-		m.push(ADDQ, imm(func_stack_size), reg(RSP));
+	m.push(ADDQ, imm(func_stack_size), reg(RSP));
+	m.reserve(5);	// for reg load
 	m.push(POPQ, reg(RBP));	
 	m.push(RET);
 }

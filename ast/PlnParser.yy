@@ -5,7 +5,7 @@
 /// is created from this definition file by bison.
 ///
 /// @file	PlnParser.yy
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 %skeleton "lalr1.cc"
 %require "3.0.2"
@@ -1385,70 +1385,6 @@ var_affixes_ref: '@'
 		$$.push_back(jref);
 	}
 	;
-
-/*type_or_var
-	{
-		for (json& t: $1) {
-			if (t["name"] == "[]") {
-				for (json& s: t["sizes"]) {
-					if (s["exp-type"] == "unknown") {
-						if (s["info"] == "?") {
-							s = {
-								{"exp-type", "lit-int"},
-								{"val", 0},
-								{"loc", s["loc"]}
-							};
-						} else if (s["info"] == "") {
-							s = {
-								{"exp-type", "lit-int"},
-								{"val", -1},
-								{"loc", s["loc"]}
-							};
-						}
-					}
-				}
-			}
-		}
-		$$ = move($1);
-	}
-	;
-
-type_or_var: ID
-	{
-		json ptype = {
-			{"name", $1},
-			{"mode", "---"}
-		};
-		LOC(ptype, @$);
-		$$.push_back(move(ptype));
-	}
-	| type_or_var '.' ID
-	{
-		json ptype = {
-			{"name", $3},
-			{"mode", "---"}
-		};
-		LOC(ptype, @3);
-		$$ = move($1);
-		$$.push_back(move(ptype));
-	}
-	| type_or_var '[' array_items ']'
-	{
-		json atype = {
-			{"name", "[]"},
-			{"sizes", move($3)},
-			{"mode", "---"}
-		};
-		LOC(atype, @$);
-		$$ = move($1);
-		$$.push_back(move(atype));
-	}
-	| type_or_var '@'
-	{
-		$$ = move($1);
-		$$.back()["mode"] = "rir";
-	}
-	;*/
 
 array_items: array_item
 	{

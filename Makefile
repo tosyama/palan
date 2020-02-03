@@ -25,6 +25,7 @@ SRCS=palan.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	generators/PlnX86_64RegisterMachine.cpp \
+	generators/PlnX86_64RegisterSave.cpp \
 	PlnDataAllocator.cpp PlnGenerator.cpp \
 	PlnMessage.cpp PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
 	PlnModelTreeBuilder.cpp
@@ -53,6 +54,11 @@ $(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
 	@$(MAKE) -C test
 $(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll
 	@$(MAKE) -C ast
+clean:
+	rm -f objs/*
+	rm -f $(AST)
+	rm -f ast/objs/*
+	rm -f test/*.o
 depend: $(SRCS)
 	-@ $(RM) depend.inc
 	-@ for i in $^; do $(CXX) -std=c++11 -MM $$i \

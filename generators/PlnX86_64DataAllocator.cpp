@@ -163,16 +163,6 @@ PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
 	return dp;
 }
 
-vector<int> PlnX86_64DataAllocator::getRegsNeedSave()
-{
-	vector<int> save_regs;
-	static int regs4save[] = {RBX, R12, R13, R14, R15};
-	for (int r: regs4save)
-		if (regs[r])
-			save_regs.push_back(r);
-	return save_regs;
-}
-
 static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 {
 	PlnDataPlace *curdp = root;

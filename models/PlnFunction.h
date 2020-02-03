@@ -1,7 +1,7 @@
 /// Function model declaration.
 ///
 /// @file	PlnFunction.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -48,8 +48,6 @@ public:
 	vector<PlnReturnValue> return_vals;
 	PlnVarInit *retval_init;
 	vector<int> ret_dtypes, arg_dtypes;
-	vector<int> save_regs;
-	vector<PlnDataPlace*> save_reg_dps;
 	PlnLoc loc;
 	union {
 		struct {

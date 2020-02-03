@@ -24,7 +24,6 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 protected:
 	PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) override;
 	PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) override;
-	vector<int> getRegsNeedSave() override;
 
 public:
 	PlnX86_64DataAllocator();

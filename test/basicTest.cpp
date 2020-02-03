@@ -8,7 +8,7 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "10");
+	REQUIRE(exec(testcode) == "");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -227,7 +227,7 @@ void normalCaseTest()
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 38 161 8 TTT\n"
-						"3 17 5 17 3");
+						"3 17 5 17 3ACB");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")

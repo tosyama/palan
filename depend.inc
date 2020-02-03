@@ -1,8 +1,9 @@
 palan.o:  PlnMessage.h models/PlnModule.h models/PlnExpression.h \
 	models/../PlnModel.h generators/PlnX86_64DataAllocator.h \
 	generators/../PlnDataAllocator.h generators/PlnX86_64Generator.h \
-	generators/../PlnGenerator.h PlnModelTreeBuilder.h \
-	libs/json/single_include/nlohmann/json.hpp PlnException.h
+	generators/../PlnGenerator.h generators/PlnX86_64RegisterMachine.h \
+	PlnModelTreeBuilder.h libs/json/single_include/nlohmann/json.hpp \
+	PlnException.h
 PlnModule.o:  models/PlnModule.h \
 	models/PlnExpression.h models/../PlnModel.h models/PlnBlock.h \
 	models/PlnFunction.h models/PlnVariable.h models/PlnStatement.h \
@@ -247,7 +248,15 @@ PlnX86_64DataAllocator.o:  \
 PlnX86_64RegisterMachine.o:  \
 	generators/../PlnModel.h generators/PlnX86_64DataAllocator.h \
 	generators/../PlnDataAllocator.h generators/PlnX86_64Generator.h \
-	generators/../PlnGenerator.h generators/PlnX86_64RegisterMachine.h
+	generators/../PlnGenerator.h generators/PlnX86_64RegisterMachine.h \
+	generators/PlnX86_64RegisterMachineImp.h \
+	generators/PlnX86_64RegisterSave.h
+PlnX86_64RegisterSave.o:  \
+	generators/../PlnModel.h generators/PlnX86_64DataAllocator.h \
+	generators/../PlnDataAllocator.h generators/PlnX86_64Generator.h \
+	generators/../PlnGenerator.h generators/PlnX86_64RegisterMachine.h \
+	generators/PlnX86_64RegisterMachineImp.h \
+	generators/PlnX86_64RegisterSave.h
 PlnDataAllocator.o:  PlnDataAllocator.h \
 	PlnConstants.h
 PlnGenerator.o:  PlnModel.h PlnDataAllocator.h \

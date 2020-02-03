@@ -1,7 +1,7 @@
 /// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
@@ -215,11 +215,6 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	for (auto e: expressions)
 		for (auto dp: e->data_places)
 			g.genSaveDp(dp);
-
-	for (int i=0; i<function->save_regs.size(); i++) {
-		auto e = g.getEntity(function->save_reg_dps[i]);
-		g.genLoadReg(function->save_regs[i], e.get());
-	}
 	
 	g.genReturn();
 }

@@ -1,6 +1,6 @@
 #include "testBase.h"
 
-TEST_CASE("basic algorithm code example.", "[algorithm]")
+static void algorithmTest()
 {
 	string testcode;
 
@@ -15,4 +15,12 @@ TEST_CASE("basic algorithm code example.", "[algorithm]")
 	testcode = "102_lsm";
  	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "-0.633, 1.204");
+}
+
+TEST_CASE("basic algorithm code example.", "[algorithm]")
+{
+	disableOptimize = true;
+	algorithmTest();
+	disableOptimize = false;
+	algorithmTest();
 }
