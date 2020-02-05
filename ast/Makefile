@@ -2,6 +2,8 @@ PROGRAM=pat
 SRCS=palanast.cpp PlnParser.cpp PlnLexer.cpp ../PlnMessage.cpp
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:..
+CXX_FLAGS= -g -O0
+CXX_RELEASE_FLAGS= -s -O2
 
 $(PROGRAM): $(OBJS)
 	@echo link $(PROGRAM).
@@ -9,7 +11,7 @@ $(PROGRAM): $(OBJS)
 	@ln -fs ast/$(PROGRAM) ../$(PROGRAM)
 .cpp.o:
 	@mkdir -p objs
-	$(CXX) -std=c++11 -c -g $< -o objs/$@
+	$(CXX) -std=c++11 -c $(CXX_FLAGS) $< -o objs/$@
 PlnParser.cpp: PlnParser.yy
 	bison -o $@ -r all --report-file=bison.log $<
 PlnLexer.cpp: PlnLexer.ll
@@ -17,3 +19,5 @@ PlnLexer.cpp: PlnLexer.ll
 palanast.o: PlnParser.cpp
 PlnParser.o: PlnLexer.h PlnParser.hpp ../PlnMessage.h
 palanast.o: PlnLexer.h PlnParser.hpp ../PlnMessage.h
+release: CXX_FLAGS=$(CXX_RELEASE_FLAGS)
+release: $(PROGRAM)

@@ -349,6 +349,7 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 	removeOmittableMoveToReg(imp->opecodes);
 	asmOptimize(imp->opecodes);
 
+	os << ".balign 16\n";
 	for (PlnOpeCode& oc: imp->opecodes) {
 		if (oc.mne != MNE_NONE)
 			os << oc << "\n";
