@@ -203,7 +203,7 @@ void normalCaseTest()
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
 								"infunc\n"
-								"smy0.33"); 
+								"smy0.33 abc 1234"); 
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode)== "success");

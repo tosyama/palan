@@ -3,7 +3,7 @@
 /// Manage output message descriptions in Palan compiler.
 ///
 /// @file	PlnMessage.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include "PlnMessage.h"
 #include "boost/format.hpp"
@@ -38,6 +38,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Could not open file '%1%'."; break;
 		case E_CantCopyFreedVar:
 			f = "Can not copy to freed variable '%1%'."; break;
+		case E_CantCopyType:
+			f = "Can not use copy to the variable of type '%1%'."; break;
 		case E_AmbiguousFuncCall:
 			f = "Ambiguous function call '%1%'."; break;
 		case E_IncompatibleTypeAssign:

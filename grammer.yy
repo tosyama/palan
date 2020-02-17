@@ -41,6 +41,7 @@ int yylex();
 %token DBL_ARROW
 %token ARROW
 %token EQ_ARROW
+%token AT_EXCL
 
 %right '='
 %left ARROW DBL_ARROW EQ_ARROW
@@ -342,9 +343,11 @@ var_affixes_arr: array_vals
 	| var_affixes_ref array_vals
 	;
 
-var_affixes_ref: '@'
-	| var_affixes_arr '@'
+var_affixes_ref: ref_mark
+	| var_affixes_arr ref_mark
 	;
+
+ref_mark: '@' | AT_EXCL;
 
 array_items: array_item
 	| array_items ',' array_item

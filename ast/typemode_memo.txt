@@ -113,7 +113,7 @@ literal/const
 [Allocation]
 Allocation/location of the data
  h: Heap allocation. Address info is stored in stack. The variable has responsible to alloc/free).
- s: Stack allocation.
+ s: Stack allocation or an element of container.
  r: Reference for the object. Address info is stored in stack. 
  i: Immediate value. This value don't have address.
  -: Default. using only output json from parser.

@@ -16,6 +16,8 @@ ccall localtime(@uint64 t) -> @struct_tm;
 
 ccall cos(flo64 x) -> flo64 :m;
 
+ccall strtol(@[?]byte s, @, int32 base => @![?]byte endptr) -> int32;
+
 type FILE;
 extern @FILE stdout, stderr;
 type struct_tm {
@@ -64,6 +66,12 @@ if tm.tm_year >= 119 && tm.tm_year <= 200
 	&& tm.tm_year == tm2.tm_year { printf("y") }
 
 printf("%.2lf", cos(1.23));
+
+@![?]byte rest_str;
+int32 l = strtol("1234 abc", 10 => rest_str);
+
+printf("%s %d", rest_str, l);
+
 exit(0);
 
 func infunc(@[?]byte str)

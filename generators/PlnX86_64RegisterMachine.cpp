@@ -338,23 +338,33 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 	if (!mnes.size())
 		initMnes();
 
+	// Optimize
+	removeOmittableMoveToReg(imp->opecodes);
+
 	// Add registor save  // ret_num == 0: top level
 	if (imp->ret_num == 1) addRegSave(imp->opecodes, imp->requested_stack_size);
 	else if (imp->ret_num >= 2) addRegSaveWithCFAnalysis(imp->opecodes, imp->requested_stack_size);
 
-	// Optimize
 	if (!imp->has_call)
 		removeStackArea(imp->opecodes);
 
-	removeOmittableMoveToReg(imp->opecodes);
 	asmOptimize(imp->opecodes);
 
 	os << ".balign 16\n";
+	BOOST_ASSERT(imp->opecodes.front().mne == LABEL);
+	PlnX86_64Mnemonic pre_mne = MNE_SIZE;
 	for (PlnOpeCode& oc: imp->opecodes) {
+		if (oc.mne == LABEL) {
+			if (pre_mne == RET || pre_mne == JMP) {
+				os << ".balign 2\n";
+			}
+		}
 		if (oc.mne != MNE_NONE)
 			os << oc << "\n";
 		delete oc.src;
 		delete oc.dst;
+		if (!(oc.mne == MNE_NONE || oc.mne == COMMENT))
+			pre_mne = oc.mne;
 	}
 	os.flush();
 	// reset internal information.
@@ -564,7 +574,7 @@ void asmOptimize(vector<PlnOpeCode> &opecodes)
 					delete src;
 				}
 			}
-		}
+		} 
 		opec++;
 	}
 }

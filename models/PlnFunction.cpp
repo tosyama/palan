@@ -112,7 +112,9 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 	param->dflt_value = defaultVal;
 	param->index = parameters.size();
 	param->iomode = iomode;
-	param->force_move = (pass_method == FPM_MOVEOWNER);
+	param->passby = pass_method;
+	param->passby = !ptype && pass_method == FPM_UNKNOWN ? 
+			parameters.back()->passby : pass_method;
 
 	parameters.push_back(param);
 
@@ -140,7 +142,7 @@ vector<string> PlnFunction::getParamStrs() const
 	vector<string> param_types;
 	for (auto p: parameters) {
 		string pname = p->var->var_type->name();
-		if (p->force_move) 
+		if (p->passby == FPM_OBJ_MOVEOWNER) 
 			pname += ">>";
 		if (p->var->name == "...")
 			pname += "...";
@@ -168,7 +170,7 @@ static string mangling(PlnFunction* f)
 		seed += "|";
 		seed += p->var->var_type->name();
 		seed += "." + p->var->var_type->mode;
-		seed += "." + to_string(p->force_move);
+		seed += "." + to_string(p->passby);
 	}
 
 	size_t hash = std::hash<string>{}(seed);

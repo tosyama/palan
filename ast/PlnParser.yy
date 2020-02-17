@@ -81,8 +81,10 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_ARROW	"->>"
 %token ARROW	"->"
 %token EQ_ARROW	"=>"
+%token AT_EXCL	"@!"
 
 %type <string>	pass_by
+%type <string>	ref_mark
 %type <bool>	move_owner take_owner arrow_ope
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
@@ -1331,6 +1333,9 @@ type: ids
 			if (ax["name"] == "@") {
 				mode = "rir";
 				continue;
+			} else if (ax["name"] == "@!") {
+				mode = "wcr";
+				continue;
 			} else if (ax["name"] == "[]") {
 				json jarr = {
 					{ "name", "[]" },
@@ -1367,22 +1372,32 @@ var_affixes_arr: array_vals
 	}
 	;
 
-var_affixes_ref: '@'
+var_affixes_ref: ref_mark
 	{
 		json jref = {
-			{"name","@"}
+			{"name",$1}
 		};
 		LOC(jref, @$);
 		$$.push_back(jref);
 	}
-	| var_affixes_arr '@'
+	| var_affixes_arr ref_mark
 	{
 		$$ = move($1);
 		json jref = {
-			{"name","@"}
+			{"name",$2}
 		};
 		LOC(jref, @$);
 		$$.push_back(jref);
+	}
+	;
+
+ref_mark: '@'
+	{
+		$$ = "@";
+	}
+	| AT_EXCL
+	{
+		$$ = "@!";
 	}
 	;
 
