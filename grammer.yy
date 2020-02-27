@@ -41,6 +41,7 @@ int yylex();
 %token DBL_ARROW
 %token ARROW
 %token EQ_ARROW
+%token DBL_EQ_ARROW
 %token AT_EXCL
 
 %right '='
@@ -107,9 +108,9 @@ out_parameter_def:
 	| EQ_ARROW KW_VARLENARG
 	;
 
-out_parameters: type ID
-	| out_parameters ',' type ID
-	| out_parameters ',' ID
+out_parameters: type ID move_owner
+	| out_parameters ',' type ID move_owner
+	| out_parameters ',' ID move_owner
 	;
 
 move_owner: /* empty */
@@ -226,7 +227,11 @@ expression:
 	;
 
 func_call: FUNC_ID '(' arguments ')'
-	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
+	| FUNC_ID '(' arguments output_arrow out_arguments ')'
+	;
+
+output_arrow: EQ_ARROW
+	| DBL_EQ_ARROW
 	;
 
 arguments: argument
@@ -237,11 +242,9 @@ argument: /* empty */
 	| expression move_owner
 	;
 
-out_arguments: out_argument
-	| out_arguments ',' out_argument
-	;
-
-out_argument: expression
+out_arguments: expression
+	| out_arguments ',' expression
+	| out_arguments ',' pass_by expression
 	;
 
 dst_vals: dst_val
@@ -251,8 +254,12 @@ dst_vals: dst_val
 dst_val: move_owner var_expression
 	;
 
-var_expression: var_exp_ids
-	| var_exp_affixes
+var_expression: var_exp_ids force_write
+	| var_exp_affixes force_write
+	;
+
+force_write: /* empty */
+	| '!'
 	;
 
 var_exp_ids: ids

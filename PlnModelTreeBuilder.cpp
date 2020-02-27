@@ -273,6 +273,14 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 						}
 					}
 
+				} else if (param["pass-by"] == "write-ref") {
+					iomode = PIO_OUTPUT;
+					if (var_type) {
+						if (var_type->data_type() == DT_OBJECT_REF) {
+							pm = FPM_VAR_REF;
+						} else
+							BOOST_ASSERT(false);
+					}
 				} else {
 					assertAST(param["pass-by"]=="copy", param);
 					iomode = PIO_INPUT;

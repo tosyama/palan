@@ -92,7 +92,7 @@ string build(const string &srcf)
 	if (ret) return "assemble err:"+srcf;
 
 	// link
-	string ld_cmd = "mkdir -p out && ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o out/"+srcf+" -lc -lm tmp.o";
+	string ld_cmd = "mkdir -p out && ld --dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 -o out/"+srcf+" -lc -lm tmp.o capi4test.o";
 	ret = system(ld_cmd.c_str());
 	if (ret) return "link err:"+srcf;
 

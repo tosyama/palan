@@ -1,11 +1,25 @@
 ccall printf(...);
 ccall strtol(@[?]byte s, @, int32 base => @![?]byte endptr) -> int32;
+ccall capitest();
+ccall topen(@[?]byte name => TestDb tdb>>) -> int32;
+ccall tclose(TestDb >>tdb);
+
+type TestDb;
 
 {
 	@[?]byte c = "1234";
 	int32 l = strtol("1234 abc", 10 => c);
 
+	// capitest();
+	//@!TestDb tdb;
+	// topen("test" => tdb);
+	TestDb tdb;
+	topen("test" =>> tdb);
+	tclose(tdb>>);
+
 	// printf("%s", c);
 
 //	fopen("test", "r") ->> f;
 }
+
+

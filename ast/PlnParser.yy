@@ -81,11 +81,12 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_ARROW	"->>"
 %token ARROW	"->"
 %token EQ_ARROW	"=>"
+%token DBL_EQ_ARROW	"=>>"
 %token AT_EXCL	"@!"
 
 %type <string>	pass_by
 %type <string>	ref_mark
-%type <bool>	move_owner take_owner arrow_ope
+%type <bool>	move_owner take_owner arrow_ope output_arrow
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
 %type <json>	parameter default_value
@@ -98,7 +99,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	extern_var_def
 %type <json>	expression
 %type <json>	assignment func_call chain_call term
-%type <json>	argument out_argument literal chain_src
+%type <json>	argument literal chain_src
 %type <json>	dst_val var_expression
 %type <json>	array_item
 %type <json>	array_val /* internal data {name,items,loc} */
@@ -339,33 +340,33 @@ out_parameter_def: /* empty */ { }
 	}
 	;
 
-out_parameters: type ID
+out_parameters: type ID move_owner
 	{
 		json prm = {
 			{ "var-type", move($1) },
 			{ "name", move($2) },
-			{ "pass-by", "write" }
+			{ "pass-by", $3 ? "write-ref" : "write" }
 		};
 		LOC(prm, @2);
 		$$.push_back(move(prm));
 	}
-	| out_parameters ',' type ID
+	| out_parameters ',' type ID move_owner
 	{
 		$$ = move($1);
 		json prm = {
 			{ "var-type", move($3) },
 			{ "name", move($4) },
-			{ "pass-by", "write" }
+			{ "pass-by", $5 ? "write-ref" : "write" }
 		};
 		LOC(prm, @4);
 		$$.push_back(move(prm));
 	}
-	| out_parameters ',' ID
+	| out_parameters ',' ID move_owner
 	{
 		$$ = move($1);
 		json prm = {
 			{ "name", move($3) },
-			{ "pass-by", "write" }
+			{ "pass-by", $4 ? "write-ref" : "write" }
 		};
 		LOC(prm, @3);
 		$$.push_back(move(prm));
@@ -795,8 +796,11 @@ func_call: FUNC_ID '(' arguments ')'
 		$$ = move(func_call);
 		LOC($$, @$);
 	}
-	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
+	| FUNC_ID '(' arguments output_arrow out_arguments ')'
 	{
+		if ($4) {
+			$5.front()["get_ownership"] = true;
+		}
 		json func_call = {
 			{"exp-type", "func-call"},
 			{"func-name", $1},
@@ -806,6 +810,10 @@ func_call: FUNC_ID '(' arguments ')'
 		$$ = move(func_call);
 		LOC($$, @$);
 	}
+	;
+
+output_arrow: EQ_ARROW { $$ = false; }
+	| DBL_EQ_ARROW { $$ = true; }
 	;
 
 arguments: argument
@@ -835,20 +843,26 @@ argument: /* empty */
 	}
 	;
 
-out_arguments: out_argument
+out_arguments: expression
 	{
-		$$.push_back(move($1));
+		json out_arg;
+		out_arg["exp"] = move($1);
+		$$.push_back(move(out_arg));
 	}
-	| out_arguments ',' out_argument
+	| out_arguments ',' expression
 	{
 		$$ = move($1);
-		$$.push_back(move($3));
+		json out_arg;
+		out_arg["exp"] = move($3);
+		$$.push_back(move(out_arg));
 	}
-	;
-
-out_argument: expression
+	| out_arguments ',' pass_by expression
 	{
-		$$["exp"] = move($1);
+		$$ = move($1);
+		json out_arg;
+		out_arg["exp"] = move($4);
+		out_arg["get_ownership"] = true;
+		$$.push_back(move(out_arg));
 	}
 	;
 

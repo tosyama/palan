@@ -46,7 +46,7 @@ AST_MAKE_FLAGS=
 
 FORCE: $(PROGRAM)
 	@cd test && $(MAKE) post_test
-$(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST)
+$(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST) test/*.c
 	@cd test && $(MAKE) test
 	@echo link $(PROGRAM).
 	@$(CXX) $(LDFLAGS) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options

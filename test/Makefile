@@ -1,3 +1,4 @@
+CC = gcc
 PROGRAM = tester
 TESTOBJS = testMain.o testBase.o basicTest.o dataAllocTest.o \
 		algorithmTest.o
@@ -5,8 +6,9 @@ OBJS = $(filter-out ../objs/palan.o, $(wildcard ../objs/*.o))
 AST = ../ast/pat
 POST_TESTER = cuitester
 POST_OBJS = cuiTestMain.o cuiTestBase.o cuiTest.o
+TESTCAPI_OBJ = capi4test.o
 
-.SUFFIXES: .cpp .o
+.SUFFIXES: .cpp .c .o
 
 $(POST_TESTER): $(POST_OBJS) $(PROGRAM)
 	@echo link $(POST_TESTER).
@@ -18,8 +20,10 @@ $(PROGRAM): $(TESTOBJS) $(OBJS) ./pacode/*.pa $(AST)
 
 .cpp.o:
 	$(CXX) -std=c++11 -c -g $< -pthread
+.c.o: 
+	$(CC) -c $<
 
-test:
+test: $(TESTCAPI_OBJ)
 	@mkdir -p out
 	./$(PROGRAM)
 

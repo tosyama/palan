@@ -9,7 +9,7 @@ ccall fopen(@[?]byte filename, mode) -> FILE;
 ccall fclose(FILE >>stream) -> int32;
 ccall int32 sqlite3_open([?]byte filename => sqlite3 db>>);
 
-byte[80] str;
+[80]byte str;
 int32 result;
 "Hello Horld" -> sprintf(=>str) -> result;
 
@@ -38,7 +38,7 @@ char *p, char p[]:
 	clone: [?]byte pa "wmh"+"wis"
 	move: caller [?]byte pa>>  : callee [?]byte >>pa "wmh"+"wis"
   after =>
-	write(io): [?]byte pa "wmh"+"wis"
+	write(io): [?]byte pa "wmr"+"wis"
 
 const char *p:
 	readonly: @[?]byte p "rir"+"ris"

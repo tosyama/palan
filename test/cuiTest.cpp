@@ -179,6 +179,6 @@ TEST_CASE("sample code compile test.", "[cui]")
 {
 	string dir = "../samples/";
 	string testcode = "tetris";
-	REQUIRE(exec_pac(testcode, "-o", testcode, "", dir) == "success");
-	REQUIRE(outfile(testcode) == "exists");
+	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
+	REQUIRE(outfile(testcode + ".o") == "exists");
 }

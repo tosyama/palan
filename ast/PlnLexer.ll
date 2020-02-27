@@ -55,6 +55,7 @@ enum {
 	ARROW		= PlnParser::token::ARROW,
 	DBL_ARROW	= PlnParser::token::DBL_ARROW,
 	EQ_ARROW	= PlnParser::token::EQ_ARROW,
+	DBL_EQ_ARROW	= PlnParser::token::DBL_EQ_ARROW,
 	AT_EXCL		= PlnParser::token::AT_EXCL
 };
 
@@ -76,6 +77,7 @@ DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
 EQ_ARROW	"=>"
+DBL_EQ_ARROW	"=>>"
 AT_EXCL		"@!"
 DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
@@ -156,6 +158,9 @@ extern/{POST_KW} 	{ return KW_EXTERN; }
 	}
 {EQ_ARROW} {
 		return EQ_ARROW;
+	}
+{DBL_EQ_ARROW} {
+		return DBL_EQ_ARROW;
 	}
 {DBL_LESS}	{
 		return DBL_LESS;
