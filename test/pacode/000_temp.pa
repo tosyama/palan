@@ -2,6 +2,8 @@ ccall printf(...);
 ccall strtol(@[?]byte s, @, int32 base => @![?]byte endptr) -> int32;
 ccall capitest();
 ccall topen(@[?]byte name => TestDb tdb>>) -> int32;
+//ccall topen(@[?]byte name => @!TestDb tdb) -> int32;
+ccall topen2(@[?]byte name => int32 stat, TestDb tdb>>) -> int32;
 ccall tclose(TestDb >>tdb);
 
 type TestDb;
@@ -13,9 +15,13 @@ type TestDb;
 	// capitest();
 	//@!TestDb tdb;
 	// topen("test" => tdb);
-	TestDb tdb;
+	TestDb tdb, tdb2;
+	int32 stat;
 	topen("test" =>> tdb);
+	topen2("test" => stat, >>tdb2);
+
 	tclose(tdb>>);
+	tclose(tdb2>>);
 
 	// printf("%s", c);
 

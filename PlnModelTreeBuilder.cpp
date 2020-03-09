@@ -277,7 +277,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					iomode = PIO_OUTPUT;
 					if (var_type) {
 						if (var_type->data_type() == DT_OBJECT_REF) {
-							pm = FPM_VAR_REF;
+							pm = FPM_OBJ_GETOWNER;
 						} else
 							BOOST_ASSERT(false);
 					}
@@ -967,6 +967,11 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		for (PlnValue& val: e->values) {
 			args.back().inf.push_back({PIO_OUTPUT});
 		}
+
+		if (arg["get-ownership"].is_boolean() && arg["get-ownership"] == true) {
+			args.back().inf.back().opt = AG_MOVE;
+		}
+
 	}
 
 	try {

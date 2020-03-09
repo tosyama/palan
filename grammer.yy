@@ -124,7 +124,7 @@ default_value: /* empty */
 	| '=' ID
 	| '=' INT
 	| '=' UINT
-	| '=' STR
+	| '=' strs
 	;
 
 ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return at_lib';'
@@ -279,12 +279,19 @@ array_vals: array_val
 
 array_val: '[' array_items ']'
 
-term: INT
-	| UINT
-	| STR
+term: literal
 	| var_expression
 	| array_vals
 	| '(' expression ')'
+	;
+
+literal: INT
+	| UINT
+	| strs
+	;
+
+strs: STR 
+	| strs STR
 	;
 
 assignment: expressions arrow_ope dst_vals

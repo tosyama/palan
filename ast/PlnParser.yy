@@ -53,7 +53,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 
 %token <int64_t>	INT	"integer"
 %token <uint64_t>	UINT	"unsigned integer"
-%token <double>		FLOAT	"float" %token <string>	STR	"string"
+%token <double>		FLOAT	"float"
+%token <string>	STR	"string"
 %token <string>	ID	"identifier"
 %token <string>	FUNC_ID	"function identifier"
 %token KW_TYPE	"type"
@@ -84,6 +85,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_EQ_ARROW	"=>>"
 %token AT_EXCL	"@!"
 
+%type <string>	strs
 %type <string>	pass_by
 %type <string>	ref_mark
 %type <bool>	move_owner take_owner arrow_ope output_arrow
@@ -129,7 +131,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%' '&'
-%left UMINUS '!' '@'
+%right UMINUS '!' '@'
 %left '.'
 
 %start module	
@@ -799,7 +801,7 @@ func_call: FUNC_ID '(' arguments ')'
 	| FUNC_ID '(' arguments output_arrow out_arguments ')'
 	{
 		if ($4) {
-			$5.front()["get_ownership"] = true;
+			$5.front()["get-ownership"] = true;
 		}
 		json func_call = {
 			{"exp-type", "func-call"},
@@ -861,7 +863,7 @@ out_arguments: expression
 		$$ = move($1);
 		json out_arg;
 		out_arg["exp"] = move($4);
-		out_arg["get_ownership"] = true;
+		out_arg["get-ownership"] = true;
 		$$.push_back(move(out_arg));
 	}
 	;
@@ -1057,7 +1059,7 @@ literal: INT
 		$$ = move(lit_float);
 		LOC($$, @$);
 	}
-	| STR
+	| strs
 	{
 		json lit_str = {
 			{"exp-type", "lit-str"},
@@ -1065,6 +1067,16 @@ literal: INT
 		};
 		$$ = move(lit_str);
 		LOC($$, @$);
+	}
+	;
+
+strs: STR
+	{
+		$$ = move($1);
+	}
+	| strs STR
+	{
+		$$ = $1 + $2;
 	}
 	;
 

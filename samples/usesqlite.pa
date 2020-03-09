@@ -1,0 +1,81 @@
+// std
+typeFILE;
+type c_str = [?]byte;
+ccall printf(@c_str format, ...) -> int32;
+ccall strlen(@c_str str) -> int64;
+ccall exit(int32 status);
+
+// sqlite3
+type sqlite3;
+type sqlite3_stmt;
+ccall sqlite3_open(@c_str filename => sqlite3 db>>) -> int32:sqlite3;
+ccall sqlite3_close(sqlite3 >>db) -> int32;
+ccall sqlite3_errmsg(@sqlite3 db) -> @[?]byte;
+ccall sqlite3_prepare_v2(@sqlite3 db, @c_str sql, int32 nbyte, @, int64 tail_dummy=0 => sqlite3_stmt stmt>>) -> int32;
+ccall sqlite3_bind_int(@sqlite3_stmt stmt, int32 ind, int32 val) -> int32;
+ccall sqlite3_bind_text(@sqlite3_stmt stmt, int32 ind, @c_str str, int32 len, int64 destructor_type) -> int32;
+ccall sqlite3_step(@sqlite3_stmt stmt) -> int32;
+ccall sqlite3_column_int(@sqlite3_stmt stmt, int32 icol) -> int32;
+ccall sqlite3_reset(@sqlite3_stmt stmt) -> int32;
+ccall sqlite3_finalize(@sqlite3_stmt >>stmt) -> int32;
+const SQLITE_OK = 0;
+const SQLITE_NG = 1;
+const SQLITE_ROW = 100;
+const SQLITE_DONE = 101;
+const SQLITE_STATIC = 0;
+const SQLITE_TRANSIENT = -1;
+
+sqlite3 db;
+sqlite3_open(":memory:" =>> db) -> check(db, "open db");
+{
+	sqlite3_stmt tbl_stmt;
+	sqlite3_prepare_v2(db, 
+			"CREATE TABLE fruits ("
+			"	id INTEGER PRIMARY KEY,"
+			"	name TEXT NOT NULL"
+			");",
+			-1, 0 =>> tbl_stmt)
+		-> check(db, "table sql");
+	tbl_stmt->sqlite3_step() -> check(db, "create tbl");
+	tbl_stmt->>sqlite3_finalize() -> check(db, "finalize");
+}
+
+{
+	sqlite3_stmt ins_stmt;
+	@c_str ins_sql = "INSERT INTO fruits VALUES(?, ?);";
+	sqlite3_prepare_v2(db, ins_sql, -1, 0 =>> ins_stmt) -> check(db, "insert sql");
+
+	const NUM = 2;
+	[NUM]@c_str fruits = ["apple", "orange"];
+	i=0;
+	while i<NUM {
+		sqlite3_bind_int(ins_stmt, 1, i) -> check(db, "bind int");
+		sqlite3_bind_text(ins_stmt, 2, fruits[i], strlen(fruits[i]), SQLITE_STATIC) -> check(db, "bind txt");
+		ins_stmt->sqlite3_step() -> check(db, "insert dat");
+		ins_stmt->sqlite3_reset();
+		i + 1 -> i;
+	}
+	ins_stmt->>sqlite3_finalize() -> check(db, "finalize");
+}
+{
+	sqlite3_stmt sel_stmt;
+	@c_str sel_sql = "SELECT * FROM fruits;";
+	sqlite3_prepare_v2(db, sel_sql, -1, 0 =>> sel_stmt) -> check(db, "select sql");
+	
+	int32 rc;
+	while (sel_stmt->sqlite3_step()->rc) == SQLITE_ROW {
+		id = (sel_stmt -> sqlite3_column_int(0));
+		printf("%d:\n", id);
+	}
+	rc -> check(db, "select all");
+	sel_stmt->>sqlite3_finalize() -> check(db, "finalize");
+}
+
+db->>sqlite3_close();
+
+func check(int32 ret_val, @sqlite3 db, @c_str method) {
+	if ret_val != SQLITE_OK && ret_val != SQLITE_DONE {
+		printf("%s error: %s\n", method, sqlite3_errmsg(db));
+		exit(1);
+	}
+}

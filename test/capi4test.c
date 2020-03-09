@@ -28,6 +28,12 @@ int topen(const char* name, TestDb** tdb)
 	return 0;
 }
 
+int topen2(const char* name, int* stat, TestDb** tdb)
+{
+	*stat = 999;
+	return topen(name, tdb);
+}
+
 void tclose(TestDb *tdb)
 {
 	if (!tdb)
