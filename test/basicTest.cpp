@@ -219,9 +219,9 @@ void normalCaseTest()
 
 	testcode = "030_reference";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n"
+	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s234\n"
 					"2 2 1.23 2.34");
-	CHECK(mcheck("mtrace030-1") == "+14 -14");
+	CHECK(mcheck("mtrace030-1") == "+15 -15");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 
 	testcode = "031_regalloc";
@@ -337,7 +337,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Type of variable 'amb_arr' is ambiguous.");
 
 	testcode = "535_varinit_type_err";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "536_varinit_type_err2";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible type to init variable 'b'.");

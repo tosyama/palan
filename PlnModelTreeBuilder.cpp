@@ -544,10 +544,10 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 		if (vt["name"] == "[]") {
 			assertAST(vt["sizes"].is_array(),vt);
 			for (json& sz: vt["sizes"]) {
-				if (sz_i >= sizes.size()) {
-					goto sz_err;
-				}
 				if (sz["exp-type"] == "token" && sz["info"] == "") {
+					if (sz_i >= sizes.size()) {
+						goto sz_err;
+					}
 					sz["exp-type"] = "lit-int";
 					sz["val"] = sizes[sz_i];
 				}
@@ -556,8 +556,7 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 		}
 	}
 
-	if (sz_i == sizes.size())
-		return;
+	return;
 
 sz_err:
 	PlnCompileError err(E_IncompatibleTypeInitVar, var["name"]);

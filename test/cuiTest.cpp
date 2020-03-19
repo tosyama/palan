@@ -181,4 +181,8 @@ TEST_CASE("sample code compile test.", "[cui]")
 	string testcode = "tetris";
 	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
 	REQUIRE(outfile(testcode + ".o") == "exists");
+
+	testcode = "usesqlite";
+	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
+	REQUIRE(outfile(testcode + ".o") == "exists");
 }

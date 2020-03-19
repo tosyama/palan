@@ -1,5 +1,5 @@
 // std
-typeFILE;
+type FILE;
 type c_str = [?]byte;
 ccall printf(@c_str format, ...) -> int32;
 ccall strlen(@c_str str) -> int64;
@@ -16,6 +16,7 @@ ccall sqlite3_bind_int(@sqlite3_stmt stmt, int32 ind, int32 val) -> int32;
 ccall sqlite3_bind_text(@sqlite3_stmt stmt, int32 ind, @c_str str, int32 len, int64 destructor_type) -> int32;
 ccall sqlite3_step(@sqlite3_stmt stmt) -> int32;
 ccall sqlite3_column_int(@sqlite3_stmt stmt, int32 icol) -> int32;
+ccall sqlite3_column_text(@sqlite3_stmt stmt, int32 icol) -> @c_str;
 ccall sqlite3_reset(@sqlite3_stmt stmt) -> int32;
 ccall sqlite3_finalize(@sqlite3_stmt >>stmt) -> int32;
 const SQLITE_OK = 0;
@@ -46,7 +47,7 @@ sqlite3_open(":memory:" =>> db) -> check(db, "open db");
 	sqlite3_prepare_v2(db, ins_sql, -1, 0 =>> ins_stmt) -> check(db, "insert sql");
 
 	const NUM = 2;
-	[NUM]@c_str fruits = ["apple", "orange"];
+	[]@c_str fruits = ["apple", "orange"];
 	i=0;
 	while i<NUM {
 		sqlite3_bind_int(ins_stmt, 1, i) -> check(db, "bind int");
@@ -65,7 +66,7 @@ sqlite3_open(":memory:" =>> db) -> check(db, "open db");
 	int32 rc;
 	while (sel_stmt->sqlite3_step()->rc) == SQLITE_ROW {
 		id = (sel_stmt -> sqlite3_column_int(0));
-		printf("%d:\n", id);
+		printf("%d: %s\n", id, sqlite3_column_text(sel_stmt, 1));
 	}
 	rc -> check(db, "select all");
 	sel_stmt->>sqlite3_finalize() -> check(db, "finalize");
