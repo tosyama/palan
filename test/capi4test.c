@@ -10,8 +10,8 @@ int capitest()
 
 typedef struct {
 	int id;
-	char name[10];
 	int status;
+	char name[10];
 } TestDb;
 
 int topen(const char* name, TestDb** tdb)
@@ -32,6 +32,16 @@ int topen2(const char* name, int* stat, TestDb** tdb)
 {
 	*stat = 999;
 	return topen(name, tdb);
+}
+
+int tgetId(TestDb* tdb)
+{
+	return tdb->id;
+}
+
+const char* tgetName(TestDb* tdb)
+{
+	return tdb->name;
 }
 
 void tclose(TestDb *tdb)
