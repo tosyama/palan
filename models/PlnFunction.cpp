@@ -144,8 +144,13 @@ vector<string> PlnFunction::getParamStrs() const
 		string pname = p->var->var_type->name();
 		if (p->passby == FPM_OBJ_MOVEOWNER) 
 			pname += ">>";
+		else if (p->passby == FPM_OBJ_GETOWNER)
+			pname = ">" + pname;
 		if (p->var->name == "...")
 			pname += "...";
+		if (p->iomode == PIO_OUTPUT) {
+			pname = ">" + pname;
+		}
 		param_types.push_back(pname);
 	}
 	return param_types;

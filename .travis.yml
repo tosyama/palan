@@ -22,3 +22,5 @@ script:
 
 after_success:
  - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT --skip-ssl-verify
+ - bash <curl -s https://codecov.io/bash) -t a07eb55e-f7o6-40de-8b1f-c3c06bb78f0b
+

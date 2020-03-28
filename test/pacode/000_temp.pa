@@ -15,10 +15,12 @@ type TestDb;
 	// capitest();
 	//@!TestDb tdb;
 	// topen("test" => tdb);
-	TestDb tdb, tdb2;
+	TestDb tdb, tdb2, edb;
 	int32 stat;
 	topen("test" =>> tdb);
 	topen2("test" => stat, >>tdb2);
+
+//	topen("eest" => edb);
 
 	tclose(tdb>>);
 	tclose(tdb2>>);

@@ -10,6 +10,7 @@
 # target="../models/PlnBlock"
 # target="../models/PlnModule"
 # target="../models/PlnType"
+target="../models/PlnFunction"
 # target="../PlnMessage"
 # target="../PlnModelTreeBuilder"
 # target="../PlnGenerator"
@@ -20,12 +21,12 @@
 # target="../models/types/PlnArrayValueType"
 # target="../models/types/PlnFixedArrayType"
 # target="../models/types/PlnStructType"
-target="../models/expressions/assignitem/PlnAssignItem"
+#target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
-#gcovs="${targetnm}.cpp"
+gcovs="${targetnm}.cpp"
 #gcovs="PlnAssignArrayValue.h"
 #gcovs="PlnArrayValueType.h"
-gcovs="PlnDstCopyObjectItem.h"
+#gcovs="PlnDstCopyObjectItem.h"
 #gcovs="PlnAssignWorkValsItem.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
