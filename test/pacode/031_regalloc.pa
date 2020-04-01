@@ -59,6 +59,10 @@ func mem2regf()
 	regd + 1.2 -> regd;
 	printf(" %.2f %.2f", regd, memd);
 
+	2.2 -> regf;
+	regf -> memf;
+	printf(" %.2f", memf);
+
 	3.1 -> memd;
 	memd -> regf;
 }

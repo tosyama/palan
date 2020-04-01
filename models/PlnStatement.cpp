@@ -82,7 +82,6 @@ void PlnStatement::gen(PlnGenerator& g)
 			break;
 		default:
 			BOOST_ASSERT(false);	
-			break;
 	}
 }
 
