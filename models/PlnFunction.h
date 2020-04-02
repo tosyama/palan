@@ -7,9 +7,13 @@
 
 enum PlnPassingMethod {
 	FPM_UNKNOWN,
-	FPM_COPY,
-	FPM_MOVEOWNER,
-	FPM_REF
+	FPM_VAR_COPY,
+	FPM_VAR_REF,
+	FPM_OBJ_CLONE,
+	FPM_OBJ_MOVEOWNER,
+	FPM_OBJ_GETOWNER,
+	FPM_ANY_IN,
+	FPM_ANY_OUT,
 };
 
 enum {
@@ -25,7 +29,8 @@ public:
 	PlnExpression* dflt_value;
 	int index;
 	int iomode;
-	bool force_move;
+	PlnPassingMethod passby;
+//	bool force_move;
 };
 
 class PlnReturnValue {

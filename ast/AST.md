@@ -59,7 +59,7 @@ Parameter
 ---------
 *   name\* - Parameter name string
 *   var-type\# - Variable type list
-*   pass-by\* - Passing way string: "copy", "move", "read":for variable argument, "write"
+*   pass-by\* - Passing way string: "copy", "move", "read":for variable argument, "write", "write-ref"
 *   default-val - Default value expression
 *   loc - Location integer array
 
@@ -229,6 +229,7 @@ Argument
 --------
 *   exp\* - Argument expression
 *   move-src - Move ownership flag boolean
+*   get-ownership - Move ownership flag boolean in output arguments
 
 Struct member
 -------------

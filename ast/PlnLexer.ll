@@ -6,7 +6,7 @@
 /// from this definition file by flex.
 ///
 /// @file	PlnLexer.ll
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <algorithm>
 #include "PlnParser.hpp"
@@ -54,7 +54,9 @@ enum {
 	DBL_GRTR	= PlnParser::token::DBL_GRTR,
 	ARROW		= PlnParser::token::ARROW,
 	DBL_ARROW	= PlnParser::token::DBL_ARROW,
-	EQ_ARROW	= PlnParser::token::EQ_ARROW
+	EQ_ARROW	= PlnParser::token::EQ_ARROW,
+	DBL_EQ_ARROW	= PlnParser::token::DBL_EQ_ARROW,
+	AT_EXCL		= PlnParser::token::AT_EXCL
 };
 
 static string& unescape(string& str);
@@ -75,6 +77,8 @@ DBL_GRTR	">>"
 ARROW		"->"
 DBL_ARROW	"->>"
 EQ_ARROW	"=>"
+DBL_EQ_ARROW	"=>>"
+AT_EXCL		"@!"
 DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
@@ -155,11 +159,17 @@ extern/{POST_KW} 	{ return KW_EXTERN; }
 {EQ_ARROW} {
 		return EQ_ARROW;
 	}
+{DBL_EQ_ARROW} {
+		return DBL_EQ_ARROW;
+	}
 {DBL_LESS}	{
 		return DBL_LESS;
 	}
 {DBL_GRTR}	{
 		return DBL_GRTR;
+	}
+{AT_EXCL}	{
+		return AT_EXCL;
 	}
 {DELIMITER}	{ return yytext[0]; }
 [ \t]+		{ loc.step(); }

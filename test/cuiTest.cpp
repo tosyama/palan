@@ -58,7 +58,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 	  							"bbaa 99 2.34 7\n"
 	    						"2:This,is\n"
 								"infunc\n"
-		  						"smy0.33");
+		  						"smy0.33 abc 1234");
 
 	// pac <input-file>
 	testcode = "100_qsort";
@@ -179,6 +179,10 @@ TEST_CASE("sample code compile test.", "[cui]")
 {
 	string dir = "../samples/";
 	string testcode = "tetris";
-	REQUIRE(exec_pac(testcode, "-o", testcode, "", dir) == "success");
-	REQUIRE(outfile(testcode) == "exists");
+	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
+	REQUIRE(outfile(testcode + ".o") == "exists");
+
+	testcode = "usesqlite";
+	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
+	REQUIRE(outfile(testcode + ".o") == "exists");
 }

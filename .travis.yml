@@ -18,7 +18,10 @@ install:
 script:
  - export CC=g++-5
  - export CXX=g++-5
- - make "CFLAGS=--coverage" "LDFLAGS=--coverage -lgcov"
+ - make "CFLAGS=--coverage -DNDEBUG" "LDFLAGS=--coverage -lgcov"
 
 after_success:
- - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
+ - coveralls -b . --gcov gcov-5 --exclude libs --exclude test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT --skip-ssl-verify
+ - export CODECOV_TOKEN="a07eb55e-f756-40de-8b1f-c3c06bb78f0b"
+ - bash <(curl -s https://codecov.io/bash)
+

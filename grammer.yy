@@ -41,6 +41,8 @@ int yylex();
 %token DBL_ARROW
 %token ARROW
 %token EQ_ARROW
+%token DBL_EQ_ARROW
+%token AT_EXCL
 
 %right '='
 %left ARROW DBL_ARROW EQ_ARROW
@@ -106,9 +108,9 @@ out_parameter_def:
 	| EQ_ARROW KW_VARLENARG
 	;
 
-out_parameters: type ID
-	| out_parameters ',' type ID
-	| out_parameters ',' ID
+out_parameters: type ID move_owner
+	| out_parameters ',' type ID move_owner
+	| out_parameters ',' ID move_owner
 	;
 
 move_owner: /* empty */
@@ -122,7 +124,7 @@ default_value: /* empty */
 	| '=' ID
 	| '=' INT
 	| '=' UINT
-	| '=' STR
+	| '=' strs
 	;
 
 ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return at_lib';'
@@ -225,7 +227,11 @@ expression:
 	;
 
 func_call: FUNC_ID '(' arguments ')'
-	| FUNC_ID '(' arguments EQ_ARROW out_arguments ')'
+	| FUNC_ID '(' arguments output_arrow out_arguments ')'
+	;
+
+output_arrow: EQ_ARROW
+	| DBL_EQ_ARROW
 	;
 
 arguments: argument
@@ -236,11 +242,9 @@ argument: /* empty */
 	| expression move_owner
 	;
 
-out_arguments: out_argument
-	| out_arguments ',' out_argument
-	;
-
-out_argument: expression
+out_arguments: expression
+	| out_arguments ',' expression
+	| out_arguments ',' pass_by expression
 	;
 
 dst_vals: dst_val
@@ -250,8 +254,12 @@ dst_vals: dst_val
 dst_val: move_owner var_expression
 	;
 
-var_expression: var_exp_ids
-	| var_exp_affixes
+var_expression: var_exp_ids force_write
+	| var_exp_affixes force_write
+	;
+
+force_write: /* empty */
+	| '!'
 	;
 
 var_exp_ids: ids
@@ -271,12 +279,19 @@ array_vals: array_val
 
 array_val: '[' array_items ']'
 
-term: INT
-	| UINT
-	| STR
+term: literal
 	| var_expression
 	| array_vals
 	| '(' expression ')'
+	;
+
+literal: INT
+	| UINT
+	| strs
+	;
+
+strs: STR 
+	| strs STR
 	;
 
 assignment: expressions arrow_ope dst_vals
@@ -342,9 +357,11 @@ var_affixes_arr: array_vals
 	| var_affixes_ref array_vals
 	;
 
-var_affixes_ref: '@'
-	| var_affixes_arr '@'
+var_affixes_ref: ref_mark
+	| var_affixes_arr ref_mark
 	;
+
+ref_mark: '@' | AT_EXCL;
 
 array_items: array_item
 	| array_items ',' array_item

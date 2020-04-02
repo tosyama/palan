@@ -386,7 +386,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 						ai = ii;
 
 					} else {
-						// search next input
+						// search next output
 						oi++;
 						for (; oi<arg_infs.size(); ++oi) {
 							if (arg_infs[oi].iomode == PIO_OUTPUT)
@@ -414,10 +414,12 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 					PlnTypeConvCap cap = p->var->var_type->canCopyFrom(ainf.var_type);
 					if (cap == TC_CANT_CONV) goto next_func;
 
-					if (p->force_move && ainf.opt != AG_MOVE) {
+					bool is_move = p->passby == FPM_OBJ_MOVEOWNER || p->passby == FPM_OBJ_GETOWNER;
+
+					if (is_move && ainf.opt != AG_MOVE) {
 						goto next_func;
 					}
-					if (!p->force_move && ainf.opt == AG_MOVE) {
+					if (!is_move && ainf.opt == AG_MOVE) {
 						goto next_func;
 					}
 

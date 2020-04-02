@@ -38,22 +38,25 @@ POST_TEST=test/cuitester
 # Workarround of mtrace hang with double free.
 MALLOC_CHECK_=1	
 export MALLOC_CHECK_
+CXX_FLAGS= -g -O0
+CXX_RELEASE_FLAGS= -s -O2
+AST_MAKE_FLAGS=
 
 .SUFFIXES: .cpp .o
 
 FORCE: $(PROGRAM)
 	@cd test && $(MAKE) post_test
-$(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST)
+$(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST) test/*.c
 	@cd test && $(MAKE) test
 	@echo link $(PROGRAM).
 	@$(CXX) $(LDFLAGS) -o $(PROGRAM) $(addprefix objs/,$(OBJS)) -lboost_program_options
 .cpp.o:
 	@mkdir -p objs
-	$(CXX) $(CFLAGS) -std=c++11 -c -g $< -o objs/$@
+	$(CXX) $(CFLAGS) -std=c++11 -c $(CXX_FLAGS) $< -o objs/$@
 $(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
 	@$(MAKE) -C test
 $(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll
-	@$(MAKE) -C ast
+	@$(MAKE) -C ast $(AST_MAKE_FLAGS)
 clean:
 	rm -f objs/*
 	rm -f $(AST)
@@ -71,4 +74,8 @@ package:
 	-apt-get -y install bison
 	-apt-get -y install flex
 	-curl -o test/catch.hpp https://raw.githubusercontent.com/catchorg/Catch2/master/single_include/catch2/catch.hpp
-
+.PHONY: release
+release: clean
+release: CXX_FLAGS=$(CXX_RELEASE_FLAGS)
+release: AST_MAKE_FLAGS=release
+release: $(PROGRAM)

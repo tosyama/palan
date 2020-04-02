@@ -203,7 +203,7 @@ void normalCaseTest()
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
 								"infunc\n"
-								"smy0.33"); 
+								"smy0.33 abc 1234"); 
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode)== "success");
@@ -219,15 +219,19 @@ void normalCaseTest()
 
 	testcode = "030_reference";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s23\n"
-					"2 2 1.23 2.34");
-	CHECK(mcheck("mtrace030-1") == "+14 -14");
+	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s234\n"
+						"2 2 1.23 2.34");
+	CHECK(mcheck("mtrace030-1") == "+15 -15");
 	CHECK(mcheck("mtrace030-2") == "+1 -1");
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 38 161 8 TTT\n"
+	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 2.20 38 161 8 TTT\n"
 						"3 17 5 17 3ACB");
+
+	testcode = "032_ptrptr";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "test 1234 test2");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
@@ -238,7 +242,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	normalCaseTest();
 }
 
-// Error file ID: 500-591
+// Error file ID: 500-592
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -337,7 +341,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Type of variable 'amb_arr' is ambiguous.");
 
 	testcode = "535_varinit_type_err";
-	REQUIRE(build(testcode) == "0:2-2 Incompatible type to init variable 'a'.");
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "536_varinit_type_err2";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible type to init variable 'b'.");
@@ -455,6 +459,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "591_externdup_err2";
 	REQUIRE(build(testcode) == "0:5-5 Variable name 'x' already defined.");
+
+	testcode = "592_cantcopytype_err";
+	REQUIRE(build(testcode) == "finish:0:3-3 Can not use copy to the variable of type 'X'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

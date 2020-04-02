@@ -101,7 +101,15 @@ public:
 	int size() { return typeinf->size; }
 	PlnExpression *getAllocEx() { return typeinf->allocator->getAllocEx(); }
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
-	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) { return typeinf->copyer->getCopyEx(dst_var, src_var); }
-	PlnDeepCopyExpression* getCopyEx() { return typeinf->copyer->getCopyEx(); }
+	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
+		PlnCopyer* copyer = typeinf->copyer;
+		if (!copyer) return NULL;
+		return typeinf->copyer->getCopyEx(dst_var, src_var);
+	}
+	PlnDeepCopyExpression* getCopyEx() {
+		PlnCopyer* copyer = typeinf->copyer;
+		if (!copyer) return NULL;
+		return typeinf->copyer->getCopyEx();
+	}
 	PlnTypeConvCap canCopyFrom(PlnVarType *src) { return typeinf->canCopyFrom(mode, src); }
 };

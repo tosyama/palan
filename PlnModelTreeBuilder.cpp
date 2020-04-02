@@ -1,7 +1,7 @@
 /// Build model trees from AST json definision.
 ///
 /// @file	PlnModelTreeBuilder.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -181,9 +181,15 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			PlnPassingMethod pm = FPM_UNKNOWN;
 			
 			if (param["pass-by"] == "move") {
-				pm = FPM_MOVEOWNER;
+				pm = FPM_OBJ_MOVEOWNER;
 			} else if (param["pass-by"] == "copy") {
-				pm = FPM_COPY;
+				if (var_type) {
+					if (var_type->data_type() == DT_OBJECT_REF) {
+						pm = FPM_OBJ_CLONE;
+					} else {
+						pm = FPM_VAR_COPY;
+					}
+				}
 			} else
 				BOOST_ASSERT(false);
 
@@ -219,7 +225,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		} else { // if (ftype_str == "syscall")
 			f = new PlnFunction(FT_SYS, proto["name"]);
 			f->inf.syscall.id = proto["call-id"];
-		} 
+		}
 		f->parent = CUR_BLOCK;
 
 		int i=0;
@@ -232,38 +238,64 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			} else if (param["name"] == "...") {
 				BOOST_ASSERT((i+1)==proto["params"].size());
 				int iomode = PIO_UNKNOWN;
+				PlnPassingMethod pm = FPM_UNKNOWN;
 				if (param["pass-by"] == "read") {
 					iomode = PIO_INPUT;
+					pm = FPM_ANY_IN;
 				} else {
 					assertAST(param["pass-by"] == "write", param);
 					iomode = PIO_OUTPUT;
+					pm = FPM_ANY_OUT;
 				}
 
-				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, FPM_COPY, NULL);
+				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, pm, NULL);
 
 			} else {
 				PlnVarType *var_type = getVarType(param["var-type"], scope);
-				PlnPassingMethod pm = FPM_COPY;
+				PlnPassingMethod pm = FPM_UNKNOWN;
 				int iomode = PIO_UNKNOWN;
 				if (param["pass-by"] == "move") {
-					pm = FPM_MOVEOWNER;
+					pm = FPM_OBJ_MOVEOWNER;
 					iomode = PIO_INPUT;
 
 				} else if (param["pass-by"] == "write") {
-					if (var_type->mode[ALLOC_MD] == 's' || var_type->mode[ALLOC_MD] == 'h') {
-						string w_mode = var_type->mode;
-						w_mode[ALLOC_MD] = 'r';
-						var_type = var_type->typeinf->getVarType(w_mode);
-						pm = FPM_COPY;
-						
-					} else { // "r"
-						BOOST_ASSERT(false);
-					}
 					iomode = PIO_OUTPUT;
+					if (var_type) {
+						if (var_type->data_type() == DT_OBJECT_REF) {
+							if (var_type->mode[ALLOC_MD]=='r') {
+								BOOST_ASSERT(var_type->mode[IDENTITY_MD]=='c');
+								pm = FPM_VAR_REF;
+							} else {
+								pm = FPM_VAR_COPY;
+							}
+						} else {
+							pm = FPM_VAR_REF;
+						}
+					}
 
+				} else if (param["pass-by"] == "write-ref") {
+					iomode = PIO_OUTPUT;
+					if (var_type) {
+						if (var_type->data_type() == DT_OBJECT_REF) {
+							pm = FPM_OBJ_GETOWNER;
+						} else
+							BOOST_ASSERT(false);
+					}
 				} else {
 					assertAST(param["pass-by"]=="copy", param);
 					iomode = PIO_INPUT;
+					if (var_type) {
+						if (var_type->data_type() == DT_OBJECT_REF) {
+							if (var_type->mode[ALLOC_MD]=='r')
+								pm = FPM_VAR_COPY;
+							else
+								pm = FPM_OBJ_CLONE;
+						} else if (var_type->mode[ALLOC_MD]=='r') {
+							pm = FPM_VAR_REF;
+						} else {
+							pm = FPM_VAR_COPY;
+						}
+					}
 				}
 				f->addParam(param["name"], var_type, iomode, pm, NULL);
 			}
@@ -512,10 +544,10 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 		if (vt["name"] == "[]") {
 			assertAST(vt["sizes"].is_array(),vt);
 			for (json& sz: vt["sizes"]) {
-				if (sz_i >= sizes.size()) {
-					goto sz_err;
-				}
 				if (sz["exp-type"] == "token" && sz["info"] == "") {
+					if (sz_i >= sizes.size()) {
+						goto sz_err;
+					}
 					sz["exp-type"] = "lit-int";
 					sz["val"] = sizes[sz_i];
 				}
@@ -524,8 +556,7 @@ static void inferArrayIndex(json& var, vector<int> sizes)
 		}
 	}
 
-	if (sz_i == sizes.size())
-		return;
+	return;
 
 sz_err:
 	PlnCompileError err(E_IncompatibleTypeInitVar, var["name"]);
@@ -935,6 +966,11 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		for (PlnValue& val: e->values) {
 			args.back().inf.push_back({PIO_OUTPUT});
 		}
+
+		if (arg["get-ownership"].is_boolean() && arg["get-ownership"] == true) {
+			args.back().inf.back().opt = AG_MOVE;
+		}
+
 	}
 
 	try {

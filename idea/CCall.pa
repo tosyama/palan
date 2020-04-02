@@ -7,10 +7,9 @@ ccall strcpy([?]byte >>dst, @[?]byte src) -> [?]byte;
 
 ccall fopen(@[?]byte filename, mode) -> FILE;
 ccall fclose(FILE >>stream) -> int32;
+ccall int32 sqlite3_open([?]byte filename => sqlite3 db>>);
 
-ccall int32 sqlite3_open([?]byte filename => sqlite3 @db);
-
-byte[80] str;
+[80]byte str;
 int32 result;
 "Hello Horld" -> sprintf(=>str) -> result;
 
@@ -33,4 +32,30 @@ FILE f = {"aa.txt", "r"};
 FILE f = ("aa.txt", "r");
 FILE f = {filename: "aa.txt", mode: "r"};
 FILE f("aa.txt", "r");
+
+// idea of param C -> pa
+char *p, char p[]:
+	clone: [?]byte pa "wmh"+"wis"
+	move: caller [?]byte pa>>  : callee [?]byte >>pa "wmh"+"wis"
+  after =>
+	write(io): [?]byte pa "wmr"+"wis"
+
+const char *p:
+	readonly: @[?]byte p "rir"+"ris"
+	readonly: @byte p "rir"
+
+char **p:
+  after =>
+	write: @![?]byte p "wcr"+"wis"
+	write: @!byte p	"wcr"+"wis"
+	move: caller [?]byte >>pa  : callee [?]byte pa>> "wmh"+"wis"
+
+complex case:
+	clone: [?]@[?]byte p "wmh"
+	readonly?: @[?]@![?]byte p "rir"+"wcr"+"wis"
+	move:
+  after =>
+	write: [?]@![?]byte p "wmh"+"wcr"+"wis"
+	write: @![?]@[?]byte p "wcr"+"rir"+"ris"
+	write: @![?]@![?]byte p "wcr"+"wcr"+"wis"
 

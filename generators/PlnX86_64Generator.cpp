@@ -348,7 +348,7 @@ void PlnX86_64Generator::genEndFunc()
 	for (ConstInfo &ci: const_buf) {
 		if (!ci.generated) {
 			if (alignment < ci.alignment) {
-				os << "	.align " << int(ci.alignment) << endl;
+				os << "	.balign " << int(ci.alignment) << endl;
 				alignment = ci.alignment;
 			}
 			if (ci.id >= 0)

@@ -21,6 +21,7 @@ enum PlnErrCode {
 	E_InvalidReturnValType, // var name
 	E_CouldnotOpenFile,	// file name
 	E_CantCopyFreedVar,	// var name
+	E_CantCopyType,	// type name
 	E_AmbiguousFuncCall,	// func name
 	E_IncompatibleTypeAssign,	// src type, dst type
 	E_CantUseAtToplevel,	// statement

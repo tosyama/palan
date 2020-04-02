@@ -30,15 +30,24 @@ public:
 
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		cpy_ex = dst_ex->values[0].getVarType()->getCopyEx();
+		if (!cpy_ex) {
+			PlnCompileError err(E_CantCopyType, dst_ex->values[0].getVarType()->name());
+			err.loc = dst_ex->loc;
+			throw err;
+		}
 		src_ex->data_places.push_back(cpy_ex->srcDp(da));
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		PlnVariable* var = dst_ex->values[0].inf.var;
-		if ((!var->is_tmpvar) && si.get_lifetime(var) == VLT_FREED) {
-			PlnCompileError err(E_CantCopyFreedVar, var->name);
-			err.loc = dst_ex->loc;
-			throw err;
+		if (!var->is_tmpvar) {
+			PlnVarLifetime lt = si.get_lifetime(var);
+			BOOST_ASSERT(lt != VLT_UNKNOWN); 
+			if (lt == VLT_FREED) {
+				PlnCompileError err(E_CantCopyFreedVar, var->name);
+				err.loc = dst_ex->loc;
+				throw err;
+			}
 		}
 
 		cpy_dst_dp = cpy_ex->dstDp(da);

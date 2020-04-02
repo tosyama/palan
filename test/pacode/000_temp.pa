@@ -1,25 +1,33 @@
 ccall printf(...);
+ccall strtol(@[?]byte s, @, int32 base => @![?]byte endptr) -> int32;
+ccall capitest();
+ccall topen(@[?]byte name => TestDb tdb>>) -> int32;
+//ccall topen(@[?]byte name => @!TestDb tdb) -> int32;
+ccall topen2(@[?]byte name => int32 stat, TestDb tdb>>) -> int32;
+ccall tclose(TestDb >>tdb);
 
-opti_regsave(3);
+type TestDb;
 
-func opti_regsave(int64 i)
 {
-	if i == 0 { return }
+	@[?]byte c = "1234";
+	int32 l = strtol("1234 abc", 10 => c);
 
-	n = 0;
-	m = 0;
-	while n < 9 {
-		n -> m;
-		n + 1 -> n;
-		if n == 2 { continue }
-		else if n == 8 { break }
-		else if n == 9 { return }
-	}
-	dummy();
-	m -> n;
-	i+1 -> i;
+	// capitest();
+	//@!TestDb tdb;
+	// topen("test" => tdb);
+	TestDb tdb, tdb2, edb;
+	int32 stat;
+	topen("test" =>> tdb);
+	topen2("test" => stat, >>tdb2);
+
+//	topen("eest" => edb);
+
+	tclose(tdb>>);
+	tclose(tdb2>>);
+
+	// printf("%s", c);
+
+//	fopen("test", "r") ->> f;
 }
 
-func dummy()
-{
-}
+

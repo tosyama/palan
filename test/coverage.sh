@@ -1,15 +1,16 @@
 #!/bin/bash
 # Coverage check tool
 
-# target="../generators/PlnX86_64Generator"
+target="../generators/PlnX86_64Generator"
 # target="../generators/PlnX86_64DataAllocator"
 # target="../generators/PlnX86_64RegisterMachine"
-target="../generators/PlnX86_64RegisterSave"
+# target="../generators/PlnX86_64RegisterSave"
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
 # target="../models/PlnBlock"
 # target="../models/PlnModule"
 # target="../models/PlnType"
+# target="../models/PlnFunction"
 # target="../PlnMessage"
 # target="../PlnModelTreeBuilder"
 # target="../PlnGenerator"
@@ -20,7 +21,7 @@ target="../generators/PlnX86_64RegisterSave"
 # target="../models/types/PlnArrayValueType"
 # target="../models/types/PlnFixedArrayType"
 # target="../models/types/PlnStructType"
-# target="../models/expressions/assignitem/PlnAssignItem"
+#target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"
 #gcovs="PlnAssignArrayValue.h"

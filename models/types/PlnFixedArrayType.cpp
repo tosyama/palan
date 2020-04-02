@@ -90,7 +90,6 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 			}
 		} else {	// Difference only mode of item.
 			if (sizes == src_farr->sizes) {
-				// return item_type->typeinf->canConvFrom(item_type->mode, src_farr->item_type);
 				if (item_type->typeinf == src_farr->item_type->typeinf)
 					return TC_AUTO_CAST;
 

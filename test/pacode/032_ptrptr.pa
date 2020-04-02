@@ -1,0 +1,20 @@
+ccall printf(...);
+
+ccall topen(@[?]byte name => TestDb tdb>>) -> int32;
+ccall topen2(@[?]byte name => int32 stat, TestDb tdb>>) -> int32;
+ccall tgetId(@TestDb tdb) -> int32;
+ccall tgetName(@TestDb tdb) -> @[?]byte;
+ccall tclose(TestDb >>tdb);
+
+type TestDb;
+
+TestDb tdb, tdb2;
+int32 stat;
+topen("test" =>> tdb);
+topen2("test2" => stat, >>tdb2);
+
+printf("%s %d %s", tgetName(tdb), tgetId(tdb), tgetName(tdb2));
+
+tclose(tdb>>);
+tclose(tdb2>>);
+
