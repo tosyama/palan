@@ -14,6 +14,7 @@ SRCS=palan.cpp \
 	models/expressions/PlnAddOperation.cpp \
 	models/expressions/PlnMulOperation.cpp \
 	models/expressions/PlnDivOperation.cpp \
+	models/expressions/PlnBoolExpression.cpp \
 	models/expressions/PlnCmpOperation.cpp \
 	models/expressions/PlnBoolOperation.cpp \
 	models/expressions/PlnAssignment.cpp \

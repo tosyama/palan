@@ -97,10 +97,10 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 
 PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, uint64_t i)
 {
-	PlnCmpOperation *cmp_op;
+	PlnCmpOperation2 *cmp_op;
 	auto l_ex = new PlnExpression(var);
 	auto r_ex = new PlnExpression(i);
-	cmp_op = new PlnCmpOperation(l_ex, r_ex, CMP_L);
+	cmp_op = new PlnCmpOperation2(l_ex, r_ex, CMP_L);
 	auto wblock = new PlnBlock();
 	auto whl = new PlnWhileStatement(cmp_op, wblock, block);
 	block->statements.push_back(whl);

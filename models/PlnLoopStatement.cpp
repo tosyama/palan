@@ -1,7 +1,7 @@
 /// Loop statement model classes definition.
 ///
 /// @file	PlnLoopStatement.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
 #include "PlnLoopStatement.h"
@@ -11,6 +11,7 @@
 #include "../PlnGenerator.h"
 #include "expressions/PlnCmpOperation.h"
 
+bool migrate = true;
 
 PlnWhileStatement::PlnWhileStatement(PlnExpression* condition, PlnBlock* block, PlnBlock* parent)
 	: cond_dp(NULL), jmp_start_id(-1), jmp_end_id(-1)
@@ -19,18 +20,24 @@ PlnWhileStatement::PlnWhileStatement(PlnExpression* condition, PlnBlock* block, 
 	block->owner_stmt = this;
 	inf.block = block;
 	this->parent = parent;
-
-	if (condition->type == ET_CMP
-		 || condition->type == ET_AND || condition->type == ET_OR) {
-		this->condition = static_cast<PlnCmpExpression*>(condition);
+	if (migrate) {
+		this->condition = PlnBoolExpression::create(condition);
+		this->condition2 = NULL;
 	} else {
-		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
+		this->condition = NULL;
+		if (condition->type == ET_CMP
+			 || condition->type == ET_AND || condition->type == ET_OR) {
+			this->condition2 = static_cast<PlnCmpExpression*>(condition);
+		} else {
+			this->condition2 = new PlnCmpOperation2(new PlnExpression(int64_t(0)), condition, CMP_NE);
+		}
 	}
 }
 
 PlnWhileStatement::~PlnWhileStatement()
 {
 	delete condition;
+	delete condition2;
 	delete inf.block;
 }
 
@@ -42,23 +49,33 @@ void PlnWhileStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	jmp_start_id = m->getJumpID();
 	jmp_end_id = m->getJumpID();
 
-	condition->finish(da, si);
+	if (migrate) {
+		condition->jmp_if = 0;
+		condition->jmp_id = jmp_end_id;
+		condition->finish(da, si);
+	} else {
+		condition2->finish(da, si);
+	}
 	inf.block->finish(da, si);
 }
 
 void PlnWhileStatement::gen(PlnGenerator& g)
 {
 	g.genJumpLabel(jmp_start_id, "while");
-	condition->gen(g);
+	if (migrate) {
+		condition->gen(g);
+	} else {
+		condition2->gen(g);
 
-	int cmp_type = condition->getCmpType();
+		int cmp_type = condition2->getCmpType();
 
-	if (cmp_type == CMP_CONST_TRUE) 
-		;	// 	do nothing.
-	else if (cmp_type == CMP_CONST_FALSE)
-		g.genJump(jmp_end_id, "");
-	else
-		g.genFalseJump(jmp_end_id, cmp_type, "");
+		if (cmp_type == CMP_CONST_TRUE) 
+			;	// 	do nothing.
+		else if (cmp_type == CMP_CONST_FALSE)
+			g.genJump(jmp_end_id, "");
+		else
+			g.genFalseJump(jmp_end_id, cmp_type, "");
+	}
 
 	inf.block->gen(g);
 	g.genJump(jmp_start_id, "");

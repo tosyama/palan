@@ -1291,10 +1291,15 @@ PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope)
 	return PlnNegative::create(e);
 }
 
+extern bool migrate;
 PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope)
 {
 	BinaryEx bex = getBiEx(cmp, scope);
-	return new PlnCmpOperation(bex.l, bex.r, type);
+	if (migrate) {
+		return PlnCmpOperation::create(bex.l, bex.r, type);
+	} else {
+		return new PlnCmpOperation2(bex.l, bex.r, type);
+	}
 }
 
 PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope)

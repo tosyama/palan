@@ -1,15 +1,17 @@
 /// Conditi Branch model classes declaration.
 ///
 /// @file	PlnConditionalBranch.h
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "PlnStatement.h"
 
 class PlnCmpExpression;
+class PlnBoolExpression;
 class PlnIfStatement : public PlnStatement
 {
 public:
-	PlnCmpExpression* condition;
+	PlnBoolExpression* condition;
+	PlnCmpExpression* condition2;
 	int jmp_next_id, jmp_end_id;
 	PlnDataPlace* cond_dp;
 	PlnStatement* next;

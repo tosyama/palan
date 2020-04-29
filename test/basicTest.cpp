@@ -56,6 +56,7 @@ void normalCaseTest()
 							"0!=<<=1==<=>=2!=>>=\n"
 							"[us1][uu1]>tt010ttf");
 
+/*
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttdef\n"
@@ -232,6 +233,7 @@ void normalCaseTest()
 	testcode = "032_ptrptr";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "test 1234 test2");
+	*/
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
@@ -243,7 +245,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 }
 
 // Error file ID: 500-592
-TEST_CASE("Compile error test", "[basic]")
+TEST_CASE("Compile error test", "[basic][.]")
 {
 	string testcode;
 
@@ -464,7 +466,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not use copy to the variable of type 'X'.");
 }
 
-TEST_CASE("Array description compile error test", "[basic]")
+TEST_CASE("Array description compile error test", "[basic][.]")
 {
 	string testcode;
 

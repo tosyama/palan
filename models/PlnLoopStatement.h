@@ -6,10 +6,13 @@
 #include "PlnStatement.h"
 
 class PlnCmpExpression;
+class PlnBoolExpression;
 class PlnWhileStatement : public PlnStatement
 {
 public:
-	PlnCmpExpression* condition;
+	PlnCmpExpression* condition2;
+	PlnBoolExpression* condition;
+
 	int jmp_start_id, jmp_end_id;
 	PlnDataPlace* cond_dp;
 

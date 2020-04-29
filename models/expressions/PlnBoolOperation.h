@@ -10,7 +10,7 @@ class PlnBoolOperation : public PlnCmpExpression
 protected:
 	int jmp_l_id, jmp_r_id;
 	PlnDataPlace *result_dp, *zero_dp;
-	PlnCmpOperation *l, *r;
+	PlnCmpOperation2 *l, *r;
 public:
 	PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
 	PlnBoolOperation(const PlnBoolOperation&) = delete;

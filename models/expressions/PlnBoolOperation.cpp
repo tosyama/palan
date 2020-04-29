@@ -28,15 +28,15 @@ PlnBoolOperation::PlnBoolOperation(PlnExpression* l, PlnExpression* r, PlnExprsn
 	values.push_back(v);
 
 	if (l->type != ET_CMP) {
-		this->l = new PlnCmpOperation(l, new PlnExpression(int64_t(0)), CMP_NE);
+		this->l = new PlnCmpOperation2(l, new PlnExpression(int64_t(0)), CMP_NE);
 	} else {
-		this->l = static_cast<PlnCmpOperation*>(l);
+		this->l = static_cast<PlnCmpOperation2*>(l);
 	}
 
 	if (r->type != ET_CMP) {
-		this->r = new PlnCmpOperation(r, new PlnExpression(int64_t(0)), CMP_NE);
+		this->r = new PlnCmpOperation2(r, new PlnExpression(int64_t(0)), CMP_NE);
 	} else {
-		this->r = static_cast<PlnCmpOperation*>(r);
+		this->r = static_cast<PlnCmpOperation2*>(r);
 	}
 }
 
@@ -248,7 +248,7 @@ void PlnBoolOperation::gen(PlnGenerator& g)
 PlnExpression* PlnBoolOperation::getNot(PlnExpression *e)
 {
 	if (e->type == ET_CMP) {
-		auto ce = static_cast<PlnCmpOperation*>(e);
+		auto ce = static_cast<PlnCmpOperation2*>(e);
 		PlnCmpType cmp_type;
 		switch (ce->cmp_type) {
 			case CMP_EQ: cmp_type=CMP_NE; break;
@@ -274,5 +274,5 @@ PlnExpression* PlnBoolOperation::getNot(PlnExpression *e)
 		ce->cmp_type = cmp_type;
 		return ce;
 	}
-	return new PlnCmpOperation(e, new PlnExpression(int64_t(0)), CMP_EQ);
+	return new PlnCmpOperation2(e, new PlnExpression(int64_t(0)), CMP_EQ);
 }

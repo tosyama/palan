@@ -1,33 +1,14 @@
 ccall printf(...);
-ccall strtol(@[?]byte s, @, int32 base => @![?]byte endptr) -> int32;
-ccall capitest();
-ccall topen(@[?]byte name => TestDb tdb>>) -> int32;
-//ccall topen(@[?]byte name => @!TestDb tdb) -> int32;
-ccall topen2(@[?]byte name => int32 stat, TestDb tdb>>) -> int32;
-ccall tclose(TestDb >>tdb);
-
-type TestDb;
-
+func elif(int32 i)
 {
-	@[?]byte c = "1234";
-	int32 l = strtol("1234 abc", 10 => c);
-
-	// capitest();
-	//@!TestDb tdb;
-	// topen("test" => tdb);
-	TestDb tdb, tdb2, edb;
-	int32 stat;
-	topen("test" =>> tdb);
-	topen2("test" => stat, >>tdb2);
-
-//	topen("eest" => edb);
-
-	tclose(tdb>>);
-	tclose(tdb2>>);
-
-	// printf("%s", c);
-
-//	fopen("test", "r") ->> f;
+	if i == 0 {
+		printf("[if]");
+	} else if (i == 1) {
+		printf("[elif]");
+	} else if 2 >= i {
+		printf("[elif2]");
+	} else {
+		printf("[else]");
+	}
 }
-
 
