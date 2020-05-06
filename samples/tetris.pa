@@ -90,7 +90,7 @@ type Block = [4,4]byte;
 		[0,0,0,0][0,1,1,0][0,1,1,0][0,0,0,0]	]
 	;
 
-const start_y, start_x = -1,2;
+const start_y, start_x = -1, 2;
 
 // start
 stdscr = initscr();

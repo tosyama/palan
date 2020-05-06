@@ -56,13 +56,17 @@ void normalCaseTest()
 							"0!=<<=1==<=>=2!=>>=\n"
 							"[us1][uu1]>tt010ttf");
 
-/*
+
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttdef\n"
 							"100\n"
 							"aaa01bbbcctdtdftdtdeefg\n"
 							"tt tt\n"
+							"110\n"
+							"TT"
+							);
+	/*
 							"110\n"
 							"1010\n"
 							"100101\n"

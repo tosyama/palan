@@ -149,14 +149,19 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(data_places.size() == 1);
 		if (push_mode == -1) {
 			result_dp = da.prepareAccumulator(DT_SINT);
+			da.allocDp(result_dp);
+			da.pushSrc(data_places[0], result_dp, true);
+
 		} else if (push_mode == 0) {
 			da.pushSrc(data_places[0], da.getLiteralIntDp(0));
 		} else if (push_mode == 1) {
 			da.pushSrc(data_places[0], da.getLiteralIntDp(1));
 		}
 
-		da.allocDp(result_dp);
-		da.pushSrc(data_places[0], result_dp, true);
+		if (push_mode != -1) {
+			BOOST_ASSERT(jmp_if != -1);
+			da.popSrc(data_places[0]);
+		}
 	}
 }
 
@@ -205,10 +210,15 @@ void PlnCmpOperation::gen(PlnGenerator& g)
 	int gen_cmp_type = g.genCmp(le.get(), re.get(), cmp_type, ldp->cmt() + cmp_str + rdp->cmt());
 
 	if (data_places.size()) {
-		auto e = g.getEntity(result_dp);
-		if (push_mode == -1) 
+		if (push_mode == -1) {
+			auto e = g.getEntity(result_dp);
 			g.genMoveCmpFlag(e.get(), gen_cmp_type, "cmpflg -> " + result_dp->cmt());
+		}
+
 		g.genSaveSrc(data_places[0]);
+		if (push_mode != -1) {
+			g.genLoadDp(data_places[0]);
+		}
 	}
 
 	if (jmp_if == 1) {

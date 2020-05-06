@@ -57,6 +57,10 @@ void PlnTrueExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		} else {
 			da.pushSrc(data_places[0], da.getLiteralIntDp(0));
 		}
+		if (push_mode != -1) {
+			BOOST_ASSERT(jmp_if != -1);
+			da.popSrc(data_places[0]);
+		}
 	}
 }
 
@@ -64,6 +68,9 @@ void PlnTrueExpression::gen(PlnGenerator& g)
 {
 	if (data_places.size()) {
 		g.genSaveSrc(data_places[0]);
+		if (push_mode != -1) {
+			g.genLoadDp(data_places[0]);
+		}
 	}
 
 	if (jmp_if == 1) {
@@ -90,6 +97,11 @@ void PlnFalseExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		} else {
 			da.pushSrc(data_places[0], da.getLiteralIntDp(0));
 		}
+
+		if (push_mode != -1) {
+			BOOST_ASSERT(jmp_if != -1);
+			da.popSrc(data_places[0]);
+		}
 	}
 }
 
@@ -97,6 +109,9 @@ void PlnFalseExpression::gen(PlnGenerator& g)
 {
 	if (data_places.size()) {
 		g.genSaveSrc(data_places[0]);
+		if (push_mode != -1) {
+			g.genLoadDp(data_places[0]);
+		}
 	}
 
 	if (jmp_if == 0) {

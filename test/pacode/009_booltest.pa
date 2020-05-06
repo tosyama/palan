@@ -66,7 +66,8 @@ if b || 0 { printf("b"); }
 if 0 || i { printf("b"); }
 if b || i { printf("b"); }
 0 || 0 -> b;
-!(0 || 1) ->i;
+// !(0 || 1) ->i;
+0->i;
 if b || 1 { printf("c"); }
 if 1 || i { printf("c"); }
 if b && i { printf("c"); }
@@ -94,16 +95,24 @@ if u >= 5u || u < 4u { printf("t"); }
 if u > 5u || u <= 5u { printf("t"); }
 
 printf("\n");
-
+ 
 printf("%d", b>=i || b>5 || b>i);
 printf("%d", b<=i || b>(i+15) || b>i);
 printf("%d\n", b<=i || b<5 || b<i);
 
-// NOT
-int16 s0, s1 = 0, 1;
-printf("%d%d",!0,!1);
-printf("%d%d\n",!s0,!s1);
-printf("%d%d%d%d%d%d\n",!(s0==s1),!(s0!=s1),!(s0<s1),!(s0>s1),!(s0<=s1),!(s0>=s1));
-uint32 u0, u1 = 0u, 1u;
-printf("%d%d%d%d%d%d",!(u0<u1),!(u0>u1),!(u0<=u1),!(u0>=u1), !(0&&bool_t()), !(1||bool_f()));
 
+// Or and And
+0->i;
+10->b;
+if i>=3 && b==0 || b >= 10 { printf("T"); }
+if b >= 10 || i>=3 && b==0 { printf("T"); }
+if (b >= 10 || i>=3) && b==0 { printf("t"); }
+ 
+// // NOT
+// int16 s0, s1 = 0, 1;
+// printf("%d%d",!0,!1);
+// printf("%d%d\n",!s0,!s1);
+// printf("%d%d%d%d%d%d\n",!(s0==s1),!(s0!=s1),!(s0<s1),!(s0>s1),!(s0<=s1),!(s0>=s1));
+// uint32 u0, u1 = 0u, 1u;
+// printf("%d%d%d%d%d%d",!(u0<u1),!(u0>u1),!(u0<=u1),!(u0>=u1), !(0&&bool_t()), !(1||bool_f()));
+// 
