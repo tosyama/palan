@@ -64,14 +64,11 @@ void normalCaseTest()
 							"aaa01bbbcctdtdftdtdeefg\n"
 							"tt tt\n"
 							"110\n"
-							"TT"
-							);
-	/*
-							"110\n"
+							"TT\n"
 							"1010\n"
 							"100101\n"
-							"010110");
-
+							"010110 00fTftTttF ftT");
+/*
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "11 12 13 3124 2135 1110 2 12 3");

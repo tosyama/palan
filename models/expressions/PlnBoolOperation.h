@@ -17,6 +17,7 @@ public:
 	~PlnBoolOperation();
 
 	static PlnExpression* create(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
+	static PlnExpression* createNot(PlnExpression* e);
 };
 
 class PlnAndOperation : public PlnBoolOperation
@@ -41,22 +42,5 @@ public:
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
-};
-
-class PlnBoolOperation2 : public PlnCmpExpression
-{
-protected:
-	int jmp_l_id, jmp_r_id;
-	PlnDataPlace *result_dp, *zero_dp;
-	PlnCmpOperation2 *l, *r;
-public:
-	PlnBoolOperation2(PlnExpression* l, PlnExpression* r, PlnExprsnType type);
-	PlnBoolOperation2(const PlnBoolOperation2&) = delete;
-	~PlnBoolOperation2();
-
-	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
-	void gen(PlnGenerator& g) override;
-
-	static PlnExpression* getNot(PlnExpression *e);
 };
 

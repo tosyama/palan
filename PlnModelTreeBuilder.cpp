@@ -912,7 +912,7 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 	} else if (type == "uminus") {
 		expression = buildNegativeOperation(exp, scope);
 	} else if (type == "not") {
-		expression = PlnBoolOperation2::getNot(buildExpression(exp["val"], scope));
+		expression = PlnBoolOperation::createNot(buildExpression(exp["val"], scope));
 	} else if (type == "token") {
 		// token should be process before call this.
 		PlnCompileError err(E_UnexpectedToken, exp["info"]);
@@ -1291,21 +1291,15 @@ PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope)
 	return PlnNegative::create(e);
 }
 
-extern bool migrate;
 PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope)
 {
 	BinaryEx bex = getBiEx(cmp, scope);
-	if (migrate) {
-		return PlnCmpOperation::create(bex.l, bex.r, type);
-	} else {
-		return new PlnCmpOperation2(bex.l, bex.r, type);
-	}
+	return PlnCmpOperation::create(bex.l, bex.r, type);
 }
 
 PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope)
 {
 	BinaryEx bex = getBiEx(bl, scope);
 	return PlnBoolOperation::create(bex.l, bex.r, type);
-//	return new PlnBoolOperation2(bex.l, bex.r, type);
 }
 

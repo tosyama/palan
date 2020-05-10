@@ -73,7 +73,7 @@ void PlnTrueExpression::gen(PlnGenerator& g)
 		}
 	}
 
-	if (jmp_if == 1) {
+	if ((!is_not && jmp_if == 1) || (is_not && jmp_if == 0)) {
 		g.genJump(jmp_id, "true");
 	}
 }
@@ -114,7 +114,7 @@ void PlnFalseExpression::gen(PlnGenerator& g)
 		}
 	}
 
-	if (jmp_if == 0) {
+	if ((!is_not && jmp_if == 0) || (is_not && jmp_if == 1)) {
 		g.genJump(jmp_id, "false");
 	}
 }

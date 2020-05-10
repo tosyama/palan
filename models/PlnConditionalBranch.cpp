@@ -11,8 +11,6 @@
 #include "../PlnGenerator.h"
 #include "expressions/PlnCmpOperation.h"
 
-extern bool migrate;
-
 PlnIfStatement::PlnIfStatement
 	(PlnExpression* condition, PlnBlock* block, PlnStatement* next, PlnBlock* parent)
 	: cond_dp(NULL), jmp_next_id(-1), jmp_end_id(-1), next(next)
@@ -21,25 +19,12 @@ PlnIfStatement::PlnIfStatement
 	inf.block = block;
 	this->parent = parent;
 
-	if (migrate) {
-		this->condition = PlnBoolExpression::create(condition);
-		this->condition2 = NULL;
-
-	} else {
-		this->condition = NULL;
-		if (condition->type == ET_CMP
-				|| condition->type == ET_AND || condition->type == ET_OR) {
-			this->condition2 = static_cast<PlnCmpExpression*>(condition);
-		} else {
-			this->condition2 = new PlnCmpOperation2(new PlnExpression(int64_t(0)), condition, CMP_NE);
-		}
-	}
+	this->condition = PlnBoolExpression::create(condition);
 }
 
 PlnIfStatement::~PlnIfStatement()
 {
 	delete condition;
-	delete condition2;
 	delete inf.block;
 	if (next)
 		delete next;
@@ -52,13 +37,9 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	jmp_next_id = m->getJumpID();
 
-	if (migrate) {
-		condition->jmp_if = 0;
-		condition->jmp_id = jmp_next_id;
-		condition->finish(da, si);
-	} else {
-		condition2->finish(da, si);
-	}
+	condition->jmp_if = 0;
+	condition->jmp_id = jmp_next_id;
+	condition->finish(da, si);
 	inf.block->finish(da, si);
 
 	if (next) {
@@ -77,20 +58,7 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnIfStatement::gen(PlnGenerator& g)
 {
-	if (migrate) {
-		condition->gen(g);
-	} else {
-		condition2->gen(g);
-		int cmp_type = condition2->getCmpType();
-		if (cmp_type == CMP_CONST_TRUE) 
-			g.comment(" if true");	// 	do nothing.
-		
-		else if (cmp_type == CMP_CONST_FALSE)
-			g.genJump(jmp_next_id, "if false");
-		else
-			g.genFalseJump(jmp_next_id, cmp_type, "if");
-	}
-
+	condition->gen(g);
 	inf.block->gen(g);
 
 	if (next) {
