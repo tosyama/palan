@@ -135,7 +135,8 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->finish(da, si);
 		da.popSrc(radp);
 
-	} else if (jmp_if == 0 && !is_not) {
+	} else if ((jmp_if == 0 && !is_not)
+			|| (jmp_if == 1 && is_not)) {
 		BOOST_ASSERT(jmp_id != -1);
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
@@ -154,7 +155,8 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->jmp_id = jmp_id;
 		r->finish(da, si);
 
-	} else if (jmp_if == 0 && is_not) {
+	} else if ((jmp_if == 0 && is_not)
+			|| (jmp_if == 1 && !is_not)){
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
 			radp = da.prepareAccumulator(DT_SINT);
@@ -170,25 +172,6 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->jmp_id = jmp_id;
 		r->finish(da, si);
 
-	} else if (jmp_if == 1) {
-		BOOST_ASSERT(!is_not); // not implemented yet
-		if (data_places.size()) {
-			BOOST_ASSERT(push_mode != -1);
-			ladp = da.prepareAccumulator(DT_SINT);
-			radp = da.prepareAccumulator(DT_SINT);
-			l->data_places.push_back(ladp);
-			r->data_places.push_back(radp);
-			l->push_mode = push_mode;
-			r->push_mode = push_mode;
-		}
-		end_jmp_id = m->getJumpID();
-		l->jmp_if = 0;
-		l->jmp_id = end_jmp_id;
-		l->finish(da, si);
-		r->jmp_if = 1;
-		r->jmp_id = jmp_id;
-		r->finish(da, si);
-		
 	} else
 		BOOST_ASSERT(false);
 
@@ -199,24 +182,13 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnAndOperation::gen(PlnGenerator& g)
 {
-	if (jmp_if == -1) {
-		l->gen(g);
-		r->gen(g);
+	l->gen(g);
+	r->gen(g);
+	if (jmp_if == -1)
 		g.genLoadDp(r->data_places[0]);
-		BOOST_ASSERT(end_jmp_id >= 0);
-		g.genJumpLabel(end_jmp_id, "end &&");
 
-	} if (jmp_if == 0) {
-		l->gen(g);
-		r->gen(g);
-		if (end_jmp_id >= 0)
-			g.genJumpLabel(end_jmp_id, "end &&");
-
-	} if (jmp_if == 1) {
-		l->gen(g);
-		r->gen(g);
+	if (end_jmp_id >= 0)
 		g.genJumpLabel(end_jmp_id, "end &&");
-	}
 }
 
 void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -247,7 +219,8 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->finish(da, si);
 		da.popSrc(radp);
 
-	} else if (jmp_if == 0 && !is_not) {
+	} else if ((jmp_if == 0 && !is_not)
+			|| (jmp_if == 1 && is_not)) {
 		BOOST_ASSERT(jmp_id != -1);
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
@@ -264,7 +237,8 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->jmp_id = jmp_id;
 		r->finish(da, si);
 
-	} else if (jmp_if == 0 && is_not) {
+	} else if ((jmp_if == 0 && is_not)
+			|| (jmp_if == 1 && !is_not)) {
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
 			ladp = da.prepareAccumulator(DT_SINT);
@@ -278,24 +252,6 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		l->jmp_id = jmp_id;
 		l->finish(da, si);
 
-		r->jmp_if = 1;
-		r->jmp_id = jmp_id;
-		r->finish(da, si);
-
-	} else if (jmp_if == 1) {
-		BOOST_ASSERT(!is_not); // not implemented yet
-		if (data_places.size()) {
-			BOOST_ASSERT(push_mode != -1);
-			ladp = da.prepareAccumulator(DT_SINT);
-			radp = da.prepareAccumulator(DT_SINT);
-			l->data_places.push_back(ladp);
-			r->data_places.push_back(radp);
-			l->push_mode = push_mode;
-			r->push_mode = push_mode;
-		}
-		l->jmp_if = 1;
-		l->jmp_id = jmp_id;
-		l->finish(da, si);
 		r->jmp_if = 1;
 		r->jmp_id = jmp_id;
 		r->finish(da, si);
@@ -311,24 +267,12 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnOrOperation::gen(PlnGenerator& g)
 {
-	if (jmp_if == -1) {
-		l->gen(g);
-		r->gen(g);
+	l->gen(g);
+	r->gen(g);
+	if (jmp_if == -1)
 		g.genLoadDp(r->data_places[0]);
-		BOOST_ASSERT(end_jmp_id >= 0);
+
+	if (end_jmp_id >= 0)
 		g.genJumpLabel(end_jmp_id, "end ||");
-
-	} else if (jmp_if == 0) {
-		l->gen(g);
-		r->gen(g);
-		if (end_jmp_id >= 0)
-			g.genJumpLabel(end_jmp_id, "end ||");
-
-	} else if (jmp_if == 1) {
-		l->gen(g);
-		r->gen(g);
-
-	} else
-		BOOST_ASSERT(false);
 }
 
