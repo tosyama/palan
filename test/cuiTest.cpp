@@ -4,7 +4,7 @@
 
 using namespace boost;
 
-TEST_CASE("CUI basic command-line test.", "[cui][.]")
+TEST_CASE("CUI basic command-line test.", "[cui]")
 {
 	string str;
 	vector<string> strs; 
@@ -79,7 +79,7 @@ TEST_CASE("CUI basic command-line test.", "[cui][.]")
 	REQUIRE(outfile(testcode) == "exists");
 }
 
-TEST_CASE("CUI parametor validation test.", "[cui][.]")
+TEST_CASE("CUI parametor validation test.", "[cui]")
 {
 	string str;
 	vector<string> strs; 
@@ -149,7 +149,7 @@ TEST_CASE("CUI parametor validation test.", "[cui][.]")
 	REQUIRE(outfile(testcode) == "not exists");
 }
 
-TEST_CASE("CUI basic err test.", "[cui][.]")
+TEST_CASE("CUI basic err test.", "[cui]")
 {
 	string testcode = "XXX_src_not_found";
 	REQUIRE(build(testcode) == "err: 1");
@@ -175,7 +175,7 @@ TEST_CASE("CUI basic err test.", "[cui][.]")
 	REQUIRE(errstr(testcode) == "509_needret_err.pa:6: Return argument(s) can't be omitted at this function.\n");
 }
 
-TEST_CASE("sample code compile test.", "[cui][.]")
+TEST_CASE("sample code compile test.", "[cui]")
 {
 	string dir = "../samples/";
 	string testcode = "tetris";

@@ -17,7 +17,7 @@ static void algorithmTest()
 	REQUIRE(exec(testcode) == "-0.633, 1.204");
 }
 
-TEST_CASE("basic algorithm code example.", "[algorithm][.]")
+TEST_CASE("basic algorithm code example.", "[algorithm]")
 {
 	disableOptimize = true;
 	algorithmTest();
