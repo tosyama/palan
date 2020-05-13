@@ -176,3 +176,11 @@ if z2 { printf("t") } else { printf("f") }
 if !z1 { printf("t") } else { printf("f") }
 if !z2 { printf("t") } else { printf("f") }
 
+printf(" ");
+// tfftf
+if 0.1 && 0.2 { printf("t") } else { printf("f") }
+if 0.1 && 0.0 { printf("t") } else { printf("f") }
+if 0.1 && z1 { printf("t") } else { printf("f") }
+if z1 || 0.1 { printf("t") } else { printf("f") }
+if 0.0 { printf("t") } else { printf("f") }
+

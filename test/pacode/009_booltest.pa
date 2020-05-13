@@ -16,9 +16,9 @@ int32 i = 1;
 byte b = 255;
 
 // AND
-if 0 && 0 { printf("a"); }
+if 0u && 0 { printf("a"); }
 if 1 && 0 { printf("a"); }
-if 0 && 1 { printf("a"); }
+if 0 && 1u { printf("a"); }
 if 1 && 1 { printf("a"); }
 if b && 0 { printf("b"); }
 if 0 && i { printf("b"); }
@@ -46,9 +46,12 @@ if b<i && b { printf("g"); }
 
 printf("\n");
 
+// 10000
 printf("%d", b>=i && b>5 && b>i);
 printf("%d", b>=i && b>(i+15) && b>i);
-printf("%d\n", b>=i && b>5 && b<i);
+printf("%d", b>=i && b>5 && b<i);
+printf("%d", b && 10 && i);
+printf("%d\n", b && 0 && b+1);
 
 // OR test
 if 0 || 0 { printf("a"); }
@@ -63,7 +66,7 @@ printf("%d", 0||b);
 printf("%d", b||0);
 
 if b || 0 { printf("b"); }
-if 0 || i { printf("b"); }
+if 0u || i { printf("b"); }
 if b || i { printf("b"); }
 0 || 0 -> b;
 // !(0 || 1) ->i;
@@ -95,10 +98,12 @@ if u >= 5u || u < 4u { printf("t"); }
 if u > 5u || u <= 5u { printf("t"); }
 
 printf("\n");
- 
+// 11010
 printf("%d", b>=i || b>5 || b>i);
 printf("%d", b<=i || b>(i+15) || b>i);
-printf("%d\n", b<=i || b<5 || b<i);
+printf("%d", b<=i || b<5 || b<i);
+printf("%d", b<=i || b<5 || 10 || b<i);
+printf("%d\n", b<=i || b<5 || 0 || b<i);
 
 
 // Or and And
@@ -126,3 +131,10 @@ if !(bool_t() && bool_t()) { printf("T") } else { printf("F") }
 
 printf(" ");
 if !(bool_f() || !bool_t()) { printf("T") }
+
+printf(" ");
+x =  !(bool_t() && bool_f()) && bool_t();
+printf("%d", x); 
+!(bool_f() || bool_t()) || bool_f() -> x;
+printf("%d", x); 
+

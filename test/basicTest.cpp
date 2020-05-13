@@ -59,14 +59,14 @@ void normalCaseTest()
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttdef\n"
-							"100\n"
+							"10000\n"
 							"aaa01bbbcctdtdftdtdeefg\n"
 							"tt tt\n"
-							"110\n"
+							"11010\n"
 							"TT\n"
 							"1010\n"
 							"100101\n"
-							"010110 00fTftTttF ftT");
+							"010110 00fTftTttF ftT tft1ftf0");
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");
@@ -153,7 +153,7 @@ void normalCaseTest()
 	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft ffttf\n"
 								"fffftt tfft fttf ftft fft\n"
 								"fftf fttfft fftft tftf tftf tftt\n"
-								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
+								"tftf ttf 0.0 -0.0 ttftf ttt fftt tfftf");
 
 	testcode = "020_arrlit";
 	REQUIRE(build(testcode) == "success");
