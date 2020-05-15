@@ -232,7 +232,7 @@ void normalCaseTest()
 
 	testcode = "032_ptrptr";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "test 1234 test2");
+	REQUIRE(exec(testcode) == "test 1234 test2 123456");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")

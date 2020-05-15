@@ -112,7 +112,6 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 	param->dflt_value = defaultVal;
 	param->index = parameters.size();
 	param->iomode = iomode;
-	param->passby = pass_method;
 	param->passby = !ptype && pass_method == FPM_UNKNOWN ? 
 			parameters.back()->passby : pass_method;
 

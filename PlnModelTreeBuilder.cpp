@@ -185,7 +185,10 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			} else if (param["pass-by"] == "copy") {
 				if (var_type) {
 					if (var_type->data_type() == DT_OBJECT_REF) {
-						pm = FPM_OBJ_CLONE;
+						if (var_type->mode[ALLOC_MD]=='r')
+							pm = FPM_VAR_COPY;
+						else
+							pm = FPM_OBJ_CLONE;
 					} else {
 						pm = FPM_VAR_COPY;
 					}
