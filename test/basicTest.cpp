@@ -54,7 +54,7 @@ void normalCaseTest()
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "[if][elif][elif2][else][true]\n"
 							"0!=<<=1==<=>=2!=>>=\n"
-							"[us1][uu1]>tt010ttf");
+							"[us1][uu1][uu2]>tt010ttftf");
 
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
@@ -227,7 +227,7 @@ void normalCaseTest()
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 2.20 38 161 8 TTT\n"
+	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 2.20 38 161 8T TTT\n"
 						"3 17 5 17 3ACB");
 
 	testcode = "032_ptrptr";

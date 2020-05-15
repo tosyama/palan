@@ -41,10 +41,11 @@ printf("\n");
 byte b = 255;
 
 if b > 1 { printf("[us1]"); }
-if b > 1u { printf("[uu1]"); }
+if 1u < b { printf("[uu1]"); }
 
 if b <= 1 { printf("[us2]"); }
-if b <= 1u { printf("[uu2]"); }
+if 1u <= b { printf("[uu2]"); } 
+
 
 if b+1 > b-1 { printf(">"); }
 
@@ -59,3 +60,5 @@ printf("%d%d%d",i<1,i<2,b<=1u);
 if 2>1 { printf("t"); } else { printf("f"); }
 if 2u>=2u { printf("t"); } else { printf("f"); }
 if 1u>=2u { printf("t"); } else { printf("f"); }
+if 1u==1 { printf("t"); } else { printf("f"); }
+if 1u!=1 { printf("t"); } else { printf("f"); }
