@@ -1,7 +1,7 @@
 /// Conditinal branch model classes definition.
 ///
 /// @file	PlnConditionalBranch.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
 #include "PlnConditionalBranch.h"
@@ -11,7 +11,6 @@
 #include "../PlnGenerator.h"
 #include "expressions/PlnCmpOperation.h"
 
-
 PlnIfStatement::PlnIfStatement
 	(PlnExpression* condition, PlnBlock* block, PlnStatement* next, PlnBlock* parent)
 	: cond_dp(NULL), jmp_next_id(-1), jmp_end_id(-1), next(next)
@@ -20,12 +19,7 @@ PlnIfStatement::PlnIfStatement
 	inf.block = block;
 	this->parent = parent;
 
-	if (condition->type == ET_CMP
-			|| condition->type == ET_AND || condition->type == ET_OR) {
-		this->condition = static_cast<PlnCmpExpression*>(condition);
-	} else {
-		this->condition = new PlnCmpOperation(new PlnExpression(int64_t(0)), condition, CMP_NE);
-	}
+	this->condition = PlnBoolExpression::create(condition);
 }
 
 PlnIfStatement::~PlnIfStatement()
@@ -41,10 +35,14 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	BOOST_ASSERT(si.scope[0].type == SC_MODULE);
 	PlnModule* m = si.scope[0].inf.module;
 
+	jmp_next_id = m->getJumpID();
+
+	condition->jmp_if = 0;
+	condition->jmp_id = jmp_next_id;
 	condition->finish(da, si);
 	inf.block->finish(da, si);
+
 	if (next) {
-		jmp_next_id = m->getJumpID();
 		next->finish(da, si);
 		if (next->type == ST_IF) {
 			jmp_end_id = static_cast<PlnIfStatement*>(next)->jmp_end_id;
@@ -53,7 +51,7 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		}
 
 	} else {
-		jmp_next_id = jmp_end_id = m->getJumpID();
+		jmp_end_id = jmp_next_id;
 	}
 
 }
@@ -61,14 +59,6 @@ void PlnIfStatement::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnIfStatement::gen(PlnGenerator& g)
 {
 	condition->gen(g);
-	int cmp_type = condition->getCmpType();
-	if (cmp_type == CMP_CONST_TRUE) 
-		g.comment(" if true");	// 	do nothing.
-	else if (cmp_type == CMP_CONST_FALSE)
-		g.genJump(jmp_next_id, "if false");
-	else
-		g.genFalseJump(jmp_next_id, cmp_type, "if");
-
 	inf.block->gen(g);
 
 	if (next) {

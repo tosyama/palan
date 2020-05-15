@@ -66,12 +66,14 @@ PlnLoopStatement.o:  models/PlnLoopStatement.h \
 	models/PlnStatement.h models/../PlnModel.h models/PlnModule.h \
 	models/PlnExpression.h models/PlnBlock.h models/../PlnScopeStack.h \
 	models/../PlnGenerator.h models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h \
 	models/expressions/../../PlnConstants.h
 PlnConditionalBranch.o:  \
 	models/PlnConditionalBranch.h models/PlnStatement.h models/../PlnModel.h \
 	models/PlnModule.h models/PlnExpression.h models/PlnBlock.h \
 	models/../PlnScopeStack.h models/../PlnGenerator.h \
 	models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h \
 	models/expressions/../../PlnConstants.h
 PlnFixedArrayType.o:  \
 	models/types/../../PlnConstants.h models/types/../PlnGeneralObject.h \
@@ -135,8 +137,17 @@ PlnDivOperation.o:  \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/../../PlnMessage.h \
 	models/expressions/../../PlnException.h models/expressions/../PlnType.h
+PlnBoolExpression.o:  \
+	models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h \
+	models/expressions/../PlnExpression.h \
+	models/expressions/../../PlnModel.h \
+	models/expressions/../../PlnConstants.h models/expressions/../PlnType.h \
+	models/expressions/../../PlnDataAllocator.h \
+	models/expressions/../../PlnGenerator.h
 PlnCmpOperation.o:  \
 	models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h \
 	models/expressions/../../PlnConstants.h \
@@ -145,6 +156,7 @@ PlnCmpOperation.o:  \
 PlnBoolOperation.o:  \
 	models/expressions/PlnBoolOperation.h \
 	models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnModel.h \
 	models/expressions/../../PlnConstants.h models/expressions/../PlnType.h \
@@ -267,6 +279,7 @@ PlnTreeBuildHelper.o:  PlnTreeBuildHelper.h \
 	models/PlnStatement.h models/PlnVariable.h models/PlnLoopStatement.h \
 	models/expressions/PlnAddOperation.h models/expressions/PlnArrayItem.h \
 	models/expressions/PlnAssignment.h models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/PlnFunctionCall.h models/types/PlnFixedArrayType.h
 PlnScopeStack.o:  PlnModel.h models/PlnType.h \
@@ -283,7 +296,8 @@ PlnModelTreeBuilder.o:  PlnModel.h \
 	models/expressions/PlnMulOperation.h \
 	models/expressions/PlnDivOperation.h \
 	models/expressions/PlnBoolOperation.h \
-	models/expressions/PlnCmpOperation.h models/expressions/PlnArrayItem.h \
+	models/expressions/PlnCmpOperation.h \
+	models/expressions/PlnBoolExpression.h models/expressions/PlnArrayItem.h \
 	models/expressions/PlnStructMember.h models/expressions/PlnArrayValue.h \
 	models/types/PlnFixedArrayType.h models/types/PlnArrayValueType.h \
 	models/types/PlnStructType.h

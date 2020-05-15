@@ -54,18 +54,19 @@ void normalCaseTest()
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "[if][elif][elif2][else][true]\n"
 							"0!=<<=1==<=>=2!=>>=\n"
-							"[us1][uu1]>tt010ttf");
+							"[us1][uu1][uu2]>tt010ttftf");
 
 	testcode = "009_booltest";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "ab10ttdtfDfDtttdef\n"
-							"100\n"
+							"10000\n"
 							"aaa01bbbcctdtdftdtdeefg\n"
 							"tt tt\n"
-							"110\n"
+							"11010\n"
+							"TT\n"
 							"1010\n"
 							"100101\n"
-							"010110");
+							"010110 00fTftTttF ftT tft1ftf0");
 
 	testcode = "010_arrarray";
 	REQUIRE(build(testcode) == "success");
@@ -152,7 +153,7 @@ void normalCaseTest()
 	REQUIRE(exec(testcode) == "tftfft tfft fttf ftft ffttf\n"
 								"fffftt tfft fttf ftft fft\n"
 								"fftf fttfft fftft tftf tftf tftt\n"
-								"tftf ttf 0.0 -0.0 ttftf ttt fftt");
+								"tftf ttf 0.0 -0.0 ttftf ttt fftt tfftf");
 
 	testcode = "020_arrlit";
 	REQUIRE(build(testcode) == "success");
@@ -226,12 +227,12 @@ void normalCaseTest()
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 2.20 38 161 8 TTT\n"
+	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 2.20 38 161 8T TTT\n"
 						"3 17 5 17 3ACB");
 
 	testcode = "032_ptrptr";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "test 1234 test2");
+	REQUIRE(exec(testcode) == "test 1234 test2 123456");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")

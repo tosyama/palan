@@ -1,21 +1,11 @@
 /// PlnCmpOperation model class declaration.
 ///
 /// @file	PlnCmpOperation.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
-#include "../PlnExpression.h"
-#include "../../PlnConstants.h"
+#include "PlnBoolExpression.h"
 
-class PlnCmpExpression : public PlnExpression
-{
-public:
-	int gen_cmp_type;
-
-	PlnCmpExpression(PlnExprsnType type) : PlnExpression(type), gen_cmp_type(-1) { };
-	int getCmpType() { return gen_cmp_type; };
-};
-
-class PlnCmpOperation : public PlnCmpExpression
+class PlnCmpOperation : public PlnBoolExpression
 {
 public:
 	PlnCmpType cmp_type;
@@ -29,6 +19,7 @@ public:
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
-	bool isConst();
+
+	static PlnExpression* create(PlnExpression* l, PlnExpression* r, PlnCmpType cmp_type);
 };
 

@@ -185,7 +185,10 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			} else if (param["pass-by"] == "copy") {
 				if (var_type) {
 					if (var_type->data_type() == DT_OBJECT_REF) {
-						pm = FPM_OBJ_CLONE;
+						if (var_type->mode[ALLOC_MD]=='r')
+							pm = FPM_VAR_COPY;
+						else
+							pm = FPM_OBJ_CLONE;
 					} else {
 						pm = FPM_VAR_COPY;
 					}
@@ -912,7 +915,7 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 	} else if (type == "uminus") {
 		expression = buildNegativeOperation(exp, scope);
 	} else if (type == "not") {
-		expression = PlnBoolOperation::getNot(buildExpression(exp["val"], scope));
+		expression = PlnBoolOperation::createNot(buildExpression(exp["val"], scope));
 	} else if (type == "token") {
 		// token should be process before call this.
 		PlnCompileError err(E_UnexpectedToken, exp["info"]);
@@ -1294,12 +1297,12 @@ PlnExpression* buildNegativeOperation(json& neg, PlnScopeStack &scope)
 PlnExpression* buildCmpOperation(json& cmp, PlnCmpType type, PlnScopeStack &scope)
 {
 	BinaryEx bex = getBiEx(cmp, scope);
-	return new PlnCmpOperation(bex.l, bex.r, type);
+	return PlnCmpOperation::create(bex.l, bex.r, type);
 }
 
 PlnExpression* buildBoolOperation(json& bl, PlnExprsnType type, PlnScopeStack &scope)
 {
 	BinaryEx bex = getBiEx(bl, scope);
-	return new PlnBoolOperation(bex.l, bex.r, type);
+	return PlnBoolOperation::create(bex.l, bex.r, type);
 }
 

@@ -431,7 +431,7 @@ static void adjustImmediateEntity(const PlnGenEntity* src, int dst_data_type, in
 
 	if (src->data_type == DT_SINT || src->data_type == DT_UINT) {
 		// integer -> integer: do nothing.
-		if (dst_data_type == DT_SINT || dst_data_type == DT_UINT)
+		if (dst_data_type == DT_SINT || dst_data_type == DT_UINT || dst_data_type == DT_OBJECT_REF)
 			return;
 
 		BOOST_ASSERT(dst_data_type == DT_FLOAT);

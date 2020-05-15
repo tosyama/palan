@@ -5,6 +5,7 @@ ccall topen2(@[?]byte name => int32 stat, TestDb tdb>>) -> int32;
 ccall tgetId(@TestDb tdb) -> int32;
 ccall tgetName(@TestDb tdb) -> @[?]byte;
 ccall tclose(TestDb >>tdb);
+ccall tprintparray([2][3]int64 parray, int64 num1, num2);
 
 type TestDb;
 
@@ -13,8 +14,12 @@ int32 stat;
 topen("test" =>> tdb);
 topen2("test2" => stat, >>tdb2);
 
-printf("%s %d %s", tgetName(tdb), tgetId(tdb), tgetName(tdb2));
+printf("%s %d %s ", tgetName(tdb), tgetId(tdb), tgetName(tdb2));
 
 tclose(tdb>>);
 tclose(tdb2>>);
+{
+	[2][3]int64 parray = [1,2,3][4,5,6];
+	tprintparray(parray, 2, 3);
+}
 

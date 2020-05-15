@@ -23,7 +23,9 @@ enum PlnExprsnType {
 	ET_CLONE,
 	ET_ARRAYITEM,
 	ET_STRUCTMEMBER,
-	ET_MCOPY
+	ET_MCOPY,
+	ET_TRUE,
+	ET_FALSE
 };
 
 class PlnModule;

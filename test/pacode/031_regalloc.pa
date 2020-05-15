@@ -91,6 +91,7 @@ func mem2regi()
 
 	regi / memu -> regi;
 	printf(" %d", regi);
+	if regi < memu { printf("T") }
 }
 
 func cmp()

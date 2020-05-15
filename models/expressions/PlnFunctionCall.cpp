@@ -137,6 +137,8 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 					// TODO?: delete arg.exp before assgin?
 				}
 				clone = new PlnClone(da, arg.exp, v.getVarType(), false);
+			} else {
+				BOOST_ASSERT(argval.param->passby != FPM_OBJ_CLONE);
 			}
 
 			auto pvar_type = argval.param->var->var_type;
@@ -310,8 +312,15 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 		}
 		case FT_C:
 		{
-			for (auto& arg: arguments)
+			int i=0;
+			for (auto arg: arguments) {
+				if (clones[i]) clones[i]->genAlloc(g);
 				arg.exp->gen(g);
+				if (clones[i]) clones[i]->gen(g);
+				i++;
+			}
+			//for (auto& arg: arguments)
+			//	arg.exp->gen(g);
 
 			for (auto dp: arg_dps)
 				g.genLoadDp(dp, false);
