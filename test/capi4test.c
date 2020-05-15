@@ -61,8 +61,9 @@ void tclose(TestDb *tdb)
 
 void tprintparray(int64_t** parray, int num1, int num2)
 {
-	for (int i=0; i<num1; i++) {
-		for (int j=0; j<num2; j++)
+	int i, j;
+	for (i=0; i<num1; i++) {
+		for (j=0; j<num2; j++)
 			printf("%ld", parray[i][j]);
 
 		free(parray[i]);
