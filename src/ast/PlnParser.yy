@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "../libs/json/single_include/nlohmann/json.hpp"
+#include "../../libs/json/single_include/nlohmann/json.hpp"
 
 using std::string;
 using std::cerr;
