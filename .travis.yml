@@ -17,9 +17,6 @@ before_install:
 install:
  - sudo make package
 
-before_script:
- - cd src
-
 script:
  - export CC=g++-5
  - export CXX=g++-5
