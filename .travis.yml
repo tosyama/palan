@@ -12,7 +12,6 @@ addons:
 
 before_install:
  - pip install --user cpp-coveralls
- - cd src
 
 install:
  - sudo make package
@@ -20,7 +19,7 @@ install:
 script:
  - export CC=g++-5
  - export CXX=g++-5
- - make "CFLAGS=--coverage -DNDEBUG" "LDFLAGS=--coverage -lgcov"
+ - make coverage
 
 after_success:
  - coveralls -b . --gcov gcov-5 --exclude libs --exclude src/test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT --skip-ssl-verify

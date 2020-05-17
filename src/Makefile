@@ -69,14 +69,13 @@ depend: $(SRCS)
 	| sed "s/[_a-zA-Z0-9/][_a-zA-Z0-9/]*\.cpp//g" \
 	| sed "s/^\ /\t/g" >> depend.inc; done
 -include depend.inc
-package:
-	-apt-get -y install libboost-dev
-	-apt-get -y install libboost-program-options-dev
-	-apt-get -y install bison
-	-apt-get -y install flex
-	-curl -o test/catch.hpp https://raw.githubusercontent.com/catchorg/Catch2/master/single_include/catch2/catch.hpp
 .PHONY: release
 release: clean
 release: CXX_FLAGS=$(CXX_RELEASE_FLAGS)
 release: AST_MAKE_FLAGS=release
 release: $(PROGRAM)
+.PHONY: coverage
+coverage: CFLAGS=--coverage -DNDEBUG
+coverage: LDFLAGS=--coverage -lgcov
+coverage: $(PROGRAM)
+
