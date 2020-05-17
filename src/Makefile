@@ -55,7 +55,7 @@ $(PROGRAM): $(OBJS)	$(TEST) $(POST_TEST) test/*.c
 	@mkdir -p objs
 	$(CXX) $(CFLAGS) -std=c++11 -c $(CXX_FLAGS) $< -o objs/$@
 $(TEST): $(OBJS) test/*.cpp test/pacode/* $(AST)
-	@$(MAKE) -C test
+	@$(MAKE) -C test "LDFLAGS=$(LDFLAGS)"
 $(AST): ast/*.cpp ast/*.yy ast/*.h ast/*.ll
 	@$(MAKE) -C ast $(AST_MAKE_FLAGS)
 clean:
