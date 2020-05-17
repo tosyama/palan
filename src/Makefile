@@ -77,5 +77,5 @@ release: $(PROGRAM)
 .PHONY: coverage
 coverage: CFLAGS=--coverage -DNDEBUG
 coverage: LDFLAGS=--coverage -lgcov
-coverage: $(PROGRAM)
+coverage: FORCE
 
