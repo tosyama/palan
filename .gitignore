@@ -13,7 +13,6 @@ position.hh
 stack.hh
 pac
 pat
-test/tester
-test/cuitester
-test/out
-
+src/test/tester
+src/test/cuitester
+src/test/out

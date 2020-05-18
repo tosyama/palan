@@ -30,11 +30,10 @@ $ vi helloworld.pa
 ccall printf(...);
 "Hello World!\n" -> printf();
 ```
-Note: write "ccall int32 printf();" if the version 0.2 or less.
 
 ### Build and Run
 ```console
-$ ./pac helloworld.pa -o a.out
+$ bin/pac helloworld.pa -o a.out
 $ ./a.out
 Hello World!
 ```
