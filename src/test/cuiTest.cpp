@@ -177,7 +177,7 @@ TEST_CASE("CUI basic err test.", "[cui]")
 
 TEST_CASE("sample code compile test.", "[cui]")
 {
-	string dir = "../samples/";
+	string dir = "../../samples/";
 	string testcode = "tetris";
 	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
 	REQUIRE(outfile(testcode + ".o") == "exists");

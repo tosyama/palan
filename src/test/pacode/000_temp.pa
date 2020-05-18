@@ -10,3 +10,5 @@ if j>1 && i>1 {
 } else {
 	printf("");
 }
+
+@[?]byte str = "abc";

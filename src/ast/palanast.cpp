@@ -15,7 +15,7 @@
 #include "PlnParser.hpp"
 #include "PlnLexer.h"
 #include "../PlnMessage.h"
-#include "../libs/json/single_include/nlohmann/json.hpp"
+#include "../../libs/json/single_include/nlohmann/json.hpp"
 
 using std::cout;
 using std::cerr;
