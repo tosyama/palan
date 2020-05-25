@@ -170,7 +170,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		f->parent = CUR_BLOCK;
 		for (auto& param: proto["params"]) {
 			if (param["name"] == "@" || param["name"] == "...") {
-				PlnCompileError err(E_UnsuppotedGrammer,"Not supported placeholder or variable argument at palan function.");
+				PlnCompileError err(E_UnsupportedGrammer,"Not supported placeholder or variable argument at palan function.");
 				setLoc(&err, param);
 				throw err;
 			}
@@ -595,9 +595,12 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			try {
 				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_BLOCK);
 
-				// check type not support for var
+				// Cstr -> []byte
 				if (t->typeinf == PlnType::getReadOnlyCStr()) {
-					throw PlnCompileError(E_UnsuppotedGrammer, "Not supported type for variable.");
+					string mode = "---";
+					int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
+					vector<int> sizes = { size };
+					t = CUR_BLOCK->getFixedArrayType(PlnType::getByte()->getVarType(), sizes, mode);
 				}
 
 			} catch (PlnCompileError &err) {
@@ -620,6 +623,9 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				}
 			} else if (tt->type == TP_ARRAY_VALUE) {
 				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
+			} else if (tt == PlnType::getReadOnlyCStr()) {
+				int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
+				sizes.push_back(size);
 			}
 
 			inferArrayIndex(var, sizes);

@@ -53,7 +53,7 @@ enum PlnErrCode {
 	E_CUI_InvalidExecOpt,
 
 	// Unsupported grammer
-	E_UnsuppotedGrammer // any, any
+	E_UnsupportedGrammer // any, any
 };
 
 enum PlnHelpCode {

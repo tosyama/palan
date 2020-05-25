@@ -41,7 +41,7 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 		return block->getFixedArrayType(itype, fixarr_sizes, "---");
 	}
 
-	PlnCompileError err(E_UnsuppotedGrammer, "use only fixed array here.");
+	PlnCompileError err(E_UnsupportedGrammer, "use only fixed array here.");
 	throw err;
 }
 
