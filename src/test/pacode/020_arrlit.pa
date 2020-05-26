@@ -70,3 +70,12 @@ printf("%d%d", arr1a[0,0], arr1a[2,0]);
 printf("%d%d", arr1b[0,0], arr1b[2,0]);
 printf("%d%d", arr1c[0,0,0], arr1c[0,2,0]);
 
+// text literal
+test("abc");
+
+func test([10]byte text)
+{
+	68 -> text[1];// 68 (D)
+	printf(" %s", text);
+}
+

@@ -49,9 +49,9 @@ Code Structure
 
 Generating Files
 ----------------
-pac - Palan compiler. To display help, type "./pac -h".  
-ast/pat - Palan json AST generator. To display help, type "./pat -h".  
-test/tester - Auto test program using Catch C++ testing framework.  
+bin/pac - Palan compiler. To display help, type "bin/pac -h".  
+bin/pat - Palan json AST generator. To display help, type "bin/pat -h".  
+src/test/tester - Auto test program using Catch C++ testing framework.  
 
 Main Logic
 ----------

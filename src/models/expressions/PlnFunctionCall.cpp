@@ -131,12 +131,13 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			if (argval.param->iomode == PIO_INPUT
 					&& argval.param->var->var_type->mode[ALLOC_MD]=='h'
 					&& argval.opt == AG_NONE) {
-				BOOST_ASSERT(v.type == VL_LIT_ARRAY || v.type == VL_VAR || v.type == VL_WORK);
+				BOOST_ASSERT(v.type == VL_LIT_ARRAY || v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_STR);
 				if (v.type == VL_LIT_ARRAY) {
 					arg.exp = v.inf.arrValue;
 					// TODO?: delete arg.exp before assgin?
 				}
-				clone = new PlnClone(da, arg.exp, v.getVarType(), false);
+				// clone = new PlnClone(da, arg.exp, v.getVarType(), false);
+				clone = new PlnClone(da, arg.exp, argval.param->var->var_type, false);
 			} else {
 				BOOST_ASSERT(argval.param->passby != FPM_OBJ_CLONE);
 			}
