@@ -205,7 +205,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto dp: arg_dps)
 		da.popSrc(dp);
 
-	da.funcCalled(arg_dps, func_type);
+	da.funcCalled(arg_dps, func_type, function->never_return);
 
 	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
 	int i = 0;
@@ -353,6 +353,7 @@ static void initInternalFunctions()
 	f = new PlnFunction(FT_C, "__exit");
 	f->asm_name = "exit";
 	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_VAR_COPY, NULL);
+	f->never_return = true;
 	internalFuncs[IFUNC_EXIT] = f;
 }
 

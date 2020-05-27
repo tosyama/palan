@@ -173,7 +173,7 @@ static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 	}
 }
 
-void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_type)
+void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_type, bool never_return)
 {
 	// TODO: use popSrc().
 	for (auto dp: args) {
@@ -191,7 +191,8 @@ void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_ty
 			checkExistsActiveDP(arg_stack[dp->data.stack.idx], dp);
 	}
 
-	destroyRegsByFuncCall();
+	if (!never_return)
+		destroyRegsByFuncCall();
 	step++;
 }
 
