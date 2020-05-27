@@ -8,7 +8,7 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "");
+	REQUIRE(exec(testcode) == "abc");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -159,16 +159,16 @@ void normalCaseTest()
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "23-413 56746 3.3 1.0 5.5\n"
 								"567 210 46 12-6-12 12-6-12 12-6-12\n"
-								"116 161 13131313");
+								"116 161 13131313 aDc");
 
 	testcode = "021_arr_size_infer";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "235.0999\n" "3388 23");
+	REQUIRE(exec(testcode) == "235.0999\n" "3388 23 abc");
 
 	testcode = "022_type_inference";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "91012.3 91012.3 91012 91012.3\n"
-							"32.2 5");
+							"32.2 5 abc");
 
 	testcode = "023_const_array";
 	REQUIRE(build(testcode) == "success");
@@ -386,8 +386,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "552_ambigfunc_err2";
 	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
 
-	testcode = "557_unsupported_err2";
-	REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported type for variable.");
+	// testcode = "557_unsupported_err2";
+	// REQUIRE(build(testcode) == "0:1-1 Unsupported grammer: Not supported type for variable.");
 
 	testcode = "566_copyfreevar_err4";
 	REQUIRE(build(testcode) == "finish:0:4-4 Can not copy to freed variable 'arr1'.");

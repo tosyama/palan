@@ -11,4 +11,17 @@ if j>1 && i>1 {
 	printf("");
 }
 
-@[?]byte str = "abc";
+type User {
+	int64 id;
+	[10]byte name;
+	int16 age;
+};
+
+test("abc");
+
+func test([10]byte name)
+{
+	printf("%s", name);
+}
+
+

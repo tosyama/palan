@@ -5,40 +5,40 @@ ver 0.3.0a
 
 Code Structure
 --------------
-*palan.cpp*  
+*src/palan.cpp*  
 	Main function of palan CUI compiler.
 	You can start reading code from here.
 
-*/ast/palnast.cpp*  
+*src/ast/palnast.cpp*  
 	Main function of palan paser CUI.
 
-*/ast/AST.md*  
+*src/ast/AST.md*  
 	Json AST specification.
 
-*/ast/PlnParser.yy*  
+*src/ast/PlnParser.yy*  
 	The parser generate json AST.
 
-*/ast/PlnLexer.ll*  
+*src/ast/PlnLexer.ll*  
 	Lexical analyser.
 
-*PlnModelTreeBuilder.cpp*  
+*src/PlnModelTreeBuilder.cpp*  
 	Build palan model tree form json AST.
 
-*PlnDataAllocator.cpp*  
+*src/PlnDataAllocator.cpp*  
 	Provide the mechanism of allcating varibles to stack and register.
 	Environment dependent code is separated to /generators/*DataAllocator.cpp 
 
-*PlnGenerator.cpp*  
+*src/PlnGenerator.cpp*  
 	Provide the mechanism to generate assembly code.
 	Environment dependent code is separated to /generators/*Generator.cpp 
 	
-*/models*  
+*src/models*  
 	Palan model tree classes. See [Palan Model Tree](#PMT).
 
-*/test*  
+*src/test*  
 	Automatic tests codes.
 
-*/test/pacode*  
+*src/test/pacode*  
 	Palan codes for automatic test.
 	You can see working palan code here.
 	Asm files and execution files will be created under /test/out.
@@ -49,9 +49,9 @@ Code Structure
 
 Generating Files
 ----------------
-pac - Palan compiler. To display help, type "./pac -h".  
-ast/pat - Palan json AST generator. To display help, type "./pat -h".  
-test/tester - Auto test program using Catch C++ testing framework.  
+bin/pac - Palan compiler. To display help, type "bin/pac -h".  
+bin/pat - Palan json AST generator. To display help, type "bin/pat -h".  
+src/test/tester - Auto test program using Catch C++ testing framework.  
 
 Main Logic
 ----------

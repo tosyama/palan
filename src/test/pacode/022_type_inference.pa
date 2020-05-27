@@ -29,4 +29,7 @@ printf("%d%.1f ", arr1[2], arr2[1,1]);
 
 arr31 = arr3;
 
-printf("%d", arr31[2][1,1]);
+printf("%d ", arr31[2][1,1]);
+
+str = "abc";
+printf("%s", str);
