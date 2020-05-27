@@ -136,8 +136,8 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 					arg.exp = v.inf.arrValue;
 					// TODO?: delete arg.exp before assgin?
 				}
-				// clone = new PlnClone(da, arg.exp, v.getVarType(), false);
 				clone = new PlnClone(da, arg.exp, argval.param->var->var_type, false);
+
 			} else {
 				BOOST_ASSERT(argval.param->passby != FPM_OBJ_CLONE);
 			}
@@ -148,17 +148,6 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				|| (argval.param->passby == FPM_ANY_OUT && arg.exp->getDataType(vi) != DT_OBJECT_REF)) {
 				arg_dps[dp_i]->load_address = true;
 			} 
-			/*if (argval.param->iomode == PIO_INPUT) {
-				if (pvar_type->mode[ALLOC_MD]=='r' && arg.exp->getDataType(vi) != DT_OBJECT_REF) {
-					arg_dps[dp_i]->load_address = true;
-				}
-			} else if (argval.param->iomode == PIO_OUTPUT) {
-				if (arg.exp->getDataType(vi) != DT_OBJECT_REF) {
-					arg_dps[dp_i]->load_address = true;
-				}
-			} else
-				BOOST_ASSERT(false);
-			*/
 
 			if (clone)
 				clone->finishAlloc(da, si);
