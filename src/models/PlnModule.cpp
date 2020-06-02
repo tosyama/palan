@@ -97,6 +97,7 @@ void PlnModule::gen(PlnDataAllocator& da, PlnGenerator& g)
 	for (auto f : functions) {
 		if (!f->generated) {
 			// Do only finishing to detect code error
+			f->do_opti_regalloc = do_opti_regalloc;
 			f->finish(da, si);
 			f->clear();
 			da.reset();

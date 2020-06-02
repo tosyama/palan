@@ -458,8 +458,99 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 		return NULL;
 }
 
+bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
+{
+	PlnDataPlace* rdp = regs[regid];
+	BOOST_ASSERT(rdp);
+
+	bool is_overlapped = false;
+	PlnDataPlace* insert_dp = rdp;
+
+	while(rdp) {
+		if (dp->alloc_step <= rdp->release_step
+				&& dp->release_step >= rdp->alloc_step) {
+			is_overlapped = true;
+		}
+		rdp = rdp->previous;
+	}
+	
+	if (is_overlapped) {
+		return false;
+	}
+	
+	dp->previous = regs[regid];
+	regs[regid] = dp;
+	dp->type = DP_REG;
+	dp->data.reg.id = regid;
+	dp->data.reg.offset = 0;
+
+	return true;
+}
+
 void PlnX86_64DataAllocator::optimizeRegAlloc()
 {
+	// try to allocate src_dp reg
+	for (int i=0; i<data_stack.size();) {
+		PlnDataPlace* dp = data_stack[i];
+		PlnDataPlace* pdp = NULL;
+
+		while (dp) {
+			PlnDataPlace* save_pdp = dp->previous;
+			if (dp->type == DP_BYTES) {
+				auto& bytesData = *dp->data.bytesData;
+				auto bdpi = bytesData.begin();
+				while (bdpi != bytesData.end()) {
+					BOOST_ASSERT(!(*bdpi)->previous);
+					if ((*bdpi)->src_place && !(*bdpi)->save_place) {
+						auto srcdp = (*bdpi)->src_place;
+						if (srcdp->type == DP_REG) {
+							if (tryMoveDp2Reg((*bdpi), srcdp->data.reg.id)) {
+								bdpi = bytesData.erase(bdpi);
+								continue;
+							}
+						}
+					}
+					bdpi++;
+				}
+
+				if (!bytesData.size()) {
+					if (pdp) {
+						pdp->previous = save_pdp;
+					} else {
+						data_stack[i] = save_pdp;
+					}
+					dp = save_pdp;
+					continue;
+				}
+
+			} else {
+				if (dp->src_place && !dp->save_place) {
+					auto srcdp = dp->src_place;
+					if (srcdp->type == DP_REG) {
+						if (tryMoveDp2Reg(dp, srcdp->data.reg.id)) {
+							if (pdp) {
+								pdp->previous = save_pdp;
+							} else {
+								data_stack[i] = save_pdp;
+							}
+							dp = save_pdp;
+							continue;
+						}
+					}
+				}
+			}
+			pdp = dp;
+			if (dp)
+				dp = dp->previous;
+		}
+
+		if (!data_stack[i]) {
+			data_stack.erase(data_stack.begin()+i);
+		} else { 
+			i++;
+		}
+	}
+
 	static vector<int> no_save_regids = {RAX, RDI, RSI, RDX, RCX, R8, R9, R10};
 	static vector<int> save_regids = {RBX, R12, R13, R14, R15};
 

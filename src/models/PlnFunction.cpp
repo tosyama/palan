@@ -219,7 +219,7 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 					si.push_owner_var(p->var);
 
 				PlnVarType *t = p->var->var_type;
-				auto dp = da.allocData(t->size(), t->data_type());
+				auto dp = da.prepareLocalVar(t->size(), t->data_type());
 				dp->comment = &p->var->name;
 
 				da.pushSrc(dp, arg_dps[i]);

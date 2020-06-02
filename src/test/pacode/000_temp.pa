@@ -1,4 +1,9 @@
-a = 1;
-b = 1;
-a + 1 -> a;
-b + 1 -> b;
+
+test(3, 5);
+
+func test(int32 a, b) -> int64 result {
+	a + 1 -> a;
+	b + 2 -> b;
+
+	a + b -> result;
+}
