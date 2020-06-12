@@ -52,115 +52,73 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 	}
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::createArgDp
-	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
+void PlnX86_64DataAllocator::setArgDps(int func_type, vector<PlnDataPlace*> &arg_dps, bool is_callee)
 {
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+	int reg_ind = 0;
 	int freg_ind = 0;
-	for (int i=0; i<index; i++)
-		if (arg_dtypes[i] == DT_FLOAT)
-			freg_ind++;
+	int stk_ind = 0;
 	
-	int reg_ind = index - freg_ind;
+	for (int index = 0; index < arg_dps.size(); index++) {
+		PlnDataPlace* dp = arg_dps[index];
+		static string comment = "arg";
+		dp->comment = &comment;
 
-	if (arg_dtypes[index] == DT_FLOAT && freg_ind <= 7) {
-		int regid;
-		dp->type = DP_REG;
-		dp->data.reg.id = FARG_TBL[freg_ind];
-		dp->data.reg.offset = 0;
+		if (dp->data_type == DT_FLOAT && freg_ind <= 7) {
+			int regid;
+			dp->type = DP_REG;
+			dp->data.reg.id = FARG_TBL[freg_ind];
+			dp->data.reg.offset = 0;
 
-	} else if (arg_dtypes[index] != DT_FLOAT && reg_ind <= 5) {
-		int regid;
-		if (func_type == FT_PLN || func_type == FT_C)
-			regid = ARG_TBL[reg_ind];
-		else if (func_type == FT_SYS)
-			regid = SYSARG_TBL[reg_ind];
-		else
-			BOOST_ASSERT(false);
+			freg_ind++;
 
-		dp->type = DP_REG;
-		dp->data.reg.id = regid;
-		dp->data.reg.offset = 0;
+		} else if (dp->data_type != DT_FLOAT && reg_ind <= 5) {
+			int regid;
+			if (func_type == FT_PLN || func_type == FT_C)
+				regid = ARG_TBL[reg_ind];
+			else if (func_type == FT_SYS)
+				regid = SYSARG_TBL[reg_ind];
+			else
+				BOOST_ASSERT(false);
 
-	} else {	// index >= 5
-		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = -1;
-		if (reg_ind > 5)
-			ind += reg_ind-5;
+			dp->type = DP_REG;
+			dp->data.reg.id = regid;
+			dp->data.reg.offset = 0;
 
-		if (freg_ind > 7)
-			ind += freg_ind-7;
+			reg_ind++;
 
-		if (is_callee) {
-			dp->type = DP_STK_BP;
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8+16;
+		} else {	// index >= 5
+			if (is_callee) {
+				dp->type = DP_STK_BP;
+				dp->data.stack.idx = stk_ind;
+				dp->data.stack.offset = stk_ind*8+16;
 
-		} else {
-			dp->type = DP_STK_SP;
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8;
+			} else {
+				dp->type = DP_STK_SP;
+				dp->data.stack.idx = stk_ind;
+				dp->data.stack.offset = stk_ind*8;
+			}
+
+			stk_ind++;
 		}
 	}
-
-	return dp;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
-	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
+void PlnX86_64DataAllocator::setRetValDps(int func_type, vector<PlnDataPlace*> &retval_dps, bool is_callee)
 {
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
-	int freg_ind = 0;
-	for (int i=0; i<index; i++)
-		if (ret_dtypes[i] == DT_FLOAT)
-			freg_ind++;
+	static string comment = "retval";
 
-	int reg_ind = index - freg_ind;
-
-	if (ret_dtypes[index] == DT_FLOAT && freg_ind <= 7) {
-		int regid;
+	if (retval_dps.size() == 1 && retval_dps[0]->data_type != DT_FLOAT) {
+		PlnDataPlace* dp = retval_dps[0];
 		dp->type = DP_REG;
-		dp->data.reg.id = FARG_TBL[freg_ind];
+		dp->data.reg.id = RAX;
 		dp->data.reg.offset = 0;
-
-	} else if (ret_dtypes[index] != DT_FLOAT && reg_ind <= 5) {
-		int regid;
-		if (func_type == FT_PLN || func_type == FT_C) {
-			regid = (ret_dtypes.size() == 1) ? RAX : ARG_TBL[index];
-
-		} else if (func_type == FT_SYS) {
-			BOOST_ASSERT(ret_dtypes.size() == 1);
-			regid = RAX;
-		} else
-			BOOST_ASSERT(false);
-
-		dp->type = DP_REG;
-		dp->data.reg.id = regid;
-		dp->data.reg.offset = 0;
-		
-	} else {	// index >= 5
-		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = -1;
-		if (reg_ind > 5)
-			ind += reg_ind-5;
-
-		if (freg_ind > 7)
-			ind += freg_ind-7;
-
-		if (is_callee) {
-			dp->type = DP_STK_BP;
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8+16;
-
-		} else {
-			dp->type = DP_STK_SP;
-
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8;
-		}
+		dp->comment = &comment;
+		return;
 	}
 
-	return dp;
+	setArgDps(func_type, retval_dps, is_callee);
+	for (auto dp: retval_dps)
+		dp->comment = &comment;
 }
 
 static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)

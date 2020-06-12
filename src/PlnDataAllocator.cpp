@@ -222,6 +222,7 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 
 	if (dp->size < 8 && dp->type == DP_STK_BP) {
 		dp->data.bytes.parent_dp->updateBytesDpStatus();
+
 	} else if (dp->type == DP_INDRCT_OBJ) {
 		if (auto bdp = dp->data.indirect.base_dp) {
 			releaseDp(bdp);
@@ -232,39 +233,6 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 	}
 
 	step++;
-}
-
-vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee)
-{
-	int arg_num = arg_dtypes.size();
-
-	vector<PlnDataPlace*> dps;
-	for (int i=0; i<arg_num; ++i) {
-		auto dp = createArgDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
-		static string cmt="arg";
-		dp->comment = &cmt;
-		dp->status = DS_READY_ASSIGN;
-		dp->data_type = arg_dtypes[i];
-		dps.push_back(dp);
-	}
-
-	return dps;
-}
-
-vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee)
-{
-	int ret_num = ret_dtypes.size();
-	vector<PlnDataPlace*> dps;
-
-	for (int i=0; i<ret_num; ++i) {
-		static string cmt = "return";
-		auto dp = createReturnDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
-		dp->comment = &cmt;
-		dp->status = DS_READY_ASSIGN;
-		dps.push_back(dp);
-	}
-
-	return dps;
 }
 
 void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement)

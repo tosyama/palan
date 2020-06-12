@@ -61,7 +61,7 @@ public:
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*> &args);
 	~PlnFunctionCall();
 
-	void loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types);
+	void loadArgDps(PlnDataAllocator& da);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

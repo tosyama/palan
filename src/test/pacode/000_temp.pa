@@ -1,9 +1,24 @@
+ccall printf(...);
+func as_is(int64 a, int32 b)
+	-> int32 b, int64 a
+{
+}
 
-test(3, 5);
+int32 bb, int64 aa = as_is(64, 32);
+printf("%d %d", aa, bb);
 
-func test(int32 a, b) -> int64 result {
+// test(3, 5);
+
+func test(byte a, b) -> int64 result {
 	a + 1 -> a;
 	b + 2 -> b;
 
 	a + b -> result;
+}
+
+func testf(flo32 a, b) { // -> flo64 result {
+	a + 1 -> a;
+	b + 2 -> b;
+
+//	a + b -> result;
 }

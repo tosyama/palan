@@ -31,7 +31,6 @@ protected:
 	int regnum;
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
-	virtual PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
 	bool isDestroyed(PlnDataPlace* dp);
 
 public:
@@ -56,10 +55,10 @@ public:
 
 	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
 	void releaseDp(PlnDataPlace* dp);
-	virtual PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
 	virtual void funcCalled(vector<PlnDataPlace*>& args, int func_type, bool never_return) = 0;
-	vector<PlnDataPlace*> prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee);
-	vector<PlnDataPlace*> prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee);
+	// need to pass allocated dp with data_type and size.
+	virtual void setArgDps(int func_type, vector<PlnDataPlace*> &arg_dps, bool is_callee) = 0;
+	virtual void setRetValDps(int func_type, vector<PlnDataPlace*> &retval_dps, bool is_callee) = 0;
 
 	// Process register data may be breaken by this process.
 	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) = 0;

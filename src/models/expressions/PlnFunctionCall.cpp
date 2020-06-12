@@ -70,28 +70,19 @@ PlnFunctionCall::~PlnFunctionCall()
 		delete fex;
 }
 
-void PlnFunctionCall::loadArgDps(PlnDataAllocator& da, vector<int> arg_data_types)
+void PlnFunctionCall::loadArgDps(PlnDataAllocator& da)
 {
 	PlnFunction* f = function;
 	BOOST_ASSERT(!arguments.size());
-
-	arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_data_types, false);
-	if (f->parameters.size()) {
-		BOOST_ASSERT(f->parameters.size() == arg_data_types.size());
-		int i=0;
-		for (auto p: f->parameters) {
-			BOOST_ASSERT(i<arg_dps.size());
-			BOOST_ASSERT(p->var->var_type->data_type() == arg_data_types[i]);
-			arg_dps[i]->data_type = arg_data_types[i];
-			i++;
-		}
-	}
+	
+	arg_dps = f->createArgDps();
+	da.setArgDps(f->type, arg_dps, false);
 }
 
 static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 	PlnFunction*f, vector<PlnArgument> &args, vector<PlnClone*> &clones)
 {
-	vector<int> arg_dtypes = f->arg_dtypes;
+	auto arg_dps = f->createArgDps();
 
 	if (f->has_va_arg) {
 		// Add variable arguments data types.
@@ -99,10 +90,15 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			int i=0;
 			for (auto& inf: arg.inf) {
 				if (inf.param->var->name == "...") {
-					if (inf.param->iomode & PIO_OUTPUT)
-						arg_dtypes.push_back(DT_OBJECT_REF);
-					else {
-						arg_dtypes.push_back(arg.exp->getDataType(i));
+					if (inf.param->iomode & PIO_OUTPUT) {
+						PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
+						dp->status = DS_READY_ASSIGN;
+						arg_dps.push_back(dp);
+
+					} else {
+						PlnDataPlace* dp = new PlnDataPlace(8, arg.exp->getDataType(i));
+						dp->status = DS_READY_ASSIGN;
+						arg_dps.push_back(dp);
 					}
 				}
 				i++;
@@ -110,7 +106,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 		}
 	}
 
-	auto arg_dps = da.prepareArgDps(f->type, f->ret_dtypes, arg_dtypes, false);
+	da.setArgDps(f->type, arg_dps, false);
 
 	int j = 0;
 	for (auto &arg: args) {
@@ -121,7 +117,6 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 			if (argval.va_idx >= 0)
 				dp_i += argval.va_idx;
 			BOOST_ASSERT(arg_dps[dp_i]->data_type != DT_UNKNOWN);
-
 
 			if (argval.opt == AG_MOVE && v.type == VL_VAR) {
 				arg_dps[dp_i]->do_clear_src = true;
@@ -207,7 +202,9 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	da.funcCalled(arg_dps, func_type, function->never_return);
 
-	ret_dps = da.prepareRetValDps(func_type, function->ret_dtypes, function->arg_dtypes, false);
+	ret_dps = function->createRetValDps();
+	da.setRetValDps(function->type, ret_dps, false);
+
 	int i = 0;
 	for (auto r: function->return_vals) {
 		ret_dps[i]->data_type = r.local_var->var_type->data_type();

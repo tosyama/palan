@@ -1,7 +1,7 @@
 /// Generic object utility definitions.
 ///
 /// @file	PlnGeneralObject.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "../PlnConstants.h"
 #include "expressions/PlnFunctionCall.h"
@@ -67,19 +67,13 @@ public:
 	PlnDeepCopyFuncCall(const PlnDeepCopyFuncCall&) = delete;
 
 	PlnDataPlace* dstDp(PlnDataAllocator &da) override {
-		if (!fcall->arg_dps.size()) {
-			BOOST_ASSERT(false);	// Should be call srcDp first.
-//			vector<int> dtypes = { DT_OBJECT_REF, DT_OBJECT_REF };
-//			fcall->loadArgDps(da, dtypes);
-		}
+		BOOST_ASSERT(fcall->arg_dps.size()); // Should be call srcDp first.
 		return fcall->arg_dps[0];
 	}
 
 	PlnDataPlace* srcDp(PlnDataAllocator &da) override {
-		if (!fcall->arg_dps.size()) {
-			vector<int> dtypes = { DT_OBJECT_REF, DT_OBJECT_REF };
-			fcall->loadArgDps(da, dtypes);
-		}
+		BOOST_ASSERT(!fcall->arg_dps.size());
+		fcall->loadArgDps(da);
 		return fcall->arg_dps[1];
 	}
 

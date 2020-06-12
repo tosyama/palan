@@ -23,8 +23,8 @@ class PlnX86_64DataAllocator: public PlnDataAllocator
 	bool tryMoveDp2Reg(PlnDataPlace* dp, int regid);
 
 protected:
-	PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) override;
-	PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) override;
+	void setArgDps(int func_type, vector<PlnDataPlace*> &arg_dps, bool is_callee);
+	void setRetValDps(int func_type, vector<PlnDataPlace*> &retval_dps, bool is_callee);
 
 public:
 	PlnX86_64DataAllocator();

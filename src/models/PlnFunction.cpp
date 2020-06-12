@@ -31,8 +31,7 @@ using std::to_string;
 
 PlnFunction::PlnFunction(int func_type, const string &func_name)
 	:	type(func_type), name(func_name), retval_init(NULL), implement(NULL),
-		parent(NULL), has_va_arg(false), num_in_param(0), num_out_param(0),
-		call_count(0), generated(false)
+		parent(NULL), has_va_arg(false), call_count(0), generated(false)
 {
 }
 
@@ -72,7 +71,6 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 				throw PlnCompileError(E_InvalidReturnValType, rname);
 
 			return_vals.push_back({p->var, rtype, true});
-			ret_dtypes.push_back(p->var->var_type->data_type());
 
 			return p->var;
 		}
@@ -86,7 +84,6 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	
 	ret_var->var_type = getEditableVarTypeForLocal(rtype, parent);
 	return_vals.push_back({ret_var, rtype, false});
-	ret_dtypes.push_back(rtype->data_type());
 
 	return ret_var;
 }
@@ -117,22 +114,6 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 
 	parameters.push_back(param);
 
-	if (!has_va_arg) {
-		if (iomode & PIO_OUTPUT) {
-			num_out_param++;
-			arg_dtypes.push_back(DT_OBJECT_REF);
-
-		} else {
-			auto t = param_var->var_type;
-			num_in_param++;
-			if (t->data_type() != DT_OBJECT_REF && param_var->var_type->mode[ALLOC_MD] == 'r') {
-				arg_dtypes.push_back(DT_OBJECT_REF);
-			} else {
-				arg_dtypes.push_back(t->data_type());
-			}
-		}
-	}
-
 	return	param_var;
 }
 
@@ -153,6 +134,37 @@ vector<string> PlnFunction::getParamStrs() const
 		param_types.push_back(pname);
 	}
 	return param_types;
+}
+
+vector<PlnDataPlace*> PlnFunction::createArgDps()
+{
+	vector<PlnDataPlace*> arg_dps;
+
+	for (auto p: parameters) {
+		if (p->var->name != "...") {
+			PlnVarType* var_type = p->var->var_type;
+			int data_type = var_type->data_type();
+			if (p->iomode == PIO_OUTPUT || var_type->mode[ALLOC_MD] == 'r') { // e.g. for reference parameter => @int64
+				data_type = DT_OBJECT_REF;
+			}
+			PlnDataPlace* dp = new PlnDataPlace(8, data_type);
+			dp->status = DS_READY_ASSIGN;
+			arg_dps.push_back(dp);
+		}
+	}
+
+	return arg_dps;
+}
+
+vector<PlnDataPlace*> PlnFunction::createRetValDps()
+{
+	vector<PlnDataPlace*> dps;
+	for (auto& rt: return_vals) {
+		PlnDataPlace* dp = new PlnDataPlace(8, rt.local_var->var_type->data_type());
+		dp->status = DS_READY_ASSIGN;
+		dps.push_back(dp);
+	}
+	return dps;
 }
 
 static string mangling(PlnFunction* f)
@@ -202,17 +214,14 @@ void PlnFunction::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			si.push_scope(this);
 
 			// Allocate arguments place.
-			int i=0;
-			auto arg_dps = da.prepareArgDps(FT_PLN, ret_dtypes, arg_dtypes, true);
-			BOOST_ASSERT(arg_dps.size() == parameters.size());
-			for (auto p: parameters) {
-				arg_dps[i]->data_type = p->var->var_type->data_type();
-				da.allocDp(arg_dps[i]);
-				++i;
-			}
+			vector<PlnDataPlace*> arg_dps = createArgDps();
+			da.setArgDps(this->type, arg_dps, true);
+
+			for (auto dp: arg_dps)
+				da.allocDp(dp);
 
 			// Allocate stack space for parameters.
-			i = 0;
+			int i = 0;
 			vector<PlnVariable*> for_release;
 			for (auto p: parameters) {
 				if (p->var->var_type->mode[IDENTITY_MD] == 'm')
