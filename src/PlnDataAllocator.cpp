@@ -220,7 +220,7 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 		dp->save_place->release_step = step;
 	}
 
-	if (dp->size < 8 && dp->type == DP_STK_BP) {
+	if (dp->size < 8 && dp->type == DP_STK_BP && dp->data.bytes.parent_dp) {
 		dp->data.bytes.parent_dp->updateBytesDpStatus();
 
 	} else if (dp->type == DP_INDRCT_OBJ) {

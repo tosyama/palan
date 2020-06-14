@@ -4,21 +4,13 @@ func as_is(int64 a, int32 b)
 {
 }
 
+func as_is2(int64 a, int32 b) -> int64 a, int32 b
+{
+	a + 1 -> a;
+	a + b -> b;
+}
+
 int32 bb, int64 aa = as_is(64, 32);
+aa, bb -> as_is2() -> aa, bb;
 printf("%d %d", aa, bb);
 
-// test(3, 5);
-
-func test(byte a, b) -> int64 result {
-	a + 1 -> a;
-	b + 2 -> b;
-
-	a + b -> result;
-}
-
-func testf(flo32 a, b) { // -> flo64 result {
-	a + 1 -> a;
-	b + 2 -> b;
-
-//	a + b -> result;
-}

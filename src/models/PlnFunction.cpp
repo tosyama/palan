@@ -144,11 +144,14 @@ vector<PlnDataPlace*> PlnFunction::createArgDps()
 		if (p->var->name != "...") {
 			PlnVarType* var_type = p->var->var_type;
 			int data_type = var_type->data_type();
+			int data_size = var_type->size();
 			if (p->iomode == PIO_OUTPUT || var_type->mode[ALLOC_MD] == 'r') { // e.g. for reference parameter => @int64
 				data_type = DT_OBJECT_REF;
+				data_size = 8;
 			}
-			PlnDataPlace* dp = new PlnDataPlace(8, data_type);
+			PlnDataPlace* dp = new PlnDataPlace(data_size, data_type);
 			dp->status = DS_READY_ASSIGN;
+			dp->data.bytes.parent_dp = NULL;
 			arg_dps.push_back(dp);
 		}
 	}
@@ -162,6 +165,7 @@ vector<PlnDataPlace*> PlnFunction::createRetValDps()
 	for (auto& rt: return_vals) {
 		PlnDataPlace* dp = new PlnDataPlace(8, rt.local_var->var_type->data_type());
 		dp->status = DS_READY_ASSIGN;
+		dp->data.bytes.parent_dp = NULL;
 		dps.push_back(dp);
 	}
 	return dps;
