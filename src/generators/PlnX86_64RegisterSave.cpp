@@ -87,7 +87,7 @@ inline void recUsedReg(PlnOperandInfo *ope, char access_reg[])
 	}
 }
 
-void addRegSave(vector<PlnOpeCode> &opecodes, int cur_stacksize)
+void addRegSave(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 {
 	char access_reg[REG_NUM] = {};
 	for (auto &opecode: opecodes) {
@@ -155,7 +155,7 @@ static void addRegSaveOpeFromAnalyzedInfo(vector<PlnOpeCode> &opecodes, vector<a
 // static void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes);
 // static void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
 
-void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
+void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 {
 	vector<RegUsedBlock*> blocks;
 
@@ -338,11 +338,10 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int cur_stacksize)
 //	showSaveInfo(opecodes, saveInfo, restoreInfo);
 
 	vector<array<int,2>> regmap;
-	int stack_pos = cur_stacksize;
 	for (int sregid: save_regids) {
 		if (access_reg[sregid]) {
-			stack_pos += 8;
-			regmap.push_back({sregid, stack_pos});
+			cur_stacksize += 8;
+			regmap.push_back({sregid, cur_stacksize});
 		}
 	}
 

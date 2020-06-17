@@ -286,6 +286,9 @@ void PlnX86_64RegisterMachine::push(PlnX86_64Mnemonic mne, PlnOperandInfo *src, 
 	if (mne == CALL) imp->has_call = true;
 	else if (mne == SYSCALL) imp->has_call = true;
 	else if (mne == RET) imp->ret_num++;
+
+	// Don't use PUSH/POP except RBP.
+	BOOST_ASSERT(!((mne == PUSHQ || mne == POPQ) && regid_of(src) != RBP));
 }
 
 void PlnX86_64RegisterMachine::reserve(int num)
@@ -345,6 +348,8 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 	if (imp->ret_num == 1) addRegSave(imp->opecodes, imp->requested_stack_size);
 	else if (imp->ret_num >= 2) addRegSaveWithCFAnalysis(imp->opecodes, imp->requested_stack_size);
 
+	// Note: It may change RBP->RSP.
+	// 		 So this should be execute after removeOmittableMoveToReg().
 	if (!imp->has_call)
 		removeStackArea(imp->opecodes);
 
@@ -374,15 +379,47 @@ void PlnX86_64RegisterMachine::popOpecodes(ostream& os)
 	imp->requested_stack_size = 0;
 }
 
-void removeStackArea(vector<PlnOpeCode> &opecodes)
-{
-	for (auto &opec: opecodes) {
-		if ((opec.mne == SUBQ || opec.mne == ADDQ) && opec.dst->type == OP_REG
-				&& regid_of(opec.dst) == RSP) {
-			opec.mne = MNE_NONE;
+static void replaceRbp2Rsp(PlnOperandInfo* ope) {
+	if (ope) {
+		if (ope->type == OP_ADRS) {
+			auto addr_ope = static_cast<PlnAdrsModeOperand*>(ope);
+			if (addr_ope->base_regid == RBP) {
+				addr_ope->base_regid = RSP;
+				if (addr_ope->displacement > 0) {
+					// adjust affect of remove push rbp
+					addr_ope->displacement -= 8;
+				}
+			}
+			BOOST_ASSERT(addr_ope->index_regid != RBP);
+		}
+		if (ope->type == OP_LBLADRS) {
+			auto lbladdr_ope = static_cast<PlnLabelAdrsModeOperand*>(ope);
+			BOOST_ASSERT(lbladdr_ope->base_regid != RBP);
 		}
 	}
 }
+
+// For no function or no localvar
+// It remove pop/push rbp and rsp set & replace rbp => rsp 
+void removeStackArea(vector<PlnOpeCode> &opecodes)
+{
+	for (auto &opec: opecodes) {
+		if ((opec.mne == SUBQ || opec.mne == ADDQ) && opec.dst->type == OP_REG && regid_of(opec.dst) == RSP)
+			opec.mne = MNE_NONE;
+		else if (opec.mne == MOVQ && opec.src->type == OP_REG && regid_of(opec.src) == RSP
+				&& opec.dst->type == OP_REG && regid_of(opec.dst) == RBP)
+			opec.mne = MNE_NONE;
+		else if (opec.mne == PUSHQ && opec.src->type == OP_REG && regid_of(opec.src) == RBP)
+			opec.mne = MNE_NONE;
+		else if (opec.mne == POPQ && opec.src->type == OP_REG && regid_of(opec.src) == RBP)
+			opec.mne = MNE_NONE;
+		else {
+			replaceRbp2Rsp(opec.src);
+			replaceRbp2Rsp(opec.dst);
+		}
+	}
+}
+
 
 // Remove omiitalbe move.
 enum RegState {
@@ -510,6 +547,10 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 						regs[RDX].state = RS_UNKONWN;
 						break;
 					case POPQ:
+						regs[regid_of(opec.src)].state = RS_UNKONWN;
+						regs[RSP].state = RS_UNKONWN;
+						break;
+					case PUSHQ:
 						regs[RSP].state = RS_UNKONWN;
 						break;
 					default: break;

@@ -10,7 +10,21 @@ func as_is2(int64 a, int32 b) -> int64 a, int32 b
 	a + b -> b;
 }
 
-int32 bb, int64 aa = as_is(64, 32);
-aa, bb -> as_is2() -> aa, bb;
-printf("%d %d", aa, bb);
+func as_is3(int64 a, int32 b) -> int64 a, int32 b
+{
+	return 56, (a+2 -> a);
+}
 
+func callsome()
+{
+	as_is(3, 5);	
+}
+
+int32 bb, int64 aa = as_is(64, 32);
+printf("%d %d", aa, bb);
+aa, bb -> as_is2() -> aa, bb;
+printf(" %d %d", aa, bb);
+as_is3(64, 32) -> aa, bb;
+printf(" %d %d", aa, bb);
+
+callsome();
