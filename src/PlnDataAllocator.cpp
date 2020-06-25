@@ -570,11 +570,12 @@ void PlnDataAllocator::checkDataLeak()
 
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
-	: type(DP_UNKNOWN), status(DS_UNKNOWN),
-		access_score(0), alloc_step(0), release_step(INT_MAX),
+	: type(DP_UNKNOWN), size(size), data_type(data_type), status(DS_UNKNOWN),
+		release_src_pop(true), load_address(false),
+		need_address(false), do_clear_src(false),
+		alloc_step(0), release_step(INT_MAX),
 		previous(NULL), save_place(NULL), src_place(NULL),
-		size(size), data_type(data_type), release_src_pop(true),
-		load_address(false), need_address(false), do_clear_src(false)
+		access_score(0), custom_inf(0)
 {
 	static string emp = "";
 	comment = &emp;

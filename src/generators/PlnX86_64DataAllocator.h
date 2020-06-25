@@ -17,6 +17,10 @@ enum {
 	RIP, REG_NUM,
 };
 
+enum {	// for custom_inf
+	IS_RETVAL = 1
+};
+
 class PlnX86_64DataAllocator: public PlnDataAllocator
 {
 	void destroyRegsByFuncCall();

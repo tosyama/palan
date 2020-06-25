@@ -117,8 +117,10 @@ void PlnX86_64DataAllocator::setRetValDps(int func_type, vector<PlnDataPlace*> &
 	}
 
 	setArgDps(func_type, retval_dps, is_callee);
-	for (auto dp: retval_dps)
+	for (auto dp: retval_dps) {
 		dp->comment = &comment;
+		dp->custom_inf |= IS_RETVAL;
+	}
 }
 
 static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
@@ -416,6 +418,22 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 		return NULL;
 }
 
+bool is_src_of_retval(PlnDataPlace* dp, PlnDataPlace* rdp)
+{
+	if (rdp->custom_inf & IS_RETVAL) {
+		auto src_dp = rdp->src_place;
+		if (src_dp) {
+			if (src_dp == dp) {
+				BOOST_ASSERT(false);
+			} else if (src_dp->type == DP_SUBDP) {
+				if (src_dp->data.originalDp == dp)
+					return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
 {
 	PlnDataPlace* rdp = regs[regid];
@@ -427,7 +445,8 @@ bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
 	while(rdp) {
 		if (dp->alloc_step <= rdp->release_step
 				&& dp->release_step >= rdp->alloc_step) {
-			is_overlapped = true;
+			if (!is_src_of_retval(dp, rdp))
+				is_overlapped = true;
 		}
 		rdp = rdp->previous;
 	}
@@ -435,7 +454,7 @@ bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
 	if (is_overlapped) {
 		return false;
 	}
-	
+
 	dp->previous = regs[regid];
 	regs[regid] = dp;
 	dp->type = DP_REG;

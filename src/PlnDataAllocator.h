@@ -129,16 +129,16 @@ public:
 	char data_type;
 	char status;
 
-	int32_t access_score;
+	bool release_src_pop;
+	bool load_address;
+	bool need_address;
+	bool do_clear_src;
 
 	int32_t alloc_step;
 	int32_t release_step;
 	int32_t push_src_step;
 
-	bool release_src_pop;
-	bool load_address;
-	bool need_address;
-	bool do_clear_src;
+	int32_t access_score;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
@@ -159,6 +159,7 @@ public:
 	PlnDataPlace* save_place;
 	PlnDataPlace* src_place;
 	string* comment;
+	int64_t custom_inf;
 
 	PlnDataPlace(int size, int data_type);
 	~PlnDataPlace();

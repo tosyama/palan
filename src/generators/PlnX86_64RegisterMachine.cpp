@@ -399,8 +399,6 @@ static void replaceRbp2Rsp(PlnOperandInfo* ope) {
 	}
 }
 
-// For no function or no localvar
-// It remove pop/push rbp and rsp set & replace rbp => rsp 
 void removeStackArea(vector<PlnOpeCode> &opecodes)
 {
 	for (auto &opec: opecodes) {
@@ -419,7 +417,6 @@ void removeStackArea(vector<PlnOpeCode> &opecodes)
 		}
 	}
 }
-
 
 // Remove omiitalbe move.
 enum RegState {
