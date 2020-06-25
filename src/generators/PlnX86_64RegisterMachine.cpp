@@ -393,8 +393,9 @@ static void replaceRbp2Rsp(PlnOperandInfo* ope) {
 			BOOST_ASSERT(addr_ope->index_regid != RBP);
 		}
 		if (ope->type == OP_LBLADRS) {
-			auto lbladdr_ope = static_cast<PlnLabelAdrsModeOperand*>(ope);
-			BOOST_ASSERT(lbladdr_ope->base_regid != RBP);
+			BOOST_ASSERT(false);
+			// auto lbladdr_ope = static_cast<PlnLabelAdrsModeOperand*>(ope);
+			// BOOST_ASSERT(lbladdr_ope->base_regid != RBP);
 		}
 	}
 }
@@ -550,7 +551,9 @@ void removeOmittableMoveToReg(vector<PlnOpeCode> &opecodes)
 					case PUSHQ:
 						regs[RSP].state = RS_UNKONWN;
 						break;
-					default: break;
+					default:
+						BOOST_ASSERT(false);
+						// break;
 				}
 			} else if (opec.mne == CALL) {
 				breakRegsInfo(regs);
