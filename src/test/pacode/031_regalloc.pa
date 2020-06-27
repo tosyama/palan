@@ -28,6 +28,7 @@ func regf4toint2() -> flo32 ff, int32 z
 	flo32 f = 1.23;
 	int16 i2 = 10;
 	uint16 u2 = 12;
+	uint64 u3 = 13;
 
 	// do some calloc for regalloc;
 	i2 + u2 + f -> ff;
@@ -35,6 +36,7 @@ func regf4toint2() -> flo32 ff, int32 z
 	f -> i2;
 	f -> u2;
 	i2 + u2 -> z;
+	f -> u3;
 }
 
 func bigintope()

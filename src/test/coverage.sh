@@ -1,7 +1,7 @@
 #!/bin/bash
 # Coverage check tool
 
-# target="../generators/PlnX86_64Generator"
+target="../generators/PlnX86_64Generator"
 # target="../generators/PlnX86_64DataAllocator"
 # target="../generators/PlnX86_64RegisterMachine"
 # target="../generators/PlnX86_64RegisterSave"
@@ -17,7 +17,7 @@
 # target="../models/PlnExpression"
 # target="../models/expressions/PlnMulOperation"
 # target="../models/expressions/PlnArrayValue"
-target="../models/expressions/PlnFunctionCall"
+# target="../models/expressions/PlnFunctionCall"
 # target="../models/expressions/PlnBoolExpression"
 # target="../models/expressions/PlnBoolOperation"
 # target="../models/expressions/PlnCmpOperation"
