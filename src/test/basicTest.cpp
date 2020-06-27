@@ -8,7 +8,8 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "abc");
+	// REQUIRE(exec(testcode) == "64 32 65 97 56 66 58 58");
+	REQUIRE(exec(testcode) == "64 32");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -22,7 +23,7 @@ void normalCaseTest()
 	testcode = "004_regalloc";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "56 11 2 3 4 5 6 7 18\n"
-							"64 32");
+							"64 32 64 32");
 
 	testcode = "005_intpromotion";
 	REQUIRE(build(testcode) == "success");

@@ -1,7 +1,7 @@
 /// x86-64 (Linux) data allocation management class declaration.
 ///
 /// @file	PlnX86_64DataAllocator.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu
 
 #include "../PlnDataAllocator.h"
 
@@ -17,18 +17,23 @@ enum {
 	RIP, REG_NUM,
 };
 
+enum {	// for custom_inf
+	IS_RETVAL = 1
+};
+
 class PlnX86_64DataAllocator: public PlnDataAllocator
 {
 	void destroyRegsByFuncCall();
+	bool tryMoveDp2Reg(PlnDataPlace* dp, int regid);
 
 protected:
-	PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) override;
-	PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) override;
+	void setArgDps(int func_type, vector<PlnDataPlace*> &arg_dps, bool is_callee);
+	void setRetValDps(int func_type, vector<PlnDataPlace*> &retval_dps, bool is_callee);
 
 public:
 	PlnX86_64DataAllocator();
 
-	void funcCalled(vector<PlnDataPlace*>& args, int func_type) override;
+	void funcCalled(vector<PlnDataPlace*>& args, int func_type, bool never_return) override;
 
 	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) override;
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len) override;

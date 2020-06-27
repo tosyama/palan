@@ -142,18 +142,13 @@ PlnReturnStmt::~PlnReturnStmt()
 
 void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-
 	BOOST_ASSERT(function->type == FT_PLN);
-	vector<PlnDataPlace*> dps = da.prepareRetValDps(FT_PLN, function->ret_dtypes, function->arg_dtypes, true);
-	vector<PlnVariable*> ret_vars;
+	vector<PlnDataPlace*> dps = function->createRetValDps();
+	da.setRetValDps(function->type, dps, true);
 
-	int i=0;
-	for (auto& rt: function->return_vals) {
-		dps[i]->data_type = rt.local_var->var_type->data_type();
-		i++;
-	}
+	vector<PlnVariable*> ret_vars;
 	
-	i = 0;
+	int i = 0;
 	for (auto e: expressions) {
 		for (auto &v: e->values) {
 			if (i<dps.size())

@@ -52,115 +52,75 @@ void PlnX86_64DataAllocator::destroyRegsByFuncCall()
 	}
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::createArgDp
-	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
+void PlnX86_64DataAllocator::setArgDps(int func_type, vector<PlnDataPlace*> &arg_dps, bool is_callee)
 {
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
+	int reg_ind = 0;
 	int freg_ind = 0;
-	for (int i=0; i<index; i++)
-		if (arg_dtypes[i] == DT_FLOAT)
-			freg_ind++;
+	int stk_ind = 0;
 	
-	int reg_ind = index - freg_ind;
+	for (int index = 0; index < arg_dps.size(); index++) {
+		PlnDataPlace* dp = arg_dps[index];
+		static string comment = "arg";
+		dp->comment = &comment;
 
-	if (arg_dtypes[index] == DT_FLOAT && freg_ind <= 7) {
-		int regid;
-		dp->type = DP_REG;
-		dp->data.reg.id = FARG_TBL[freg_ind];
-		dp->data.reg.offset = 0;
+		if (dp->data_type == DT_FLOAT && freg_ind <= 7) {
+			int regid;
+			dp->type = DP_REG;
+			dp->data.reg.id = FARG_TBL[freg_ind];
+			dp->data.reg.offset = 0;
 
-	} else if (arg_dtypes[index] != DT_FLOAT && reg_ind <= 5) {
-		int regid;
-		if (func_type == FT_PLN || func_type == FT_C)
-			regid = ARG_TBL[reg_ind];
-		else if (func_type == FT_SYS)
-			regid = SYSARG_TBL[reg_ind];
-		else
-			BOOST_ASSERT(false);
+			freg_ind++;
 
-		dp->type = DP_REG;
-		dp->data.reg.id = regid;
-		dp->data.reg.offset = 0;
+		} else if (dp->data_type != DT_FLOAT && reg_ind <= 5) {
+			int regid;
+			if (func_type == FT_PLN || func_type == FT_C)
+				regid = ARG_TBL[reg_ind];
+			else if (func_type == FT_SYS)
+				regid = SYSARG_TBL[reg_ind];
+			else
+				BOOST_ASSERT(false);
 
-	} else {	// index >= 5
-		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = -1;
-		if (reg_ind > 5)
-			ind += reg_ind-5;
+			dp->type = DP_REG;
+			dp->data.reg.id = regid;
+			dp->data.reg.offset = 0;
 
-		if (freg_ind > 7)
-			ind += freg_ind-7;
+			reg_ind++;
 
-		if (is_callee) {
-			dp->type = DP_STK_BP;
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8+16;
+		} else {	// index >= 5
+			if (is_callee) {
+				dp->type = DP_STK_BP;
+				dp->data.stack.idx = stk_ind;
+				dp->data.stack.offset = stk_ind*8+16;
 
-		} else {
-			dp->type = DP_STK_SP;
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8;
+			} else {
+				dp->type = DP_STK_SP;
+				dp->data.stack.idx = stk_ind;
+				dp->data.stack.offset = stk_ind*8;
+			}
+
+			stk_ind++;
 		}
 	}
-
-	return dp;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::createReturnDp
-	(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee)
+void PlnX86_64DataAllocator::setRetValDps(int func_type, vector<PlnDataPlace*> &retval_dps, bool is_callee)
 {
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_UNKNOWN);
-	int freg_ind = 0;
-	for (int i=0; i<index; i++)
-		if (ret_dtypes[i] == DT_FLOAT)
-			freg_ind++;
+	static string comment = "retval";
 
-	int reg_ind = index - freg_ind;
-
-	if (ret_dtypes[index] == DT_FLOAT && freg_ind <= 7) {
-		int regid;
+	if (retval_dps.size() == 1 && retval_dps[0]->data_type != DT_FLOAT) {
+		PlnDataPlace* dp = retval_dps[0];
 		dp->type = DP_REG;
-		dp->data.reg.id = FARG_TBL[freg_ind];
+		dp->data.reg.id = RAX;
 		dp->data.reg.offset = 0;
-
-	} else if (ret_dtypes[index] != DT_FLOAT && reg_ind <= 5) {
-		int regid;
-		if (func_type == FT_PLN || func_type == FT_C) {
-			regid = (ret_dtypes.size() == 1) ? RAX : ARG_TBL[index];
-
-		} else if (func_type == FT_SYS) {
-			BOOST_ASSERT(ret_dtypes.size() == 1);
-			regid = RAX;
-		} else
-			BOOST_ASSERT(false);
-
-		dp->type = DP_REG;
-		dp->data.reg.id = regid;
-		dp->data.reg.offset = 0;
-		
-	} else {	// index >= 5
-		BOOST_ASSERT(func_type != FT_SYS);
-		int ind = -1;
-		if (reg_ind > 5)
-			ind += reg_ind-5;
-
-		if (freg_ind > 7)
-			ind += freg_ind-7;
-
-		if (is_callee) {
-			dp->type = DP_STK_BP;
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8+16;
-
-		} else {
-			dp->type = DP_STK_SP;
-
-			dp->data.stack.idx = ind;
-			dp->data.stack.offset = ind*8;
-		}
+		dp->comment = &comment;
+		return;
 	}
 
-	return dp;
+	setArgDps(func_type, retval_dps, is_callee);
+	for (auto dp: retval_dps) {
+		dp->comment = &comment;
+		dp->custom_inf |= IS_RETVAL;
+	}
 }
 
 static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
@@ -173,7 +133,7 @@ static void checkExistsActiveDP(PlnDataPlace* root, PlnDataPlace* dp)
 	}
 }
 
-void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_type)
+void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_type, bool never_return)
 {
 	// TODO: use popSrc().
 	for (auto dp: args) {
@@ -191,7 +151,8 @@ void PlnX86_64DataAllocator::funcCalled(vector<PlnDataPlace*>& args, int func_ty
 			checkExistsActiveDP(arg_stack[dp->data.stack.idx], dp);
 	}
 
-	destroyRegsByFuncCall();
+	if (!never_return)
+		destroyRegsByFuncCall();
 	step++;
 }
 
@@ -457,8 +418,116 @@ static PlnDataPlace* divideBytesDps(PlnDataPlace* &root_dp, int regid)
 		return NULL;
 }
 
+bool is_src_of_retval(PlnDataPlace* dp, PlnDataPlace* rdp)
+{
+	if (rdp->custom_inf & IS_RETVAL) {
+		auto src_dp = rdp->src_place;
+		if (src_dp) {
+			if (src_dp == dp) {
+				BOOST_ASSERT(false);
+			} else if (src_dp->type == DP_SUBDP) {
+				if (src_dp->data.originalDp == dp)
+					return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
+{
+	PlnDataPlace* rdp = regs[regid];
+	BOOST_ASSERT(rdp);
+
+	bool is_overlapped = false;
+	PlnDataPlace* insert_dp = rdp;
+
+	while(rdp) {
+		if (dp->alloc_step <= rdp->release_step
+				&& dp->release_step >= rdp->alloc_step) {
+			if (!is_src_of_retval(dp, rdp))
+				is_overlapped = true;
+		}
+		rdp = rdp->previous;
+	}
+	
+	if (is_overlapped) {
+		return false;
+	}
+
+	dp->previous = regs[regid];
+	regs[regid] = dp;
+	dp->type = DP_REG;
+	dp->data.reg.id = regid;
+	dp->data.reg.offset = 0;
+
+	return true;
+}
+
 void PlnX86_64DataAllocator::optimizeRegAlloc()
 {
+	// try to allocate src_dp reg
+	for (int i=0; i<data_stack.size();) {
+		PlnDataPlace* dp = data_stack[i];
+		PlnDataPlace* pdp = NULL;
+
+		while (dp) {
+			PlnDataPlace* save_pdp = dp->previous;
+			if (dp->type == DP_BYTES) {
+				auto& bytesData = *dp->data.bytesData;
+				auto bdpi = bytesData.begin();
+				while (bdpi != bytesData.end()) {
+					BOOST_ASSERT(!(*bdpi)->previous);
+					if ((*bdpi)->src_place && !(*bdpi)->save_place) {
+						auto srcdp = (*bdpi)->src_place;
+						if (srcdp->type == DP_REG) {
+							if (tryMoveDp2Reg((*bdpi), srcdp->data.reg.id)) {
+								bdpi = bytesData.erase(bdpi);
+								continue;
+							}
+						}
+					}
+					bdpi++;
+				}
+
+				if (!bytesData.size()) {
+					if (pdp) {
+						pdp->previous = save_pdp;
+					} else {
+						data_stack[i] = save_pdp;
+					}
+					dp = save_pdp;
+					continue;
+				}
+
+			} else {
+				if (dp->src_place && !dp->save_place) {
+					auto srcdp = dp->src_place;
+					if (srcdp->type == DP_REG) {
+						if (tryMoveDp2Reg(dp, srcdp->data.reg.id)) {
+							if (pdp) {
+								pdp->previous = save_pdp;
+							} else {
+								data_stack[i] = save_pdp;
+							}
+							dp = save_pdp;
+							continue;
+						}
+					}
+				}
+			}
+			pdp = dp;
+			if (dp)
+				dp = dp->previous;
+		}
+
+		if (!data_stack[i]) {
+			data_stack.erase(data_stack.begin()+i);
+		} else { 
+			i++;
+		}
+	}
+
 	static vector<int> no_save_regids = {RAX, RDI, RSI, RDX, RCX, R8, R9, R10};
 	static vector<int> save_regids = {RBX, R12, R13, R14, R15};
 

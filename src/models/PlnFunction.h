@@ -30,7 +30,6 @@ public:
 	int index;
 	int iomode;
 	PlnPassingMethod passby;
-//	bool force_move;
 };
 
 class PlnReturnValue {
@@ -52,7 +51,6 @@ public:
 	vector<PlnParameter*> parameters;
 	vector<PlnReturnValue> return_vals;
 	PlnVarInit *retval_init;
-	vector<int> ret_dtypes, arg_dtypes;
 	PlnLoc loc;
 	union {
 		struct {
@@ -65,16 +63,18 @@ public:
 	PlnBlock* implement;
 	PlnBlock* parent;
 	bool has_va_arg;
-	int num_in_param, num_out_param;
 	int call_count;
 	bool generated;
 	bool do_opti_regalloc = true;
+	bool never_return = false;
 
 	PlnFunction(int func_type, const string& func_name);
 	PlnVariable* addRetValue(const string& rname, PlnVarType* rtype);
 	PlnVariable* addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
 
 	vector<string> getParamStrs() const;
+	vector<PlnDataPlace*> createArgDps();
+	vector<PlnDataPlace*> createRetValDps();
 
 	void genAsmName();
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;

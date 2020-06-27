@@ -220,8 +220,9 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 		dp->save_place->release_step = step;
 	}
 
-	if (dp->size < 8 && dp->type == DP_STK_BP) {
+	if (dp->size < 8 && dp->type == DP_STK_BP && dp->data.bytes.parent_dp) {
 		dp->data.bytes.parent_dp->updateBytesDpStatus();
+
 	} else if (dp->type == DP_INDRCT_OBJ) {
 		if (auto bdp = dp->data.indirect.base_dp) {
 			releaseDp(bdp);
@@ -232,39 +233,6 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 	}
 
 	step++;
-}
-
-vector<PlnDataPlace*> PlnDataAllocator::prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee)
-{
-	int arg_num = arg_dtypes.size();
-
-	vector<PlnDataPlace*> dps;
-	for (int i=0; i<arg_num; ++i) {
-		auto dp = createArgDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
-		static string cmt="arg";
-		dp->comment = &cmt;
-		dp->status = DS_READY_ASSIGN;
-		dp->data_type = arg_dtypes[i];
-		dps.push_back(dp);
-	}
-
-	return dps;
-}
-
-vector<PlnDataPlace*> PlnDataAllocator::prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee)
-{
-	int ret_num = ret_dtypes.size();
-	vector<PlnDataPlace*> dps;
-
-	for (int i=0; i<ret_num; ++i) {
-		static string cmt = "return";
-		auto dp = createReturnDp(func_type, ret_dtypes, arg_dtypes, i, is_callee);
-		dp->comment = &cmt;
-		dp->status = DS_READY_ASSIGN;
-		dps.push_back(dp);
-	}
-
-	return dps;
 }
 
 void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement)
@@ -602,11 +570,12 @@ void PlnDataAllocator::checkDataLeak()
 
 // PlnDataPlace
 PlnDataPlace::PlnDataPlace(int size, int data_type)
-	: type(DP_UNKNOWN), status(DS_UNKNOWN),
-		access_score(0), alloc_step(0), release_step(INT_MAX),
+	: type(DP_UNKNOWN), size(size), data_type(data_type), status(DS_UNKNOWN),
+		release_src_pop(true), load_address(false),
+		need_address(false), do_clear_src(false),
+		alloc_step(0), release_step(INT_MAX),
 		previous(NULL), save_place(NULL), src_place(NULL),
-		size(size), data_type(data_type), release_src_pop(true),
-		load_address(false), need_address(false), do_clear_src(false)
+		access_score(0), custom_inf(0)
 {
 	static string emp = "";
 	comment = &emp;

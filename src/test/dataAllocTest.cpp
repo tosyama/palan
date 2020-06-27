@@ -25,7 +25,10 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	vector<PlnVariable*> rets;
 	vector<int> rdtypes = { };
 
-	auto dps1 = allocator.prepareArgDps(FT_SYS, rdtypes, adtypes, false);
+	vector<PlnDataPlace*> dps1;
+	for (int t: adtypes)
+		dps1.push_back(new PlnDataPlace(8, t));
+	allocator.setArgDps(FT_SYS, dps1, false);
 	for (auto dp: dps1)
 		allocator.allocDp(dp);
 	REQUIRE(dps1.size() == 6);
@@ -36,18 +39,21 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	rdtypes = { DT_SINT, DT_SINT };
 	params.resize(7);
 	adtypes.push_back( DT_SINT );
-	auto dps2 = allocator.prepareArgDps(FT_PLN, rdtypes, adtypes, false);
+	vector<PlnDataPlace*> dps2;
+	for (int t: adtypes)
+		dps2.push_back(new PlnDataPlace(8, t));
+	allocator.setArgDps(FT_SYS, dps2, false);
 	for (auto dp: dps2)
 		allocator.allocDp(dp);	// stack[dp dp3 dp1save1 .. dp1save6 dp2arg1]	// ap1arg4 is not save
 	REQUIRE(dps2.size() == 7);
 	REQUIRE(allocator.data_stack.size() == 2);
 	REQUIRE(allocator.arg_stack.size() == 1);
-	allocator.funcCalled(dps2, FT_PLN);
+	allocator.funcCalled(dps2, FT_PLN, false);
 	REQUIRE(allocator.regs[RDI] == dps2[0]);
 	REQUIRE(dps2[0]->status==DS_RELEASED);
 	REQUIRE(dps2[6]->status==DS_RELEASED);
 
-	allocator.funcCalled(dps1, FT_SYS);
+	allocator.funcCalled(dps1, FT_SYS, false);
 	REQUIRE(allocator.regs[RDI]->status == DS_RELEASED);
 	REQUIRE(dps1[0]->status==DS_RELEASED);
 	REQUIRE(dps1[5]->status==DS_RELEASED);
@@ -231,13 +237,16 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	{
 		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
 		da.allocDp(dp_ac_src);
-		auto dst_arg1 = da.prepareArgDps(FT_PLN, {}, {DT_SINT}, false);
+		vector<PlnDataPlace*> dst_arg1 = { new PlnDataPlace(8, DT_SINT) };
+		dst_arg1[0]->status = DS_READY_ASSIGN;
+		da.setArgDps(FT_PLN, dst_arg1, false);
 
 		push_step = da.step;
 		da.pushSrc(dst_arg1[0], dp_ac_src);
 
 		// destory
-		auto dst_arg2 = da.prepareArgDps(FT_PLN, {}, {DT_SINT}, false);
+		vector<PlnDataPlace*> dst_arg2= { new PlnDataPlace(8, DT_SINT) };
+		da.setArgDps(FT_PLN, dst_arg2, false);
 		da.allocDp(dst_arg2[0]);
 		da.releaseDp(dst_arg2[0]);
 
@@ -264,7 +273,9 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	{
 		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
 		da.allocDp(dp_ac_src);
-		auto dst_arg = da.prepareArgDps(FT_PLN, {}, {DT_SINT}, false);
+		vector<PlnDataPlace*> dst_arg = { new PlnDataPlace(8, DT_SINT) };
+		dst_arg[0]->status = DS_READY_ASSIGN;
+		da.setArgDps(FT_PLN, dst_arg, false);
 
 		push_step = da.step;
 		da.pushSrc(dst_arg[0], dp_ac_src);
@@ -288,15 +299,16 @@ TEST_CASE("Data source and save management.", "[allocate]")
 	}
 //--- 
 	auto dpv4 = da.allocData(4, DT_SINT);
-	auto dp_prms = da.prepareArgDps(FT_PLN, {DT_SINT}, {DT_SINT,DT_SINT,DT_SINT}, false);
-	
+	vector<PlnDataPlace*> dp_prms = { new PlnDataPlace(8, DT_SINT), new PlnDataPlace(8, DT_SINT), new PlnDataPlace(8, DT_SINT)};
+	da.setArgDps(FT_PLN, dp_prms, false);
+
 	da.pushSrc(dp_prms[0], dpv4);
 	da.popSrc(dp_prms[0]);
 
 	for (auto dp: dp_prms)
 		da.allocDp(dp);
 
-	da.funcCalled(dp_prms, FT_PLN);
+	da.funcCalled(dp_prms, FT_PLN, false);
 
 	da.finish();
 }

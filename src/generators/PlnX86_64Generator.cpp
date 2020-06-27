@@ -724,7 +724,8 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[0] = {MOVQ};
 			return 1;
 		case SXMMF|S8 + DXMMF|D4:	// 4
-			BOOST_ASSERT(false);
+			genInfos[0] = {CVTSD2SS};
+			return 1;
 		case SXMMF|S8 + DMEMF|D4:	// 5
 			genInfos[0] = {CVTSD2SS, XMM11};
 			genInfos[1] = {MOVSS};
@@ -741,10 +742,16 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 5. xmm4f->mem8f: CVTSS2SD(X11) + MOVSD
 		// 6. xmm4f->reg8f: CVTSS2SD(X11) + MOVQ
 		case SXMMF|S4 + DXMMF|D4:
+			BOOST_ASSERT(false);
 		case SXMMF|S4 + DMEMF|D4:
+			genInfos[0] = {MOVSS};
+			return 1;
 		case SXMMF|S4 + DREGF|D4:
+			BOOST_ASSERT(false);
 		case SXMMF|S4 + DXMMF|D8:
+			BOOST_ASSERT(false);
 		case SXMMF|S4 + DMEMF|D8:
+			BOOST_ASSERT(false);
 		case SXMMF|S4 + DREGF|D8:
 			BOOST_ASSERT(false);
 
@@ -765,7 +772,9 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[0] = {MOVQ};
 			return 1;
 		case SMEMF|S8 + DXMMF|D4:	// 4
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVSD, XMM11};
+			genInfos[1] = {CVTSD2SS};
+			return 2;
 		case SMEMF|S8 + DMEMF|D4:	// 5
 			genInfos[0] = {MOVSD, XMM11};
 			genInfos[1] = {CVTSD2SS, XMM11};
@@ -798,7 +807,8 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[2] = {MOVQ};
 			return 3;
 		case SMEMF|S4 + DXMMF|D4:	// 4
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVSS};
+			return 1;
 		case SMEMF|S4 + DMEMF|D4:	// 5
 			genInfos[0] = {MOVL, R11};
 			genInfos[1] = {MOVL};
@@ -821,7 +831,9 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			return 1;
 
 		case SREGF|S8 + DXMMF|D4:
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVQ, XMM11};
+			genInfos[1] = {CVTSD2SS};
+			return 2;
 
 		case SREGF|S8 + DMEMF|D4:
 			genInfos[0] = {MOVQ, XMM11};
@@ -852,7 +864,8 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 			genInfos[2] = {MOVQ};
 			return 3;
 		case SREGF|S4 + DXMMF|D4:
-			BOOST_ASSERT(false);
+			genInfos[0] = {MOVQ};
+			return 1;
 		case SREGF|S4 + DMEMF|D4:
 			genInfos[0] = {MOVL};
 			return 1;
@@ -869,11 +882,10 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 6. bigimm -> reg8f/reg4f: MOVABSQ
 		// 1.
 		case SIMMF|S8 + DXMMF|D8:
+		case SIMMF|S8 + DXMMF|D4:
 			genInfos[0] = {MOVQ, R11};
 			genInfos[1] = {MOVQ};
 			return 2;
-		case SIMMF|S8 + DXMMF|D4:
-			BOOST_ASSERT(false);
 		// 2.
 		case SIMMF|S8 + DMEMF|D8:
 		case SIMMF|S8 + DMEMF|D4:
@@ -1040,7 +1052,8 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 					return 2;
 				// 4.
 				case SREGI|S8 + DXMMF|D4:
-					BOOST_ASSERT(false);
+					genInfos[0] = {CVTSI2SS};
+					return 1;
 				// 5.
 				case SREGI|S8 + DMEMF|D4:
 					genInfos[0] = {CVTSI2SS, XMM11};
@@ -1097,8 +1110,13 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 
 					// 4.
 				case SMEMI + DXMMF|D4: case SREGI + DXMMF|D4:
+					genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SS};
+					return 2;
 				case SMEMU + DXMMF|D4: case SREGU + DXMMF|D4:
-					BOOST_ASSERT(false);
+					genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
+					genInfos[1] = {CVTSI2SS};
+					return 2;
 					// 5.
 				case SMEMI + DMEMF|D4: case SREGI + DMEMF|D4:
 					genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
@@ -1197,6 +1215,9 @@ static void pushGenInfo(PlnX86_64RegisterMachine& m, GenInfo *ginf, int num, con
 
 		} else if (ginf->mnem == CMP) {
 			adjustRegSize(src_ope, 8);
+
+		} else if (ginf->mnem == CVTTSS2SI || ginf->mnem == CVTTSD2SI) {
+			adjustRegSize(dst_ope, 8);
 		}
 
 		m.push(ginf->mnem, src_ope, dst_ope);

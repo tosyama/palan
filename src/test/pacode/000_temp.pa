@@ -1,27 +1,38 @@
 ccall printf(...);
-
-i=3;
-j=2;
-
-b = 10 && 3>1;
-
-if j>1 && i>1 {
-	printf("");
-} else {
-	printf("");
-}
-
-type User {
-	int64 id;
-	[10]byte name;
-	int16 age;
-};
-
-test("abc");
-
-func test([10]byte name)
+func as_is(int64 a, int32 b)
+	-> int32 b, int64 a
 {
-	printf("%s", name);
 }
 
-
+// func as_is2(int64 a, int32 b) -> int64 a, int32 b
+// {
+// 	a + 1 -> a;
+// 	a + b -> b;
+// }
+// 
+// func as_is3(int64 a, int32 b) -> int64 a, int32 b
+// {
+// 	return 56, (a+2 -> a);
+// }
+// 
+// func as_is4(int64 a, int32 b) -> int64 a, int32 b
+// {
+// 	56->a;
+// 	return a, (a+2 -> a);
+// }
+// 
+// func callsome()
+// {
+// 	as_is(3, 5);	
+// }
+// 
+int32 bb, int64 aa = as_is(64, 32);
+printf("%d %d", aa, bb);
+// aa, bb -> as_is2() -> aa, bb;
+// printf(" %d %d", aa, bb);
+// as_is3(64, 32) -> aa, bb;
+// printf(" %d %d", aa, bb);
+// as_is4(64, 32) -> aa, bb;
+// printf(" %d %d", aa, bb);
+// 
+// callsome();

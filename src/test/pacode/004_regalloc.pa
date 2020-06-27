@@ -18,6 +18,11 @@ func as_is(int64 a, int32 b)
 {
 }
 
+func swap(int64 a, int32 b)
+	-> int32 b, int64 a
+{
+}
+
 int64 a1, a2, a3 = 1, 2, 3;
 
 int64 a = func1(a1+1, func1(4,5,6)+a2, func1(7,8,9)+a3+10);
@@ -27,3 +32,6 @@ printf ("%d %d %d %d %d %d %d %d %d\n", a, r1, r2, r3, r4, r5, r6, r7, r8);
 
 int32 bb, int64 aa = as_is(64, 32);
 printf("%d %d", aa, bb);
+
+swap(64, 32)->bb, aa;
+printf(" %d %d", aa, bb);

@@ -31,7 +31,6 @@ protected:
 	int regnum;
 
 	void allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int release_step);
-	virtual PlnDataPlace* createReturnDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
 	bool isDestroyed(PlnDataPlace* dp);
 
 public:
@@ -56,10 +55,10 @@ public:
 
 	void allocDp(PlnDataPlace *Dp, bool proceed_step = true);
 	void releaseDp(PlnDataPlace* dp);
-	virtual PlnDataPlace* createArgDp(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, int index, bool is_callee) = 0;
-	virtual void funcCalled(vector<PlnDataPlace*>& args, int func_type) = 0;
-	vector<PlnDataPlace*> prepareArgDps(int func_type, const vector<int> &ret_dtypes, const vector<int> &arg_dtypes, bool is_callee);
-	vector<PlnDataPlace*> prepareRetValDps(int func_type, vector<int> &ret_dtypes, vector<int> &arg_dtypes, bool is_callee);
+	virtual void funcCalled(vector<PlnDataPlace*>& args, int func_type, bool never_return) = 0;
+	// need to pass allocated dp with data_type and size.
+	virtual void setArgDps(int func_type, vector<PlnDataPlace*> &arg_dps, bool is_callee) = 0;
+	virtual void setRetValDps(int func_type, vector<PlnDataPlace*> &retval_dps, bool is_callee) = 0;
 
 	// Process register data may be breaken by this process.
 	virtual void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) = 0;
@@ -130,16 +129,16 @@ public:
 	char data_type;
 	char status;
 
-	int32_t access_score;
+	bool release_src_pop;
+	bool load_address;
+	bool need_address;
+	bool do_clear_src;
 
 	int32_t alloc_step;
 	int32_t release_step;
 	int32_t push_src_step;
 
-	bool release_src_pop;
-	bool load_address;
-	bool need_address;
-	bool do_clear_src;
+	int32_t access_score;
 
 	union {
 		struct {int32_t idx; int32_t offset;} stack;
@@ -160,6 +159,7 @@ public:
 	PlnDataPlace* save_place;
 	PlnDataPlace* src_place;
 	string* comment;
+	int64_t custom_inf;
 
 	PlnDataPlace(int size, int data_type);
 	~PlnDataPlace();
