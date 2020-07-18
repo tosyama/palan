@@ -1,5 +1,5 @@
 # What is Palan?
-Palan is a programming language (compiler) that is developing little by little, aiming at a language that can be an alternative to C language which is simpler and safer. 
+Palan is a programming language (compiler) that is developing little by little, aiming at a language that can be an alternative to C language, which is simpler and safer. 
 
 Main added features of ver0.3 are struct, reference and improvement of C funtion call. You can develop some practical programs by using Palan ver 0.3. (e.g. Tetris on console)
 
@@ -9,7 +9,7 @@ Although it run faster than the gcc -O0 in many cases, because it compiles to th
 The aim of language is that makes both clarity and simplicity compatible. Also, although it is just sense, my feeling when programming by Palan is important.
 
 # Sample program and explanation
-Although Palan ver0.3 has limited language function, it can be created if it is about the quick sort program as shown below.
+Although Palan ver0.3 has limited language features, you can develop a simple quick sort program like below.
 
 ```
 ccall printf(...);
@@ -332,7 +332,7 @@ User userA;  // The declaration of User variable userA.
 Note: Unlike the C language, array and structure members are allocated separated memory area from the structure body. (e.g. The `name`  member variable in above example.)
 
 ## Access to member
-You can access the structure member by writing `. ` and member name after the variable name.
+You can access the structure member by writing `.` and member name after the variable name.
 
 ```
 User userA;
