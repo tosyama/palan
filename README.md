@@ -39,7 +39,7 @@ Hello World!
 ```
 
 ## Reference
-See wiki [Palan 0.2 Language Reference](https://github.com/tosyama/palan/wiki/Palan-0.2-Language-Reference).(Old version)
+See [Palan Language Reference](https://github.com/tosyama/palan/tree/master/doc/REFERENCE.md).
 See qiita for Japanese edition [Palan 0.3 Language Reference(JP)](https://qiita.com/tosyama/items/44146bb978a31679e177).
 
 [boost]: http://boost.org
