@@ -1,11 +1,9 @@
 language: C++
 sudo: required
-dist: trusty
+dist: xenial
 
 addons:
  apt:
-  sources:
-   - ubuntu-toolchain-r-test
   packages:
    - gcc-5
    - g++-5
