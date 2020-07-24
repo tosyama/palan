@@ -440,7 +440,6 @@ bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
 	BOOST_ASSERT(rdp);
 
 	bool is_overlapped = false;
-	PlnDataPlace* insert_dp = rdp;
 
 	while(rdp) {
 		if (dp->alloc_step <= rdp->release_step

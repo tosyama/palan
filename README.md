@@ -1,13 +1,13 @@
 # Palan
 [![Build Status](https://travis-ci.org/tosyama/palan.svg?branch=master)](https://travis-ci.org/tosyama/palan)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/8224c75046a04172a3798c29dd3aedd0)](https://www.codacy.com/app/tosyama/palan?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tosyama/palan&amp;utm_campaign=Badge_Grade)
-[![codecov](https://codecov.io/gh/tosyama/palan/branch/master/graph/badge.svg)](https://codecov.io/gh/tosyama/palan)  
+[![Coverage Status](https://img.shields.io/coveralls/github/tosyama/palan/master.svg)](https://coveralls.io/github/tosyama/palan?branch=master) 
 Palan is aiming simpler, safer and more enjoyable programming language alternative C.
 Current palan is very draft.
 
 ## Quick Start
 ### Environment
-*   Ubuntu 14.04.5 LTS (x86-64) or later(18.04.1 LTS)
+*   Ubuntu 16.04.5 LTS (x86-64) or later(18.04.1 LTS)
 *   g++ (gcc 5.5.0/as,ld) or later(gcc 7.3.0)
 *   GNU Make
 *   curl

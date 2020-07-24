@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Specification
 ========================================
 
-ver 0.3.0a
+ver 0.4.0a
 
 \* - Required  
 \# - Required if first item of list 
@@ -101,7 +101,8 @@ Block
 Statement
 ---------
 *   stmt-type\* - Statement type string:
-    "exp" "block" "var-init" "return" "while" "if" "func-def" "extern-var"
+    "exp" "block" "var-init" "return" "while" "if"
+	"func-def" "extern-var" "ope-asgn"
     1.  exp - Expression statement
         *   exp\* - Expression model
 
@@ -146,6 +147,11 @@ Statement
     12. extern-var - Import extern global variables
         *   var-type\* - Variable type list
         *   names\* - variable name list
+	
+	13. ope-asgn - Operational assignment
+        *   dst-val\* - Destination value
+		*	ope\* - Operator string : "+"
+		*	rval\* - Right value expression
 
 *   loc - Location integer array
 

@@ -56,7 +56,8 @@ enum {
 	DBL_ARROW	= PlnParser::token::DBL_ARROW,
 	EQ_ARROW	= PlnParser::token::EQ_ARROW,
 	DBL_EQ_ARROW	= PlnParser::token::DBL_EQ_ARROW,
-	AT_EXCL		= PlnParser::token::AT_EXCL
+	AT_EXCL		= PlnParser::token::AT_EXCL,
+	DBL_PLUS	= PlnParser::token::DBL_PLUS
 };
 
 static string& unescape(string& str);
@@ -171,6 +172,7 @@ extern/{POST_KW} 	{ return KW_EXTERN; }
 {AT_EXCL}	{
 		return AT_EXCL;
 	}
+"++"	{ return DBL_PLUS; }
 {DELIMITER}	{ return yytext[0]; }
 [ \t]+		{ loc.step(); }
 \r\n|\r|\n	{ loc.lines(); loc.step(); }
