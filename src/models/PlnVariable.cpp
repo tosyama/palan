@@ -141,7 +141,13 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto vi: varinits) {
 		PlnVariable *v = vi.var;
 		auto t = v->var_type;
-		v->place = da.allocData(t->size(), t->data_type());
+		BOOST_ASSERT(t->mode[ALLOC_MD] != 'i');
+		if (t->mode[ALLOC_MD] == 's') {
+			v->place = da.allocData(t->size(), t->data_type());
+		} else {	// h: Heap or r: Refernce
+			v->place = da.allocData(8, DT_OBJECT_REF);
+		}
+
 		v->place->comment = &v->name;
 		if (v->var_type->mode[IDENTITY_MD]=='m') {
 			si.push_owner_var(v);

@@ -3,7 +3,7 @@
 /// Src value don't need to be clear.
 ///
 /// @file	PlnAssignPrimitiveItem.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 class PlnAssignPrimitiveItem : public PlnAssignItem {
 	PlnExpression* src_ex;
@@ -20,8 +20,8 @@ public:
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 		BOOST_ASSERT(dst_item == NULL);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].getVarType()->mode[ALLOC_MD] == 'r'
-			|| ex->values[0].getVarType()->data_type() != DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].getVarType()->data_type() != DT_OBJECT_REF);
+		// BOOST_ASSERT(ex->values[0].getVarType()->mode[ALLOC_MD] != 'r');
 		dst_item = PlnDstItem::createDstItem(ex, need_save);
 	}
 

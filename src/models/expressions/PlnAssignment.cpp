@@ -101,7 +101,8 @@ PlnAssignment::PlnAssignment(vector<PlnExpression*>& dst_vals, vector<PlnExpress
 {
 	for (auto e: lvals) {
 		BOOST_ASSERT(e->values.size() == 1);
-		BOOST_ASSERT(e->type == ET_VALUE || e->type == ET_ARRAYITEM || e->type == ET_STRUCTMEMBER);
+		BOOST_ASSERT(e->type == ET_VALUE || e->type == ET_ARRAYITEM
+				|| e->type == ET_STRUCTMEMBER || e->type == ET_REFVALUE);
 		BOOST_ASSERT(e->values[0].type == VL_VAR);
 		values.push_back(e->values[0]);
 		values.back().asgn_type = NO_ASGN;

@@ -187,6 +187,11 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 				BOOST_ASSERT(false);
 			}
 		}
+	} else if (ex->type == ET_REFVALUE) {
+		int dt = ex->values[0].getVarType()->data_type();
+		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
+			di = new PlnDstPrimitiveItem(ex);
+		}
 	}
 
 	BOOST_ASSERT(di);

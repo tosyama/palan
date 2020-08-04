@@ -28,6 +28,7 @@
 #include "models/expressions/PlnBoolOperation.h"
 #include "models/expressions/PlnArrayItem.h"
 #include "models/expressions/PlnStructMember.h"
+#include "models/expressions/PlnReferenceValue.h"
 #include "models/expressions/PlnArrayValue.h"
 #include "models/types/PlnFixedArrayType.h"
 #include "models/types/PlnArrayValueType.h"
@@ -47,6 +48,7 @@ static PlnStatement* buildWhile(json& whl, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildBreak(json& brk, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildContinue(json& cntn, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast);
+static PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast);
 static PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
 static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
@@ -406,7 +408,6 @@ static void prebuildBlock(json& stmts, PlnScopeStack& scope, json& ast)
 	}
 }
 
-
 PlnBlock* buildBlock(json& stmts, PlnScopeStack &scope, json& ast, PlnBlock* new_block)
 {
 	PlnBlock* block = new_block ? new_block : new PlnBlock();
@@ -466,6 +467,9 @@ PlnStatement* buildStatement(json& stmt, PlnScopeStack &scope, json& ast)
 
 	} else if (type == "if") {
 		statement = buildIf(stmt, scope, ast);
+
+	} else if (type == "ope-asgn") {
+		statement = buildOpeAssignment(stmt, scope, ast);
 
 	} else if (type == "func-def") {
 		json& f = getFuncDef(ast, stmt["id"]);
@@ -863,6 +867,42 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast)
 	return new PlnIfStatement(cond, ifblock, else_stmt, CUR_BLOCK);
 }
 
+PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
+{
+	PlnExpression* var_val = buildVariarble(opeasgn["dst-val"], scope);
+	PlnExpression* rval = buildExpression(opeasgn["rval"], scope);
+	if (opeasgn["ope"] == "+") {
+		if (var_val->type == ET_VALUE || var_val->type == ET_REFVALUE) {
+			PlnExpression* add_ex =  PlnAddOperation::create(var_val, rval);
+			PlnExpression* dst_val = buildDstValue(opeasgn["dst-val"], scope);
+			vector<PlnExpression*> dst_vals = {dst_val};
+			vector<PlnExpression*> exs = {add_ex};
+			PlnExpression* asgn_ex =  new PlnAssignment(dst_vals, exs);
+			return new PlnStatement(asgn_ex, CUR_BLOCK);
+
+		} if (var_val->type == ET_ARRAYITEM || var_val->type == ET_STRUCTMEMBER) {
+			BOOST_ASSERT(var_val->values[0].type == VL_VAR);
+			auto sub_block = new PlnBlock();
+			sub_block->setParent(CUR_BLOCK);
+			PlnVarType *t = var_val->values[0].inf.var->var_type->typeinf->getVarType("w-r");
+			PlnVariable *v = sub_block->declareVariable("__tmp", t, false);
+
+			// BOOST_ASSERT(false);
+			vector<PlnValue> vars = {v};
+			vector<PlnExpression*> inits{var_val};
+			sub_block->statements.push_back(
+				new PlnStatement(new PlnVarInit(vars, &inits), sub_block));
+
+			return new PlnStatement(sub_block, CUR_BLOCK);
+
+		} else {
+			BOOST_ASSERT(false);
+		}
+	} else
+		BOOST_ASSERT(false);
+
+}
+
 PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {
 	assertAST(exp["exp-type"].is_string(), exp);
@@ -1208,7 +1248,14 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 				throw;
 			}
 		}
+	} else {
+		auto vt = pvar->var_type;
+		// primitve reference
+		if (vt->data_type() != DT_OBJECT_REF && vt->mode[ALLOC_MD] == 'r') {
+			var_exp = new PlnReferenceValue(var_exp);
+		}
 	}
+
 	return var_exp;
 }
 
@@ -1226,7 +1273,8 @@ PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 		var_exp->values[0].asgn_type = ASGN_MOVE;
 
 	} else {
-		if (var_exp->values[0].getVarType()->mode[ACCESS_MD] == 'r') {
+		auto vt = var_exp->values[0].getVarType();
+		if (vt->mode[ACCESS_MD] == 'r') {
 			PlnValue& val = var_exp->values[0];
 			if (val.type == VL_VAR) {
 				PlnCompileError err(E_CantCopyToReadonly, var_exp->values[0].inf.var->name);

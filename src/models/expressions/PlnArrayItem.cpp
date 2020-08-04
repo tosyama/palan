@@ -63,7 +63,6 @@ static PlnVariable* getArrayVar(PlnVarType *item_type, PlnExpression* array_ex)
 	return var;
 }
 
-
 // Can be any array type.
 PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind,
 	PlnVarType* arr_type)

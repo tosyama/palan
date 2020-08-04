@@ -1501,7 +1501,7 @@ increment: var_expression DBL_PLUS
 
 		json inc = {
 			{"stmt-type", "ope-asgn"},
-			{"dst_val", $1},
+			{"dst-val", $1},
 			{"ope", "+" },
 			{"rval", one}
 		};
