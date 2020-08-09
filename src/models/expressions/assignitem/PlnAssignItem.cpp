@@ -98,7 +98,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER) {
+	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER || ex->type == ET_REFVALUE) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {

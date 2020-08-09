@@ -329,6 +329,10 @@ PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src)
 	if (this == src->typeinf)
 		return TC_SAME;
 	
+	// reference should be same type.
+	if (mode[ALLOC_MD] == 'r')
+		return TC_CANT_CONV;
+
 	for (auto ci: conv_inf)
 		if (ci.type == src->typeinf)
 			return ci.capacity;

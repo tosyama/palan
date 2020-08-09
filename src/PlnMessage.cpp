@@ -84,6 +84,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Unexpected token '%1%' was found."; break;
 		case E_CantUseDynamicVal:
 			f = "Can not assign dynamic allocated value to '%1%'."; break;
+		case E_CantUseNonMemoryValue:
+			f = "Can not assign non memory value to '%1%'."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%."; break;

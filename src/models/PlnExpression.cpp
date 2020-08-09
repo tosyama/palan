@@ -172,6 +172,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 				err.loc = loc;
 				throw;
 			}
+			
 		} else {
 			PlnVarType *vtype = values[0].getVarType();
 			if (types[0]->canCopyFrom(vtype) == TC_CANT_CONV) {

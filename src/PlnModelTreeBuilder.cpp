@@ -892,6 +892,14 @@ PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 			vector<PlnExpression*> inits{var_val};
 			sub_block->statements.push_back(
 				new PlnStatement(new PlnVarInit(vars, &inits), sub_block));
+			PlnExpression* tmp_var = new PlnReferenceValue(new PlnExpression(v));
+			PlnExpression* add_ex =  PlnAddOperation::create(tmp_var, rval);
+			PlnExpression* dst_val = new PlnReferenceValue(new PlnExpression(v));
+			vector<PlnExpression*> dst_vals = { dst_val };
+			vector<PlnExpression*> exs = {add_ex};
+			PlnExpression* asgn_ex =  new PlnAssignment(dst_vals, exs);
+			sub_block->statements.push_back(
+				new PlnStatement(asgn_ex, sub_block));
 
 			return new PlnStatement(sub_block, CUR_BLOCK);
 

@@ -546,6 +546,10 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 			}
 		}
 
+		if (max_score == 0) { // Not exist dp it can be on register.
+			return;
+		}
+
 		// select register
 		int regid = -1;
 		for (int id: no_save_regids) {

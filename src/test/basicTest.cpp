@@ -8,7 +8,7 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "16");
+	REQUIRE(exec(testcode) == "");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -233,6 +233,15 @@ void normalCaseTest()
 	testcode = "032_ptrptr";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "test 1234 test2 123456");
+
+	testcode = "033_prireference";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "10 13 18 18 18 18 11\n"
+							"2.2 22.2 123 1.2 5 3.5");
+
+	testcode = "034_increment";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "1 -4 !23 !23 12 23.2");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
@@ -463,6 +472,24 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "592_cantcopytype_err";
 	REQUIRE(build(testcode) == "finish:0:3-3 Can not use copy to the variable of type 'X'.");
+
+	testcode = "593_incompatiref_err";
+	REQUIRE(build(testcode) == "0:2-2 Incompatible types in assignment of 'int64' to 'int32'.");
+
+	testcode = "594_refinit_err";
+	REQUIRE(build(testcode) == "0:2-2 Can not assign non memory value to 'iz'.");
+
+	testcode = "595_roassign_err";
+	REQUIRE(build(testcode) == "0:3-3 Can not copy to readonly variable 'ix@'.");
+
+	testcode = "596_incompatiref_err2";
+	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'int16' to 'int64'.");
+
+	testcode = "597_increment_err";
+	REQUIRE(build(testcode) == "0:3-3 syntax error, unexpected ++, expecting ';'");
+
+	testcode = "598_increment_err2";
+	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for '[3]int64'.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

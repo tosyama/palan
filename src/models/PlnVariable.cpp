@@ -81,8 +81,22 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					PlnVarType* src_type = ex->values[i].getVarType();
 					PlnVarType* dst_type = vars[var_i].getVarType();
 
-					// Compatibility is assured at adjustTypes().
+					// Compatibility should be assured at adjustTypes() in advance.
 					BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
+
+					// Validation of referece var
+					if (dst_type->mode[ALLOC_MD] == 'r') {
+						int val_type = ex->values[i].type;
+						if (!(val_type == VL_LIT_ARRAY || val_type == VL_LIT_STR || val_type == VL_VAR)
+								&& (src_type->mode[ALLOC_MD] != 'r')) {
+							// e.g.) @int64 a = (b + 2);	// not in memory.
+							PlnCompileError err(E_CantUseNonMemoryValue, vars[var_i].inf.var->name);
+							err.loc = ex->loc;
+							throw err;
+
+							BOOST_ASSERT(false);
+						}
+					}
 
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex, i);

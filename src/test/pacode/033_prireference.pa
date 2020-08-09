@@ -1,0 +1,48 @@
+ccall printf(...);
+
+int16 a = 10;
+@!int16 ax = a;
+
+printf("%d ", ax);
+13 -> a;
+printf("%d ", ax);
+
+ax + 5 -> ax;
+printf("%d ", a);
+
+int16 b = ax;
+printf("%d ", b);
+
+c = ax;	// int16
+printf("%d ", c);
+5 -> c;
+
+printf("%d ", ax);
+
+@int16 axx = ax;
+11 -> a;
+printf("%d\n", axx);
+
+//array item
+[2,3]flo32 fa = [1.1, 1.2, 1.3][2.1, 2.2, 2.3];
+@flo32 fx = fa[1,1];
+printf("%.1f ", fx);
+
+22.2 -> fa[1,1];
+printf("%.1f ", fx);
+
+// struct
+type Test {
+	int16 i16;
+	flo32 f32;
+};
+
+Test s = [ 123, 1.2 ];
+@!int16 sx = s.i16;
+@!flo32 sf = s.f32;
+printf("%d %.1f ", sx, sf);
+
+5 -> sx;
+3.5 -> sf;
+printf("%d %.1f", s.i16, s.f32);
+

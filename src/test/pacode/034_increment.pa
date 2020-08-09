@@ -1,0 +1,34 @@
+ccall printf(...);
+
+i = 0;
+i++;
+
+printf("%d ", i);
+
+sbyte b = -5;
+b++;
+printf("%d ",b);
+
+[3]int16 ia = [11,22,33];
+ia[ind(1)]++;
+printf("%d ", ia[1]);
+
+[2][3]int16 ia2 = [11,21,31][12,22,32];
+ia2[1][ind(1)]++;
+printf("%d ", ia2[1][1]);
+
+Test t = [11, 22.2];
+t.ii++; t.ff++;
+printf("%d %.1f", t.ii, t.ff);
+
+func ind(int64 i) -> int64
+{
+	printf("!");
+	return i;
+}
+
+type Test {
+	int32 ii;
+	flo32 ff;
+};
+

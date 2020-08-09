@@ -187,9 +187,9 @@ func newFld() -> Field newfld
 	while y < FLD_H {
 		while x < FLD_W {
 			0->newfld[y,x];
-			1+x -> x;
+			x++;
 		}
-		1+y -> y;
+		y++;
 	}
 }
 
@@ -204,9 +204,9 @@ func drawFld(@WINDOW win, @Field f)
 		while x < FLD_W {
 			if f[y,x] == 1 { win->draw1Block(y, x) }
 			else { win->delete1Block(y, x)	 }
-			1+x->x;
+			x++;
 		}
-		1+y->y;
+		y++;
 	}
 
 	win->wnoutrefresh();
@@ -225,11 +225,11 @@ func tryMove(@Field f, @Block b, int32 y, x) -> int32 can_move
 				if f[y,xx]!=0
 					{ return false }
 			}
-			1+w->w;
-			1+xx->xx;
+			w++;
+			xx++;
 		}
-		1+h->h;
-		1+y->y;
+		h++;
+		y++;
 	}
 	return true;
 }
@@ -243,11 +243,11 @@ func drawBlock(@WINDOW win, @Block b, int32 y, x)
 		while w < 4 {
 			if b[h, w] == 1
 				{ win->draw1Block(y, xx) }
-			1+w->w;
-			1+xx->xx;
+			w++;
+			xx++;
 		}
-		1+h->h;
-		1+y->y;
+		h++;
+		y++;
 	}
 	win->wnoutrefresh();
 }
@@ -273,11 +273,11 @@ func margeBlockToField(Field >>f, @Block b, int32 y, x) -> Field f
 		while w < 4 {
 			if b[h, w] == 1
 				{ 1->f[y,xx] }
-			1+w->w;
-			1+xx->xx;
+			w++;
+			xx++;
 		}
-		1+h->h;
-		1+y->y;
+		h++;
+		y++;
 	}
 }
 
@@ -294,11 +294,11 @@ func checkDelLine([FLD_H]int32 >>del_mv_lineinf, @Field field)
 				false -> all_block;
 				break;
 			}
-			x+1 -> x;
+			x++;
 		}
 		if all_block {
 			-1 -> del_mv_lineinf[y];
-			del_count+1 -> del_count;
+			del_count++;
 		} else {
 			y+del_count -> del_mv_lineinf[y];
 		}
@@ -317,7 +317,7 @@ func delLine(Field >>field, @[FLD_H]int32 del_mv_lineinf)
 			del_cnt+1 -> del_cnt;
 			while x < FLD_W {
 				0->field[y,x];
-				x+1 -> x;
+				x++;
 			}
 		}
 		y-1 -> y;
@@ -338,10 +338,10 @@ func mvLine(Field >>field, @[FLD_H]int32 del_mv_lineinf)
 			x = 0;
 			while x < FLD_W {
 				field[y,x]->field[mv_y, x];
-				x+1 -> x;
+				x++;
 			}
 		} else {
-			del_cnt+1 -> del_cnt;
+			del_cnt++;
 		}
 		y-1 -> y;
 	}
@@ -351,9 +351,9 @@ func mvLine(Field >>field, @[FLD_H]int32 del_mv_lineinf)
 		x = 0;
 		while x < FLD_W {
 			0->field[y, x];
-			x+1 -> x;
+			x++;
 		}
-		y+1 -> y;
+		y++;
 	}
 }
 

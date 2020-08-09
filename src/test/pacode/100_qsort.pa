@@ -18,7 +18,7 @@ func show([N]int16 data)
 	i=0;
 	while i<N {
 		printf(" %d",data[i]);
-		i+1 -> i;
+		i++;
 	}
 	printf("\n");
 }

@@ -33,7 +33,10 @@ public:
 			if (src_ex->getDataType(val_ind) != DT_OBJECT_REF) {
 				// DT_SINT/DT_UINT/DT_FLOAT
 				if (dst_dp->data_type == DT_OBJECT_REF) {
-					dst_dp->load_address = true;
+					auto allocmode = src_ex->values[0].inf.var->var_type->mode[ALLOC_MD];
+					if (allocmode != 'r') {
+						dst_dp->load_address = true;
+					}
 				}
 			}
 

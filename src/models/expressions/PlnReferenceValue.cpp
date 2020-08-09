@@ -6,12 +6,14 @@
 /// @copyright	2020 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
+#include "PlnReferenceValue.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"
-#include "PlnReferenceValue.h"
 
 PlnReferenceValue::PlnReferenceValue(PlnExpression *refvar_ex)
 	: PlnExpression(ET_REFVALUE), refvar_ex(refvar_ex)
@@ -24,7 +26,7 @@ PlnReferenceValue::PlnReferenceValue(PlnExpression *refvar_ex)
 	BOOST_ASSERT(ref_vartype->mode[ALLOC_MD] == 'r');
 	BOOST_ASSERT(ref_vartype->typeinf->type == TP_PRIMITIVE);
 
-	var->name = "(" + ref_var->name + ")";
+	var->name = ref_var->name + "@";
 	string mode = "---";
 	mode[ACCESS_MD] = ref_vartype->mode[ACCESS_MD];
 	var->var_type = ref_vartype->typeinf->getVarType(mode);	// get default type
@@ -44,6 +46,26 @@ PlnReferenceValue::PlnReferenceValue(PlnExpression *refvar_ex)
 PlnReferenceValue::~PlnReferenceValue()
 {
 	delete refvar_ex;
+}
+
+PlnExpression* PlnReferenceValue::adjustTypes(const vector<PlnVarType*> &types)
+{
+	BOOST_ASSERT(types.size() == 1);
+	PlnVarType *vtype = values[0].getVarType();
+	if (types[0]->canCopyFrom(vtype) == TC_CANT_CONV) {
+		PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
+		err.loc = loc;
+		throw err;
+	}
+	
+	if (types[0]->mode[ALLOC_MD] == 'r') { // lea (%src)  %dst -> mov %src %dst
+		auto ret_ex = refvar_ex;
+		refvar_ex = NULL;
+		delete this;
+		return ret_ex;
+	}
+
+	return this;
 }
 
 void PlnReferenceValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
