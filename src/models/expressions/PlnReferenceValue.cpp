@@ -31,10 +31,8 @@ PlnReferenceValue::PlnReferenceValue(PlnExpression *refvar_ex)
 	mode[ACCESS_MD] = ref_vartype->mode[ACCESS_MD];
 	var->var_type = ref_vartype->typeinf->getVarType(mode);	// get default type
 
-	if (ref_var->container)
-		var->container = ref_var->container;
-	else
-		var->container = ref_var;
+	BOOST_ASSERT(ref_var->container);
+	var->container = ref_var->container;
 
 	var->is_indirect = true;
 	var->is_tmpvar = var->container->is_tmpvar;

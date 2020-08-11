@@ -81,7 +81,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					PlnVarType* src_type = ex->values[i].getVarType();
 					PlnVarType* dst_type = vars[var_i].getVarType();
 
-					// Compatibility should be assured at adjustTypes() in advance.
+					// Compatibility is assured at adjustTypes().
 					BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
 
 					// Validation of referece var
@@ -95,6 +95,12 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 							throw err;
 
 							BOOST_ASSERT(false);
+						}
+						if (val_type == VL_VAR) {
+							PlnVariable* container = ex->values[i].inf.var->container;
+							if (!container)
+								container = ex->values[i].inf.var;
+							vars[var_i].inf.var->container = container;
 						}
 					}
 
