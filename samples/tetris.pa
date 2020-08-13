@@ -10,7 +10,6 @@
 // type for var name
 // it should be able to pass element address of array 
 //  e.g. [5,4]int32 a; a[3,#] or a[3,] or a[3,:]
-//  ++/--
 
 // curses lib API
 ccall initscr()->WINDOW :ncursesw;
@@ -127,10 +126,10 @@ while is_running {
 	if is_falling {
 		if ch == KEY_LEFT {
 			if field,blocks[blk_type,rotate]->tryMove(by,bx-1)
-				{ bx-1 -> bx }
+				{ bx-- }
 		} else if ch == KEY_RIGHT {
 			if field,blocks[blk_type,rotate]->tryMove(by,bx+1)
-				{ bx+1 -> bx }
+				{ bx++ }
 		} else if ch == SPACE {
 			r = rotate + 1;
 			if r >= 4 { 0->r }
@@ -138,14 +137,14 @@ while is_running {
 				{ r -> rotate }
 		} else if ch == KEY_UP {
 			while field,blocks[blk_type,rotate]->tryMove(by+1,bx)
-				{ by+1 -> by }
+				{ by++ }
 			false -> is_falling;
 			0->timer;
 		}
 
 		if (timer > gravity || ch == KEY_DOWN) {
 			if field,blocks[blk_type,rotate]->tryMove(by+1,bx)
-				{ by+1 -> by }
+				{ by++ }
 			else
 				{ false -> is_falling }
 
@@ -174,7 +173,7 @@ while is_running {
 
 	doupdate();
 	usleep(10000);
-	timer+1 -> timer;
+	timer++;
 }
 endwin();
 printf("Game Over: You deleted %d lines\n", deleted_lines);
@@ -343,7 +342,7 @@ func mvLine(Field >>field, @[FLD_H]int32 del_mv_lineinf)
 		} else {
 			del_cnt++;
 		}
-		y-1 -> y;
+		y--;
 	}
 
 	0 -> y;

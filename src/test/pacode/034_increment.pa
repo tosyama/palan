@@ -19,7 +19,12 @@ printf("%d ", ia2[1][1]);
 
 Test t = [11, 22.2];
 t.ii++; t.ff++;
-printf("%d %.1f", t.ii, t.ff);
+printf("%d %.1f\n", t.ii, t.ff);
+
+// decrement
+int16 ii = 10;
+ii--;
+printf("%d ", ii);
 
 func ind(int64 i) -> int64
 {

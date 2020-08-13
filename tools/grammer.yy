@@ -44,6 +44,7 @@ int yylex();
 %token DBL_EQ_ARROW
 %token AT_EXCL
 %token DBL_PLUS
+%token DBL_MINUS
 
 %right '='
 %left ARROW DBL_ARROW EQ_ARROW
@@ -380,6 +381,7 @@ const_names: ID
 	;
 
 increment: var_expression DBL_PLUS
+	| var_expression DBL_MINUS
 	;
 
 %%

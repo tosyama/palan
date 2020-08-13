@@ -241,7 +241,8 @@ void normalCaseTest()
 
 	testcode = "034_increment";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "1 -4 !23 !23 12 23.2");
+	REQUIRE(exec(testcode) == "1 -4 !23 !23 12 23.2\n"
+								"9 " );
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")

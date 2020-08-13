@@ -33,7 +33,7 @@ func queen([Y,X]byte >>board, int32 x, y)
 		xx = x-1;
 		while xx >= 0 {
 			if board[y, xx] { return }
-			xx-1 -> xx;
+			x--;
 		}
 	}
 
@@ -42,7 +42,8 @@ func queen([Y,X]byte >>board, int32 x, y)
 		yy = y-1;
 		while xx >= 0 && yy >= 0 {
 			if board[yy, xx] { return }
-			xx-1, yy-1 -> xx, yy;
+			x--;
+			y--;
 		}
 	}
 
@@ -51,7 +52,7 @@ func queen([Y,X]byte >>board, int32 x, y)
 		yy = y+1;
 		while xx >= 0 && yy < 8 {
 			if board[yy, xx] { return }
-			xx-1 -> xx;
+			x--;
 			yy++;
 		}
 	}

@@ -85,6 +85,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_EQ_ARROW	"=>>"
 %token AT_EXCL	"@!"
 %token DBL_PLUS	"++"
+%token DBL_MINUS "--"
 
 %type <string>	strs
 %type <string>	pass_by
@@ -1496,6 +1497,24 @@ increment: var_expression DBL_PLUS
 		json one = {
 			{"exp-type", "lit-int"},
 			{"val", 1}
+		};
+		LOC(one, @2);
+
+		json inc = {
+			{"stmt-type", "ope-asgn"},
+			{"dst-val", $1},
+			{"ope", "+" },
+			{"rval", one}
+		};
+
+		$$ = move(inc);
+		LOC($$, @$);
+	}
+	| var_expression DBL_MINUS
+	{
+		json one = {
+			{"exp-type", "lit-int"},
+			{"val", -1}
 		};
 		LOC(one, @2);
 
