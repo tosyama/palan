@@ -43,6 +43,8 @@ int yylex();
 %token EQ_ARROW
 %token DBL_EQ_ARROW
 %token AT_EXCL
+%token DBL_PLUS
+%token DBL_MINUS
 
 %right '='
 %left ARROW DBL_ARROW EQ_ARROW
@@ -188,6 +190,7 @@ semi_stmt: st_expression
 	| return_stmt
 	| break_stmt
 	| continue_stmt
+	| increment
 	;
 
 take_owner1: /* empty */
@@ -375,6 +378,10 @@ array_item: /* empty */
 const_def: KW_CONST const_names '=' expressions;
 const_names: ID
 	| const_names ',' ID
+	;
+
+increment: var_expression DBL_PLUS
+	| var_expression DBL_MINUS
 	;
 
 %%

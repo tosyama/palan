@@ -16,7 +16,6 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
-#include "../PlnConstants.h"
 #include "../PlnTreeBuildHelper.h"
 
 using namespace std;

@@ -598,6 +598,11 @@ void asmOptimize(vector<PlnOpeCode> &opecodes)
 					opec->src = opec->dst;
 					opec->dst = NULL;
 					delete src;
+				} else if (i==-1) {
+					opec->mne = DECQ;
+					opec->src = opec->dst;
+					opec->dst = NULL;
+					delete src;
 				}
 			}
 		} else if (opec->mne == SUBQ) {

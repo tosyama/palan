@@ -161,7 +161,7 @@ I will finish the explanation of the quick sort program so far. How was the prog
 The Palan compiler pac works on the following environment.
 - CPU: X86-64 Intel base CPU
 - Memory: 2GB
-- OS: Ubuntu 14.04.5 LTS (64bit) or later (18.04.1 LTS) 
+- OS: Ubuntu 16.04.5 LTS (64bit) or later (18.04.1 LTS) 
 - Library: g++ (gcc 5.5.0/as/ld) or later(gcc 7.3.0), libboost-program-options
 
 # Installation

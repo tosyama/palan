@@ -1,38 +1,45 @@
 ccall printf(...);
-func as_is(int64 a, int32 b)
-	-> int32 b, int64 a
-{
-}
 
-// func as_is2(int64 a, int32 b) -> int64 a, int32 b
-// {
-// 	a + 1 -> a;
-// 	a + b -> b;
-// }
+// i = 0;
+// i++;
 // 
-// func as_is3(int64 a, int32 b) -> int64 a, int32 b
-// {
-// 	return 56, (a+2 -> a);
-// }
+// a = [1,2,3];
+// @!int16 x = a[2]; // @a[2] -> x;
+// @!int16 xx = a[2]; // @a[2] -> x;
+// 5 -> x;
+// x++; // (x) + 1 -> (x)
+// 10 + x -> x;
 // 
-// func as_is4(int64 a, int32 b) -> int64 a, int32 b
-// {
-// 	56->a;
-// 	return a, (a+2 -> a);
-// }
+// a[1]++;
 // 
-// func callsome()
-// {
-// 	as_is(3, 5);	
-// }
+// printf("%d", a[2]);
+// //z = x; // x -> @!int64 z;
+// // int64 y = x; // (x) -> y;
 // 
-int32 bb, int64 aa = as_is(64, 32);
-printf("%d %d", aa, bb);
-// aa, bb -> as_is2() -> aa, bb;
-// printf(" %d %d", aa, bb);
-// as_is3(64, 32) -> aa, bb;
-// printf(" %d %d", aa, bb);
-// as_is4(64, 32) -> aa, bb;
-// printf(" %d %d", aa, bb);
-// 
-// callsome();
+// @![3]int64 xa = a; // ref of a -> x;
+// // za = xa; // xa -> @![3]int64 z
+
+int64 i = 0;
+@int64 ix = i;
+// @int16 ix = i;	// NG o
+// @int64 ix = i+1; // NG o
+
+// 12 -> ix;	//: NG o
+//@int16 ii = ix;	// NG o
+
+// @int64 ix2 = ix;
+
+//(i++);	// NG
+//(i*2)++;	// NG o
+
+[3]int64 a = [1,2,3];
+// a++;	// NG
+
+B b = [1];
+// b++; // NG
+// b.b++;
+
+type B {
+	int64 b;
+};
+

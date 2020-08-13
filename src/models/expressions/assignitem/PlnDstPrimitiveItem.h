@@ -5,7 +5,7 @@
 ///         Refernce copy.
 ///
 /// @file	PlnDstPrimitiveItem.h
-/// @copyright	2018 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 class PlnDstPrimitiveItem : public PlnDstItem {
 	PlnExpression *dst_ex;
@@ -28,12 +28,21 @@ public:
 	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo &si, PlnExpression *src_ex) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
 		if (place == NULL) {
+			int val_ind = src_ex->data_places.size();
 			src_ex->data_places.push_back(dst_dp);
+			if (src_ex->getDataType(val_ind) != DT_OBJECT_REF) {
+				// DT_SINT/DT_UINT/DT_FLOAT
+				if (dst_dp->data_type == DT_OBJECT_REF) {
+					auto allocmode = src_ex->values[0].inf.var->var_type->mode[ALLOC_MD];
+					if (allocmode != 'r') {
+						dst_dp->load_address = true;
+					}
+				}
+			}
 
 		} else {
 			if (src_ex->type == ET_VALUE) {
 				BOOST_ASSERT(src_ex->data_places.size() == 0);
-				PlnValue v = src_ex->values[0];
 			}
 
 			if (dst_ex->type == ET_VALUE) {

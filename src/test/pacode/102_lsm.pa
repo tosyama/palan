@@ -18,7 +18,7 @@ func lsm([N]flo64 x, y) -> flo64 a0, a1
 		a02 + y[i] -> a02;
 		a11 + x[i]*x[i] -> a11;
 		a12 + x[i]*y[i] -> a12;
-		i+1 -> i;
+		i++;
 	}
 
 	(a02*a11-a01*a12) / (a00*a11-a01*a01) -> a0;

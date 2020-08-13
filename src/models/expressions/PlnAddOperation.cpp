@@ -4,7 +4,7 @@
 /// e.g.) a + b / a - b
 ///
 /// @file	PlnAddOperation.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -13,6 +13,8 @@
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
 #include "../PlnType.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 #define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
 	union {int64_t i; uint64_t u; double d;} ex##val; \
@@ -31,6 +33,14 @@
 // PlnAddOperation
 PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 {
+	if (l->getDataType() == DT_OBJECT_REF || r->getDataType() == DT_OBJECT_REF) {
+		auto exp = (l->getDataType() == DT_OBJECT_REF) ? l : r;
+		string tname = exp->values[0].getVarType()->typeinf->name;
+		PlnCompileError err(E_CantUseOperatorHere, tname);
+		err.loc = exp->loc;
+		throw err;
+	}
+
 	CREATE_CHECK_FLAG(l);
 	CREATE_CHECK_FLAG(r);
 

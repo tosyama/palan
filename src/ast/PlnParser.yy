@@ -84,6 +84,8 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token EQ_ARROW	"=>"
 %token DBL_EQ_ARROW	"=>>"
 %token AT_EXCL	"@!"
+%token DBL_PLUS	"++"
+%token DBL_MINUS "--"
 
 %type <string>	strs
 %type <string>	pass_by
@@ -105,6 +107,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %type <json>	dst_val var_expression
 %type <json>	array_item
 %type <json>	array_val /* internal data {name,items,loc} */
+%type <json>	increment
 %type <vector<string>>	const_names
 %type <vector<json>>	ids array_vals var_affixes	/* internal data {name,items,loc} array */
 %type <vector<json>>	var_affixes_arr var_affixes_ref /* internal data {name,items,loc} structure */
@@ -561,6 +564,10 @@ semi_stmt: st_expression
 		$$ = move($1);
 	}
 	| continue_stmt 
+	{
+		$$ = move($1);
+	}
+	| increment 
 	{
 		$$ = move($1);
 	}
@@ -1485,6 +1492,43 @@ const_names: ID
 	}
 	;
 
+increment: var_expression DBL_PLUS
+	{
+		json one = {
+			{"exp-type", "lit-int"},
+			{"val", 1}
+		};
+		LOC(one, @2);
+
+		json inc = {
+			{"stmt-type", "ope-asgn"},
+			{"dst-val", $1},
+			{"ope", "+" },
+			{"rval", one}
+		};
+
+		$$ = move(inc);
+		LOC($$, @$);
+	}
+	| var_expression DBL_MINUS
+	{
+		json one = {
+			{"exp-type", "lit-int"},
+			{"val", -1}
+		};
+		LOC(one, @2);
+
+		json inc = {
+			{"stmt-type", "ope-asgn"},
+			{"dst-val", $1},
+			{"ope", "+" },
+			{"rval", one}
+		};
+
+		$$ = move(inc);
+		LOC($$, @$);
+	}
+	;
 %%
 
 namespace palan 

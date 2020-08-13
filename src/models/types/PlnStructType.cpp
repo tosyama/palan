@@ -1,7 +1,7 @@
 /// Structure type class definition.
 ///
 /// @file	PlnStructType.cpp
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnModel.h"
@@ -66,7 +66,6 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-//	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_COPY, NULL);
 	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_VAR_COPY, NULL);
 	f->parent = parent_block;
 

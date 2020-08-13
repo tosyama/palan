@@ -84,6 +84,26 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					// Compatibility is assured at adjustTypes().
 					BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
 
+					// Validation of referece var
+					if (dst_type->mode[ALLOC_MD] == 'r') {
+						int val_type = ex->values[i].type;
+						if (!(val_type == VL_LIT_ARRAY || val_type == VL_LIT_STR || val_type == VL_VAR)
+								&& (src_type->mode[ALLOC_MD] != 'r')) {
+							// e.g.) @int64 a = (b + 2);	// not in memory.
+							PlnCompileError err(E_CantUseNonMemoryValue, vars[var_i].inf.var->name);
+							err.loc = ex->loc;
+							throw err;
+
+							BOOST_ASSERT(false);
+						}
+						if (val_type == VL_VAR) {
+							PlnVariable* container = ex->values[i].inf.var->container;
+							if (!container)
+								container = ex->values[i].inf.var;
+							vars[var_i].inf.var->container = container;
+						}
+					}
+
 					// Note: vars'asgn_type is possible to update in this call. 
 					auto var_ex = createVarExpression(vars[var_i], ex, i);
 
@@ -141,7 +161,13 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto vi: varinits) {
 		PlnVariable *v = vi.var;
 		auto t = v->var_type;
-		v->place = da.allocData(t->size(), t->data_type());
+		BOOST_ASSERT(t->mode[ALLOC_MD] != 'i');
+		if (t->mode[ALLOC_MD] == 's') {
+			v->place = da.allocData(t->size(), t->data_type());
+		} else {	// h: Heap or r: Refernce
+			v->place = da.allocData(8, DT_OBJECT_REF);
+		}
+
 		v->place->comment = &v->name;
 		if (v->var_type->mode[IDENTITY_MD]=='m') {
 			si.push_owner_var(v);

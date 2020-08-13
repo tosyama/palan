@@ -440,7 +440,6 @@ bool PlnX86_64DataAllocator::tryMoveDp2Reg(PlnDataPlace* dp, int regid)
 	BOOST_ASSERT(rdp);
 
 	bool is_overlapped = false;
-	PlnDataPlace* insert_dp = rdp;
 
 	while(rdp) {
 		if (dp->alloc_step <= rdp->release_step
@@ -545,6 +544,10 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 				max_score_index = i;
 				max_score = score;
 			}
+		}
+
+		if (max_score == 0) { // Not exist dp it can be on register.
+			return;
 		}
 
 		// select register

@@ -322,19 +322,6 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 		item_name = "@" + item_name;
 	
 	return arr_name + item_name;
-
-	/*PlnVarType *it = item_type;
-	while (it->typeinf->type == TP_FIXED_ARRAY) {
-		it = static_cast<PlnFixedArrayType*>(it->typeinf)->item_type;
-	}
-	const string& item_name = it->name();
-	string item_suffix = item_type->name().substr(item_name.size());
-
-	if (item_type->mode == "rir")
-		item_suffix += "@";
-
-	return item_name + arr_name + item_suffix;
-	*/
 }
 
 PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src)
@@ -342,6 +329,10 @@ PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src)
 	if (this == src->typeinf)
 		return TC_SAME;
 	
+	// reference should be same type.
+	if (mode[ALLOC_MD] == 'r')
+		return TC_CANT_CONV;
+
 	for (auto ci: conv_inf)
 		if (ci.type == src->typeinf)
 			return ci.capacity;
@@ -373,7 +364,11 @@ PlnTypeConvCap PlnType::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
 
 PlnVarType* PlnType::getVarType(const string& mode)
 {
-	const string& search_mode = mode == "---" ? default_mode : mode;
+	string search_mode = mode;
+	if (search_mode[0] == '-') search_mode[0] = default_mode[0];
+	if (search_mode[1] == '-') search_mode[1] = default_mode[1];
+	if (search_mode[2] == '-') search_mode[2] = default_mode[2];
+
 	for (PlnVarType* vt: var_types) {
 		if (vt->mode == search_mode)
 			return vt;

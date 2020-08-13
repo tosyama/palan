@@ -18,9 +18,9 @@ func initBoard([Y,X]byte >>board)
 		x = 0;
 		while x < X {
 			0->board[y, x];
-			x+1->x;
+			x++;
 		}
-		y+1->y;
+		y++;
 	}
 }
 
@@ -33,7 +33,7 @@ func queen([Y,X]byte >>board, int32 x, y)
 		xx = x-1;
 		while xx >= 0 {
 			if board[y, xx] { return }
-			xx-1 -> xx;
+			xx--;
 		}
 	}
 
@@ -42,7 +42,8 @@ func queen([Y,X]byte >>board, int32 x, y)
 		yy = y-1;
 		while xx >= 0 && yy >= 0 {
 			if board[yy, xx] { return }
-			xx-1, yy-1 -> xx, yy;
+			xx--;
+			yy--;
 		}
 	}
 
@@ -51,14 +52,15 @@ func queen([Y,X]byte >>board, int32 x, y)
 		yy = y+1;
 		while xx >= 0 && yy < 8 {
 			if board[yy, xx] { return }
-			xx-1, yy+1 -> xx, yy;
+			xx--;
+			yy++;
 		}
 	}
 
 	if x >= 0 { 1 -> board[y, x] }
 
 	if x == X-1 {
-		count+1 -> count;
+		count++;
 	} else {
 		yy = 0;
 		while yy < Y {
@@ -66,7 +68,7 @@ func queen([Y,X]byte >>board, int32 x, y)
 			board ->> queen(x+1, yy)
 				->> board,  cnt;
 			cnt + count -> count;
-			yy+1 -> yy;
+			yy++;
 		}
 	}
 

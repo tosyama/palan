@@ -98,7 +98,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		return new PlnAssignWorkValsItem(ex);
 	}
 
-	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER) {
+	if (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER || ex->type == ET_REFVALUE) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
@@ -186,6 +186,11 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 			} else {
 				BOOST_ASSERT(false);
 			}
+		}
+	} else if (ex->type == ET_REFVALUE) {
+		int dt = ex->values[0].getVarType()->data_type();
+		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
+			di = new PlnDstPrimitiveItem(ex);
 		}
 	}
 
