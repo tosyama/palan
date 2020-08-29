@@ -146,7 +146,7 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8)) {
 				sizes.push_back(e->values[0].inf.uintValue);
 			} else {
-				BOOST_ASSERT(false);
+				sizes.push_back(0u);
 			}
 		}
 		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);

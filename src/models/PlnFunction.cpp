@@ -163,7 +163,7 @@ vector<PlnDataPlace*> PlnFunction::createRetValDps()
 {
 	vector<PlnDataPlace*> dps;
 	for (auto& rt: return_vals) {
-		PlnDataPlace* dp = new PlnDataPlace(8, rt.local_var->var_type->data_type());
+		PlnDataPlace* dp = new PlnDataPlace(rt.local_var->var_type->size(), rt.local_var->var_type->data_type());
 		dp->status = DS_READY_ASSIGN;
 		dp->data.bytes.parent_dp = NULL;
 		dps.push_back(dp);

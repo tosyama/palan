@@ -741,18 +741,20 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 4. xmm4f->xmm8f: CVTSS2SD
 		// 5. xmm4f->mem8f: CVTSS2SD(X11) + MOVSD
 		// 6. xmm4f->reg8f: CVTSS2SD(X11) + MOVQ
-		case SXMMF|S4 + DXMMF|D4:
+		case SXMMF|S4 + DXMMF|D4:	// 1
 			BOOST_ASSERT(false);
-		case SXMMF|S4 + DMEMF|D4:
+		case SXMMF|S4 + DMEMF|D4:	// 2
 			genInfos[0] = {MOVSS};
 			return 1;
-		case SXMMF|S4 + DREGF|D4:
+		case SXMMF|S4 + DREGF|D4:	// 3
+			genInfos[0] = {MOVQ};
+			return 1;
+		case SXMMF|S4 + DXMMF|D8:	// 4
+			genInfos[0] = {CVTSS2SD};
+			return 1;
+		case SXMMF|S4 + DMEMF|D8:	// 5
 			BOOST_ASSERT(false);
-		case SXMMF|S4 + DXMMF|D8:
-			BOOST_ASSERT(false);
-		case SXMMF|S4 + DMEMF|D8:
-			BOOST_ASSERT(false);
-		case SXMMF|S4 + DREGF|D8:
+		case SXMMF|S4 + DREGF|D8:	// 6
 			BOOST_ASSERT(false);
 
 		// 1. mem8f->xmm8f: MOVSD

@@ -21,7 +21,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 
 	// pac -v
 	REQUIRE(exec_pac("", "-v", "", "") == "success");
-	REQUIRE(outstr("log") == "Palan compiler 0.3.0a\n");
+	REQUIRE(outstr("log") == "Palan compiler 0.4.0a\n");
 	REQUIRE(errstr("log") == "");
 
 	// pac -S <input-file>"
@@ -58,7 +58,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 	  							"bbaa 99 2.34 7\n"
 	    						"2:This,is\n"
 								"infunc\n"
-		  						"smy0.33 abc 1234");
+		  						"smy0.33 1.00 abc 1234");
 
 	// pac <input-file>
 	testcode = "100_qsort";

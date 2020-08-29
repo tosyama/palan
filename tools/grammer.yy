@@ -141,6 +141,7 @@ single_return: /* empty */
 
 at_lib: /* empty */
 	| ':' ID
+	| ':' STR
 	;
 
 function_definition: palan_function_definition

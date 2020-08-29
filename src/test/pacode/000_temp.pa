@@ -1,45 +1,10 @@
 ccall printf(...);
+ccall tan(flo64 x) -> flo64;
+ccall tanf(flo32 x) -> flo32;
 
-// i = 0;
-// i++;
-// 
-// a = [1,2,3];
-// @!int16 x = a[2]; // @a[2] -> x;
-// @!int16 xx = a[2]; // @a[2] -> x;
-// 5 -> x;
-// x++; // (x) + 1 -> (x)
-// 10 + x -> x;
-// 
-// a[1]++;
-// 
-// printf("%d", a[2]);
-// //z = x; // x -> @!int64 z;
-// // int64 y = x; // (x) -> y;
-// 
-// @![3]int64 xa = a; // ref of a -> x;
-// // za = xa; // xa -> @![3]int64 z
+i = 1;
+[1]int32 aa;
 
-int64 i = 0;
-@int64 ix = i;
-// @int16 ix = i;	// NG o
-// @int64 ix = i+1; // NG o
-
-// 12 -> ix;	//: NG o
-//@int16 ii = ix;	// NG o
-
-// @int64 ix2 = ix;
-
-//(i++);	// NG
-//(i*2)++;	// NG o
-
-[3]int64 a = [1,2,3];
-// a++;	// NG
-
-B b = [1];
-// b++; // NG
-// b.b++;
-
-type B {
-	int64 b;
-};
-
+flo64 x1 = tan(3.14159265359/4);
+flo32 x2 = tanf(3.14159265359/4);
+// printf("%lf %f\n", x1, x2);

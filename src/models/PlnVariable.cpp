@@ -1,10 +1,10 @@
 /// Variable model class definition.
 ///
 /// PlnVariable model manage variable information
-/// such as type and momory allocation.
+/// such as type and memory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 

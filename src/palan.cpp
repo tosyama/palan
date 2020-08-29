@@ -48,7 +48,7 @@ const int PARAM_ERR = -1;
 /// Main function for palan compiler CUI.
 int main(int argc, char* argv[])
 {
-	const char* ver_str = "Palan compiler 0.3.0a";
+	const char* ver_str = "Palan compiler 0.4.0a";
 	bool show_asm = false;
 	bool do_asm = true;
 	bool do_link = true;
@@ -154,6 +154,7 @@ int main(int argc, char* argv[])
 
 	vector<string> files(vm["input-file"].as< vector<string> >());
 	vector<string> linklibs = {"c"};
+	vector<string> linkobjs = {};
 
 	for (string& fname: files) {
 		if (getExtention(fname) == "o") continue;
@@ -213,9 +214,22 @@ int main(int argc, char* argv[])
 				// read libraries;
 				if (j["ast"]["libs"].is_array()) {
 					for (json lib: j["ast"]["libs"]) {
-						auto it = find(linklibs.begin(), linklibs.end(), lib["name"]);
-						if (it == linklibs.end()) {
-							linklibs.push_back(lib["name"]);
+						string libname = lib["name"];
+						auto dotpos = libname.find_last_of(".");
+						string extension = (dotpos != string::npos) ?
+								libname.substr(dotpos, libname.size() - dotpos):
+								"";
+						if (extension == ".o") {
+							auto it = find(linkobjs.begin(), linkobjs.end(), libname);
+							if (it == linkobjs.end()) {
+								linkobjs.push_back(libname);
+							}
+
+						} else {
+							auto it = find(linklibs.begin(), linklibs.end(), libname);
+							if (it == linklibs.end()) {
+								linklibs.push_back(libname);
+							}
 						}
 					}
 				}
@@ -266,7 +280,7 @@ int main(int argc, char* argv[])
 	}
 
 	if (do_link) {
-		string flist = join(object_files, " ");
+		string flist = join(object_files, " ") + " " + join(linkobjs, " ");
 		if (!do_exec)
 			cout << "linking: " << out_file << endl;
 		string libs = "";
