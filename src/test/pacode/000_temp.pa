@@ -1,10 +1,62 @@
 ccall printf(...);
-ccall tan(flo64 x) -> flo64;
-ccall tanf(flo32 x) -> flo32;
 
-i = 1;
-[1]int32 aa;
+ccall fmaxf(flo32 x, y) -> flo32: m;
+ccall fminf(flo32 x, y) -> flo32;
 
-flo64 x1 = tan(3.14159265359/4);
-flo32 x2 = tanf(3.14159265359/4);
-// printf("%lf %f\n", x1, x2);
+type Vec3f {
+	flo32 x;
+	flo32 y;
+	flo32 z;
+};
+
+func neg(@Vec3f v) -> Vec3f ret
+{
+	-v.x -> ret.x;
+	-v.y -> ret.y;
+	-v.z -> ret.z;
+}
+
+func mul(@Vec3f l, @Vec3f r) -> flo32 ret
+{
+	l.x * r.x -> ret;
+	ret + l.y * r.y -> ret;
+	ret + l.z * r.z -> ret;
+}
+
+func refract(@Vec3f I, @Vec3f N, flo32 eta_t, flo32 eta_i = 1.0)
+	-> Vec3f ret
+{
+	flo32 cosi = -fmaxf(-1.0, fminf(1.0, mul(I, N)));
+	if cosi < 0 {
+	 	Vec3f nN <<= neg(N);
+	 	return refract(I, nN, eta_i, eta_t);	// if the ray comems from inside the object, swap the airt and the media
+	}
+
+	[1, 0, 0]->ret;
+
+}
+
+Vec3f I, N;
+refract(I,N,1.0,1.0);
+
+// ====
+
+// 
+// type obj {
+// 	// int64 x, y; //NG
+// 	int64 x;
+// 	int64 y;
+// };
+// 
+// // move work? => OK!
+// obj o = creObj();
+// 
+// calcObj(creObj());	// release work? => No! NG! block?
+// 
+// func creObj() -> obj { // no local? => OK!
+// 	obj o;
+// 	return o;
+// }
+// 
+// func calcObj(@obj o) {
+// }
