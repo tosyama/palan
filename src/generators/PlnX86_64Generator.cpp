@@ -186,6 +186,7 @@ int PlnX86_64Generator::registerConstData(vector<PlnRoData> &rodata)
 				}
 				if (matched) {
 					if (const_buf[i].id < 0) {
+						if (generated) continue;
 						const_buf[i].id = max_const_id;
 						max_const_id++;
 					}
