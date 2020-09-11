@@ -185,4 +185,8 @@ TEST_CASE("sample code compile test.", "[cui]")
 	testcode = "usesqlite";
 	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
 	REQUIRE(outfile(testcode + ".o") == "exists");
+
+	testcode = "raytracer";
+	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
+	REQUIRE(outfile(testcode + ".o") == "exists");
 }
