@@ -1,6 +1,6 @@
 ccall printf(...);
 
-ccall topen(@[?]byte name => TestDb tdb>>) -> int32;
+ccall topen(@[?]byte name => TestDb tdb>>) -> int32 : "capi4test.o";
 ccall topen2(@[?]byte name => int32 stat, TestDb tdb>>) -> int32;
 ccall tgetId(@TestDb tdb) -> int32;
 ccall tgetName(@TestDb tdb) -> @[?]byte;

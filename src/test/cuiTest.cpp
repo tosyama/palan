@@ -60,6 +60,11 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 								"infunc\n"
 		  						"smy0.33 1.00 abc 1234");
 
+	// object file loading
+	testcode = "032_ptrptr";
+	REQUIRE(exec_pac(testcode, "", "", "") == "success");
+	REQUIRE(outstr(testcode) == "test 1234 test2 123456");
+
 	// pac <input-file>
 	testcode = "100_qsort";
 	REQUIRE(exec_pac(testcode, "", "", "") == "success");
