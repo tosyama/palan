@@ -46,15 +46,17 @@ public:
 // FunctionCall: Function Arguments;
 class PlnFunctionCall : public PlnExpression
 {
-	vector<PlnArgument> arguments;
-	vector<PlnDataPlace*> ret_dps;
-	vector<PlnVariable*> free_vars;
-	vector<PlnExpression*> free_exs;
-	vector<PlnClone*> clones;
 
 public:
 	PlnFunction* function;
+
+	vector<PlnArgument> arguments;
 	vector<PlnDataPlace*> arg_dps;
+	vector<PlnDataPlace*> ret_dps;
+	vector<PlnVariable*> free_work_vars;
+	vector<PlnVariable*> free_vars;
+	vector<PlnExpression*> free_exs;
+	vector<PlnClone*> clones;
 
 	PlnFunctionCall(PlnFunction* f);
 	PlnFunctionCall(PlnFunction* f, vector<PlnArgument> &args);

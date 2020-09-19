@@ -223,7 +223,7 @@ void normalCaseTest()
 	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s234\n"
 						"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+15 -15");
-	CHECK(mcheck("mtrace030-2") == "+1 -1");
+	CHECK(mcheck("mtrace030-2") == "+2 -2");
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");

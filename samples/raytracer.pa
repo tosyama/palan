@@ -502,7 +502,7 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
 			dist_i -> distance;
 			Vec3f tmp = mulvf(dir, dist_i);
 			add(orig, tmp) -> hit;
-			sub(hit, sp.center) -> N;
+			sub(hit, sp.center) ->> N;
 			N ->> normalize() ->> N;
 			sp.material -> material;
 		}
@@ -515,7 +515,8 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
 		add(pt, orig) -> pt;
 		if d>0 && fabsf(pt.x)<10 && pt.z<-10 && pt.z>-30 && d < distance {
 			Vec3f n = [0, 1, 0];
-			Material board_material = [1.0, [1.0, 0.0, 0.0, 0.0], [0.3, 0.2, 0.1], 0.0];
+			[1.0, [1.0, 0.0, 0.0, 0.0], [0.3, 0.2, 0.1], 0.0]
+				-> material;
 			@Color3f c2 = [0.3, 0.3, 0.3];
 			d -> distance;
 			pt -> hit;
@@ -523,9 +524,8 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
 			int32 x = (0.5*pt.x+1000);
 			int32 z = (0.5*pt.z);
 			if (x+z)%2 {
-				c2->board_material.diffuse_color;
+				c2->material.diffuse_color;
 			}
-			board_material -> material;
 		}
 	}
 	(distance < 1000.0) -> is_intersect;

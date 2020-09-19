@@ -70,6 +70,8 @@ mtrace();
 	bb.b2 -> b2;
 	bb.d -> d;
 	bb.f -> f;
+
+	calcB(createB());
 }
 muntrace();
 
@@ -79,3 +81,14 @@ func refread(@[3]int32 arr, int32 x) -> int32 i
 {
 	arr[x] -> i;
 }
+
+func createB() -> B b
+{
+	2->b.b1;
+}
+
+func calcB(@B b)
+{
+	1->b.b1;
+}
+

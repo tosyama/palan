@@ -79,14 +79,15 @@ void PlnFunctionCall::loadArgDps(PlnDataAllocator& da)
 	da.setArgDps(f->type, arg_dps, false);
 }
 
-static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
-	PlnFunction*f, vector<PlnArgument> &args, vector<PlnClone*> &clones)
+static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	auto f = fcall->function;
+	auto& clones = fcall->clones;
 	auto arg_dps = f->createArgDps();
 
 	if (f->has_va_arg) {
 		// Add variable arguments data types.
-		for (auto &arg: args) {
+		for (auto &arg: fcall->arguments) {
 			int i=0;
 			for (auto& inf: arg.inf) {
 				if (inf.param->var->name == "...") {
@@ -109,7 +110,7 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 	da.setArgDps(f->type, arg_dps, false);
 
 	int j = 0;
-	for (auto &arg: args) {
+	for (auto &arg: fcall->arguments) {
 		int vi = 0;
 		for (auto &v: arg.exp->values) {
 			PlnArgValueInf& argval = arg.inf[vi];
@@ -133,6 +134,20 @@ static vector<PlnDataPlace*> loadArgs(PlnDataAllocator& da, PlnScopeInfo& si,
 				}
 				clone = new PlnClone(da, arg.exp, argval.param->var->var_type, false);
 
+			} else if (argval.param->iomode == PIO_INPUT
+					&& argval.param->var->var_type->mode[ALLOC_MD]=='r'
+					&& argval.param->passby == FPM_VAR_COPY) {
+				// reference paramater
+				if (v.type == VL_WORK) { // e.g. return value of function
+					BOOST_ASSERT(v.inf.wk_type->mode[ALLOC_MD]=='h');
+					// needs to free after call func.
+					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "free_var");
+					da.pushSrc(tmp_var->place, arg_dps[dp_i], false);
+					PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
+
+					fcall->free_work_vars.push_back(tmp_var);
+					fcall->free_exs.push_back(free_ex);
+				}
 			} else {
 				BOOST_ASSERT(argval.param->passby != FPM_OBJ_CLONE);
 			}
@@ -195,10 +210,13 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	int func_type = function->type;
 
 	if (arguments.size()) 
-		arg_dps = loadArgs(da, si, function, arguments, clones);
+		arg_dps = loadArgs(this, da, si);
 
 	for (auto dp: arg_dps)
 		da.popSrc(dp);
+
+	for (auto free_work_var: free_work_vars)
+		da.popSrc(free_work_var->place);
 
 	da.funcCalled(arg_dps, func_type, function->never_return);
 
@@ -240,6 +258,9 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	for (auto free_ex: free_exs)
 		free_ex->finish(da, si);
 
+	for (auto free_work_var: free_work_vars)
+		da.releaseDp(free_work_var->place);
+
 	for (auto free_var: free_vars)
 		da.releaseDp(free_var->place);
 
@@ -268,6 +289,9 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			vector<int> arg_dtypes;
 			for (auto dp: arg_dps)
 				arg_dtypes.push_back(dp->data_type);
+
+			for (auto free_work_var: free_work_vars)
+				g.genLoadDp(free_work_var->place);
 
 			g.genCCall(function->asm_name, arg_dtypes, function->has_va_arg);
 
