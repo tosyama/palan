@@ -787,6 +787,24 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 			ret_vals.push_back(buildExpression(ret_val, scope));
 		}
 	
+	PlnFunction* f = CUR_FUNC;
+	int ti = 0;
+	int ri = 0;
+	for (int ri=0; ri<ret_vals.size(); ri++) {
+		vector<PlnVarType*> types;
+		PlnExpression* e = ret_vals[ri];
+		for (int i=0; i<e->values.size(); i++) {
+			if (ti >= f->return_vals.size()) {
+				PlnCompileError err(E_InvalidRetValues);
+				err.loc = e->loc;
+				throw err;
+			}
+			types.push_back(f->return_vals[ti].var_type);
+			ti++;
+		}
+		ret_vals[ri] = e->adjustTypes(types);
+	}
+	
 	try {
 		return new PlnReturnStmt(ret_vals, CUR_BLOCK);
 

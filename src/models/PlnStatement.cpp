@@ -16,6 +16,7 @@
 #include "../PlnScopeStack.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
+#include "expressions/PlnClone.h"
 
 using std::endl;
 
@@ -125,7 +126,7 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 				++i;
 			}
 		}
-
+ 
 		if (i<num_ret) {
 			throw PlnCompileError(E_InvalidRetValues);
 		}
@@ -149,13 +150,29 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	vector<PlnVariable*> ret_vars;
 	
 	int i = 0;
-	for (auto e: expressions) {
+	int j = 0;
+	for (int j=0; j<expressions.size(); j++) {
+		PlnExpression* e = expressions[j];
+		PlnClone* clone = NULL;
 		for (auto &v: e->values) {
-			if (i<dps.size())
-				e->data_places.push_back(dps[i]);
+			if (i<dps.size()) {
+				if (v.type == VL_LIT_ARRAY) {
+					BOOST_ASSERT(e->values.size() == 1);
+					clone = new PlnClone(da, e, e->values[0].getVarType(), false);
+					clone->data_places.push_back(dps[i]);
+
+				} else {
+					e->data_places.push_back(dps[i]);
+				}
+			}
 			++i;
 		}
+		clones.push_back(clone);
+		if (clone)
+			clone->finishAlloc(da, si);
 		e->finish(da, si);
+		if (clone)
+			clone->finish(da, si);
 
 		// ret_vars is just used checking requirement of free varialbes.
 		if (e->type == ET_VALUE && e->values[0].type == VL_VAR)
@@ -194,8 +211,15 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnReturnStmt::gen(PlnGenerator& g)
 {
-	for (auto e: expressions)
+	int i=0;
+	for (auto e: expressions) {
+		if (clones[i])
+			clones[i]->genAlloc(g);
 		e->gen(g);
+		if (clones[i])
+			clones[i]->gen(g);
+		i++;
+	}
 
 	PlnDataPlace* adp = NULL;
 

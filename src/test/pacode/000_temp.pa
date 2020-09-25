@@ -31,11 +31,13 @@ func aafunc(@[?][?]int32 arrarr)
 {
 }
 
+retlit();
+
 // NG! Abort
-// func retlit() -> [3]int32
-// {
-//	return [1,2,3];
-// }
+func retlit() -> [3]int32
+{
+	return [1,2,3];
+}
 
 
 // NG! Abort

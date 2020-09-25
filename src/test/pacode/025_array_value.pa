@@ -79,7 +79,6 @@ printf(" %d %d %d", arr3[1][0,0], arr3[1][0,2], arr3[1][1,2]);
 printf("\n");
 [prnt(i+2), 3, prnt(i)];
 
-
 func prnt([3]int64 a)
 {
 	printf("%d %d,", a[0],a[2]);
@@ -99,4 +98,14 @@ prntref([1,2,3]);
 func prntref(@[3]int64 a)
 {
 	printf("%d %d", a[0],a[2]);
+}
+
+{
+	arr4 = retlit();
+	printf(" %d", arr4[1]);
+}
+
+func retlit() -> [3]int32
+{
+	return [1,2,3];
 }

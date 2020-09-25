@@ -38,11 +38,13 @@ public:
 	virtual void gen(PlnGenerator& g);
 };
 
+class PlnClone;
 class PlnReturnStmt : public PlnStatement
 {
 public:
 	PlnFunction *function;
 	vector<PlnExpression*> expressions;
+	vector<PlnClone*> clones;
 	vector<PlnExpression*> free_vars;
 
 	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);	// throw PlnCompileError
