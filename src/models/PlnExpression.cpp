@@ -120,7 +120,15 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getROStrArrayDp(*inf.strValue);
 
 		case VL_LIT_ARRAY:
-			return inf.arrValue->getROArrayDp(da);
+			{
+				PlnType* type = getVarType()->typeinf;
+				if (type->type == TP_FIXED_ARRAY) {
+					return inf.arrValue->getROArrayDp(da);
+				} else {
+					BOOST_ASSERT(type->type == TP_STRUCT);
+					return inf.arrValue->getROStructDp(da);
+				}
+			}
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;

@@ -144,7 +144,7 @@ PlnReturnStmt::~PlnReturnStmt()
 void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(function->type == FT_PLN);
-	vector<PlnDataPlace*> dps = function->createRetValDps();
+	dps = function->createRetValDps();
 	da.setRetValDps(function->type, dps, true);
 
 	vector<PlnVariable*> ret_vars;
@@ -226,14 +226,12 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 	for (auto free_var: free_vars)
 		free_var->gen(g);
 
-	for (auto e: expressions)
-		for (auto dp: e->data_places)
-				g.genLoadDp(dp, false);
-				
-	for (auto e: expressions)
-		for (auto dp: e->data_places)
-			g.genSaveDp(dp);
-	
+	for(auto dp: dps)
+		g.genLoadDp(dp, false);
+
+	for(auto dp: dps)
+		g.genSaveDp(dp);
+
 	g.genReturn();
 }
 

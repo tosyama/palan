@@ -212,7 +212,7 @@ void normalCaseTest()
 								"32 1 64 1.23 2112\n"
 								"32 1 64 5.55 5 1\n"
 								"10 21 99 24.40 3.44");
-	CHECK(mcheck("mtrace028") == "+136 -136");
+	CHECK(mcheck("mtrace028") == "+137 -137");
 
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");

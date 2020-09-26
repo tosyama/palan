@@ -45,6 +45,7 @@ public:
 	PlnFunction *function;
 	vector<PlnExpression*> expressions;
 	vector<PlnClone*> clones;
+	vector<PlnDataPlace*> dps;
 	vector<PlnExpression*> free_vars;
 
 	PlnReturnStmt(vector<PlnExpression*> &retexp, PlnBlock* parent);	// throw PlnCompileError

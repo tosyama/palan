@@ -32,17 +32,17 @@ func aafunc(@[?][?]int32 arrarr)
 }
 
 retlit();
+retobj();
 
-// NG! Abort
-func retlit() -> [3]int32
+func retlit() -> [3]int32 arr
 {
 	return [1,2,3];
 }
 
 
 // NG! Abort
-// func retobj() -> obj o
-// {
-//	return [1,2];
-// }
+func retobj() -> obj
+{
+	return [1,2];
+}
 
