@@ -102,10 +102,16 @@ func prntref(@[3]int64 a)
 
 {
 	arr4 = retlit();
-	printf(" %d", arr4[1]);
+	arr5 = retlit2();
+	printf(" %d %d", arr4[1], arr5[2]);
 }
 
 func retlit() -> [3]int32
+{
+	return [1,2,3];
+}
+
+func retlit2() -> [3]int32 a
 {
 	return [1,2,3];
 }

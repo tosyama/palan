@@ -17,6 +17,7 @@
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 #include "expressions/PlnClone.h"
+#include "expressions/PlnAssignment.h"
 
 using std::endl;
 
@@ -156,10 +157,24 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		PlnClone* clone = NULL;
 		for (auto &v: e->values) {
 			if (i<dps.size()) {
-				if (v.type == VL_LIT_ARRAY) {
+				if (v.type == VL_LIT_ARRAY) { // e.g.) return [1, 2];
 					BOOST_ASSERT(e->values.size() == 1);
-					clone = new PlnClone(da, e, e->values[0].getVarType(), false);
-					clone->data_places.push_back(dps[i]);
+					if (function->return_vals[i].local_var->name == "") { // e.g) func fname() -> ObjType {}
+						clone = new PlnClone(da, e, e->values[0].getVarType(), false);
+						clone->data_places.push_back(dps[i]);
+
+					} else { // e.g) func fname() -> ObjType varname {}
+						auto var_ex = new PlnExpression(function->return_vals[i].local_var);
+						var_ex->values[0].asgn_type = ASGN_COPY;
+
+						vector<PlnExpression*> dsts = { var_ex };
+						vector<PlnExpression*> exps = { e };
+						PlnAssignment* asgn_ex = new PlnAssignment(dsts, exps);
+
+						expressions[j] = asgn_ex;
+						asgn_ex->data_places.push_back(dps[i]);
+						ret_vars.push_back(var_ex->values[0].inf.var);
+					}
 
 				} else {
 					e->data_places.push_back(dps[i]);
@@ -167,6 +182,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			}
 			++i;
 		}
+		e = expressions[j];
 		clones.push_back(clone);
 		if (clone)
 			clone->finishAlloc(da, si);

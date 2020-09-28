@@ -195,6 +195,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	BOOST_ASSERT(data_places.size() <= 1);
 	if (data_places.size())
 		da.pushSrc(data_places[0], values[0].getDataPlace(da));
 }

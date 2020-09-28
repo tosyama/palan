@@ -188,7 +188,7 @@ void normalCaseTest()
 								"1423 162311 113142\n"
 								"11 13,11 13,22.2,4 3,11 11,11.2,\n"
 								"11 12 13 4 2 1 6\n"
-								"3 1 1 3 2");
+								"3 1 1 3 2 3");
 
 	testcode = "026_arrarr_value";
 	REQUIRE(build(testcode) == "success");

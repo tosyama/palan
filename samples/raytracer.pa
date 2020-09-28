@@ -12,8 +12,6 @@
 // jpeg_compress_struct cinfo;
 // jpeg_error_mgr err;
 // err -> cinfo.err; // NG. it become copy.
-// --
-//	return [1,0,0]; -> Abort
 //
  
 // stdio.h

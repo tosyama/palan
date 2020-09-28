@@ -1,7 +1,7 @@
 /// PlnAssignment model class declaration.
 ///
 /// @file	PlnAssignment.h
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include "../PlnExpression.h"
 

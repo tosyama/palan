@@ -5,10 +5,9 @@ type obj {
 	int64 y;
 };
 
-// move work? => OK!
 obj o = creObj();
 {
-	calcObj(creObj());	// NG! only top? in block?
+	calcObj(creObj());
 }
 
 [10][2]int32 arrarr;
@@ -39,9 +38,7 @@ func retlit() -> [3]int32 arr
 	return [1,2,3];
 }
 
-
-// NG! Abort
-func retobj() -> obj
+func retobj() -> obj o
 {
 	return [1,2];
 }
