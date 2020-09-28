@@ -112,20 +112,8 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 		int i=0;
 		int num_ret = function->return_vals.size();
 		for (auto e: expressions) {
-			if (i >= num_ret) {
-				throw PlnCompileError(E_InvalidRetValues);
-			}
-			for (auto&v: e->values) {
-				if (i < num_ret) {
-					PlnVarType* t = function->return_vals[i].local_var->var_type;
-					if (t->canCopyFrom(v.getVarType()) == TC_CANT_CONV) {
-						PlnCompileError err(E_InvalidRetValues);
-						err.loc = e->loc;
-						throw err;
-					}
-				}
-				++i;
-			}
+			BOOST_ASSERT(i<num_ret);
+			i += e->values.size();
 		}
  
 		if (i<num_ret) {
