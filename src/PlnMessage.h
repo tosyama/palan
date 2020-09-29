@@ -45,6 +45,7 @@ enum PlnErrCode {
 	E_UnexpectedToken,	// token
 	E_CantUseDynamicVal,	// var name
 	E_CantUseNonMemoryValue,	// var name
+	E_OnlyAllowedIntegerHere, // none
 
 	E_InvalidAST,	// source name, line
 

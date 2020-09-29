@@ -253,7 +253,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	normalCaseTest();
 }
 
-// Error file ID: 500-592
+// Error file ID: 500-599
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -336,8 +336,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "525_undeftype_err";
 	REQUIRE(build(testcode) == "0:2-2 Type 'int' was not declared in this scope.");
 
-	// testcode = "526_arrlit_noint_err";
-	// REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
+	testcode = "526_arraysize_noint_err";
+	REQUIRE(build(testcode) == "0:2-2 Only allowed integer type here.");
 
 	testcode = "531_func_retval_err";
 	REQUIRE(build(testcode) == "0:4-4 Variable name 'b' already defined.");
