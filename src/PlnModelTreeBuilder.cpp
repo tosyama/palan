@@ -136,6 +136,13 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 		vector<int> sizes;
 		for (json& i: vt["sizes"]) {
 			if (i["exp-type"]=="token" && i["info"]=="?") {
+				// 0 size is only allowed first. => OK: [?,1,2]int32, NG: [1,?,3]int32
+				if (sizes.size()) {
+					PlnCompileError err(E_OnlyAllowedAnySizeAtFirst);
+					setLoc(&err, i);
+					throw err;
+				}
+
 				sizes.push_back(0u);
 				continue;
 			}

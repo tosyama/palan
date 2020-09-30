@@ -88,6 +88,8 @@ string PlnMessage::getErr(PlnErrCode err_code, string arg1, string arg2)
 			f = "Can not assign non memory value to '%1%'."; break;
 		case E_OnlyAllowedIntegerHere:
 			f = "Only allowed integer type here.";	break;
+		case E_OnlyAllowedAnySizeAtFirst:
+			f = "Only allowed undefined size at first size of array."; break;
 
 		case E_InvalidAST:
 			f = "Detected invalid AST at %1%:%2%."; break;

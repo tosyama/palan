@@ -491,6 +491,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "598_increment_err2";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for '[3]int64'.");
+
+	testcode = "599_anysize_arr_err";
+	REQUIRE(build(testcode) == "0:3-3 Only allowed undefined size at first size of array.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

@@ -45,8 +45,8 @@ enum PlnErrCode {
 	E_UnexpectedToken,	// token
 	E_CantUseDynamicVal,	// var name
 	E_CantUseNonMemoryValue,	// var name
-	E_OnlyAllowedIntegerHere, // none
-
+	E_OnlyAllowedIntegerHere,	// none
+	E_OnlyAllowedAnySizeAtFirst,	// none
 	E_InvalidAST,	// source name, line
 
 	// CUI errors

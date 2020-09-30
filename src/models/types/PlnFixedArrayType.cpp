@@ -1,7 +1,7 @@
 /// Fixed array type class definition.
 ///
 /// @file	PlnFixedArrayType.cpp
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
@@ -12,6 +12,8 @@
 #include "PlnFixedArrayType.h"
 #include "PlnArrayValueType.h"
 #include "../PlnArray.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent)
 	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
@@ -28,11 +30,13 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	this->sizes = move(sizes);
 
 	auto it = this->item_type;
-	
-	if (alloc_size == 0) {
+
+	if (alloc_size == 0) {	// 0(?) size exists.
+		// only support free. alloc and copy is not supported because size is undefined.
 		// raw array reference.
 		freer = new PlnSingleObjectFreer();
 		// TODO: confirm it's OK when data_type is object.
+
 		return;
 	}
 
@@ -82,8 +86,8 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 	if (src->typeinf->type == TP_FIXED_ARRAY) {
 		auto src_farr = static_cast<PlnFixedArrayType*>(src->typeinf);
 		if (item_type == src_farr->item_type) {
-			if (!sizes[0]) {	// xx[n] -> xx[?]
-				return TC_AUTO_CAST; // It has risk to break data.
+			if (!sizes[0]) {	// [9,2]itemtype -> [?,2]itemtype
+				return TC_UP_CAST; // It has risk to break data.
 			} else if (!src_farr->sizes[0]) {	// xx[?] -> xx[n]
 				BOOST_ASSERT(false);
 				// return TC_DOWN_CAST;
@@ -97,6 +101,7 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 					return item_type->canCopyFrom(src_farr->item_type);
 			}
 		}
+		return TC_CANT_CONV;
 	}
 
 	if (src->typeinf->type == TP_ARRAY_VALUE) {
@@ -111,6 +116,7 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 				return TC_AUTO_CAST;
 
 		}
+		return TC_CANT_CONV;
 	}
 
 	return TC_CANT_CONV;

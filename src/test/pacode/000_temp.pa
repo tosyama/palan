@@ -1,26 +1,24 @@
+ccall printf(...);
 
-type obj {
-	// int64 x, y; //NG
-	int64 x;
-	int64 y;
-};
-
-obj o = creObj();
+[10]int32 arr;
+af(arr);
+func af(@[?]int32 a)
 {
-	calcObj(creObj());
+}
+
+
+[,]int32 a2 = [1,2][3,4][5,6];
+
+a2f(a2);
+
+func a2f(@[?,1]int32 x)
+{
+//	printf("%d\n", x[1,1]);
 }
 
 [10][2]int32 arrarr;
 afunc(arrarr);
 // aafunc(arrarr);	// NG!
-
-func creObj() -> obj { // no local? => OK!
-	obj o;
-	return o;
-}
-
-func calcObj(@obj o) {
-}
 
 func afunc(@[?][2]int32 arrarr)
 {
@@ -28,18 +26,5 @@ func afunc(@[?][2]int32 arrarr)
 
 func aafunc(@[?][?]int32 arrarr)
 {
-}
-
-retlit();
-retobj();
-
-func retlit() -> [3]int32 arr
-{
-	return [1,2,3];
-}
-
-func retobj() -> obj o
-{
-	return [1,2];
 }
 
