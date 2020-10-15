@@ -4,14 +4,14 @@
 /// e.g.) a / b
 ///
 /// @file	PlnDivOperation.cpp
-/// @copyright	2017- YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
+#include "../../PlnConstants.h"
 #include "PlnDivOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
-#include "../../PlnConstants.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
 #include "../PlnType.h"

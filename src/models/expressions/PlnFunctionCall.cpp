@@ -9,6 +9,7 @@
 
 #include <boost/assert.hpp>
 
+#include "../../PlnConstants.h"
 #include "PlnFunctionCall.h"
 #include "../PlnFunction.h"
 #include "../PlnVariable.h"
@@ -16,7 +17,6 @@
 #include "../../PlnModel.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
-#include "../../PlnConstants.h"
 #include "../../PlnScopeStack.h"
 #include "PlnClone.h"
 #include "PlnArrayValue.h"

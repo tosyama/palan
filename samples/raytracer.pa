@@ -2,10 +2,6 @@
 
 // Issue memo (for palan Language specification)
 // 
-// ccall jpeg_write_scanlines(..., @[?][?]JSAMPLE scanlines, ...);
-// [1][width*3]JSAMPLE buffer;
-// jpeg_write_scanlines(xx, buffer, xx); => compile error.
-// --
 // type jpeg_compress_struct {
 //	@jpeg_error_mgr err;
 // ...
@@ -161,7 +157,7 @@ ccall jpeg_set_defaults(@!jpeg_compress_struct cinfo);
 ccall jpeg_set_quality(@!jpeg_compress_struct cinfo, int32 quality, boolean force_baseline);
 ccall jpeg_stdio_dest(@!jpeg_compress_struct cinfo, FILE ofs);
 ccall jpeg_start_compress (@!jpeg_compress_struct cinfo, boolean write_all_tables);
-ccall jpeg_write_scanlines(@!jpeg_compress_struct cinfo, @[1][width*3]JSAMPLE scanlines, JDIMENSION num_lines);
+ccall jpeg_write_scanlines(@!jpeg_compress_struct cinfo, @[?][?]JSAMPLE scanlines, JDIMENSION num_lines);
 ccall jpeg_finish_compress(@!jpeg_compress_struct cinfo);
 ccall jpeg_destroy_compress(@!jpeg_compress_struct cinfo);
 

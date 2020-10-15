@@ -11,6 +11,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/join.hpp>
 
+#include "../PlnConstants.h"
 #include "PlnFunction.h"
 #include "PlnGeneralObject.h"
 #include "PlnBlock.h"
@@ -25,7 +26,6 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
-#include "../PlnConstants.h"
 #include "../PlnMessage.h"
 #include "expressions/PlnFunctionCall.h"
 #include "../PlnException.h"
@@ -411,7 +411,27 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 					PlnArgInf& ainf = arg_infs[ai];
 
 					// Check conpatibilty of type.
-					PlnTypeConvCap cap = p->var->var_type->canCopyFrom(ainf.var_type);
+					PlnAsgnType atype;
+					switch (p->passby) {
+						case FPM_VAR_COPY:
+							if (p->var->var_type->data_type() == DT_OBJECT_REF) {
+								atype = ASGN_COPY_REF;
+								break;
+							} else {
+								atype = ASGN_COPY;
+								break;
+							}
+						case FPM_OBJ_CLONE:
+							atype = ASGN_COPY; break;
+						case FPM_OBJ_MOVEOWNER:
+						case FPM_OBJ_GETOWNER:
+							atype = ASGN_MOVE; break;
+						case FPM_VAR_REF:
+							atype = ASGN_COPY_REF; break;
+						default:
+							BOOST_ASSERT(false);
+					}
+					PlnTypeConvCap cap = p->var->var_type->canCopyFrom(ainf.var_type, atype);
 					if (cap == TC_CANT_CONV) goto next_func;
 
 					bool is_move = p->passby == FPM_OBJ_MOVEOWNER || p->passby == FPM_OBJ_GETOWNER;

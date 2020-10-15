@@ -8,6 +8,7 @@
 
 #include <boost/assert.hpp>
 
+#include "../PlnConstants.h"
 #include "PlnFunction.h"
 #include "PlnBlock.h"
 #include "PlnExpression.h"
@@ -18,7 +19,6 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
-#include "../PlnConstants.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 #include "expressions/PlnFunctionCall.h"
@@ -82,7 +82,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					PlnVarType* dst_type = vars[var_i].getVarType();
 
 					// Compatibility is assured at adjustTypes().
-					BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
+					BOOST_ASSERT(dst_type->canCopyFrom(src_type, ASGN_COPY) != TC_CANT_CONV);
 
 					// Validation of referece var
 					if (dst_type->mode[ALLOC_MD] == 'r') {

@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -72,7 +72,7 @@ public:
 
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
 	virtual ~PlnType();
-	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src);
+	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode);
 
 	PlnVarType* getVarType(const string& mode = "---");
 
@@ -111,5 +111,5 @@ public:
 		if (!copyer) return NULL;
 		return typeinf->copyer->getCopyEx();
 	}
-	PlnTypeConvCap canCopyFrom(PlnVarType *src) { return typeinf->canCopyFrom(mode, src); }
+	PlnTypeConvCap canCopyFrom(PlnVarType *src, PlnAsgnType copymode) { return typeinf->canCopyFrom(mode, src, copymode); }
 };

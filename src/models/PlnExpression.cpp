@@ -4,16 +4,16 @@
 /// The values are set specified place.
 ///
 /// @file	PlnExpression.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 
+#include "../PlnConstants.h"
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "expressions/PlnArrayValue.h"
-#include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnMessage.h"
@@ -183,7 +183,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 			
 		} else {
 			PlnVarType *vtype = values[0].getVarType();
-			if (types[0]->canCopyFrom(vtype) == TC_CANT_CONV) {
+			if (types[0]->canCopyFrom(vtype, ASGN_COPY) == TC_CANT_CONV) {
 				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
 				err.loc = loc;
 				throw err;

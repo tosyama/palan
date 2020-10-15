@@ -1,9 +1,11 @@
 /// PlnClone model class definition.
 ///
 /// @file	PlnClone.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+
+#include "../../PlnConstants.h"
 #include "../PlnExpression.h"
 #include "../PlnVariable.h"
 #include "../PlnType.h"

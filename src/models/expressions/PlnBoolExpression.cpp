@@ -4,6 +4,7 @@
 /// @copyright	2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include "../../PlnConstants.h"
 #include "PlnCmpOperation.h"
 #include "../PlnType.h"
 #include "../../PlnDataAllocator.h"

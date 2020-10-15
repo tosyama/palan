@@ -10,6 +10,10 @@
 #include <boost/assert.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <functional>
+#include "../PlnConstants.h"
+#include "../PlnDataAllocator.h"
+#include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 #include "PlnFunction.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"
@@ -18,10 +22,6 @@
 #include "types/PlnFixedArrayType.h"
 #include "types/PlnStructType.h"
 #include "PlnVariable.h"
-#include "../PlnDataAllocator.h"
-#include "../PlnGenerator.h"
-#include "../PlnConstants.h"
-#include "../PlnScopeStack.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 

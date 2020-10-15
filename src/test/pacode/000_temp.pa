@@ -6,19 +6,28 @@ func af(@[?]int32 a)
 {
 }
 
-
 [,]int32 a2 = [1,2][3,4][5,6];
 
-a2f(a2);
+@[10]byte b = "abc";
+[10]byte bb;
 
-func a2f(@[?,1]int32 x)
+func xxx(@![10]byte b) {
+}
+func xxx2([10]byte b) {
+}
+
+a2f(a2);
+// xxx(b);	 // NG
+xxx2(b);	 // OK
+
+func a2f(@[?,2]int32 x)
 {
 //	printf("%d\n", x[1,1]);
 }
 
 [10][2]int32 arrarr;
 afunc(arrarr);
-// aafunc(arrarr);	// NG!
+aafunc(arrarr);
 
 func afunc(@[?][2]int32 arrarr)
 {

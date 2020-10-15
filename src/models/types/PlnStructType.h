@@ -1,7 +1,7 @@
 /// Structure type class declaration.
 ///
 /// @file	PlnStructType.h
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 class PlnStructMemberDef {
 public:
@@ -19,6 +19,6 @@ public:
 
 	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode);
 	~PlnStructType();
-	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src) override;
+	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override;
 };
 

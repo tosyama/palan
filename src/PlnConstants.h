@@ -46,3 +46,10 @@ enum PlnTypeMode {
 	IDENTITY_MD = 1,
 	ALLOC_MD = 2
 };
+
+enum PlnAsgnType {
+	NO_ASGN,
+	ASGN_COPY,
+	ASGN_MOVE,
+	ASGN_COPY_REF
+};

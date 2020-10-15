@@ -7,12 +7,12 @@
 
 #include <iostream>
 #include <boost/assert.hpp>
+#include "../../../PlnConstants.h"
 #include "../PlnAssignment.h"
 #include "../../PlnVariable.h"
 #include "../../PlnType.h"
 #include "../../../PlnDataAllocator.h"
 #include "../../../PlnGenerator.h"
-#include "../../../PlnConstants.h"
 #include "../../../PlnScopeStack.h"
 #include "../../../PlnMessage.h"
 #include "../../../PlnException.h"

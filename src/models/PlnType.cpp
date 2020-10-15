@@ -1,14 +1,14 @@
 /// Type model class definition.
 ///
 /// @file	PlnType.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include "../PlnConstants.h"
 #include "PlnType.h"
 #include "types/PlnFixedArrayType.h"
 #include "PlnVariable.h"
 #include "PlnExpression.h"
-#include "../PlnConstants.h"
 
 using namespace std;
 
@@ -324,7 +324,7 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	return arr_name + item_name;
 }
 
-PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src)
+PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
 {
 	if (this == src->typeinf)
 		return TC_SAME;
