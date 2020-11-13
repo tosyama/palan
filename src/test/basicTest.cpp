@@ -237,7 +237,7 @@ void normalCaseTest()
 	testcode = "033_prireference";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "10 13 18 18 18 18 11\n"
-							"2.2 22.2 123 1.2 5 3.5");
+							"2.2 22.2 123 1.2 5 3.5d");
 
 	testcode = "034_increment";
 	REQUIRE(build(testcode) == "success");
@@ -494,6 +494,34 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "599_anysize_arr_err";
 	REQUIRE(build(testcode) == "0:3-3 Only allowed undefined size at first size of array.");
+
+	// fixed array type compatiblity check.(600-608)
+	testcode = "600_fixedarray_typecmp_err1";
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'writable'.\nCandidate: writable([10]byte)");
+
+	testcode = "601_fixedarray_typecmp_err2";
+	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'movable'.\nCandidate: movable([10]byte>>)");
+
+	testcode = "602_fixedarray_typecmp_err3";
+	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'movable'.\nCandidate: movable([10]byte>>)");
+
+	testcode = "603_fixedarray_typecmp_err4";
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize([?,2]int32)");
+
+	testcode = "604_fixedarray_typecmp_err5";
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize([?,2]int32)");
+
+	testcode = "605_fixedarray_typecmp_err6";
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+	
+	testcode = "606_fixedarray_typecmp_err7";
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+
+	testcode = "607_fixedarray_typecmp_err8";
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+
+	testcode = "608_fixedarray_typecmp_err9";
+	REQUIRE(build(testcode) == "0:5-5 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

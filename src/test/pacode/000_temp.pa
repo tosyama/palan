@@ -11,13 +11,38 @@ func af(@[?]int32 a)
 @[10]byte b = "abc";
 [10]byte bb;
 
-func xxx(@![10]byte b) {
+func test1(@![10]byte b) {
 }
+func test2([10]byte >>b) {
+}
+
+func test3(@[?,2]int32 x)
+{
+}
+
+func test4(@[10,2]int32 x)
+{
+}
+
 func xxx2([10]byte b) {
 }
 
+[10,3]int32 m2;
+@[?,3]int32 mm2 = m2;
+[10,2,3]int32 m3;
+@[?,2,3]int32 mm3 = m3;
+// [?,2,3]int32 mm4 = m3; // SEG
+
 a2f(a2);
-// xxx(b);	 // NG
+// test1(b);	 // NG*
+// test2(b);	 // NG*
+// test2(b>>);	 // NG*
+// test3(m2);	// NG*
+// test3(m3);	// NG*
+// test4(mm3);	// NG*
+// test4(mm2);	// NG*
+// test4(m2); //NG* exists test
+// test4("test2");	// NG
 xxx2(b);	 // OK
 
 func a2f(@[?,2]int32 x)

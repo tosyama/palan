@@ -1,0 +1,8 @@
+func readonly(@[10,2]int32 a) {
+}
+
+[10,3]int32 m;
+@[?,3]int32 mm = m;
+
+readonly(mm);
+
