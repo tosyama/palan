@@ -99,11 +99,13 @@ public:
 	const string& name() { return typeinf->name; }
 	int data_type() { return typeinf->data_type; }
 	int size() { return typeinf->size; }
-	PlnExpression *getAllocEx() { return typeinf->allocator->getAllocEx(); }
+	PlnExpression *getAllocEx() {
+		if (!typeinf->allocator) return NULL;
+		return typeinf->allocator->getAllocEx();
+	}
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
-		PlnCopyer* copyer = typeinf->copyer;
-		if (!copyer) return NULL;
+		if (!typeinf->copyer) return NULL;
 		return typeinf->copyer->getCopyEx(dst_var, src_var);
 	}
 	PlnDeepCopyExpression* getCopyEx() {

@@ -47,6 +47,7 @@ enum PlnErrCode {
 	E_CantUseNonMemoryValue,	// var name
 	E_OnlyAllowedIntegerHere,	// none
 	E_OnlyAllowedAnySizeAtFirst,	// none
+	E_CantAllocate,	// type name
 	E_InvalidAST,	// source name, line
 
 	// CUI errors

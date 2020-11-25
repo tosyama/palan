@@ -253,7 +253,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	normalCaseTest();
 }
 
-// Error file ID: 500-599
+// Error file ID: 500-609
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -522,6 +522,9 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "608_fixedarray_typecmp_err9";
 	REQUIRE(build(testcode) == "0:5-5 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+
+	testcode = "609_nosizearray_alloc_err";
+	REQUIRE(build(testcode) == "0:1-1 Can not allocate memory for [?,3]int32.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")
