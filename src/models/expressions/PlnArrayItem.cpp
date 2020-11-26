@@ -8,6 +8,7 @@
 /// @copyright	2017-2019 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
+#include "../../PlnConstants.h"
 #include "PlnArrayItem.h"
 #include "PlnMulOperation.h"
 #include "PlnAddOperation.h"
@@ -15,7 +16,6 @@
 #include "../PlnType.h"
 #include "../types/PlnFixedArrayType.h"
 #include "../../PlnDataAllocator.h"
-#include "../../PlnConstants.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnConstants.h"
 #include "../../PlnMessage.h"

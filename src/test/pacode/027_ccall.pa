@@ -15,6 +15,7 @@ ccall time(uint64 tloc)->uint64;
 ccall localtime(@uint64 t) -> @struct_tm;
 
 ccall cos(flo64 x) -> flo64 :m;
+ccall tanf(flo32 x) -> flo32;
 
 ccall strtol(@[?]byte s, @, int32 base => @![?]byte endptr) -> int32;
 
@@ -65,7 +66,7 @@ if tm.tm_mon >= 0 && tm.tm_mon <= 11 { printf("m") }
 if tm.tm_year >= 119 && tm.tm_year <= 200
 	&& tm.tm_year == tm2.tm_year { printf("y") }
  
-printf("%.2lf", cos(1.23));
+printf("%.2lf %.2f", cos(1.23), tanf(3.14159265359/4));
  
 @![?]byte rest_str;
 int32 l = strtol("1234 abc", 10 => rest_str);

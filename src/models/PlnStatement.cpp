@@ -16,6 +16,8 @@
 #include "../PlnScopeStack.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
+#include "expressions/PlnClone.h"
+#include "expressions/PlnAssignment.h"
 
 using std::endl;
 
@@ -110,22 +112,10 @@ PlnReturnStmt::PlnReturnStmt(vector<PlnExpression *>& retexp, PlnBlock* parent)
 		int i=0;
 		int num_ret = function->return_vals.size();
 		for (auto e: expressions) {
-			if (i >= num_ret) {
-				throw PlnCompileError(E_InvalidRetValues);
-			}
-			for (auto&v: e->values) {
-				if (i < num_ret) {
-					PlnVarType* t = function->return_vals[i].local_var->var_type;
-					if (t->canCopyFrom(v.getVarType()) == TC_CANT_CONV) {
-						PlnCompileError err(E_InvalidRetValues);
-						err.loc = e->loc;
-						throw err;
-					}
-				}
-				++i;
-			}
+			BOOST_ASSERT(i<num_ret);
+			i += e->values.size();
 		}
-
+ 
 		if (i<num_ret) {
 			throw PlnCompileError(E_InvalidRetValues);
 		}
@@ -143,19 +133,50 @@ PlnReturnStmt::~PlnReturnStmt()
 void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(function->type == FT_PLN);
-	vector<PlnDataPlace*> dps = function->createRetValDps();
+	dps = function->createRetValDps();
 	da.setRetValDps(function->type, dps, true);
 
 	vector<PlnVariable*> ret_vars;
 	
 	int i = 0;
-	for (auto e: expressions) {
+	int j = 0;
+	for (int j=0; j<expressions.size(); j++) {
+		PlnExpression* e = expressions[j];
+		PlnClone* clone = NULL;
 		for (auto &v: e->values) {
-			if (i<dps.size())
-				e->data_places.push_back(dps[i]);
+			if (i<dps.size()) {
+				if (v.type == VL_LIT_ARRAY) { // e.g.) return [1, 2];
+					BOOST_ASSERT(e->values.size() == 1);
+					if (function->return_vals[i].local_var->name == "") { // e.g) func fname() -> ObjType {}
+						clone = new PlnClone(da, e, e->values[0].getVarType(), false);
+						clone->data_places.push_back(dps[i]);
+
+					} else { // e.g) func fname() -> ObjType varname {}
+						auto var_ex = new PlnExpression(function->return_vals[i].local_var);
+						var_ex->values[0].asgn_type = ASGN_COPY;
+
+						vector<PlnExpression*> dsts = { var_ex };
+						vector<PlnExpression*> exps = { e };
+						PlnAssignment* asgn_ex = new PlnAssignment(dsts, exps);
+
+						expressions[j] = asgn_ex;
+						asgn_ex->data_places.push_back(dps[i]);
+						ret_vars.push_back(var_ex->values[0].inf.var);
+					}
+
+				} else {
+					e->data_places.push_back(dps[i]);
+				}
+			}
 			++i;
 		}
+		e = expressions[j];
+		clones.push_back(clone);
+		if (clone)
+			clone->finishAlloc(da, si);
 		e->finish(da, si);
+		if (clone)
+			clone->finish(da, si);
 
 		// ret_vars is just used checking requirement of free varialbes.
 		if (e->type == ET_VALUE && e->values[0].type == VL_VAR)
@@ -194,22 +215,27 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 void PlnReturnStmt::gen(PlnGenerator& g)
 {
-	for (auto e: expressions)
+	int i=0;
+	for (auto e: expressions) {
+		if (clones[i])
+			clones[i]->genAlloc(g);
 		e->gen(g);
+		if (clones[i])
+			clones[i]->gen(g);
+		i++;
+	}
 
 	PlnDataPlace* adp = NULL;
 
 	for (auto free_var: free_vars)
 		free_var->gen(g);
 
-	for (auto e: expressions)
-		for (auto dp: e->data_places)
-				g.genLoadDp(dp, false);
-				
-	for (auto e: expressions)
-		for (auto dp: e->data_places)
-			g.genSaveDp(dp);
-	
+	for(auto dp: dps)
+		g.genLoadDp(dp, false);
+
+	for(auto dp: dps)
+		g.genSaveDp(dp);
+
 	g.genReturn();
 }
 

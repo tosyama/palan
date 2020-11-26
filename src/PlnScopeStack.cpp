@@ -6,11 +6,11 @@
 #include <boost/assert.hpp>
 #include <algorithm>
 
+#include "PlnConstants.h"
 #include "PlnModel.h"
 #include "models/PlnType.h"
 #include "models/PlnVariable.h"
 #include "PlnScopeStack.h"
-#include "PlnConstants.h"
 
 bool PlnScopeInfo::exists_current(PlnVariable* v)
 {

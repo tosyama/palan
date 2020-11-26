@@ -457,6 +457,11 @@ at_lib: /* empty */
 		json lib = {{ "name", $2 }};
 		ast["ast"]["libs"].push_back(lib);
 	}
+	| ':' STR 
+	{
+		json lib = {{ "name", $2 }};
+		ast["ast"]["libs"].push_back(lib);
+	}
 	;
 
 statement: semi_stmt ';'

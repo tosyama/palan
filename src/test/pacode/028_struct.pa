@@ -95,6 +95,8 @@ mtrace();
 	copyParam([1,2,3,3.3,4.4]);
 	// ArrayValue for Test2
 	copyParam([1, 2.22, [1,2,3,4,2.2],[1,2,3,4,5]]);
+
+	Test ct = creTest();
 }
 
 muntrace();
@@ -142,3 +144,7 @@ func refParam(@Test t)
 	}
 }
 
+func creTest() -> Test
+{
+	return [1, 2, 3, 4.4, 5.5];
+}

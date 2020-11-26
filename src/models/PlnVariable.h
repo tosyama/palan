@@ -15,6 +15,10 @@ public:
 	bool is_indirect;
 	bool is_global;
 
+	struct {
+		vector<PlnExpression*> *sizes;
+	} inf ;
+
 	PlnLoc loc;
 
 	PlnVariable(): var_type(NULL), place(NULL), container(NULL),

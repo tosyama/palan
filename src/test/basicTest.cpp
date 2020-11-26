@@ -188,7 +188,7 @@ void normalCaseTest()
 								"1423 162311 113142\n"
 								"11 13,11 13,22.2,4 3,11 11,11.2,\n"
 								"11 12 13 4 2 1 6\n"
-								"3 1 1 3");
+								"3 1 1 3 2 3");
 
 	testcode = "026_arrarr_value";
 	REQUIRE(build(testcode) == "success");
@@ -204,7 +204,7 @@ void normalCaseTest()
 								"bbaa 99 2.34 7\n"
 								"2:This,is\n"
 								"infunc\n"
-								"smy0.33 abc 1234"); 
+								"smy0.33 1.00 abc 1234"); 
 
 	testcode = "028_struct";
 	REQUIRE(build(testcode)== "success");
@@ -212,7 +212,7 @@ void normalCaseTest()
 								"32 1 64 1.23 2112\n"
 								"32 1 64 5.55 5 1\n"
 								"10 21 99 24.40 3.44");
-	CHECK(mcheck("mtrace028") == "+136 -136");
+	CHECK(mcheck("mtrace028") == "+137 -137");
 
 	testcode = "029_typealias";
 	REQUIRE(build(testcode) == "success");
@@ -223,7 +223,7 @@ void normalCaseTest()
 	REQUIRE(exec(testcode) == "2 5 3 5 9 5 s234\n"
 						"2 2 1.23 2.34");
 	CHECK(mcheck("mtrace030-1") == "+15 -15");
-	CHECK(mcheck("mtrace030-2") == "+1 -1");
+	CHECK(mcheck("mtrace030-2") == "+2 -2");
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
@@ -237,7 +237,7 @@ void normalCaseTest()
 	testcode = "033_prireference";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "10 13 18 18 18 18 11\n"
-							"2.2 22.2 123 1.2 5 3.5");
+							"2.2 22.2 123 1.2 5 3.5d");
 
 	testcode = "034_increment";
 	REQUIRE(build(testcode) == "success");
@@ -253,7 +253,7 @@ TEST_CASE("Normal case with simple grammer", "[basic]")
 	normalCaseTest();
 }
 
-// Error file ID: 500-592
+// Error file ID: 500-609
 TEST_CASE("Compile error test", "[basic]")
 {
 	string testcode;
@@ -295,7 +295,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Number of return arguments or definitions are not match.");
 
 	testcode = "512_invalidret3_err";
-	REQUIRE(build(testcode) == "0:4-4 Number of return arguments or definitions are not match.");
+	REQUIRE(build(testcode) == "0:4-4 Incompatible types in assignment of '[10]int32' to 'int32'.");
 
 	testcode = "513_asgnLRnum_err";
 	REQUIRE(build(testcode) == "0:2-2 Number of left values did not match right values.");
@@ -336,8 +336,8 @@ TEST_CASE("Compile error test", "[basic]")
 	testcode = "525_undeftype_err";
 	REQUIRE(build(testcode) == "0:2-2 Type 'int' was not declared in this scope.");
 
-	// testcode = "526_arrlit_noint_err";
-	// REQUIRE(build(testcode) == "0:2-2 Only allowed to use integer here.");
+	testcode = "526_arraysize_noint_err";
+	REQUIRE(build(testcode) == "0:2-2 Only allowed integer type here.");
 
 	testcode = "531_func_retval_err";
 	REQUIRE(build(testcode) == "0:4-4 Variable name 'b' already defined.");
@@ -491,6 +491,40 @@ TEST_CASE("Compile error test", "[basic]")
 
 	testcode = "598_increment_err2";
 	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for '[3]int64'.");
+
+	testcode = "599_anysize_arr_err";
+	REQUIRE(build(testcode) == "0:3-3 Only allowed undefined size at first size of array.");
+
+	// fixed array type compatiblity check.(600-608)
+	testcode = "600_fixedarray_typecmp_err1";
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'writable'.\nCandidate: writable([10]byte)");
+
+	testcode = "601_fixedarray_typecmp_err2";
+	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'movable'.\nCandidate: movable([10]byte>>)");
+
+	testcode = "602_fixedarray_typecmp_err3";
+	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'movable'.\nCandidate: movable([10]byte>>)");
+
+	testcode = "603_fixedarray_typecmp_err4";
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize([?,2]int32)");
+
+	testcode = "604_fixedarray_typecmp_err5";
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize([?,2]int32)");
+
+	testcode = "605_fixedarray_typecmp_err6";
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+	
+	testcode = "606_fixedarray_typecmp_err7";
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+
+	testcode = "607_fixedarray_typecmp_err8";
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+
+	testcode = "608_fixedarray_typecmp_err9";
+	REQUIRE(build(testcode) == "0:5-5 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+
+	testcode = "609_nosizearray_alloc_err";
+	REQUIRE(build(testcode) == "0:1-1 Can not allocate memory for [?,3]int32.");
 }
 
 TEST_CASE("Array description compile error test", "[basic]")

@@ -21,7 +21,7 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 
 	// pac -v
 	REQUIRE(exec_pac("", "-v", "", "") == "success");
-	REQUIRE(outstr("log") == "Palan compiler 0.3.0a\n");
+	REQUIRE(outstr("log") == "Palan compiler 0.4.0a\n");
 	REQUIRE(errstr("log") == "");
 
 	// pac -S <input-file>"
@@ -58,7 +58,12 @@ TEST_CASE("CUI basic command-line test.", "[cui]")
 	  							"bbaa 99 2.34 7\n"
 	    						"2:This,is\n"
 								"infunc\n"
-		  						"smy0.33 abc 1234");
+		  						"smy0.33 1.00 abc 1234");
+
+	// object file loading
+	testcode = "032_ptrptr";
+	REQUIRE(exec_pac(testcode, "", "", "") == "success");
+	REQUIRE(outstr(testcode) == "test 1234 test2 123456");
 
 	// pac <input-file>
 	testcode = "100_qsort";
@@ -183,6 +188,10 @@ TEST_CASE("sample code compile test.", "[cui]")
 	REQUIRE(outfile(testcode + ".o") == "exists");
 
 	testcode = "usesqlite";
+	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
+	REQUIRE(outfile(testcode + ".o") == "exists");
+
+	testcode = "raytracer";
 	REQUIRE(exec_pac(testcode, "-c", "", "", dir) == "success");
 	REQUIRE(outfile(testcode + ".o") == "exists");
 }

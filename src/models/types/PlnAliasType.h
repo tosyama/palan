@@ -1,7 +1,7 @@
 /// Alias type class declaration.
 ///
 /// @file	PlnAliasType.h
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 class PlnAliasType : public PlnType {
 public:
@@ -14,5 +14,5 @@ public:
 		this->size = orig_type->size;
 	}
 
-	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src) override { BOOST_ASSERT(false); }
+	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override { BOOST_ASSERT(false); }
 };

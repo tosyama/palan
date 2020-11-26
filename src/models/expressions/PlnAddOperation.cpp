@@ -8,10 +8,10 @@
 
 #include <boost/assert.hpp>
 
+#include "../../PlnConstants.h"
 #include "PlnAddOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
-#include "../../PlnConstants.h"
 #include "../PlnType.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"

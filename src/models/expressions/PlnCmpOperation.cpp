@@ -6,10 +6,10 @@
 /// @file	PlnCmpOperation.cpp
 /// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
+#include "../../PlnConstants.h"
 #include "PlnCmpOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
-#include "../../PlnConstants.h"
 #include "../PlnType.h"
 
 #include "boost/assert.hpp"

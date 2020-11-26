@@ -4,10 +4,10 @@ reffunc(a);
 
 func reffunc(@[10]int32 aa)
 {
-	mvfunc(aa>>);
+	mvfunc(aa>>);	// Error at here currently.
 }
 
-func mvfunc([10]int32 >>aa)
+func mvfunc(@[10]int32 >>aa)	// However, this gammer should be NG.
 {
 	
 }

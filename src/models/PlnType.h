@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -72,7 +72,7 @@ public:
 
 	PlnType(PlnTypeType type=TP_PRIMITIVE);
 	virtual ~PlnType();
-	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src);
+	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode);
 
 	PlnVarType* getVarType(const string& mode = "---");
 
@@ -99,11 +99,13 @@ public:
 	const string& name() { return typeinf->name; }
 	int data_type() { return typeinf->data_type; }
 	int size() { return typeinf->size; }
-	PlnExpression *getAllocEx() { return typeinf->allocator->getAllocEx(); }
+	PlnExpression *getAllocEx() {
+		if (!typeinf->allocator) return NULL;
+		return typeinf->allocator->getAllocEx();
+	}
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
-		PlnCopyer* copyer = typeinf->copyer;
-		if (!copyer) return NULL;
+		if (!typeinf->copyer) return NULL;
 		return typeinf->copyer->getCopyEx(dst_var, src_var);
 	}
 	PlnDeepCopyExpression* getCopyEx() {
@@ -111,5 +113,5 @@ public:
 		if (!copyer) return NULL;
 		return typeinf->copyer->getCopyEx();
 	}
-	PlnTypeConvCap canCopyFrom(PlnVarType *src) { return typeinf->canCopyFrom(mode, src); }
+	PlnTypeConvCap canCopyFrom(PlnVarType *src, PlnAsgnType copymode) { return typeinf->canCopyFrom(mode, src, copymode); }
 };

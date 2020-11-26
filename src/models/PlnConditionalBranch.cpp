@@ -4,6 +4,7 @@
 /// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
+#include "../PlnConstants.h"
 #include "PlnConditionalBranch.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"

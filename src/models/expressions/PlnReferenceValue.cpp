@@ -6,10 +6,10 @@
 /// @copyright	2020 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
+#include "../../PlnConstants.h"
 #include "PlnReferenceValue.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
-#include "../../PlnConstants.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
 #include "../PlnVariable.h"
@@ -50,7 +50,7 @@ PlnExpression* PlnReferenceValue::adjustTypes(const vector<PlnVarType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
 	PlnVarType *vtype = values[0].getVarType();
-	if (types[0]->canCopyFrom(vtype) == TC_CANT_CONV) {
+	if (types[0]->canCopyFrom(vtype, ASGN_COPY) == TC_CANT_CONV) {
 		PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
 		err.loc = loc;
 		throw err;

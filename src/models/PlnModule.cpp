@@ -7,16 +7,17 @@
 /// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include "../PlnConstants.h"
+#include "../PlnDataAllocator.h"
+#include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
+#include "../PlnTreeBuildHelper.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"
 #include "PlnFunction.h"
 #include "PlnVariable.h"
 #include "PlnStatement.h"
 #include "PlnType.h"
-#include "../PlnDataAllocator.h"
-#include "../PlnGenerator.h"
-#include "../PlnScopeStack.h"
-#include "../PlnTreeBuildHelper.h"
 
 using namespace std;
 

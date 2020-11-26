@@ -1,13 +1,14 @@
 /// Variable model class definition.
 ///
 /// PlnVariable model manage variable information
-/// such as type and momory allocation.
+/// such as type and memory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
+#include "../PlnConstants.h"
 #include "PlnFunction.h"
 #include "PlnBlock.h"
 #include "PlnExpression.h"
@@ -18,7 +19,6 @@
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnScopeStack.h"
-#include "../PlnConstants.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 #include "expressions/PlnFunctionCall.h"
@@ -66,10 +66,10 @@ static bool requireInit(PlnVarType* var_type)
 
 PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 {
-	int var_i=0;
+	int init_var_i=0;
 	if (inits) {
 		for (auto &ex: *inits) {
-			if (var_i >= vars.size()) {
+			if (init_var_i >= vars.size()) {
 				// No any more assign.
 				PlnCompileError err(E_NumOfLRVariables);
 				err.loc = ex->loc;
@@ -77,12 +77,12 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			}
 			PlnAssignItem* ai = PlnAssignItem::createAssignItem(ex);
 			for (int i=0; i<ex->values.size(); ++i) {
-				if (var_i < vars.size()) {
+				if (init_var_i < vars.size()) {
 					PlnVarType* src_type = ex->values[i].getVarType();
-					PlnVarType* dst_type = vars[var_i].getVarType();
+					PlnVarType* dst_type = vars[init_var_i].getVarType();
 
 					// Compatibility is assured at adjustTypes().
-					BOOST_ASSERT(dst_type->canCopyFrom(src_type) != TC_CANT_CONV);
+					BOOST_ASSERT(dst_type->canCopyFrom(src_type, ASGN_COPY) != TC_CANT_CONV);
 
 					// Validation of referece var
 					if (dst_type->mode[ALLOC_MD] == 'r') {
@@ -90,7 +90,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 						if (!(val_type == VL_LIT_ARRAY || val_type == VL_LIT_STR || val_type == VL_VAR)
 								&& (src_type->mode[ALLOC_MD] != 'r')) {
 							// e.g.) @int64 a = (b + 2);	// not in memory.
-							PlnCompileError err(E_CantUseNonMemoryValue, vars[var_i].inf.var->name);
+							PlnCompileError err(E_CantUseNonMemoryValue, vars[init_var_i].inf.var->name);
 							err.loc = ex->loc;
 							throw err;
 
@@ -100,12 +100,12 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 							PlnVariable* container = ex->values[i].inf.var->container;
 							if (!container)
 								container = ex->values[i].inf.var;
-							vars[var_i].inf.var->container = container;
+							vars[init_var_i].inf.var->container = container;
 						}
 					}
 
 					// Note: vars'asgn_type is possible to update in this call. 
-					auto var_ex = createVarExpression(vars[var_i], ex, i);
+					auto var_ex = createVarExpression(vars[init_var_i], ex, i);
 
 					try {
 						ai->addDstEx(var_ex, false);
@@ -114,7 +114,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 						throw;
 					}
 
-					++var_i;
+					++init_var_i;
 				}
 			}
 			assgin_items.push_back(ai);
@@ -136,8 +136,13 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 		PlnVariable* v = vars[i].inf.var;
 		PlnExpression* alloc_ex = NULL;
 		if (v->var_type->mode[ALLOC_MD] == 'h') {
-			if (i >= var_i || vars[i].asgn_type == ASGN_COPY) {
+			if (i >= init_var_i || vars[i].asgn_type == ASGN_COPY) {
 				alloc_ex = PlnAllocator::getAllocEx(v);
+				if (!alloc_ex) {
+					PlnCompileError err(E_CantAllocate, v->var_type->name());
+					err.loc = v->loc;
+					throw err;
+				}
 			}
 		}
 		varinits.push_back({v, alloc_ex});

@@ -152,6 +152,7 @@ static void mergeBlocks(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsed
 static void reflectUsingReg(RegUsedBlock* b, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo, char access_reg[]);
 static void addRegSaveOpeFromAnalyzedInfo(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &regmap,
 				vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
+static void removeOpecodesOfBlock(vector<PlnOpeCode> &opecodes, RegUsedBlock* b);
 // static void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes);
 // static void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo);
 
@@ -271,9 +272,31 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 		}
 	}
 
-//	showBlockInfo(blocks, opecodes);
+	// showBlockInfo(blocks, opecodes);
 
-	// transform graph -> tree
+	// Remove unreachable block
+	{
+		bool is_delete = true;
+		while (is_delete) {
+			is_delete = false;
+			for (int i=1; i<blocks.size(); i++) {
+				auto b = blocks[i];
+				if (b->deleted) continue;
+				if (b->previous_blocks.size() == 0) {	// Unreachable block
+					b->deleted = true;
+					for (auto nb: b->next_blocks) {
+						remove_erase(nb->previous_blocks, b);
+					}
+					b->next_blocks.clear();
+					// TODO: performance improvement
+					removeOpecodesOfBlock(opecodes, b);
+				}
+			}
+		}
+	}
+
+
+	// Transform graph -> tree
 	for (int i=0; i<blocks.size(); i++) {
 		auto b = blocks[i];
 		if (b->deleted) continue;
@@ -298,7 +321,7 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 		}
 	}
 
-	// merge merged blocks
+	// Merge merged blocks
 	for (auto b: blocks) {
 		if (b->deleted) continue;
 		if (b->end_type == CFGE_Merged) {
@@ -316,7 +339,7 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 		}
 	}
 
-	// create save and restore information from tree.
+	// Create save and restore information from tree.
 	vector<SaveRegInfo> saveInfo;
 	vector<SaveRegInfo> restoreInfo;
 	char access_reg[REG_NUM] = {};
@@ -334,8 +357,8 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 		}
 	}
 
-//	showBlockInfo(blocks, opecodes);
-//	showSaveInfo(opecodes, saveInfo, restoreInfo);
+	// showBlockInfo(blocks, opecodes);
+	// showSaveInfo(opecodes, saveInfo, restoreInfo);
 
 	vector<array<int,2>> regmap;
 	for (int sregid: save_regids) {
@@ -349,7 +372,6 @@ void addRegSaveWithCFAnalysis(vector<PlnOpeCode> &opecodes, int &cur_stacksize)
 		addRegSaveOpeFromAnalyzedInfo(opecodes, regmap, saveInfo, restoreInfo);
 	}
 	
-
 	for (auto b: blocks)
 		delete b;
 }
@@ -584,96 +606,113 @@ void updateBlock(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* 
 	}
 }
 
-/* void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes)
+void removeOpecodesOfBlock(vector<PlnOpeCode> &opecodes, RegUsedBlock* b)
 {
-	// output analize info
-	for (auto b: blocks) {
-		string info;
-		if (b->deleted)
-			continue;
-			// info = "##";
-		info += to_string(b->ind) + ":";
-		info += to_string(b->start_mark)+"-"+ to_string(b->end_mark)+ ":";
-
-		// start
-		if (b->start_type == CFGS_Label) {
-			info += b->start_label+ ":";
-		} else if (b->start_type == CFGS_Merged) {
-			info += "+:";
-		} else {
-			info += "-:";
+	BOOST_ASSERT(b->deleted);
+	for (int i=0; i<opecodes.size(); i++) {
+		if (opecodes[i].mark == b->start_mark) {
+			for (;i<opecodes.size(); i++) {
+				opecodes[i].mne = MNE_NONE;
+				if (opecodes[i].mark == b->end_mark) {
+					return;
+				}
+			}
+			BOOST_ASSERT(false);
 		}
-		// end
-		if (b->end_type == CFGE_Return) {
-			info += "ret:";
-		} else if (b->end_type == CFGE_JumpCond) {
-			info += "jpc:";
-		} else if (b->end_type == CFGE_Jump) {
-			info += "jmp:";
-		} else if (b->end_type == CFGE_Merged) {
-			info += "+:";
-		} else {
-			info += "-:";
-		}
-
-		// next
-		info += "[";
-		for (auto n: b->next_blocks) {
-			info += to_string(n->ind) + ",";
-		}
-		info += "]:[";
-
-		// previous
-		for (auto p: b->previous_blocks) {
-			info += to_string(p->ind) + ",";
-		}
-		info += "]:[";
-		info +=	to_string(b->access_reg[RBX]);
-		info +=	to_string(b->access_reg[R12]);
-		info +=	to_string(b->access_reg[R13]);
-		info +=	to_string(b->access_reg[R14]);
-		info +=	to_string(b->access_reg[R15]);
-
-		info += "]:" + b->merge_info;
-		opecodes.push_back({COMMENT, NULL, NULL, info});
 	}
+
 }
 
-void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo)
-{
-	opecodes.push_back({COMMENT, NULL, NULL, "--save--"});
-	for (auto &si: saveInfo) {
-		string info = to_string(si.mark)+"[";
-		for (int rid: si.regids) {
-			switch (rid) {
-				case RBX: info += "rbx,"; break;
-				case R12: info += "r12,"; break;
-				case R13: info += "r13,"; break;
-				case R14: info += "r14,"; break;
-				case R15: info += "r15,"; break;
-				default: info += "*,"; break;
-			}
-		}
-		info += "]";
-		opecodes.push_back({COMMENT, NULL, NULL, info});
-	}
-
-	opecodes.push_back({COMMENT, NULL, NULL, "--restore--"});
-	for (auto &ri: restoreInfo) {
-		string info = to_string(ri.mark);
-		info += "[";
-		for (int rid: ri.regids) {
-			switch (rid) {
-				case RBX: info += "rbx,"; break;
-				case R12: info += "r12,"; break;
-				case R13: info += "r13,"; break;
-				case R14: info += "r14,"; break;
-				case R15: info += "r15,"; break;
-				default: info += "*,"; break;
-			}
-		}
-		info += "]";
-		opecodes.push_back({COMMENT, NULL, NULL, info});
-	}
-} */
-
+// void showBlockInfo(vector<RegUsedBlock*> &blocks, vector<PlnOpeCode> &opecodes)
+// {
+// 	// output analize info
+// 	for (auto b: blocks) {
+// 		string info;
+// 		if (b->deleted)
+// 			continue;
+// 			// info = "##";
+// 		info += to_string(b->ind) + ":";
+// 		info += to_string(b->start_mark)+"-"+ to_string(b->end_mark)+ ":";
+// 
+// 		// start
+// 		if (b->start_type == CFGS_Label) {
+// 			info += b->start_label+ ":";
+// 		} else if (b->start_type == CFGS_Merged) {
+// 			info += "+:";
+// 		} else {
+// 			info += "-:";
+// 		}
+// 		// end
+// 		if (b->end_type == CFGE_Return) {
+// 			info += "ret:";
+// 		} else if (b->end_type == CFGE_JumpCond) {
+// 			info += "jpc:";
+// 		} else if (b->end_type == CFGE_Jump) {
+// 			info += "jmp:";
+// 		} else if (b->end_type == CFGE_Merged) {
+// 			info += "+:";
+// 		} else {
+// 			info += "-:";
+// 		}
+// 
+// 		// next
+// 		info += "[";
+// 		for (auto n: b->next_blocks) {
+// 			info += to_string(n->ind) + ",";
+// 		}
+// 		info += "]:[";
+// 
+// 		// previous
+// 		for (auto p: b->previous_blocks) {
+// 			info += to_string(p->ind) + ",";
+// 		}
+// 		info += "]:[";
+// 		info +=	to_string(b->access_reg[RBX]);
+// 		info +=	to_string(b->access_reg[R12]);
+// 		info +=	to_string(b->access_reg[R13]);
+// 		info +=	to_string(b->access_reg[R14]);
+// 		info +=	to_string(b->access_reg[R15]);
+// 
+// 		info += "]:" + b->merge_info;
+// 		opecodes.push_back({COMMENT, NULL, NULL, info});
+// 	}
+// }
+// 
+// void showSaveInfo(vector<PlnOpeCode> &opecodes, vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo)
+// {
+// 	opecodes.push_back({COMMENT, NULL, NULL, "--save--"});
+// 	for (auto &si: saveInfo) {
+// 		string info = to_string(si.mark)+"[";
+// 		for (int rid: si.regids) {
+// 			switch (rid) {
+// 				case RBX: info += "rbx,"; break;
+// 				case R12: info += "r12,"; break;
+// 				case R13: info += "r13,"; break;
+// 				case R14: info += "r14,"; break;
+// 				case R15: info += "r15,"; break;
+// 				default: info += "*,"; break;
+// 			}
+// 		}
+// 		info += "]";
+// 		opecodes.push_back({COMMENT, NULL, NULL, info});
+// 	}
+// 
+// 	opecodes.push_back({COMMENT, NULL, NULL, "--restore--"});
+// 	for (auto &ri: restoreInfo) {
+// 		string info = to_string(ri.mark);
+// 		info += "[";
+// 		for (int rid: ri.regids) {
+// 			switch (rid) {
+// 				case RBX: info += "rbx,"; break;
+// 				case R12: info += "r12,"; break;
+// 				case R13: info += "r13,"; break;
+// 				case R14: info += "r14,"; break;
+// 				case R15: info += "r15,"; break;
+// 				default: info += "*,"; break;
+// 			}
+// 		}
+// 		info += "]";
+// 		opecodes.push_back({COMMENT, NULL, NULL, info});
+// 	}
+// } 
+// 

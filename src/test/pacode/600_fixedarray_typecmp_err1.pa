@@ -1,0 +1,7 @@
+
+func writable(@![10]byte b) {
+}
+
+@[10]byte b = "abc";	// readonly
+
+writable(b);

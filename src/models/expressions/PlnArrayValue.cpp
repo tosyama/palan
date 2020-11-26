@@ -1,15 +1,15 @@
 /// Object Array value class difinition.
 ///
 /// @file	PlnArrayValue.cpp
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include "../../PlnConstants.h"
 #include "../PlnType.h"
 #include "PlnArrayValue.h"
 #include "../types/PlnArrayValueType.h"
 #include "../types/PlnFixedArrayType.h"
 #include "../types/PlnStructType.h"
-#include "../../PlnConstants.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../../PlnMessage.h"

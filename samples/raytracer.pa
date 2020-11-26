@@ -1,0 +1,549 @@
+// original source: https://github.com/ssloy/tinyraytracer
+
+// Issue memo (for palan Language specification)
+// 
+// type jpeg_compress_struct {
+//	@jpeg_error_mgr err;
+// ...
+// jpeg_compress_struct cinfo;
+// jpeg_error_mgr err;
+// err -> cinfo.err; // NG. it become copy.
+//
+ 
+// stdio.h
+type FILE;
+ccall fopen(@[?]byte filename, @[?]byte mode) -> FILE;
+ccall fclose(FILE >>stream) -> int32;
+
+// math.h
+ccall tanf(flo32 x) -> flo32 : m;
+ccall sqrtf(flo32 x) -> flo32;
+ccall fmaxf(flo32 x, y) -> flo32;
+ccall fminf(flo32 x, y) -> flo32;
+ccall fabsf(flo32 x) -> flo32;
+ccall powf(flo32 x, y) -> flo32;
+
+const FLT_MAX = 3.40282e+38;
+
+// jpeglib.h
+type boolean = int32;
+type ptr = int64;
+type JDIMENSION = uint32;
+type J_COLOR_SPACE = int32;
+type J_DCT_METHOD = int32;
+type JSAMPLE = byte;
+type jpeg_error_mgr {
+  ptr error_exit;
+  ptr emit_message;
+  ptr output_message;
+  ptr format_message;
+  ptr reset_error_mgr;
+  int32 msg_code;
+  // #define JMSG_STR_PARM_MAX  80
+  // union {
+  //  int i[8];
+  //  char s[JMSG_STR_PARM_MAX];
+  //} msg_parm;
+  int64 msg_param0; int64 msg_param1; int64 msg_param2; int64 msg_param3; int64 msg_param4;
+  int64 msg_param5; int64 msg_param6; int64 msg_param7; int64 msg_param8; int64 msg_param9;
+  int32 trace_level;
+  int64 num_warnings;
+  ptr jpeg_message_table;
+  int32 last_jpeg_message;
+  ptr addon_message_table;
+  int32 first_addon_message;
+  int32 last_addon_message;
+};
+
+type jpeg_compress_struct {
+	jpeg_error_mgr err;// struct jpeg_error_mgr *err;
+	ptr mem; // struct jpeg_memory_mgr *mem;
+	ptr progress; // struct jpeg_progress_mgr *progress;
+	ptr client_data; // void *client_data;
+	boolean is_decompressor;
+	int32 global_state; // int global_state;
+	ptr dest; // struct jpeg_destination_mgr *dest;
+	JDIMENSION image_width;
+	JDIMENSION image_height;
+	int32 input_components; // int input_components;
+	J_COLOR_SPACE in_color_space;
+	flo64 input_gamma; // double input_gamma;
+	//unsigned int scale_num, scale_denom; /* fraction by which to scale image */
+	uint32 scale_num;
+	uint32 scale_denom;
+	JDIMENSION jpeg_width;	// /* scaled JPEG image width */
+	JDIMENSION jpeg_height;	// /* scaled JPEG image height */
+	int32 data_precision;	// int data_precision;
+	int32 num_components;	// int num_components;
+	J_COLOR_SPACE jpeg_color_space;
+	ptr comp_info; // jpeg_component_info *comp_info;
+	// JQUANT_TBL *quant_tbl_ptrs[4];
+	ptr quant_tbl_ptrs0; ptr quant_tbl_ptrs1; ptr quant_tbl_ptrs2; ptr quant_tbl_ptrs3;
+	// int q_scale_factor[NUM_QUANT_TBLS]; // NUM_QUANT_TBLS = 4
+	int32 q_scale_factor0; int32 q_scale_factor1; int32 q_scale_factor2; int32 q_scale_factor3;
+	// JHUFF_TBL *dc_huff_tbl_ptrs[4];
+	ptr dc_huff_tbl_ptrs0; ptr dc_huff_tbl_ptrs1; ptr dc_huff_tbl_ptrs2; ptr dc_huff_tbl_ptrs3;
+	// JHUFF_TBL *ac_huff_tbl_ptrs[4];
+	ptr ac_huff_tbl_ptrs0; ptr ac_huff_tbl_ptrs1; ptr ac_huff_tbl_ptrs2; ptr ac_huff_tbl_ptrs3;
+	// UINT8 arith_dc_L[16];
+	uint64 arith_dc_L0; uint64 arith_dc_L1;
+	// UINT8 arith_dc_U[16];
+	uint64 arith_dc_U0; uint64 arith_dc_U1;
+	// UINT8 arith_ac_K[16]1
+	uint64 arith_ac_K0; uint64 arith_ac_K1;
+	int32 num_scans;	// int num_scans;
+	ptr scan_info; // const jpeg_scan_info *scan_info;
+	boolean raw_data_in;
+	boolean arith_code;
+	boolean optimize_coding;
+	boolean CCIR601_sampling;
+	boolean do_fancy_downsampling; // /* TRUE=apply fancy downsampling */
+	int32 smoothing_factor; // int smoothing_factor;
+	J_DCT_METHOD dct_method;
+	uint32 restart_interval; // unsigned int restart_interval;
+	int32 restart_in_rows; // int restart_in_rows;
+	boolean write_JFIF_header;
+	byte JFIF_major_version; // UINT8 JFIF_major_version;
+	byte JFIF_minor_version; // UINT8 JFIF_minor_version;
+	byte density_unit; // UINT8 density_unit;
+	uint16 X_density; // UINT16 X_density;
+	uint16 Y_density; // UINT16 Y_density;
+	boolean write_Adobe_marker;
+	JDIMENSION next_scanline;
+	boolean progressive_mode;
+	int32 max_h_samp_factor; // int max_h_samp_factor;
+	int32 max_v_samp_factor; // int max_v_samp_factor;
+	int32 min_DCT_h_scaled_size;	// int min_DCT_h_scaled_size;    /* smallest DCT_h_scaled_size of any component */
+	int32 min_DCT_v_scaled_size;	// int min_DCT_v_scaled_size;    /* smallest DCT_v_scaled_size of any component */
+	JDIMENSION total_iMCU_rows;
+	int32 comps_in_scan; // int comps_in_scan;
+	// jpeg_component_info *cur_comp_info[4];
+	ptr cur_comp_info0; ptr cur_comp_info1; ptr cur_comp_info2; ptr cur_comp_info3;
+	JDIMENSION MCUs_per_row;
+	JDIMENSION MCU_rows_in_scan;
+	int32 blocks_in_MCU; // int blocks_in_MCU;
+	// int MCU_membership[10];
+	int64 MCU_membership0; int64 MCU_membership1;
+	int64 MCU_membership2; int64 MCU_membership3;
+	int64 MCU_membership4;
+	int32 Ss; // int Ss;
+	int32 Se; // int Se;
+	int32 Ah; // int Ah;
+	int32 Al; // int Al;
+	int32 block_size;	//	int block_size;               /* the basic DCT block size: 1..16 */
+  	ptr natural_order;	// const int *natural_order;     /* natural-order position array */
+	int32 lim_Se;	// int lim_Se;                   /* min( Se, DCTSIZE2-1 ) */
+	ptr master; // struct jpeg_comp_master *master;
+	ptr main; // struct jpeg_c_main_controller *main;
+	ptr prep; // struct jpeg_c_prep_controller *prep;
+	ptr coef; // struct jpeg_c_coef_controller *coef;
+	ptr marker; // struct jpeg_marker_writer *marker;
+	ptr cconvert; // struct jpeg_color_converter *cconvert;
+	ptr downsample; // struct jpeg_downsampler *downsample;
+	ptr fdct; // struct jpeg_forward_dct *fdct;
+	ptr entropy; // struct jpeg_entropy_encoder *entropy;
+	ptr script_space; // jpeg_scan_info *script_space;
+	int32 script_space_size; // int script_space_size;
+};
+
+const JPEG_LIB_VERSION = 80;
+const JPEG_COMPRESS_STRUCT_SIZE = 584;
+const JCS_RGB = 2;
+const TRUE, FALSE = 1, 0;
+
+ccall jpeg_CreateCompress(@, int32 version, int64 structsize => jpeg_compress_struct cinfo): jpeg;
+ccall jpeg_std_error(@!jpeg_error_mgr err) -> @!jpeg_error_mgr;
+ccall jpeg_set_defaults(@!jpeg_compress_struct cinfo);
+ccall jpeg_set_quality(@!jpeg_compress_struct cinfo, int32 quality, boolean force_baseline);
+ccall jpeg_stdio_dest(@!jpeg_compress_struct cinfo, FILE ofs);
+ccall jpeg_start_compress (@!jpeg_compress_struct cinfo, boolean write_all_tables);
+ccall jpeg_write_scanlines(@!jpeg_compress_struct cinfo, @[?][?]JSAMPLE scanlines, JDIMENSION num_lines);
+ccall jpeg_finish_compress(@!jpeg_compress_struct cinfo);
+ccall jpeg_destroy_compress(@!jpeg_compress_struct cinfo);
+
+type Vec3f {
+	flo32 x;
+	flo32 y;
+	flo32 z;
+};
+
+func add(@Vec3f l, @Vec3f r) -> Vec3f ret
+{
+	l.x + r.x -> ret.x;
+	l.y + r.y -> ret.y;
+	l.z + r.z -> ret.z;
+}
+
+func sub(@Vec3f l, @Vec3f r) -> Vec3f ret
+{
+	l.x - r.x -> ret.x;
+	l.y - r.y -> ret.y;
+	l.z - r.z -> ret.z;
+}
+
+func mul(@Vec3f l, @Vec3f r) -> flo32 ret
+{
+	l.x * r.x -> ret;
+	ret + l.y * r.y -> ret;
+	ret + l.z * r.z -> ret;
+}
+
+func mulvf(@Vec3f l, flo32 r) -> Vec3f ret
+{
+	l.x * r -> ret.x;
+	l.y * r -> ret.y;
+	l.z * r -> ret.z;
+}
+
+func neg(@Vec3f v) -> Vec3f ret
+{
+	-v.x -> ret.x;
+	-v.y -> ret.y;
+	-v.z -> ret.z;
+}
+
+func norm(@Vec3f v) -> flo32
+{
+	flo32 x = v.x;
+	flo32 y = v.y;
+	flo32 z = v.z;
+	return sqrtf(x*x + y*y + z*z);
+}
+
+func normalize(Vec3f >>v) -> Vec3f v
+{
+	flo32 n = norm(v);
+	v.x / n -> v.x;
+	v.y / n -> v.y;
+	v.z / n -> v.z;
+}
+
+func reflect(@Vec3f I, @Vec3f N) -> Vec3f
+{
+	Vec3f ret = mulvf(N, 2.0*mul(I, N));
+	I.x - ret.x -> ret.x;
+	I.y - ret.y -> ret.y;
+	I.z - ret.z -> ret.z;
+	return ret;	
+}
+
+func refract(@Vec3f I, @Vec3f N, flo32 eta_t, flo32 eta_i = 1.0)
+	-> Vec3f ret
+{
+	flo32 cosi = -fmaxf(-1.0, fminf(1.0, mul(I, N)));
+
+	if cosi < 0 {
+	 	Vec3f nN = neg(N);
+		refract(I, nN, eta_i, eta_t) ->> ret;	// if the ray comes from inside the object, swap the airt and the media
+		return;
+	}
+
+	flo32 eta = eta_i / eta_t;
+	flo32 k = 1 - eta*eta*(1-cosi*cosi);
+
+	[1, 0, 0]->ret;
+
+	if k>=0 {
+		mulvf(I, eta) ->> ret;
+		Vec3f tmp = mulvf(N, eta*cosi - sqrtf(k));
+		add(ret, tmp) ->> ret;
+	}
+}
+
+type Color3f {
+	flo32 r;
+	flo32 g;
+	flo32 b;
+};
+
+func mul_color(Color3f >>c, flo32 f)
+	-> Color3f c
+{
+	c.r * f -> c.r;
+	c.g * f -> c.g;
+	c.b * f -> c.b;
+}
+
+func add_color(Color3f >>c, @Color3f addc)
+	-> Color3f c
+{
+	c.r + addc.r -> c.r;
+	c.g + addc.g -> c.g;
+	c.b + addc.b -> c.b;
+}
+
+type Material {
+	flo32 refractive_index;
+	[4]flo32 albedo;
+	Color3f diffuse_color;
+	flo32 specular_exponent;
+};
+
+type Light {
+	Vec3f position;
+	flo32 intensity;
+};
+
+type Sphere {
+	Vec3f center;
+	flo32 radius;
+	Material material;
+};
+
+const M_PI = 3.1415926535897932384626433832795;
+const width = 1024;
+const height = 764;
+const fov = M_PI/3.0;
+
+const ivory = [1.0, [0.6, 0.3, 0.1, 0.0], [0.4, 0.4, 0.3], 50.0];
+const glass	= [1.5, [0.0, 0.5, 0.1, 0.8], [0.6, 0.7, 0.8], 125.0];
+const red_rubber = [1.0, [0.9, 0.1, 0.0, 0.0], [0.3, 0.1, 0.1], 10.0];
+const mirror= [1.0, [0.0, 10.0, 0.8, 0.0], [1.0, 1.0, 1.0], 1425.0];
+const PN = 4;
+[PN]Sphere spheres = [
+	[[-3, 0, -16], 2, ivory],
+	[[-1, -1.5, -12], 2, glass],
+	[[1.5, -0.5, -18], 3, red_rubber],
+	[[7, 5, -18], 4, mirror]
+];
+
+const LN = 3;
+[LN]Light lights = [
+	[[-20, 20, 20], 1.5],
+	[[30, 50, -25], 1.8],
+	[[30, 20, 30], 1.7]
+];
+
+const SZ = width * height;
+[SZ,3]flo32 framebuffer = render(spheres, lights);
+
+// write framebuffer to jpg.
+jpeg_compress_struct cinfo;
+ 
+// jpeg_create_compress(cinfo);
+jpeg_CreateCompress(JPEG_LIB_VERSION, JPEG_COMPRESS_STRUCT_SIZE => cinfo);
+jpeg_std_error(cinfo.err);
+width	-> cinfo.image_width;
+height	-> cinfo.image_height;
+3		-> cinfo.input_components;
+JCS_RGB -> cinfo.in_color_space;
+
+cinfo->jpeg_set_defaults();
+cinfo->jpeg_set_quality(75, TRUE);
+
+FILE ofs = fopen("./ray.jpg", "wb");
+cinfo->jpeg_stdio_dest(ofs);
+
+jpeg_start_compress(cinfo, TRUE);
+[1][width*3]JSAMPLE buffer;
+
+i = 0;
+while i<height {
+	j = 0;
+	while j<width {
+		indf = i*width+j;
+		indb = j*3;
+		(framebuffer[indf, 0] -> fmaxf(0.0) -> fminf(1.0)) * 255 -> buffer[0][indb];
+		(framebuffer[indf, 1] -> fmaxf(0.0) -> fminf(1.0)) * 255 -> buffer[0][indb+1];
+		(framebuffer[indf, 2] -> fmaxf(0.0) -> fminf(1.0)) * 255 -> buffer[0][indb+2];
+		j++;
+	}
+	jpeg_write_scanlines(cinfo, buffer, 1);
+	i++;
+}
+
+jpeg_finish_compress(cinfo);
+jpeg_destroy_compress(cinfo);
+
+fclose(ofs>>);
+
+func render(@[PN]Sphere spheres, @[LN]Light lights)
+	-> [SZ,3]flo32 framebuffer
+{
+	Vec3f orig = [0.0, 0.0, 0.0];
+
+	j = 0;
+	while j < height {
+		i = 0;
+		while i < width {
+			Vec3f dir = [
+				(i+0.5) - width/2.0,
+				-(j+0.5) + height/2.0,
+				-height/(2.0 * tanf(fov/2.0))
+			];
+			dir->>normalize()->>dir;
+
+			ind = i+j*width;
+			cast_ray(orig, dir, spheres, lights)
+				-> framebuffer[ind, 0], framebuffer[ind, 1], framebuffer[ind, 2];
+			i++;
+		}
+		j++;
+	}
+}
+
+func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, int32 depth=0)
+	-> flo32 r, g, b
+{
+	0.2, 0.7, 0.8 -> r, g, b;
+	if depth > 4 { return }
+
+	boolean is_intersect,
+	Vec3f point, N,
+	Material material
+		= scene_intersect(orig, dir, spheres);
+
+	if !is_intersect { return }
+
+	// reflect
+	Vec3f reflect_dir = (reflect(dir, N) ->> normalize());
+	Vec3f reflect_orig = mulvf(N, 1.0e-3);
+	if mul(reflect_dir, N) < 0 {
+		sub(point, reflect_orig) ->> reflect_orig;
+	} else {
+		add(point, reflect_orig) ->> reflect_orig;
+	}
+	Color3f reflect_color;
+	cast_ray(reflect_orig, reflect_dir, spheres, lights, depth+1)
+		-> reflect_color.r, reflect_color.g, reflect_color.b;
+
+	// refract
+	Vec3f refract_dir = (refract(dir, N, material.refractive_index) ->> normalize());
+	Vec3f refract_orig = mulvf(N, 1.0e-3);
+	if mul(refract_dir, N) < 0 {
+	 	sub(point, refract_orig) ->> refract_orig;
+	} else {
+	 	add(point, refract_orig) ->> refract_orig;
+	}
+	Color3f refract_color;
+	cast_ray(refract_orig, refract_dir, spheres, lights, depth+1)
+	 	-> refract_color.r, refract_color.g, refract_color.b;
+	
+	flo32 diffuse_light_intensity = 0.0;
+	flo32 specular_light_intensity = 0.0;
+	i = 0;
+	while i<LN {
+		@Light l = lights[i];
+		Vec3f light_dir = sub(l.position, point);
+		flo32 light_distance = norm(light_dir);
+		light_dir ->> normalize() ->> light_dir;
+
+		{	// shadow
+			Vec3f shadow_orig;
+			Vec3f n = mulvf(N, 1.0e-3);
+			if mul(light_dir, N) < 0 {
+				sub(point, n) ->> shadow_orig;
+			} else {
+				add(point, n) ->> shadow_orig;
+			}
+			boolean is_intersect_shadow,
+			Vec3f shadow_pt, tmp_N,
+			Material tmp_mate
+				= scene_intersect(shadow_orig, light_dir, spheres);
+
+			if is_intersect_shadow {
+				Vec3f shadow_dir = sub(shadow_pt, shadow_orig);
+				if norm(shadow_dir) < light_distance {
+					i++;
+					continue;
+				}
+			}
+		}
+
+		// diffuse
+		diffuse_light_intensity + l.intensity * fmaxf(0.0, mul(light_dir, N))
+		 -> diffuse_light_intensity;
+
+		{ // specular
+			Vec3f tmp = neg(light_dir);
+			reflect(tmp, N) ->> tmp;
+			specular_light_intensity + powf(fmaxf(0.0, -mul(tmp, dir)), material.specular_exponent) * l.intensity
+				-> specular_light_intensity;
+		}
+		i++;
+	 }
+
+	 Color3f diffuse_color = material.diffuse_color;
+	 Color3f specular_color = [1.0, 1.0, 1.0];
+	 mul_color(diffuse_color>>, diffuse_light_intensity * material.albedo[0])
+		->> diffuse_color;
+	 mul_color(specular_color>>, specular_light_intensity * material.albedo[1])
+		->> specular_color;
+	 mul_color(reflect_color>>, material.albedo[2])
+		->> reflect_color;
+	 mul_color(refract_color>>, material.albedo[3])
+		->> refract_color;
+
+	Color3f ret = diffuse_color;
+	ret ->> add_color(specular_color)
+	 	->> add_color(reflect_color)
+	 	->> add_color(refract_color)
+		->> ret;
+
+	ret.r, ret.g, ret.b -> r, g, b;
+}
+
+func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
+	-> boolean is_intersect, Vec3f hit, N, Material material
+{
+	flo32 distance = FLT_MAX;
+	int64 i=0;
+	while i<PN {
+		boolean is_intersect_i, flo32 dist_i
+			= sphere_ray_intersect(spheres[i], orig, dir);
+		if is_intersect_i && dist_i < distance {
+			@Sphere sp = spheres[i];
+			dist_i -> distance;
+			Vec3f tmp = mulvf(dir, dist_i);
+			add(orig, tmp) -> hit;
+			sub(hit, sp.center) ->> N;
+			N ->> normalize() ->> N;
+			sp.material -> material;
+		}
+		i++;
+	}
+
+	if fabsf(dir.y) > 1.0e-3 {
+		flo32 d = -(orig.y + 4.0) / dir.y;	// the checkerboard plane has equebyt y = -4
+		Vec3f pt = mulvf(dir, d); 
+		add(pt, orig) -> pt;
+		if d>0 && fabsf(pt.x)<10 && pt.z<-10 && pt.z>-30 && d < distance {
+			Vec3f n = [0, 1, 0];
+			[1.0, [1.0, 0.0, 0.0, 0.0], [0.3, 0.2, 0.1], 0.0]
+				-> material;
+			@Color3f c2 = [0.3, 0.3, 0.3];
+			d -> distance;
+			pt -> hit;
+			[0, 1, 0] -> N;
+			int32 x = (0.5*pt.x+1000);
+			int32 z = (0.5*pt.z);
+			if (x+z)%2 {
+				c2->material.diffuse_color;
+			}
+		}
+	}
+	(distance < 1000.0) -> is_intersect;
+}
+
+func sphere_ray_intersect(@Sphere sp, @Vec3f orig, dir)
+	-> boolean is_intersect, flo32 distance
+{
+	FALSE -> is_intersect;
+
+	Vec3f L = sub(sp.center, orig);
+	flo32 tca = mul(L, dir);
+	flo32 d2 = mul(L, L) - tca*tca;
+	flo32 rr = sp.radius * sp.radius;
+
+	if d2 > rr { return }
+
+	flo32 thc = sqrtf(rr - d2);
+	flo32 t0 = tca - thc;
+	flo32 t1 = tca + thc;
+	if t0 < 0 { t1 -> t0 }
+	t0 -> distance;
+
+	if (t0 < 0) { return }
+ 
+	TRUE -> is_intersect;
+}

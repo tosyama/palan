@@ -1,0 +1,6 @@
+
+func readonly(@[10,2]int32 a) {
+}
+
+readonly("test");
+

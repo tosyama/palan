@@ -1,7 +1,7 @@
 /// Fixed array type class definition.
 ///
 /// @file	PlnFixedArrayType.cpp
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
@@ -12,6 +12,8 @@
 #include "PlnFixedArrayType.h"
 #include "PlnArrayValueType.h"
 #include "../PlnArray.h"
+#include "../../PlnMessage.h"
+#include "../../PlnException.h"
 
 PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent)
 	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
@@ -28,11 +30,13 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	this->sizes = move(sizes);
 
 	auto it = this->item_type;
-	
-	if (alloc_size == 0) {
-		// raw array reference.
-		freer = new PlnSingleObjectFreer();
-		// TODO: confirm it's OK when data_type is object.
+
+	if (alloc_size == 0) {	// 0(?) size exists.
+		// only support free. alloc and copy is not supported because size is undefined.
+		// e.g.) raw array reference.
+		if (item_type->data_type() != DT_OBJECT_REF) {
+			freer = new PlnSingleObjectFreer();
+		}
 		return;
 	}
 
@@ -70,10 +74,22 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	}
 }
 
-PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *src)
+PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
 {
-	if (this == src->typeinf)
+	if (this == src->typeinf && mode == src->mode)
 		return TC_SAME;
+	
+	// check mode
+	if (copymode == ASGN_COPY_REF) {
+		if (mode[ACCESS_MD] == 'w' && src->mode[ACCESS_MD] == 'r') {
+			return TC_CANT_CONV;
+		}
+	} else if (copymode == ASGN_MOVE) {
+		if (mode[ACCESS_MD] == 'w' && src->mode[ACCESS_MD] == 'r') {
+			return TC_CANT_CONV;
+		}
+	} else
+		BOOST_ASSERT(copymode == ASGN_COPY);
 
 	if (src->typeinf == PlnType::getObject()) {
 		return TC_DOWN_CAST;
@@ -81,22 +97,65 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 
 	if (src->typeinf->type == TP_FIXED_ARRAY) {
 		auto src_farr = static_cast<PlnFixedArrayType*>(src->typeinf);
-		if (item_type == src_farr->item_type) {
-			if (!sizes[0]) {	// xx[n] -> xx[?]
-				return TC_AUTO_CAST; // It has risk to break data.
-			} else if (!src_farr->sizes[0]) {	// xx[?] -> xx[n]
-				BOOST_ASSERT(false);
-				// return TC_DOWN_CAST;
-			}
-		} else {	// Difference only mode of item.
-			if (sizes == src_farr->sizes) {
-				if (item_type->typeinf == src_farr->item_type->typeinf)
-					return TC_AUTO_CAST;
+		// Assumed cases
+		// [9,2]int32 -> [9,2]int64: NG
+		// [9,2]itemtype -> [9,2]itemtype: OK
+		// [9,2]itemtype -> @[9,2]itemtype: OK
+		// @[9,2]itemtype -> @[9,2]itemtype: OK
+		// @[9,2]itemtype -> [9,2]itemtype: OK copy, NG if address copy ??
+		// [9,2]itemtype -> [?,2]itemtype: Upcast
+		// [9,2]itemtype -> [?]itemtype: Upcast
+		// [?,2]itemtype -> [?,2]itemtype: OK
+		// [?,2]itemtype -> [9,2]itemtype: Downcast
+		// [9,2]itemtype -> [?,3]itemtype: NG
+		// [9,2]itemtype -> [?,2,3]itemtype: NG
+		// [9,2,3]itemtype -> [?,2]itemtype: NG
+		// [9,2][2]itemtype -> [9,2][?]itemtype: Downcast (basically uses item([2]itemtype) compatibility)
 
-				if (item_type->typeinf->type == TP_FIXED_ARRAY)
-					return item_type->canCopyFrom(src_farr->item_type);
+		PlnTypeConvCap cap = TC_AUTO_CAST;
+		if (sizes[0] == 0) { // Undefined size case. e.g. [?,2]
+			if (sizes.size() != 1) {
+				if (sizes.size() != src_farr->sizes.size()) {
+					return TC_CANT_CONV;
+				}
+				for (int i=1; i<sizes.size(); i++) {
+					if (sizes[i] != src_farr->sizes[i]) {
+						return TC_CANT_CONV;
+					}
+				}
 			}
+			cap = TC_UP_CAST;
+
+		} else if (src_farr->sizes[0] == 0) { // Downcast case [?]->[9]
+			if (src_farr->sizes.size() != 1) {
+				if (sizes.size() != src_farr->sizes.size()) {
+					return TC_CANT_CONV;
+				}
+				for (int i=1; i<sizes.size(); i++) {
+					if (sizes[i] != src_farr->sizes[i]) {
+						return TC_CANT_CONV;
+					}
+				}
+			}
+			cap = TC_DOWN_CAST;
+
+		} else if (sizes != src_farr->sizes) { // size case
+			return TC_CANT_CONV;
+
 		}
+
+		// Item type check
+		if (item_type->data_type() == DT_OBJECT_REF) {
+			return item_type->canCopyFrom(src_farr->item_type, ASGN_COPY);
+
+		} else if (item_type == src_farr->item_type) {
+			return cap;
+
+		} else {
+			return TC_CANT_CONV;
+		}
+
+		return TC_CANT_CONV;
 	}
 
 	if (src->typeinf->type == TP_ARRAY_VALUE) {
@@ -111,6 +170,7 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 				return TC_AUTO_CAST;
 
 		}
+		return TC_CANT_CONV;
 	}
 
 	return TC_CANT_CONV;

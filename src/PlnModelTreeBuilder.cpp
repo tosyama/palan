@@ -105,7 +105,7 @@ PlnModule* PlnModelTreeBuilder::buildModule(json& ast)
 	return module;
 }
 
-static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
+static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 {
 	if (var_type.is_null()) return NULL;
 
@@ -136,6 +136,13 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 		vector<int> sizes;
 		for (json& i: vt["sizes"]) {
 			if (i["exp-type"]=="token" && i["info"]=="?") {
+				// 0 size is only allowed first. => OK: [?,1,2]int32, NG: [1,?,3]int32
+				if (sizes.size()) {
+					PlnCompileError err(E_OnlyAllowedAnySizeAtFirst);
+					setLoc(&err, i);
+					throw err;
+				}
+
 				sizes.push_back(0u);
 				continue;
 			}
@@ -146,7 +153,9 @@ static PlnVarType* getVarType(json& var_type, PlnScopeStack& scope)
 			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8)) {
 				sizes.push_back(e->values[0].inf.uintValue);
 			} else {
-				BOOST_ASSERT(false);
+				PlnCompileError err(E_OnlyAllowedIntegerHere);
+				setLoc(&err, i);
+				throw err;
 			}
 		}
 		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);
@@ -177,7 +186,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				throw err;
 			}
 
-			PlnVarType *var_type = getVarType(param["var-type"], scope);
+			PlnVarType *var_type = getVarTypeFromJson(param["var-type"], scope);
 			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy", param);
 
 			PlnPassingMethod pm = FPM_UNKNOWN;
@@ -207,7 +216,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		}
 
 		for (auto& ret: proto["rets"]) {
-			PlnVarType *var_type = getVarType(ret["var-type"], scope);
+			PlnVarType *var_type = getVarTypeFromJson(ret["var-type"], scope);
 			string name;
 			if (ret["name"].is_string())
 				name = ret["name"];
@@ -256,7 +265,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, pm, NULL);
 
 			} else {
-				PlnVarType *var_type = getVarType(param["var-type"], scope);
+				PlnVarType *var_type = getVarTypeFromJson(param["var-type"], scope);
 				PlnPassingMethod pm = FPM_UNKNOWN;
 				int iomode = PIO_UNKNOWN;
 				if (param["pass-by"] == "move") {
@@ -307,7 +316,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			i++;
 		}
 		if (proto["ret"].is_object()) {
-			PlnVarType *t = getVarType(proto["ret"]["var-type"], scope);
+			PlnVarType *t = getVarTypeFromJson(proto["ret"]["var-type"], scope);
 			string rname = "";
 			f->addRetValue(rname, t);
 
@@ -339,7 +348,7 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
 		BOOST_ASSERT (param["name"]!="...");
-		PlnVarType* var_type = getVarType(param["var-type"], scope);
+		PlnVarType* var_type = getVarTypeFromJson(param["var-type"], scope);
 		string p_name;
 		if (var_type) {
 			pre_name = var_type->name();
@@ -633,10 +642,10 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			}
 
 			inferArrayIndex(var, sizes);
-			t = getVarType(var["var-type"], scope);
+			t = getVarTypeFromJson(var["var-type"], scope);
 
 		} else {
-			t = getVarType(var["var-type"], scope);
+			t = getVarTypeFromJson(var["var-type"], scope);
 		}
 
 		bool do_check_ancestor_blocks = (infer == TYPE_INFER);
@@ -740,7 +749,7 @@ void registerType(json& type, PlnScopeStack &scope)
 
 		vector<PlnStructMemberDef*> members;
 		for (auto m: type["members"]) {
-			PlnVarType* t = getVarType(m["type"], scope);
+			PlnVarType* t = getVarTypeFromJson(m["type"], scope);
 
 			auto member = new PlnStructMemberDef(t, m["name"]);
 			members.push_back(member);
@@ -749,7 +758,7 @@ void registerType(json& type, PlnScopeStack &scope)
 	
 	} else if (type["type"] == "alias") {
 		assertAST(type["var-type"].is_array(), type);
-		PlnVarType* t = getVarType(type["var-type"], scope);
+		PlnVarType* t = getVarTypeFromJson(type["var-type"], scope);
 		string type_name = type["name"];
 
 		CUR_BLOCK->declareAliasType(type_name, t->typeinf);
@@ -761,7 +770,7 @@ void registerType(json& type, PlnScopeStack &scope)
 
 void registerExternVar(json& var, PlnScopeStack &scope)
 {
-	PlnVarType* t = getVarType(var["var-type"], scope);
+	PlnVarType* t = getVarTypeFromJson(var["var-type"], scope);
 	for (const string& vname: var["names"]) {
 		PlnVariable *v = CUR_BLOCK->declareGlobalVariable(vname, t, true);
 		if (!v) {
@@ -786,6 +795,24 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 			assertAST(ret_val.is_object(), ret);
 			ret_vals.push_back(buildExpression(ret_val, scope));
 		}
+	
+	PlnFunction* f = CUR_FUNC;
+	int ti = 0;
+	int ri = 0;
+	for (int ri=0; ri<ret_vals.size(); ri++) {
+		vector<PlnVarType*> types;
+		PlnExpression* e = ret_vals[ri];
+		for (int i=0; i<e->values.size(); i++) {
+			if (ti >= f->return_vals.size()) {
+				PlnCompileError err(E_InvalidRetValues);
+				err.loc = e->loc;
+				throw err;
+			}
+			types.push_back(f->return_vals[ti].var_type);
+			ti++;
+		}
+		ret_vals[ri] = e->adjustTypes(types);
+	}
 	
 	try {
 		return new PlnReturnStmt(ret_vals, CUR_BLOCK);

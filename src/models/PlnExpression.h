@@ -1,7 +1,7 @@
 /// Expression model class declaration.
 ///
 /// @file	PlnExpression.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #pragma once
 #include "../PlnModel.h"
@@ -65,13 +65,6 @@ enum PlnValType {
 	VL_LIT_ARRAY,
 	VL_VAR,
 	VL_WORK
-};
-
-enum PlnAsgnType {
-	NO_ASGN,
-	ASGN_COPY,
-	ASGN_MOVE,
-	ASGN_COPY_REF
 };
 
 class PlnArrayLiteral;

@@ -1,7 +1,7 @@
 /// Assignment Item class definition.
 ///
 /// @file	PlnAssignArrayValue.h
-/// @copyright	2019 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 class PlnAssignArrayValue : public PlnAssignItem {
 	PlnArrayValue* src_ex;
@@ -15,9 +15,11 @@ class PlnAssignArrayValue : public PlnAssignItem {
 	PlnDstItem *dst_item;
 	PlnExpression *tmp_var_ex;
 
+	PlnDataPlace *place;
+
 public:
 	PlnAssignArrayValue(PlnExpression* ex)
-		: tmp_var(NULL), alloc_ex(NULL), dst_item(NULL), free_ex(NULL) {
+		: tmp_var(NULL), alloc_ex(NULL), dst_item(NULL), free_ex(NULL), place(NULL) {
 		BOOST_ASSERT(ex->type = ET_ARRAYVALUE);
 		src_ex = static_cast<PlnArrayValue*>(ex);
 	}
@@ -44,7 +46,7 @@ public:
 	}
 
 	int addDataPlace(vector<PlnDataPlace*> &data_places, int start_ind) override {
-		dst_ex->data_places.push_back(data_places[start_ind]);
+		place = data_places[start_ind];
 		return start_ind + 1;
 	}
 
@@ -67,6 +69,7 @@ public:
 		if (src_ex->doCopyFromStaticBuffer) {
 			dst_item = PlnDstItem::createDstItem(dst_ex, false);
 			dst_item->setSrcEx(da, si, src_ex);
+			dst_item->place = place;
 			src_ex->finish(da, si);
 
 		} else {
@@ -77,6 +80,9 @@ public:
 				err.loc =  dst_ex->loc;
 				throw err;
 			}
+
+			if (place)
+				dst_ex->data_places.push_back(place);
 
 			if (dst_ex->type == ET_VALUE) {
 				PlnVariable* dst_var = dst_ex->values[0].inf.var;

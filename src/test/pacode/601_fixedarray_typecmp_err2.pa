@@ -1,0 +1,6 @@
+@[10]byte b = "abc";	// readonly
+
+movable(b);
+func movable([10]byte >>b) {
+}
+

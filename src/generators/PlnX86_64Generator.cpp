@@ -186,6 +186,7 @@ int PlnX86_64Generator::registerConstData(vector<PlnRoData> &rodata)
 				}
 				if (matched) {
 					if (const_buf[i].id < 0) {
+						if (generated) continue;
 						const_buf[i].id = max_const_id;
 						max_const_id++;
 					}
@@ -741,19 +742,24 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 4. xmm4f->xmm8f: CVTSS2SD
 		// 5. xmm4f->mem8f: CVTSS2SD(X11) + MOVSD
 		// 6. xmm4f->reg8f: CVTSS2SD(X11) + MOVQ
-		case SXMMF|S4 + DXMMF|D4:
-			BOOST_ASSERT(false);
-		case SXMMF|S4 + DMEMF|D4:
+		case SXMMF|S4 + DXMMF|D4:	// 1
+		case SXMMF|S4 + DMEMF|D4:	// 2
 			genInfos[0] = {MOVSS};
 			return 1;
-		case SXMMF|S4 + DREGF|D4:
-			BOOST_ASSERT(false);
-		case SXMMF|S4 + DXMMF|D8:
-			BOOST_ASSERT(false);
-		case SXMMF|S4 + DMEMF|D8:
-			BOOST_ASSERT(false);
-		case SXMMF|S4 + DREGF|D8:
-			BOOST_ASSERT(false);
+		case SXMMF|S4 + DREGF|D4:	// 3
+			genInfos[0] = {MOVQ};
+			return 1;
+		case SXMMF|S4 + DXMMF|D8:	// 4
+			genInfos[0] = {CVTSS2SD};
+			return 1;
+		case SXMMF|S4 + DMEMF|D8:	// 5
+			genInfos[0] = {CVTSS2SD, XMM11};
+			genInfos[1] = {MOVSD};
+			return 2;
+		case SXMMF|S4 + DREGF|D8:	// 6
+			genInfos[0] = {CVTSS2SD, XMM11};
+			genInfos[1] = {MOVQ};
+			return 2;
 
 		// 1. mem8f->xmm8f: MOVSD
 		// 2. mem8f->mem8f: MOVQ(R11) + MOVQ

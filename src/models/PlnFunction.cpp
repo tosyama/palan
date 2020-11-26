@@ -10,6 +10,10 @@
 #include <boost/assert.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <functional>
+#include "../PlnConstants.h"
+#include "../PlnDataAllocator.h"
+#include "../PlnGenerator.h"
+#include "../PlnScopeStack.h"
 #include "PlnFunction.h"
 #include "PlnModule.h"
 #include "PlnBlock.h"
@@ -18,10 +22,6 @@
 #include "types/PlnFixedArrayType.h"
 #include "types/PlnStructType.h"
 #include "PlnVariable.h"
-#include "../PlnDataAllocator.h"
-#include "../PlnGenerator.h"
-#include "../PlnConstants.h"
-#include "../PlnScopeStack.h"
 #include "../PlnMessage.h"
 #include "../PlnException.h"
 
@@ -163,7 +163,7 @@ vector<PlnDataPlace*> PlnFunction::createRetValDps()
 {
 	vector<PlnDataPlace*> dps;
 	for (auto& rt: return_vals) {
-		PlnDataPlace* dp = new PlnDataPlace(8, rt.local_var->var_type->data_type());
+		PlnDataPlace* dp = new PlnDataPlace(rt.local_var->var_type->size(), rt.local_var->var_type->data_type());
 		dp->status = DS_READY_ASSIGN;
 		dp->data.bytes.parent_dp = NULL;
 		dps.push_back(dp);

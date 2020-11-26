@@ -492,7 +492,7 @@ The following condition operator can be used to judge complicated conditions.
 |Operator|Name|Description|Example|
 |:-------|:---|:----------|:------|
 |`&&`|And|Return 1 if the left value is not 0 and the right value is not 0, otherwise return 0. If the left value is 0, the expression for the right value is not evaluated.|`if a>0 && a <= 10 {`...`}`|
-|`||`|Or|Return 1 if the left value is not 0 or the right value is not 0, otherwise return 0. If the left value is 1, the expression for the right value is not evaluated.|`if a <0 || a >= 10 {`...`}`|
+|<code>&#124;&#124;</code>|Or|Return 1 if the left value is not 0 or the right value is not 0, otherwise return 0. If the left value is 1, the expression for the right value is not evaluated.|`if a <0 || a >= 10 {`...`}`|
 |`!`|Not|Return 1 if the expression is 0, Return 0 if it is not 0.|`if !(a<0) {`...`}`|
 
 **Note:** Although it is often called boolean operation in other languages, since the actual operation is a conditional branch, it is defined as a conditional operation in Palan.

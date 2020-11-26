@@ -46,3 +46,9 @@ printf("%d %.1f ", sx, sf);
 3.5 -> sf;
 printf("%d %.1f", s.i16, s.f32);
 
+@[?]byte str="for down cast";
+arraydowmcast(str);
+func arraydowmcast(@[9]byte str)
+{
+	printf("%c", str[4]);
+}

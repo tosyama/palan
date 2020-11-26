@@ -4,16 +4,16 @@
 /// The values are set specified place.
 ///
 /// @file	PlnExpression.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 
+#include "../PlnConstants.h"
 #include "PlnExpression.h"
 #include "PlnType.h"
 #include "PlnVariable.h"
 #include "expressions/PlnArrayValue.h"
-#include "../PlnConstants.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "../PlnMessage.h"
@@ -120,7 +120,15 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 			return da.getROStrArrayDp(*inf.strValue);
 
 		case VL_LIT_ARRAY:
-			return inf.arrValue->getROArrayDp(da);
+			{
+				PlnType* type = getVarType()->typeinf;
+				if (type->type == TP_FIXED_ARRAY) {
+					return inf.arrValue->getROArrayDp(da);
+				} else {
+					BOOST_ASSERT(type->type == TP_STRUCT);
+					return inf.arrValue->getROStructDp(da);
+				}
+			}
 
 		case VL_VAR:
 			PlnVariable *var = inf.var;
@@ -175,7 +183,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 			
 		} else {
 			PlnVarType *vtype = values[0].getVarType();
-			if (types[0]->canCopyFrom(vtype) == TC_CANT_CONV) {
+			if (types[0]->canCopyFrom(vtype, ASGN_COPY) == TC_CANT_CONV) {
 				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
 				err.loc = loc;
 				throw err;
@@ -187,6 +195,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
+	BOOST_ASSERT(data_places.size() <= 1);
 	if (data_places.size())
 		da.pushSrc(data_places[0], values[0].getDataPlace(da));
 }

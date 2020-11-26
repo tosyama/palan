@@ -1,0 +1,6 @@
+func readonlyanysize(@[?,2]int32 b) {
+}
+
+[10,2,3]int32 m;
+
+readonlyanysize(m);
