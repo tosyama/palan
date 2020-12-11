@@ -160,13 +160,32 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add)
 	: PlnExpression(ET_ADD), l(l), r(r), ldp(NULL), rdp(NULL), is_add(is_add), do_cross(false)
 {
-	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
-	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
+	int ldtype = l->getDataType();
+	int rdtype = r->getDataType();
+	bool isUnsigned = (ldtype == DT_UINT && rdtype == DT_UINT);
+	bool isFloat = (ldtype == DT_FLOAT || rdtype == DT_FLOAT);
 
 	PlnValue v;
 	v.type = VL_WORK;
 	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo()->getVarType();
+		int fsize = 4;
+		if (ldtype == DT_FLOAT
+				&& l->values[0].type != VL_LIT_FLO8
+				&& l->values[0].getVarType()->size() == 8)
+			fsize = 8;
+
+		if (rdtype == DT_FLOAT
+				&& r->values[0].type != VL_LIT_FLO8
+				&& r->values[0].getVarType()->size() == 8)
+			fsize = 8;
+
+		if (fsize == 8) {
+			v.inf.wk_type = PlnType::getFlo64()->getVarType();
+		} else if (fsize == 4) {
+			v.inf.wk_type = PlnType::getFlo32()->getVarType();
+		} else
+			BOOST_ASSERT(false);
+
 	} else if (isUnsigned) {
 		v.inf.wk_type = PlnType::getUint()->getVarType();
 	} else {

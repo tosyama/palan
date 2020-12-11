@@ -536,7 +536,7 @@ static PlnVarType* getDefaultType(PlnValue &val, PlnBlock *block)
 	else if (val.type == VL_LIT_UINT8)
 		return PlnType::getUint()->getVarType();
 	else if (val.type == VL_LIT_FLO8)
-		return PlnType::getFlo()->getVarType();
+		return PlnType::getFlo64()->getVarType();
 	else if (val.type == VL_WORK) {
 		if (val.inf.wk_type->typeinf->type == TP_ARRAY_VALUE) {
 			return static_cast<PlnArrayValueType*>(val.inf.wk_type->typeinf)->getDefaultType(block);

@@ -98,7 +98,7 @@ PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	PlnValue v;
 	v.type = VL_WORK;
 	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo()->getVarType();
+		v.inf.wk_type = PlnType::getFlo64()->getVarType();
 	} else if (isUnsigned) {
 		v.inf.wk_type = PlnType::getUint()->getVarType();
 	} else {

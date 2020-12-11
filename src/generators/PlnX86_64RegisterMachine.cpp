@@ -136,7 +136,7 @@ static const char* r(int rt, int size)
 		switch (size) {
 			case 4: case 8:
 				i = 0; break;
-			defalt:
+			default:
 				BOOST_ASSERT(false);
 		}
 		return tbl[rt][i];

@@ -287,7 +287,7 @@ void PlnX86_64Generator::genTrueJump(int id, int cmp_type, string comment)
 		case CMP_BE: jcmd = JBE; break;
 		case CMP_AE: jcmd = JAE; break;
 
-		defalt:
+		default:
 			BOOST_ASSERT(false);
 	}
 	m.push(jcmd, lbl(".L", id), NULL, comment);
@@ -308,7 +308,7 @@ void PlnX86_64Generator::genFalseJump(int id, int cmp_type, string comment)
 		case CMP_BE: jcmd = JA; break;
 		case CMP_AE: jcmd = JB; break;
 
-		defalt:
+		default:
 			BOOST_ASSERT(false);
 	}
 	m.push(jcmd, lbl(".L", id), NULL, comment);
@@ -1348,7 +1348,6 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			genInfos[1] = {MOVQ, XMM11};
 			genInfos[2] = {fmne};
 			return 3;
-
 	}
 
 	// integer + integer
@@ -1643,6 +1642,7 @@ static int setCmp2GenInfo(int pattern, GenInfo genInfos[3], int &cmp_type)
 			genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
 			genInfos[1] = {CMP};
 			n = 2; break;
+		default: BOOST_ASSERT(false);
 	}
 
 	// for float and uint
