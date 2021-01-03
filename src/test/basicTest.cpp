@@ -227,7 +227,7 @@ void normalCaseTest()
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "23.23 2 9 2.43 4.41 2.20 38 161 8T TTT\n"
+	REQUIRE(exec(testcode) == "23.23 2 11 2.43 4.41 2.20 38 161 8T TTT\n"
 						"3 17 5 17 3ACB");
 
 	testcode = "032_ptrptr";

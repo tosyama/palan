@@ -118,7 +118,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (r->getDataType() == DT_FLOAT)
 		acm_data_type = DT_FLOAT;
 
-	ldp = da.prepareAccumulator(acm_data_type);
+	ldp = da.prepareAccumulator(acm_data_type, 8);
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
@@ -143,7 +143,7 @@ void PlnCmpOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	if (data_places.size()) {
 		BOOST_ASSERT(data_places.size() == 1);
 		if (push_mode == -1) {
-			result_dp = da.prepareAccumulator(DT_SINT);
+			result_dp = da.prepareAccumulator(DT_SINT, 8);
 			da.allocDp(result_dp);
 			da.pushSrc(data_places[0], result_dp, true);
 

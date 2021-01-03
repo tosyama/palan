@@ -7,6 +7,7 @@
 /// @copyright	2017-2020 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include <algorithm>
 
 #include "../../PlnConstants.h"
 #include "PlnAddOperation.h"
@@ -168,16 +169,20 @@ PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add
 	PlnValue v;
 	v.type = VL_WORK;
 	if (isFloat) {
-		int fsize = 4;
-		if (ldtype == DT_FLOAT
-				&& l->values[0].type != VL_LIT_FLO8
-				&& l->values[0].getVarType()->size() == 8)
-			fsize = 8;
-
-		if (rdtype == DT_FLOAT
-				&& r->values[0].type != VL_LIT_FLO8
-				&& r->values[0].getVarType()->size() == 8)
-			fsize = 8;
+		int fsize = 0;
+		if (ldtype == DT_FLOAT && rdtype != DT_FLOAT) {
+			fsize = l->values[0].getVarType()->size();
+		} else if (ldtype != DT_FLOAT && rdtype == DT_FLOAT) {
+			fsize = r->values[0].getVarType()->size();
+		} else if (l->values[0].type == VL_LIT_FLO8) {
+			fsize = r->values[0].getVarType()->size();
+		} else if (r->values[0].type == VL_LIT_FLO8) {
+			fsize = l->values[0].getVarType()->size();
+		} else {
+			fsize = std::max(
+					l->values[0].getVarType()->size(),
+					r->values[0].getVarType()->size());
+		}
 
 		if (fsize == 8) {
 			v.inf.wk_type = PlnType::getFlo64()->getVarType();
@@ -210,7 +215,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	//   case 3: x1 + x2 => x1->temp, x2 + temp  
 
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type(), values[0].getVarType()->size());
 
 	if (r->type == ET_VALUE) {	// case 1
 		rdp = r->values[0].getDataPlace(da);
@@ -227,7 +232,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->data_places.push_back(rdp);
 		
 	} else {
-		rdp = da.prepareLocalVar(8, r->getDataType());
+		rdp = da.prepareLocalVar(r->values[0].getVarType()->size(), r->getDataType());
 		static string cmt="(temp@add)";
 		rdp->comment = &cmt;
 
@@ -311,7 +316,7 @@ PlnNegative::~PlnNegative()
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type(), 8);
 	e->data_places.push_back(dp);
 	e->finish(da, si);
 	da.popSrc(dp);

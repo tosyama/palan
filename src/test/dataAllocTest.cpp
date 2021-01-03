@@ -206,8 +206,8 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg(accumlateor)): keep, dst(Reg): keep
 	{
-		auto dp_ac_dst = da.prepareAccumulator(DT_SINT);
-		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		auto dp_ac_dst = da.prepareAccumulator(DT_SINT, 8);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT, 8);
 		da.allocDp(dp_ac_src);
 
 		push_step = da.step;
@@ -235,7 +235,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg): keep, dst(Reg): destroy
 	{
-		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT, 8);
 		da.allocDp(dp_ac_src);
 		vector<PlnDataPlace*> dst_arg1 = { new PlnDataPlace(8, DT_SINT) };
 		dst_arg1[0]->status = DS_READY_ASSIGN;
@@ -271,7 +271,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 
 	// src(Reg): destory, dst(Reg): keep
 	{
-		auto dp_ac_src = da.prepareAccumulator(DT_SINT);
+		auto dp_ac_src = da.prepareAccumulator(DT_SINT, 8);
 		da.allocDp(dp_ac_src);
 		vector<PlnDataPlace*> dst_arg = { new PlnDataPlace(8, DT_SINT) };
 		dst_arg[0]->status = DS_READY_ASSIGN;
@@ -280,7 +280,7 @@ TEST_CASE("Data source and save management.", "[allocate]")
 		push_step = da.step;
 		da.pushSrc(dst_arg[0], dp_ac_src);
 
-		auto dp_ac_src2 = da.prepareAccumulator(DT_SINT);
+		auto dp_ac_src2 = da.prepareAccumulator(DT_SINT, 8);
 		da.allocDp(dp_ac_src2);
 		da.releaseDp(dp_ac_src2);
 

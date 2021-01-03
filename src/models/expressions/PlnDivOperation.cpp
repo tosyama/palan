@@ -137,7 +137,7 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type(), 8);
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);

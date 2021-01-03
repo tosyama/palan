@@ -38,7 +38,7 @@ public:
 	void prepareMemCopyDps(PlnDataPlace* &dst, PlnDataPlace* &src, PlnDataPlace* &len) override;
 	void memCopyed(PlnDataPlace* dst, PlnDataPlace* src, PlnDataPlace* len) override;
 
-	PlnDataPlace* prepareAccumulator(int data_type) override;
+	PlnDataPlace* prepareAccumulator(int data_type, int data_size) override;
 	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) override;
 	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp) override;
 	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp) override;

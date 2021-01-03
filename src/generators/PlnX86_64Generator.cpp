@@ -947,7 +947,10 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 3.
 		case SXMMF|S4 + DMEMI:
 		case SXMMF|S4 + DMEMU:
-			BOOST_ASSERT(false);
+			genInfos[0] = {CVTTSD2SI, R11};
+			genInfos[1] = {movIntRegToMne[dstByte(pattern)]};
+			return 2;
+
 		// 4.
 		case SXMMF|S4 + DREGI:
 		case SXMMF|S4 + DREGU:
@@ -1274,21 +1277,43 @@ typedef enum {
 
 static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[3])
 {
-	BOOST_ASSERT(pattern & D8);
-
 	PlnX86_64Mnemonic fmne;
 	PlnX86_64Mnemonic imne;
 	if (calc == CALC_ADD) {
-		fmne = ADDSD; imne = ADDQ;
+		if ((pattern & DMASK) == DXMMF) {
+			if ((pattern & DSZMASK) == D8) {
+				fmne = ADDSD;
+			} else {
+				BOOST_ASSERT((pattern & DSZMASK) == D4);
+				fmne = ADDSS;
+			}
+		} else {
+			BOOST_ASSERT(pattern & D8);
+			imne = ADDQ;
+		}
 	} else if (calc == CALC_SUB) {
-		fmne = SUBSD; imne = SUBQ;
+		if ((pattern & DMASK) == DXMMF) {
+			if ((pattern & DSZMASK) == D8) {
+				fmne = SUBSD;
+			} else {
+				BOOST_ASSERT((pattern & DSZMASK) == D4);
+				fmne = SUBSS;
+			}
+		} else {
+			BOOST_ASSERT(pattern & D8);
+			imne = SUBQ;
+		}
+//		BOOST_ASSERT(pattern & D8);
+//		fmne = SUBSD; imne = SUBQ;
 	} else if (calc  == CALC_MUL) {
+		BOOST_ASSERT(pattern & D8);
 		fmne = MULSD; imne = IMULQ;
 	} else {
+		BOOST_ASSERT(pattern & D8);
 		BOOST_ASSERT(calc == CALC_DIV);
 		fmne = DIVSD;
 	} 
-	
+
 	// target + second
 	switch (maskIntSize(pattern)) {
 	// float + float
@@ -1297,7 +1322,9 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		// 3. xmm8f + mem8f: ADDSD
 		// 4. xmm8f + mem4f: MOVSS(X11) + CVTSS2SD(X11) + ADDSD
 		// 5. xmm8f + reg8f: MOVQ(X11) + ADDSD
+		//    xmm4f + mem4f: MOVQ(X11) + ADDSS
 		// 6. xmm8f + reg4f: MOVQ(X11) + CVTSS2SD(X11) + ADDSD
+		// 7. xmm4f + mem4f: ADDSS
 		case DXMMF|D8 + SXMMF|S8:	// 1
 		case DXMMF|D8 + SXMMF|S4:	// 2
 			BOOST_ASSERT(false);
@@ -1310,6 +1337,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			genInfos[2] = {fmne};
 			return 3;
 		case DXMMF|D8 + SREGF|S8:	// 5
+		case DXMMF|D4 + SREGF|S4:
 			genInfos[0] = {MOVQ, XMM11};
 			genInfos[1] = {fmne};
 			return 2;
@@ -1318,6 +1346,9 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			genInfos[1] = {CVTSS2SD, XMM11};
 			genInfos[2] = {fmne};
 			return 3;
+		case DXMMF|D4 + SMEMF|S4:	// 7
+			genInfos[0] = {fmne};
+			return 1;
 
 	// float + integer
 		// 1. xmm8f + memNi: MOVn(R11) + CVTSI2SD(X11) + ADDSD
@@ -1336,8 +1367,10 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 	// float + immediate
 		// 1. xmm8f + imm: MOVQ(R11) + MOVQ(X11) + ADDSD
 		// 2. xmm8f + bigimm: MOVABSQ(R11) + MOVQ(X11) + ADDSD
+
 		// 1.
 		case DXMMF|D8 + SIMMF|S8:
+		case DXMMF|D4 + SIMMF|S8:	// immediate is already converted to float.
 			genInfos[0] = {MOVQ, R11};
 			genInfos[1] = {MOVQ, XMM11};
 			genInfos[2] = {fmne};
@@ -1348,6 +1381,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			genInfos[1] = {MOVQ, XMM11};
 			genInfos[2] = {fmne};
 			return 3;
+
 	}
 
 	// integer + integer
@@ -1432,7 +1466,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			case DREGI|D8 + SBIGIMMI|S8: case DREGI|D8 + SBIGIMMU|S8:
 			case DREGU|D8 + SBIGIMMI|S8: case DREGU|D8 + SBIGIMMU|S8:
 				genInfos[0] = {MOVABSQ, R11};
-				genInfos[1] = {ADDQ};
+				genInfos[1] = {imne};
 				return 2;
 			// 3.
 			case DREGI|D8 + SMEMI|S8:

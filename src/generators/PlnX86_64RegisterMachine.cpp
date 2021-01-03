@@ -226,10 +226,12 @@ static void initMnes()
 	mnes[MOVSD] = "movsd";
 
 	mnes[ADDSD] = "addsd";
+	mnes[ADDSS] = "addss";
 	mnes[INCQ] = "incq";
 	mnes[ADDQ] = "addq";
 
 	mnes[SUBSD] = "subsd";
+	mnes[SUBSS] = "subss";
 	mnes[DECQ] = "decq";
 	mnes[SUBQ] = "subq";
 	mnes[NEGQ] = "negq";

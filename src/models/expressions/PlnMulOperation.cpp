@@ -123,7 +123,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	//   case 3: x1 * x2 => x1->temp, x2 * temp  
 
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type(), 8);
 
 	if (r->type == ET_VALUE) {	// case 1
 		rdp = r->values[0].getDataPlace(da);

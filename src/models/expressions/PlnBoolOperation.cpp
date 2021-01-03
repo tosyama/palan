@@ -117,8 +117,8 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(jmp_id == -1);
 		BOOST_ASSERT(push_mode == -1);
 
-		ladp = da.prepareAccumulator(DT_SINT);
-		radp = da.prepareAccumulator(DT_SINT);
+		ladp = da.prepareAccumulator(DT_SINT, 8);
+		radp = da.prepareAccumulator(DT_SINT, 8);
 		l->data_places.push_back(ladp);
 		r->data_places.push_back(radp);
 		l->push_mode = is_not ? 1:0;
@@ -140,8 +140,8 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(jmp_id != -1);
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
-			ladp = da.prepareAccumulator(DT_SINT);
-			radp = da.prepareAccumulator(DT_SINT);
+			ladp = da.prepareAccumulator(DT_SINT, 8);
+			radp = da.prepareAccumulator(DT_SINT, 8);
 			l->data_places.push_back(ladp);
 			r->data_places.push_back(radp);
 			l->push_mode = push_mode;
@@ -159,7 +159,7 @@ void PlnAndOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			|| (jmp_if == 1 && !is_not)){
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
-			radp = da.prepareAccumulator(DT_SINT);
+			radp = da.prepareAccumulator(DT_SINT, 8);
 			r->data_places.push_back(radp);
 			r->push_mode = push_mode;
 		}
@@ -201,8 +201,8 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(data_places.size() == 1);
 		BOOST_ASSERT(jmp_id == -1);
 
-		ladp = da.prepareAccumulator(DT_SINT);
-		radp = da.prepareAccumulator(DT_SINT);
+		ladp = da.prepareAccumulator(DT_SINT, 8);
+		radp = da.prepareAccumulator(DT_SINT, 8);
 		l->data_places.push_back(ladp);
 		r->data_places.push_back(radp);
 		l->push_mode = is_not ? 0 : 1;
@@ -224,7 +224,7 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		BOOST_ASSERT(jmp_id != -1);
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
-			radp = da.prepareAccumulator(DT_SINT);
+			radp = da.prepareAccumulator(DT_SINT, 8);
 			r->data_places.push_back(radp);
 			r->push_mode = push_mode;
 		}
@@ -241,8 +241,8 @@ void PlnOrOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			|| (jmp_if == 1 && !is_not)) {
 		if (data_places.size()) {
 			BOOST_ASSERT(push_mode != -1);
-			ladp = da.prepareAccumulator(DT_SINT);
-			radp = da.prepareAccumulator(DT_SINT);
+			ladp = da.prepareAccumulator(DT_SINT, 8);
+			radp = da.prepareAccumulator(DT_SINT, 8);
 			l->data_places.push_back(ladp);
 			r->data_places.push_back(radp);
 			l->push_mode = push_mode;
