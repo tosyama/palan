@@ -245,6 +245,7 @@ static void initMnes()
 
 	mnes[XORQ] = "xorq";
 	mnes[XORPD] = "xorpd";
+	mnes[XORPS] = "xorps";
 
 	mnes[CVTTSD2SI] = "cvttsd2si";
 	mnes[CVTTSS2SI] = "cvttss2si";

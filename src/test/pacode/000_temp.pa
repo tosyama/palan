@@ -1,10 +1,6 @@
 ccall printf(...);
+flo32 a = 1.2;
 
+//-a -> a;
 
-func bigintope()
-{
-	int64 i = 10;
-	i - 9223372036854775807 -> i;
-	i % 9223372036854775807 -> i;
-	printf(" %d", i);
-}
+//printf("%f", a);

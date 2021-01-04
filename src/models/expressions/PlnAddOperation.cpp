@@ -305,7 +305,11 @@ PlnNegative::PlnNegative(PlnExpression* e)
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = e->values[0].getVarType();
+	if (e->getDataType() == DT_FLOAT) {
+		v.inf.wk_type = e->values[0].getVarType();
+	} else {
+		v.inf.wk_type = PlnType::getSint()->getVarType();
+	}
 	values.push_back(v);
 }
 
@@ -316,7 +320,7 @@ PlnNegative::~PlnNegative()
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type(), 8);
+	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type(), values[0].getVarType()->size());
 	e->data_places.push_back(dp);
 	e->finish(da, si);
 	da.popSrc(dp);

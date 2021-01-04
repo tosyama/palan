@@ -1538,10 +1538,18 @@ void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)
 {
 	if (tgt->data_type == DT_FLOAT) {
-		int64_t mask = 0x8000000000000000;
-		m.push(MOVABSQ, imm(mask), reg(R11));
-		m.push(MOVQ, reg(R11), reg(XMM11));
-		m.push(XORPD, reg(XMM11), ope(tgt), comment);
+		if (tgt->size == 8) {
+			int64_t mask = 0x8000000000000000;
+			m.push(MOVABSQ, imm(mask), reg(R11));
+			m.push(MOVQ, reg(R11), reg(XMM11));
+			m.push(XORPD, reg(XMM11), ope(tgt), comment);
+		} else {
+			BOOST_ASSERT(tgt->size == 4);
+			int64_t mask = 0x80000000;
+			m.push(MOVQ, imm(mask), reg(R11));
+			m.push(MOVQ, reg(R11), reg(XMM11));
+			m.push(XORPS, reg(XMM11), ope(tgt), comment);
+		}
 
 	} else {
 		m.push(NEGQ, ope(tgt), NULL, comment);
