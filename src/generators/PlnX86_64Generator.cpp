@@ -1,7 +1,7 @@
 /// x86-64 (Linux) assembly generator class definition.
 ///
 /// @file	PlnX86_64Generator.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <iostream>
@@ -947,14 +947,21 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 		// 3.
 		case SXMMF|S4 + DMEMI:
 		case SXMMF|S4 + DMEMU:
-			genInfos[0] = {CVTTSD2SI, R11};
+			genInfos[0] = {CVTTSS2SI, R11};
 			genInfos[1] = {movIntRegToMne[dstByte(pattern)]};
 			return 2;
 
 		// 4.
 		case SXMMF|S4 + DREGI:
 		case SXMMF|S4 + DREGU:
-			BOOST_ASSERT(false);
+			if (pattern & D8) {
+				genInfos[0] = {CVTTSS2SI};
+				return 1;
+			} else {
+				genInfos[0] = {CVTTSS2SI, R11};
+				genInfos[1] = {movIntRegToMne[dstByte(pattern)]};
+				return 2;
+			}
 
 		// 1. mem8f->memNi: MOVSD(X11) + CVTTSD2SI(R11) + MOVn
 		// 2. mem8f->regNi: MOVSD(X11) + CVTTSD2SI
@@ -1275,43 +1282,38 @@ typedef enum {
 	CALC_DIV
 } CalcOperation;
 
+static PlnX86_64Mnemonic getCalcMne(int pattern,
+	PlnX86_64Mnemonic f64mne, PlnX86_64Mnemonic f32mne, PlnX86_64Mnemonic intmne)
+{
+	if ((pattern & DMASK) == DXMMF) {
+		if ((pattern & DSZMASK) == D8) {
+			return f64mne;
+		} else {
+			BOOST_ASSERT((pattern & DSZMASK) == D4);
+			return f32mne;
+		}
+	} else {
+		BOOST_ASSERT(pattern & D8);
+		return intmne;
+	}
+}
+
 static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[3])
 {
-	PlnX86_64Mnemonic fmne;
-	PlnX86_64Mnemonic imne;
+	PlnX86_64Mnemonic mne;
 	if (calc == CALC_ADD) {
-		if ((pattern & DMASK) == DXMMF) {
-			if ((pattern & DSZMASK) == D8) {
-				fmne = ADDSD;
-			} else {
-				BOOST_ASSERT((pattern & DSZMASK) == D4);
-				fmne = ADDSS;
-			}
-		} else {
-			BOOST_ASSERT(pattern & D8);
-			imne = ADDQ;
-		}
+		mne = getCalcMne(pattern, ADDSD, ADDSS, ADDQ);
+
 	} else if (calc == CALC_SUB) {
-		if ((pattern & DMASK) == DXMMF) {
-			if ((pattern & DSZMASK) == D8) {
-				fmne = SUBSD;
-			} else {
-				BOOST_ASSERT((pattern & DSZMASK) == D4);
-				fmne = SUBSS;
-			}
-		} else {
-			BOOST_ASSERT(pattern & D8);
-			imne = SUBQ;
-		}
-//		BOOST_ASSERT(pattern & D8);
-//		fmne = SUBSD; imne = SUBQ;
+		mne = getCalcMne(pattern, SUBSD, SUBSS, SUBQ);
+
 	} else if (calc  == CALC_MUL) {
-		BOOST_ASSERT(pattern & D8);
-		fmne = MULSD; imne = IMULQ;
+		mne = getCalcMne(pattern, MULSD, MULSS, IMULQ);
+
 	} else {
 		BOOST_ASSERT(pattern & D8);
 		BOOST_ASSERT(calc == CALC_DIV);
-		fmne = DIVSD;
+		mne = DIVSD;
 	} 
 
 	// target + second
@@ -1329,25 +1331,25 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		case DXMMF|D8 + SXMMF|S4:	// 2
 			BOOST_ASSERT(false);
 		case DXMMF|D8 + SMEMF|S8:	// 3
-			genInfos[0] = {fmne};
+			genInfos[0] = {mne};
 			return 1;
 		case DXMMF|D8 + SMEMF|S4:	// 4
 			genInfos[0] = {MOVSS, XMM11};
 			genInfos[1] = {CVTSS2SD, XMM11};
-			genInfos[2] = {fmne};
+			genInfos[2] = {mne};
 			return 3;
 		case DXMMF|D8 + SREGF|S8:	// 5
 		case DXMMF|D4 + SREGF|S4:
 			genInfos[0] = {MOVQ, XMM11};
-			genInfos[1] = {fmne};
+			genInfos[1] = {mne};
 			return 2;
 		case DXMMF|D8 + SREGF|S4:	// 6
 			genInfos[0] = {MOVQ, XMM11};
 			genInfos[1] = {CVTSS2SD, XMM11};
-			genInfos[2] = {fmne};
+			genInfos[2] = {mne};
 			return 3;
 		case DXMMF|D4 + SMEMF|S4:	// 7
-			genInfos[0] = {fmne};
+			genInfos[0] = {mne};
 			return 1;
 
 	// float + integer
@@ -1361,7 +1363,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		case DXMMF|D8 + SREGU:
 			genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
 			genInfos[1] = {CVTSI2SD, XMM11};
-			genInfos[2] = {fmne};
+			genInfos[2] = {mne};
 			return 3;
 
 	// float + immediate
@@ -1373,13 +1375,13 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		case DXMMF|D4 + SIMMF|S8:	// immediate is already converted to float.
 			genInfos[0] = {MOVQ, R11};
 			genInfos[1] = {MOVQ, XMM11};
-			genInfos[2] = {fmne};
+			genInfos[2] = {mne};
 			return 3;
 		// 2.
 		case DXMMF|D8 + SBIGIMMF|S8:
 			genInfos[0] = {MOVABSQ, R11};
 			genInfos[1] = {MOVQ, XMM11};
-			genInfos[2] = {fmne};
+			genInfos[2] = {mne};
 			return 3;
 
 	}
@@ -1460,18 +1462,18 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			// 1.
 			case DREGI|D8 + SIMMI|S8: case DREGI|D8 + SIMMU|S8:
 			case DREGU|D8 + SIMMI|S8: case DREGU|D8 + SIMMU|S8:
-				genInfos[0] = {imne};
+				genInfos[0] = {mne};
 				return 1;
 			// 2.
 			case DREGI|D8 + SBIGIMMI|S8: case DREGI|D8 + SBIGIMMU|S8:
 			case DREGU|D8 + SBIGIMMI|S8: case DREGU|D8 + SBIGIMMU|S8:
 				genInfos[0] = {MOVABSQ, R11};
-				genInfos[1] = {imne};
+				genInfos[1] = {mne};
 				return 2;
 			// 3.
 			case DREGI|D8 + SMEMI|S8:
 			case DREGI|D8 + SMEMU|S8:
-				genInfos[0] = {imne};
+				genInfos[0] = {mne};
 				return 1;
 
 			// 4.
@@ -1479,13 +1481,13 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 			case DREGU|D8 + SMEMI|S4: case DREGU|D8 + SMEMI|S2: case DREGU|D8 + SMEMI|S1:
 				BOOST_ASSERT(!(pattern & S8));
 				genInfos[0] = {movSintMemToMne[srcByte(pattern)], R11};
-				genInfos[1] = {imne};
+				genInfos[1] = {mne};
 				return 2;
 			case DREGI|D8 + SMEMU|S4: case DREGI|D8 + SMEMU|S2: case DREGI|D8 + SMEMU|S1:
 			case DREGU|D8 + SMEMU|S4: case DREGU|D8 + SMEMU|S2: case DREGU|D8 + SMEMU|S1:
 				BOOST_ASSERT(!(pattern & S8));
 				genInfos[0] = {movUintMemToMne[srcByte(pattern)], R11};
-				genInfos[1] = {imne};
+				genInfos[1] = {mne};
 				return 2;
 			// 5.
 			case DREGI|D8 + SREGI|S8: case DREGI|D8 + SREGI|S4:
@@ -1499,7 +1501,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 
 			case DREGU|D8 + SREGU|S8: case DREGU|D8 + SREGU|S4:
 			case DREGU|D8 + SREGU|S2: case DREGU|D8 + SREGU|S1:
-				genInfos[0] = {imne};
+				genInfos[0] = {mne};
 				return 1;
 		}
 	}

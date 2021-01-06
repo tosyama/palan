@@ -1,6 +1,7 @@
 ccall printf(...);
 flo32 a = 1.2;
 
-//-a -> a;
+int64 i = a + 255;
 
-//printf("%f", a);
+// printf("%d", i);
+

@@ -238,7 +238,7 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	ldp->access(step);
 	releaseDp(rdp);
 	releaseDp(ldp);
-	auto result = prepareAccumulator(ldp->data_type, 8);
+	auto result = prepareAccumulator(ldp->data_type, ldp->size);
 	allocDp(result);
 	return result;
 }

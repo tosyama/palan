@@ -237,6 +237,7 @@ static void initMnes()
 	mnes[NEGQ] = "negq";
 
 	mnes[MULSD] = "mulsd";
+	mnes[MULSS] = "mulss";
 	mnes[IMULQ] = "imulq";
 	mnes[DIVSD] = "divsd";
 	mnes[DIVQ] = "divq";
