@@ -240,6 +240,7 @@ static void initMnes()
 	mnes[MULSS] = "mulss";
 	mnes[IMULQ] = "imulq";
 	mnes[DIVSD] = "divsd";
+	mnes[DIVSS] = "divss";
 	mnes[DIVQ] = "divq";
 	mnes[CQTO] = "cqto";
 	mnes[IDIVQ] = "idivq";

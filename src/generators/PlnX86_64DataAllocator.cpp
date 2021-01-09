@@ -254,7 +254,7 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	if (ldp->data_type == DT_FLOAT) {
 		ldp->access(step);
 		releaseDp(ldp);
-		*quotient = prepareAccumulator(ldp->data_type, 8);
+		*quotient = prepareAccumulator(ldp->data_type, ldp->size);
 		*reminder = NULL;
 		step++;
 		return;

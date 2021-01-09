@@ -1311,9 +1311,8 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		mne = getCalcMne(pattern, MULSD, MULSS, IMULQ);
 
 	} else {
-		BOOST_ASSERT(pattern & D8);
 		BOOST_ASSERT(calc == CALC_DIV);
-		mne = DIVSD;
+		mne = getCalcMne(pattern, DIVSD, DIVSS, IDIVQ);
 	} 
 
 	// target + second

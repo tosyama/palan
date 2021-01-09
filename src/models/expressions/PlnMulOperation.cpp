@@ -13,20 +13,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../PlnType.h"
-
-#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
-	union {int64_t i; uint64_t u; double d;} ex##val; \
-	if (ex->type == ET_VALUE) { \
-		switch (ex->values[0].type) { \
-			case VL_LIT_INT8: is_##ex##_int = true; \
-				ex##val.i = ex->values[0].inf.intValue; break;\
-			case VL_LIT_UINT8: is_##ex##_uint = true; \
-				ex##val.u = ex->values[0].inf.uintValue; break; \
-			case VL_LIT_FLO8: is_##ex##_flo = true; \
-				ex##val.d = ex->values[0].inf.floValue; break; \
-		} \
-	} \
-	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
+#include "PlnCalcOperationUtils.h"
 
 // PlnMulOperation
 PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
@@ -93,40 +80,10 @@ PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
 PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	: PlnExpression(ET_MUL), l(l), r(r), ldp(NULL), rdp(NULL), do_cross(false)
 {
-	int ldtype = l->getDataType();
-	int rdtype = r->getDataType();
-	bool isUnsigned = (ldtype == DT_UINT && rdtype == DT_UINT);
-	bool isFloat = (ldtype == DT_FLOAT || rdtype == DT_FLOAT);
 	PlnValue v;
 	v.type = VL_WORK;
-	if (isFloat) {
-		int fsize = 0;
-		if (ldtype == DT_FLOAT && rdtype != DT_FLOAT) {
-			fsize = l->values[0].getVarType()->size();
-		} else if (ldtype != DT_FLOAT && rdtype == DT_FLOAT) {
-			fsize = r->values[0].getVarType()->size();
-		} else if (l->values[0].type == VL_LIT_FLO8) {
-			fsize = r->values[0].getVarType()->size();
-		} else if (r->values[0].type == VL_LIT_FLO8) {
-			fsize = l->values[0].getVarType()->size();
-		} else {
-			fsize = std::max(
-					l->values[0].getVarType()->size(),
-					r->values[0].getVarType()->size());
-		}
+	v.inf.wk_type = binaryOperationType(l, r);
 
-		if (fsize == 8) {
-			v.inf.wk_type = PlnType::getFlo64()->getVarType();
-		} else if (fsize == 4) {
-			v.inf.wk_type = PlnType::getFlo32()->getVarType();
-		} else
-			BOOST_ASSERT(false);
-
-	} else if (isUnsigned) {
-		v.inf.wk_type = PlnType::getUint()->getVarType();
-	} else {
-		v.inf.wk_type = PlnType::getSint()->getVarType();
-	}
 	values.push_back(v);
 }
 
