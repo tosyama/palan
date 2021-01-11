@@ -149,7 +149,6 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.releaseDp(quotient);
 		if (remainder) da.releaseDp(remainder);
 	}
-
 }
 
 void PlnDivOperation::gen(PlnGenerator& g)
