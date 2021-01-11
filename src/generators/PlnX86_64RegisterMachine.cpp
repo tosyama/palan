@@ -1,7 +1,7 @@
 /// x86-64 (Linux) register machine class definition.
 ///
 /// @file	PlnX86_64RegisterMachine.cpp
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <algorithm>
@@ -302,7 +302,7 @@ void PlnX86_64RegisterMachine::reserve(int num)
 		imp->opecodes.push_back({MNE_NONE, NULL, NULL, ""});
 }
 
-void PlnX86_64RegisterMachine::addComment(string comment)
+void PlnX86_64RegisterMachine::addComment(const string& comment)
 {
 	imp->opecodes.back().comment = comment;
 }

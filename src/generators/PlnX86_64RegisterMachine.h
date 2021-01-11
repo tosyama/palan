@@ -114,7 +114,7 @@ public:
 	PlnX86_64RegisterMachine(const PlnX86_64RegisterMachine&) = delete;
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="");
 	void reserve(int num);
-	void addComment(string comment);
+	void addComment(const string& comment);
 	void popOpecodes(ostream& os);
 	void memoRequestedStackSize(int size);
 };

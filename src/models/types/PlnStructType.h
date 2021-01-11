@@ -1,7 +1,7 @@
 /// Structure type class declaration.
 ///
 /// @file	PlnStructType.h
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 class PlnStructMemberDef {
 public:
@@ -9,7 +9,7 @@ public:
 	string name;
 	int offset;
 
-	PlnStructMemberDef(PlnVarType *type, string name);
+	PlnStructMemberDef(PlnVarType *type, const string& name);
 };
 
 class PlnStructType : public PlnType {

@@ -228,7 +228,7 @@ int PlnX86_64Generator::registerString(string& str)
 	return const_buf.back().id;
 }
 
-void PlnX86_64Generator::comment(const string s)
+void PlnX86_64Generator::comment(const string& s)
 {
 	m.push(COMMENT,NULL,NULL,s);
 }

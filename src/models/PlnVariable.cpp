@@ -215,7 +215,7 @@ void PlnVarInit::gen(PlnGenerator& g)
 	}
 }
 
-PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name)
+PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name)
 {
 	auto var = new PlnVariable();
 	var->var_type = var_type;

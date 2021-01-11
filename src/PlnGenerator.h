@@ -41,7 +41,7 @@ public:
 	PlnGenerator(ostream& ostrm) : os(ostrm) {}
 	virtual ~PlnGenerator() {}
 
-	virtual void comment(const string s) = 0;
+	virtual void comment(const string& s) = 0;
 	void blank() { comment(""); }
 
 	virtual void genSecReadOnlyData()=0;

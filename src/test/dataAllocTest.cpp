@@ -36,7 +36,6 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	REQUIRE(allocator.arg_stack.size() == 0);
 
 	rets.resize(2);
-	rdtypes = { DT_SINT, DT_SINT };
 	params.resize(7);
 	adtypes.push_back( DT_SINT );
 	vector<PlnDataPlace*> dps2;
