@@ -20,7 +20,7 @@ $ cd palan
 $ sudo make package
 $ make
 ```
-Note: `make package` installs [Boost][boost], [Bison][bison], [Flex][flex] and [Catch][catch]. You might need to install libfl-dev and libncursesw5-dev.
+Note: `make package` installs [Boost][boost], [Bison][bison], [Flex][flex] and [Catch][catch]. You might need to install libncursesw5-dev.
 
 ### Write Code
 ```console

@@ -150,8 +150,8 @@ Statement
 	
 	13. ope-asgn - Operational assignment
         *   dst-val\* - Destination value
-		*	ope\* - Operator string : "+"
-		*	rval\* - Right value expression
+        *   ope\* - Operator string : "+"
+        *   rval\* - Right value expression
 
 *   loc - Location integer array
 
