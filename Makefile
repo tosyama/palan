@@ -11,6 +11,7 @@ package:
 	-apt-get -y install libboost-program-options-dev
 	-apt-get -y install bison
 	-apt-get -y install flex
+	-apt-get -y install libfl-dev
 	-curl -o src/test/catch.hpp https://raw.githubusercontent.com/catchorg/Catch2/v2.x/single_include/catch2/catch.hpp
 coverage:
 	@$(MAKE) -C src coverage
