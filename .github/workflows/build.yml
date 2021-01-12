@@ -13,6 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make package
-      run: make package
+      run: sudo make package
     - name: make
       run: make
