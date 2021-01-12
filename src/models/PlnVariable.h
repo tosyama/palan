@@ -1,7 +1,7 @@
 /// Variable model class declaration.
 ///
 /// @file	PlnVariable.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -24,7 +24,7 @@ public:
 	PlnVariable(): var_type(NULL), place(NULL), container(NULL),
 		is_tmpvar(false), is_indirect(false), is_global(false) {}
 
-	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, string name);
+	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name);
 };
 
 class PlnAssignItem;

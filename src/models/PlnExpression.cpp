@@ -87,7 +87,7 @@ PlnVarType* PlnValue::getVarType()
 		case VL_LIT_UINT8:
 			return PlnType::getUint()->getVarType("rin");
 		case VL_LIT_FLO8:
-			return PlnType::getFlo()->getVarType("rin");
+			return PlnType::getFlo64()->getVarType("rin");
 		case VL_LIT_STR:
 			return PlnType::getReadOnlyCStr()->getVarType("rir");
 		case VL_LIT_ARRAY:

@@ -5,7 +5,7 @@
 
 enum PlnX86_64Mnemonic {
 	COMMENT, LABEL,
-	ADDQ, ADDSD,
+	ADDQ, ADDSS, ADDSD,
 	CALL,
 	CLD,
 	CMP, CMPB, CMPW, CMPL, CMPQ,
@@ -13,7 +13,7 @@ enum PlnX86_64Mnemonic {
 	CVTSD2SS, CVTSI2SS, CVTSI2SD, CVTSS2SD,
 	CVTTSD2SI, CVTTSS2SI,
 	DECQ,
-	DIVSD, DIVQ,
+	DIVSS, DIVSD, DIVQ,
 	IDIVQ, IMULQ,
 	INCQ,
 	JA, JAE, JB, JBE,
@@ -28,17 +28,17 @@ enum PlnX86_64Mnemonic {
 	MOVSBQ, MOVSWQ, MOVSLQ,
 	MOVSS, MOVSD,
 	MOVZBQ, MOVZWQ,
-	MULSD,
+	MULSS, MULSD,
 	NEGQ,
 	POPQ, PUSHQ,
 	REP_MOVSQ, REP_MOVSL, REP_MOVSW, REP_MOVSB,
 	RET,
 	SETE, SETNE, SETL, SETG, SETLE, SETGE,
 	SETB, SETA, SETBE, SETAE,
-	SUBQ, SUBSD,
+	SUBQ, SUBSS, SUBSD,
 	SYSCALL,
 	UCOMISD, UCOMISS,
-	XORPD, XORQ,
+	XORPD, XORPS, XORQ,
 
 	MNE_SIZE,
 	MNE_NONE=-1
@@ -114,7 +114,7 @@ public:
 	PlnX86_64RegisterMachine(const PlnX86_64RegisterMachine&) = delete;
 	void push(PlnX86_64Mnemonic mne, PlnOperandInfo *src=NULL, PlnOperandInfo* dst=NULL, string comment="");
 	void reserve(int num);
-	void addComment(string comment);
+	void addComment(const string& comment);
 	void popOpecodes(ostream& os);
 	void memoRequestedStackSize(int size);
 };

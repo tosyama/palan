@@ -4,7 +4,7 @@
 /// e.g.) a / b
 ///
 /// @file	PlnDivOperation.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -15,20 +15,7 @@
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
 #include "../PlnType.h"
-
-#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
-	union {int64_t i; uint64_t u; double d;} ex##val; \
-	if (ex->type == ET_VALUE) { \
-		switch (ex->values[0].type) { \
-			case VL_LIT_INT8: is_##ex##_int = true; \
-				ex##val.i = ex->values[0].inf.intValue; break;\
-			case VL_LIT_UINT8: is_##ex##_uint = true; \
-				ex##val.u = ex->values[0].inf.uintValue; break; \
-			case VL_LIT_FLO8: is_##ex##_flo = true; \
-				ex##val.d = ex->values[0].inf.floValue; break; \
-		} \
-	} \
-	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
+#include "PlnCalcOperationUtils.h"
 
 // PlnDivOperation
 PlnExpression* PlnDivOperation::create(PlnExpression* l, PlnExpression* r)
@@ -107,23 +94,15 @@ PlnExpression* PlnDivOperation::create_mod(PlnExpression* l, PlnExpression* r)
 PlnDivOperation::PlnDivOperation(PlnExpression* l, PlnExpression* r, PlnDivType dt)
 	: PlnExpression(ET_DIV), l(l), r(r), div_type(dt), quotient(NULL), remainder(NULL)
 {
-	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
-	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
-	if (isFloat && div_type == DV_MOD) {
-		PlnCompileError err(E_CantUseOperatorHere, PlnMessage::floatNumber());
-		throw err;
-	}
-	BOOST_ASSERT(!(isFloat && div_type == DV_MOD));
-	
 	PlnValue v;
 	v.type = VL_WORK;
-	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo()->getVarType();
-	} else if (isUnsigned) {
-		v.inf.wk_type = PlnType::getUint()->getVarType();
-	} else {
-		v.inf.wk_type = PlnType::getSint()->getVarType();
+	v.inf.wk_type = binaryOperationType(l, r);
+
+	if (div_type == DV_MOD && v.inf.wk_type->data_type() == DT_FLOAT) {
+	 	PlnCompileError err(E_CantUseOperatorHere, PlnMessage::floatNumber());
+	 	throw err;
 	}
+
 	values.push_back(v);
 }
 
@@ -137,13 +116,13 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	PlnDataPlace *ldp, *rdp;
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type(), values[0].getVarType()->size());
 
 	if (r->type == ET_VALUE) {
 		rdp = r->values[0].getDataPlace(da);
 	} else {
 		static string cmt="(temp)";
-		rdp = da.prepareLocalVar(8, r->getDataType());
+		rdp = da.prepareLocalVar(r->values[0].getVarType()->size(), r->getDataType());
 		rdp->comment = &cmt;
 	}
 
@@ -170,7 +149,6 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.releaseDp(quotient);
 		if (remainder) da.releaseDp(remainder);
 	}
-
 }
 
 void PlnDivOperation::gen(PlnGenerator& g)

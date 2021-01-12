@@ -1,68 +1,7 @@
 ccall printf(...);
+flo32 a = 1.2;
 
-[10]int32 arr;
-af(arr);
-func af(@[?]int32 a)
-{
-}
+int64 i = a + 255;
 
-[,]int32 a2 = [1,2][3,4][5,6];
-
-@[10]byte b = "abc";
-[10]byte bb;
-
-@![10]byte xx = bb;
-
-func test1(@![10]byte b) {
-}
-func test2([10]byte >>b) {
-}
-
-func test3(@[?,2]int32 x)
-{
-}
-
-func test4(@[10,2]int32 x)
-{
-}
-
-func xxx2([10]byte b) {
-}
-
-[10,3]int32 m2;
-@[?,3]int32 mm2 = m2;
-[10,2,3]int32 m3;
-@[?,2,3]int32 mm3 = m3;
-// [?,2,3]int32 mm4 = m3; // SEG? it shold be clone of m3?
-//[?,2,3]int32 mm4; // NG??
-// [?]int32 mm5;
-
-a2f(a2);
-// test1(b);	 // NG*
-// test2(b);	 // NG*
-// test2(b>>);	 // NG*
-// test3(m2);	// NG*
-// test3(m3);	// NG*
-// test4(mm3);	// NG*
-// test4(mm2);	// NG*
-// test4(m2); //NG* exists test
-// test4("test2");	// NG
-xxx2(b);	 // OK
-
-func a2f(@[?,2]int32 x)
-{
-//	printf("%d\n", x[1,1]);
-}
-
-[10][2]int32 arrarr;
-afunc(arrarr);
-aafunc(arrarr);
-
-func afunc(@[?][2]int32 arrarr)
-{
-}
-
-func aafunc(@[?][?]int32 arrarr)
-{
-}
+// printf("%d", i);
 

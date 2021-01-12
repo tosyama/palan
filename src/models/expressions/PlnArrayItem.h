@@ -10,7 +10,7 @@ class PlnArrayItem : public PlnExpression
 public:
 	PlnExpression* array_ex;
 	PlnExpression* index_ex;
-	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind);
+	PlnArrayItem(PlnExpression *array_ex, const vector<PlnExpression*>& item_ind);
 	PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind, PlnVarType* arr_type);
 	PlnArrayItem(PlnExpression *array_ex, PlnExpression* index_ex, PlnVarType* item_type);
 	~PlnArrayItem();

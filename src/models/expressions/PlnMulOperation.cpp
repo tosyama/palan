@@ -4,7 +4,7 @@
 /// e.g.) a * b
 ///
 /// @file	PlnMulOperation.cpp
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -13,20 +13,7 @@
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../PlnType.h"
-
-#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
-	union {int64_t i; uint64_t u; double d;} ex##val; \
-	if (ex->type == ET_VALUE) { \
-		switch (ex->values[0].type) { \
-			case VL_LIT_INT8: is_##ex##_int = true; \
-				ex##val.i = ex->values[0].inf.intValue; break;\
-			case VL_LIT_UINT8: is_##ex##_uint = true; \
-				ex##val.u = ex->values[0].inf.uintValue; break; \
-			case VL_LIT_FLO8: is_##ex##_flo = true; \
-				ex##val.d = ex->values[0].inf.floValue; break; \
-		} \
-	} \
-	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
+#include "PlnCalcOperationUtils.h"
 
 // PlnMulOperation
 PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
@@ -93,17 +80,10 @@ PlnExpression* PlnMulOperation::create(PlnExpression* l, PlnExpression* r)
 PlnMulOperation::PlnMulOperation(PlnExpression* l, PlnExpression* r)
 	: PlnExpression(ET_MUL), l(l), r(r), ldp(NULL), rdp(NULL), do_cross(false)
 {
-	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
-	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
 	PlnValue v;
 	v.type = VL_WORK;
-	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo()->getVarType();
-	} else if (isUnsigned) {
-		v.inf.wk_type = PlnType::getUint()->getVarType();
-	} else {
-		v.inf.wk_type = PlnType::getSint()->getVarType();
-	}
+	v.inf.wk_type = binaryOperationType(l, r);
+
 	values.push_back(v);
 }
 
@@ -123,7 +103,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	//   case 3: x1 * x2 => x1->temp, x2 * temp  
 
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type(), values[0].getVarType()->size());
 
 	if (r->type == ET_VALUE) {	// case 1
 		rdp = r->values[0].getDataPlace(da);
@@ -140,7 +120,7 @@ void PlnMulOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->data_places.push_back(rdp);
 
 	} else {	// case 3
-		rdp = da.prepareLocalVar(8, r->getDataType());
+		rdp = da.prepareLocalVar(r->values[0].getVarType()->size(), r->getDataType());
 		static string cmt="(temp@mul)";
 		rdp->comment = &cmt;
 

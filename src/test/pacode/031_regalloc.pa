@@ -11,7 +11,8 @@ flo64 d = 10.0;
 
 bigintope();
 mem2regf();
-flo2int();
+flo2int(); // 38 161
+flo2int2(); // 38 161
 mem2regi();
 cmp();
 printf("\n");
@@ -20,6 +21,9 @@ mem8_inv();
 multi_ret(0);
 multi_ret(1);
 multi_ret(8);
+printf(" %.1f",flo64toflo32()); // 3.2
+printf(" %.1f",flo64toflo32_2()); // 3.3
+printf(" %.1lf", flo32toflo64());
 
 exit(0);
 
@@ -83,6 +87,19 @@ func flo2int()
 
 }
 
+func flo2int2()
+{
+	flo32 f = 32.6;
+	int16 i2 = 5;
+	byte b = 5;
+
+	i2 * i2 -> i2;	// dummy calc
+	f + 5.6 -> i2;
+	f + 128.6 -> b;
+
+	printf(" %d %d", i2, b);
+
+}
 
 func mem2regi()
 {
@@ -171,4 +188,28 @@ func multi_ret(int64 i) // reg save optimazation
 	m -> n;
 	i+1 -> i;
 	printf("C");
+}
+
+func flo64toflo32() -> flo32
+{
+	flo64 d = 1.2;
+	flo32 f = 2.1;
+
+	d + 2 -> f;
+	return f;
+}
+
+func flo64toflo32_2() -> flo32
+{
+	flo64 d = 1.2;
+
+	return d+2.1;
+}
+
+func flo32toflo64() -> flo64
+{
+	flo32 f = 1.5;
+	flo64 d = 2.1;
+	f * (d+0.5) -> d;
+	return d;
 }

@@ -33,7 +33,7 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 			case DT_UINT:
 				itype = PlnType::getUint()->getVarType(); break;
 			case DT_FLOAT:
-				itype = PlnType::getFlo()->getVarType(); break;
+				itype = PlnType::getFlo64()->getVarType(); break;
 			default:
 				BOOST_ASSERT(false);
 		}

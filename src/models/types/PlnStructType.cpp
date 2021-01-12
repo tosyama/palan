@@ -1,7 +1,7 @@
 /// Structure type class definition.
 ///
 /// @file	PlnStructType.cpp
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnModel.h"
@@ -23,12 +23,12 @@
 #include "PlnStructType.h"
 #include "PlnArrayValueType.h"
 
-PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, string name)
+PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, const string& name)
 	: type(type), name(name), offset(0)
 {
 }
 
-static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 
@@ -62,7 +62,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string func_name, PlnSt
 	return f;
 }
 
-static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
@@ -93,7 +93,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string func_name, PlnStr
 	return f;
 }
 
-static PlnFunction* createObjMemberStructCopyFunc(const string func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";

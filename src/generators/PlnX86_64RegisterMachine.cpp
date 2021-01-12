@@ -1,7 +1,7 @@
 /// x86-64 (Linux) register machine class definition.
 ///
 /// @file	PlnX86_64RegisterMachine.cpp
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 #include <vector>
 #include <algorithm>
@@ -136,7 +136,7 @@ static const char* r(int rt, int size)
 		switch (size) {
 			case 4: case 8:
 				i = 0; break;
-			defalt:
+			default:
 				BOOST_ASSERT(false);
 		}
 		return tbl[rt][i];
@@ -226,23 +226,28 @@ static void initMnes()
 	mnes[MOVSD] = "movsd";
 
 	mnes[ADDSD] = "addsd";
+	mnes[ADDSS] = "addss";
 	mnes[INCQ] = "incq";
 	mnes[ADDQ] = "addq";
 
 	mnes[SUBSD] = "subsd";
+	mnes[SUBSS] = "subss";
 	mnes[DECQ] = "decq";
 	mnes[SUBQ] = "subq";
 	mnes[NEGQ] = "negq";
 
 	mnes[MULSD] = "mulsd";
+	mnes[MULSS] = "mulss";
 	mnes[IMULQ] = "imulq";
 	mnes[DIVSD] = "divsd";
+	mnes[DIVSS] = "divss";
 	mnes[DIVQ] = "divq";
 	mnes[CQTO] = "cqto";
 	mnes[IDIVQ] = "idivq";
 
 	mnes[XORQ] = "xorq";
 	mnes[XORPD] = "xorpd";
+	mnes[XORPS] = "xorps";
 
 	mnes[CVTTSD2SI] = "cvttsd2si";
 	mnes[CVTTSS2SI] = "cvttss2si";
@@ -297,7 +302,7 @@ void PlnX86_64RegisterMachine::reserve(int num)
 		imp->opecodes.push_back({MNE_NONE, NULL, NULL, ""});
 }
 
-void PlnX86_64RegisterMachine::addComment(string comment)
+void PlnX86_64RegisterMachine::addComment(const string& comment)
 {
 	imp->opecodes.back().comment = comment;
 }

@@ -1,7 +1,7 @@
 /// PlnStatement model class definition.
 ///
 /// @file	PlnStatement.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
@@ -139,7 +139,6 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	vector<PlnVariable*> ret_vars;
 	
 	int i = 0;
-	int j = 0;
 	for (int j=0; j<expressions.size(); j++) {
 		PlnExpression* e = expressions[j];
 		PlnClone* clone = NULL;

@@ -193,9 +193,9 @@ void PlnX86_64DataAllocator::memCopyed(PlnDataPlace* dst, PlnDataPlace* src, Pln
 	step++;
 }
 
-PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type)
+PlnDataPlace* PlnX86_64DataAllocator::prepareAccumulator(int data_type, int data_size)
 {
-	auto dp = new PlnDataPlace(8, data_type);
+	auto dp = new PlnDataPlace(data_size, data_type);
 	dp->type = DP_REG;
 
 	dp->status = DS_READY_ASSIGN;
@@ -222,8 +222,8 @@ PlnDataPlace* PlnX86_64DataAllocator::added(PlnDataPlace* ldp, PlnDataPlace *rdp
 	ldp->access(step);
 	releaseDp(rdp);
 	releaseDp(ldp);
-
-	auto result = prepareAccumulator(ldp->data_type);
+	
+	auto result = prepareAccumulator(ldp->data_type, ldp->size);
 	allocDp(result);
 	return result;
 }
@@ -238,7 +238,7 @@ PlnDataPlace* PlnX86_64DataAllocator::multiplied(PlnDataPlace* ldp, PlnDataPlace
 	ldp->access(step);
 	releaseDp(rdp);
 	releaseDp(ldp);
-	auto result = prepareAccumulator(ldp->data_type);
+	auto result = prepareAccumulator(ldp->data_type, ldp->size);
 	allocDp(result);
 	return result;
 }
@@ -254,7 +254,7 @@ void PlnX86_64DataAllocator::divided(PlnDataPlace** quotient, PlnDataPlace** rem
 	if (ldp->data_type == DT_FLOAT) {
 		ldp->access(step);
 		releaseDp(ldp);
-		*quotient = prepareAccumulator(ldp->data_type);
+		*quotient = prepareAccumulator(ldp->data_type, ldp->size);
 		*reminder = NULL;
 		step++;
 		return;

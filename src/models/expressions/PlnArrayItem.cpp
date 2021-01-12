@@ -41,7 +41,7 @@ static PlnExpression* getIndexExpression(
 	return ex;
 }
 
-PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, vector<PlnExpression*> item_ind)
+PlnArrayItem::PlnArrayItem(PlnExpression *array_ex, const vector<PlnExpression*>& item_ind)
 	: PlnArrayItem(array_ex, item_ind, array_ex->values[0].inf.var->var_type)
 {
 }

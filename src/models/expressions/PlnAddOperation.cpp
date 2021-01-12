@@ -4,9 +4,10 @@
 /// e.g.) a + b / a - b
 ///
 /// @file	PlnAddOperation.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
+#include <algorithm>
 
 #include "../../PlnConstants.h"
 #include "PlnAddOperation.h"
@@ -15,20 +16,7 @@
 #include "../PlnType.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
-
-#define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
-	union {int64_t i; uint64_t u; double d;} ex##val; \
-	if (ex->type == ET_VALUE) { \
-		switch (ex->values[0].type) { \
-			case VL_LIT_INT8: is_##ex##_int = true; \
-				ex##val.i = ex->values[0].inf.intValue; break;\
-			case VL_LIT_UINT8: is_##ex##_uint = true; \
-				ex##val.u = ex->values[0].inf.uintValue; break; \
-			case VL_LIT_FLO8: is_##ex##_flo = true; \
-				ex##val.d = ex->values[0].inf.floValue; break; \
-		} \
-	} \
-	bool is_##ex##_num_lit = is_##ex##_int || is_##ex##_uint || is_##ex##_flo;
+#include "PlnCalcOperationUtils.h"
 
 // PlnAddOperation
 PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
@@ -160,18 +148,10 @@ PlnExpression* PlnAddOperation::create_sub(PlnExpression* l, PlnExpression* r)
 PlnAddOperation::PlnAddOperation(PlnExpression* l, PlnExpression* r, bool is_add)
 	: PlnExpression(ET_ADD), l(l), r(r), ldp(NULL), rdp(NULL), is_add(is_add), do_cross(false)
 {
-	bool isUnsigned = (l->getDataType() == DT_UINT && r->getDataType() == DT_UINT);
-	bool isFloat = (l->getDataType() == DT_FLOAT || r->getDataType() == DT_FLOAT);
-
 	PlnValue v;
 	v.type = VL_WORK;
-	if (isFloat) {
-		v.inf.wk_type = PlnType::getFlo()->getVarType();
-	} else if (isUnsigned) {
-		v.inf.wk_type = PlnType::getUint()->getVarType();
-	} else {
-		v.inf.wk_type = PlnType::getSint()->getVarType();
-	}
+	v.inf.wk_type = binaryOperationType(l, r);
+
 	values.push_back(v);
 }
 
@@ -191,7 +171,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	//   case 3: x1 + x2 => x1->temp, x2 + temp  
 
 	// l => RAX
-	ldp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	ldp = da.prepareAccumulator(values[0].getVarType()->data_type(), values[0].getVarType()->size());
 
 	if (r->type == ET_VALUE) {	// case 1
 		rdp = r->values[0].getDataPlace(da);
@@ -208,7 +188,7 @@ void PlnAddOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		r->data_places.push_back(rdp);
 		
 	} else {
-		rdp = da.prepareLocalVar(8, r->getDataType());
+		rdp = da.prepareLocalVar(r->values[0].getVarType()->size(), r->getDataType());
 		static string cmt="(temp@add)";
 		rdp->comment = &cmt;
 
@@ -281,7 +261,11 @@ PlnNegative::PlnNegative(PlnExpression* e)
 {
 	PlnValue v;
 	v.type = VL_WORK;
-	v.inf.wk_type = e->values[0].getVarType();
+	if (e->getDataType() == DT_FLOAT) {
+		v.inf.wk_type = e->values[0].getVarType();
+	} else {
+		v.inf.wk_type = PlnType::getSint()->getVarType();
+	}
 	values.push_back(v);
 }
 
@@ -292,7 +276,7 @@ PlnNegative::~PlnNegative()
 
 void PlnNegative::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type());
+	auto dp = da.prepareAccumulator(values[0].getVarType()->data_type(), values[0].getVarType()->size());
 	e->data_places.push_back(dp);
 	e->finish(da, si);
 	da.popSrc(dp);
