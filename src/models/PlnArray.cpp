@@ -1,7 +1,7 @@
 /// Array model class definition.
 ///
 /// @file	PlnArray.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -20,8 +20,8 @@
 
 PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock* block)
 {
-	PlnType* it = arr_type->item_type->typeinf;
-	int item_num = arr_type->inf.obj.alloc_size / it->size;
+	PlnVarType* it = arr_type->item_type;
+	int item_num = arr_type->data_size / it->size();
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
@@ -31,17 +31,17 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
 	
-	palan::malloc(f->implement, ret_var, arr_type->inf.obj.alloc_size);
+	palan::malloc(f->implement, ret_var, arr_type->data_size);
 
 	// add alloc code.
 	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
 	{
-		BOOST_ASSERT(it->allocator);
 		PlnExpression* arr_item = palan::rawArrayItem(ret_var, i, block);
 		arr_item->values[0].asgn_type = ASGN_COPY_REF;
 		vector<PlnExpression*> lvals = { arr_item };
-		PlnExpression* alloc_ex = it->allocator->getAllocEx();
+		PlnExpression* alloc_ex = it->getAllocEx();
+		BOOST_ASSERT(alloc_ex);
 		vector<PlnExpression*> exps = { alloc_ex };
 
 		auto assign = new PlnAssignment(lvals, exps);
@@ -55,8 +55,8 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
-	PlnType* it = arr_type->item_type->typeinf;
-	int item_num = arr_type->inf.obj.alloc_size / it->size;
+	PlnVarType* it = arr_type->item_type;
+	int item_num = arr_type->data_size / it->size();
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
@@ -76,9 +76,9 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	PlnVariable* i = palan::declareUInt(ifblock, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(ifblock, i, item_num);
 	{
-		BOOST_ASSERT(it->freer);
 		PlnExpression* arr_item = palan::rawArrayItem(p1_var, i, block);
-		PlnExpression* free_item = it->freer->getFreeEx(arr_item);
+		PlnExpression* free_item = it->getFreeEx(arr_item);
+		BOOST_ASSERT(free_item);
 		wblock->statements.push_back(new PlnStatement(free_item, wblock));
 
 		palan::incrementUInt(wblock, i, 1);
@@ -91,8 +91,8 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 
 PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
-	PlnType* it = arr_type->item_type->typeinf;
-	int item_num = arr_type->inf.obj.alloc_size / it->size;
+	PlnVarType* it = arr_type->item_type;
+	int item_num = arr_type->data_size / it->size();
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
@@ -110,8 +110,8 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayTyp
 	{
 		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0]->var, i, block);
 		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1]->var, i, block);
-		if (it->copyer) {
-			PlnExpression* copy_item = it->copyer->getCopyEx(dst_arr_item, src_arr_item);
+		PlnExpression* copy_item = it->getCopyEx(dst_arr_item, src_arr_item);
+		if (copy_item) {
 			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
 		}
 

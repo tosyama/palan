@@ -147,8 +147,8 @@ Statement
     12. extern-var - Import extern global variables
         *   var-type\* - Variable type list
         *   names\* - variable name list
-	
-	13. ope-asgn - Operational assignment
+
+    13. ope-asgn - Operational assignment
         *   dst-val\* - Destination value
         *   ope\* - Operator string : "+"
         *   rval\* - Right value expression

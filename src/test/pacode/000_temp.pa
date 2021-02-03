@@ -1,7 +1,11 @@
 ccall printf(...);
-flo32 a = 1.2;
 
-int64 i = a + 255;
 
-// printf("%d", i);
+int32 a=1;
+[3]int32 ia = [11,22,33];
+ia[1]++;
+//{
+//	@!int32 aa = ia[1];
+//	aa + 1 -> aa;
+//}
 

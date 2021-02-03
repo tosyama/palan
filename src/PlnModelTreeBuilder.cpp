@@ -276,7 +276,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					iomode = PIO_OUTPUT;
 					if (var_type) {
 						if (var_type->data_type() == DT_OBJECT_REF) {
-							if (var_type->mode[ALLOC_MD]=='r') {
+							if (var_type->mode[ALLOC_MD]=='r') {	// refernce of refernce
 								BOOST_ASSERT(var_type->mode[IDENTITY_MD]=='c');
 								pm = FPM_VAR_REF;
 							} else {
@@ -295,6 +295,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 						} else
 							BOOST_ASSERT(false);
 					}
+
 				} else {
 					assertAST(param["pass-by"]=="copy", param);
 					iomode = PIO_INPUT;
@@ -304,9 +305,10 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 								pm = FPM_VAR_COPY;
 							else
 								pm = FPM_OBJ_CLONE;
-						} else if (var_type->mode[ALLOC_MD]=='r') {
+
+						} else if (var_type->mode[ALLOC_MD]=='r') {	// != DT_OBJECT_REF
 							pm = FPM_VAR_REF;
-						} else {
+						} else {	// != DT_OBJECT_REF
 							pm = FPM_VAR_COPY;
 						}
 					}
@@ -916,6 +918,7 @@ PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 
 			// BOOST_ASSERT(false);
 			vector<PlnValue> vars = {v};
+			vars[0].asgn_type = ASGN_COPY_REF;
 			vector<PlnExpression*> inits{var_val};
 			sub_block->statements.push_back(
 				new PlnStatement(new PlnVarInit(vars, &inits), sub_block));
@@ -1285,8 +1288,9 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 		}
 	} else {
 		auto vt = pvar->var_type;
+		auto original_dtype = vt->typeinf->data_type;
 		// primitve reference
-		if (vt->data_type() != DT_OBJECT_REF && vt->mode[ALLOC_MD] == 'r') {
+		if (vt->data_type() == DT_OBJECT_REF && original_dtype != DT_OBJECT) {
 			var_exp = new PlnReferenceValue(var_exp);
 		}
 	}

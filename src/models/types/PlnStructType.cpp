@@ -40,7 +40,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 	block->setParent(f);
 	f->implement = block;
 
-	palan::malloc(f->implement, ret_var, struct_type->inf.obj.alloc_size);
+	palan::malloc(f->implement, ret_var, struct_type->data_size);
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
 		if (mdef->type->data_type() == DT_OBJECT_REF) {
@@ -133,8 +133,6 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	: PlnType(TP_STRUCT), members(move(members))
 {
 	this->name = name;
-	data_type = DT_OBJECT_REF;
-	size = 8;
 	int alloc_size = 0;
 	int max_member_size = 1;
 	this->default_mode = default_mode;
@@ -167,8 +165,8 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		alloc_size = (alloc_size / max_member_size+1) * max_member_size;
 	}
 
-	inf.obj.is_fixed_size = true;
-	inf.obj.alloc_size = alloc_size;
+	data_type = DT_OBJECT;
+	data_size = alloc_size;
 
 	if (need_alloc_func) {
 		string fname = PlnBlock::generateFuncName("new", {this}, {});

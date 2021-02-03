@@ -1,7 +1,7 @@
 /// Difinition of constants to share.
 ///
 /// @file	PlnConstants.h
-/// @copyright	2017 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2016 YAMAGUCHI Toshinobu 
 
 #pragma once
 
@@ -10,7 +10,7 @@ enum {
 	DT_SINT,	/// Signed integer.
 	DT_UINT,	/// Unsigned integer.
 	DT_FLOAT,	/// Floating-point number.
-	DT_OBJECT,	/// Instance of object. (size <= 8byte)
+	DT_OBJECT,	/// Instance of object.
 	DT_OBJECT_REF,	/// Address of object.
 	DT_UNKNOWN	/// Unkown data type. Not initialized.
 };

@@ -370,7 +370,7 @@ PlnDataPlace* PlnArrayValue::getROStructDp(PlnDataAllocator& da)
 	for (auto member: stype->members) {
 		PlnRoData datainf;
 		datainf.data_type = member->type->data_type();
-		datainf.size = member->type->typeinf->size;
+		datainf.size = member->type->size();
 		datainf.alignment = calcAlign(member->offset);
 		if (datainf.data_type == DT_SINT || datainf.data_type == DT_UINT) {
 			datainf.val.i = getInt(item_exps[i]);

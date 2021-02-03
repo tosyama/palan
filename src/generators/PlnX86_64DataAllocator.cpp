@@ -500,6 +500,8 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 				}
 
 			} else {
+				BOOST_ASSERT(dp->type == DP_STK_BP);
+				BOOST_ASSERT(dp->size == 8);
 				if (dp->src_place && !dp->save_place) {
 					auto srcdp = dp->src_place;
 					if (srcdp->type == DP_REG) {

@@ -152,7 +152,6 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 				BOOST_ASSERT(argval.param->passby != FPM_OBJ_CLONE);
 			}
 
-			auto pvar_type = argval.param->var->var_type;
 			if (argval.param->passby == FPM_VAR_REF
 				|| argval.param->passby == FPM_OBJ_GETOWNER
 				|| (argval.param->passby == FPM_ANY_OUT && arg.exp->getDataType(vi) != DT_OBJECT_REF)) {

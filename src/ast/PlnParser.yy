@@ -134,7 +134,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%' '&'
-%right UMINUS '!' '@'
+%right UMINUS '!' '@' '#'
 %left '.'
 
 %start module	
@@ -1374,6 +1374,9 @@ type: ids
 			} else if (ax["name"] == "@!") {
 				mode = "wcr";
 				continue;
+			} else if (ax["name"] == "#") {
+				mode = "wis";
+				continue;
 			} else if (ax["name"] == "[]") {
 				json jarr = {
 					{ "name", "[]" },
@@ -1436,6 +1439,10 @@ ref_mark: '@'
 	| AT_EXCL
 	{
 		$$ = "@!";
+	}
+	| '#'
+	{
+		$$ = "#";
 	}
 	;
 

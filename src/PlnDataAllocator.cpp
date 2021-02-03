@@ -1,7 +1,7 @@
 /// Register/Stack allocation class definition.
 ///
 /// @file	PlnDataAllocator.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu
 
 #include <iostream>
 #include <stdlib.h>
@@ -92,7 +92,29 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 		}
 
 		dp->data.stack.idx = stack_size;
+		dp->data.stack.children = NULL;
 		dp->previous = NULL;
+		data_stack.push_back(dp);
+		return;
+
+	} else if (size > 8) {
+		BOOST_ASSERT((size % 8) == 0);
+		vector<PlnDataPlace *> *children = new vector<PlnDataPlace *>();
+		int num = size / 8;
+		for (int i=0; i<num; i++) {
+			PlnDataPlace* rsv_dp = new PlnDataPlace(8, DT_OBJECT);
+			rsv_dp->type = DP_STK_RESERVE_BP;
+			rsv_dp->size = 8;
+			rsv_dp->data.originalDp = dp;
+			rsv_dp->status = DS_ASSIGNED;
+			rsv_dp->alloc_step = alloc_step;
+			rsv_dp->release_step = release_step;
+
+			children->push_back(rsv_dp);
+			data_stack.push_back(rsv_dp);
+		}
+
+		dp->data.stack.children = children;
 		data_stack.push_back(dp);
 		return;
 	}
@@ -142,6 +164,7 @@ PlnDataPlace* PlnDataAllocator::prepareLocalVar(int size, int data_type)
 	PlnDataPlace* new_dp = new PlnDataPlace(size, data_type);
 	new_dp->type = DP_STK_BP;
 	new_dp->data.stack.offset = 0;
+	new_dp->data.stack.children = NULL;
 	new_dp->status = DS_READY_ASSIGN;
 
 	return new_dp;
@@ -220,7 +243,14 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 		dp->save_place->release_step = step;
 	}
 
-	if (dp->size < 8 && dp->type == DP_STK_BP && dp->data.bytes.parent_dp) {
+	if (dp->size > 8 && dp->type == DP_STK_BP) {
+		BOOST_ASSERT(dp->data.stack.children);
+		for (PlnDataPlace *cdp: *dp->data.stack.children) {
+			cdp->status = DS_RELEASED;
+			cdp->release_step = step;
+		}
+
+	} else if (dp->size < 8 && dp->type == DP_STK_BP && dp->data.bytes.parent_dp) {
 		dp->data.bytes.parent_dp->updateBytesDpStatus();
 
 	} else if (dp->type == DP_INDRCT_OBJ) {
@@ -396,8 +426,10 @@ void PlnDataAllocator::finish()
 				for (auto child: *dpp->data.bytesData) {
 					child->data.stack.offset = offset + child->data.bytes.offset;
 				}
-			} else
+			} else if (dpp->type == DP_STK_BP) {
 				dpp->data.stack.offset = offset;
+			} else
+				BOOST_ASSERT(dpp->type == DP_STK_RESERVE_BP);
 		}
 	}
 

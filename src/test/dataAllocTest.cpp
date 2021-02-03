@@ -23,7 +23,6 @@ TEST_CASE("Register/stack allocation basic test.(Normal call)", "[allocate]")
 	vector<PlnParameter*> params(6);
 	vector<int> adtypes = { DT_SINT, DT_SINT, DT_SINT, DT_SINT, DT_SINT, DT_SINT };
 	vector<PlnVariable*> rets;
-	vector<int> rdtypes = { };
 
 	vector<PlnDataPlace*> dps1;
 	for (int t: adtypes)

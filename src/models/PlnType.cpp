@@ -1,7 +1,7 @@
 /// Type model class definition.
 ///
 /// @file	PlnType.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
@@ -60,14 +60,14 @@ void PlnType::initBasicTypes()
 	sbt->name = "sbyte";
 	sbt->default_mode = "wis";
 	sbt->data_type = DT_SINT;
-	sbt->size = 1;
+	sbt->data_size = 1;
 	basic_types.push_back(sbt);
 
 	PlnType* bt = new PlnType();
 	bt->name = "byte";
 	bt->default_mode = "wis";
 	bt->data_type = DT_UINT;
-	bt->size = 1;
+	bt->data_size = 1;
 	basic_types.push_back(bt);
 	byte_type = bt;
 
@@ -75,35 +75,35 @@ void PlnType::initBasicTypes()
 	i16t->name = "int16";
 	i16t->default_mode = "wis";
 	i16t->data_type = DT_SINT;
-	i16t->size = 2;
+	i16t->data_size = 2;
 	basic_types.push_back(i16t);
 
 	PlnType* u16t = new PlnType();
 	u16t->name = "uint16";
 	u16t->default_mode = "wis";
 	u16t->data_type = DT_UINT;
-	u16t->size = 2;
+	u16t->data_size = 2;
 	basic_types.push_back(u16t);
 	
 	PlnType* i32t = new PlnType();
 	i32t->name = "int32";
 	i32t->default_mode = "wis";
 	i32t->data_type = DT_SINT;
-	i32t->size = 4;
+	i32t->data_size = 4;
 	basic_types.push_back(i32t);
 
 	PlnType* u32t = new PlnType();
 	u32t->name = "uint32";
 	u32t->default_mode = "wis";
 	u32t->data_type = DT_UINT;
-	u32t->size = 4;
+	u32t->data_size = 4;
 	basic_types.push_back(u32t);
 
 	PlnType* i64t = new PlnType();
 	i64t->name = "int64";
 	i64t->default_mode = "wis";
 	i64t->data_type = DT_SINT;
-	i64t->size = 8;
+	i64t->data_size = 8;
 	basic_types.push_back(i64t);
 	int_type = i64t;
 
@@ -111,7 +111,7 @@ void PlnType::initBasicTypes()
 	u64t->name = "uint64";
 	u64t->default_mode = "wis";
 	u64t->data_type = DT_UINT;
-	u64t->size = 8;
+	u64t->data_size = 8;
 	basic_types.push_back(u64t);
 	uint_type = u64t;
 
@@ -119,7 +119,7 @@ void PlnType::initBasicTypes()
 	f32t->name = "flo32";
 	f32t->default_mode = "wis";
 	f32t->data_type = DT_FLOAT;
-	f32t->size = 4;
+	f32t->data_size = 4;
 	basic_types.push_back(f32t);
 	flo32_type = f32t;
 
@@ -127,23 +127,23 @@ void PlnType::initBasicTypes()
 	f64t->name = "flo64";
 	f64t->default_mode = "wis";
 	f64t->data_type = DT_FLOAT;
-	f64t->size = 8;
+	f64t->data_size = 8;
 	basic_types.push_back(f64t);
 	flo64_type = f64t;
 
 	PlnType* t = new PlnType();
 	t->name = "_ro_cstr";
 	t->default_mode = "rir";
-	t->data_type = DT_OBJECT_REF;
-	t->size = 8;
+	t->data_type = DT_OBJECT;
+	t->data_size = 0;
 	basic_types.push_back(t);
 	ro_cstr_type = t;
 
 	t = new PlnType();
 	t->name = "object";
 	t->default_mode = "wmr";
-	t->data_type = DT_OBJECT_REF;
-	t->size = 8;
+	t->data_type = DT_OBJECT;
+	t->data_size = 0;
 	basic_types.push_back(t);
 	object_type = t;
 
@@ -151,7 +151,7 @@ void PlnType::initBasicTypes()
 	t->name = "";
 	t->default_mode = "wmi";
 	t->data_type = DT_UNKNOWN;
-	t->size = 0;
+	t->data_size = 0;
 	basic_types.push_back(t);
 	any_type = t;
 
@@ -386,3 +386,19 @@ PlnVarType* PlnType::getVarType(const string& mode)
 	return var_type;
 }
 
+// PlnVarType
+int PlnVarType::data_type()
+{
+	if (mode[ALLOC_MD] == 'r' || mode[ALLOC_MD] == 'h') {
+		return DT_OBJECT_REF;
+	}
+	return typeinf->data_type;
+}
+
+int PlnVarType::size()
+{
+	if (mode[ALLOC_MD] == 'r' || mode[ALLOC_MD] == 'h') {
+		return 8;	// ponter_size
+	}
+	return typeinf->data_size;
+}

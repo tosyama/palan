@@ -1,7 +1,7 @@
 /// Fixed array type class definition.
 ///
 /// @file	PlnFixedArrayType.cpp
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
@@ -23,10 +23,8 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 		alloc_size *= s;
 
 	this->name = name;
-	this->data_type = DT_OBJECT_REF;
-	this->size = 8;
-	this->inf.obj.is_fixed_size = true;
-	this->inf.obj.alloc_size = alloc_size;
+	this->data_type = DT_OBJECT;
+	this->data_size = alloc_size;
 	this->sizes = move(sizes);
 
 	auto it = this->item_type;

@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -47,15 +47,9 @@ class PlnType {
 public:
 	PlnTypeType type;
 	int	data_type;
+	int data_size;
 	string name;
 	string default_mode;
-	int size;
-	union {
-		struct {
-			bool is_fixed_size;
-			int alloc_size;
-		} obj;
-	} inf;
 
 	vector<PlnVarType*> var_types;
 
@@ -98,8 +92,8 @@ public:
 	string mode;
 
 	const string& name() { return typeinf->name; }
-	int data_type() { return typeinf->data_type; }
-	int size() { return typeinf->size; }
+	int data_type();
+	int size();
 	PlnExpression *getAllocEx() {
 		if (!typeinf->allocator) return NULL;
 		return typeinf->allocator->getAllocEx();

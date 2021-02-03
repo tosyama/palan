@@ -140,6 +140,8 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 				di = new PlnDstMoveObjectItem(ex);
 			} else if (asgn_type == ASGN_COPY_REF) {
 				di = new PlnDstPrimitiveItem(ex);
+			} else {
+				BOOST_ASSERT(false);
 			}
 		} else {
 			di = new PlnDstPrimitiveItem(ex);

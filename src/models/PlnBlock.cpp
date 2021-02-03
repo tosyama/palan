@@ -238,8 +238,8 @@ void PlnBlock::declareType(const string& type_name)
 	PlnType* t = new PlnType();
 	t->name = type_name;
 	t->default_mode = "wmr";
-	t->data_type = DT_OBJECT_REF;
-	t->size = 8;
+	t->data_type = DT_OBJECT;
+	t->data_size = 0;
 	types.push_back(t);
 }
 

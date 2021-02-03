@@ -11,7 +11,7 @@ public:
 	{
 		this->name = name;
 		this->data_type = orig_type->data_type;
-		this->size = orig_type->size;
+		this->data_size = orig_type->data_size;
 	}
 
 	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override { BOOST_ASSERT(false); }

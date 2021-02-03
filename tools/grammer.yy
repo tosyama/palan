@@ -55,8 +55,9 @@ int yylex();
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-' '|'
-%left '*' '/' '%' '&' '@'
-%left UMINUS '!'
+%left '*' '/' '%' '&'
+%left UMINUS '!' '@' '#'
+%left '.'
 
 %start module	
 %%
@@ -365,7 +366,7 @@ var_affixes_ref: ref_mark
 	| var_affixes_arr ref_mark
 	;
 
-ref_mark: '@' | AT_EXCL;
+ref_mark: '@' | AT_EXCL | '#';
 
 array_items: array_item
 	| array_items ',' array_item
