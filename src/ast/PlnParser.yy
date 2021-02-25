@@ -5,7 +5,7 @@
 /// is created from this definition file by bison.
 ///
 /// @file	PlnParser.yy
-/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2021 YAMAGUCHI Toshinobu 
 
 %skeleton "lalr1.cc"
 %require "3.0.2"
@@ -88,7 +88,6 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_MINUS "--"
 
 %type <string>	strs
-%type <string>	pass_by
 %type <string>	ref_mark
 %type <bool>	move_owner take_owner arrow_ope output_arrow
 %type <json>	function_definition	palan_function_definition
@@ -231,7 +230,8 @@ parameter_def: /* empty */ {}
 	{
 		json varprm = {
 			{ "name", "..." },
-			{ "pass-by", "read" }
+			{ "io", "in" },
+			{ "moveto", "none" }
 		};
 		LOC(varprm, @$);
 		$$.push_back(move(varprm));
@@ -241,7 +241,8 @@ parameter_def: /* empty */ {}
 		$$ = move($1);
 		json varprm = {
 			{ "name", "..." },
-			{ "pass-by", "read" }
+			{ "io", "in" },
+			{ "moveto", "none" }
 		};
 		LOC(varprm, @3);
 		$$.push_back(move(varprm));
@@ -260,7 +261,8 @@ parameters: parameter { $$.push_back($1); }
 		$$ = move($1);
 		json prm = {
 			{ "name", $3 },
-			{ "pass-by", "copy" }
+			{ "io", "in" },
+			{ "moveto", "none" }
 		};
 		if (!$4.is_null())
 			prm["default-val"] = move($4);
@@ -269,12 +271,13 @@ parameters: parameter { $$.push_back($1); }
 
 		$$.push_back(move(prm));
 	}
-	| parameters ',' pass_by ID default_value
+	| parameters ',' DBL_GRTR ID default_value
 	{
 		$$ = move($1);
 		json prm = {
 			{ "name", $4 },
-			{ "pass-by", $3 }
+			{ "io", "in" },
+			{ "moveto", "callee" }
 		};
 		if (!$5.is_null())
 			prm["default-val"] = move($5);
@@ -285,24 +288,13 @@ parameters: parameter { $$.push_back($1); }
 	}
 	;
 
-parameter: type ID default_value
-	{
-		json prm = {
-			{ "var-type", move($1) },
-			{ "name", move($2) },
-			{ "pass-by", "copy" }
-		};
-		if (!$3.is_null())
-			prm["default-val"] = move($3);
-		$$ = move(prm);
-		LOC($$, @$);
-	}
-	| type pass_by ID default_value
+parameter: type move_owner ID default_value
 	{
 		json prm = {
 			{ "var-type", move($1) },
 			{ "name", move($3) },
-			{ "pass-by", $2 }
+			{ "io", "in" },
+			{ "moveto", $2 ? "callee" : "none" }
 		};
 		if (!$4.is_null())
 			prm["default-val"] = move($4);
@@ -328,7 +320,8 @@ out_parameter_def: /* empty */ { }
 	{
 		json prm = {
 			{ "name", "..." },
-			{ "pass-by", "write" }
+			{ "io", "out" },
+			{ "moveto", "none" }
 		};
 		LOC(prm, @2);
 		$$.push_back(move(prm));
@@ -338,7 +331,8 @@ out_parameter_def: /* empty */ { }
 		$$ = move($2);
 		json prm = {
 			{ "name", "..." },
-			{ "pass-by", "write" }
+			{ "io", "out" },
+			{ "moveto", "none" }
 		};
 		LOC(prm, @4);
 		$$.push_back(move(prm));
@@ -350,18 +344,21 @@ out_parameters: type ID move_owner
 		json prm = {
 			{ "var-type", move($1) },
 			{ "name", move($2) },
-			{ "pass-by", $3 ? "write-ref" : "write" }
+			{ "io", "out" },
+			{ "moveto", $3 ? "caller" : "none" }
 		};
 		LOC(prm, @2);
 		$$.push_back(move(prm));
 	}
 	| out_parameters ',' type ID move_owner
+
 	{
 		$$ = move($1);
 		json prm = {
 			{ "var-type", move($3) },
 			{ "name", move($4) },
-			{ "pass-by", $5 ? "write-ref" : "write" }
+			{ "io", "out" },
+			{ "moveto", $5 ? "caller" : "none" }
 		};
 		LOC(prm, @4);
 		$$.push_back(move(prm));
@@ -371,7 +368,8 @@ out_parameters: type ID move_owner
 		$$ = move($1);
 		json prm = {
 			{ "name", move($3) },
-			{ "pass-by", $4 ? "write-ref" : "write" }
+			{ "io", "out" },
+			{ "moveto", $4 ? "caller" : "none" }
 		};
 		LOC(prm, @3);
 		$$.push_back(move(prm));
@@ -380,9 +378,6 @@ out_parameters: type ID move_owner
 
 move_owner: /* empty */	{ $$ = false; }
 	| DBL_GRTR { $$ = true; }
-	;
-
-pass_by: DBL_GRTR { $$ = "move"; }
 	;
 
 default_value:	/* empty */	{  }
@@ -870,7 +865,7 @@ out_arguments: expression
 		out_arg["exp"] = move($3);
 		$$.push_back(move(out_arg));
 	}
-	| out_arguments ',' pass_by expression
+	| out_arguments ',' DBL_GRTR expression
 	{
 		$$ = move($1);
 		json out_arg;

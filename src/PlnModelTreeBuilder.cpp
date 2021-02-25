@@ -187,13 +187,13 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			}
 
 			PlnVarType *var_type = getVarTypeFromJson(param["var-type"], scope);
-			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy", param);
+			assertAST(param["io"] == "in", param);
 
 			PlnPassingMethod pm = FPM_UNKNOWN;
 			
-			if (param["pass-by"] == "move") {
+			if (param["moveto"] == "callee") {
 				pm = FPM_OBJ_MOVEOWNER;
-			} else if (param["pass-by"] == "copy") {
+			} else if (param["moveto"] == "none") {
 				if (var_type) {
 					if (var_type->data_type() == DT_OBJECT_REF) {
 						if (var_type->mode[ALLOC_MD]=='r')
@@ -211,7 +211,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			if (param["default-val"].is_object()) {
 				default_val = buildExpression(param["default-val"], scope);
 			}
-			f->addParam(param["name"], var_type, PIO_INPUT, pm, default_val);
+			f->addParam(param["name"], var_type, PIO_INPUT, FPM_UNKNOWN, pm, default_val);
 			setLoc(f->parameters.back()->var, param);
 		}
 
@@ -253,67 +253,65 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				BOOST_ASSERT((i+1)==proto["params"].size());
 				int iomode = PIO_UNKNOWN;
 				PlnPassingMethod pm = FPM_UNKNOWN;
-				if (param["pass-by"] == "read") {
+				if (param["io"] == "in") {
 					iomode = PIO_INPUT;
 					pm = FPM_ANY_IN;
 				} else {
-					assertAST(param["pass-by"] == "write", param);
+					assertAST(param["io"] == "out", param);
 					iomode = PIO_OUTPUT;
 					pm = FPM_ANY_OUT;
 				}
 
-				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, pm, NULL);
+				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, FPM_UNKNOWN, pm, NULL);
 
 			} else {
 				PlnVarType *var_type = getVarTypeFromJson(param["var-type"], scope);
 				PlnPassingMethod pm = FPM_UNKNOWN;
 				int iomode = PIO_UNKNOWN;
-				if (param["pass-by"] == "move") {
-					pm = FPM_OBJ_MOVEOWNER;
+				if (param["io"] == "in") {
 					iomode = PIO_INPUT;
+					if (param["moveto"] == "callee") {
+						pm = FPM_OBJ_MOVEOWNER;
 
-				} else if (param["pass-by"] == "write") {
-					iomode = PIO_OUTPUT;
-					if (var_type) {
-						if (var_type->data_type() == DT_OBJECT_REF) {
-							if (var_type->mode[ALLOC_MD]=='r') {	// refernce of refernce
-								BOOST_ASSERT(var_type->mode[IDENTITY_MD]=='c');
+					} else {
+						assertAST(param["moveto"]=="none", param);
+						if (var_type) {
+							if (var_type->typeinf->data_type == DT_OBJECT) {
+								if (var_type->mode[ALLOC_MD]=='r')
+									pm = FPM_VAR_COPY;
+								else
+									pm = FPM_OBJ_CLONE;
+
+							// != DT_OBJECT
+							} else if (var_type->mode[ALLOC_MD]=='r') {
 								pm = FPM_VAR_REF;
 							} else {
 								pm = FPM_VAR_COPY;
 							}
-						} else {
-							pm = FPM_VAR_REF;
 						}
 					}
 
-				} else if (param["pass-by"] == "write-ref") {
+				} else if (param["io"] == "out") {
 					iomode = PIO_OUTPUT;
-					if (var_type) {
-						if (var_type->data_type() == DT_OBJECT_REF) {
-							pm = FPM_OBJ_GETOWNER;
-						} else
-							BOOST_ASSERT(false);
-					}
-
-				} else {
-					assertAST(param["pass-by"]=="copy", param);
-					iomode = PIO_INPUT;
-					if (var_type) {
-						if (var_type->data_type() == DT_OBJECT_REF) {
-							if (var_type->mode[ALLOC_MD]=='r')
-								pm = FPM_VAR_COPY;
-							else
-								pm = FPM_OBJ_CLONE;
-
-						} else if (var_type->mode[ALLOC_MD]=='r') {	// != DT_OBJECT_REF
-							pm = FPM_VAR_REF;
-						} else {	// != DT_OBJECT_REF
-							pm = FPM_VAR_COPY;
+					if (param["moveto"] == "caller") {
+						pm = FPM_OBJ_GETOWNER;
+					} else {
+						if (var_type) {
+							if (var_type->typeinf->data_type == DT_OBJECT) {
+								if (var_type->mode[ALLOC_MD]=='r') {	// refernce of refernce
+									BOOST_ASSERT(var_type->mode[IDENTITY_MD]=='c');
+									pm = FPM_VAR_REF;
+								} else {
+									pm = FPM_VAR_COPY;
+								}
+							} else {
+								pm = FPM_VAR_REF;
+							}
 						}
 					}
+
 				}
-				f->addParam(param["name"], var_type, iomode, pm, NULL);
+				f->addParam(param["name"], var_type, iomode, FPM_UNKNOWN, pm, NULL);
 			}
 			i++;
 		}
@@ -357,9 +355,10 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		}
 		p_name = pre_name;
 
-		if (param["pass-by"] == "move") {
+		if (param["moveto"] == "callee" || param["moveto"] == "caller") {
 			p_name += ">>";
-		}
+		} else
+			BOOST_ASSERT(param["moveto"]  == "none");
 
 		param_types.push_back(p_name);
 	}

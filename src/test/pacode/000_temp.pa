@@ -1,11 +1,16 @@
-ccall printf(...);
+ccall printf(@[?]byte format, ...) -> int32;
 
+type A {
+	int64 a;
+	int64 b;
+};
 
-int32 a=1;
-[3]int32 ia = [11,22,33];
-ia[1]++;
-//{
-//	@!int32 aa = ia[1];
-//	aa + 1 -> aa;
+{
+	#A test;
+	int64 x = 1;
+	3->test.a;
+//	f(test);
+}
+
+//func f(@A a) {
 //}
-

@@ -60,6 +60,8 @@ Parameter
 *   name\* - Parameter name string
 *   var-type\# - Variable type list
 *   pass-by\* - Passing way string: "copy", "move", "read":for variable argument, "write", "write-ref"
+*   io\* - Input/output string: "in", "out"
+*   moveto\* - Move owner option: "none", "callee", "caller"
 *   default-val - Default value expression
 *   loc - Location integer array
 
@@ -89,7 +91,9 @@ Variable Type
 
 *   mode\* - mode string(access right, identity, allocation):
     1.  --- - dafault: depend on type
-    2.  rir - read-only reference
+    2.  rir - read-only reference (@)
+    3.  wcr - writable reference (@!)
+    4.  wis - writable stack/direct allocation (#)
 
 *   loc - Location integer array
 

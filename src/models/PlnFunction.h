@@ -1,7 +1,7 @@
 /// Function model declaration.
 ///
 /// @file	PlnFunction.h
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -14,6 +14,15 @@ enum PlnPassingMethod {
 	FPM_OBJ_GETOWNER,
 	FPM_ANY_IN,
 	FPM_ANY_OUT,
+
+	FPM_IN_BYVAL,	// primitive:default, object:#
+	FPM_IN_BYREF,	// primitive:@, object:@
+	FPM_IN_BYREF_CLONE,	// object:default
+	FPM_IN_BYREF_MOVEOWNER,	// object:>>
+	FPM_IN_VARIADIC,	// primitive:byVal, object:byRef
+	FPM_OUT_BYREF,	// primitive:default, object:default
+	FPM_OUT_BYREFADDR_GETOWNER, // object:>>
+	FPM_OUT_VARIADIC, // primitive:byRef, object:byRef
 };
 
 enum {
@@ -30,6 +39,7 @@ public:
 	int index;
 	int iomode;
 	PlnPassingMethod passby;
+	PlnPassingMethod passby2;
 };
 
 class PlnReturnValue {
@@ -70,7 +80,7 @@ public:
 
 	PlnFunction(int func_type, const string& func_name);
 	PlnVariable* addRetValue(const string& rname, PlnVarType* rtype);
-	PlnVariable* addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal);
+	PlnVariable* addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnPassingMethod pass_method2, PlnExpression* defaultVal);
 
 	vector<string> getParamStrs() const;
 	vector<PlnDataPlace*> createArgDps();

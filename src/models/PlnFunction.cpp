@@ -88,7 +88,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	return ret_var;
 }
 
-PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
+PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnPassingMethod pass_method2, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(!has_va_arg);
 	BOOST_ASSERT(ptype || parameters.size());
@@ -109,8 +109,8 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 	param->dflt_value = defaultVal;
 	param->index = parameters.size();
 	param->iomode = iomode;
-	param->passby = !ptype && pass_method == FPM_UNKNOWN ? 
-			parameters.back()->passby : pass_method;
+	param->passby2 = !ptype && pass_method2 == FPM_UNKNOWN ? 
+			parameters.back()->passby2 : pass_method2;
 
 	parameters.push_back(param);
 
@@ -122,9 +122,9 @@ vector<string> PlnFunction::getParamStrs() const
 	vector<string> param_types;
 	for (auto p: parameters) {
 		string pname = p->var->var_type->name();
-		if (p->passby == FPM_OBJ_MOVEOWNER) 
+		if (p->passby2 == FPM_OBJ_MOVEOWNER) 
 			pname += ">>";
-		else if (p->passby == FPM_OBJ_GETOWNER)
+		else if (p->passby2 == FPM_OBJ_GETOWNER)
 			pname = ">" + pname;
 		if (p->var->name == "...")
 			pname += "...";
@@ -190,7 +190,7 @@ static string mangling(PlnFunction* f)
 		seed += "|";
 		seed += p->var->var_type->name();
 		seed += "." + p->var->var_type->mode;
-		seed += "." + to_string(p->passby);
+		seed += "." + to_string(p->passby2);
 	}
 
 	size_t hash = std::hash<string>{}(seed);

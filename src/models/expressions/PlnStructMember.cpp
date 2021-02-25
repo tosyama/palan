@@ -74,6 +74,12 @@ void PlnStructMember::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	auto base_dp = da.prepareObjBasePtr();
 	struct_ex->data_places.push_back(base_dp);
+
+	if (struct_ex->getDataType() == DT_OBJECT) {
+		base_dp->load_address = true;
+	} else
+		BOOST_ASSERT(struct_ex->getDataType() == DT_OBJECT_REF);
+
 	struct_ex->finish(da, si);
 
 	auto member_dp = member_var->place;

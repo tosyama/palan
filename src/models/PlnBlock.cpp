@@ -412,7 +412,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 
 					// Check conpatibilty of type.
 					PlnAsgnType atype;
-					switch (p->passby) {
+					switch (p->passby2) {
 						case FPM_VAR_COPY:
 							if (p->var->var_type->data_type() == DT_OBJECT_REF) {
 								atype = ASGN_COPY_REF;
@@ -434,7 +434,7 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 					PlnTypeConvCap cap = p->var->var_type->canCopyFrom(ainf.var_type, atype);
 					if (cap == TC_CANT_CONV) goto next_func;
 
-					bool is_move = p->passby == FPM_OBJ_MOVEOWNER || p->passby == FPM_OBJ_GETOWNER;
+					bool is_move = p->passby2 == FPM_OBJ_MOVEOWNER || p->passby2 == FPM_OBJ_GETOWNER;
 
 					if (is_move && ainf.opt != AG_MOVE) {
 						goto next_func;

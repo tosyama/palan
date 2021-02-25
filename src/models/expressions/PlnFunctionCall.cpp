@@ -136,7 +136,7 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 
 			} else if (argval.param->iomode == PIO_INPUT
 					&& argval.param->var->var_type->mode[ALLOC_MD]=='r'
-					&& argval.param->passby == FPM_VAR_COPY) {
+					&& argval.param->passby2 == FPM_VAR_COPY) {
 				// reference paramater
 				if (v.type == VL_WORK) { // e.g. return value of function
 					BOOST_ASSERT(v.inf.wk_type->mode[ALLOC_MD]=='h');
@@ -149,12 +149,12 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 					fcall->free_exs.push_back(free_ex);
 				}
 			} else {
-				BOOST_ASSERT(argval.param->passby != FPM_OBJ_CLONE);
+				BOOST_ASSERT(argval.param->passby2 != FPM_OBJ_CLONE);
 			}
 
-			if (argval.param->passby == FPM_VAR_REF
-				|| argval.param->passby == FPM_OBJ_GETOWNER
-				|| (argval.param->passby == FPM_ANY_OUT && arg.exp->getDataType(vi) != DT_OBJECT_REF)) {
+			if (argval.param->passby2 == FPM_VAR_REF
+				|| argval.param->passby2 == FPM_OBJ_GETOWNER
+				|| (argval.param->passby2 == FPM_ANY_OUT && arg.exp->getDataType(vi) != DT_OBJECT_REF)) {
 				arg_dps[dp_i]->load_address = true;
 			} 
 
@@ -361,18 +361,18 @@ static void initInternalFunctions()
 
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
-	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_VAR_COPY, NULL);
+	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
 	f->addRetValue(ret_name, PlnType::getObject()->getVarType());
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");
 	f->asm_name = "free";
-	f->addParam("ptr", PlnType::getObject()->getVarType(), PIO_INPUT, FPM_VAR_COPY, NULL);
+	f->addParam("ptr", PlnType::getObject()->getVarType(), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
 	internalFuncs[IFUNC_FREE] = f;
 
 	f = new PlnFunction(FT_C, "__exit");
 	f->asm_name = "exit";
-	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_VAR_COPY, NULL);
+	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
 	f->never_return = true;
 	internalFuncs[IFUNC_EXIT] = f;
 }

@@ -97,12 +97,11 @@ parameter_def: /* empty */
 parameters: parameter
 	| parameters ',' parameter
 	| parameters ',' ID default_value
-	| parameters ',' pass_by ID default_value
+	| parameters ',' DBL_GRTR ID default_value
 	;
 
 parameter: '@'
-	| type ID default_value
-	| type pass_by ID default_value
+	| type move_owner ID default_value
 	;
 
 out_parameter_def:
@@ -118,9 +117,6 @@ out_parameters: type ID move_owner
 
 move_owner: /* empty */
 	| DBL_GRTR
-	;
-
-pass_by: DBL_GRTR
 	;
 
 default_value: /* empty */
@@ -249,7 +245,7 @@ argument: /* empty */
 
 out_arguments: expression
 	| out_arguments ',' expression
-	| out_arguments ',' pass_by expression
+	| out_arguments ',' DBL_GRTR expression
 	;
 
 dst_vals: dst_val
