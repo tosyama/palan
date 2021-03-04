@@ -66,7 +66,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnSt
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
-	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_IN_BYREF, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -98,9 +98,9 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
 	// dst
-	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wcr"), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wcr"), PIO_INPUT, FPM_IN_BYREF, NULL);
 	// src
-	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_IN_BYREF, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();

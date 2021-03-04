@@ -5,7 +5,7 @@
 /// e.g.) func funcname(int arg1, arg2)->int32 ret1, ret2  { ... }
 ///
 /// @file	PlnFunction.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
@@ -88,10 +88,11 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 	return ret_var;
 }
 
-PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnPassingMethod pass_method2, PlnExpression* defaultVal)
+PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(!has_va_arg);
-	BOOST_ASSERT(ptype || parameters.size());
+	BOOST_ASSERT(ptype);
+	BOOST_ASSERT(pass_method != FPM_UNKNOWN);
 
 	if (pname == "...") {
 		has_va_arg = true;
@@ -102,15 +103,14 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 
 	PlnVariable* param_var = new PlnVariable();
 	param_var->name = pname;
-	param_var->var_type = ptype ? ptype : parameters.back()->var->var_type;
+	param_var->var_type = ptype;
 
 	PlnParameter* param = new PlnParameter();
 	param->var = param_var;
 	param->dflt_value = defaultVal;
 	param->index = parameters.size();
 	param->iomode = iomode;
-	param->passby2 = !ptype && pass_method2 == FPM_UNKNOWN ? 
-			parameters.back()->passby2 : pass_method2;
+	param->passby = pass_method;
 
 	parameters.push_back(param);
 
@@ -122,10 +122,13 @@ vector<string> PlnFunction::getParamStrs() const
 	vector<string> param_types;
 	for (auto p: parameters) {
 		string pname = p->var->var_type->name();
-		if (p->passby2 == FPM_OBJ_MOVEOWNER) 
+
+		if (p->passby == FPM_IN_BYREF_MOVEOWNER) {
 			pname += ">>";
-		else if (p->passby2 == FPM_OBJ_GETOWNER)
+		} else if (p->passby == FPM_OUT_BYREFADDR_GETOWNER) {
 			pname = ">" + pname;
+		}
+
 		if (p->var->name == "...")
 			pname += "...";
 		if (p->iomode == PIO_OUTPUT) {
@@ -190,7 +193,7 @@ static string mangling(PlnFunction* f)
 		seed += "|";
 		seed += p->var->var_type->name();
 		seed += "." + p->var->var_type->mode;
-		seed += "." + to_string(p->passby2);
+		seed += "." + to_string(p->passby);
 	}
 
 	size_t hash = std::hash<string>{}(seed);

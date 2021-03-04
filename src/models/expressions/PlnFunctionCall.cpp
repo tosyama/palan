@@ -5,7 +5,7 @@
 /// e.g. ) funcion(a, b) -> c, d;
 ///
 /// @file	PlnFunctionCall.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -124,19 +124,24 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 			} 
 
 			PlnClone* clone = NULL;
-			if (argval.param->iomode == PIO_INPUT
-					&& argval.param->var->var_type->mode[ALLOC_MD]=='h'
-					&& argval.opt == AG_NONE) {
+			if (argval.param->passby == FPM_IN_BYREF_CLONE) {
 				BOOST_ASSERT(v.type == VL_LIT_ARRAY || v.type == VL_VAR || v.type == VL_WORK || v.type == VL_LIT_STR);
 				if (v.type == VL_LIT_ARRAY) {
-					arg.exp = v.inf.arrValue;
-					// TODO?: delete arg.exp before assgin?
+					PlnExpression* tmp = v.inf.arrValue;
+					v.inf.arrValue = NULL;	 // == arg.exp->values[vi].inf.arrValue;
+					delete arg.exp;
+					arg.exp = tmp;
 				}
-				clone = new PlnClone(da, arg.exp, argval.param->var->var_type, false);
 
-			} else if (argval.param->iomode == PIO_INPUT
-					&& argval.param->var->var_type->mode[ALLOC_MD]=='r'
-					&& argval.param->passby2 == FPM_VAR_COPY) {
+				if (v.type == VL_WORK) {
+					if (v.inf.wk_type->mode[ALLOC_MD] != 'h') {
+						clone = new PlnClone(da, arg.exp, argval.param->var->var_type, false);
+					}
+				} else {
+					clone = new PlnClone(da, arg.exp, argval.param->var->var_type, false);
+				}
+
+			} else if (argval.param->passby == FPM_IN_BYREF) {
 				// reference paramater
 				if (v.type == VL_WORK) { // e.g. return value of function
 					BOOST_ASSERT(v.inf.wk_type->mode[ALLOC_MD]=='h');
@@ -148,15 +153,16 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 					fcall->free_work_vars.push_back(tmp_var);
 					fcall->free_exs.push_back(free_ex);
 				}
-			} else {
-				BOOST_ASSERT(argval.param->passby2 != FPM_OBJ_CLONE);
+
 			}
 
-			if (argval.param->passby2 == FPM_VAR_REF
-				|| argval.param->passby2 == FPM_OBJ_GETOWNER
-				|| (argval.param->passby2 == FPM_ANY_OUT && arg.exp->getDataType(vi) != DT_OBJECT_REF)) {
+			if ((argval.param->passby == FPM_IN_BYREF && arg.exp->getDataType(vi) != DT_OBJECT_REF)
+				|| (argval.param->passby == FPM_OUT_BYREF && arg.exp->getDataType(vi) != DT_OBJECT_REF)
+				|| (argval.param->passby == FPM_OUT_VARIADIC && arg.exp->getDataType(vi) != DT_OBJECT_REF)
+				|| (argval.param->passby == FPM_OUT_BYREFADDR_GETOWNER)
+				|| (argval.param->passby == FPM_OUT_BYREFADDR)) {
 				arg_dps[dp_i]->load_address = true;
-			} 
+			}
 
 			if (clone)
 				clone->finishAlloc(da, si);
@@ -361,18 +367,18 @@ static void initInternalFunctions()
 
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
-	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_IN_BYVAL, NULL);
 	f->addRetValue(ret_name, PlnType::getObject()->getVarType());
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");
 	f->asm_name = "free";
-	f->addParam("ptr", PlnType::getObject()->getVarType(), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	f->addParam("ptr", PlnType::getObject()->getVarType(), PIO_INPUT, FPM_IN_BYREF, NULL);
 	internalFuncs[IFUNC_FREE] = f;
 
 	f = new PlnFunction(FT_C, "__exit");
 	f->asm_name = "exit";
-	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_IN_BYVAL, NULL);
 	f->never_return = true;
 	internalFuncs[IFUNC_EXIT] = f;
 }

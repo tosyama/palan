@@ -61,7 +61,7 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
 	string s1 = "__p1";
-	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_IN_BYREF, NULL);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
@@ -98,8 +98,8 @@ PlnFunction* PlnArray::createObjArrayCopyFunc(string func_name, PlnFixedArrayTyp
 	f->parent = block;
 	string s1 = "__p1", s2 = "__p2";
 
-	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
-	f->addParam(s2, arr_type->getVarType("rir"), PIO_INPUT, FPM_UNKNOWN, FPM_VAR_COPY, NULL);
+	f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_IN_BYREF, NULL);
+	f->addParam(s2, arr_type->getVarType("rir"), PIO_INPUT, FPM_IN_BYREF, NULL);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
