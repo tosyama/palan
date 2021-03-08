@@ -98,9 +98,8 @@ void PlnDataAllocator::allocDataWithDetail(PlnDataPlace* dp, int alloc_step, int
 		return;
 
 	} else if (size > 8) {
-		BOOST_ASSERT((size % 8) == 0);
 		vector<PlnDataPlace *> *children = new vector<PlnDataPlace *>();
-		int num = size / 8;
+		int num = (size+7) / 8;
 		for (int i=0; i<num; i++) {
 			PlnDataPlace* rsv_dp = new PlnDataPlace(8, DT_OBJECT);
 			rsv_dp->type = DP_STK_RESERVE_BP;

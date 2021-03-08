@@ -167,14 +167,14 @@ type Vec3f {
 	flo32 z;
 };
 
-func add(@Vec3f l, @Vec3f r) -> Vec3f ret
+func add(@Vec3f l, @Vec3f r, @!Vec3f ret)
 {
 	l.x + r.x -> ret.x;
 	l.y + r.y -> ret.y;
 	l.z + r.z -> ret.z;
 }
 
-func sub(@Vec3f l, @Vec3f r) -> Vec3f ret
+func sub(@Vec3f l, @Vec3f r, @!Vec3f ret)
 {
 	l.x - r.x -> ret.x;
 	l.y - r.y -> ret.y;
@@ -188,14 +188,14 @@ func mul(@Vec3f l, @Vec3f r) -> flo32 ret
 	ret + l.z * r.z -> ret;
 }
 
-func mulvf(@Vec3f l, flo32 r) -> Vec3f ret
+func mulvf(@Vec3f l, flo32 r, @!Vec3f ret)
 {
 	l.x * r -> ret.x;
 	l.y * r -> ret.y;
 	l.z * r -> ret.z;
 }
 
-func neg(@Vec3f v) -> Vec3f ret
+func neg(@Vec3f v, @!Vec3f ret)
 {
 	-v.x -> ret.x;
 	-v.y -> ret.y;
@@ -210,7 +210,7 @@ func norm(@Vec3f v) -> flo32
 	return sqrtf(x*x + y*y + z*z);
 }
 
-func normalize(Vec3f >>v) -> Vec3f v
+func normalize(@!Vec3f v)
 {
 	flo32 n = norm(v);
 	v.x / n -> v.x;
@@ -218,23 +218,23 @@ func normalize(Vec3f >>v) -> Vec3f v
 	v.z / n -> v.z;
 }
 
-func reflect(@Vec3f I, @Vec3f N) -> Vec3f
+func reflect(@Vec3f I, @Vec3f N, @!Vec3f ret)
 {
-	Vec3f ret = mulvf(N, 2.0*mul(I, N));
-	I.x - ret.x -> ret.x;
-	I.y - ret.y -> ret.y;
-	I.z - ret.z -> ret.z;
-	return ret;	
+	#Vec3f tmp;
+	mulvf(N, 2.0*mul(I, N), tmp);
+	I.x - tmp.x -> ret.x;
+	I.y - tmp.y -> ret.y;
+	I.z - tmp.z -> ret.z;
 }
 
-func refract(@Vec3f I, @Vec3f N, flo32 eta_t, flo32 eta_i = 1.0)
-	-> Vec3f ret
+func refract(@Vec3f I, @Vec3f N, flo32 eta_t, @!Vec3f ret,  flo32 eta_i = 1.0)
 {
 	flo32 cosi = -fmaxf(-1.0, fminf(1.0, mul(I, N)));
 
 	if cosi < 0 {
-	 	Vec3f nN = neg(N);
-		refract(I, nN, eta_i, eta_t) ->> ret;	// if the ray comes from inside the object, swap the airt and the media
+	 	#Vec3f nN;
+		neg(N, nN);
+		refract(I, nN, eta_i, ret, eta_t);	// if the ray comes from inside the object, swap the airt and the media
 		return;
 	}
 
@@ -244,9 +244,10 @@ func refract(@Vec3f I, @Vec3f N, flo32 eta_t, flo32 eta_i = 1.0)
 	[1, 0, 0]->ret;
 
 	if k>=0 {
-		mulvf(I, eta) ->> ret;
-		Vec3f tmp = mulvf(N, eta*cosi - sqrtf(k));
-		add(ret, tmp) ->> ret;
+		mulvf(I, eta, ret);
+		#Vec3f tmp;
+		mulvf(N, eta*cosi - sqrtf(k), tmp);
+		add(ret, tmp, ret);
 	}
 }
 
@@ -371,7 +372,7 @@ func render(@[PN]Sphere spheres, @[LN]Light lights)
 				-(j+0.5) + height/2.0,
 				-height/(2.0 * tanf(fov/2.0))
 			];
-			dir->>normalize()->>dir;
+			normalize(dir);
 
 			ind = i+j*width;
 			cast_ray(orig, dir, spheres, lights)
@@ -388,32 +389,38 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	0.2, 0.7, 0.8 -> r, g, b;
 	if depth > 4 { return }
 
+	#Vec3f point, N;
 	boolean is_intersect,
-	Vec3f point, N,
 	Material material
-		= scene_intersect(orig, dir, spheres);
+		= scene_intersect(orig, dir, spheres, point, N);
 
 	if !is_intersect { return }
 
 	// reflect
-	Vec3f reflect_dir = (reflect(dir, N) ->> normalize());
-	Vec3f reflect_orig = mulvf(N, 1.0e-3);
+	#Vec3f reflect_dir;
+	reflect(dir, N, reflect_dir);
+	normalize(reflect_dir);
+	#Vec3f reflect_orig;
+	mulvf(N, 1.0e-3, reflect_orig);
 	if mul(reflect_dir, N) < 0 {
-		sub(point, reflect_orig) ->> reflect_orig;
+		sub(point, reflect_orig, reflect_orig);
 	} else {
-		add(point, reflect_orig) ->> reflect_orig;
+		add(point, reflect_orig, reflect_orig);
 	}
 	Color3f reflect_color;
 	cast_ray(reflect_orig, reflect_dir, spheres, lights, depth+1)
 		-> reflect_color.r, reflect_color.g, reflect_color.b;
 
 	// refract
-	Vec3f refract_dir = (refract(dir, N, material.refractive_index) ->> normalize());
-	Vec3f refract_orig = mulvf(N, 1.0e-3);
+	#Vec3f refract_dir;
+	refract(dir, N, material.refractive_index, refract_dir);
+	normalize(refract_dir);
+	#Vec3f refract_orig;
+	mulvf(N, 1.0e-3, refract_orig);
 	if mul(refract_dir, N) < 0 {
-	 	sub(point, refract_orig) ->> refract_orig;
+		sub(point, refract_orig, refract_orig);
 	} else {
-	 	add(point, refract_orig) ->> refract_orig;
+	 	add(point, refract_orig, refract_orig);
 	}
 	Color3f refract_color;
 	cast_ray(refract_orig, refract_dir, spheres, lights, depth+1)
@@ -424,25 +431,29 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	i = 0;
 	while i<LN {
 		@Light l = lights[i];
-		Vec3f light_dir = sub(l.position, point);
+		#Vec3f light_dir;
+		sub(l.position, point, light_dir);
 		flo32 light_distance = norm(light_dir);
-		light_dir ->> normalize() ->> light_dir;
+		normalize(light_dir);
 
 		{	// shadow
-			Vec3f shadow_orig;
-			Vec3f n = mulvf(N, 1.0e-3);
+			#Vec3f shadow_orig;
+			#Vec3f n;
+			mulvf(N, 1.0e-3, n);
 			if mul(light_dir, N) < 0 {
-				sub(point, n) ->> shadow_orig;
+				sub(point, n, shadow_orig);
 			} else {
-				add(point, n) ->> shadow_orig;
+				add(point, n, shadow_orig);
 			}
+
+			#Vec3f shadow_pt, tmp_N;
 			boolean is_intersect_shadow,
-			Vec3f shadow_pt, tmp_N,
 			Material tmp_mate
-				= scene_intersect(shadow_orig, light_dir, spheres);
+				= scene_intersect(shadow_orig, light_dir, spheres, shadow_pt, tmp_N);
 
 			if is_intersect_shadow {
-				Vec3f shadow_dir = sub(shadow_pt, shadow_orig);
+				#Vec3f shadow_dir;
+				sub(shadow_pt, shadow_orig, shadow_dir);
 				if norm(shadow_dir) < light_distance {
 					i++;
 					continue;
@@ -455,8 +466,9 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 		 -> diffuse_light_intensity;
 
 		{ // specular
-			Vec3f tmp = neg(light_dir);
-			reflect(tmp, N) ->> tmp;
+			#Vec3f tmp;
+			neg(light_dir, tmp);
+			reflect(tmp, N, tmp);
 			specular_light_intensity + powf(fmaxf(0.0, -mul(tmp, dir)), material.specular_exponent) * l.intensity
 				-> specular_light_intensity;
 		}
@@ -483,8 +495,8 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	ret.r, ret.g, ret.b -> r, g, b;
 }
 
-func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
-	-> boolean is_intersect, Vec3f hit, N, Material material
+func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @!Vec3f hit, N)
+	-> boolean is_intersect, Material material
 {
 	flo32 distance = FLT_MAX;
 	int64 i=0;
@@ -494,10 +506,11 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
 		if is_intersect_i && dist_i < distance {
 			@Sphere sp = spheres[i];
 			dist_i -> distance;
-			Vec3f tmp = mulvf(dir, dist_i);
-			add(orig, tmp) -> hit;
-			sub(hit, sp.center) ->> N;
-			N ->> normalize() ->> N;
+			#Vec3f tmp;
+			mulvf(dir, dist_i, tmp);
+			add(orig, tmp, hit);
+			sub(hit, sp.center, N);
+			normalize(N);
 			sp.material -> material;
 		}
 		i++;
@@ -505,10 +518,10 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres)
 
 	if fabsf(dir.y) > 1.0e-3 {
 		flo32 d = -(orig.y + 4.0) / dir.y;	// the checkerboard plane has equebyt y = -4
-		Vec3f pt = mulvf(dir, d); 
-		add(pt, orig) -> pt;
+		Vec3f pt;
+		mulvf(dir, d, pt); 
+		add(pt, orig, pt);
 		if d>0 && fabsf(pt.x)<10 && pt.z<-10 && pt.z>-30 && d < distance {
-			Vec3f n = [0, 1, 0];
 			[1.0, [1.0, 0.0, 0.0, 0.0], [0.3, 0.2, 0.1], 0.0]
 				-> material;
 			@Color3f c2 = [0.3, 0.3, 0.3];
@@ -530,7 +543,8 @@ func sphere_ray_intersect(@Sphere sp, @Vec3f orig, dir)
 {
 	FALSE -> is_intersect;
 
-	Vec3f L = sub(sp.center, orig);
+	#Vec3f L;
+	sub(sp.center, orig, L);
 	flo32 tca = mul(L, dir);
 	flo32 d2 = mul(L, L) - tca*tca;
 	flo32 rr = sp.radius * sp.radius;

@@ -40,7 +40,7 @@ public:
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		PlnVariable* var = dst_ex->values[0].inf.var;
-		if (!var->is_tmpvar) {
+		if (!var->is_tmpvar && var->var_type->mode[ALLOC_MD] == 'h') {
 			PlnVarLifetime lt = si.get_lifetime(var);
 			BOOST_ASSERT(lt != VLT_UNKNOWN); 
 			if (lt == VLT_FREED) {
