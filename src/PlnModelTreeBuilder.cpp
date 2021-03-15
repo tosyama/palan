@@ -359,10 +359,13 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 		}
 		p_name = pre_name;
 
-		if (param["moveto"] == "callee" || param["moveto"] == "caller") {
+		if (param["moveto"] == "callee"/* || param["moveto"] == "caller"*/) {
 			p_name += ">>";
-		} else
+		/*} else if (param["moveto"] == "caller") {
+			p_name = ">" + p_name; */
+		} else {
 			BOOST_ASSERT(param["moveto"]  == "none");
+		}
 
 		param_types.push_back(p_name);
 	}
@@ -961,7 +964,6 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = new PlnExpression(exp["val"].get<double>());
 	} else if (type == "lit-str") {
 		assertAST(exp["val"].is_string(), exp);
-		// PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
 		expression = new PlnExpression(exp["val"].get<string>());
 	} else if (type == "array-val") {
 		expression = buildArrayValue(exp, scope);
@@ -1037,7 +1039,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			args.back().inf.push_back({PIO_INPUT});
 		}
 
-		if (arg["move-src"].is_boolean() && arg["move-src"] == true) {
+		if (arg["option"] == "move-owner") {
 			args.back().inf.back().opt = AG_MOVE;
 
 			if (e->type == ET_VALUE && e->values[0].type == VL_LIT_ARRAY) {
@@ -1045,6 +1047,15 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 				err.loc = e->loc;
 				throw err;
 			}
+		} else if (arg["option"] == "writable-ref") {
+			args.back().inf.back().opt = AG_WREF;
+
+			if (e->values.back().getVarType()->mode[ACCESS_MD]=='r') {
+				// TODO: error handling
+				BOOST_ASSERT(false);
+			}
+		} else {
+			BOOST_ASSERT(arg["option"] == "none");
 		}
 	}
 
@@ -1057,8 +1068,10 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			args.back().inf.push_back({PIO_OUTPUT});
 		}
 
-		if (arg["get-ownership"].is_boolean() && arg["get-ownership"] == true) {
+		if (arg["option"] == "get-owner") {
 			args.back().inf.back().opt = AG_MOVE;
+		} else {
+			BOOST_ASSERT(arg["option"] == "none");
 		}
 
 	}

@@ -88,7 +88,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token DBL_MINUS "--"
 
 %type <string>	strs
-%type <string>	ref_mark
+%type <string>	ref_mark arg_opt
 %type <bool>	move_owner take_owner arrow_ope output_arrow
 %type <json>	function_definition	palan_function_definition
 %type <json>	ccall_declaration syscall_definition
@@ -808,7 +808,7 @@ func_call: FUNC_ID '(' arguments ')'
 	| FUNC_ID '(' arguments output_arrow out_arguments ')'
 	{
 		if ($4) {
-			$5.front()["get-ownership"] = true;
+			$5.front()["option"] = "get-owner";
 		}
 		json func_call = {
 			{"exp-type", "func-call"},
@@ -845,10 +845,24 @@ arguments: argument
 argument: /* empty */
 	{
 	}
-	| expression move_owner
+	| expression arg_opt
 	{
 		$$["exp"] = move($1);
-		if ($2) $$["move-src"] = true;
+		$$["option"] = $2;
+	}
+	;
+
+arg_opt: /* empty */
+	{
+		$$ = "none";
+	}
+	| DBL_GRTR
+	{
+		$$ = "move-owner";
+	}
+	| '!'
+	{
+		$$ = "writable-ref";
 	}
 	;
 
@@ -856,6 +870,7 @@ out_arguments: expression
 	{
 		json out_arg;
 		out_arg["exp"] = move($1);
+		out_arg["option"] = "none";
 		$$.push_back(move(out_arg));
 	}
 	| out_arguments ',' expression
@@ -863,6 +878,7 @@ out_arguments: expression
 		$$ = move($1);
 		json out_arg;
 		out_arg["exp"] = move($3);
+		out_arg["option"] = "none";
 		$$.push_back(move(out_arg));
 	}
 	| out_arguments ',' DBL_GRTR expression
@@ -870,7 +886,7 @@ out_arguments: expression
 		$$ = move($1);
 		json out_arg;
 		out_arg["exp"] = move($4);
-		out_arg["get-ownership"] = true;
+		out_arg["option"] = "get-owner";
 		$$.push_back(move(out_arg));
 	}
 	;
@@ -1153,7 +1169,8 @@ chain_call: expressions arrow_ope func_call
 		vector<json> in_args;
 		for (auto& e: $1) {
 			json arg = {
-				{"exp", e}
+				{"exp", e},
+				{"option", "none"}
 			};
 			in_args.push_back(move(arg));
 		}
@@ -1165,13 +1182,18 @@ chain_call: expressions arrow_ope func_call
 			{"args", $3["args"]},
 			{"out-args", $3["out-args"]},
 		};
-		if ($2) c_call["in-args"][0]["move-src"] = true;
+		if ($2) {
+			c_call["in-args"][0]["option"] = "move-owner";
+		}
 		$$ = move(c_call);
 		LOC($$, @$);
 	}
 	| chain_src arrow_ope func_call
 	{
-		json arg = { {"exp", move($1)} };
+		json arg = {
+			{"exp", move($1)},
+			{"option", "none"}
+		};
 		vector<json> in_args = { arg };
 
 		json c_call = {
@@ -1181,7 +1203,9 @@ chain_call: expressions arrow_ope func_call
 			{"args", $3["args"]},
 			{"out-args", $3["out-args"]},
 		};
-		if ($2) c_call["in-args"][0]["move-src"] = true;
+		if ($2) {
+			c_call["in-args"][0]["option"] = "move-owner";
+		}
 		$$ = move(c_call);
 		LOC($$, @$);
 	}

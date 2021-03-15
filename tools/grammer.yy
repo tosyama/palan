@@ -240,7 +240,12 @@ arguments: argument
 	;
 
 argument: /* empty */
-	| expression move_owner
+	| expression arg_opt
+	;
+
+arg_opt: /* empty */
+	| DBL_GRTR
+	| '!'
 	;
 
 out_arguments: expression
@@ -255,12 +260,8 @@ dst_vals: dst_val
 dst_val: move_owner var_expression
 	;
 
-var_expression: var_exp_ids force_write
-	| var_exp_affixes force_write
-	;
-
-force_write: /* empty */
-	| '!'
+var_expression: var_exp_ids
+	| var_exp_affixes
 	;
 
 var_exp_ids: ids

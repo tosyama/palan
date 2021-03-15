@@ -127,7 +127,10 @@ vector<string> PlnFunction::getParamStrs() const
 			pname += ">>";
 		} else if (p->passby == FPM_OUT_BYREFADDR_GETOWNER) {
 			pname = ">" + pname;
-		}
+		}/* else if (p->var->var_type->mode[ACCESS_MD]=='w'
+			&& p->var->var_type->mode[ALLOC_MD]=='r') {
+			pname += "!";
+		}*/
 
 		if (p->var->name == "...")
 			pname += "...";

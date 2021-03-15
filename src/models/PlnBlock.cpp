@@ -443,6 +443,14 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 						goto next_func;
 					}
 
+					bool is_writable_ref = (p->passby == FPM_IN_BYREF && p->var->var_type->mode[ACCESS_MD] == 'w');
+					if (is_writable_ref && ainf.opt != AG_WREF) {
+						goto next_func;
+					}
+					if (!is_writable_ref && ainf.opt == AG_WREF) {
+						goto next_func;
+					}
+
 					if (cap != TC_SAME) do_cast = true;
 				}
 

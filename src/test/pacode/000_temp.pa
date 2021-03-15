@@ -26,6 +26,8 @@ type B {
 	int64 x = 1;
 	3->test.b;
 	f2(xx);
+
+	f3(test!);
 }
 
 func f(@A a) {
@@ -37,3 +39,7 @@ func f2(@[3]int64 xx) {
 	3->xx[2]; // NG need to error
 }
 
+func f3(@!A a) {
+	4->a.b;
+//	printf("%d", a.b);
+}

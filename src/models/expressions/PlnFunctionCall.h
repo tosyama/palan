@@ -14,7 +14,8 @@ enum PlnInternalFuncType {
 
 enum PlnArgOption {
 	AG_NONE = 0,
-	AG_MOVE
+	AG_MOVE,
+	AG_WREF
 };
 
 class PlnClone;

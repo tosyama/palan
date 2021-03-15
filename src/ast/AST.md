@@ -238,8 +238,7 @@ Variable Declaration
 Argument
 --------
 *   exp\* - Argument expression
-*   move-src - Move ownership flag boolean
-*   get-ownership - Move ownership flag boolean in output arguments
+*   option\* - Option string: "none", "move-owner", "get-owner", "writable-ref"
 
 Struct member
 -------------

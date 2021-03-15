@@ -9,7 +9,7 @@ enum PlnPassingMethod {
 	FPM_UNKNOWN,
 
 	FPM_IN_BYVAL,	// primitive:default, object:#
-	FPM_IN_BYREF,	// primitive:@, object:@
+	FPM_IN_BYREF,	// primitive:@, object:@ or @!
 	FPM_IN_BYREF_CLONE,	// object:default
 	FPM_IN_BYREF_MOVEOWNER,	// object:>>
 	FPM_IN_VARIADIC,	// primitive:byVal, object:byRef
