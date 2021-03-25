@@ -618,6 +618,22 @@ while_statement: KW_WHILE st_expression block
 	}
 	;
 
+break_stmt: KW_BREAK
+	{
+		json ret = { {"stmt-type", "break"} };
+		$$ = move(ret);
+		LOC($$, @$);
+	}
+	;
+
+continue_stmt: KW_CONTINUE
+	{
+		json ret = { {"stmt-type", "continue"} };
+		$$ = move(ret);
+		LOC($$, @$);
+	}
+	;
+
 if_statement: KW_IF st_expression block else_statement
 	{
 		json ifs = {
@@ -1348,22 +1364,6 @@ return_stmt: KW_RETURN
 		};
 		$$ = move(ret);
 		LOC($$, @1);
-	}
-	;
-
-break_stmt: KW_BREAK
-	{
-		json ret = { {"stmt-type", "break"} };
-		$$ = move(ret);
-		LOC($$, @$);
-	}
-	;
-
-continue_stmt: KW_CONTINUE
-	{
-		json ret = { {"stmt-type", "continue"} };
-		$$ = move(ret);
-		LOC($$, @$);
 	}
 	;
 
