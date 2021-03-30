@@ -35,6 +35,7 @@ public:
 	PlnExprsnType type;
 	vector<PlnDataPlace*> data_places;
 	vector<PlnValue> values;
+	string comment;
 	PlnLoc loc;
 
 	PlnExpression(PlnExprsnType type) : type(type) {};

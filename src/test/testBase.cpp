@@ -53,7 +53,12 @@ string build(const string &srcf)
 		jf.open("out/" + srcf + ".json");
 		if (!jf)
 			return "file open err:" + srcf + ".json";
-		json j = json::parse(jf);
+		json j;
+		try {
+			j = json::parse(jf);
+		} catch(json::exception &e) {
+			BOOST_ASSERT(false);
+		}
 		if (j["errs"].is_array()) {
 			json &err = j["errs"][0];
 			PlnLoc loc(err["loc"].get<vector<int>>());
@@ -65,6 +70,8 @@ string build(const string &srcf)
 			module->do_opti_regalloc = !disableOptimize;
 		} catch (PlnCompileError &err) {
 			return err.loc.dump() + " " + PlnMessage::getErr(err.err_code, err.arg1, err.arg2);
+		} catch(json::exception &e) {
+			BOOST_ASSERT(false);
 		}
 	}
 

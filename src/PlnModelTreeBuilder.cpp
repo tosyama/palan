@@ -51,6 +51,8 @@ static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast);
 static PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
+static PlnExpression* buildStructMember(json member, PlnScopeStack &scope);
+static PlnExpression* buildIndexItem(json indexitem, PlnScopeStack &scope);
 static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
 static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
 static PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope);
@@ -361,8 +363,6 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 
 		if (param["moveto"] == "callee"/* || param["moveto"] == "caller"*/) {
 			p_name += ">>";
-		/*} else if (param["moveto"] == "caller") {
-			p_name = ">" + p_name; */
 		} else {
 			BOOST_ASSERT(param["moveto"]  == "none");
 		}
@@ -668,7 +668,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		types.push_back(v->var_type);
 
 		// set asgn_type
-		if (var["move"].is_boolean() && var["move"] == true) {
+		if (var["get-owner"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
 		} else if (v->var_type->data_type() == DT_OBJECT_REF && v->var_type->mode[ALLOC_MD] == 'r') {
 			vars.back().asgn_type = ASGN_COPY_REF;
@@ -904,12 +904,12 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast)
 
 PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 {
-	PlnExpression* var_val = buildVariarble(opeasgn["dst-val"], scope);
+	PlnExpression* var_val = buildExpression(opeasgn["dst-val"], scope);
 	PlnExpression* rval = buildExpression(opeasgn["rval"], scope);
 	if (opeasgn["ope"] == "+") {
 		if (var_val->type == ET_VALUE || var_val->type == ET_REFVALUE) {
 			PlnExpression* add_ex =  PlnAddOperation::create(var_val, rval);
-			PlnExpression* dst_val = buildDstValue(opeasgn["dst-val"], scope);
+			PlnExpression* dst_val = buildExpression(opeasgn["dst-val"], scope);
 			vector<PlnExpression*> dst_vals = {dst_val};
 			vector<PlnExpression*> exs = {add_ex};
 			PlnExpression* asgn_ex =  new PlnAssignment(dst_vals, exs);
@@ -969,6 +969,10 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = buildArrayValue(exp, scope);
 	} else if (type == "var") {
 		expression = buildVariarble(exp, scope);
+	} else if (type == "member") {
+		expression = buildStructMember(exp, scope);
+	} else if (type == "index") {
+		expression = buildIndexItem(exp, scope);
 	} else if (type == "asgn") {
 		expression = buildAssignment(exp, scope);
 	} else if (type == "func-call") {
@@ -1267,22 +1271,16 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 {
-	assertAST(var["base-var"].is_string(), var);
-	PlnVariable* pvar = CUR_BLOCK->getVariable(var["base-var"]);
+	PlnVariable* pvar = CUR_BLOCK->getVariable(var["var-name"]);
 	if (!pvar) {
 		// check constant value
-		PlnExpression* cnst_val = CUR_BLOCK->getConst(var["base-var"]);
+		PlnExpression* cnst_val = CUR_BLOCK->getConst(var["var-name"]);
 		if (cnst_val) {
-			if (var["opes"].is_null()) {
-				return cnst_val;
-			} else {
-				PlnCompileError err(E_CantUseOperatorHere, var["base-var"]);
-				setLoc(&err, var);
-				throw err;
-			}
-	
+			cnst_val->comment = var["var-name"];
+			return cnst_val;
+
 		} else {
-			PlnCompileError err(E_UndefinedVariable, var["base-var"]);
+			PlnCompileError err(E_UndefinedVariable, var["var-name"]);
 			setLoc(&err, var);
 			throw err;
 		}
@@ -1291,50 +1289,66 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 	PlnExpression *var_exp = new PlnExpression(pvar);
 	setLoc(var_exp, var);
 
-	assertAST(var["opes"].is_array() || var["opes"].is_null(), var);
-	if (var["opes"].is_array()) {
-		for (json& ope: var["opes"]) {
-			assertAST(ope["ope-type"] == "index" || ope["ope-type"] == "member", ope);
-			try {
-				// Array item with index
-				if (ope["ope-type"]=="index") {
-					assertAST(ope["indexes"].is_array(), var);
-					vector<PlnExpression*> indexes;
-					for (json& exp: ope["indexes"])
-						indexes.push_back(buildExpression(exp, scope));
-					var_exp = new PlnArrayItem(var_exp, indexes);
-
-				// Struct member
-				} else if (ope["ope-type"] == "member") {
-					var_exp = new PlnStructMember(var_exp, ope["member"]);
-					setLoc(var_exp, var);
-				}
-			} catch (PlnCompileError& err) {
-				setLoc(&err, var);
-				throw;
-			}
-		}
-	} else {
-		auto vt = pvar->var_type;
-		auto original_dtype = vt->typeinf->data_type;
-		// primitve reference
-		if (vt->data_type() == DT_OBJECT_REF && original_dtype != DT_OBJECT) {
-			var_exp = new PlnReferenceValue(var_exp);
-		}
+	auto vt = pvar->var_type;
+	auto original_dtype = vt->typeinf->data_type;
+	// primitve reference
+	if (vt->data_type() == DT_OBJECT_REF && original_dtype != DT_OBJECT) {
+		var_exp = new PlnReferenceValue(var_exp);
 	}
 
 	return var_exp;
 }
 
+PlnExpression* buildStructMember(json member, PlnScopeStack &scope)
+{
+	PlnExpression *base_exp = buildExpression(member["base-exp"], scope);
+	PlnExpression *var_exp = NULL;
+	try {
+		var_exp = new PlnStructMember(base_exp, member["member-name"]);
+		setLoc(var_exp, member);
+
+	} catch (PlnCompileError& err) {
+		setLoc(&err, member);
+		throw;
+	}
+	return var_exp;
+}
+
+PlnExpression* buildIndexItem(json index_item, PlnScopeStack &scope)
+{
+	PlnExpression *base_exp = buildExpression(index_item["base-exp"], scope);
+	PlnExpression *var_exp = NULL;
+
+	if (!(base_exp->values[0].type == VL_VAR || base_exp->values[0].type == VL_WORK)) {
+		PlnCompileError err(E_CantUseIndexHere, base_exp->comment);
+		setLoc(&err, index_item["base-exp"]);
+		throw err;
+	}
+
+	assertAST(index_item["indexes"].is_array(), index_item);
+	vector<PlnExpression*> indexes;
+	for (json& exp: index_item["indexes"])
+		indexes.push_back(buildExpression(exp, scope));
+
+	try {
+		var_exp = new PlnArrayItem(base_exp, indexes);
+		setLoc(var_exp, index_item);
+
+	} catch (PlnCompileError& err) {
+		setLoc(&err, index_item);
+		throw;
+	}
+	return var_exp;
+}
+
 PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 {
-	PlnExpression* var_exp = buildVariarble(dval, scope);
-	BOOST_ASSERT(var_exp->values.size() == 1);
+	PlnExpression* var_exp = buildExpression(dval["exp"], scope);
 
-	if (dval["move"].is_boolean() && dval["move"] == true) {
+	if (dval["get-owner"] == true) {
 		if (var_exp->values[0].getVarType()->mode[IDENTITY_MD] != 'm') {
 			PlnCompileError err(E_CantUseMoveOwnershipTo, var_exp->values[0].inf.var->name);
-			setLoc(&err, dval);
+			setLoc(&err, dval["exp"]);
 			throw err;
 		}
 		var_exp->values[0].asgn_type = ASGN_MOVE;
@@ -1345,17 +1359,18 @@ PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 			PlnValue& val = var_exp->values[0];
 			if (val.type == VL_VAR) {
 				PlnCompileError err(E_CantCopyToReadonly, var_exp->values[0].inf.var->name);
-				setLoc(&err, dval);
+				setLoc(&err, dval["exp"]);
 				throw err;
 
 			} else { // const value
 				PlnCompileError err(E_CantUseReadonlyExHere);
-				setLoc(&err, dval);
+				setLoc(&err, dval["exp"]);
 				throw err;
 			}
 		}
 		var_exp->values[0].asgn_type = ASGN_COPY;
 	}
+
 	return var_exp;
 }
 

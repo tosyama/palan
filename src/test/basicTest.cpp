@@ -313,7 +313,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'N'.");
 
 	testcode = "518_invalid_constuse_err";
-	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'N'.");
+	REQUIRE(build(testcode) == "0:3-3 Can not use the index operator for 'N'.");
 
 	testcode = "519_duplicate_func_err";
 	REQUIRE(build(testcode) == "0:7-7 Function 'test' already defined.");
@@ -364,7 +364,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "539_not_var_sytax_err";
-	REQUIRE(build(testcode) == "0:1-1 syntax error, unexpected '=', expecting ->> or -> or ','");
+	REQUIRE(build(testcode) == "0:1-1 syntax error, unexpected '=', expecting ->> or ->");
 
 	testcode = "540_noinit_autotype_err";
 	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");

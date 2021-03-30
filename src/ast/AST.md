@@ -179,8 +179,9 @@ Expression
         *   val\* - String value
 
     5.  var - Variable/Constant expression
-        *   base-var\* - Base variable/ constant vlue name string
-        *   opes - Modified operator list
+        *   var-name - Variable / constant value name string
+        *   (del)base-var\* - Base variable/ constant value name string
+        *   (del)opes - Modified operator list
 
     6.  array-val - Array expression
         *   vals\* - Item value expression list
@@ -200,26 +201,37 @@ Expression
         *   args\* - Rest of argument list
         *   out-args\* - Output argument list
 
-    10. binary operator
+    10. member - struct member expression
+        *   base-exp - Base variable expression
+        *   member-name - Struct member name string
+
+    11. index - Container item expression
+        *   base-exp - Base variable expression
+        *   indexes - Index expression list
+
+    12. binary operator
         *   lval\* -	Left value expression
         *   rval\* -	Right value expression
 
-    11. unary operator
+    13. unary operator
         *   val\* -	Value expression
-	
-	12. token - Token
+
+	14. token - Token
 	    *   info\* - token information
 
 *   loc - Location integer array
 
 Destination Value
 ------------------
-*   base-var\* - Base variable name string
-*   opes - Modified operator list
-*   move - Move ownership flag boolean
+*	exp - Destination value expression
+*   arg-option\* - Option string: "none", "move-owner",  "writable-ref"
+*   get-owner\* - get ownership flag boolean
+*   (del)base-var\* - Base variable name string
+*   (del)opes - Modified operator list
+*   (del)move - Move ownership flag boolean
 *   loc - Location integer array
 
-Modified Operator
+(del)Modified Operator
 -----------------
 *   ope-type\* - Operator type string: "index", "member"
     1.  index - Numerical index
@@ -232,7 +244,8 @@ Variable Declaration
 --------------------
 *   name\* - Variable name string
 *   var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
-*   move - Move ownership flag boolean
+*   get-owner - get ownership flag boolean
+*   (del)move - Move ownership flag boolean
 *   loc - Location integer array
 
 Argument
