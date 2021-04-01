@@ -180,8 +180,6 @@ Expression
 
     5.  var - Variable/Constant expression
         *   var-name - Variable / constant value name string
-        *   (del)base-var\* - Base variable/ constant value name string
-        *   (del)opes - Modified operator list
 
     6.  array-val - Array expression
         *   vals\* - Item value expression list
@@ -219,6 +217,7 @@ Expression
 	14. token - Token
 	    *   info\* - token information
 
+*   arg-option - Argument option string: "none", "move-owner", "get-owner", "writable-ref"
 *   loc - Location integer array
 
 Destination Value
@@ -226,32 +225,14 @@ Destination Value
 *	exp - Destination value expression
 *   arg-option\* - Option string: "none", "move-owner",  "writable-ref"
 *   get-owner\* - get ownership flag boolean
-*   (del)base-var\* - Base variable name string
-*   (del)opes - Modified operator list
-*   (del)move - Move ownership flag boolean
 *   loc - Location integer array
-
-(del)Modified Operator
------------------
-*   ope-type\* - Operator type string: "index", "member"
-    1.  index - Numerical index
-        *   indexes - Index expression list
-
-    2.  member - Struct member
-        *   member - Struct member string
 
 Variable Declaration
 --------------------
 *   name\* - Variable name string
 *   var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
 *   get-owner - get ownership flag boolean
-*   (del)move - Move ownership flag boolean
 *   loc - Location integer array
-
-Argument
---------
-*   exp\* - Argument expression
-*   option\* - Option string: "none", "move-owner", "get-owner", "writable-ref"
 
 Struct member
 -------------

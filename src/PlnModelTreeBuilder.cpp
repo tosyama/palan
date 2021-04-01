@@ -1035,47 +1035,47 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			args.back().inf.push_back({PIO_INPUT});
 			continue;
 		}
-		assertAST(arg["exp"].is_object(), fcall);
-		PlnExpression *e = buildExpression(arg["exp"], scope);
+		assertAST(arg["arg-option"].is_string(), fcall);
+		PlnExpression *e = buildExpression(arg, scope);
 
 		args.push_back({e});
 		for (PlnValue& val: e->values) {
 			args.back().inf.push_back({PIO_INPUT});
 		}
 
-		if (arg["option"] == "move-owner") {
+		if (arg["arg-option"] == "move-owner") {
 			args.back().inf.back().opt = AG_MOVE;
-
 			if (e->type == ET_VALUE && e->values[0].type == VL_LIT_ARRAY) {
 				PlnCompileError err(E_CantUseMoveOwnershipFrom, PlnMessage::arrayValue());
 				err.loc = e->loc;
 				throw err;
 			}
-		} else if (arg["option"] == "writable-ref") {
-			args.back().inf.back().opt = AG_WREF;
 
+		} else if (arg["arg-option"] == "writable-ref") {
+			args.back().inf.back().opt = AG_WREF;
 			if (e->values.back().getVarType()->mode[ACCESS_MD]=='r') {
 				// TODO: error handling
 				BOOST_ASSERT(false);
 			}
+
 		} else {
-			BOOST_ASSERT(arg["option"] == "none");
+			BOOST_ASSERT(arg["arg-option"] == "none");
 		}
 	}
 
 	for (auto& arg: fcall["out-args"]) {
-		assertAST(arg["exp"].is_object(), fcall);
-		PlnExpression *e = buildExpression(arg["exp"], scope);
+		assertAST(arg["arg-option"].is_string(), fcall);
+		PlnExpression *e = buildExpression(arg, scope);
 		args.push_back({e});
 
 		for (PlnValue& val: e->values) {
 			args.back().inf.push_back({PIO_OUTPUT});
 		}
 
-		if (arg["option"] == "get-owner") {
+		if (arg["arg-option"] == "get-owner") {
 			args.back().inf.back().opt = AG_MOVE;
 		} else {
-			BOOST_ASSERT(arg["option"] == "none");
+			BOOST_ASSERT(arg["arg-option"] == "none");
 		}
 
 	}

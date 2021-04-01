@@ -3,13 +3,14 @@
 /// Manage output message descriptions in Palan compiler.
 ///
 /// @file	PlnMessage.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <string>
 using std::string;
 
+#define PAC_ERR_MSG_START_NO	100
 enum PlnErrCode {
-	E_UndefinedVariable, // var name
+	E_UndefinedVariable = PAC_ERR_MSG_START_NO, // var name
 	E_UndefinedFunction,	// func name
 	E_UndefinedType,	// type name
 	E_NoMatchingFunction,	// func name, candidates func
@@ -19,7 +20,6 @@ enum PlnErrCode {
 	E_InvalidRetValues,	// none
 	E_NeedRetValues,	// none
 	E_InvalidReturnValType, // var name
-	E_CouldnotOpenFile,	// file name
 	E_CantCopyFreedVar,	// var name
 	E_CantCopyType,	// type name
 	E_AmbiguousFuncCall,	// func name

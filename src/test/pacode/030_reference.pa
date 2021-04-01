@@ -71,7 +71,7 @@ mtrace();
 	bb.d -> d;
 	bb.f -> f;
 
-	calcB(createB());
+	calcB(createB()!);
 }
 muntrace();
 
@@ -87,7 +87,7 @@ func createB() -> B b
 	2->b.b1;
 }
 
-func calcB(@B b)
+func calcB(@!B b)
 {
 	1->b.b1;
 }

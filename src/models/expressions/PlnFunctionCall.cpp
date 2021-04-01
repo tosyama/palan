@@ -143,7 +143,7 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 
 			} else if (argval.param->passby == FPM_IN_BYREF) {
 				// reference paramater
-				if (v.type == VL_WORK) { // e.g. return value of function
+				if (v.type == VL_WORK && v.inf.wk_type->mode[ALLOC_MD]=='h') { // e.g. return value of function
 					BOOST_ASSERT(v.inf.wk_type->mode[ALLOC_MD]=='h');
 					// needs to free after call func.
 					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "free_var");

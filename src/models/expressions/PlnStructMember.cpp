@@ -46,11 +46,16 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	auto var = new PlnVariable();
 	auto struct_var = struct_ex->values[0].inf.var;
 	var->name = struct_var->name + "." + def->name;
-	var->var_type = def->type;
 	if (struct_var->container)
 		var->container = struct_var->container;
 	else
 		var->container = struct_var;
+	
+	string mode = def->type->mode;
+	if (var->container->var_type->mode[ACCESS_MD] == 'r') {
+		mode[ACCESS_MD] = 'r';
+	}
+	var->var_type = def->type->typeinf->getVarType(mode);
 	var->is_indirect = true;
 	var->is_tmpvar = var->container->is_tmpvar;
 

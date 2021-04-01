@@ -1,5 +1,5 @@
 ccall printf(@[?]byte format, ...) -> int32;
-ccall sprintf(@, @[?]byte src, ... => [?]byte dst) -> int32;
+ccall sprintf(@![?]byte dst, @[?]byte src, ...) -> int32;
 ccall strcpy([?]byte >>dst, @[?]byte src) -> [?]byte;
 ccall sscanf(@[?]byte str, @[?]byte format => ...) -> int32;
 ccall strcat([?]byte >>dst, @[?]byte src) -> [?]byte;
@@ -36,7 +36,7 @@ type struct_tm {
 const filename = "out/027_outfile.txt";
 
 [32]byte str1, str2buf;
-sprintf("abc%d%s%.2f\n", 123, "def" ,1.23 => str1);
+str1.sprintf("abc%d%s%.2f\n", 123, "def" ,1.23);
 [?]byte str2 <<= (str2buf ->> strcpy(str1));
 str2 -> printf();
 

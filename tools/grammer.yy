@@ -194,8 +194,8 @@ st_expression: expression
 	| chain_call
 	;
 
-expressions: expression arg_opt
-	| expressions ',' expression arg_opt
+expressions: expression
+	| expressions ',' expression
 	;
 
 expression:
@@ -292,7 +292,7 @@ array_item: /* empty */
 	| '?'
 	;
 
-chain_src: expressions
+chain_src: arguments 
 	| assignment
 	| chain_call
 	;
