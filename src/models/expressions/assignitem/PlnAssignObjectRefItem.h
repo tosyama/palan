@@ -18,7 +18,7 @@ public:
 			: src_ex(ex), src_save(NULL), dst_item(NULL) {
 		BOOST_ASSERT((ex->values[0].type == VL_VAR && !(ex->values[0].inf.var->is_indirect))
 				|| ex->values[0].type == VL_LIT_STR);
-		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT || ex->getDataType(0) == DT_OBJECT_REF);
 	}
 
 	~PlnAssignObjectRefItem() {
@@ -50,6 +50,7 @@ public:
 			dst_item->setSrcEx(da, si, src_ex);
 			src_ex->finish(da, si);
 		}
+
 		if (assgin_type == ASGN_MOVE) {
 			// Mark as freed variable.
 			auto var = src_ex->values[0].inf.var;

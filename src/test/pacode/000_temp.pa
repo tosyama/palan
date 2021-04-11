@@ -16,9 +16,11 @@ type B {
 	[3]int64 xx;
 	@[3]int64 zz = xx;
 
-	#A test2;
-	A testx;
-//	test->test2; //NG
+ 	A testx;
+ 	#A test2 = testx;
+// 	test->test2;
+// 	test2->testx;
+// 	testx->test2;
 	
 	#B b;	// NG
 
@@ -30,7 +32,7 @@ type B {
 
 //	test!->f3();
 	test.f3().f3();
-	testx.f3().f3();
+//	testx.f3().f3();
 }
 
 func f(@A a) {

@@ -39,7 +39,8 @@ public:
 	void addDstEx(PlnExpression* ex, bool need_save) override {
 
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].getVarType()->data_type() == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].getVarType()->data_type() == DT_OBJECT_REF
+				|| ex->values[0].getVarType()->data_type() == DT_OBJECT);
 		BOOST_ASSERT(!need_save);
 
 		dst_ex = ex;

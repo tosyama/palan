@@ -366,7 +366,7 @@ func render(@[PN]Sphere spheres, @[LN]Light lights)
 	while j < height {
 		i = 0;
 		while i < width {
-			Vec3f dir = [
+			#Vec3f dir = [
 				(i+0.5) - width/2.0,
 				-(j+0.5) + height/2.0,
 				-height/(2.0 * tanf(fov/2.0))
@@ -406,7 +406,7 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	} else {
 		reflect_orig.add(point, reflect_orig);
 	}
-	Color3f reflect_color;
+	#Color3f reflect_color;
 	cast_ray(reflect_orig, reflect_dir, spheres, lights, depth+1)
 		-> reflect_color.r, reflect_color.g, reflect_color.b;
 
@@ -421,7 +421,7 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	} else {
 	 	refract_orig.add(point, refract_orig);
 	}
-	Color3f refract_color;
+	#Color3f refract_color;
 	cast_ray(refract_orig, refract_dir, spheres, lights, depth+1)
 	 	-> refract_color.r, refract_color.g, refract_color.b;
 	
@@ -474,14 +474,14 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 		i++;
 	 }
 
-	Color3f diffuse_color = material.diffuse_color;
-	Color3f specular_color = [1.0, 1.0, 1.0];
+	#Color3f diffuse_color = material.diffuse_color;
+	#Color3f specular_color = [1.0, 1.0, 1.0];
 	diffuse_color.mul_color(diffuse_light_intensity * material.albedo[0]);
 	specular_color.mul_color(specular_light_intensity * material.albedo[1]);
 	reflect_color.mul_color(material.albedo[2]);
 	refract_color.mul_color(material.albedo[3]);
 
-	Color3f ret = diffuse_color;
+	#Color3f ret = diffuse_color;
 	ret.add_color(specular_color)
 		.add_color(reflect_color)
 	 	.add_color(refract_color);
@@ -512,7 +512,7 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @!Vec3f hit, 
 
 	if fabsf(dir.y) > 1.0e-3 {
 		flo32 d = -(orig.y + 4.0) / dir.y;	// the checkerboard plane has equebyt y = -4
-		Vec3f pt;
+		#Vec3f pt;
 		pt.mulvf(dir, d); 
 		pt.add(orig, pt);
 		if d>0 && fabsf(pt.x)<10 && pt.z<-10 && pt.z>-30 && d < distance {

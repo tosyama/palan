@@ -17,7 +17,7 @@ public:
 		: dst_ex(ex), cpy_ex(NULL), cpy_dst_dp(NULL), tmp_var(NULL) {
 		BOOST_ASSERT(ex->values.size() == 1);
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->getDataType(0) == DT_OBJECT || ex->getDataType(0) == DT_OBJECT_REF);
 		auto var = dst_ex->values[0].inf.var;
 	}
 
