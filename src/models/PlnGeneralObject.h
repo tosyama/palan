@@ -36,6 +36,14 @@ public:
 	PlnExpression* getAllocEx() override;
 };
 
+class PlnSingleParamInternalAllocator: public PlnInternalAllocator
+{
+	PlnFunction *alloc_func;
+public:
+	PlnSingleParamInternalAllocator(PlnFunction *f) : alloc_func(f) { }
+	PlnExpression* getInternalAllocEx(PlnExpression* base_var) override;
+};
+
 class PlnSingleParamFreer : public PlnFreer
 {
 	PlnFunction *free_func;

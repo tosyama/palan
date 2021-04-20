@@ -11,6 +11,12 @@ public:
 	static PlnExpression* getAllocEx(PlnVariable* var);
 };
 
+class PlnInternalAllocator {
+public:
+	virtual PlnExpression* getInternalAllocEx(PlnExpression* base_var) = 0;
+	static PlnExpression* getInternalAllocEx(PlnVariable* var);
+};
+
 class PlnFreer {
 public:
 	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
@@ -54,6 +60,7 @@ public:
 	vector<PlnVarType*> var_types;
 
 	PlnAllocator *allocator;
+	PlnInternalAllocator *internal_allocator;
 	PlnFreer *freer;
 	PlnCopyer *copyer;
 
@@ -98,6 +105,11 @@ public:
 		if (!typeinf->allocator) return NULL;
 		return typeinf->allocator->getAllocEx();
 	}
+	PlnExpression *getInternalAllocEx(PlnExpression *base_var) {
+		if (!typeinf->internal_allocator) return NULL;
+		return typeinf->internal_allocator->getInternalAllocEx(base_var);
+	}
+
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
 		if (!typeinf->copyer) return NULL;

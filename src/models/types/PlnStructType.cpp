@@ -62,6 +62,40 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 	return f;
 }
 
+static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+{
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+
+	f->parent = parent_block;
+	string s1 = "__p1";
+	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_IN_BYREF, NULL);
+
+	auto block = new PlnBlock();
+	block->setParent(f);
+	f->implement = block;
+
+	for (PlnStructMemberDef* mdef: struct_type->members) {
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
+			PlnValue var_val(f->parameters[0]->var);
+			auto struct_ex = new PlnExpression(var_val);
+			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
+			member_ex->values[0].asgn_type = ASGN_COPY_REF;
+			vector<PlnExpression*> lvals = { member_ex };
+
+			PlnExpression* alloc_ex = mdef->type->getAllocEx();
+			vector<PlnExpression*> exps = { alloc_ex };
+
+			auto assign = new PlnAssignment(lvals, exps);
+			block->statements.push_back(new PlnStatement(assign, block));
+
+		} else if (mdef->type->data_type() == DT_OBJECT) {
+			BOOST_ASSERT(false);	// TODO: getInternalAllocEx();
+		}
+	}
+
+	return f;
+}
+
 static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
@@ -173,6 +207,10 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		PlnFunction *alloc_func = createObjMemberStructAllocFunc(fname, this, parent);
 		allocator = new PlnNoParamAllocator(alloc_func);
 
+		fname = PlnBlock::generateFuncName("init", {}, {this});
+		PlnFunction *internal_alloc_func = createInternalObjMemberStructAllocFunc(fname, this, parent);
+		internal_allocator = new PlnSingleParamInternalAllocator(internal_alloc_func);
+
 		fname = PlnBlock::generateFuncName("copy", {}, {this,this});
 		PlnFunction *copy_func = createObjMemberStructCopyFunc(fname, this, parent);
 		copyer = new PlnTwoParamsCopyer(copy_func);
@@ -182,6 +220,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		freer = new PlnSingleParamFreer(free_func);
 
 		parent->parent_module->functions.push_back(alloc_func);
+		parent->parent_module->functions.push_back(internal_alloc_func);
 		parent->parent_module->functions.push_back(copy_func);
 		parent->parent_module->functions.push_back(free_func);
 

@@ -31,7 +31,11 @@ class PlnAssignItem;
 
 // Variable initialization
 class PlnVarInit {
-	struct VarInitInf {PlnVariable* var; PlnExpression* alloc_ex; };
+	struct VarInitInf {
+		PlnVariable* var;
+		PlnExpression* alloc_ex;
+		PlnExpression* internal_alloc_ex;
+	};
 	vector<VarInitInf> varinits;
 	vector<PlnAssignItem*> assgin_items;
 

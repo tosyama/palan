@@ -30,6 +30,12 @@ PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 	return var->var_type->getAllocEx();
 }
 
+// PlnInternalAllocator
+PlnExpression* PlnInternalAllocator::getInternalAllocEx(PlnVariable* var)
+{
+	return var->var_type->getInternalAllocEx(new PlnExpression(var));
+}
+ 
 // PlnFreer
 PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 {
@@ -38,13 +44,14 @@ PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 
 // PlnType
 PlnType::PlnType(PlnTypeType type)
-	: type(type), allocator(NULL), freer(NULL), copyer(NULL)
+	: type(type), allocator(NULL), internal_allocator(NULL), freer(NULL), copyer(NULL)
 {
 }
 
 PlnType::~PlnType()
 {
 	delete allocator;
+	delete internal_allocator;
 	delete freer;
 	delete copyer;
 }

@@ -48,6 +48,13 @@ PlnExpression* PlnNoParamAllocator::getAllocEx()
 	return new PlnFunctionCall(alloc_func, args);
 }
 
+// PlnSingleParamInternalAllocator
+PlnExpression* PlnSingleParamInternalAllocator::getInternalAllocEx(PlnExpression* base_var)
+{
+	vector<PlnExpression*> args = { base_var };
+	return new PlnFunctionCall(alloc_func, args);
+}
+
 // PlnSingleParamFreer
 PlnExpression* PlnSingleParamFreer::getFreeEx(PlnExpression* free_var)
 {

@@ -134,8 +134,8 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 
 	for (int i=0; i < vars.size(); ++i) {
 		PlnVariable* v = vars[i].inf.var;
-		PlnExpression* alloc_ex = NULL;
 		if (v->var_type->mode[ALLOC_MD] == 'h') {
+			PlnExpression* alloc_ex = NULL;
 			if (i >= init_var_i || vars[i].asgn_type == ASGN_COPY) {
 				alloc_ex = PlnAllocator::getAllocEx(v);
 				if (!alloc_ex) {
@@ -144,8 +144,15 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					throw err;
 				}
 			}
+			varinits.push_back({v, alloc_ex, NULL});
+
+		} else if (v->var_type->data_type() == DT_OBJECT) {
+			PlnExpression *alloc_ex = PlnInternalAllocator::getInternalAllocEx(v);
+			varinits.push_back({v, NULL, alloc_ex});
+
+		} else {
+			varinits.push_back({v, NULL, NULL});
 		}
-		varinits.push_back({v, alloc_ex});
 	}
 }
 
@@ -188,6 +195,9 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 			}
 		}
 
+		if (auto ex = varinits[i].internal_alloc_ex) {
+			ex->finish(da, si);
+		}
 		++i;
 	}
 
@@ -201,11 +211,12 @@ void PlnVarInit::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnVarInit::gen(PlnGenerator& g)
 {
 	for (auto vi: varinits) {
+		g.comment(vi.var->name);
 		if (auto ex = vi.alloc_ex) {
 			ex->gen(g);
 			g.genLoadDp(ex->data_places[0]);
-		} else {
-			g.comment(vi.var->name);
+		} else if (auto ex = vi.internal_alloc_ex) {
+			ex->gen(g);
 		}
 	}
 
