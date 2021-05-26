@@ -83,5 +83,7 @@ public:
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;
 	void gen(PlnGenerator& g);
 	void clear();
+
+	static string getParamStr(PlnVarType* vtype, PlnPassingMethod passby);
 };
 

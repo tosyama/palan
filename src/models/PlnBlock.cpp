@@ -518,13 +518,21 @@ next:	;
 
 void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	for (auto v: variables) {
-		if (parent_block && v->var_type->mode[ALLOC_MD]=='h') {
-			auto lt = si.get_lifetime(v);
-			if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
-				PlnExpression* free_var = PlnFreer::getFreeEx(v);
-				free_var->finish(da, si);
-				free_vars.push_back(free_var);
+	if (parent_block) {
+		for (auto v: variables) {
+			if (v->var_type->mode[ALLOC_MD]=='h') {
+				auto lt = si.get_lifetime(v);
+				if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
+					PlnExpression* free_var = PlnFreer::getFreeEx(v);
+					free_var->finish(da, si);
+					free_vars.push_back(free_var);
+				}
+			} else if (v->var_type->data_type() == DT_OBJECT) {
+				PlnExpression* free_var = PlnFreer::getInternalFreeEx(v);
+				if (free_var) {
+					free_var->finish(da, si);
+					free_vars.push_back(free_var);
+				}
 			}
 		}
 	}

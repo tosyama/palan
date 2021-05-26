@@ -117,27 +117,69 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 	return	param_var;
 }
 
+string PlnFunction::getParamStr(PlnVarType* vtype, PlnPassingMethod passby)
+{
+	string pname = vtype->name();
+	bool is_object = vtype->typeinf->data_type == DT_OBJECT;
+
+	switch (passby) {
+		case FPM_IN_BYVAL:	// primitive:default, object:#
+			BOOST_ASSERT(!is_object);
+			break;
+		case FPM_IN_BYREF:	// primitive:@, object:@ or @!
+			if (is_object && vtype->mode[ACCESS_MD]=='w') {
+				pname = "@!" + pname;
+			} else {
+				pname = "@" + pname;
+			}
+			break;
+		case FPM_IN_BYREF_CLONE:	// object:default
+			BOOST_ASSERT(is_object);
+			break;
+		case FPM_IN_BYREF_MOVEOWNER:	// object:>>
+			BOOST_ASSERT(is_object);
+			pname += ">>";
+			break;
+		case FPM_OUT_BYREF:	// primitive:default, object:default
+			pname = ">" + pname;
+			break;
+		case FPM_OUT_BYREFADDR: // object:@!
+			BOOST_ASSERT(is_object);
+			pname = ">@!" + pname;
+			break;
+		case FPM_OUT_BYREFADDR_GETOWNER: // object:>>
+			BOOST_ASSERT(is_object);
+			pname = ">>" + pname;
+			break;
+		case FPM_IN_VARIADIC:	// primitive:byVal, object:byRef
+		case FPM_OUT_VARIADIC: // primitive:byRef, object:byRef
+			pname += "...";
+			break;
+	}
+	return pname;
+}
+
 vector<string> PlnFunction::getParamStrs() const
 {
 	vector<string> param_types;
 	for (auto p: parameters) {
-		string pname = p->var->var_type->name();
 
-		if (p->passby == FPM_IN_BYREF_MOVEOWNER) {
-			pname += ">>";
-		} else if (p->passby == FPM_OUT_BYREFADDR_GETOWNER) {
-			pname = ">" + pname;
-		}/* else if (p->var->var_type->mode[ACCESS_MD]=='w'
-			&& p->var->var_type->mode[ALLOC_MD]=='r') {
-			pname += "!";
-		}*/
-
-		if (p->var->name == "...")
-			pname += "...";
-		if (p->iomode == PIO_OUTPUT) {
-			pname = ">" + pname;
-		}
-		param_types.push_back(pname);
+// 		if (p->passby == FPM_IN_BYREF_MOVEOWNER) {
+// 			pname += ">>";
+// 		} else if (p->passby == FPM_OUT_BYREFADDR_GETOWNER) {
+// 			pname = ">" + pname;
+// 		}/* else if (p->var->var_type->mode[ACCESS_MD]=='w'
+// 			&& p->var->var_type->mode[ALLOC_MD]=='r') {
+// 			pname += "!";
+// 		}*/
+// 
+// 		if (p->var->name == "...")
+// 			pname += "...";
+// 		if (p->iomode == PIO_OUTPUT) {
+// 			pname = ">" + pname;
+// 		}
+//		param_types.push_back(pname);
+		param_types.push_back(getParamStr(p->var->var_type, p->passby));
 	}
 	return param_types;
 }

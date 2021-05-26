@@ -1,0 +1,15 @@
+ccall printf(...);
+type A {
+	int64 a;
+	int64 b;
+};
+
+#A a = [1, 2];
+
+func f(@A a) {
+	printf("x");
+}
+
+func f(@!A a) {
+	printf("%d", a.b);
+}

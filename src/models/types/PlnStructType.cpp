@@ -127,6 +127,30 @@ static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnSt
 	return f;
 }
 
+static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+{
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	string s1 = "__p1";
+	f->addParam(s1, struct_type->getVarType("wir"), PIO_INPUT, FPM_IN_BYREF, NULL);
+	f->parent = parent_block;
+
+	auto block = new PlnBlock();
+	block->setParent(f);
+	f->implement = block;
+
+	for (PlnStructMemberDef* mdef: struct_type->members) {
+		if (mdef->type->data_type() == DT_OBJECT_REF) {
+			PlnValue var_val(f->parameters[0]->var);
+			auto struct_ex = new PlnExpression(var_val);
+			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
+			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
+			block->statements.push_back(new PlnStatement(free_member, block));
+		}
+	}
+
+	return f;
+}
+
 static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
@@ -219,10 +243,15 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		PlnFunction *free_func = createObjMemberStructFreeFunc(fname, this, parent);
 		freer = new PlnSingleParamFreer(free_func);
 
+		fname = PlnBlock::generateFuncName("intrfree", {}, {this});
+		PlnFunction *internal_free_func = createObjMemberStructInternalFreeFunc(fname, this, parent);
+		internal_freer = new PlnSingleParamFreer(internal_free_func);
+
 		parent->parent_module->functions.push_back(alloc_func);
 		parent->parent_module->functions.push_back(internal_alloc_func);
 		parent->parent_module->functions.push_back(copy_func);
 		parent->parent_module->functions.push_back(free_func);
+		parent->parent_module->functions.push_back(internal_free_func);
 
 	} else {
 		allocator = new PlnSingleObjectAllocator(alloc_size);

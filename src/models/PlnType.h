@@ -21,6 +21,7 @@ class PlnFreer {
 public:
 	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
 	static PlnExpression* getFreeEx(PlnVariable* var);
+	static PlnExpression* getInternalFreeEx(PlnVariable* var);
 };
 
 class PlnDeepCopyExpression;
@@ -62,6 +63,7 @@ public:
 	PlnAllocator *allocator;
 	PlnInternalAllocator *internal_allocator;
 	PlnFreer *freer;
+	PlnFreer *internal_freer;
 	PlnCopyer *copyer;
 
 	struct PlnTypeConvInf {
@@ -111,6 +113,10 @@ public:
 	}
 
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
+	PlnExpression *getInternalFreeEx(PlnExpression* free_var) {
+		if (!typeinf->internal_freer) return NULL;
+		return typeinf->internal_freer->getFreeEx(free_var);
+	}
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
 		if (!typeinf->copyer) return NULL;
 		return typeinf->copyer->getCopyEx(dst_var, src_var);

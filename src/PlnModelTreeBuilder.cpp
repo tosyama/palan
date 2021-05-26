@@ -167,6 +167,79 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 	return ret_vt;
 }
 
+static PlnPassingMethod getPassingMethod(json& param, const string &mode, int data_type)
+{
+	PlnPassingMethod pm = FPM_UNKNOWN;
+
+	if (param["name"] == "...") {
+		if (param["io"] == "in") {
+			pm = FPM_IN_VARIADIC;
+		} else {
+			assertAST(param["io"] == "out", param);
+			pm = FPM_OUT_VARIADIC;
+		}
+
+	} else if (param["io"] == "in") {
+		if (param["moveto"] == "callee") {
+			pm = FPM_IN_BYREF_MOVEOWNER;
+
+		} else {
+			assertAST(param["moveto"]=="none", param);
+			if (data_type == DT_OBJECT) {
+				if (mode[ALLOC_MD]=='r') {
+					pm = FPM_IN_BYREF;
+				} else {
+					pm = FPM_IN_BYREF_CLONE;
+				}
+
+				// != DT_OBJECT
+			} else if (mode[ALLOC_MD]=='r') {
+				pm = FPM_IN_BYREF;
+			} else {
+				pm = FPM_IN_BYVAL;
+			}
+		}
+
+	} else if (param["io"] == "out") {
+		if (param["moveto"] == "caller") {
+			pm = FPM_OUT_BYREFADDR_GETOWNER;
+
+		} else {
+			if (data_type == DT_OBJECT) {
+				if (mode[ALLOC_MD]=='r') {	// refernce of refernce
+					BOOST_ASSERT(mode[IDENTITY_MD]=='c');
+					pm = FPM_OUT_BYREFADDR;
+				} else {
+					pm = FPM_OUT_BYREF;
+				}
+			} else {
+				pm = FPM_OUT_BYREF;
+			}
+		}
+	}
+
+	return pm;
+}
+
+static int getIomode(PlnPassingMethod pm)
+{
+	switch (pm) {
+		case FPM_IN_BYVAL:
+		case FPM_IN_BYREF:
+		case FPM_IN_BYREF_CLONE:
+		case FPM_IN_BYREF_MOVEOWNER:
+		case FPM_IN_VARIADIC:
+			return PIO_INPUT;
+		case FPM_OUT_BYREF:
+		case FPM_OUT_BYREFADDR:
+		case FPM_OUT_BYREFADDR_GETOWNER:
+		case FPM_OUT_VARIADIC:
+			return PIO_OUTPUT;
+		default:
+			return PIO_UNKNOWN;
+	}
+}
+
 void registerPrototype(json& proto, PlnScopeStack& scope)
 {
 	int f_type;
@@ -193,8 +266,9 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			if (!var_type) var_type = pre_var_type;
 			BOOST_ASSERT(var_type);
 			assertAST(param["io"] == "in", param);
+			PlnPassingMethod pm = getPassingMethod(param, var_type->mode, var_type->typeinf->data_type);
 
-			PlnPassingMethod pm = FPM_UNKNOWN;
+			/*PlnPassingMethod pm = FPM_UNKNOWN;
 			
 			if (param["moveto"] == "callee") {
 				pm = FPM_IN_BYREF_MOVEOWNER;
@@ -211,6 +285,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				}
 			} else
 				BOOST_ASSERT(false);
+				*/
 
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
@@ -251,12 +326,28 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		int i=0;
 		PlnVarType *pre_var_type = NULL;
 		for (auto& param: proto["params"]) {
+			PlnVarType *var_type = NULL;
+
 			if (param["name"] == "@") {
 				PlnCompileError err(E_NoMatchingParameter);
 				setLoc(&err, param);
 				throw err;
 
 			} else if (param["name"] == "...") {
+				var_type = PlnType::getAny()->getVarType();
+
+			} else {
+				var_type = getVarTypeFromJson(param["var-type"], scope);
+				if (!var_type) var_type = pre_var_type;
+
+			}
+
+			BOOST_ASSERT(var_type);
+			// PlnPassingMethod pm = FPM_UNKNOWN;
+			PlnPassingMethod pm = getPassingMethod(param, var_type->mode, var_type->typeinf->data_type);
+			int iomode = getIomode(pm);
+
+			/*if (param["name"] == "...") {
 				BOOST_ASSERT((i+1)==proto["params"].size());
 				int iomode = PIO_UNKNOWN;
 				PlnPassingMethod pm = FPM_UNKNOWN;
@@ -316,9 +407,10 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 					}
 
 				}
+				*/
 				f->addParam(param["name"], var_type, iomode, pm, NULL);
 				pre_var_type = var_type;
-			}
+			// }
 			i++;
 		}
 		if (proto["ret"].is_object()) {
@@ -354,20 +446,31 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
 		BOOST_ASSERT (param["name"]!="...");
+
 		PlnVarType* var_type = getVarTypeFromJson(param["var-type"], scope);
 		string p_name;
 		if (var_type) {
-			pre_name = var_type->name();
-		}
-		p_name = pre_name;
+			PlnPassingMethod pm = getPassingMethod(param, var_type->mode, var_type->typeinf->data_type);
+			p_name = PlnFunction::getParamStr(var_type, pm);
 
-		if (param["moveto"] == "callee"/* || param["moveto"] == "caller"*/) {
-			p_name += ">>";
 		} else {
-			BOOST_ASSERT(param["moveto"]  == "none");
+			p_name = pre_name;
 		}
+
+		// string p_name;
+		// if (var_type) {
+		// 	pre_name = var_type->name();
+		// }
+		// p_name = pre_name;
+
+		// if (param["moveto"] == "callee"/* || param["moveto"] == "caller"*/) {
+		// 	p_name += ">>";
+		// } else {
+		// 	BOOST_ASSERT(param["moveto"]  == "none");
+		// }
 
 		param_types.push_back(p_name);
+		pre_name = p_name;
 	}
 
 	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);

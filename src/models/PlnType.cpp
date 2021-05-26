@@ -42,9 +42,15 @@ PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
 	return var->var_type->getFreeEx(new PlnExpression(var));
 }
 
+PlnExpression* PlnFreer::getInternalFreeEx(PlnVariable* var)
+{
+	return var->var_type->getInternalFreeEx(new PlnExpression(var));
+}
 // PlnType
+
 PlnType::PlnType(PlnTypeType type)
-	: type(type), allocator(NULL), internal_allocator(NULL), freer(NULL), copyer(NULL)
+	: type(type), allocator(NULL), internal_allocator(NULL),
+	freer(NULL), internal_freer(NULL), copyer(NULL)
 {
 }
 
