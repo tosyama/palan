@@ -236,7 +236,8 @@ static int getIomode(PlnPassingMethod pm)
 		case FPM_OUT_VARIADIC:
 			return PIO_OUTPUT;
 		default:
-			return PIO_UNKNOWN;
+			BOOST_ASSERT(false);
+			// return PIO_UNKNOWN;
 	}
 }
 

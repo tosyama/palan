@@ -1,13 +1,13 @@
 #!/bin/bash
 # Coverage check tool
 
-target="../generators/PlnX86_64Generator"
+# target="../generators/PlnX86_64Generator"
 # target="../generators/PlnX86_64DataAllocator"
 # target="../generators/PlnX86_64RegisterMachine"
 # target="../generators/PlnX86_64RegisterSave"
 # target="../PlnDataAllocator"
 # target="../models/PlnObjectLiteral"
-# target="../models/PlnBlock"
+target="../models/PlnBlock"
 # target="../models/PlnModule"
 # target="../models/PlnType"
 # target="../models/PlnFunction"

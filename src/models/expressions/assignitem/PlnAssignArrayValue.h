@@ -1,7 +1,7 @@
 /// Assignment Item class definition.
 ///
 /// @file	PlnAssignArrayValue.h
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 class PlnAssignArrayValue : public PlnAssignItem {
 	PlnArrayValue* src_ex;
@@ -52,11 +52,7 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		if (dst_ex->values[0].asgn_type == ASGN_MOVE) {
-			PlnCompileError err(E_CantUseMoveOwnershipFrom, PlnMessage::arrayValue());
-			err.loc = src_ex->loc;
-			throw err;
-		}
+		BOOST_ASSERT(dst_ex->values[0].asgn_type != ASGN_MOVE);
 
 		if (dst_ex->type == ET_VALUE) {
 			PlnVariable* var = dst_ex->values[0].inf.var;
