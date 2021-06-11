@@ -162,25 +162,9 @@ string PlnFunction::getParamStr(PlnVarType* vtype, PlnPassingMethod passby)
 vector<string> PlnFunction::getParamStrs() const
 {
 	vector<string> param_types;
-	for (auto p: parameters) {
-
-// 		if (p->passby == FPM_IN_BYREF_MOVEOWNER) {
-// 			pname += ">>";
-// 		} else if (p->passby == FPM_OUT_BYREFADDR_GETOWNER) {
-// 			pname = ">" + pname;
-// 		}/* else if (p->var->var_type->mode[ACCESS_MD]=='w'
-// 			&& p->var->var_type->mode[ALLOC_MD]=='r') {
-// 			pname += "!";
-// 		}*/
-// 
-// 		if (p->var->name == "...")
-// 			pname += "...";
-// 		if (p->iomode == PIO_OUTPUT) {
-// 			pname = ">" + pname;
-// 		}
-//		param_types.push_back(pname);
+	for (auto p: parameters)
 		param_types.push_back(getParamStr(p->var->var_type, p->passby));
-	}
+
 	return param_types;
 }
 

@@ -12,7 +12,7 @@ flo64 d = 10.0;
 bigintope();
 mem2regf();
 flo2int(); // 38 161
-flo2int2(); // 38 161
+flo42int(); // 38 161
 mem2regi();
 cmp();
 printf("\n");
@@ -87,18 +87,20 @@ func flo2int()
 
 }
 
-func flo2int2()
+func flo42int()
 {
 	flo32 f = 32.6;
+	int64 i8 = 6;
 	int16 i2 = 5;
 	byte b = 5;
 
+	i8 * i8 -> i8;	// dummy calc
 	i2 * i2 -> i2;	// dummy calc
+	f + 1.6 -> i8;
 	f + 5.6 -> i2;
 	f + 128.6 -> b;
 
-	printf(" %d %d", i2, b);
-
+	printf(" %d %d %d", i8, i2, b);
 }
 
 func mem2regi()

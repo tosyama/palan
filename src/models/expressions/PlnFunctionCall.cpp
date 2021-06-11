@@ -90,17 +90,15 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 		for (auto &arg: fcall->arguments) {
 			int i=0;
 			for (auto& inf: arg.inf) {
-				if (inf.param->var->name == "...") {
-					if (inf.param->iomode & PIO_OUTPUT) {
-						PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-						dp->status = DS_READY_ASSIGN;
-						arg_dps.push_back(dp);
+				if (inf.param->passby == FPM_IN_VARIADIC) {
+					PlnDataPlace* dp = new PlnDataPlace(8, arg.exp->getDataType(i));
+					dp->status = DS_READY_ASSIGN;
+					arg_dps.push_back(dp);
 
-					} else {
-						PlnDataPlace* dp = new PlnDataPlace(8, arg.exp->getDataType(i));
-						dp->status = DS_READY_ASSIGN;
-						arg_dps.push_back(dp);
-					}
+				} else if (inf.param->passby == FPM_OUT_VARIADIC) {
+					PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
+					dp->status = DS_READY_ASSIGN;
+					arg_dps.push_back(dp);
 				}
 				i++;
 			}
