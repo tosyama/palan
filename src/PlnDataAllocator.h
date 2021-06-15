@@ -109,7 +109,8 @@ enum {
 	DP_RO_STR,
 	DP_RO_DATA,
 
-	DP_SUBDP
+	DP_SUBDP,
+	DP_STK_RESERVE_BP
 };
 
 enum {
@@ -141,7 +142,7 @@ public:
 	int32_t access_score;
 
 	union {
-		struct {int32_t idx; int32_t offset;} stack;
+		struct {int32_t idx; int32_t offset; vector<PlnDataPlace*> *children; } stack;
 		struct {int32_t idx; int32_t offset; PlnDataPlace* parent_dp; } bytes;
 		struct {int32_t id; int32_t offset;} reg;
 		struct {int32_t displacement; PlnDataPlace* base_dp; PlnDataPlace* index_dp;

@@ -566,6 +566,7 @@ static int getOpePattern(const PlnGenEntity* dst, const PlnGenEntity* src)
 	else if (src->size == 4) pattern |= S4;
 	else if (src->size == 2) pattern |= S2;
 	else if (src->size == 1) pattern |= S1;
+	else BOOST_ASSERT(false);
 	
 	if (dst->type == GA_REG) {
 		pattern |=	!is_greg(regid_of(dst)) ? DXMMF:

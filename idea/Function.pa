@@ -24,7 +24,7 @@ str1.replace("a","b") -> count;
 object o1, o3;
 @object o4;
 
-funco(o1,o2.clone, o3>>, o4, io o5) ->> o1; // 所有を渡したので、o3は無効.
+funco(o1,o2.clone, o3>>, o4, o5!) ->> o1; // 所有を渡したので、o3は無効.
 					// 内部処理的にはo1の無効処理(null代入)は行わない。
 					// <<,  ioは飾り。宣言をを意識させる+関数宣言後置の場合の推測に使用
 					// 式を書く場合は、&(ab+b), *(x+3)
@@ -63,7 +63,7 @@ func swap(int sx, sy)
 }
 
 // object
-func funco(object o1, >>o2, >>o3, @object o4, object io o5)
+func funco(object o1, >>o2, >>o3, @object o4, @!object o5)
 	-> object o2
 {
 	// o1 は rval input only.(clone would be created before func call and callee free it)
@@ -85,3 +85,9 @@ func func2(int a, int b) -> int a
 	a += b;
 }
 
+#object so.initobj();	// スタックに確保したオブジェクトの初期化
+initobj(so!);	// この書き方もできる
+
+func initobj(@!object o) -> o
+{
+}

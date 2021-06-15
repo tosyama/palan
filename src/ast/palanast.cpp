@@ -14,7 +14,7 @@
 
 #include "PlnParser.hpp"
 #include "PlnLexer.h"
-#include "../PlnMessage.h"
+#include "PlnAstMessage.h"
 #include "../../libs/json/single_include/nlohmann/json.hpp"
 
 using std::cout;
@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
 	po::variables_map vm;
 
 	opt.add_options()
-		("help,h", "Display this help")
-		("output,o", po::value<string>(), "Output AST json file")
-		("indent,i", "Output indented json")
-		("input-file", po::value<vector<string>>(), "Input palan file");
+		("help,h", PlnAstMessage::getHelp(H_Help))
+		("output,o", po::value<string>(), PlnAstMessage::getHelp(H_Output))
+		("indent,i", PlnAstMessage::getHelp(H_Indent))
+		("input-file", po::value<vector<string>>(), PlnAstMessage::getHelp(H_Input));
 
 	p_opt.add("input-file", -1);
 
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 		(*jout) << std::setw(indent) << ast << endl;
 
 	} else {
-		string msg(PlnMessage::getErr(E_CouldnotOpenFile, fname));
+		string msg(PlnAstMessage::getErr(E_CouldnotOpenFile, fname));
 		cerr << "pat: error: " << msg << endl;
 		return 1;
 	}

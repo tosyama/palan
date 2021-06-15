@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:	Palan
 " Maintainer:	Toshinobu YAMAGUCHI
-" Last Change:	2019 Jul 18
+" Last Change:	2021 Feb 9
 
 if exists('b:current_syntax')
 	finish
@@ -11,7 +11,7 @@ syn keyword     paDeclaration       type var const func syscall ccall
 syn keyword     paConditional       if else
 syn keyword     paRepeat            while
 syn keyword     paStatement         return break continue extern
-syn match       paOperator          "[.,?!*+/%&\-<>=@\|]"
+syn match       paOperator          "[.,?!*+/%&\-<>=@\|#]"
 syn match       paOperator          "[][()]"
 syn match       paDelimiter         "[{};]"
 

@@ -1,5 +1,5 @@
 PROGRAM=pat
-SRCS=palanast.cpp PlnParser.cpp PlnLexer.cpp ../PlnMessage.cpp
+SRCS=palanast.cpp PlnParser.cpp PlnLexer.cpp PlnAstMessage.cpp
 OBJS=$(notdir $(SRCS:.cpp=.o))
 VPATH=.:objs:..
 CXX_FLAGS= -g -O0
@@ -17,7 +17,7 @@ PlnParser.cpp: PlnParser.yy
 PlnLexer.cpp: PlnLexer.ll
 	flex -o $@ $<
 palanast.o: PlnParser.cpp
-PlnParser.o: PlnLexer.h PlnParser.hpp ../PlnMessage.h
-palanast.o: PlnLexer.h PlnParser.hpp ../PlnMessage.h
+PlnParser.o: PlnLexer.h PlnParser.hpp PlnAstMessage.h
+palanast.o: PlnLexer.h PlnParser.hpp PlnAstMessage.h
 release: CXX_FLAGS=$(CXX_RELEASE_FLAGS)
 release: $(PROGRAM)

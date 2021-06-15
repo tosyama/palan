@@ -71,6 +71,11 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 
 			} else if (dt == DT_OBJECT_REF) {
 				return new PlnAssignObjectRefItem(ex);
+
+			} else {
+				BOOST_ASSERT(dt == DT_OBJECT);
+				return new PlnAssignObjectRefItem(ex);
+				
 			}
 		}
 	}
@@ -140,7 +145,16 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 				di = new PlnDstMoveObjectItem(ex);
 			} else if (asgn_type == ASGN_COPY_REF) {
 				di = new PlnDstPrimitiveItem(ex);
+			} else {
+				BOOST_ASSERT(false);
 			}
+		} else if (dt == DT_OBJECT) {
+			auto asgn_type = ex->values[0].asgn_type;
+			BOOST_ASSERT(asgn_type == ASGN_COPY);
+			di = new PlnDstCopyObjectItem(ex);
+
+			//BOOST_ASSERT(false);
+
 		} else {
 			di = new PlnDstPrimitiveItem(ex);
 		}
@@ -164,6 +178,7 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 			} else {
 				BOOST_ASSERT(false);
 			}
+
 		} else {
 			BOOST_ASSERT(false);
 		}

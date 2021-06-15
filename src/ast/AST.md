@@ -60,6 +60,8 @@ Parameter
 *   name\* - Parameter name string
 *   var-type\# - Variable type list
 *   pass-by\* - Passing way string: "copy", "move", "read":for variable argument, "write", "write-ref"
+*   io\* - Input/output string: "in", "out"
+*   moveto\* - Move owner option: "none", "callee", "caller"
 *   default-val - Default value expression
 *   loc - Location integer array
 
@@ -89,7 +91,9 @@ Variable Type
 
 *   mode\* - mode string(access right, identity, allocation):
     1.  --- - dafault: depend on type
-    2.  rir - read-only reference
+    2.  rir - read-only reference (@)
+    3.  wcr - writable reference (@!)
+    4.  wis - writable stack/direct allocation (#)
 
 *   loc - Location integer array
 
@@ -147,8 +151,8 @@ Statement
     12. extern-var - Import extern global variables
         *   var-type\* - Variable type list
         *   names\* - variable name list
-	
-	13. ope-asgn - Operational assignment
+
+    13. ope-asgn - Operational assignment
         *   dst-val\* - Destination value
         *   ope\* - Operator string : "+"
         *   rval\* - Right value expression
@@ -175,8 +179,7 @@ Expression
         *   val\* - String value
 
     5.  var - Variable/Constant expression
-        *   base-var\* - Base variable/ constant vlue name string
-        *   opes - Modified operator list
+        *   var-name - Variable / constant value name string
 
     6.  array-val - Array expression
         *   vals\* - Item value expression list
@@ -196,46 +199,40 @@ Expression
         *   args\* - Rest of argument list
         *   out-args\* - Output argument list
 
-    10. binary operator
+    10. member - struct member expression
+        *   base-exp - Base variable expression
+        *   member-name - Struct member name string
+
+    11. index - Container item expression
+        *   base-exp - Base variable expression
+        *   indexes - Index expression list
+
+    12. binary operator
         *   lval\* -	Left value expression
         *   rval\* -	Right value expression
 
-    11. unary operator
+    13. unary operator
         *   val\* -	Value expression
-	
-	12. token - Token
+
+	14. token - Token
 	    *   info\* - token information
 
+*   arg-option - Argument option string: "none", "move-owner", "get-owner", "writable-ref"
 *   loc - Location integer array
 
 Destination Value
 ------------------
-*   base-var\* - Base variable name string
-*   opes - Modified operator list
-*   move - Move ownership flag boolean
+*	exp - Destination value expression
+*   arg-option\* - Option string: "none", "move-owner",  "writable-ref"
+*   get-owner\* - get ownership flag boolean
 *   loc - Location integer array
-
-Modified Operator
------------------
-*   ope-type\* - Operator type string: "index", "member"
-    1.  index - Numerical index
-        *   indexes - Index expression list
-
-    2.  member - Struct member
-        *   member - Struct member string
 
 Variable Declaration
 --------------------
 *   name\* - Variable name string
 *   var-type\# - Variable type list (nothing: use pre defined var type, empty: type inference)
-*   move - Move ownership flag boolean
+*   get-owner - get ownership flag boolean
 *   loc - Location integer array
-
-Argument
---------
-*   exp\* - Argument expression
-*   move-src - Move ownership flag boolean
-*   get-ownership - Move ownership flag boolean in output arguments
 
 Struct member
 -------------

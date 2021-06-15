@@ -327,7 +327,9 @@ static int calcAccessScore(PlnDataPlace* dp) {
 			score += max_score;
 
 		} else if (!dp->need_address) {
-			score += dp->access_score;
+			if (dp->type == DP_STK_BP && dp->size == 8) {
+				score += dp->access_score;
+			}
 		}
 		dp = dp->previous;
 	}
@@ -499,8 +501,8 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 					continue;
 				}
 
-			} else {
-				if (dp->src_place && !dp->save_place) {
+			} else if (dp->type == DP_STK_BP) {
+				if (dp->size == 8 && dp->src_place && !dp->save_place) {
 					auto srcdp = dp->src_place;
 					if (srcdp->type == DP_REG) {
 						if (tryMoveDp2Reg(dp, srcdp->data.reg.id)) {
@@ -514,7 +516,10 @@ void PlnX86_64DataAllocator::optimizeRegAlloc()
 						}
 					}
 				}
+			} else {
+				BOOST_ASSERT(dp->type == DP_STK_RESERVE_BP);
 			}
+
 			pdp = dp;
 			if (dp)
 				dp = dp->previous;

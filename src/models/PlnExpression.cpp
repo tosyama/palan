@@ -141,8 +141,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 
 			} else if (var->is_global) {
 				if (!var->place) {
-					PlnType* t = var->var_type->typeinf;
-					var->place = da.prepareGlobalVar(var->name, t->size, t->data_type);
+					var->place = da.prepareGlobalVar(var->name, var->var_type->size(), var->var_type->data_type());
 					var->place->comment = &var->name;
 				}
 				return da.getSeparatedDp(inf.var->place);
@@ -196,8 +195,13 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() <= 1);
-	if (data_places.size())
+	if (data_places.size()) {
+		PlnDataPlace *dp = values[0].getDataPlace(da);
 		da.pushSrc(data_places[0], values[0].getDataPlace(da));
+		if (dp->data_type == DT_OBJECT) {
+			data_places[0]->load_address = true;
+		}
+	}
 }
 
 void PlnExpression::gen(PlnGenerator& g)

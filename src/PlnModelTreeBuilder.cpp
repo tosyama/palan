@@ -1,7 +1,7 @@
 /// Build model trees from AST json definision.
 ///
 /// @file	PlnModelTreeBuilder.cpp
-/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -51,6 +51,8 @@ static PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast);
 static PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast);
 static PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope);
 static PlnExpression* buildVariarble(json var, PlnScopeStack &scope);
+static PlnExpression* buildStructMember(json member, PlnScopeStack &scope);
+static PlnExpression* buildIndexItem(json indexitem, PlnScopeStack &scope);
 static PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope);
 static PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope);
 static PlnExpression* buildChainCall(json& ccall, PlnScopeStack &scope);
@@ -165,6 +167,80 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 	return ret_vt;
 }
 
+static PlnPassingMethod getPassingMethod(json& param, const string &mode, int data_type)
+{
+	PlnPassingMethod pm = FPM_UNKNOWN;
+
+	if (param["name"] == "...") {
+		if (param["io"] == "in") {
+			pm = FPM_IN_VARIADIC;
+		} else {
+			assertAST(param["io"] == "out", param);
+			pm = FPM_OUT_VARIADIC;
+		}
+
+	} else if (param["io"] == "in") {
+		if (param["moveto"] == "callee") {
+			pm = FPM_IN_BYREF_MOVEOWNER;
+
+		} else {
+			assertAST(param["moveto"]=="none", param);
+			if (data_type == DT_OBJECT) {
+				if (mode[ALLOC_MD]=='r') {
+					pm = FPM_IN_BYREF;
+				} else {
+					pm = FPM_IN_BYREF_CLONE;
+				}
+
+				// != DT_OBJECT
+			} else if (mode[ALLOC_MD]=='r') {
+				pm = FPM_IN_BYREF;
+			} else {
+				pm = FPM_IN_BYVAL;
+			}
+		}
+
+	} else if (param["io"] == "out") {
+		if (param["moveto"] == "caller") {
+			pm = FPM_OUT_BYREFADDR_GETOWNER;
+
+		} else {
+			if (data_type == DT_OBJECT) {
+				if (mode[ALLOC_MD]=='r') {	// refernce of refernce
+					BOOST_ASSERT(mode[IDENTITY_MD]=='c');
+					pm = FPM_OUT_BYREFADDR;
+				} else {
+					pm = FPM_OUT_BYREF;
+				}
+			} else {
+				pm = FPM_OUT_BYREF;
+			}
+		}
+	}
+
+	return pm;
+}
+
+static int getIomode(PlnPassingMethod pm)
+{
+	switch (pm) {
+		case FPM_IN_BYVAL:
+		case FPM_IN_BYREF:
+		case FPM_IN_BYREF_CLONE:
+		case FPM_IN_BYREF_MOVEOWNER:
+		case FPM_IN_VARIADIC:
+			return PIO_INPUT;
+		case FPM_OUT_BYREF:
+		case FPM_OUT_BYREFADDR:
+		case FPM_OUT_BYREFADDR_GETOWNER:
+		case FPM_OUT_VARIADIC:
+			return PIO_OUTPUT;
+		default:
+			BOOST_ASSERT(false);
+			// return PIO_UNKNOWN;
+	}
+}
+
 void registerPrototype(json& proto, PlnScopeStack& scope)
 {
 	int f_type;
@@ -179,6 +255,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 	if (ftype_str == "palan") {
 		f = new PlnFunction(FT_PLN, proto["name"]);
 		f->parent = CUR_BLOCK;
+		PlnVarType *pre_var_type = NULL;
 		for (auto& param: proto["params"]) {
 			if (param["name"] == "@" || param["name"] == "...") {
 				PlnCompileError err(E_UnsupportedGrammer,"Not supported placeholder or variable argument at palan function.");
@@ -187,25 +264,10 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			}
 
 			PlnVarType *var_type = getVarTypeFromJson(param["var-type"], scope);
-			assertAST(param["pass-by"] == "move" || param["pass-by"] == "copy", param);
-
-			PlnPassingMethod pm = FPM_UNKNOWN;
-			
-			if (param["pass-by"] == "move") {
-				pm = FPM_OBJ_MOVEOWNER;
-			} else if (param["pass-by"] == "copy") {
-				if (var_type) {
-					if (var_type->data_type() == DT_OBJECT_REF) {
-						if (var_type->mode[ALLOC_MD]=='r')
-							pm = FPM_VAR_COPY;
-						else
-							pm = FPM_OBJ_CLONE;
-					} else {
-						pm = FPM_VAR_COPY;
-					}
-				}
-			} else
-				BOOST_ASSERT(false);
+			if (!var_type) var_type = pre_var_type;
+			BOOST_ASSERT(var_type);
+			assertAST(param["io"] == "in", param);
+			PlnPassingMethod pm = getPassingMethod(param, var_type->mode, var_type->typeinf->data_type);
 
 			PlnExpression* default_val = NULL;
 			if (param["default-val"].is_object()) {
@@ -213,6 +275,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 			}
 			f->addParam(param["name"], var_type, PIO_INPUT, pm, default_val);
 			setLoc(f->parameters.back()->var, param);
+			pre_var_type = var_type;
 		}
 
 		for (auto& ret: proto["rets"]) {
@@ -243,76 +306,30 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 		f->parent = CUR_BLOCK;
 
 		int i=0;
+		PlnVarType *pre_var_type = NULL;
 		for (auto& param: proto["params"]) {
+			PlnVarType *var_type = NULL;
+
 			if (param["name"] == "@") {
 				PlnCompileError err(E_NoMatchingParameter);
 				setLoc(&err, param);
 				throw err;
 
 			} else if (param["name"] == "...") {
-				BOOST_ASSERT((i+1)==proto["params"].size());
-				int iomode = PIO_UNKNOWN;
-				PlnPassingMethod pm = FPM_UNKNOWN;
-				if (param["pass-by"] == "read") {
-					iomode = PIO_INPUT;
-					pm = FPM_ANY_IN;
-				} else {
-					assertAST(param["pass-by"] == "write", param);
-					iomode = PIO_OUTPUT;
-					pm = FPM_ANY_OUT;
-				}
-
-				f->addParam(param["name"], PlnType::getAny()->getVarType(), iomode, pm, NULL);
+				var_type = PlnType::getAny()->getVarType();
 
 			} else {
-				PlnVarType *var_type = getVarTypeFromJson(param["var-type"], scope);
-				PlnPassingMethod pm = FPM_UNKNOWN;
-				int iomode = PIO_UNKNOWN;
-				if (param["pass-by"] == "move") {
-					pm = FPM_OBJ_MOVEOWNER;
-					iomode = PIO_INPUT;
+				var_type = getVarTypeFromJson(param["var-type"], scope);
+				if (!var_type) var_type = pre_var_type;
 
-				} else if (param["pass-by"] == "write") {
-					iomode = PIO_OUTPUT;
-					if (var_type) {
-						if (var_type->data_type() == DT_OBJECT_REF) {
-							if (var_type->mode[ALLOC_MD]=='r') {
-								BOOST_ASSERT(var_type->mode[IDENTITY_MD]=='c');
-								pm = FPM_VAR_REF;
-							} else {
-								pm = FPM_VAR_COPY;
-							}
-						} else {
-							pm = FPM_VAR_REF;
-						}
-					}
-
-				} else if (param["pass-by"] == "write-ref") {
-					iomode = PIO_OUTPUT;
-					if (var_type) {
-						if (var_type->data_type() == DT_OBJECT_REF) {
-							pm = FPM_OBJ_GETOWNER;
-						} else
-							BOOST_ASSERT(false);
-					}
-				} else {
-					assertAST(param["pass-by"]=="copy", param);
-					iomode = PIO_INPUT;
-					if (var_type) {
-						if (var_type->data_type() == DT_OBJECT_REF) {
-							if (var_type->mode[ALLOC_MD]=='r')
-								pm = FPM_VAR_COPY;
-							else
-								pm = FPM_OBJ_CLONE;
-						} else if (var_type->mode[ALLOC_MD]=='r') {
-							pm = FPM_VAR_REF;
-						} else {
-							pm = FPM_VAR_COPY;
-						}
-					}
-				}
-				f->addParam(param["name"], var_type, iomode, pm, NULL);
 			}
+
+			BOOST_ASSERT(var_type);
+			PlnPassingMethod pm = getPassingMethod(param, var_type->mode, var_type->typeinf->data_type);
+			int iomode = getIomode(pm);
+			f->addParam(param["name"], var_type, iomode, pm, NULL);
+			pre_var_type = var_type;
+
 			i++;
 		}
 		if (proto["ret"].is_object()) {
@@ -348,18 +365,31 @@ void buildFunction(json& func, PlnScopeStack &scope, json& ast)
 	vector<string> param_types;
 	for (auto& param: func["params"]) {
 		BOOST_ASSERT (param["name"]!="...");
+
 		PlnVarType* var_type = getVarTypeFromJson(param["var-type"], scope);
 		string p_name;
 		if (var_type) {
-			pre_name = var_type->name();
-		}
-		p_name = pre_name;
+			PlnPassingMethod pm = getPassingMethod(param, var_type->mode, var_type->typeinf->data_type);
+			p_name = PlnFunction::getParamStr(var_type, pm);
 
-		if (param["pass-by"] == "move") {
-			p_name += ">>";
+		} else {
+			p_name = pre_name;
 		}
+
+		// string p_name;
+		// if (var_type) {
+		// 	pre_name = var_type->name();
+		// }
+		// p_name = pre_name;
+
+		// if (param["moveto"] == "callee"/* || param["moveto"] == "caller"*/) {
+		// 	p_name += ">>";
+		// } else {
+		// 	BOOST_ASSERT(param["moveto"]  == "none");
+		// }
 
 		param_types.push_back(p_name);
+		pre_name = p_name;
 	}
 
 	PlnFunction* f = CUR_BLOCK->getFuncProto(func["name"], param_types);
@@ -660,7 +690,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 		types.push_back(v->var_type);
 
 		// set asgn_type
-		if (var["move"].is_boolean() && var["move"] == true) {
+		if (var["get-owner"] == true) {
 			vars.back().asgn_type = ASGN_MOVE;
 		} else if (v->var_type->data_type() == DT_OBJECT_REF && v->var_type->mode[ALLOC_MD] == 'r') {
 			vars.back().asgn_type = ASGN_COPY_REF;
@@ -896,12 +926,12 @@ PlnStatement* buildIf(json& ifels, PlnScopeStack& scope, json& ast)
 
 PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 {
-	PlnExpression* var_val = buildVariarble(opeasgn["dst-val"], scope);
+	PlnExpression* var_val = buildExpression(opeasgn["dst-val"], scope);
 	PlnExpression* rval = buildExpression(opeasgn["rval"], scope);
 	if (opeasgn["ope"] == "+") {
 		if (var_val->type == ET_VALUE || var_val->type == ET_REFVALUE) {
 			PlnExpression* add_ex =  PlnAddOperation::create(var_val, rval);
-			PlnExpression* dst_val = buildDstValue(opeasgn["dst-val"], scope);
+			PlnExpression* dst_val = buildExpression(opeasgn["dst-val"], scope);
 			vector<PlnExpression*> dst_vals = {dst_val};
 			vector<PlnExpression*> exs = {add_ex};
 			PlnExpression* asgn_ex =  new PlnAssignment(dst_vals, exs);
@@ -914,8 +944,8 @@ PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 			PlnVarType *t = var_val->values[0].inf.var->var_type->typeinf->getVarType("w-r");
 			PlnVariable *v = sub_block->declareVariable("__tmp", t, false);
 
-			// BOOST_ASSERT(false);
 			vector<PlnValue> vars = {v};
+			vars[0].asgn_type = ASGN_COPY_REF;
 			vector<PlnExpression*> inits{var_val};
 			sub_block->statements.push_back(
 				new PlnStatement(new PlnVarInit(vars, &inits), sub_block));
@@ -955,12 +985,15 @@ PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 		expression = new PlnExpression(exp["val"].get<double>());
 	} else if (type == "lit-str") {
 		assertAST(exp["val"].is_string(), exp);
-		// PlnReadOnlyData *ro = CUR_MODULE->getReadOnlyData(exp["val"]);
 		expression = new PlnExpression(exp["val"].get<string>());
 	} else if (type == "array-val") {
 		expression = buildArrayValue(exp, scope);
 	} else if (type == "var") {
 		expression = buildVariarble(exp, scope);
+	} else if (type == "member") {
+		expression = buildStructMember(exp, scope);
+	} else if (type == "index") {
+		expression = buildIndexItem(exp, scope);
 	} else if (type == "asgn") {
 		expression = buildAssignment(exp, scope);
 	} else if (type == "func-call") {
@@ -1023,36 +1056,47 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 			args.back().inf.push_back({PIO_INPUT});
 			continue;
 		}
-		assertAST(arg["exp"].is_object(), fcall);
-		PlnExpression *e = buildExpression(arg["exp"], scope);
+		assertAST(arg["arg-option"].is_string(), fcall);
+		PlnExpression *e = buildExpression(arg, scope);
 
 		args.push_back({e});
 		for (PlnValue& val: e->values) {
 			args.back().inf.push_back({PIO_INPUT});
 		}
 
-		if (arg["move-src"].is_boolean() && arg["move-src"] == true) {
+		if (arg["arg-option"] == "move-owner") {
 			args.back().inf.back().opt = AG_MOVE;
-
 			if (e->type == ET_VALUE && e->values[0].type == VL_LIT_ARRAY) {
 				PlnCompileError err(E_CantUseMoveOwnershipFrom, PlnMessage::arrayValue());
 				err.loc = e->loc;
 				throw err;
 			}
+
+		} else if (arg["arg-option"] == "writable-ref") {
+			args.back().inf.back().opt = AG_WREF;
+			if (e->values.back().getVarType()->mode[ACCESS_MD]=='r') {
+				// TODO: error handling
+				BOOST_ASSERT(false);
+			}
+
+		} else {
+			BOOST_ASSERT(arg["arg-option"] == "none");
 		}
 	}
 
 	for (auto& arg: fcall["out-args"]) {
-		assertAST(arg["exp"].is_object(), fcall);
-		PlnExpression *e = buildExpression(arg["exp"], scope);
+		assertAST(arg["arg-option"].is_string(), fcall);
+		PlnExpression *e = buildExpression(arg, scope);
 		args.push_back({e});
 
 		for (PlnValue& val: e->values) {
 			args.back().inf.push_back({PIO_OUTPUT});
 		}
 
-		if (arg["get-ownership"].is_boolean() && arg["get-ownership"] == true) {
+		if (arg["arg-option"] == "get-owner") {
 			args.back().inf.back().opt = AG_MOVE;
+		} else {
+			BOOST_ASSERT(arg["arg-option"] == "none");
 		}
 
 	}
@@ -1170,6 +1214,18 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 		BOOST_ASSERT(dst_vals.back()->values[0].getVarType()->mode[ACCESS_MD] != 'r');
 
 		types.push_back(dst_vals.back()->values[0].inf.var->var_type);
+
+		if (dst_vals.back()->values[0].asgn_type == ASGN_MOVE) {
+			// need to much type completely for move.
+			PlnVarType* src_vtype = src_exps[src_ex_ind]->values[src_val_ind].getVarType();
+			if (src_vtype->typeinf != types.back()->typeinf || src_vtype->mode[IDENTITY_MD] != 'm') {
+				PlnCompileError err(E_CantUseMoveOwnershipFrom, src_vtype->name());
+				err.loc = src_exps[src_ex_ind]->loc;
+				throw err;
+				
+			}
+		}
+
 		if (src_ex_ind < src_exps.size()) {
 			if (src_val_ind+1 < src_exps[src_ex_ind]->values.size()) {
 				src_val_ind++;
@@ -1236,22 +1292,16 @@ PlnExpression* buildArrayValue(json& arrval, PlnScopeStack& scope)
 
 PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 {
-	assertAST(var["base-var"].is_string(), var);
-	PlnVariable* pvar = CUR_BLOCK->getVariable(var["base-var"]);
+	PlnVariable* pvar = CUR_BLOCK->getVariable(var["var-name"]);
 	if (!pvar) {
 		// check constant value
-		PlnExpression* cnst_val = CUR_BLOCK->getConst(var["base-var"]);
+		PlnExpression* cnst_val = CUR_BLOCK->getConst(var["var-name"]);
 		if (cnst_val) {
-			if (var["opes"].is_null()) {
-				return cnst_val;
-			} else {
-				PlnCompileError err(E_CantUseOperatorHere, var["base-var"]);
-				setLoc(&err, var);
-				throw err;
-			}
-	
+			cnst_val->comment = var["var-name"];
+			return cnst_val;
+
 		} else {
-			PlnCompileError err(E_UndefinedVariable, var["base-var"]);
+			PlnCompileError err(E_UndefinedVariable, var["var-name"]);
 			setLoc(&err, var);
 			throw err;
 		}
@@ -1260,49 +1310,66 @@ PlnExpression* buildVariarble(json var, PlnScopeStack &scope)
 	PlnExpression *var_exp = new PlnExpression(pvar);
 	setLoc(var_exp, var);
 
-	assertAST(var["opes"].is_array() || var["opes"].is_null(), var);
-	if (var["opes"].is_array()) {
-		for (json& ope: var["opes"]) {
-			assertAST(ope["ope-type"] == "index" || ope["ope-type"] == "member", ope);
-			try {
-				// Array item with index
-				if (ope["ope-type"]=="index") {
-					assertAST(ope["indexes"].is_array(), var);
-					vector<PlnExpression*> indexes;
-					for (json& exp: ope["indexes"])
-						indexes.push_back(buildExpression(exp, scope));
-					var_exp = new PlnArrayItem(var_exp, indexes);
-
-				// Struct member
-				} else if (ope["ope-type"] == "member") {
-					var_exp = new PlnStructMember(var_exp, ope["member"]);
-					setLoc(var_exp, var);
-				}
-			} catch (PlnCompileError& err) {
-				setLoc(&err, var);
-				throw;
-			}
-		}
-	} else {
-		auto vt = pvar->var_type;
-		// primitve reference
-		if (vt->data_type() != DT_OBJECT_REF && vt->mode[ALLOC_MD] == 'r') {
-			var_exp = new PlnReferenceValue(var_exp);
-		}
+	auto vt = pvar->var_type;
+	auto original_dtype = vt->typeinf->data_type;
+	// primitve reference
+	if (vt->data_type() == DT_OBJECT_REF && original_dtype != DT_OBJECT) {
+		var_exp = new PlnReferenceValue(var_exp);
 	}
 
 	return var_exp;
 }
 
+PlnExpression* buildStructMember(json member, PlnScopeStack &scope)
+{
+	PlnExpression *base_exp = buildExpression(member["base-exp"], scope);
+	PlnExpression *var_exp = NULL;
+	try {
+		var_exp = new PlnStructMember(base_exp, member["member-name"]);
+		setLoc(var_exp, member);
+
+	} catch (PlnCompileError& err) {
+		setLoc(&err, member);
+		throw;
+	}
+	return var_exp;
+}
+
+PlnExpression* buildIndexItem(json index_item, PlnScopeStack &scope)
+{
+	PlnExpression *base_exp = buildExpression(index_item["base-exp"], scope);
+	PlnExpression *var_exp = NULL;
+
+	if (!(base_exp->values[0].type == VL_VAR || base_exp->values[0].type == VL_WORK)) {
+		PlnCompileError err(E_CantUseIndexHere, base_exp->comment);
+		setLoc(&err, index_item["base-exp"]);
+		throw err;
+	}
+
+	assertAST(index_item["indexes"].is_array(), index_item);
+	vector<PlnExpression*> indexes;
+	for (json& exp: index_item["indexes"])
+		indexes.push_back(buildExpression(exp, scope));
+
+	try {
+		var_exp = new PlnArrayItem(base_exp, indexes);
+		setLoc(var_exp, index_item);
+
+	} catch (PlnCompileError& err) {
+		setLoc(&err, index_item);
+		throw;
+	}
+	return var_exp;
+}
+
 PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 {
-	PlnExpression* var_exp = buildVariarble(dval, scope);
-	BOOST_ASSERT(var_exp->values.size() == 1);
+	PlnExpression* var_exp = buildExpression(dval["exp"], scope);
 
-	if (dval["move"].is_boolean() && dval["move"] == true) {
+	if (dval["get-owner"] == true) {
 		if (var_exp->values[0].getVarType()->mode[IDENTITY_MD] != 'm') {
 			PlnCompileError err(E_CantUseMoveOwnershipTo, var_exp->values[0].inf.var->name);
-			setLoc(&err, dval);
+			setLoc(&err, dval["exp"]);
 			throw err;
 		}
 		var_exp->values[0].asgn_type = ASGN_MOVE;
@@ -1313,17 +1380,18 @@ PlnExpression* buildDstValue(json dval, PlnScopeStack &scope)
 			PlnValue& val = var_exp->values[0];
 			if (val.type == VL_VAR) {
 				PlnCompileError err(E_CantCopyToReadonly, var_exp->values[0].inf.var->name);
-				setLoc(&err, dval);
+				setLoc(&err, dval["exp"]);
 				throw err;
 
 			} else { // const value
 				PlnCompileError err(E_CantUseReadonlyExHere);
-				setLoc(&err, dval);
+				setLoc(&err, dval["exp"]);
 				throw err;
 			}
 		}
 		var_exp->values[0].asgn_type = ASGN_COPY;
 	}
+
 	return var_exp;
 }
 

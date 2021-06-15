@@ -5,7 +5,7 @@
 /// e.g.) func funcname(int arg1, arg2)->int32 ret1, ret2  { ... }
 ///
 /// @file	PlnFunction.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
@@ -91,7 +91,8 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int iomode, PlnPassingMethod pass_method, PlnExpression* defaultVal)
 {
 	BOOST_ASSERT(!has_va_arg);
-	BOOST_ASSERT(ptype || parameters.size());
+	BOOST_ASSERT(ptype);
+	BOOST_ASSERT(pass_method != FPM_UNKNOWN);
 
 	if (pname == "...") {
 		has_va_arg = true;
@@ -102,37 +103,68 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 
 	PlnVariable* param_var = new PlnVariable();
 	param_var->name = pname;
-	param_var->var_type = ptype ? ptype : parameters.back()->var->var_type;
+	param_var->var_type = ptype;
 
 	PlnParameter* param = new PlnParameter();
 	param->var = param_var;
 	param->dflt_value = defaultVal;
 	param->index = parameters.size();
 	param->iomode = iomode;
-	param->passby = !ptype && pass_method == FPM_UNKNOWN ? 
-			parameters.back()->passby : pass_method;
+	param->passby = pass_method;
 
 	parameters.push_back(param);
 
 	return	param_var;
 }
 
+string PlnFunction::getParamStr(PlnVarType* vtype, PlnPassingMethod passby)
+{
+	string pname = vtype->name();
+	bool is_object = vtype->typeinf->data_type == DT_OBJECT;
+
+	switch (passby) {
+		case FPM_IN_BYVAL:	// primitive:default, object:#
+			BOOST_ASSERT(!is_object);
+			break;
+		case FPM_IN_BYREF:	// primitive:@, object:@ or @!
+			if (is_object && vtype->mode[ACCESS_MD]=='w') {
+				pname = "@!" + pname;
+			} else {
+				pname = "@" + pname;
+			}
+			break;
+		case FPM_IN_BYREF_CLONE:	// object:default
+			BOOST_ASSERT(is_object);
+			break;
+		case FPM_IN_BYREF_MOVEOWNER:	// object:>>
+			BOOST_ASSERT(is_object);
+			pname += ">>";
+			break;
+		case FPM_OUT_BYREF:	// primitive:default, object:default
+			pname = ">" + pname;
+			break;
+		case FPM_OUT_BYREFADDR: // object:@!
+			BOOST_ASSERT(is_object);
+			pname = ">@!" + pname;
+			break;
+		case FPM_OUT_BYREFADDR_GETOWNER: // object:>>
+			BOOST_ASSERT(is_object);
+			pname = ">>" + pname;
+			break;
+		case FPM_IN_VARIADIC:	// primitive:byVal, object:byRef
+		case FPM_OUT_VARIADIC: // primitive:byRef, object:byRef
+			pname += "...";
+			break;
+	}
+	return pname;
+}
+
 vector<string> PlnFunction::getParamStrs() const
 {
 	vector<string> param_types;
-	for (auto p: parameters) {
-		string pname = p->var->var_type->name();
-		if (p->passby == FPM_OBJ_MOVEOWNER) 
-			pname += ">>";
-		else if (p->passby == FPM_OBJ_GETOWNER)
-			pname = ">" + pname;
-		if (p->var->name == "...")
-			pname += "...";
-		if (p->iomode == PIO_OUTPUT) {
-			pname = ">" + pname;
-		}
-		param_types.push_back(pname);
-	}
+	for (auto p: parameters)
+		param_types.push_back(getParamStr(p->var->var_type, p->passby));
+
 	return param_types;
 }
 

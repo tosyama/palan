@@ -13,6 +13,7 @@ int yylex();
 
 %token INT
 %token UINT
+%token FLOAT
 %token STR
 %token ID
 %token FUNC_ID
@@ -55,8 +56,9 @@ int yylex();
 %left OPE_EQ OPE_NE
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-' '|'
-%left '*' '/' '%' '&' '@'
-%left UMINUS '!'
+%left '*' '/' '%' '&'
+%left UMINUS '!' '@' '#'
+%left '.'
 
 %start module	
 %%
@@ -96,12 +98,11 @@ parameter_def: /* empty */
 parameters: parameter
 	| parameters ',' parameter
 	| parameters ',' ID default_value
-	| parameters ',' pass_by ID default_value
+	| parameters ',' DBL_GRTR ID default_value
 	;
 
 parameter: '@'
-	| type ID default_value
-	| type pass_by ID default_value
+	| type move_owner ID default_value
 	;
 
 out_parameter_def:
@@ -117,16 +118,10 @@ out_parameters: type ID move_owner
 
 move_owner: /* empty */
 	| DBL_GRTR
-	;
-
-pass_by: DBL_GRTR
-	;
+	; 
 
 default_value: /* empty */
-	| '=' ID
-	| '=' INT
-	| '=' UINT
-	| '=' strs
+	| '=' expression
 	;
 
 ccall_declaration: KW_CCALL FUNC_ID '(' parameter_def out_parameter_def ')' single_return at_lib';'
@@ -142,6 +137,30 @@ single_return: /* empty */
 at_lib: /* empty */
 	| ':' ID
 	| ':' STR
+	;
+
+statements:	/* empty */ { }
+	| statements statement
+	;
+
+statement: semi_stmt ';'
+	| while_statement
+	| if_statement
+	| function_definition
+	| block
+	;
+
+semi_stmt: st_expression
+	| type_def
+	| extern_var_def
+	| declarations
+	| declarations '=' expressions
+	| ID take_owner '=' expression 
+	| const_def
+	| return_stmt
+	| break_stmt
+	| continue_stmt
+	| increment
 	;
 
 function_definition: palan_function_definition
@@ -168,34 +187,6 @@ if_statement: KW_IF st_expression block else_statement
 else_statement:	/* empty */
 	| KW_ELSE block
 	| KW_ELSE if_statement
-	;
-
-statements:	/* empty */ { }
-	| statements statement
-	;
-
-statement: semi_stmt ';'
-	| while_statement
-	| if_statement
-	| function_definition
-	| block
-	;
-
-semi_stmt: st_expression
-	| type_def
-	| extern_var_def
-	| declarations
-	| declarations '=' expressions
-	| ID take_owner1 '=' expression 
-	| const_def
-	| return_stmt
-	| break_stmt
-	| continue_stmt
-	| increment
-	;
-
-take_owner1: /* empty */
-	| DBL_LESS
 	;
 
 st_expression: expression
@@ -243,45 +234,25 @@ arguments: argument
 	;
 
 argument: /* empty */
-	| expression move_owner
+	| expression arg_opt
+	;
+
+arg_opt: /* empty */
+	| DBL_GRTR
+	| '!'
 	;
 
 out_arguments: expression
 	| out_arguments ',' expression
-	| out_arguments ',' pass_by expression
+	| out_arguments ',' DBL_GRTR expression
 	;
 
 dst_vals: dst_val
 	| dst_vals ',' dst_val
 	;
 
-dst_val: move_owner var_expression
+dst_val: move_owner var_expression arg_opt
 	;
-
-var_expression: var_exp_ids force_write
-	| var_exp_affixes force_write
-	;
-
-force_write: /* empty */
-	| '!'
-	;
-
-var_exp_ids: ids
-	| var_exp_affixes '.' ids
-	;
-
-ids: ID
-	| ids '.' ID
-	;
-
-var_exp_affixes: var_exp_ids var_affixes
-	;
-
-array_vals: array_val
-	| array_vals array_val
-	;
-
-array_val: '[' array_items ']'
 
 term: literal
 	| var_expression
@@ -291,6 +262,7 @@ term: literal
 
 literal: INT
 	| UINT
+	| FLOAT
 	| strs
 	;
 
@@ -298,18 +270,41 @@ strs: STR
 	| strs STR
 	;
 
-assignment: expressions arrow_ope dst_vals
-	| assignment arrow_ope dst_vals
-	| chain_call arrow_ope dst_vals
+var_expression: ID 
+	| var_expression array_val
+	| var_expression '.' ID
+	| var_expression '.' func_call
+	;
+
+array_vals: array_val
+	| array_vals array_val
+	;
+
+array_val: '[' array_items ']'
+	;
+
+array_items: array_item
+	| array_items ',' array_item
+	;
+
+array_item: /* empty */
+	| expression
+	| '?'
+	;
+
+chain_src: arguments 
+	| assignment
+	| chain_call
+	;
+
+assignment: chain_src arrow_ope dst_vals
+	;
+
+chain_call: chain_src arrow_ope func_call
 	;
 
 arrow_ope: ARROW
 	| DBL_ARROW
-	;
-
-chain_call: expressions arrow_ope func_call
-	| chain_call arrow_ope func_call
-	| assignment arrow_ope func_call
 	;
 
 type_def: KW_TYPE ID
@@ -317,8 +312,8 @@ type_def: KW_TYPE ID
 	| KW_TYPE ID '=' type 
 	;
 
-extern_var_def: KW_EXTERN type ids
-	| extern_var_def ',' ids
+extern_var_def: KW_EXTERN type ID
+	| extern_var_def ',' ID
 	;
 
 struct_def: type ID
@@ -332,9 +327,11 @@ declarations: declaration
 	;
 
 declaration: var_type ID take_owner
+	| var_type ID '.' func_call
 	;
 
 subdeclaration: ID take_owner
+	| ID '.' func_call
 	;
 
 take_owner: /* empty */
@@ -349,31 +346,20 @@ var_type: KW_AUTOTYPE
 	| type
 	;
 
-type: ids
-	| var_affixes ids
+type: ID
+	| type_prefix_ref ID
+	| type_prefix_arr ID
 	;
 
-var_affixes: var_affixes_arr
-	| var_affixes_ref
+type_prefix_ref: '@'
+	| AT_EXCL
+	| '#'
+	| type_prefix_arr '@'
+	| type_prefix_arr AT_EXCL
 	;
 
-var_affixes_arr: array_vals
-	| var_affixes_ref array_vals
-	;
-
-var_affixes_ref: ref_mark
-	| var_affixes_arr ref_mark
-	;
-
-ref_mark: '@' | AT_EXCL;
-
-array_items: array_item
-	| array_items ',' array_item
-	;
-
-array_item: /* empty */
-	| expression
-	| '?'
+type_prefix_arr: array_vals
+	| type_prefix_ref array_vals
 	;
 
 const_def: KW_CONST const_names '=' expressions;
@@ -381,8 +367,10 @@ const_names: ID
 	| const_names ',' ID
 	;
 
-increment: var_expression DBL_PLUS
-	| var_expression DBL_MINUS
+increment: expression inc_ope
+	;
+
+inc_ope: DBL_PLUS | DBL_MINUS
 	;
 
 %%

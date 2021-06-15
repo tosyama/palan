@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -11,10 +11,17 @@ public:
 	static PlnExpression* getAllocEx(PlnVariable* var);
 };
 
+class PlnInternalAllocator {
+public:
+	virtual PlnExpression* getInternalAllocEx(PlnExpression* base_var) = 0;
+	static PlnExpression* getInternalAllocEx(PlnVariable* var);
+};
+
 class PlnFreer {
 public:
 	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
 	static PlnExpression* getFreeEx(PlnVariable* var);
+	static PlnExpression* getInternalFreeEx(PlnVariable* var);
 };
 
 class PlnDeepCopyExpression;
@@ -47,20 +54,16 @@ class PlnType {
 public:
 	PlnTypeType type;
 	int	data_type;
+	int data_size;
 	string name;
 	string default_mode;
-	int size;
-	union {
-		struct {
-			bool is_fixed_size;
-			int alloc_size;
-		} obj;
-	} inf;
 
 	vector<PlnVarType*> var_types;
 
 	PlnAllocator *allocator;
+	PlnInternalAllocator *internal_allocator;
 	PlnFreer *freer;
+	PlnFreer *internal_freer;
 	PlnCopyer *copyer;
 
 	struct PlnTypeConvInf {
@@ -98,13 +101,22 @@ public:
 	string mode;
 
 	const string& name() { return typeinf->name; }
-	int data_type() { return typeinf->data_type; }
-	int size() { return typeinf->size; }
+	int data_type();
+	int size();
 	PlnExpression *getAllocEx() {
 		if (!typeinf->allocator) return NULL;
 		return typeinf->allocator->getAllocEx();
 	}
+	PlnExpression *getInternalAllocEx(PlnExpression *base_var) {
+		if (!typeinf->internal_allocator) return NULL;
+		return typeinf->internal_allocator->getInternalAllocEx(base_var);
+	}
+
 	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
+	PlnExpression *getInternalFreeEx(PlnExpression* free_var) {
+		if (!typeinf->internal_freer) return NULL;
+		return typeinf->internal_freer->getFreeEx(free_var);
+	}
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
 		if (!typeinf->copyer) return NULL;
 		return typeinf->copyer->getCopyEx(dst_var, src_var);

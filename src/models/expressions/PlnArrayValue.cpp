@@ -184,9 +184,11 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
 
-		values[0].inf.wk_type = types[0];
 		if (isLiteral && atype->item_type->data_type() != DT_OBJECT_REF) {
 			doCopyFromStaticBuffer = true;
+			values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+		} else {
+			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
 		}
 		return this;
 
@@ -195,10 +197,12 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 		adjustStructType(this, stype);
 
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
-		values[0].inf.wk_type = types[0];
 
 		if (isLiteral && !stype->has_object_member) {
 			doCopyFromStaticBuffer = true;
+			values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+		} else {
+			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
 		}
 
 		return this;
@@ -370,7 +374,7 @@ PlnDataPlace* PlnArrayValue::getROStructDp(PlnDataAllocator& da)
 	for (auto member: stype->members) {
 		PlnRoData datainf;
 		datainf.data_type = member->type->data_type();
-		datainf.size = member->type->typeinf->size;
+		datainf.size = member->type->size();
 		datainf.alignment = calcAlign(member->offset);
 		if (datainf.data_type == DT_SINT || datainf.data_type == DT_UINT) {
 			datainf.val.i = getInt(item_exps[i]);

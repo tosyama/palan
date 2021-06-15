@@ -238,8 +238,8 @@ void PlnBlock::declareType(const string& type_name)
 	PlnType* t = new PlnType();
 	t->name = type_name;
 	t->default_mode = "wmr";
-	t->data_type = DT_OBJECT_REF;
-	t->size = 8;
+	t->data_type = DT_OBJECT;
+	t->data_size = 0;
 	types.push_back(t);
 }
 
@@ -413,28 +413,28 @@ PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_i
 					// Check conpatibilty of type.
 					PlnAsgnType atype;
 					switch (p->passby) {
-						case FPM_VAR_COPY:
-							if (p->var->var_type->data_type() == DT_OBJECT_REF) {
-								atype = ASGN_COPY_REF;
-								break;
-							} else {
-								atype = ASGN_COPY;
-								break;
-							}
-						case FPM_OBJ_CLONE:
+						case FPM_IN_BYVAL:
 							atype = ASGN_COPY; break;
-						case FPM_OBJ_MOVEOWNER:
-						case FPM_OBJ_GETOWNER:
-							atype = ASGN_MOVE; break;
-						case FPM_VAR_REF:
+						case FPM_IN_BYREF:
 							atype = ASGN_COPY_REF; break;
+						case FPM_IN_BYREF_CLONE:
+							atype = ASGN_COPY; break;
+						case FPM_IN_BYREF_MOVEOWNER:
+							atype = ASGN_MOVE; break;
+						case FPM_OUT_BYREF:
+							atype = ASGN_COPY_REF; break;
+						case FPM_OUT_BYREFADDR:
+							atype = ASGN_COPY_REF; break;
+						case FPM_OUT_BYREFADDR_GETOWNER:
+							atype = ASGN_MOVE; break;
+
 						default:
 							BOOST_ASSERT(false);
 					}
 					PlnTypeConvCap cap = p->var->var_type->canCopyFrom(ainf.var_type, atype);
 					if (cap == TC_CANT_CONV) goto next_func;
 
-					bool is_move = p->passby == FPM_OBJ_MOVEOWNER || p->passby == FPM_OBJ_GETOWNER;
+					bool is_move = p->passby == FPM_IN_BYREF_MOVEOWNER || p->passby == FPM_OUT_BYREFADDR_GETOWNER;
 
 					if (is_move && ainf.opt != AG_MOVE) {
 						goto next_func;
@@ -510,13 +510,21 @@ next:	;
 
 void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	for (auto v: variables) {
-		if (parent_block && v->var_type->mode[ALLOC_MD]=='h') {
-			auto lt = si.get_lifetime(v);
-			if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
-				PlnExpression* free_var = PlnFreer::getFreeEx(v);
-				free_var->finish(da, si);
-				free_vars.push_back(free_var);
+	if (parent_block) {
+		for (auto v: variables) {
+			if (v->var_type->mode[ALLOC_MD]=='h') {
+				auto lt = si.get_lifetime(v);
+				if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
+					PlnExpression* free_var = PlnFreer::getFreeEx(v);
+					free_var->finish(da, si);
+					free_vars.push_back(free_var);
+				}
+			} else if (v->var_type->data_type() == DT_OBJECT) {
+				PlnExpression* free_var = PlnFreer::getInternalFreeEx(v);
+				if (free_var) {
+					free_var->finish(da, si);
+					free_vars.push_back(free_var);
+				}
 			}
 		}
 	}

@@ -227,7 +227,7 @@ void normalCaseTest()
 
 	testcode = "031_regalloc";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "23.23 2 11 2.43 4.41 2.20 38 161 38 161 8T TTT\n"
+	REQUIRE(exec(testcode) == "23.23 2 11 2.43 4.41 2.20 38 161 34 38 161 8T TTT\n"
 						"3 17 5 17 3ACB 3.2 3.3 3.9");
 
 	testcode = "032_ptrptr";
@@ -243,6 +243,15 @@ void normalCaseTest()
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "1 -4 !23 !23 12 23.2\n"
 								"9 " );
+
+	testcode = "035_structonstack";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "136115 16 2");
+	CHECK(mcheck("mtrace035") == "+1 -1");
+
+	testcode = "036_methodcall";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
@@ -313,7 +322,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Can not use dynamic expression for const 'N'.");
 
 	testcode = "518_invalid_constuse_err";
-	REQUIRE(build(testcode) == "0:3-3 Can not use the operator for 'N'.");
+	REQUIRE(build(testcode) == "0:3-3 Can not use the index operator for 'N'.");
 
 	testcode = "519_duplicate_func_err";
 	REQUIRE(build(testcode) == "0:7-7 Function 'test' already defined.");
@@ -364,7 +373,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "539_not_var_sytax_err";
-	REQUIRE(build(testcode) == "0:1-1 syntax error, unexpected '=', expecting ->> or -> or ','");
+	REQUIRE(build(testcode) == "0:1-1 syntax error, unexpected '=', expecting ->> or ->");
 
 	testcode = "540_noinit_autotype_err";
 	REQUIRE(build(testcode) == "0:1-1 Type of variable 'c' is ambiguous.");
@@ -391,7 +400,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Can't use read-only expression here.");
 
 	testcode = "551_constarr_mv_err2";
-	REQUIRE(build(testcode) == "finish:0:3-3 Can not move ownership from 'array value'.");
+	REQUIRE(build(testcode) == "0:3-3 Can not move ownership from 'array value'.");
 
 	testcode = "552_ambigfunc_err2";
 	REQUIRE(build(testcode) == "0:11-11 Ambiguous function call 'afunc'.");
@@ -497,7 +506,7 @@ TEST_CASE("Compile error test", "[basic]")
 
 	// fixed array type compatiblity check.(600-608)
 	testcode = "600_fixedarray_typecmp_err1";
-	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'writable'.\nCandidate: writable([10]byte)");
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'writable'.\nCandidate: writable(@![10]byte)");
 
 	testcode = "601_fixedarray_typecmp_err2";
 	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'movable'.\nCandidate: movable([10]byte>>)");
@@ -506,22 +515,22 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 No matching function for call to 'movable'.\nCandidate: movable([10]byte>>)");
 
 	testcode = "603_fixedarray_typecmp_err4";
-	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize([?,2]int32)");
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize(@[?,2]int32)");
 
 	testcode = "604_fixedarray_typecmp_err5";
-	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize([?,2]int32)");
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonlyanysize'.\nCandidate: readonlyanysize(@[?,2]int32)");
 
 	testcode = "605_fixedarray_typecmp_err6";
-	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly(@[10,2]int32)");
 	
 	testcode = "606_fixedarray_typecmp_err7";
-	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+	REQUIRE(build(testcode) == "0:7-7 No matching function for call to 'readonly'.\nCandidate: readonly(@[10,2]int32)");
 
 	testcode = "607_fixedarray_typecmp_err8";
-	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+	REQUIRE(build(testcode) == "0:6-6 No matching function for call to 'readonly'.\nCandidate: readonly(@[10,2]int32)");
 
 	testcode = "608_fixedarray_typecmp_err9";
-	REQUIRE(build(testcode) == "0:5-5 No matching function for call to 'readonly'.\nCandidate: readonly([10,2]int32)");
+	REQUIRE(build(testcode) == "0:5-5 No matching function for call to 'readonly'.\nCandidate: readonly(@[10,2]int32)");
 
 	testcode = "609_nosizearray_alloc_err";
 	REQUIRE(build(testcode) == "0:1-1 Can not allocate memory for [?,3]int32.");

@@ -1,19 +1,22 @@
 /// Function model declaration.
 ///
 /// @file	PlnFunction.h
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
 enum PlnPassingMethod {
 	FPM_UNKNOWN,
-	FPM_VAR_COPY,
-	FPM_VAR_REF,
-	FPM_OBJ_CLONE,
-	FPM_OBJ_MOVEOWNER,
-	FPM_OBJ_GETOWNER,
-	FPM_ANY_IN,
-	FPM_ANY_OUT,
+
+	FPM_IN_BYVAL,	// primitive:default, object:#
+	FPM_IN_BYREF,	// primitive:@, object:@ or @!
+	FPM_IN_BYREF_CLONE,	// object:default
+	FPM_IN_BYREF_MOVEOWNER,	// object:>>
+	FPM_IN_VARIADIC,	// primitive:byVal, object:byRef
+	FPM_OUT_BYREF,	// primitive:default, object:default
+	FPM_OUT_BYREFADDR, // object:@!
+	FPM_OUT_BYREFADDR_GETOWNER, // object:>>
+	FPM_OUT_VARIADIC, // primitive:byRef, object:byRef
 };
 
 enum {
@@ -80,5 +83,7 @@ public:
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);	// throw PlnCompileError;
 	void gen(PlnGenerator& g);
 	void clear();
+
+	static string getParamStr(PlnVarType* vtype, PlnPassingMethod passby);
 };
 
