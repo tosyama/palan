@@ -778,11 +778,17 @@ void registerType(json& type, PlnScopeStack &scope)
 		assertAST(type["members"].is_array(), type);
 
 		vector<PlnStructMemberDef*> members;
+		PlnVarType* pre_type = NULL;
 		for (auto m: type["members"]) {
 			PlnVarType* t = getVarTypeFromJson(m["type"], scope);
+			if (!t) {
+				BOOST_ASSERT(pre_type);
+				t = pre_type;
+			}
 
 			auto member = new PlnStructMemberDef(t, m["name"]);
 			members.push_back(member);
+			pre_type = t;
 		}
 		CUR_BLOCK->declareType(type_name, members);
 	

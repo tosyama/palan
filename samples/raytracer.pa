@@ -44,8 +44,8 @@ type jpeg_error_mgr {
   //  int i[8];
   //  char s[JMSG_STR_PARM_MAX];
   //} msg_parm;
-  int64 msg_param0; int64 msg_param1; int64 msg_param2; int64 msg_param3; int64 msg_param4;
-  int64 msg_param5; int64 msg_param6; int64 msg_param7; int64 msg_param8; int64 msg_param9;
+  int64 msg_param0, msg_param1, msg_param2, msg_param3, msg_param4;
+  int64 msg_param5, msg_param6, msg_param7, msg_param8, msg_param9;
   int32 trace_level;
   int64 num_warnings;
   ptr jpeg_message_table;
