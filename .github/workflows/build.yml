@@ -17,5 +17,5 @@ jobs:
     - name: make
       run: make coverage
     - name: send to coveralls
-      run: coveralls -b src --gcov gcov-5 --exclude libs --exclude src/test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
+      run: coveralls -b src --exclude libs --exclude src/test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
 
