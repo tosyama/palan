@@ -1,16 +1,14 @@
 name: C/C++ CI
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+    - name: prepare coveralls
+      run: pip install --user cpp-coveralls
     - uses: actions/checkout@v2
       with:
         submodules: true
@@ -18,3 +16,6 @@ jobs:
       run: sudo make package
     - name: make
       run: make
+    - name: send to coveralls
+      run: coveralls -b src --gcov gcov-5 --exclude libs --exclude src/test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT
+
