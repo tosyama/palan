@@ -9,15 +9,21 @@ jobs:
     steps:
     - name: prepare lcov
       run: sudo apt-get install lcov
+
     - uses: actions/checkout@v2
       with:
         submodules: true
+
     - name: make package
       run: sudo make package
     - name: make
       run: make coverage
+
     - name: lcov
-      run: lcov -c -d . -o lcov.info
+      run: |
+        lcov -c -d . -b src -o lcov.info
+        lcov -e -o lcov.info */palan/src/* -o lcov.info
+
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
