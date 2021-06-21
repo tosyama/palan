@@ -16,6 +16,6 @@ jobs:
       run: sudo make package
     - name: make
       run: make coverage
-    - name: send to coveralls
-      run: coveralls -b src --exclude libs --exclude src/test --gcov-options '\-lp' --exclude-lines-pattern BOOST_ASSERT -t vqkCTuaT6CALS6yHvqMUFrplHcByvUmIx
+    - name: lcov
+      run: lcov -c -d . -o lcov.info
 
