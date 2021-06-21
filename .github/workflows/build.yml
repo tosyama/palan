@@ -18,4 +18,9 @@ jobs:
       run: make coverage
     - name: lcov
       run: lcov -c -d . -o lcov.info
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./lcov.info
 
