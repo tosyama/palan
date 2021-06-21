@@ -88,6 +88,7 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 			{
 				return int64_of(l) == int64_of(r);
 			}
+// LCOV_EXCL_START
 		case OP_LBL: 
 			BOOST_ASSERT(false);
 		case OP_LBLADRS: 
@@ -96,6 +97,7 @@ static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 			BOOST_ASSERT(false);
 	}
 }
+// LCOV_EXCL_STOP
 
 PlnX86_64Generator::PlnX86_64Generator(ostream& ostrm)
 	: PlnGenerator(ostrm), require_align(false), max_const_id(0), func_stack_size(0)
@@ -1161,7 +1163,7 @@ static int setMove2GenInfo(int pattern, GenInfo genInfos[3])
 	};
 
 	BOOST_ASSERT(false);
-}
+} // LCOV_EXCL_LINE
 
 inline void adjustRegSize(PlnOperandInfo* reg_ope, int size)
 {
@@ -1506,7 +1508,7 @@ static int setNumCalc2GenInfo(CalcOperation calc, int pattern, GenInfo genInfos[
 		}
 	}
 	BOOST_ASSERT(false);
-}
+} // LCOV_EXCL_LINE
 
 static void genCalc(PlnX86_64RegisterMachine &m, CalcOperation calc, PlnGenEntity* tgt, PlnGenEntity* scnd, string& comment)
 {

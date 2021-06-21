@@ -1,7 +1,7 @@
 /// Object Array value class difinition.
 ///
 /// @file	PlnArrayValue.cpp
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
@@ -357,10 +357,9 @@ double getFloat(PlnExpression *exp) {
 	PlnValue &val = exp->values[0];
 	if (val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8) {
 		return val.inf.intValue;
-	} else if (val.type == VL_LIT_FLO8) {
-		return val.inf.floValue;;
-	} else
-		BOOST_ASSERT(false);
+	}
+	BOOST_ASSERT(val.type == VL_LIT_FLO8);
+	return val.inf.floValue;;
 }
 
 PlnDataPlace* PlnArrayValue::getROStructDp(PlnDataAllocator& da)

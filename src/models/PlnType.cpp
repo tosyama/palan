@@ -376,10 +376,8 @@ PlnTypeConvCap PlnType::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
 		return TC_LOSTABLE_AUTO_CAST;
 	}
 
-	if (l == TC_CANT_CONV)
-		return TC_CANT_CONV;
-
-	BOOST_ASSERT(false);
+	BOOST_ASSERT(l == TC_CANT_CONV);
+	return TC_CANT_CONV;
 }
 
 PlnVarType* PlnType::getVarType(const string& mode)

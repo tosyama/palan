@@ -4,7 +4,7 @@
 /// depend on command-line options.
 ///
 /// @file	palan.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -174,10 +174,12 @@ int main(int argc, char* argv[])
 					try {
 						j = json::parse(pat_output);
 
+					// LCOV_EXCL_START
 					} catch (json::exception& e) {
 						cerr << e.what() << endl;
 						BOOST_ASSERT(false);
 					}
+					// LCOV_EXCL_STOP
 				}
 
 				int ret = getStatus(pclose(outf));
