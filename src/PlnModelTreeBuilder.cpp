@@ -235,11 +235,11 @@ static int getIomode(PlnPassingMethod pm)
 		case FPM_OUT_BYREFADDR_GETOWNER:
 		case FPM_OUT_VARIADIC:
 			return PIO_OUTPUT;
-		default:
-			BOOST_ASSERT(false);
-			// return PIO_UNKNOWN;
+	//	default:
+	//		return PIO_UNKNOWN;
 	}
-}
+	BOOST_ASSERT(false);
+} // LCOV_EXCL_LINE
 
 void registerPrototype(json& proto, PlnScopeStack& scope)
 {
@@ -420,7 +420,7 @@ static json& getFuncDef(json& ast, int id)
 		}
 	}
 	BOOST_ASSERT(false);
-}
+} // LCOV_EXCL_LINE
 
 static void prebuildBlock(json& stmts, PlnScopeStack& scope, json& ast)
 {
@@ -579,7 +579,7 @@ static PlnVarType* getDefaultType(PlnValue &val, PlnBlock *block)
 		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->typeinf)->getDefaultType(block);
 	else
 		BOOST_ASSERT(false);
-}
+} // LCOV_EXCL_LINE
 
 static void inferArrayIndex(json& var, vector<int> sizes)
 {
@@ -778,11 +778,17 @@ void registerType(json& type, PlnScopeStack &scope)
 		assertAST(type["members"].is_array(), type);
 
 		vector<PlnStructMemberDef*> members;
+		PlnVarType* pre_type = NULL;
 		for (auto m: type["members"]) {
 			PlnVarType* t = getVarTypeFromJson(m["type"], scope);
+			if (!t) {
+				BOOST_ASSERT(pre_type);
+				t = pre_type;
+			}
 
 			auto member = new PlnStructMemberDef(t, m["name"]);
 			members.push_back(member);
+			pre_type = t;
 		}
 		CUR_BLOCK->declareType(type_name, members);
 	
@@ -966,7 +972,7 @@ PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 	} else
 		BOOST_ASSERT(false);
 
-}
+} // LCOV_EXCL_LINE
 
 PlnExpression* buildExpression(json& exp, PlnScopeStack &scope)
 {

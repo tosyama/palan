@@ -1,20 +1,32 @@
-name: C/C++ CI
+name: build
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+    - name: prepare lcov
+      run: sudo apt-get install lcov
+
     - uses: actions/checkout@v2
       with:
         submodules: true
+
     - name: make package
       run: sudo make package
     - name: make
-      run: make
+      run: make coverage
+
+    - name: lcov
+      run: |
+        lcov -c -d . -b src -o all.info
+        lcov -e all.info */palan/src/* -o lcov.info
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./lcov.info
+

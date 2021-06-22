@@ -383,7 +383,7 @@ RegUsedBlock* searchLabledBlock(vector<RegUsedBlock*> &blocks, string &lable)
 			return b;
 	}
 	BOOST_ASSERT(false);
-}
+} // LCOV_EXCL_LINE
 
 static void mergeBlocksVec(vector<RegUsedBlock*> &blocks1, vector<RegUsedBlock*> &blocks2);
 static void updateBlock(vector<RegUsedBlock*> &blocks, RegUsedBlock* b1, RegUsedBlock* b2);

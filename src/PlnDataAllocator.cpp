@@ -499,10 +499,10 @@ bool PlnDataAllocator::isDestroyed(PlnDataPlace* dp)
 		case DP_BYTES:
 		case DP_STK_BP:
 			return false;
-		default: // not implemented.
-			BOOST_ASSERT(false);
 	}
-}
+	// not implemented.
+	BOOST_ASSERT(false);
+} // LCOV_EXCL_LINE
 
 bool tryAccelerateAlloc(PlnDataPlace *dp, int push_step)
 {

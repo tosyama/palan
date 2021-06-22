@@ -3,7 +3,7 @@
 /// Imprementation of all assignment item.
 ///
 /// @file	PlnAssignItem.cpp
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2021 YAMAGUCHI Toshinobu 
 
 #include <iostream>
 #include <boost/assert.hpp>
@@ -35,7 +35,11 @@ public:
 
 	virtual PlnAsgnType getAssginType() = 0;
 	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
-	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) { BOOST_ASSERT(false); }
+	// LCOV_EXCL_START
+	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) {
+		BOOST_ASSERT(false);
+	}
+	// LCOV_EXCL_STOP
 	virtual void gen(PlnGenerator& g) = 0;
 
 	static PlnDstItem* createDstItem(PlnExpression* ex, bool need_save);
@@ -122,7 +126,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 	}
 
 	BOOST_ASSERT(false);
-}
+}	// LCOV_EXCL_LINE
 
 #include "PlnDstPrimitiveItem.h"
 #include "PlnDstCopyObjectItem.h"

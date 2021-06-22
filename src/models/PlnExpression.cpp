@@ -4,7 +4,7 @@
 /// The values are set specified place.
 ///
 /// @file	PlnExpression.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -98,7 +98,7 @@ PlnVarType* PlnValue::getVarType()
 			return inf.wk_type;
 	}
 	BOOST_ASSERT(false);
-}
+}	// LCOV_EXCL_LINE
 
 PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 {
@@ -150,7 +150,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 				return da.getSeparatedDp(inf.var->place);
 	}
 	BOOST_ASSERT(false);
-}
+}	// LCOV_EXCL_LINE
 
 // PlnExpression
 PlnExpression::PlnExpression(PlnValue value) : type(ET_VALUE)

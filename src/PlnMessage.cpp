@@ -3,7 +3,7 @@
 /// Manage output message descriptions in Palan compiler.
 ///
 /// @file	PlnMessage.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include "PlnMessage.h"
 #include "boost/format.hpp"
@@ -138,7 +138,7 @@ const char* PlnMessage::getHelp(PlnHelpCode help_code)
 			return "Specify input palan source file";
 	}
 	BOOST_ASSERT(false);
-}
+}	// LCOV_EXCL_LINE
 
 string PlnMessage::floatNumber()
 {

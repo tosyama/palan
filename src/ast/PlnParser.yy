@@ -1214,6 +1214,14 @@ struct_def: type ID
 		};
 		$$.push_back(member);
 	}
+	| struct_def ',' ID
+	{
+		$$ = move($1);
+		json member = {
+			{"name", $3},
+		};
+		$$.push_back(member);
+	}
 	| struct_def ';'
 	{
 		$$ = move($1);

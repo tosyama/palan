@@ -1,7 +1,7 @@
 /// Array value type class declaration.
 ///
 /// @file	PlnArrayValueType.cpp
-/// @copyright	2019-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
@@ -46,7 +46,11 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 	throw err;
 }
 
-PlnTypeConvCap PlnArrayValueType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) { BOOST_ASSERT(false); }
+// LCOV_EXCL_START
+PlnTypeConvCap PlnArrayValueType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) {
+	BOOST_ASSERT(false);
+}
+// LCOV_EXCL_STOP
 
 static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarType* item_type, const vector<int>& sizes, int depth)
 {
@@ -81,25 +85,20 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarTyp
 
 PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnVarType* item_type, const vector<int>& sizes)
 {
-	if (arr_val) {
-		return checkFixedArrayItemTypes(arr_val, item_type, sizes, 0);
-
-	} else {
-		BOOST_ASSERT(false);
-	}
+	BOOST_ASSERT(arr_val);
+	return checkFixedArrayItemTypes(arr_val, item_type, sizes, 0);
 }
 
 vector<int> PlnArrayValueType::getArraySizes()
 {
-	if (arr_val) {
-		vector<int> fixarr_sizes;
-		int item_type;
-		if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, item_type)) {
-			BOOST_ASSERT(fixarr_sizes.back() == 0);
-			fixarr_sizes.pop_back();
+	BOOST_ASSERT(arr_val);
+	vector<int> fixarr_sizes;
+	int item_type;
+	if (PlnArrayValue::isFixedArray(arr_val->item_exps, fixarr_sizes, item_type)) {
+		BOOST_ASSERT(fixarr_sizes.back() == 0);
+		fixarr_sizes.pop_back();
 
-			return fixarr_sizes;
-		}
+		return fixarr_sizes;
 	}
 	BOOST_ASSERT(false);
-}
+}	// LCOV_EXCL_LINE

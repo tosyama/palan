@@ -133,6 +133,15 @@ type Test3 {
 	int32 d;
 };
 
+type Test4 {
+	int64 a, b;
+	[4]int16 x, y;
+};
+
+Test4 t4;
+12 -> t4.y[3];
+
+
 func copyParam(Test3 t)
 {
 }

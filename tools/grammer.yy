@@ -318,6 +318,7 @@ extern_var_def: KW_EXTERN type ID
 
 struct_def: type ID
 	| struct_def ';' type ID
+	| struct_def ',' ID
 	| struct_def ';'
 	;
 
