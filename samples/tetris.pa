@@ -116,7 +116,7 @@ is_falling = true;
 deleted_lines = 0;
 
 while is_running {
-	const KEYQ = 113;
+	const KEYQ = 0x71;
 	ch = getch();
 	if ch == KEYQ
 		{ false -> is_running }

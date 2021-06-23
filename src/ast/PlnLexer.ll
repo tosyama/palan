@@ -70,6 +70,7 @@ static string& unescape(string& str);
 
 DIGIT	[0-9]+
 UDIGIT	[0-9]+"u"
+HEX		"0x"[0-9a-f]+
 FLOAT	[0-9]+"."[0-9]+
 FLO_EX	[0-9]+"."[0-9]+"e"("+"|"-")?[0-9]+
 DIGIT_MIN	"-9223372036854775808"
@@ -94,8 +95,8 @@ POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
 %}
 
 {COMMENT1}	{ loc.lines(); loc.step(); }
-{UDIGIT}	{
-			lval.build<uint64_t>() = std::stoull(yytext);
+{UDIGIT}|{HEX}	{
+			lval.build<uint64_t>() = std::stoull(yytext, NULL, 0);
 			return UINT;
 	}
 {DIGIT_MIN} {
@@ -116,7 +117,7 @@ POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
 {FLOAT}|{FLO_EX}	{
 			lval.build<double>() = std::stod(yytext);
 			return FLOAT;
-		}
+	}
 type/{POST_KW}		{ return KW_TYPE; }
 ccall/{POST_KW}		{ return KW_CCALL; }
 syscall/{POST_KW}	{ return KW_SYSCALL; }

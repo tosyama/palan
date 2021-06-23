@@ -218,11 +218,12 @@ Expression
 	    *   info\* - token information
 
 *   arg-option - Argument option string: "none", "move-owner", "get-owner", "writable-ref"
+
 *   loc - Location integer array
 
 Destination Value
 ------------------
-*	exp - Destination value expression
+*   exp - Destination value expression
 *   arg-option\* - Option string: "none", "move-owner",  "writable-ref"
 *   get-owner\* - get ownership flag boolean
 *   loc - Location integer array

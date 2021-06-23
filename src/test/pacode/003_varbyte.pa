@@ -6,7 +6,7 @@ byte c,d = b+1+a, b-a;
 {
 	byte tmp = d+1;	// tmp memory should be share with e.
 }
-byte e = 255;
+byte e = 0xff;
 int64 i = e+a;
 byte i2 = 3*a;
 byte i3 = a*b;
