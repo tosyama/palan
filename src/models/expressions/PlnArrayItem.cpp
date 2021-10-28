@@ -142,6 +142,9 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		da.popSrc(index_dp);
 	
 	if (data_places.size()) {
+		if (item_dp->data_type == DT_OBJECT) {
+			data_places[0]->load_address = true;
+		}
 		da.pushSrc(data_places[0], item_dp);
 	}
 }

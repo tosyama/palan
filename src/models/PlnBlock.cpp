@@ -308,6 +308,7 @@ string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vect
 	boost::replace_all(fname, "]", "_");
 	boost::replace_all(fname, ",", "_");
 	boost::replace_all(fname, "@", "R_");
+	boost::replace_all(fname, "#", "S_");
 	return fname;
 }
 

@@ -174,6 +174,28 @@ static void adjustStructType(PlnArrayValue* arr_val, PlnStructType* stype)
 	}
 }
 
+static bool isIncludesObjectRefMember(PlnVarType* item_type)
+{
+	if (item_type->typeinf->type == TP_FIXED_ARRAY) {
+		PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(item_type->typeinf);
+		PlnVarType* sub_item_type = farr_type->item_type;
+		
+		if (sub_item_type->data_type() == DT_OBJECT_REF)
+			return true;
+		else if (sub_item_type->data_type() == DT_OBJECT)
+			return isIncludesObjectRefMember(sub_item_type);
+		else
+			return false;
+
+	} else if (item_type->typeinf->type == TP_STRUCT) {
+		BOOST_ASSERT(false);
+
+	} else {
+		BOOST_ASSERT(false);
+	}
+	return false;
+}
+
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
@@ -185,8 +207,20 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
 
 		if (isLiteral && atype->item_type->data_type() != DT_OBJECT_REF) {
-			doCopyFromStaticBuffer = true;
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+			if (atype->item_type->data_type() == DT_OBJECT) {
+				// Check recursively if item_type includes DT_OBJECT_REF.
+				if (isIncludesObjectRefMember(atype->item_type)) {
+					values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+
+				} else {	// Dynamic allcation only object.
+					doCopyFromStaticBuffer = true;
+					values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+				}
+
+			} else {	// item data_type == DT_INT .. DT_FLOAT
+				doCopyFromStaticBuffer = true;
+				values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+			}
 		} else {
 			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
 		}
@@ -308,14 +342,36 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 	return items;
 }
 
+// return DT_OBJECT if element is struct.
+void setElementType(PlnVarType* item_type, int &ele_type, int& ele_size)
+{
+	ele_type = item_type->data_type();
+	ele_size = item_type->size();
+
+	if (ele_type == DT_SINT || ele_type == DT_UINT || ele_type == DT_FLOAT)
+		return;
+	
+	if (item_type->typeinf->type == TP_FIXED_ARRAY) {
+		PlnVarType* sub_item_type = static_cast<PlnFixedArrayType*>(item_type->typeinf)->item_type;
+		setElementType(sub_item_type, ele_type, ele_size);
+		return;
+	}
+
+	BOOST_ASSERT(false);
+}
+
 PlnDataPlace* PlnArrayValue::getROArrayDp(PlnDataAllocator& da)
 {
 	BOOST_ASSERT(doCopyFromStaticBuffer);
 	BOOST_ASSERT(values[0].inf.wk_type->typeinf->type == TP_FIXED_ARRAY);
 
 	PlnVarType* item_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type->typeinf)->item_type;
-	int ele_type = item_type->data_type();
-	int ele_size = item_type->size();
+//	int ele_type = item_type->data_type();
+//	int ele_size = item_type->size();
+	
+	int ele_type;
+	int ele_size;
+	setElementType(item_type, ele_type, ele_size);
 
 	PlnDataPlace* dp;
 	if (ele_type == DT_SINT || ele_type == DT_UINT) {

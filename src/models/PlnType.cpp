@@ -338,8 +338,11 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	arr_name.back() = ']';
 
 	string item_name = item_type->name();
-	if (item_type->mode == "rir")
+	if (item_type->mode == "rir") {
 		item_name = "@" + item_name;
+	} else if (item_type->data_type() == DT_OBJECT) {
+		item_name = "#" + item_name;
+	}
 	
 	return arr_name + item_name;
 }

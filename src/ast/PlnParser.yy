@@ -1352,6 +1352,12 @@ type_prefix_ref: '@'
 		$1.push_back(move(t));
 		$$ = move($1);
 	}
+	| type_prefix_arr '#'
+	{
+		json t = { { "mode", "wis" } };
+		$1.push_back(move(t));
+		$$ = move($1);
+	}
 	;
 
 type_prefix_arr: array_vals

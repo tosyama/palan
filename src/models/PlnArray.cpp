@@ -53,6 +53,38 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	return f;
 }
 
+PlnFunction* PlnArray::createObjArrayInternalAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+{
+	PlnVarType* it = arr_type->item_type;
+	int item_num = arr_type->data_size / it->size();
+
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+	f->parent = block;
+	string s1 = "__p1";
+	PlnVariable* param_var = f->addParam(s1, arr_type->getVarType("wir"), PIO_INPUT, FPM_IN_BYREF, NULL);
+
+	f->implement = new PlnBlock();
+	f->implement->setParent(f);
+
+	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
+	PlnBlock* wblock = palan::whileLess(f->implement, i, item_num);
+	{
+		PlnExpression* arr_item = palan::rawArrayItem(param_var, i, block);
+		arr_item->values[0].asgn_type = ASGN_COPY_REF;
+		vector<PlnExpression*> lvals = { arr_item };
+		PlnExpression* alloc_ex = it->getAllocEx();
+		BOOST_ASSERT(alloc_ex);
+		vector<PlnExpression*> exps = { alloc_ex };
+
+		auto assign = new PlnAssignment(lvals, exps);
+		wblock->statements.push_back(new PlnStatement(assign, wblock));
+
+		palan::incrementUInt(wblock, i, 1);
+	}
+
+	return f;
+}
+
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;

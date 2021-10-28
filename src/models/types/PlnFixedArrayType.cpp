@@ -39,9 +39,13 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	}
 
 	if (it->mode[ALLOC_MD] != 'h') {
-		allocator = new PlnSingleObjectAllocator(alloc_size);
-		freer = new PlnSingleObjectFreer();
-		copyer = new PlnSingleObjectCopyer(alloc_size);
+		if (!it->typeinf->internal_allocator) {
+			allocator = new PlnSingleObjectAllocator(alloc_size);
+			freer = new PlnSingleObjectFreer();
+			copyer = new PlnSingleObjectCopyer(alloc_size);
+		} else {
+			BOOST_ASSERT(false);
+		}
 
 	} else {
 		// allocator
@@ -68,6 +72,14 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, this, parent);
 			parent->parent_module->functions.push_back(copy_func);
 			copyer = new PlnTwoParamsCopyer(copy_func);
+		}
+
+		if (item_type->data_type() == DT_OBJECT_REF) {
+			string fname = PlnBlock::generateFuncName("internal_new", {this}, {});
+			PlnFunction* internal_alloc_func = PlnArray::createObjArrayInternalAllocFunc(fname, this, parent);
+			parent->parent_module->functions.push_back(internal_alloc_func);
+
+			internal_allocator = new PlnSingleParamInternalAllocator(internal_alloc_func);
 		}
 	}
 }
