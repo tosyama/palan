@@ -258,6 +258,9 @@ PlnAssignItem.o:  \
 	models/expressions/assignitem/PlnAssignIndirectObjItem.h \
 	models/expressions/assignitem/PlnChainAssignItem.h \
 	models/expressions/assignitem/PlnAssignArrayValue.h \
+	models/expressions/assignitem/arrval_imp/PlnAssignArrayValue_Static.h \
+	models/expressions/assignitem/arrval_imp/PlnAssignArrayValue_Var.h \
+	models/expressions/assignitem/arrval_imp/PlnAssignArrayValue_IndirectVar.h \
 	models/expressions/assignitem/PlnDstPrimitiveItem.h \
 	models/expressions/assignitem/PlnDstCopyObjectItem.h \
 	models/expressions/assignitem/PlnDstMoveObjectItem.h \

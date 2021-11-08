@@ -73,7 +73,8 @@ public:
 	virtual PlnDataPlace* prepareObjBasePtr() = 0;
 	virtual PlnDataPlace* prepareObjIndexPtr() = 0;
 	virtual PlnDataPlace* prepareObjIndexPtr(int staticIndex) = 0;
-	virtual void setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement);
+	// vv It return a multiply number to index expression.
+	virtual int setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement);
 
 	// for optimization
 	virtual void optimizeRegAlloc() = 0;
@@ -146,7 +147,7 @@ public:
 		struct {int32_t idx; int32_t offset; PlnDataPlace* parent_dp; } bytes;
 		struct {int32_t id; int32_t offset;} reg;
 		struct {int32_t displacement; PlnDataPlace* base_dp; PlnDataPlace* index_dp;
-				int16_t base_id; int16_t index_id; } indirect;
+				int8_t base_id; int8_t index_id; uint16_t scale; } indirect;
 		vector<PlnDataPlace*> *bytesData;
 		int64_t intValue;
 		double floValue;

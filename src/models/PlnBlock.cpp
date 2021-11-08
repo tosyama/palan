@@ -4,7 +4,7 @@
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include <algorithm>
@@ -571,6 +571,7 @@ void PlnBlock::gen(PlnGenerator& g)
 
 	// TODO?: check condition: need not call this after jump statement.
 	// Note: "return statement" frees vars insted of block when function end.
+	// Note: Generator will delete unreachable block. So, this ToDo is low priority.
 	for (auto free_var: free_vars) {
 		free_var->gen(g);
 	}

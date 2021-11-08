@@ -8,7 +8,7 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "10 6 6 4 6 6");
+	REQUIRE(exec(testcode) == "10 6 6 4 6 6 6");
 	// REQUIRE(exec(testcode) == "0 0 0 0");
 
 	testcode = "002_varint64";
@@ -470,7 +470,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");
 
 	testcode = "588_dynamic2ref_err";
-	REQUIRE(build(testcode) == "finish:0:1-1 Can not assign dynamic allocated value to 'x'.");
+	REQUIRE(build(testcode) == "0:1-1 Can not assign dynamic allocated value to 'x'.");
 
 	testcode = "589_structinit_err";
 	REQUIRE(build(testcode) == "finish:0:6-6 Incompatible types in assignment of 'float number' to 'int64'.");
