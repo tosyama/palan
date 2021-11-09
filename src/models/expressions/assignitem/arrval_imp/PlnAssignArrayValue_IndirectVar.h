@@ -44,6 +44,9 @@ public:
 				|| ex->values[0].getVarType()->data_type() == DT_OBJECT);
 		BOOST_ASSERT(!need_save);
 		BOOST_ASSERT (ex->type == ET_ARRAYITEM || ex->type == ET_STRUCTMEMBER);
+		BOOST_ASSERT(ex->values[0].inf.var->var_type->typeinf->type == TP_FIXED_ARRAY
+				|| ex->values[0].inf.var->var_type->typeinf->type == TP_STRUCT);
+
 		dst_ex = ex;
 	}
 
@@ -58,7 +61,14 @@ public:
 		if (output_place)
 			dst_ex->data_places.push_back(output_place);
 
-		tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
+		PlnVarType *tmp_vartype = dst_ex->values[0].inf.var->var_type;
+
+		if (tmp_vartype->data_type() == DT_OBJECT) {
+			// ex) [3]#[2][1]int32 a9  = [[1][2]][[3][4]][[5][6]];
+			tmp_vartype = tmp_vartype->typeinf->getVarType();
+		}
+
+		tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "tmp var");
 		BOOST_ASSERT(tmp_var->place->data_type == DT_OBJECT_REF);
 		BOOST_ASSERT(tmp_var->place->size == 8);
 
