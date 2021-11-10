@@ -12,7 +12,7 @@
 # target="../models/PlnType"
 # target="../models/PlnFunction"
 # target="../PlnMessage"
-target="../PlnModelTreeBuilder"
+#target="../PlnModelTreeBuilder"
 # target="../PlnGenerator"
 # target="../models/PlnExpression"
 # target="../models/expressions/PlnMulOperation"
@@ -25,13 +25,14 @@ target="../PlnModelTreeBuilder"
 # target="../models/types/PlnArrayValueType"
 # target="../models/types/PlnFixedArrayType"
 # target="../models/types/PlnStructType"
-#target="../models/expressions/assignitem/PlnAssignItem"
+target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
-gcovs="${targetnm}.cpp"
+#gcovs="${targetnm}.cpp"
 #gcovs="PlnAssignArrayValue.h"
 #gcovs="PlnArrayValueType.h"
 #gcovs="PlnDstCopyObjectItem.h"
 #gcovs="PlnAssignWorkValsItem.h"
+gcovs="PlnAssignArrayValue_IndirectVar.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov

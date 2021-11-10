@@ -200,10 +200,8 @@ static bool isIncludesObjectRefMember(PlnVarType* item_type)
 		}
 		return false;
 
-	} else {
-		BOOST_ASSERT(false);
-	}
-	return false;
+	} 
+	BOOST_ASSERT(false);
 }
 
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
@@ -416,8 +414,8 @@ static void addStructRoData(vector<PlnRoData> &rodata, PlnExpression* struct_exp
 		int data_type = member->type->data_type();
 
 		if (data_type == DT_OBJECT) {
+			// continue;
 			BOOST_ASSERT(false);	// TODO: need recursive process.
-			continue;
 		}
 
 		PlnRoData datainf;

@@ -19,6 +19,8 @@ public:
 	}
 
 	~PlnAssignArrayValue() {
+		if (assign_item_imp)
+			delete assign_item_imp;
 	}
 	
 	void addDstEx(PlnExpression* ex, bool need_save) override {

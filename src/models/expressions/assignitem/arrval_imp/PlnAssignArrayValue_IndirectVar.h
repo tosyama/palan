@@ -58,9 +58,6 @@ public:
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
 		BOOST_ASSERT(dst_ex->values[0].asgn_type != ASGN_MOVE);
 
-		if (output_place)
-			dst_ex->data_places.push_back(output_place);
-
 		PlnVarType *tmp_vartype = dst_ex->values[0].inf.var->var_type;
 
 		if (tmp_vartype->data_type() == DT_OBJECT) {
@@ -80,6 +77,8 @@ public:
 		tmp_var_ex = new PlnExpression(tmp_var);
 		dst_item = PlnDstItem::createDstItem(dst_ex, false);
 		dst_item->setSrcEx(da, si, tmp_var_ex);
+		if (output_place)
+			dst_item->place = output_place;
 
 		vector<PlnExpression*> val_items = src_ex->getAllItems();
 		vector<PlnExpression*> dst_items;
