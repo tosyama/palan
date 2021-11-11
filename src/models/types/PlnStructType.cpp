@@ -192,11 +192,48 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 {
 	this->name = name;
 	int alloc_size = 0;
-	int max_member_size = 1;
+	int max_member_align = 1;
 	this->default_mode = default_mode;
-	has_object_member = false;
+	has_object_ref_member = false;
 	bool need_alloc_func = false;
 
+	for (auto m: this->members) {
+		int member_size = m->type->size();
+		int member_align = member_size;
+
+		if (m->type->data_type() == DT_OBJECT) {
+			BOOST_ASSERT(false);
+		}
+
+		// padding
+		if (alloc_size % member_align) {
+			alloc_size = (alloc_size / member_align+1) * member_align;
+		}
+
+		m->offset = alloc_size;
+
+		if (member_align > max_member_align) {
+			max_member_align = member_align;
+		}
+		alloc_size += m->type->size();
+
+		if (m->type->data_type() == DT_OBJECT_REF) {
+			has_object_ref_member = true;
+			if (m->type->mode[ALLOC_MD] == 'h')
+				need_alloc_func = true;
+		} else if (m->type->data_type() == DT_OBJECT) {
+			BOOST_ASSERT(false);
+		}
+	}
+
+	// last padding
+	if (alloc_size % max_member_align) {
+		alloc_size = (alloc_size / max_member_align+1) * max_member_align;
+	}
+	
+	align = max_member_align;
+
+	/*
 	for (auto m: this->members) {
 		int member_size = m->type->size();
 		// padding
@@ -212,16 +249,18 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		alloc_size += m->type->size();
 
 		if (m->type->data_type() == DT_OBJECT_REF) {
-			has_object_member = true;
+			has_object_ref_member = true;
 			if (m->type->mode[ALLOC_MD] == 'h')
 				need_alloc_func = true;
+		} else if (m->type->data_type() == DT_OBJECT) {
+			BOOST_ASSERT(false);
 		}
 	}
 
 	// last padding
 	if (alloc_size % max_member_size) {
 		alloc_size = (alloc_size / max_member_size+1) * max_member_size;
-	}
+	} */
 
 	data_type = DT_OBJECT;
 	data_size = alloc_size;

@@ -1800,7 +1800,7 @@ unique_ptr<PlnGenEntity> PlnX86_64Generator::getEntity(PlnDataPlace* dp)
 			dp->data.indirect.base_id,
 			dp->data.indirect.displacement,
 			dp->data.indirect.index_id,
-			dp->size);
+			dp->data.indirect.scale);
 
 	} else if (dp->type == DP_LIT_INT || dp->type == DP_LIT_FLO) {
 		e->type = GA_CODE;

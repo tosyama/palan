@@ -1,7 +1,7 @@
 Palan Hacking Guide & Design Memo
 ===================
 
-ver 0.3.0a
+ver 0.4.0a
 
 Code Structure
 --------------
@@ -159,7 +159,7 @@ It consist of 3 characters and each charactor indicates access right, identity a
 
 ### Allocation
 *   *h* - Heap allocation
-*   *s* - Stack allocation
+*   *s* - Stack allocation or dynamic allocation (It means allocated on parent container area)
 *   *r* - Reference of the data
 *   *i* - Immediate value
 
@@ -201,3 +201,12 @@ Many of `g.gen*()` are required `PlnGenEntity` to call.
 Entities includes environment dependent assembly information.
 `g.getEntity()` create the entity from `dp`.
 `g.genSaveSrc()` and `g.genLoadDp()` can be used at the timing of `da.pushSrc()` and `da.popSrc()`.
+
+Data Type
+---------
+(To be added)
+
+Type Allocator/Copyer/Freer
+---------------------------
+(To be added)
+

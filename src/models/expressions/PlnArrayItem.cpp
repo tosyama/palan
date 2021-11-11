@@ -130,18 +130,32 @@ void PlnArrayItem::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 
 	} else {
 		index_dp = da.prepareObjIndexPtr();
-		index_ex->data_places.push_back(index_dp);
-		index_ex->finish(da, si);
 	}
 
 	auto item_dp = item_var->place;
-	da.setIndirectObjDp(item_dp, base_dp, index_dp, 0);
+	int need_to_mul = da.setIndirectObjDp(item_dp, base_dp, index_dp, 0);
+//	BOOST_ASSERT(need_to_mul == 1);
+
+	if (need_to_mul != 1) {
+		auto oex = new PlnExpression(PlnValue((int64_t)need_to_mul));
+		index_ex = PlnMulOperation::create(index_ex, oex);
+	}
+
+	if (index_ex) {
+		index_ex->data_places.push_back(index_dp);
+		index_ex->finish(da, si);
+	}
 	
 	da.popSrc(base_dp);
-	if (index_ex)
+
+	if (index_ex) {
 		da.popSrc(index_dp);
+	}
 	
 	if (data_places.size()) {
+		if (item_dp->data_type == DT_OBJECT) {
+			data_places[0]->load_address = true;
+		}
 		da.pushSrc(data_places[0], item_dp);
 	}
 }

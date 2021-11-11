@@ -15,7 +15,8 @@ public:
 class PlnStructType : public PlnType {
 public:
 	vector<PlnStructMemberDef*> members;
-	bool has_object_member;
+	bool has_object_ref_member;
+	int align;
 
 	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode);
 	~PlnStructType();

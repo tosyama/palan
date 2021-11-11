@@ -252,6 +252,10 @@ void normalCaseTest()
 	testcode = "036_methodcall";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "");
+	
+	testcode = "037_directobj_arr";
+	REQUIRE(build(testcode) == "success");
+	REQUIRE(exec(testcode) == "10 6 6 4 6 6 6 6 6 7 10 1.3");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
@@ -469,7 +473,7 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");
 
 	testcode = "588_dynamic2ref_err";
-	REQUIRE(build(testcode) == "finish:0:1-1 Can not assign dynamic allocated value to 'x'.");
+	REQUIRE(build(testcode) == "0:1-1 Can not assign dynamic allocated value to 'x'.");
 
 	testcode = "589_structinit_err";
 	REQUIRE(build(testcode) == "finish:0:6-6 Incompatible types in assignment of 'float number' to 'int64'.");

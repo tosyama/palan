@@ -228,7 +228,6 @@ void PlnDataAllocator::allocDp(PlnDataPlace *dp, bool proceed_step)
 
 	dp->status = DS_ASSIGNED;
 	dp->alloc_step = step;
-
 	if (proceed_step) step++;
 }
 
@@ -264,8 +263,11 @@ void PlnDataAllocator::releaseDp(PlnDataPlace* dp)
 	step++;
 }
 
-void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement)
+int PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp, PlnDataPlace* index_dp, int displacement)
 {
+	BOOST_ASSERT(dp->size < 65536);
+	int need_to_mul = 1;
+
 	dp->type = DP_INDRCT_OBJ;
 	dp->status = DS_ASSIGNED;
 
@@ -274,13 +276,23 @@ void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 	dp->data.indirect.index_dp = index_dp;
 	dp->data.indirect.base_id = base_dp->data.reg.id;
 	dp->data.indirect.index_id = -1;
+	dp->data.indirect.scale = 1;
 
 	if (index_dp) {
-		if (index_dp->type == DP_REG)
+		if (index_dp->type == DP_REG) {
 			dp->data.indirect.index_id = index_dp->data.reg.id;
-		else if (index_dp->type == DP_LIT_INT) {
+			// for X86 CPU. need to move to x86dataallocator for future.
+			if (dp->size == 1 || dp->size == 2 || dp->size == 4 || dp->size == 8) {
+				dp->data.indirect.scale = dp->size;
+			} else {
+				dp->data.indirect.scale = 1;
+				need_to_mul = dp->size;
+			}
+
+		} else if (index_dp->type == DP_LIT_INT) {
 			BOOST_ASSERT(displacement == 0);
 			dp->data.indirect.displacement = index_dp->data.intValue * dp->size;
+
 		} else
 			BOOST_ASSERT(false);
 	}
@@ -288,6 +300,8 @@ void PlnDataAllocator::setIndirectObjDp(PlnDataPlace* dp, PlnDataPlace* base_dp,
 	dp->alloc_step = step;
 	dp->release_step = step;
 	all.push_back(dp);
+
+	return need_to_mul;
 }
 
 PlnDataPlace* PlnDataAllocator::getLiteralIntDp(int64_t intValue)

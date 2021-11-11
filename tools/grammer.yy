@@ -357,6 +357,7 @@ type_prefix_ref: '@'
 	| '#'
 	| type_prefix_arr '@'
 	| type_prefix_arr AT_EXCL
+	| type_prefix_arr '#'
 	;
 
 type_prefix_arr: array_vals

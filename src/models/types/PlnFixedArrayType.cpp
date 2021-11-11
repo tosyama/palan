@@ -39,15 +39,40 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	}
 
 	if (it->mode[ALLOC_MD] != 'h') {
-		allocator = new PlnSingleObjectAllocator(alloc_size);
-		freer = new PlnSingleObjectFreer();
-		copyer = new PlnSingleObjectCopyer(alloc_size);
+		// Direct allocation case.
+		if (!it->typeinf->internal_allocator) {
+			allocator = new PlnSingleObjectAllocator(alloc_size);
+			freer = new PlnSingleObjectFreer();
+			copyer = new PlnSingleObjectCopyer(alloc_size);
 
-	} else {
+		} else {	// Array item has original allocator. The case item type is object.
+			// allocator
+			{
+				string fname = PlnBlock::generateFuncName("new", {this}, {});
+				PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, this, parent);
+				parent->parent_module->functions.push_back(alloc_func);
+
+				allocator = new PlnNoParamAllocator(alloc_func);
+			}
+
+			// freer
+			{
+				string fname = PlnBlock::generateFuncName("del", {}, {this});
+				PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, this, parent);
+				parent->parent_module->functions.push_back(free_func);
+
+				freer = new PlnSingleParamFreer(free_func);
+			}
+
+			// temp
+			copyer = new PlnSingleObjectCopyer(alloc_size);
+		}
+
+	} else {	// The case item type is object reference.
 		// allocator
 		{
 			string fname = PlnBlock::generateFuncName("new", {this}, {});
-			PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, this, parent);
+			PlnFunction* alloc_func = PlnArray::createObjRefArrayAllocFunc(fname, this, parent);
 			parent->parent_module->functions.push_back(alloc_func);
 
 			allocator = new PlnNoParamAllocator(alloc_func);
@@ -56,7 +81,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 		// freer
 		{
 			string fname = PlnBlock::generateFuncName("del", {}, {this});
-			PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, this, parent);
+			PlnFunction* free_func = PlnArray::createObjRefArrayFreeFunc(fname, this, parent);
 			parent->parent_module->functions.push_back(free_func);
 
 			freer = new PlnSingleParamFreer(free_func);
@@ -65,9 +90,30 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 		// copyer
 		{
 			string fname = PlnBlock::generateFuncName("cpy", {}, {this,this});
-			PlnFunction* copy_func = PlnArray::createObjArrayCopyFunc(fname, this, parent);
+			PlnFunction* copy_func = PlnArray::createObjRefArrayCopyFunc(fname, this, parent);
 			parent->parent_module->functions.push_back(copy_func);
+
 			copyer = new PlnTwoParamsCopyer(copy_func);
+		}
+
+		if (item_type->data_type() == DT_OBJECT_REF) {
+			// internal_allocator
+			{
+				string fname = PlnBlock::generateFuncName("internal_new", {this}, {});
+				PlnFunction* internal_alloc_func = PlnArray::createObjRefArrayInternalAllocFunc(fname, this, parent);
+				parent->parent_module->functions.push_back(internal_alloc_func);
+
+				internal_allocator = new PlnSingleParamInternalAllocator(internal_alloc_func);
+			}
+
+			// internal_freer
+			{
+				string fname = PlnBlock::generateFuncName("internal_del", {}, {this});
+				PlnFunction* internal_free_func = PlnArray::createObjRefArrayInternalFreeFunc(fname, this, parent);
+				parent->parent_module->functions.push_back(internal_free_func);
+
+				internal_freer = new PlnSingleParamFreer(internal_free_func);
+			}
 		}
 	}
 }
