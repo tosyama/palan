@@ -184,24 +184,16 @@ static bool isIncludesObjectRefMember(PlnVarType* item_type)
 			return true;
 		else if (sub_item_type->data_type() == DT_OBJECT)
 			return isIncludesObjectRefMember(sub_item_type);
-		else
-			return false;
 
 	} else if (item_type->typeinf->type == TP_STRUCT) {
 		PlnStructType *strct_type = static_cast<PlnStructType*>(item_type->typeinf);
+		return strct_type->has_object_ref_member;
 
-		for (auto member: strct_type->members) {
-			if (member->type->data_type() == DT_OBJECT_REF) {
-				return true;
-
-			} else if (member->type->data_type() == DT_OBJECT) {
-				BOOST_ASSERT(false);
-			}
-		}
-		return false;
-
-	} 
-	BOOST_ASSERT(false);
+	} else {
+		BOOST_ASSERT(false);
+	}
+	
+	return false;
 }
 
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
@@ -240,7 +232,7 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
 
-		if (isLiteral && !stype->has_object_member) {
+		if (isLiteral && !stype->has_object_ref_member) {
 			doCopyFromStaticBuffer = true;
 			values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
 		} else {
@@ -418,12 +410,14 @@ static void addStructRoData(vector<PlnRoData> &rodata, PlnExpression* struct_exp
 			BOOST_ASSERT(false);	// TODO: need recursive process.
 		}
 
+
 		PlnRoData datainf;
 		datainf.data_type = member->type->data_type();
 		datainf.size = member->type->size();
-		datainf.alignment = calcAlign(member->offset);
+		datainf.alignment = calcAlign(datainf.size);
+
 		if (i==0) {
-			datainf.alignment = calcAlign(stype->data_size);
+			datainf.alignment = stype->align;
 		}
 
 		if (datainf.data_type == DT_SINT || datainf.data_type == DT_UINT) {

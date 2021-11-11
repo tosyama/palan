@@ -53,7 +53,13 @@ public:
 		cpy_dst_dp = cpy_ex->dstDp(da);
 
 		if (place && dst_ex->type != ET_VALUE) {
-			tmp_var = PlnVariable::createTempVar(da, dst_ex->values[0].inf.var->var_type, "tmp var");
+			PlnVarType *tmp_vartype = dst_ex->values[0].inf.var->var_type;
+
+			if (tmp_vartype->data_type() == DT_OBJECT) {
+				tmp_vartype = tmp_vartype->typeinf->getVarType();
+			}
+
+			tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "tmp var");
 			dst_ex->data_places.push_back(tmp_var->place);
 			tmp_var->place->do_clear_src = place->do_clear_src;
 			place->do_clear_src = false;
