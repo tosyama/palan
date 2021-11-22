@@ -41,7 +41,7 @@ public:
 	PlnDataPlace* prepareAccumulator(int data_type, int data_size) override;
 	PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) override;
 	PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp) override;
-	void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp) override;
+	PlnDataPlace* divided(PlnDataPlace* ldp, PlnDataPlace* rdp, bool is_mod) override;
 
 	// for array item
 	PlnDataPlace* prepareObjBasePtr() override;

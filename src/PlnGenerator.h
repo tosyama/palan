@@ -68,6 +68,7 @@ public:
 	virtual void genNegative(PlnGenEntity* tgt, string comment)=0;
 	virtual void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
+	virtual void genMod(PlnGenEntity* tgt, PlnGenEntity* second, string comment)=0;
 	virtual int genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment)=0;
 	virtual int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment)=0;
 	

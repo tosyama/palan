@@ -134,20 +134,13 @@ void PlnDivOperation::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	
 	da.popSrc(rdp);
 	da.popSrc(ldp);
-	da.divided(&quotient, &remainder, ldp, rdp);
+	PlnDataPlace* result_dp = da.divided(ldp, rdp, div_type == DV_MOD);
 
 	if (data_places.size()) {
-		if (div_type == DV_DIV)  {
-			da.pushSrc(data_places[0], quotient);
-			if (remainder) da.releaseDp(remainder);
-		} else {	// DV_MOD
-			BOOST_ASSERT(remainder != NULL);
-			da.releaseDp(quotient);
-			da.pushSrc(data_places[0], remainder);
-		}
+		BOOST_ASSERT(data_places.size() == 1);
+		da.pushSrc(data_places[0], result_dp);
 	} else {
-		da.releaseDp(quotient);
-		if (remainder) da.releaseDp(remainder);
+		da.releaseDp(result_dp);
 	}
 }
 
@@ -166,18 +159,15 @@ void PlnDivOperation::gen(PlnGenerator& g)
 	auto re = g.getEntity(r->data_places[0]);
 
 	string cmt=ldp->cmt() + " / " + rdp->cmt();
-	g.genDiv(le.get(), re.get(), cmt);
+	if (div_type == DV_DIV) {
+		g.genDiv(le.get(), re.get(), cmt);
+	} else {
+		BOOST_ASSERT(div_type == DV_MOD);
+		g.genMod(le.get(), re.get(), cmt);
+	}
 	
-	if (data_places.size() > 0) {
-		if (div_type == DV_DIV) {
-			g.genSaveSrc(data_places[0]);
-			BOOST_ASSERT(data_places.size() == 1);
-			// if (data_places.size() > 1)
-			//	g.genSaveSrc(data_places[1]);
-			
-		} else { // div_type == DT_MOD
-			g.genSaveSrc(data_places[0]);
-		}
+	if (data_places.size()) {
+		g.genSaveSrc(data_places[0]);
 	}
 }
 
