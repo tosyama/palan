@@ -15,54 +15,11 @@
 #include "../PlnConstants.h"
 #include "PlnX86_64DataAllocator.h"
 #include "PlnX86_64Generator.h"
+#include "PlnX86_64CalcOptimization.h"
 
 using std::ostringstream;
 using std::to_string;
 using boost::algorithm::replace_all_copy;
-
-enum GenEttyType {
-	GA_CODE,
-	GA_REG,
-	GA_MEM
-};
-
-// Register operand (e.g. %rax)
-inline PlnRegOperand* reg(int regid, int size=8) { return new PlnRegOperand(regid, size); }
-
-inline int regid_of(const PlnGenEntity *e) {
-	return regid_of(e->ope);
-}
-
-inline bool is_greg(int regid) {
-	return regid <= R15;
-}
-
-// Immediate operand (e.g. $10)
-inline PlnImmOperand* imm(int64_t value) { return new PlnImmOperand(value); }
-
-inline int64_t int64_of(const PlnGenEntity *e) {
-	return int64_of(e->ope);
-}
-
-// Addressing mode(Memory access) operand (e.g. -8($rax))
-inline PlnAdrsModeOperand* adrs(int base_regid, int displacement=0, int index_regid=-1, int scale=0) {
-	return new PlnAdrsModeOperand(base_regid, displacement, index_regid, scale);
-}
-
-// label operand (e.g. $.LC1)
-inline PlnLabelOperand* lbl(const string &label, int id=-1) {
-	BOOST_ASSERT(id >= -1);
-	return new PlnLabelOperand(label, id);
-}
-
-// label with addressing mode operand (e.g. .LC1(%rip))
-inline PlnLabelAdrsModeOperand* lblval(const string &label, int base_regid = RIP) {
-	return new PlnLabelAdrsModeOperand(label, base_regid);
-}
-
-inline PlnOperandInfo* ope(const PlnGenEntity* e) {
-	return e->ope->clone();
-}
 
 static bool opecmp(const PlnOperandInfo *l, const PlnOperandInfo *r)
 {
@@ -1531,12 +1488,30 @@ void PlnX86_64Generator::genSub(PlnGenEntity* tgt, PlnGenEntity* scnd, string co
 
 void PlnX86_64Generator::genMul(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
+	if (tryOptiMul(m, tgt, scnd, comment))
+		return;
 	genCalc(m, CALC_MUL, tgt, scnd, comment);
 }
 
 void PlnX86_64Generator::genDiv(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
 {
+	BOOST_ASSERT(tgt->type == GA_REG);
+
+	if (tryOptiDiv(m, tgt, scnd, comment))
+		return;
+
 	genCalc(m, CALC_DIV, tgt, scnd, comment);
+}
+
+void PlnX86_64Generator::genMod(PlnGenEntity* tgt, PlnGenEntity* scnd, string comment)
+{
+	// Extruct special pattern for optimize
+	if (tryOptiMod(m, tgt, scnd, comment))
+		return;
+
+	genCalc(m, CALC_DIV, tgt, scnd, comment);
+	BOOST_ASSERT(regid_of(tgt) == RAX);
+	m.push(MOVQ, reg(RDX), reg(RAX));
 }
 
 void PlnX86_64Generator::genNegative(PlnGenEntity* tgt, string comment)

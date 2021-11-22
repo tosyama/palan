@@ -244,6 +244,7 @@ static void initMnes()
 	mnes[DIVQ] = "divq";
 	mnes[CQTO] = "cqto";
 	mnes[IDIVQ] = "idivq";
+	mnes[CLTQ] = "cltq";
 
 	mnes[XORQ] = "xorq";
 	mnes[XORPD] = "xorpd";
@@ -281,6 +282,11 @@ static void initMnes()
 	mnes[REP_MOVSW] = "rep movsw";
 	mnes[REP_MOVSB] = "rep movsb";
 	mnes[CLD] = "cld";
+
+	mnes[ANDQ] = "andq";
+	mnes[SALQ] = "salq";
+	mnes[SARQ] = "sarq";
+	mnes[SHRQ] = "shrq";
 }
 
 void PlnX86_64RegisterMachine::push(PlnX86_64Mnemonic mne, PlnOperandInfo *src, PlnOperandInfo* dst, string comment)

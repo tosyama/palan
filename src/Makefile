@@ -28,6 +28,7 @@ SRCS=palan.cpp \
 	generators/PlnX86_64DataAllocator.cpp \
 	generators/PlnX86_64RegisterMachine.cpp \
 	generators/PlnX86_64RegisterSave.cpp \
+	generators/PlnX86_64CalcOptimization.cpp\
 	PlnDataAllocator.cpp PlnGenerator.cpp \
 	PlnMessage.cpp PlnTreeBuildHelper.cpp PlnScopeStack.cpp \
 	PlnModelTreeBuilder.cpp

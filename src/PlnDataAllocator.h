@@ -67,7 +67,7 @@ public:
 	virtual PlnDataPlace* prepareAccumulator(int data_type, int data_size) = 0;
 	virtual PlnDataPlace* added(PlnDataPlace* ldp, PlnDataPlace *rdp) = 0;
 	virtual PlnDataPlace* multiplied(PlnDataPlace* ldp, PlnDataPlace* rdp) = 0;
-	virtual void divided(PlnDataPlace** quotient, PlnDataPlace** reminder, PlnDataPlace* ldp, PlnDataPlace* rdp) = 0;
+	virtual PlnDataPlace* divided(PlnDataPlace* ldp, PlnDataPlace* rdp, bool is_mod) = 0;
 
 	// for array item
 	virtual PlnDataPlace* prepareObjBasePtr() = 0;

@@ -64,6 +64,7 @@ public:
 	void genNegative(PlnGenEntity* tgt, string comment) override;
 	void genMul(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
 	void genDiv(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
+	void genMod(PlnGenEntity* tgt, PlnGenEntity* second, string comment) override;
 	int genCmp(PlnGenEntity* first, PlnGenEntity* second, int cmp_type, string comment) override;
 	int genMoveCmpFlag(PlnGenEntity* tgt, int cmp_type, string comment) override;
 
@@ -72,4 +73,48 @@ public:
 
 	unique_ptr<PlnGenEntity> getEntity(PlnDataPlace* dp) override;
 };
+
+enum GenEttyType {
+	GA_CODE,
+	GA_REG,
+	GA_MEM
+};
+
+// Register operand (e.g. %rax)
+inline PlnRegOperand* reg(int regid, int size=8) { return new PlnRegOperand(regid, size); }
+
+inline int regid_of(const PlnGenEntity *e) {
+	return regid_of(e->ope);
+}
+
+inline bool is_greg(int regid) {
+	return regid <= R15;
+}
+
+// Immediate operand (e.g. $10)
+inline PlnImmOperand* imm(int64_t value) { return new PlnImmOperand(value); }
+
+inline int64_t int64_of(const PlnGenEntity *e) {
+	return int64_of(e->ope);
+}
+
+// Addressing mode(Memory access) operand (e.g. -8($rax))
+inline PlnAdrsModeOperand* adrs(int base_regid, int displacement=0, int index_regid=-1, int scale=0) {
+	return new PlnAdrsModeOperand(base_regid, displacement, index_regid, scale);
+}
+
+// label operand (e.g. $.LC1)
+inline PlnLabelOperand* lbl(const string &label, int id=-1) {
+	BOOST_ASSERT(id >= -1);
+	return new PlnLabelOperand(label, id);
+}
+
+// label with addressing mode operand (e.g. .LC1(%rip))
+inline PlnLabelAdrsModeOperand* lblval(const string &label, int base_regid = RIP) {
+	return new PlnLabelAdrsModeOperand(label, base_regid);
+}
+
+inline PlnOperandInfo* ope(const PlnGenEntity* e) {
+	return e->ope->clone();
+}
 
