@@ -81,8 +81,6 @@ public:
 
 	PlnDataPlace* getLiteralIntDp(int64_t intValue);
 	PlnDataPlace* getLiteralFloDp(double floValue);
-	PlnDataPlace* getROIntArrayDp(vector<int64_t> int_array, int item_size);
-	PlnDataPlace* getROFloArrayDp(vector<double> flo_array, int item_size);
 	PlnDataPlace* getROStrArrayDp(string& str);
 	PlnDataPlace* getRODataDp(vector<PlnRoData>& rodata);
 	PlnDataPlace* getSeparatedDp(PlnDataPlace* dp);

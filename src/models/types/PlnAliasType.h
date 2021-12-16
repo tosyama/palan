@@ -12,6 +12,7 @@ public:
 		this->name = name;
 		this->data_type = orig_type->data_type;
 		this->data_size = orig_type->data_size;
+		this->data_align = orig_type->data_align;
 	}
 	
 	// LCOV_EXCL_START

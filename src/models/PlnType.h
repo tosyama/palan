@@ -55,6 +55,7 @@ public:
 	PlnTypeType type;
 	int	data_type;
 	int data_size;
+	int data_align;
 	string name;
 	string default_mode;
 
@@ -103,6 +104,8 @@ public:
 	const string& name() { return typeinf->name; }
 	int data_type();
 	int size();
+	int align();
+	bool has_heap_member();
 	PlnExpression *getAllocEx() {
 		if (!typeinf->allocator) return NULL;
 		return typeinf->allocator->getAllocEx();

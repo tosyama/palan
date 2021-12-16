@@ -16,7 +16,8 @@ public:
 	PlnAssignIndirectObjItem(PlnExpression* ex)
 			: src_ex(ex), src_save(NULL), dst_item(NULL) {
 		BOOST_ASSERT(ex->values[0].type == VL_VAR);
-		BOOST_ASSERT(ex->values[0].inf.var->var_type->data_type() == DT_OBJECT_REF);
+		BOOST_ASSERT(ex->values[0].inf.var->var_type->data_type() == DT_OBJECT_REF
+					|| ex->values[0].inf.var->var_type->data_type() == DT_OBJECT);
 		BOOST_ASSERT(ex->values[0].inf.var->is_indirect);
 	}
 

@@ -8,7 +8,8 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "7 2 7 2 -15 -1 -7 -2 -8 -3");
+	REQUIRE(exec(testcode) == "3 4 0 99 9 99 88 4 22\n"
+							"4 4 9");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");

@@ -22,6 +22,7 @@
 #include "../expressions/PlnArrayValue.h"
 #include "PlnStructType.h"
 #include "PlnArrayValueType.h"
+#include "PlnFixedArrayType.h"
 
 PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, const string& name)
 	: type(type), name(name), offset(0)
@@ -194,16 +195,12 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	int alloc_size = 0;
 	int max_member_align = 1;
 	this->default_mode = default_mode;
-	has_object_ref_member = false;
+	has_heap_member = false;
 	bool need_alloc_func = false;
 
 	for (auto m: this->members) {
 		int member_size = m->type->size();
-		int member_align = member_size;
-
-		if (m->type->data_type() == DT_OBJECT) {
-			BOOST_ASSERT(false);
-		}
+		int member_align = m->type->align();
 
 		// padding
 		if (alloc_size % member_align) {
@@ -217,12 +214,10 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		}
 		alloc_size += m->type->size();
 
-		if (m->type->data_type() == DT_OBJECT_REF) {
-			has_object_ref_member = true;
-			if (m->type->mode[ALLOC_MD] == 'h')
-				need_alloc_func = true;
-		} else if (m->type->data_type() == DT_OBJECT) {
-			BOOST_ASSERT(false);
+		if (m->type->mode[ALLOC_MD] == 'h'
+				|| m->type->has_heap_member()) {
+			need_alloc_func = true;
+			has_heap_member = true;
 		}
 	}
 
@@ -231,36 +226,7 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 		alloc_size = (alloc_size / max_member_align+1) * max_member_align;
 	}
 	
-	align = max_member_align;
-
-	/*
-	for (auto m: this->members) {
-		int member_size = m->type->size();
-		// padding
-		if (alloc_size % member_size) {
-			alloc_size = (alloc_size / member_size+1) * member_size;
-		}
-
-		m->offset = alloc_size;
-
-		if (member_size > max_member_size) {
-			max_member_size = member_size;
-		}
-		alloc_size += m->type->size();
-
-		if (m->type->data_type() == DT_OBJECT_REF) {
-			has_object_ref_member = true;
-			if (m->type->mode[ALLOC_MD] == 'h')
-				need_alloc_func = true;
-		} else if (m->type->data_type() == DT_OBJECT) {
-			BOOST_ASSERT(false);
-		}
-	}
-
-	// last padding
-	if (alloc_size % max_member_size) {
-		alloc_size = (alloc_size / max_member_size+1) * max_member_size;
-	} */
+	data_align = max_member_align;
 
 	data_type = DT_OBJECT;
 	data_size = alloc_size;
