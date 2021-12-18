@@ -59,10 +59,15 @@ type jpeg_error_mgr {
   ptr error_exit;
 };
 
+type inc_obj_ref {
+	[4]ptr arr;
+};
+
 type jpeg_compress_struct {
 	jpeg_error_mgr err;// struct jpeg_error_mgr *err;
 	ptr comp_info; // jpeg_component_info *comp_info;
 	#[4]ptr quant_tbl_ptrs;
+	#inc_obj_ref dummy;
 };
 
 jpeg_compress_struct js;
