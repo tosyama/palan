@@ -57,6 +57,14 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 
 			auto assign = new PlnAssignment(lvals, exps);
 			block->statements.push_back(new PlnStatement(assign, block));
+
+		} else if (mdef->type->data_type() == DT_OBJECT) {
+			auto struct_ex = new PlnExpression(ret_var);
+			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
+			PlnExpression* internal_alloc_ex = mdef->type->getInternalAllocEx(member_ex);
+			if (internal_alloc_ex) {
+				block->statements.push_back(new PlnStatement(internal_alloc_ex, block));
+			}
 		}
 	}
 
@@ -90,7 +98,13 @@ static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_na
 			block->statements.push_back(new PlnStatement(assign, block));
 
 		} else if (mdef->type->data_type() == DT_OBJECT) {
-			BOOST_ASSERT(false);	// TODO: getInternalAllocEx();
+			PlnValue var_val(f->parameters[0]->var);
+			auto struct_ex = new PlnExpression(var_val);
+			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
+			PlnExpression* internal_alloc_ex = mdef->type->getInternalAllocEx(member_ex);
+			if (internal_alloc_ex) {
+				block->statements.push_back(new PlnStatement(internal_alloc_ex, block));
+			}
 		}
 	}
 
@@ -172,7 +186,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 
 			auto src_struct_ex = new PlnExpression(src_var);
 			auto src_member_ex = new PlnStructMember(src_struct_ex, mdef->name);
-		if (mdef->type->data_type() == DT_OBJECT_REF) {
+		if (mdef->type->data_type() == DT_OBJECT_REF || mdef->type->data_type() == DT_OBJECT) {
 			PlnExpression* copy_member = mdef->type->getCopyEx(dst_member_ex, src_member_ex);
 			block->statements.push_back(new PlnStatement(copy_member, block));
 

@@ -53,3 +53,17 @@ printf("%d ", bb.aa.a[i2]);
 printf("%d %d ", a2.a[8], a2.b);
 
 
+// from sample raytracer bug.
+type ptr = int64;
+type jpeg_error_mgr {
+  ptr error_exit;
+};
+
+type jpeg_compress_struct {
+	jpeg_error_mgr err;// struct jpeg_error_mgr *err;
+	ptr comp_info; // jpeg_component_info *comp_info;
+	#[4]ptr quant_tbl_ptrs;
+};
+
+jpeg_compress_struct js;
+
