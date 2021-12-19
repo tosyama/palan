@@ -1,0 +1,74 @@
+ccall printf(@[?]byte format, ...) -> int32;
+
+type A {
+	#[10]int32 a;
+	int32 b;
+};
+
+type B {
+	int32 c;
+	#A aa;
+	int32 z;
+};
+// Assignment.
+A x;
+
+3 -> x.a[9] ;
+printf("%d ", x.a[9]);
+
+B bb;
+
+4 -> bb.aa.a[5];
+
+[10]int32 t = bb.aa.a;
+
+printf("%d ", t[5]);
+
+// Init by read-only array value.
+A a2 = [[1,2,3,4,5,6,7,8,9,0],99];
+
+printf("%d %d ", a2.a[9], a2.b);
+
+B b2 = [77, [[1,2,3,4,5,6,7,8,9,0],99], 88];
+
+printf("%d %d %d ", b2.aa.a[8], b2.aa.b, b2.z);
+
+type C {
+	int32 a;
+	int32 b;
+};
+
+[3]#C arr = [1,2][3,4][5,6];
+printf("%d ", arr[1].b);
+
+[11,12][21,22][31,32] -> arr;
+printf("%d\n", arr[1].b);
+
+int32 i1, i2 = 4, 9;
+i1 -> bb.aa.a[i2];
+printf("%d ", bb.aa.a[i2]);
+
+[[1,2,3,4,5,6,7,8,i1,0],i2] -> a2;
+
+printf("%d %d ", a2.a[8], a2.b);
+
+
+// from sample raytracer bug.
+type ptr = int64;
+type jpeg_error_mgr {
+  ptr error_exit;
+};
+
+type inc_obj_ref {
+	[4]ptr arr;
+};
+
+type jpeg_compress_struct {
+	jpeg_error_mgr err;// struct jpeg_error_mgr *err;
+	ptr comp_info; // jpeg_component_info *comp_info;
+	#[4]ptr quant_tbl_ptrs;
+	#inc_obj_ref dummy;
+};
+
+jpeg_compress_struct js;
+
