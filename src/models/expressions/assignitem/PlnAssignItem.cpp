@@ -112,7 +112,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 		int dt = ex->values[0].getVarType()->data_type();
 		if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
 			return new PlnAssignPrimitiveItem(ex);
-		} else if (dt == DT_OBJECT_REF) {
+		} else if (dt == DT_OBJECT_REF || dt == DT_OBJECT) {
 			return new PlnAssignIndirectObjItem(ex);
 		}
 	}

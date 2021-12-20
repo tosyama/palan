@@ -86,6 +86,9 @@ void PlnStructMember::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	da.popSrc(base_dp);
 	
 	if (data_places.size()) {
+		if (member_dp->data_type == DT_OBJECT) {
+			data_places[0]->load_address = true;
+		}
 		da.pushSrc(data_places[0], member_dp);
 	}
 }

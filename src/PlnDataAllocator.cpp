@@ -332,58 +332,6 @@ PlnDataPlace* PlnDataAllocator::getLiteralFloDp(double floValue)
 	return dp;
 }
 
-PlnDataPlace* PlnDataAllocator::getROIntArrayDp(vector<int64_t> int_array, int item_size)
-{
-	auto rodata = new vector<PlnRoData>();
-	rodata->reserve(int_array.size());
-	for (int64_t i: int_array) {
-		PlnRoData ro;
-		ro.data_type = DT_SINT;
-		ro.size = item_size;
-		ro.alignment = item_size;
-		ro.val.i = i;
-		rodata->push_back(ro);
-	}
-	(*rodata)[0].alignment = 8;
-
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-	dp->type = DP_RO_DATA;
-	dp->status = DS_ASSIGNED;
-	dp->data.rodata = rodata;
-	dp->alloc_step = step;
-	dp->release_step = step;
-	static string cmt = "\"[..]\"";
-	dp->comment = &cmt;
-	all.push_back(dp);
-	return dp;
-}
-
-PlnDataPlace* PlnDataAllocator::getROFloArrayDp(vector<double> flo_array, int item_size)
-{
-	auto rodata = new vector<PlnRoData>();
-	rodata->reserve(flo_array.size());
-	for (double f: flo_array) {
-		PlnRoData ro;
-		ro.data_type = DT_FLOAT;
-		ro.size = item_size;
-		ro.alignment = item_size;
-		ro.val.f = f;
-		rodata->push_back(ro);
-	}
-
-	(*rodata)[0].alignment = 8;
-	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);
-	dp->type = DP_RO_DATA;
-	dp->status = DS_ASSIGNED;
-	dp->data.rodata = rodata;
-	dp->alloc_step = step;
-	dp->release_step = step;
-	static string cmt = "\"[..]\"";
-	dp->comment = &cmt;
-	all.push_back(dp);
-	return dp;
-}
-
 PlnDataPlace* PlnDataAllocator::getROStrArrayDp(string &str)
 {
 	PlnDataPlace* dp = new PlnDataPlace(8, DT_OBJECT_REF);

@@ -77,20 +77,13 @@ type jpeg_compress_struct {
 	int32 num_components;	// int num_components;
 	J_COLOR_SPACE jpeg_color_space;
 	ptr comp_info; // jpeg_component_info *comp_info;
-	// JQUANT_TBL *quant_tbl_ptrs[4];
-	ptr quant_tbl_ptrs0; ptr quant_tbl_ptrs1; ptr quant_tbl_ptrs2; ptr quant_tbl_ptrs3;
-	// int q_scale_factor[NUM_QUANT_TBLS]; // NUM_QUANT_TBLS = 4
-	int32 q_scale_factor0; int32 q_scale_factor1; int32 q_scale_factor2; int32 q_scale_factor3;
-	// JHUFF_TBL *dc_huff_tbl_ptrs[4];
-	ptr dc_huff_tbl_ptrs0; ptr dc_huff_tbl_ptrs1; ptr dc_huff_tbl_ptrs2; ptr dc_huff_tbl_ptrs3;
-	// JHUFF_TBL *ac_huff_tbl_ptrs[4];
-	ptr ac_huff_tbl_ptrs0; ptr ac_huff_tbl_ptrs1; ptr ac_huff_tbl_ptrs2; ptr ac_huff_tbl_ptrs3;
-	// UINT8 arith_dc_L[16];
-	uint64 arith_dc_L0; uint64 arith_dc_L1;
-	// UINT8 arith_dc_U[16];
-	uint64 arith_dc_U0; uint64 arith_dc_U1;
-	// UINT8 arith_ac_K[16]1
-	uint64 arith_ac_K0; uint64 arith_ac_K1;
+	#[4]ptr quant_tbl_ptrs; // JQUANT_TBL *quant_tbl_ptrs[4];
+	#[4]int32 q_scale_factor; // int q_scale_factor[NUM_QUANT_TBLS]; // NUM_QUANT_TBLS = 4
+	#[4]ptr dc_huff_tbl_ptrs; // JHUFF_TBL *dc_huff_tbl_ptrs[4];
+	#[4]ptr ac_huff_tbl_ptrs; // JHUFF_TBL *ac_huff_tbl_ptrs[4];
+	#[16]byte arith_dc_L; // UINT8 arith_dc_L[16];
+	#[16]byte arith_dc_U; // UINT8 arith_dc_U[16];
+	#[16]byte arith_ac_K; // UINT8 arith_ac_K[16];
 	int32 num_scans;	// int num_scans;
 	ptr scan_info; // const jpeg_scan_info *scan_info;
 	boolean raw_data_in;
@@ -117,15 +110,11 @@ type jpeg_compress_struct {
 	int32 min_DCT_v_scaled_size;	// int min_DCT_v_scaled_size;    /* smallest DCT_v_scaled_size of any component */
 	JDIMENSION total_iMCU_rows;
 	int32 comps_in_scan; // int comps_in_scan;
-	// jpeg_component_info *cur_comp_info[4];
-	ptr cur_comp_info0; ptr cur_comp_info1; ptr cur_comp_info2; ptr cur_comp_info3;
+	#[4]ptr cur_comp_info; // jpeg_component_info *cur_comp_info[4];
 	JDIMENSION MCUs_per_row;
 	JDIMENSION MCU_rows_in_scan;
 	int32 blocks_in_MCU; // int blocks_in_MCU;
-	// int MCU_membership[10];
-	int64 MCU_membership0; int64 MCU_membership1;
-	int64 MCU_membership2; int64 MCU_membership3;
-	int64 MCU_membership4;
+	#[10]int32 MCU_membership; // int MCU_membership[10];
 	int32 Ss; // int Ss;
 	int32 Se; // int Se;
 	int32 Ah; // int Ah;

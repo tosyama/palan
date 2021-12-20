@@ -255,7 +255,7 @@ PlnDataPlace* PlnX86_64DataAllocator::divided(PlnDataPlace* ldp, PlnDataPlace* r
 
 	if (ldp->data_type == DT_SINT || ldp->data_type == DT_UINT ) {
 		BOOST_ASSERT(ldp->data.reg.id == RAX);
-		auto dp = new PlnDataPlace(8,ldp->data_type);
+		auto dp = new PlnDataPlace(8, ldp->data_type);
 		dp->type = DP_REG;
 		dp->data.reg.id = RDX;
 		allocDp(dp, false);

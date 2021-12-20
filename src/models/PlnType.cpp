@@ -7,6 +7,7 @@
 #include "../PlnConstants.h"
 #include "PlnType.h"
 #include "types/PlnFixedArrayType.h"
+#include "types/PlnStructType.h"
 #include "PlnVariable.h"
 #include "PlnExpression.h"
 
@@ -74,6 +75,7 @@ void PlnType::initBasicTypes()
 	sbt->default_mode = "wis";
 	sbt->data_type = DT_SINT;
 	sbt->data_size = 1;
+	sbt->data_align = 1;
 	basic_types.push_back(sbt);
 
 	PlnType* bt = new PlnType();
@@ -81,6 +83,7 @@ void PlnType::initBasicTypes()
 	bt->default_mode = "wis";
 	bt->data_type = DT_UINT;
 	bt->data_size = 1;
+	bt->data_align = 1;
 	basic_types.push_back(bt);
 	byte_type = bt;
 
@@ -89,6 +92,7 @@ void PlnType::initBasicTypes()
 	i16t->default_mode = "wis";
 	i16t->data_type = DT_SINT;
 	i16t->data_size = 2;
+	i16t->data_align = 2;
 	basic_types.push_back(i16t);
 
 	PlnType* u16t = new PlnType();
@@ -96,6 +100,7 @@ void PlnType::initBasicTypes()
 	u16t->default_mode = "wis";
 	u16t->data_type = DT_UINT;
 	u16t->data_size = 2;
+	u16t->data_align = 2;
 	basic_types.push_back(u16t);
 	
 	PlnType* i32t = new PlnType();
@@ -103,6 +108,7 @@ void PlnType::initBasicTypes()
 	i32t->default_mode = "wis";
 	i32t->data_type = DT_SINT;
 	i32t->data_size = 4;
+	i32t->data_align = 4;
 	basic_types.push_back(i32t);
 
 	PlnType* u32t = new PlnType();
@@ -110,6 +116,7 @@ void PlnType::initBasicTypes()
 	u32t->default_mode = "wis";
 	u32t->data_type = DT_UINT;
 	u32t->data_size = 4;
+	u32t->data_align = 4;
 	basic_types.push_back(u32t);
 
 	PlnType* i64t = new PlnType();
@@ -117,6 +124,7 @@ void PlnType::initBasicTypes()
 	i64t->default_mode = "wis";
 	i64t->data_type = DT_SINT;
 	i64t->data_size = 8;
+	i64t->data_align = 8;
 	basic_types.push_back(i64t);
 	int_type = i64t;
 
@@ -125,6 +133,7 @@ void PlnType::initBasicTypes()
 	u64t->default_mode = "wis";
 	u64t->data_type = DT_UINT;
 	u64t->data_size = 8;
+	u64t->data_align = 8;
 	basic_types.push_back(u64t);
 	uint_type = u64t;
 
@@ -133,6 +142,7 @@ void PlnType::initBasicTypes()
 	f32t->default_mode = "wis";
 	f32t->data_type = DT_FLOAT;
 	f32t->data_size = 4;
+	f32t->data_align = 4;
 	basic_types.push_back(f32t);
 	flo32_type = f32t;
 
@@ -141,6 +151,7 @@ void PlnType::initBasicTypes()
 	f64t->default_mode = "wis";
 	f64t->data_type = DT_FLOAT;
 	f64t->data_size = 8;
+	f64t->data_align = 8;
 	basic_types.push_back(f64t);
 	flo64_type = f64t;
 
@@ -149,6 +160,7 @@ void PlnType::initBasicTypes()
 	t->default_mode = "rir";
 	t->data_type = DT_OBJECT;
 	t->data_size = 0;
+	t->data_align = 1;
 	basic_types.push_back(t);
 	ro_cstr_type = t;
 
@@ -157,6 +169,7 @@ void PlnType::initBasicTypes()
 	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT;
 	t->data_size = 0;
+	t->data_align = 8;
 	basic_types.push_back(t);
 	object_type = t;
 
@@ -165,6 +178,7 @@ void PlnType::initBasicTypes()
 	t->default_mode = "wmi";
 	t->data_type = DT_UNKNOWN;
 	t->data_size = 0;
+	t->data_align = 8;
 	basic_types.push_back(t);
 	any_type = t;
 
@@ -415,4 +429,27 @@ int PlnVarType::size()
 		return 8;	// ponter_size
 	}
 	return typeinf->data_size;
+}
+
+int PlnVarType::align()
+{
+	if (mode[ALLOC_MD] == 'r' || mode[ALLOC_MD] == 'h') {
+		return 8;	// ponter_size
+	}
+	return typeinf->data_align;
+}
+
+bool PlnVarType::has_heap_member()
+{
+	if (typeinf->type == TP_FIXED_ARRAY) {
+		PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(typeinf);
+		return farr_type->has_heap_member;
+
+	} else if (typeinf->type == TP_STRUCT) {
+		PlnStructType *strct_type = static_cast<PlnStructType*>(typeinf);
+		return strct_type->has_heap_member;
+
+	}
+	
+	return false;
 }

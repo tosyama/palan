@@ -7,6 +7,7 @@ class PlnFixedArrayType : public PlnType {
 public:
 	PlnVarType* item_type;
 	vector<int> sizes;
+	bool has_heap_member;
 
 	PlnFixedArrayType(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent);
 	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override;

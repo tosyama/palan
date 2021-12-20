@@ -25,6 +25,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	this->name = name;
 	this->data_type = DT_OBJECT;
 	this->data_size = alloc_size;
+	this->data_align = item_type->align();
 	this->sizes = move(sizes);
 
 	auto it = this->item_type;
@@ -38,9 +39,20 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 		return;
 	}
 
+	if (it->mode[ALLOC_MD] == 'h') {
+		has_heap_member = true;
+
+	} else if (it->data_type() == DT_OBJECT) {
+		has_heap_member = it->has_heap_member();
+
+	} else {
+		has_heap_member = false;
+	}
+
 	if (it->mode[ALLOC_MD] != 'h') {
 		// Direct allocation case.
-		if (!it->typeinf->internal_allocator) {
+		if (!it->has_heap_member()) {
+			BOOST_ASSERT(!it->typeinf->internal_allocator);
 			allocator = new PlnSingleObjectAllocator(alloc_size);
 			freer = new PlnSingleObjectFreer();
 			copyer = new PlnSingleObjectCopyer(alloc_size);
