@@ -370,6 +370,40 @@ static double getFloat(PlnExpression *exp) {
 	return val.inf.floValue;;
 }
 
+static void setStringROData(vector<PlnRoData>& rodata, PlnVarType* var_type, PlnValue& item_val, int align)
+{
+	BOOST_ASSERT(item_val.type == VL_LIT_STR);
+	BOOST_ASSERT(var_type->typeinf->type == TP_FIXED_ARRAY);
+
+	PlnFixedArrayType* arr_type = static_cast<PlnFixedArrayType*>(var_type->typeinf);
+	BOOST_ASSERT(arr_type->item_type->size() == 1);
+	BOOST_ASSERT(arr_type->item_type->data_type() == DT_SINT || arr_type->item_type->data_type() == DT_UINT);
+	BOOST_ASSERT(arr_type->sizes.size() == 1);
+	
+	int arr_size = arr_type->sizes[0];
+	string &s = *item_val.inf.strValue;
+	
+	BOOST_ASSERT(arr_size >= s.size());
+	PlnRoData datainf;
+	datainf.data_type = arr_type->item_type->data_type();
+	datainf.size = 1;
+	datainf.alignment = align ? align : 1;
+
+	for (int i=0; i<arr_size; i++) {
+		if (i < s.size()) {
+			datainf.val.i = s[i];
+		} else if (!(i%8) && (i+8 <=arr_size)) {
+			datainf.size = 8;
+			datainf.val.i = 0;
+			i+=7;
+		} else {
+			datainf.size = 1;
+			datainf.val.i = 0;
+		}
+		rodata.push_back(datainf);
+		datainf.alignment = 1;
+	}
+}
 
 static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<PlnExpression *> &item_exps, int index, int align, int arr_dim = 1)
 {
@@ -409,8 +443,16 @@ static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<Pl
 			if (item_exps[index]->type == ET_ARRAYVALUE) {
 				PlnArrayValue *exp = static_cast<PlnArrayValue*>(item_exps[index]);
 				setROData(rodata, member->type, exp->item_exps, 0, member_align);
+
+			} else if (item_exps[index]->type == ET_VALUE) {
+				PlnValue &val = item_exps[index]->values[0];
+				if (val.type == VL_LIT_STR) {
+					setStringROData(rodata, member->type, val, member_align);
+				} else {
+					setROData(rodata, member->type, item_exps, index, member_align);
+				}
 			} else {
-				setROData(rodata, member->type, item_exps, index, member_align);
+				BOOST_ASSERT(false);
 			}
 			index++;
 		}
@@ -420,7 +462,6 @@ static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<Pl
 		datainf.data_type = var_type->data_type();
 		datainf.size = var_type->size();
 		datainf.alignment = align ? align : var_type->align();	//todo
-
 
 		if (datainf.data_type == DT_SINT || datainf.data_type == DT_UINT) {
 			datainf.val.i = getInt(item_exps[index]);

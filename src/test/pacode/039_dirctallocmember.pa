@@ -72,3 +72,13 @@ type jpeg_compress_struct {
 
 jpeg_compress_struct js;
 
+type User {
+	int64 id;
+	#[16]byte name1, name2;
+	int16 age;
+};
+
+#User u = [101, "Alice","Bob", 12];
+
+printf("%s,%s,%d", u.name1, u.name2, u.age);
+
