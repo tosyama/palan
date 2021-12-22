@@ -372,7 +372,7 @@ User userB;
 [102, "Bob", 13] -> userB;
 ```
 
-## Allocation for stack area
+# Allocation for stack area
 In default, object variables such as arrays or structures are placed at heap area.
 This allocation process possible to be bottle neck of performance in cases.
 You can optimaize performance by placing the objects on stack area by prefixing type with `#`.
@@ -517,8 +517,8 @@ You cannot use with another expressons because they are statements.
 
 |Operator|Name|Description|Example|
 |:-------|:---|:----------|:------|
-|`++`|Increment|Increase value of variable by 1|`i++;`|
-|`--`|Decrement|Decrease value of variable by 1|`i--;`|
+|`++`|Increment|Increase value of variable by 1.|`i++;`|
+|`--`|Decrement|Decrease value of variable by 1.|`i--;`|
 
 ## Mixed integers and floating points number operations
 When performing operations that mix integers and floating point numbers, calculations and comparisons are performed after promoting integers to 64-bit floating point numbers.
