@@ -1,7 +1,7 @@
 # What is Palan?
 Palan is a programming language (compiler) that is developing little by little, aiming at a language that can be an alternative to C language, which is simpler and safer. 
 
-Main added features of ver0.3 are struct, reference and improvement of C funtion call. You can develop some practical programs by using Palan ver 0.3. (e.g. Tetris on console)
+Main added features of ver0.4 are object can be allocate stack or struct member directly. You can develop some practical programs by using Palan ver 0.4. (e.g. Tetris on console)
 
 Although it run faster than the gcc -O0 in many cases, because it compiles to the assembler and optimize performance by register allocation for integer.
 
@@ -9,7 +9,7 @@ Although it run faster than the gcc -O0 in many cases, because it compiles to th
 The aim of language is that makes both clarity and simplicity compatible. Also, although it is just sense, my feeling when programming by Palan is important.
 
 # Sample program and explanation
-Although Palan ver0.3 has limited language features, you can develop a simple quick sort program like below.
+Although Palan ver0.4 has limited language features, you can develop a simple quick sort program like below.
 
 ```
 ccall printf(...);
@@ -44,10 +44,10 @@ func quicksort([N]int16 >>data, int32 left, right)
 
     while i <= right {
         if data[i] < data[left] {
-            mid+1 -> mid;
+            mid++;
             data[mid], data[i] -> data[i], data[mid];
         }
-        i+1 -> i;
+        i++;
     }
     data[left], data[mid] -> data[mid], data[left];
 
@@ -83,7 +83,7 @@ There is no start function like main, the program is basically executed in order
 ccall printf(...);
 ```
 
-In the Palan ver0.3, it links with the standard C library by default. By declaring with `ccall`, you can use preferred functions of the library. `...` represents a variable length argument.
+In the Palan ver0.4, it links with the standard C library by default. By declaring with `ccall`, you can use preferred functions of the library. `...` represents a variable length argument.
 
 ```
 // init data.
@@ -165,7 +165,7 @@ The Palan compiler pac works on the following environment.
 - Library: g++ (gcc 5.5.0/as/ld) or later(gcc 7.3.0), libboost-program-options
 
 # Installation
-Palan ver 0.3 does not provide a binary file for installation. You need to clone and build the source from github. Please read README.md for the build method.
+Palan ver 0.4 does not provide a binary file for installation. You need to clone and build the source from github. Please read README.md for the build method.
 
 # Command line reference
 The Palan compiler (pac) is the command line tool on the console.
@@ -214,7 +214,7 @@ After `//` description, it becomes a comment. The description is ignored until t
 ```
 
 # Primitive types
-In Palan ver 0.3, following integer types and floating point number types are available.  
+In Palan ver 0.4, following integer types and floating point number types are available.  
 
 |Type name|Description|Minimum|Maximum|
 |:--------|:----------|:------|:------|
@@ -317,6 +317,14 @@ If you omit the number of elements when initializing array variables, it will be
 [][]int32 aa = [1,2,3][4,5,6];  // Array of array.
 ```
 
+## Direct allocation of object elements
+In default, objects such as arrays or structures are placed at heap area, and array elements keep referenc of them.
+You can place the opject at element area directy by prefixing the element's type name with `#`.
+
+```
+[2]#[3]int32 a;   // The Memory allocation is same as [2,3]int32.
+```
+
 # Structure
 A structure is used to collect multiple data as one variable. To use the structure, you need to define the structure by describing the name and the members in `{}` after `type`.
 
@@ -329,7 +337,17 @@ type User {
 
 User userA;  // The declaration of User variable userA.
 ```
-Note: Unlike the C language, array and structure members are allocated separated memory area from the structure body. (e.g. The `name`  member variable in above example.)
+## Direct allocation of object members
+In default, objects such as arrays or structures are placed at heap area, and structure members keep referenc of them.
+You can place the opject at member area directy by prefixing the member's type name with `#`.
+
+```
+type User {
+	int64 id;
+	#[80]byte name;	// This object is placed at structure area.
+	int16 age;
+};
+```
 
 ## Access to member
 You can access the structure member by writing `.` and member name after the variable name.
@@ -353,6 +371,19 @@ User userA = [101, "Alice", 12];
 User userB;
 [102, "Bob", 13] -> userB;
 ```
+
+## Allocation for stack area
+In default, object variables such as arrays or structures are placed at heap area.
+This allocation process possible to be bottle neck of performance in cases.
+You can optimaize performance by placing the objects on stack area by prefixing type with `#`.
+However you should be careful for stack overflow.
+
+```
+#[3]int32 a = [1,2,3];
+#User u = [101, "Alice", 12];
+```
+
+
 # Type Alias
 You can define alias for type. It become easier to understand usage of the type. After `type`, write new name with `=` and the type name you want to alias.
 
@@ -480,6 +511,15 @@ You must always be aware of rounding errors in floating point comparisons.
 |`>=`|Greater than equal|Return 1 if the left value is greater than or equal to the right value, otherwise return 0.|`if a> = 10 {`...`}`|
 |`<=`|Less than equal|Return 1 if the left value is less than or equal to the right value, otherwise return 0.|`if a <= 10 {`...`}`|
 
+## Increment/decrement operation
+You can increment/decrement a variable by using `++`/`--` operator.
+You cannot use with another expressons because they are statements.
+
+|Operator|Name|Description|Example|
+|:-------|:---|:----------|:------|
+|`++`|Increment|Increase value of variable by 1|`i++;`|
+|`--`|Decrement|Decrease value of variable by 1|`i--;`|
+
 ## Mixed integers and floating points number operations
 When performing operations that mix integers and floating point numbers, calculations and comparisons are performed after promoting integers to 64-bit floating point numbers.
 
@@ -494,8 +534,6 @@ The following condition operator can be used to judge complicated conditions.
 |`&&`|And|Return 1 if the left value is not 0 and the right value is not 0, otherwise return 0. If the left value is 0, the expression for the right value is not evaluated.|`if a>0 && a <= 10 {`...`}`|
 |<code>&#124;&#124;</code>|Or|Return 1 if the left value is not 0 or the right value is not 0, otherwise return 0. If the left value is 1, the expression for the right value is not evaluated.|`if a <0 || a >= 10 {`...`}`|
 |`!`|Not|Return 1 if the expression is 0, Return 0 if it is not 0.|`if !(a<0) {`...`}`|
-
-**Note:** Although it is often called boolean operation in other languages, since the actual operation is a conditional branch, it is defined as a conditional operation in Palan.
 
 ## Function call
 You can call functions in the scope defined and declared by specifying arguments in function names and `()`. If it is within the scope, there is no problem even if there is a function definition after calling. Some arguments require ownership. In that case you need to add `>>` after the argument to clarify that the variable will lose ownership. The return value can be received using the assignment operator or the move operator.
