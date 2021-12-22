@@ -223,7 +223,7 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 					values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
 				}
 
-			} else {	// item data_type == DT_INT .. DT_FLOAT
+			} else {	// item data_type == DT_SINT .. DT_FLOAT
 				doCopyFromStaticBuffer = true;
 				values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
 			}
@@ -425,6 +425,9 @@ static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<Pl
 			if (item_exps[index]->type == ET_ARRAYVALUE) {
 				PlnArrayValue *exp = static_cast<PlnArrayValue*>(item_exps[index]);
 				setROData(rodata, item_type, exp->item_exps, 0, item_type->align(), arr_dim);
+
+			} else if (item_exps[index]->values[0].type == VL_LIT_STR) {
+				setStringROData(rodata, item_type, item_exps[index]->values[0], item_type->align());
 
 			} else {
 				setROData(rodata, item_type, item_exps, index, 0, arr_dim);

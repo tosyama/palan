@@ -1,11 +1,6 @@
 ccall printf(...);
-type User {
-	int64 id;
-	#[16]byte name1, name2;
-	int16 age;
-};
 
-#User u = [101, "Alice","Bob", 12];
+[3]#[10]byte names = ["Alice","Bob","Ken"];
 
-printf("%s,%s,%d", u.name1, u.name2, u.age);
+printf("%s,%s,%s", names[0], names[1], names[2]);
 
