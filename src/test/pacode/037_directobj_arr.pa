@@ -76,5 +76,10 @@ flo32 f11;
 }
 
 printf("%d %d %d %d %d ", o1, o3, o4, o5, o6);
-printf("%d %d %d %d %d %d %.1f", o7, o8, o9, o10, o10_2, o11, f11);
+printf("%d %d %d %d %d %d %.1f\n", o7, o8, o9, o10, o10_2, o11, f11);
+
+{
+	[3]#[10]byte names = ["Alice","Bob","Ken"];
+	printf("%s,%s,%s", names[0], names[1], names[2]);
+}
 

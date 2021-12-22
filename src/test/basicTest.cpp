@@ -8,8 +8,7 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "3 4 0 99 9 99 88 4 22\n"
-							"4 4 9 ");
+	REQUIRE(exec(testcode) == "Alice,Bob,Ken");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -256,7 +255,8 @@ void normalCaseTest()
 	
 	testcode = "037_directobj_arr";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "10 6 6 4 6 6 6 6 6 7 10 1.3");
+	REQUIRE(exec(testcode) == "10 6 6 4 6 6 6 6 6 7 10 1.3\n"
+								"Alice,Bob,Ken");
 
 	testcode = "038_calcopti";
 	REQUIRE(build(testcode) == "success");
@@ -265,7 +265,7 @@ void normalCaseTest()
 	testcode = "039_dirctallocmember";
 	REQUIRE(build(testcode) == "success");
 	REQUIRE(exec(testcode) == "3 4 0 99 9 99 88 4 22\n"
-							"4 4 9 ");
+							"4 4 9 Alice,Bob,12");
 }
 
 TEST_CASE("Normal case with simple grammer", "[basic]")
