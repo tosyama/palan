@@ -132,14 +132,14 @@ bool PlnArrayValue::isFixedArray(const vector<PlnExpression*> &items, vector<int
 
 static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayVarType* atype, int depth=0)
 {
-	BOOST_ASSERT(depth < atype->sizes2.size());
-	if (arr_val->item_exps.size() != atype->sizes2[depth]) {
+	BOOST_ASSERT(depth < atype->sizes.size());
+	if (arr_val->item_exps.size() != atype->sizes[depth]) {
 		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->typeinf->name);
 		err.loc = arr_val->loc;
 		throw err;
 	}
 
-	if (depth == atype->sizes2.size()-1) { // check item
+	if (depth == atype->sizes.size()-1) { // check item
 		vector<PlnVarType*> types = { atype->item_type() };
 		for (auto& exp: arr_val->item_exps) {
 			exp = exp->adjustTypes(types);
@@ -207,7 +207,6 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 	BOOST_ASSERT(types.size() == 1);
 	PlnTypeInfo* type = types[0]->typeinf;
 	if (type->type == TP_FIXED_ARRAY)  {
-		//PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
 		PlnFixedArrayVarType* atype = static_cast<PlnFixedArrayVarType*>(types[0]);
 		adjustFixedArrayType(this, atype);
 
@@ -217,21 +216,21 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 			if (atype->item_type()->data_type() == DT_OBJECT) {
 				// Check recursively if item_type includes DT_OBJECT_REF.
 				if (isIncludesObjectRefMember(atype->item_type())) {
-					values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+					values[0].inf.wk_type = types[0]->getVarType("rni");
 
 				} else {	// Dynamic allcation only object.
 					doCopyFromStaticBuffer = true;
-					values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+					values[0].inf.wk_type = types[0]->getVarType("rir");
 				}
 
 			} else {	// item data_type == DT_SINT .. DT_FLOAT
 				doCopyFromStaticBuffer = true;
-				values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+				values[0].inf.wk_type = types[0]->getVarType("rir");
 			}
 		} else {
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+			values[0].inf.wk_type = types[0]->getVarType("rni");
 		}
-		static_cast<PlnFixedArrayVarType*>(values[0].inf.wk_type)->sizes2 = atype->sizes2;
+		static_cast<PlnFixedArrayVarType*>(values[0].inf.wk_type)->sizes = atype->sizes;
 
 		return this;
 
@@ -243,9 +242,9 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 
 		if (isLiteral && !isIncludesObjectRefMember(types[0])) {
 			doCopyFromStaticBuffer = true;
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+			values[0].inf.wk_type = types[0]->getVarType("rir");
 		} else {
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+			values[0].inf.wk_type = types[0]->getVarType("rni");
 		}
 
 		return this;
@@ -340,7 +339,7 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 		// PlnFixedArrayTypeInfo *farr_type = static_cast<PlnFixedArrayTypeInfo*>(values[0].inf.wk_type->typeinf);
 		// pushArrayValItemExp(this, farr_type->sizes, items);
 		PlnFixedArrayVarType *farr_type = static_cast<PlnFixedArrayVarType*>(values[0].inf.wk_type);
-		pushArrayValItemExp(this, farr_type->sizes2, items);
+		pushArrayValItemExp(this, farr_type->sizes, items);
 
 	} else if (values[0].inf.wk_type->typeinf->type == TP_STRUCT) {
 		PlnStructTypeInfo *struct_type = static_cast<PlnStructTypeInfo*>(values[0].inf.wk_type->typeinf);
@@ -383,8 +382,8 @@ static void setStringROData(vector<PlnRoData>& rodata, PlnVarType* var_type, Pln
 	PlnFixedArrayVarType* arr_type = static_cast<PlnFixedArrayVarType*>(var_type);
 	BOOST_ASSERT(arr_type->item_type()->size() == 1);
 	BOOST_ASSERT(arr_type->item_type()->data_type() == DT_SINT || arr_type->item_type()->data_type() == DT_UINT);
-	BOOST_ASSERT(arr_type->sizes2.size() == 1);
-	int arr_size = arr_type->sizes2[0];
+	BOOST_ASSERT(arr_type->sizes.size() == 1);
+	int arr_size = arr_type->sizes[0];
 	string &s = *item_val.inf.strValue;
 	
 	BOOST_ASSERT(arr_size >= s.size());
@@ -418,7 +417,7 @@ static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<Pl
 	//	PlnFixedArrayTypeInfo* arr_type = static_cast<PlnFixedArrayTypeInfo*>(var_type->typeinf);
 		PlnFixedArrayVarType* arr_type = static_cast<PlnFixedArrayVarType*>(var_type);
 		PlnVarType *item_type;
-		if (arr_dim < arr_type->sizes2.size()) {
+		if (arr_dim < arr_type->sizes.size()) {
 			item_type = var_type;
 			arr_dim++;
 		} else {

@@ -15,7 +15,7 @@ public:
 
 class PlnFixedArrayVarType : public PlnVarType {
 public:
-	vector<int> sizes2;
+	vector<int> sizes;
 	PlnFixedArrayVarType(PlnTypeInfo* typeinf, const string &mode)
 		: PlnVarType(typeinf, mode) 
 	{

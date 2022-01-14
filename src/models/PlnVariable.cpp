@@ -49,17 +49,6 @@ static bool requireInit(PlnVarType* var_type)
 {
 	if (var_type->mode[IDENTITY_MD] == 'i' && var_type->mode[ALLOC_MD] == 'r')
 		return true;
-	
-	/*if (var_type->typeinf->type == TP_FIXED_ARRAY)
-		return requireInit(static_cast<PlnFixedArrayType*>(var_type->typeinf)->item_type);
-	
-	if (var_type->typeinf->type == TP_STRUCT) {
-		PlnStructType* stype = static_cast<PlnStructType*>(var_type->typeinf);
-		for (PlnStructMemberDef* member: stype->members) {
-			if (requireInit(member->type))
-				return true;
-		}
-	}*/
 
 	return false;
 }

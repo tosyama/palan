@@ -37,7 +37,7 @@ PlnFunction* PlnArray::createObjRefArrayAllocFunc(string func_name, PlnFixedArra
 	f->parent = block;
 	string s1 = "__p1";
 	PlnVarType* ret_vtype = arr_type->getVarType("wmr");
-	static_cast<PlnFixedArrayVarType*>(ret_vtype)->sizes2 = sizes;
+	static_cast<PlnFixedArrayVarType*>(ret_vtype)->sizes = sizes;
 	PlnVariable* ret_var = f->addRetValue(s1, ret_vtype);
 
 	f->implement = new PlnBlock();

@@ -58,7 +58,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	}
 	var->var_type = def->type->typeinf->getVarType(mode);
 	if (def->type->typeinf->type == TP_FIXED_ARRAY) {
-		static_cast<PlnFixedArrayVarType*>(var->var_type)->sizes2 = static_cast<PlnFixedArrayVarType*>(def->type)->sizes2;
+		static_cast<PlnFixedArrayVarType*>(var->var_type)->sizes = static_cast<PlnFixedArrayVarType*>(def->type)->sizes;
 	}
 	var->is_indirect = true;
 	var->is_tmpvar = var->container->is_tmpvar;

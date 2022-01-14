@@ -659,7 +659,7 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			if (tt->type == TP_FIXED_ARRAY) {
 				PlnFixedArrayVarType* atype = static_cast<PlnFixedArrayVarType*>(val.getVarType());
 				while (atype) {
-					for (int sz: atype->sizes2) {
+					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
 					tt = atype->typeinf;
@@ -949,7 +949,7 @@ PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 			BOOST_ASSERT(var_val->values[0].type == VL_VAR);
 			auto sub_block = new PlnBlock();
 			sub_block->setParent(CUR_BLOCK);
-			PlnVarType *t = var_val->values[0].inf.var->var_type->typeinf->getVarType("w-r");
+			PlnVarType *t = var_val->values[0].inf.var->var_type->getVarType("w-r");
 			PlnVariable *v = sub_block->declareVariable("__tmp", t, false);
 
 			vector<PlnValue> vars = {v};

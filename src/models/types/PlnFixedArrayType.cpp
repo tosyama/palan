@@ -1,7 +1,7 @@
 /// Fixed array type class definition.
 ///
 /// @file	PlnFixedArrayType.cpp
-/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
@@ -149,7 +149,7 @@ PlnVarType* PlnFixedArrayTypeInfo::getVarType(const string& mode)
 PlnVarType* PlnFixedArrayVarType::getVarType(const string& mode)
 {
 	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(typeinf->getVarType(mode));
-	vtype->sizes2 = sizes2;
+	vtype->sizes = sizes;
 	return vtype;
 }
 
@@ -169,9 +169,9 @@ PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType co
 
 	if (src->typeinf->type == TP_FIXED_ARRAY) {
 		auto src_farrvt = static_cast<PlnFixedArrayVarType*>(src);
-		BOOST_ASSERT(src_farrvt->sizes2.size());
+		BOOST_ASSERT(src_farrvt->sizes.size());
 
-		if (typeinf == src->typeinf && sizes2 == src_farrvt->sizes2 && mode == src->mode) {
+		if (typeinf == src->typeinf && sizes == src_farrvt->sizes && mode == src->mode) {
 			return TC_SAME;
 		}
 
@@ -191,32 +191,32 @@ PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType co
 		// [9,2][2]itemtype -> [9,2][?]itemtype: Downcast (basically uses item([2]itemtype) compatibility)
 
 		PlnTypeConvCap cap = TC_AUTO_CAST;
-		if (sizes2[0] == 0) { // Undefined size case. e.g. [?,2]
-			if (sizes2.size() != 1) {
-				if (sizes2.size() != src_farrvt->sizes2.size()) {
+		if (sizes[0] == 0) { // Undefined size case. e.g. [?,2]
+			if (sizes.size() != 1) {
+				if (sizes.size() != src_farrvt->sizes.size()) {
 					return TC_CANT_CONV;
 				}
-				for (int i=1; i<sizes2.size(); i++) {
-					if (sizes2[i] != src_farrvt->sizes2[i]) {
+				for (int i=1; i<sizes.size(); i++) {
+					if (sizes[i] != src_farrvt->sizes[i]) {
 						return TC_CANT_CONV;
 					}
 				}
 			}
 			cap = TC_UP_CAST;
-		} else if (src_farrvt->sizes2[0] == 0) { // Downcast case [?]->[9]
-			if (src_farrvt->sizes2.size() != 1) {
-				if (sizes2.size() != src_farrvt->sizes2.size()) {
+		} else if (src_farrvt->sizes[0] == 0) { // Downcast case [?]->[9]
+			if (src_farrvt->sizes.size() != 1) {
+				if (sizes.size() != src_farrvt->sizes.size()) {
 					return TC_CANT_CONV;
 				}
-				for (int i=1; i<sizes2.size(); i++) {
-					if (sizes2[i] != src_farrvt->sizes2[i]) {
+				for (int i=1; i<sizes.size(); i++) {
+					if (sizes[i] != src_farrvt->sizes[i]) {
 						return TC_CANT_CONV;
 					}
 				}
 			}
 			cap = TC_DOWN_CAST;
 
-		} else if (sizes2 != src_farrvt->sizes2) { // size case
+		} else if (sizes != src_farrvt->sizes) { // size case
 			return TC_CANT_CONV;
 		}
 
@@ -242,14 +242,14 @@ PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType co
 	}
 
 	if (src->typeinf->type == TP_ARRAY_VALUE) {
-		PlnVarType *item_type = static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type;
-		return static_cast<PlnArrayValueTypeInfo*>(src->typeinf)->checkCompatible(item_type, sizes2);
+		PlnVarType *item_type = this->item_type();
+		return static_cast<PlnArrayValueTypeInfo*>(src->typeinf)->checkCompatible(item_type, sizes);
 	}
 
 	if (src == PlnVarType::getReadOnlyCStr()) {
-		PlnVarType *item_type = static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type;
-		if (item_type->typeinf == PlnVarType::getByte()->typeinf && sizes2.size() == 1) {
-			if (sizes2[0])
+		PlnVarType *item_type = this->item_type();
+		if (item_type->typeinf == PlnVarType::getByte()->typeinf && sizes.size() == 1) {
+			if (sizes[0])
 				return TC_LOSTABLE_AUTO_CAST;
 			else // byte[?]
 				return TC_AUTO_CAST;

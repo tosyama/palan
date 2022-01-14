@@ -1,12 +1,12 @@
 /// Alias type class declaration.
 ///
 /// @file	PlnAliasType.h
-/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2022 YAMAGUCHI Toshinobu 
 
-class PlnAliasType : public PlnTypeInfo {
+class PlnAliasTypeInfo : public PlnTypeInfo {
 public:
 	PlnVarType* orig_type;
-	PlnAliasType(const string &name, PlnVarType* orig_type, PlnTypeInfo* orig_type2)
+	PlnAliasTypeInfo(const string &name, PlnVarType* orig_type, PlnTypeInfo* orig_type2)
 		: PlnTypeInfo(TP_ALIAS), orig_type(orig_type)
 	{
 		this->name = name;

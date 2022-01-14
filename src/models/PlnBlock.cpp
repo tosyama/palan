@@ -253,13 +253,13 @@ void PlnBlock::declareAliasType(const string& type_name, PlnVarType* orig_type)
 {
 	BOOST_ASSERT(orig_type);
 
-	auto t = new PlnAliasType(type_name, orig_type, orig_type->typeinf);
+	auto t = new PlnAliasTypeInfo(type_name, orig_type, orig_type->typeinf);
 	typeinfos.push_back(t);
 }
 
 static PlnVarType* realType(PlnTypeInfo *t, const string& mode) {
 	if (t->type == TP_ALIAS) {
-		PlnAliasType *at = static_cast<PlnAliasType*>(t);
+		PlnAliasTypeInfo *at = static_cast<PlnAliasTypeInfo*>(t);
 		PlnVarType *vtype = at->orig_type->getVarType(mode);
 		BOOST_ASSERT(vtype->typeinf->type != TP_ALIAS);
 		return vtype;
@@ -351,7 +351,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	for (auto t: typeinfos) 
 		if (name == t->name) {
 			PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
-			vtype->sizes2 = sizes;
+			vtype->sizes = sizes;
 			return vtype;
 		}
 	
@@ -359,7 +359,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	t->default_mode = "wmh";
 	typeinfos.push_back(t);
 	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
-	vtype->sizes2 = sizes;
+	vtype->sizes = sizes;
 	return vtype;
 }
 
