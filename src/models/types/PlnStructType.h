@@ -12,13 +12,13 @@ public:
 	PlnStructMemberDef(PlnVarType *type, const string& name);
 };
 
-class PlnStructType : public PlnType {
+class PlnStructTypeInfo : public PlnTypeInfo {
 public:
 	vector<PlnStructMemberDef*> members;
 	bool has_heap_member;
 
-	PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode);
-	~PlnStructType();
+	PlnStructTypeInfo(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode);
+	~PlnStructTypeInfo();
 	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override;
 };
 

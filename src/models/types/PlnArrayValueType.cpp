@@ -12,14 +12,14 @@
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
 
-PlnArrayValueType::PlnArrayValueType(PlnArrayValue* arr_val)
-	: PlnType(TP_ARRAY_VALUE), arr_val(arr_val)
+PlnArrayValueTypeInfo::PlnArrayValueTypeInfo(PlnArrayValue* arr_val)
+	: PlnTypeInfo(TP_ARRAY_VALUE), arr_val(arr_val)
 {
 	this->default_mode = "rir";
 	this->name = PlnMessage::arrayValue();
 }
 
-PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
+PlnVarType* PlnArrayValueTypeInfo::getDefaultType(PlnBlock *block)
 {
 	BOOST_ASSERT(arr_val);
 	vector<int> fixarr_sizes;
@@ -30,11 +30,11 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 		PlnVarType* itype;
 		switch(val_item_type) {
 			case DT_SINT:
-				itype = PlnType::getSint()->getVarType(); break;
+				itype = PlnVarType::getSint(); break;
 			case DT_UINT:
-				itype = PlnType::getUint()->getVarType(); break;
+				itype = PlnVarType::getUint(); break;
 			case DT_FLOAT:
-				itype = PlnType::getFlo64()->getVarType(); break;
+				itype = PlnVarType::getFlo64(); break;
 			default:
 				BOOST_ASSERT(false);
 		}
@@ -47,7 +47,7 @@ PlnVarType* PlnArrayValueType::getDefaultType(PlnBlock *block)
 }
 
 // LCOV_EXCL_START
-PlnTypeConvCap PlnArrayValueType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) {
+PlnTypeConvCap PlnArrayValueTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) {
 	BOOST_ASSERT(false);
 }
 // LCOV_EXCL_STOP
@@ -62,7 +62,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarTyp
 	if (sizes.size() == (depth+1) ) {
 		// check item type conpatible 
 		for (auto exp: arr_val->item_exps) {
-			result = PlnType::lowCapacity(result, item_type->canCopyFrom(exp->values[0].getVarType(), ASGN_COPY));
+			result = PlnTypeInfo::lowCapacity(result, item_type->canCopyFrom(exp->values[0].getVarType(), ASGN_COPY));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}
@@ -74,7 +74,7 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarTyp
 				return TC_CANT_CONV;
 
 			PlnArrayValue* item_arr_val = static_cast<PlnArrayValue*>(exp);
-			result = PlnType::lowCapacity(result, checkFixedArrayItemTypes(item_arr_val, item_type, sizes, depth+1));
+			result = PlnTypeInfo::lowCapacity(result, checkFixedArrayItemTypes(item_arr_val, item_type, sizes, depth+1));
 			if (result == TC_CANT_CONV)
 				return TC_CANT_CONV;
 		}
@@ -83,13 +83,13 @@ static PlnTypeConvCap checkFixedArrayItemTypes(PlnArrayValue* arr_val, PlnVarTyp
 	}
 }
 
-PlnTypeConvCap PlnArrayValueType::checkCompatible(PlnVarType* item_type, const vector<int>& sizes)
+PlnTypeConvCap PlnArrayValueTypeInfo::checkCompatible(PlnVarType* item_type, const vector<int>& sizes)
 {
 	BOOST_ASSERT(arr_val);
 	return checkFixedArrayItemTypes(arr_val, item_type, sizes, 0);
 }
 
-vector<int> PlnArrayValueType::getArraySizes()
+vector<int> PlnArrayValueTypeInfo::getArraySizes()
 {
 	BOOST_ASSERT(arr_val);
 	vector<int> fixarr_sizes;

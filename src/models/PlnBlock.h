@@ -29,7 +29,7 @@ public:
 		PlnExpression *ex;
 	};
 	vector<PlnConst> consts;
-	vector<PlnType*> types;
+	vector<PlnTypeInfo*> typeinfos;
 	vector<PlnFunction*> funcs;
 	
 	PlnModule* parent_module;
@@ -55,7 +55,7 @@ public:
 
 	void declareType(const string& type_name);
 	void declareType(const string& type_name, vector<PlnStructMemberDef*>& members);
-	void declareAliasType(const string& type_name, PlnType* orig_type);
+	void declareAliasType(const string& type_name, PlnVarType* orig_type);
 
 	PlnVarType* getType(const string& type_name, const string& mode);
 	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
@@ -68,5 +68,5 @@ public:
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
 
-	static string generateFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types);
+	static string generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, vector<PlnTypeInfo*> arg_types);
 };

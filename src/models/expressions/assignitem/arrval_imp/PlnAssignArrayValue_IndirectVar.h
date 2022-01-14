@@ -62,7 +62,7 @@ public:
 
 		if (tmp_vartype->data_type() == DT_OBJECT) {
 			// ex) [3]#[2][1]int32 a9  = [[1][2]][[3][4]][[5][6]];
-			tmp_vartype = tmp_vartype->typeinf->getVarType();
+			tmp_vartype = tmp_vartype->getVarType();
 		}
 
 		tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "tmp var");

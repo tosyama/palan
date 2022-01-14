@@ -3,16 +3,16 @@
 /// @file	PlnAliasType.h
 /// @copyright	2019-2021 YAMAGUCHI Toshinobu 
 
-class PlnAliasType : public PlnType {
+class PlnAliasType : public PlnTypeInfo {
 public:
-	PlnType* orig_type;
-	PlnAliasType(const string &name, PlnType* orig_type)
-		: PlnType(TP_ALIAS), orig_type(orig_type)
+	PlnVarType* orig_type;
+	PlnAliasType(const string &name, PlnVarType* orig_type, PlnTypeInfo* orig_type2)
+		: PlnTypeInfo(TP_ALIAS), orig_type(orig_type)
 	{
 		this->name = name;
-		this->data_type = orig_type->data_type;
-		this->data_size = orig_type->data_size;
-		this->data_align = orig_type->data_align;
+		this->data_type = orig_type->typeinf->data_type;
+		this->data_size = orig_type->typeinf->data_size;
+		this->data_align = orig_type->typeinf->data_align;
 	}
 	
 	// LCOV_EXCL_START

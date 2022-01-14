@@ -17,14 +17,15 @@
 #include "PlnStructMember.h"
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
+#include "../types/PlnFixedArrayType.h"
 
 PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	: PlnExpression(ET_STRUCTMEMBER), struct_ex(sturct_ex), def(NULL)
 {
 	BOOST_ASSERT(struct_ex->values.size() == 1);
-	PlnType *t = struct_ex->values[0].getVarType()->typeinf;
+	PlnTypeInfo *t = struct_ex->values[0].getVarType()->typeinf;
 	if (t->type == TP_STRUCT) {
-		PlnStructType *st = static_cast<PlnStructType*>(t);
+		PlnStructTypeInfo *st = static_cast<PlnStructTypeInfo*>(t);
 		for (auto md: st->members) {
 			if (md->name == member_name) {
 				def = md;
@@ -56,6 +57,9 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 		mode[ACCESS_MD] = 'r';
 	}
 	var->var_type = def->type->typeinf->getVarType(mode);
+	if (def->type->typeinf->type == TP_FIXED_ARRAY) {
+		static_cast<PlnFixedArrayVarType*>(var->var_type)->sizes2 = static_cast<PlnFixedArrayVarType*>(def->type)->sizes2;
+	}
 	var->is_indirect = true;
 	var->is_tmpvar = var->container->is_tmpvar;
 
@@ -116,7 +120,7 @@ vector<PlnExpression*> PlnStructMember::getAllStructMembers(PlnVariable* var)
 	BOOST_ASSERT(var->var_type->typeinf->type == TP_STRUCT);
 	vector<PlnExpression*> member_exs;
 
-	PlnStructType *stype = static_cast<PlnStructType*>(var->var_type->typeinf);
+	PlnStructTypeInfo *stype = static_cast<PlnStructTypeInfo*>(var->var_type->typeinf);
 	for (auto member: stype->members) {
 		PlnExpression* var_ex = new PlnExpression(var);
 		PlnExpression* member_ex = new PlnStructMember(var_ex, member->name);

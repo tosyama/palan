@@ -15,8 +15,8 @@
 #include "../../PlnMessage.h"
 #include "../../PlnException.h"
 
-PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent)
-	: PlnType(TP_FIXED_ARRAY), item_type(item_type)
+PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent)
+	: PlnTypeInfo(TP_FIXED_ARRAY), item_type(item_type)
 {
 	int alloc_size = item_type->size();
 	for (int s: sizes)
@@ -26,7 +26,6 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	this->data_type = DT_OBJECT;
 	this->data_size = alloc_size;
 	this->data_align = item_type->align();
-	this->sizes = move(sizes);
 
 	auto it = this->item_type;
 
@@ -84,7 +83,7 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 		// allocator
 		{
 			string fname = PlnBlock::generateFuncName("new", {this}, {});
-			PlnFunction* alloc_func = PlnArray::createObjRefArrayAllocFunc(fname, this, parent);
+			PlnFunction* alloc_func = PlnArray::createObjRefArrayAllocFunc(fname, this, sizes, parent);
 			parent->parent_module->functions.push_back(alloc_func);
 
 			allocator = new PlnNoParamAllocator(alloc_func);
@@ -130,11 +129,32 @@ PlnFixedArrayType::PlnFixedArrayType(string &name, PlnVarType* item_type, vector
 	}
 }
 
-PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
+PlnTypeConvCap PlnFixedArrayTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
 {
-	if (this == src->typeinf && mode == src->mode)
-		return TC_SAME;
-	
+	BOOST_ASSERT(false);
+}
+
+PlnVarType* PlnFixedArrayTypeInfo::getVarType(const string& mode)
+{
+	string omode = mode;
+	if (mode[0] == '-') omode[0] = default_mode[0];
+	if (mode[1] == '-') omode[1] = default_mode[1];
+	if (mode[2] == '-') omode[2] = default_mode[2];
+
+	PlnVarType* var_type = new PlnFixedArrayVarType(this, omode);
+
+	return var_type;
+}
+
+PlnVarType* PlnFixedArrayVarType::getVarType(const string& mode)
+{
+	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(typeinf->getVarType(mode));
+	vtype->sizes2 = sizes2;
+	return vtype;
+}
+
+PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType copymode)
+{
 	// check mode
 	if (copymode == ASGN_COPY_REF) {
 		if (mode[ACCESS_MD] == 'w' && src->mode[ACCESS_MD] == 'r') {
@@ -147,12 +167,14 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 	} else
 		BOOST_ASSERT(copymode == ASGN_COPY);
 
-	if (src->typeinf == PlnType::getObject()) {
-		return TC_DOWN_CAST;
-	}
-
 	if (src->typeinf->type == TP_FIXED_ARRAY) {
-		auto src_farr = static_cast<PlnFixedArrayType*>(src->typeinf);
+		auto src_farrvt = static_cast<PlnFixedArrayVarType*>(src);
+		BOOST_ASSERT(src_farrvt->sizes2.size());
+
+		if (typeinf == src->typeinf && sizes2 == src_farrvt->sizes2 && mode == src->mode) {
+			return TC_SAME;
+		}
+
 		// Assumed cases
 		// [9,2]int32 -> [9,2]int64: NG
 		// [9,2]itemtype -> [9,2]itemtype: OK
@@ -169,42 +191,42 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 		// [9,2][2]itemtype -> [9,2][?]itemtype: Downcast (basically uses item([2]itemtype) compatibility)
 
 		PlnTypeConvCap cap = TC_AUTO_CAST;
-		if (sizes[0] == 0) { // Undefined size case. e.g. [?,2]
-			if (sizes.size() != 1) {
-				if (sizes.size() != src_farr->sizes.size()) {
+		if (sizes2[0] == 0) { // Undefined size case. e.g. [?,2]
+			if (sizes2.size() != 1) {
+				if (sizes2.size() != src_farrvt->sizes2.size()) {
 					return TC_CANT_CONV;
 				}
-				for (int i=1; i<sizes.size(); i++) {
-					if (sizes[i] != src_farr->sizes[i]) {
+				for (int i=1; i<sizes2.size(); i++) {
+					if (sizes2[i] != src_farrvt->sizes2[i]) {
 						return TC_CANT_CONV;
 					}
 				}
 			}
 			cap = TC_UP_CAST;
-
-		} else if (src_farr->sizes[0] == 0) { // Downcast case [?]->[9]
-			if (src_farr->sizes.size() != 1) {
-				if (sizes.size() != src_farr->sizes.size()) {
+		} else if (src_farrvt->sizes2[0] == 0) { // Downcast case [?]->[9]
+			if (src_farrvt->sizes2.size() != 1) {
+				if (sizes2.size() != src_farrvt->sizes2.size()) {
 					return TC_CANT_CONV;
 				}
-				for (int i=1; i<sizes.size(); i++) {
-					if (sizes[i] != src_farr->sizes[i]) {
+				for (int i=1; i<sizes2.size(); i++) {
+					if (sizes2[i] != src_farrvt->sizes2[i]) {
 						return TC_CANT_CONV;
 					}
 				}
 			}
 			cap = TC_DOWN_CAST;
 
-		} else if (sizes != src_farr->sizes) { // size case
+		} else if (sizes2 != src_farrvt->sizes2) { // size case
 			return TC_CANT_CONV;
-
 		}
 
 		// Item type check
+		PlnVarType *item_type = static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type;
+		PlnVarType *src_item_type = static_cast<PlnFixedArrayTypeInfo*>(src->typeinf)->item_type;
 		if (item_type->data_type() == DT_OBJECT_REF) {
-			return item_type->canCopyFrom(src_farr->item_type, ASGN_COPY);
+			return item_type->canCopyFrom(src_item_type, ASGN_COPY);
 
-		} else if (item_type == src_farr->item_type) {
+		} else if (item_type == src_item_type) {
 			return cap;
 
 		} else {
@@ -214,13 +236,20 @@ PlnTypeConvCap PlnFixedArrayType::canCopyFrom(const string& mode, PlnVarType *sr
 		return TC_CANT_CONV;
 	}
 
-	if (src->typeinf->type == TP_ARRAY_VALUE) {
-		return static_cast<PlnArrayValueType*>(src->typeinf)->checkCompatible(item_type, sizes);
+
+	if (src->typeinf == PlnVarType::getObject()->typeinf) {
+		return TC_DOWN_CAST;
 	}
 
-	if (src == PlnType::getReadOnlyCStr()->getVarType()) {
-		if (item_type->typeinf == PlnType::getByte() && sizes.size() == 1) {
-			if (sizes[0])
+	if (src->typeinf->type == TP_ARRAY_VALUE) {
+		PlnVarType *item_type = static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type;
+		return static_cast<PlnArrayValueTypeInfo*>(src->typeinf)->checkCompatible(item_type, sizes2);
+	}
+
+	if (src == PlnVarType::getReadOnlyCStr()) {
+		PlnVarType *item_type = static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type;
+		if (item_type->typeinf == PlnVarType::getByte()->typeinf && sizes2.size() == 1) {
+			if (sizes2[0])
 				return TC_LOSTABLE_AUTO_CAST;
 			else // byte[?]
 				return TC_AUTO_CAST;

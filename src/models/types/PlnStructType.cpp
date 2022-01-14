@@ -29,7 +29,7 @@ PlnStructMemberDef::PlnStructMemberDef(PlnVarType *type, const string& name)
 {
 }
 
-static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnStructTypeInfo* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 
@@ -71,7 +71,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 	return f;
 }
 
-static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_name, PlnStructTypeInfo* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 
@@ -111,7 +111,7 @@ static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_na
 	return f;
 }
 
-static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnStructTypeInfo* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
@@ -142,7 +142,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnSt
 	return f;
 }
 
-static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_name, PlnStructTypeInfo* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1";
@@ -166,7 +166,7 @@ static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_nam
 	return f;
 }
 
-static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnStructType* struct_type, PlnBlock* parent_block)
+static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnStructTypeInfo* struct_type, PlnBlock* parent_block)
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
@@ -202,8 +202,8 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 	return f;
 }
 
-PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
-	: PlnType(TP_STRUCT), members(move(members))
+PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
+	: PlnTypeInfo(TP_STRUCT), members(move(members))
 {
 	this->name = name;
 	int alloc_size = 0;
@@ -279,22 +279,22 @@ PlnStructType::PlnStructType(const string &name, vector<PlnStructMemberDef*> &me
 	}
 }
 
-PlnStructType::~PlnStructType()
+PlnStructTypeInfo::~PlnStructTypeInfo()
 {
 	for (auto member: members)
 		delete member;
 }
 
-PlnTypeConvCap PlnStructType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) {
+PlnTypeConvCap PlnStructTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) {
 	if (this == src->typeinf)
 		return TC_SAME;
 
-	if (src->typeinf == PlnType::getObject()) {
+	if (src->typeinf == PlnVarType::getObject()->typeinf) {
 		return TC_DOWN_CAST;
 	}
 
 	if (src->typeinf->type == TP_ARRAY_VALUE) {
-		PlnArrayValue* arr_val = static_cast<PlnArrayValueType*>(src->typeinf)->arr_val;
+		PlnArrayValue* arr_val = static_cast<PlnArrayValueTypeInfo*>(src->typeinf)->arr_val;
 
 		if (arr_val->item_exps.size() != members.size())
 			return TC_CANT_CONV;
@@ -303,7 +303,7 @@ PlnTypeConvCap PlnStructType::canCopyFrom(const string& mode, PlnVarType *src, P
 		int i = 0;
 		for (auto member: members) {
 			PlnVarType* src_type = arr_val->item_exps[i]->values[0].getVarType();
-			cap = PlnType::lowCapacity(cap, member->type->canCopyFrom(src_type, ASGN_COPY));
+			cap = PlnTypeInfo::lowCapacity(cap, member->type->canCopyFrom(src_type, ASGN_COPY));
 			i++;
 		}
 

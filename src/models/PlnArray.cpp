@@ -1,7 +1,7 @@
 /// Array model class definition.
 ///
 /// @file	PlnArray.cpp
-/// @copyright	2018-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -18,20 +18,33 @@
 #include "expressions/PlnArrayItem.h"
 #include "expressions/PlnAssignment.h"
 
-PlnFunction* PlnArray::createObjRefArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock* block)
+static int item_num_of(vector<int> & sizes)
+{
+	int n = 1;
+	for (int i: sizes) {
+		n *= i;
+	}
+	return n;
+}
+
+PlnFunction* PlnArray::createObjRefArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, vector<int> &sizes, PlnBlock* block)
 {
 	PlnVarType* it = arr_type->item_type;
-	int item_num = arr_type->data_size / it->size();
+	// int item_num = arr_type->data_size / it->size();
+	int item_num = item_num_of(sizes);
 
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	f->parent = block;
 	string s1 = "__p1";
-	PlnVariable* ret_var = f->addRetValue(s1, arr_type->getVarType("wmr"));
+	PlnVarType* ret_vtype = arr_type->getVarType("wmr");
+	static_cast<PlnFixedArrayVarType*>(ret_vtype)->sizes2 = sizes;
+	PlnVariable* ret_var = f->addRetValue(s1, ret_vtype);
 
 	f->implement = new PlnBlock();
 	f->implement->setParent(f);
 	
-	palan::malloc(f->implement, ret_var, arr_type->data_size);
+	// palan::malloc(f->implement, ret_var, arr_type->data_size);
+	palan::malloc(f->implement, ret_var, item_num * it->size());
 
 	// add alloc code.
 	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
@@ -53,7 +66,7 @@ PlnFunction* PlnArray::createObjRefArrayAllocFunc(string func_name, PlnFixedArra
 	return f;
 }
 
-PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	int item_num = arr_type->data_size / it->size();
@@ -85,7 +98,7 @@ PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnF
 	return f;
 }
 
-PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	int item_num = arr_type->data_size / it->size();
@@ -121,7 +134,7 @@ PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArray
 	return f;
 }
 
-PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	int item_num = arr_type->data_size / it->size();
@@ -155,7 +168,7 @@ PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFi
 	return f;
 }
 
-PlnFunction* PlnArray::createObjRefArrayCopyFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjRefArrayCopyFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	int item_num = arr_type->data_size / it->size();
@@ -187,7 +200,7 @@ PlnFunction* PlnArray::createObjRefArrayCopyFunc(string func_name, PlnFixedArray
 	return f;
 }
 
-PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	int item_num = arr_type->data_size / it->size();
@@ -216,7 +229,7 @@ PlnFunction* PlnArray::createObjArrayAllocFunc(string func_name, PlnFixedArrayTy
 	return f;
 }
 
-PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayType* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	int item_num = arr_type->data_size / it->size();

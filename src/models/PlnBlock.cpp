@@ -45,7 +45,7 @@ PlnBlock::~PlnBlock()
 		delete stmt;
 	for (auto cons: consts)
 		delete cons.ex;
-	for (auto t: types)
+	for (auto t: typeinfos)
 		delete t;
 }
 
@@ -235,43 +235,46 @@ PlnExpression* PlnBlock::getConst(const string& name)
 
 void PlnBlock::declareType(const string& type_name)
 {
-	PlnType* t = new PlnType();
+	PlnTypeInfo* t = new PlnTypeInfo();
 	t->name = type_name;
 	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT;
 	t->data_size = 0;
-	types.push_back(t);
+	typeinfos.push_back(t);
 }
 
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
-	auto t = new PlnStructType(type_name, members, this, "wmh");
-	types.push_back(t);
+	auto t = new PlnStructTypeInfo(type_name, members, this, "wmh");
+	typeinfos.push_back(t);
 }
 
-void PlnBlock::declareAliasType(const string& type_name, PlnType* orig_type)
+void PlnBlock::declareAliasType(const string& type_name, PlnVarType* orig_type)
 {
 	BOOST_ASSERT(orig_type);
 
-	auto t = new PlnAliasType(type_name, orig_type);
-	types.push_back(t);
+	auto t = new PlnAliasType(type_name, orig_type, orig_type->typeinf);
+	typeinfos.push_back(t);
 }
 
-static PlnVarType* realType(PlnType *t, const string& mode) {
-	while (t->type == TP_ALIAS) {
-		t = static_cast<PlnAliasType*>(t)->orig_type;
+static PlnVarType* realType(PlnTypeInfo *t, const string& mode) {
+	if (t->type == TP_ALIAS) {
+		PlnAliasType *at = static_cast<PlnAliasType*>(t);
+		PlnVarType *vtype = at->orig_type->getVarType(mode);
+		BOOST_ASSERT(vtype->typeinf->type != TP_ALIAS);
+		return vtype;
 	}
 	return t->getVarType(mode);
 }
 
 PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 {
-	// Crrent block
+	// Crrent blockstatic_cast<PlnAliasType*>(t)->orig_type
 	{
-		auto t = std::find_if(types.begin(), types.end(),
-				[type_name](PlnType* t) { return t->name == type_name; });
+		auto t = std::find_if(typeinfos.begin(), typeinfos.end(),
+				[type_name](PlnTypeInfo* t) { return t->name == type_name; });
 
-		if (t != types.end())
+		if (t != typeinfos.end())
 			return realType(*t, mode);
 	}
 
@@ -282,10 +285,10 @@ PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 
 	// Search default type if toplevel: parentBlock(this) == NULL
 	{
-		vector<PlnType*> &basic_types = PlnType::getBasicTypes();
+		vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();
 
 		auto t = std::find_if(basic_types.begin(), basic_types.end(),
-				[type_name](PlnType* t) { return t->name == type_name; });
+				[type_name](PlnTypeInfo* t) { return t->name == type_name; });
 
 		if (t != basic_types.end())
 			return realType(*t, mode);
@@ -294,7 +297,7 @@ PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 	return NULL;
 }
 
-string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
+string PlnBlock::generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, vector<PlnTypeInfo*> arg_types)
 {
 	string ret_name, arg_name;
 	for (auto t: ret_types)
@@ -318,12 +321,11 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	
 	// Find item from Crrent block
 	{
-		auto t = std::find_if(types.begin(), types.end(),
-				[item_type](PlnType* t) { return t == item_type->typeinf; });
+		auto t = std::find_if(typeinfos.begin(), typeinfos.end(),
+				[item_type](PlnTypeInfo* t) { return t == item_type->typeinf; });
 
-		if (t != types.end()) {
+		if (t != typeinfos.end()) {
 			found_item = true;
-			BOOST_ASSERT(item_type == realType(*t, item_type->mode));
 		}
 	}
 	
@@ -332,11 +334,11 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 			return b->getFixedArrayType(item_type, sizes, mode);
 
 		} else { // toplevel
-			vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
+			vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();	
 			auto t = std::find_if(basic_types.begin(), basic_types.end(),
-					[item_type](PlnType* t) { return t == item_type->typeinf; });
+					[item_type](PlnTypeInfo* t) { return t == item_type->typeinf; });
 
-			if (t != types.end()) {
+			if (t != typeinfos.end()) {
 				found_item = true;
 				BOOST_ASSERT(item_type == realType(*t, item_type->mode));
 			}
@@ -345,14 +347,20 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 		}
 	}
 
-	string name = PlnType::getFixedArrayName(item_type, sizes);
-	for (auto t: types) 
-		if (name == t->name) return t->getVarType(mode);
+	string name = PlnTypeInfo::getFixedArrayName(item_type, sizes);
+	for (auto t: typeinfos) 
+		if (name == t->name) {
+			PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
+			vtype->sizes2 = sizes;
+			return vtype;
+		}
 	
-	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
+	auto t = new PlnFixedArrayTypeInfo(name, item_type, sizes, this);
 	t->default_mode = "wmh";
-	types.push_back(t);
-	return t->getVarType(mode);
+	typeinfos.push_back(t);
+	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
+	vtype->sizes2 = sizes;
+	return vtype;
 }
 
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_infs)

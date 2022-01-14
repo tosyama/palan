@@ -20,7 +20,7 @@
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_type, bool keep_var)
 	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
 {
-	var_type = var_type->typeinf->getVarType();
+	var_type = var_type->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
 	alloc_ex = var_type->getAllocEx();
 	alloc_ex->data_places.push_back(var->place);

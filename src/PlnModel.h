@@ -32,7 +32,7 @@ class PlnStatement;
 	class PlnReturnStmt;
 class PlnExpression;
 	class PlnValue;
-class PlnType;
+class PlnTypeInfo;
 class PlnVarType;
 class PlnVariable;
 	class PlnParameter;

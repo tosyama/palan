@@ -99,7 +99,7 @@ PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType 
 	PlnValue v;
 	v.type = VL_WORK;
 	v.asgn_type = NO_ASGN;
-	v.inf.wk_type = PlnType::getSint()->getVarType();
+	v.inf.wk_type = PlnVarType::getSint();
 	values.push_back(v);
 }
 

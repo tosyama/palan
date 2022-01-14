@@ -48,7 +48,7 @@ PlnVariable.o:  models/../PlnConstants.h \
 	models/expressions/assignitem/PlnAssignItem.h
 PlnType.o:  models/../PlnConstants.h models/PlnType.h \
 	models/../PlnModel.h models/types/PlnFixedArrayType.h \
-	models/PlnVariable.h models/PlnExpression.h
+	models/types/PlnStructType.h models/PlnVariable.h models/PlnExpression.h
 PlnArray.o:  models/../PlnConstants.h models/PlnType.h \
 	models/../PlnModel.h models/../PlnTreeBuildHelper.h \
 	models/types/PlnFixedArrayType.h models/PlnArray.h models/PlnBlock.h \
@@ -81,6 +81,10 @@ PlnFixedArrayType.o:  \
 	models/types/PlnFixedArrayType.h models/types/PlnArrayValueType.h \
 	models/types/../PlnArray.h models/types/../../PlnMessage.h \
 	models/types/../../PlnException.h
+PlnFixedArrayVarType.o:  \
+	models/types/../../PlnModel.h models/types/../../PlnConstants.h \
+	models/types/../PlnType.h models/types/PlnFixedArrayType.h \
+	models/types/PlnArrayValueType.h
 PlnArrayValueType.o:  \
 	models/types/../../PlnConstants.h models/types/../PlnType.h \
 	models/types/../../PlnModel.h models/types/../PlnBlock.h \
@@ -100,7 +104,7 @@ PlnStructType.o:  \
 	models/types/../expressions/PlnAssignment.h \
 	models/types/../expressions/PlnMemCopy.h \
 	models/types/../expressions/PlnArrayValue.h models/types/PlnStructType.h \
-	models/types/PlnArrayValueType.h
+	models/types/PlnArrayValueType.h models/types/PlnFixedArrayType.h
 PlnFunctionCall.o:  \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/PlnFunctionCall.h \
@@ -200,7 +204,8 @@ PlnStructMember.o:  \
 	models/expressions/../PlnVariable.h models/expressions/PlnStructMember.h \
 	models/expressions/../PlnExpression.h \
 	models/expressions/../../PlnMessage.h \
-	models/expressions/../../PlnException.h
+	models/expressions/../../PlnException.h \
+	models/expressions/../types/PlnFixedArrayType.h
 PlnReferenceValue.o:  \
 	models/expressions/../../PlnConstants.h \
 	models/expressions/PlnReferenceValue.h \

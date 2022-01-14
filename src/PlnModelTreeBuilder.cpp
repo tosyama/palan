@@ -316,7 +316,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				throw err;
 
 			} else if (param["name"] == "...") {
-				var_type = PlnType::getAny()->getVarType();
+				var_type = PlnVarType::getAny();
 
 			} else {
 				var_type = getVarTypeFromJson(param["var-type"], scope);
@@ -562,21 +562,21 @@ static PlnVarType* getDefaultType(PlnValue &val, PlnBlock *block)
 	if (val.type == VL_VAR)
 		return val.inf.var->var_type;
 	else if (val.type == VL_LIT_INT8)
-		return PlnType::getSint()->getVarType();
+		return PlnVarType::getSint();
 	else if (val.type == VL_LIT_UINT8)
-		return PlnType::getUint()->getVarType();
+		return PlnVarType::getUint();
 	else if (val.type == VL_LIT_FLO8)
-		return PlnType::getFlo64()->getVarType();
+		return PlnVarType::getFlo64();
 	else if (val.type == VL_WORK) {
 		if (val.inf.wk_type->typeinf->type == TP_ARRAY_VALUE) {
-			return static_cast<PlnArrayValueType*>(val.inf.wk_type->typeinf)->getDefaultType(block);
+			return static_cast<PlnArrayValueTypeInfo*>(val.inf.wk_type->typeinf)->getDefaultType(block);
 		} else {
 			return val.inf.wk_type;
 		}
 	} else if (val.type == VL_LIT_STR)
-		return PlnType::getReadOnlyCStr()->getVarType();
+		return PlnVarType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
-		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->typeinf)->getDefaultType(block);
+		return static_cast<PlnArrayValueTypeInfo*>(val.inf.arrValue->values[0].inf.wk_type->typeinf)->getDefaultType(block);
 	else
 		BOOST_ASSERT(false);
 } // LCOV_EXCL_LINE
@@ -639,11 +639,11 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_BLOCK);
 
 				// Cstr -> []byte
-				if (t->typeinf == PlnType::getReadOnlyCStr()) {
+				if (t->typeinf == PlnVarType::getReadOnlyCStr()->typeinf) {
 					string mode = "---";
 					int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
 					vector<int> sizes = { size };
-					t = CUR_BLOCK->getFixedArrayType(PlnType::getByte()->getVarType(), sizes, mode);
+					t = CUR_BLOCK->getFixedArrayType(PlnVarType::getByte(), sizes, mode);
 				}
 
 			} catch (PlnCompileError &err) {
@@ -655,18 +655,20 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
 
-			PlnType *tt = val.getVarType()->typeinf;
+			PlnTypeInfo *tt = val.getVarType()->typeinf;
 			if (tt->type == TP_FIXED_ARRAY) {
-				while (tt->type == TP_FIXED_ARRAY) {
-					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(tt);
-					for (int sz: atype->sizes) {
+				PlnFixedArrayVarType* atype = static_cast<PlnFixedArrayVarType*>(val.getVarType());
+				while (atype) {
+					for (int sz: atype->sizes2) {
 						sizes.push_back(sz);	
 					}
-					tt = atype->item_type->typeinf;
+					tt = atype->typeinf;
+					atype = dynamic_cast<PlnFixedArrayVarType*>(atype->item_type());
 				}
+
 			} else if (tt->type == TP_ARRAY_VALUE) {
-				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
-			} else if (tt == PlnType::getReadOnlyCStr()) {
+				sizes = static_cast<PlnArrayValueTypeInfo*>(tt)->getArraySizes();
+			} else if (tt == PlnVarType::getReadOnlyCStr()->typeinf) {
 				int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
 				sizes.push_back(size);
 			}
@@ -797,7 +799,7 @@ void registerType(json& type, PlnScopeStack &scope)
 		PlnVarType* t = getVarTypeFromJson(type["var-type"], scope);
 		string type_name = type["name"];
 
-		CUR_BLOCK->declareAliasType(type_name, t->typeinf);
+		CUR_BLOCK->declareAliasType(type_name, t);
 
 	} else {
 		BOOST_ASSERT(false);

@@ -83,13 +83,13 @@ PlnVarType* PlnValue::getVarType()
 {
 	switch(type) {
 		case VL_LIT_INT8:
-			return PlnType::getSint()->getVarType("rin");
+			return PlnVarType::getSint("rin");
 		case VL_LIT_UINT8:
-			return PlnType::getUint()->getVarType("rin");
+			return PlnVarType::getUint("rin");
 		case VL_LIT_FLO8:
-			return PlnType::getFlo64()->getVarType("rin");
+			return PlnVarType::getFlo64("rin");
 		case VL_LIT_STR:
-			return PlnType::getReadOnlyCStr()->getVarType("rir");
+			return PlnVarType::getReadOnlyCStr("rir");
 		case VL_LIT_ARRAY:
 			return inf.arrValue->values[0].getVarType();
 		case VL_VAR:
@@ -121,7 +121,7 @@ PlnDataPlace* PlnValue::getDataPlace(PlnDataAllocator& da)
 
 		case VL_LIT_ARRAY:
 			{
-				PlnType* type = getVarType()->typeinf;
+				PlnTypeInfo* type = getVarType()->typeinf;
 				if (type->type == TP_FIXED_ARRAY) {
 					return inf.arrValue->getROArrayDp(da);
 				} else {

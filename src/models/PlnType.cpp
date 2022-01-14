@@ -15,15 +15,15 @@ using namespace std;
 
 // Basic types
 static bool is_initialzed_type = false;
-static vector<PlnType*> basic_types;
-static PlnType* byte_type = NULL;
-static PlnType* int_type = NULL;
-static PlnType* uint_type = NULL;
-static PlnType* flo32_type = NULL;
-static PlnType* flo64_type = NULL;
-static PlnType* ro_cstr_type = NULL;
-static PlnType* object_type = NULL;
-static PlnType* any_type = NULL;
+static vector<PlnTypeInfo*> basic_types;
+static PlnTypeInfo* byte_type = NULL;
+static PlnTypeInfo* int_type = NULL;
+static PlnTypeInfo* uint_type = NULL;
+static PlnTypeInfo* flo32_type = NULL;
+static PlnTypeInfo* flo64_type = NULL;
+static PlnTypeInfo* ro_cstr_type = NULL;
+static PlnTypeInfo* object_type = NULL;
+static PlnTypeInfo* any_type = NULL;
 
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
@@ -49,13 +49,13 @@ PlnExpression* PlnFreer::getInternalFreeEx(PlnVariable* var)
 }
 // PlnType
 
-PlnType::PlnType(PlnTypeType type)
+PlnTypeInfo::PlnTypeInfo(PlnTypeType type)
 	: type(type), allocator(NULL), internal_allocator(NULL),
 	freer(NULL), internal_freer(NULL), copyer(NULL)
 {
 }
 
-PlnType::~PlnType()
+PlnTypeInfo::~PlnTypeInfo()
 {
 	delete allocator;
 	delete internal_allocator;
@@ -63,14 +63,14 @@ PlnType::~PlnType()
 	delete copyer;
 }
 
-void PlnType::initBasicTypes()
+void PlnTypeInfo::initBasicTypes()
 {
 	if (is_initialzed_type)
 		return;
 
 	is_initialzed_type = true;
 
-	PlnType* sbt = new PlnType();
+	PlnTypeInfo* sbt = new PlnTypeInfo();
 	sbt->name = "sbyte";
 	sbt->default_mode = "wis";
 	sbt->data_type = DT_SINT;
@@ -78,7 +78,7 @@ void PlnType::initBasicTypes()
 	sbt->data_align = 1;
 	basic_types.push_back(sbt);
 
-	PlnType* bt = new PlnType();
+	PlnTypeInfo* bt = new PlnTypeInfo();
 	bt->name = "byte";
 	bt->default_mode = "wis";
 	bt->data_type = DT_UINT;
@@ -87,7 +87,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(bt);
 	byte_type = bt;
 
-	PlnType* i16t = new PlnType();
+	PlnTypeInfo* i16t = new PlnTypeInfo();
 	i16t->name = "int16";
 	i16t->default_mode = "wis";
 	i16t->data_type = DT_SINT;
@@ -95,7 +95,7 @@ void PlnType::initBasicTypes()
 	i16t->data_align = 2;
 	basic_types.push_back(i16t);
 
-	PlnType* u16t = new PlnType();
+	PlnTypeInfo* u16t = new PlnTypeInfo();
 	u16t->name = "uint16";
 	u16t->default_mode = "wis";
 	u16t->data_type = DT_UINT;
@@ -103,7 +103,7 @@ void PlnType::initBasicTypes()
 	u16t->data_align = 2;
 	basic_types.push_back(u16t);
 	
-	PlnType* i32t = new PlnType();
+	PlnTypeInfo* i32t = new PlnTypeInfo();
 	i32t->name = "int32";
 	i32t->default_mode = "wis";
 	i32t->data_type = DT_SINT;
@@ -111,7 +111,7 @@ void PlnType::initBasicTypes()
 	i32t->data_align = 4;
 	basic_types.push_back(i32t);
 
-	PlnType* u32t = new PlnType();
+	PlnTypeInfo* u32t = new PlnTypeInfo();
 	u32t->name = "uint32";
 	u32t->default_mode = "wis";
 	u32t->data_type = DT_UINT;
@@ -119,7 +119,7 @@ void PlnType::initBasicTypes()
 	u32t->data_align = 4;
 	basic_types.push_back(u32t);
 
-	PlnType* i64t = new PlnType();
+	PlnTypeInfo* i64t = new PlnTypeInfo();
 	i64t->name = "int64";
 	i64t->default_mode = "wis";
 	i64t->data_type = DT_SINT;
@@ -128,7 +128,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(i64t);
 	int_type = i64t;
 
-	PlnType* u64t = new PlnType();
+	PlnTypeInfo* u64t = new PlnTypeInfo();
 	u64t->name = "uint64";
 	u64t->default_mode = "wis";
 	u64t->data_type = DT_UINT;
@@ -137,7 +137,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(u64t);
 	uint_type = u64t;
 
-	PlnType* f32t = new PlnType();
+	PlnTypeInfo* f32t = new PlnTypeInfo();
 	f32t->name = "flo32";
 	f32t->default_mode = "wis";
 	f32t->data_type = DT_FLOAT;
@@ -146,7 +146,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(f32t);
 	flo32_type = f32t;
 
-	PlnType* f64t = new PlnType();
+	PlnTypeInfo* f64t = new PlnTypeInfo();
 	f64t->name = "flo64";
 	f64t->default_mode = "wis";
 	f64t->data_type = DT_FLOAT;
@@ -155,7 +155,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(f64t);
 	flo64_type = f64t;
 
-	PlnType* t = new PlnType();
+	PlnTypeInfo* t = new PlnTypeInfo();
 	t->name = "_ro_cstr";
 	t->default_mode = "rir";
 	t->data_type = DT_OBJECT;
@@ -164,7 +164,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(t);
 	ro_cstr_type = t;
 
-	t = new PlnType();
+	t = new PlnTypeInfo();
 	t->name = "object";
 	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT;
@@ -173,7 +173,7 @@ void PlnType::initBasicTypes()
 	basic_types.push_back(t);
 	object_type = t;
 
-	t = new PlnType();
+	t = new PlnTypeInfo();
 	t->name = "";
 	t->default_mode = "wmi";
 	t->data_type = DT_UNKNOWN;
@@ -295,52 +295,14 @@ void PlnType::initBasicTypes()
 
 }
 
-vector<PlnType*>& PlnType::getBasicTypes()
+vector<PlnTypeInfo*>& PlnTypeInfo::getBasicTypes()
 {
 	return basic_types;
 }
 
-PlnType* PlnType::getByte()
-{
- 	return byte_type;
-}
 
-PlnType* PlnType::getSint()
-{
-	return int_type;
-}
 
-PlnType* PlnType::getUint()
-{
-	return uint_type;
-}
-
-PlnType* PlnType::getFlo32()
-{
-	return flo32_type;
-}
-
-PlnType* PlnType::getFlo64()
-{
-	return flo64_type;
-}
-
-PlnType* PlnType::getReadOnlyCStr()
-{
-	return ro_cstr_type;
-}
-
-PlnType* PlnType::getObject()
-{
-	return object_type;
-}
-
-PlnType* PlnType::getAny()
-{
-	return any_type;
-}
-
-string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
+string PlnTypeInfo::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
 	for (int s: sizes) {
@@ -361,7 +323,7 @@ string PlnType::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	return arr_name + item_name;
 }
 
-PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
+PlnTypeConvCap PlnTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
 {
 	if (this == src->typeinf)
 		return TC_SAME;
@@ -377,7 +339,7 @@ PlnTypeConvCap PlnType::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgn
 	return TC_CANT_CONV;
 }
 
-PlnTypeConvCap PlnType::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
+PlnTypeConvCap PlnTypeInfo::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
 {
 	if (l == TC_SAME) {
 		return r;
@@ -397,7 +359,7 @@ PlnTypeConvCap PlnType::lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r)
 	return TC_CANT_CONV;
 }
 
-PlnVarType* PlnType::getVarType(const string& mode)
+PlnVarType* PlnTypeInfo::getVarType(const string& mode)
 {
 	string search_mode = mode;
 	if (search_mode[0] == '-') search_mode[0] = default_mode[0];
@@ -442,14 +404,59 @@ int PlnVarType::align()
 bool PlnVarType::has_heap_member()
 {
 	if (typeinf->type == TP_FIXED_ARRAY) {
-		PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(typeinf);
-		return farr_type->has_heap_member;
+		PlnFixedArrayTypeInfo *farr_typeinf = static_cast<PlnFixedArrayTypeInfo*>(typeinf);
+		return farr_typeinf->has_heap_member;
 
 	} else if (typeinf->type == TP_STRUCT) {
-		PlnStructType *strct_type = static_cast<PlnStructType*>(typeinf);
+		PlnStructTypeInfo *strct_type = static_cast<PlnStructTypeInfo*>(typeinf);
 		return strct_type->has_heap_member;
 
 	}
 	
 	return false;
+}
+
+PlnVarType* PlnVarType::getVarType(const string& mode)
+{
+	return typeinf->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getByte(const string& mode)
+{
+ 	return byte_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getSint(const string& mode)
+{
+	return int_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getUint(const string& mode)
+{
+	return uint_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getFlo32(const string& mode)
+{
+	return flo32_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getFlo64(const string& mode)
+{
+	return flo64_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getReadOnlyCStr(const string& mode)
+{
+	return ro_cstr_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getObject(const string& mode)
+{
+	return object_type->getVarType(mode);
+}
+
+PlnVarType* PlnVarType::getAny(const string& mode)
+{
+	return any_type->getVarType(mode);
 }

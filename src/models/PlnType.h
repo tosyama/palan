@@ -1,7 +1,7 @@
 /// Type model class declaration.
 ///
 /// @file	PlnType.h
-/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 
@@ -50,7 +50,8 @@ enum PlnTypeType {
 };
 
 class PlnVarType;
-class PlnType {
+class PlnTypeInfo {
+
 public:
 	PlnTypeType type;
 	int	data_type;
@@ -68,28 +69,20 @@ public:
 	PlnCopyer *copyer;
 
 	struct PlnTypeConvInf {
-		PlnType *type;
+		PlnTypeInfo *type;
 		PlnTypeConvCap capacity;
-		PlnTypeConvInf(PlnType* t, PlnTypeConvCap cap) : type(t), capacity(cap) { }
+		PlnTypeConvInf(PlnTypeInfo* t, PlnTypeConvCap cap) : type(t), capacity(cap) { }
 	};
 	vector<PlnTypeConvInf> conv_inf;
 
-	PlnType(PlnTypeType type=TP_PRIMITIVE);
-	virtual ~PlnType();
+	PlnTypeInfo(PlnTypeType type=TP_PRIMITIVE);
+	virtual ~PlnTypeInfo();
 	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode);
 
-	PlnVarType* getVarType(const string& mode = "---");
+	virtual PlnVarType* getVarType(const string& mode = "---");
 
 	static void initBasicTypes();
-	static vector<PlnType*>& getBasicTypes();
-	static PlnType* getByte();
-	static PlnType* getSint();
-	static PlnType* getUint();
-	static PlnType* getFlo32();
-	static PlnType* getFlo64();
-	static PlnType* getReadOnlyCStr();
-	static PlnType* getObject();
-	static PlnType* getAny();
+	static vector<PlnTypeInfo*>& getBasicTypes();
 
 	static string getFixedArrayName(PlnVarType* item_type, vector<int>& sizes);
 	static PlnTypeConvCap lowCapacity(PlnTypeConvCap l, PlnTypeConvCap r);
@@ -97,8 +90,8 @@ public:
 
 class PlnVarType {
 public:
-	PlnVarType(PlnType* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
-	PlnType* typeinf;
+	PlnVarType(PlnTypeInfo* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
+	PlnTypeInfo* typeinf;
 	string mode;
 
 	const string& name() { return typeinf->name; }
@@ -129,5 +122,16 @@ public:
 		if (!copyer) return NULL;
 		return typeinf->copyer->getCopyEx();
 	}
-	PlnTypeConvCap canCopyFrom(PlnVarType *src, PlnAsgnType copymode) { return typeinf->canCopyFrom(mode, src, copymode); }
+
+	virtual PlnVarType* getVarType(const string& mode = "---");
+	virtual PlnTypeConvCap canCopyFrom(PlnVarType *src, PlnAsgnType copymode) { return typeinf->canCopyFrom(mode, src, copymode); }
+
+	static PlnVarType* getByte(const string& mode = "---");
+	static PlnVarType* getSint(const string& mode = "---");
+	static PlnVarType* getUint(const string& mode = "---");
+	static PlnVarType* getFlo32(const string& mode = "---");
+	static PlnVarType* getFlo64(const string& mode = "---");
+	static PlnVarType* getReadOnlyCStr(const string& mode = "---");
+	static PlnVarType* getObject(const string& mode = "---");
+	static PlnVarType* getAny(const string& mode = "---");
 };

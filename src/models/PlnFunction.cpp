@@ -42,18 +42,7 @@ static PlnVarType* getEditableVarTypeForLocal(PlnVarType* var_type, PlnBlock* bl
 		mode[IDENTITY_MD] = 'c';
 	}
 
-	if (var_type->typeinf->type == TP_FIXED_ARRAY) {
-		// PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(var_type->typeinf);
-		// PlnVarType *editable_item_type = getEditableVarTypeForLocal(atype->item_type, block);
-		// vector<int> sizes = atype->sizes;
-		// var_type = block->getFixedArrayType(editable_item_type, sizes, mode);
-
-	} else if (var_type->typeinf->type == TP_STRUCT) {
-	} else if (var_type->typeinf->type == TP_PRIMITIVE) {
-	} else
-		BOOST_ASSERT(false);
-
-	return var_type->typeinf->getVarType(mode);
+	return var_type->getVarType(mode);
 }
 
 PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)

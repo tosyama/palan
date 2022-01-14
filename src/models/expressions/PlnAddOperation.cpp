@@ -264,7 +264,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	if (e->getDataType() == DT_FLOAT) {
 		v.inf.wk_type = e->values[0].getVarType();
 	} else {
-		v.inf.wk_type = PlnType::getSint()->getVarType();
+		v.inf.wk_type = PlnVarType::getSint();
 	}
 	values.push_back(v);
 }
