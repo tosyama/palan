@@ -49,7 +49,7 @@ void incrementUInt(PlnBlock* block, PlnVariable *var, uint64_t i)
 	block->statements.push_back(new PlnStatement(inc_st, block));
 }
 
-void malloc(PlnBlock* block, PlnVariable* var, uint64_t alloc_size)
+void malloc(PlnBlock* block, PlnVariable* var, PlnExpression* alloc_size_ex)
 {
 	PlnValue var_val(var);
 	var_val.asgn_type = ASGN_COPY_REF;
@@ -57,7 +57,7 @@ void malloc(PlnBlock* block, PlnVariable* var, uint64_t alloc_size)
 	vector<PlnExpression*> lvals = { var_ex };
 
 	PlnFunction* func_malloc = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
-	vector<PlnExpression*> args = { new PlnExpression(alloc_size) };
+	vector<PlnExpression*> args = { alloc_size_ex };
 	PlnFunctionCall *call_malloc= new PlnFunctionCall(func_malloc, args);
 
 	vector<PlnExpression*> exps = { call_malloc };
@@ -97,12 +97,11 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
 }
 
-PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, uint64_t i)
+PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, PlnExpression* loop_num_ex)
 {
 	PlnCmpOperation *cmp_op;
 	auto l_ex = new PlnExpression(var);
-	auto r_ex = new PlnExpression(i);
-	cmp_op = new PlnCmpOperation(l_ex, r_ex, CMP_L);
+	cmp_op = new PlnCmpOperation(l_ex, loop_num_ex, CMP_L);
 	auto wblock = new PlnBlock();
 	auto whl = new PlnWhileStatement(cmp_op, wblock, block);
 	block->statements.push_back(whl);

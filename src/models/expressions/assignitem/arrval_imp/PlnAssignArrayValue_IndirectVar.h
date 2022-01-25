@@ -69,7 +69,9 @@ public:
 		BOOST_ASSERT(tmp_var->place->data_type == DT_OBJECT_REF);
 		BOOST_ASSERT(tmp_var->place->size == 8);
 
-		alloc_ex = tmp_var->var_type->getAllocEx();
+		vector<PlnExpression*> args;
+		tmp_var->var_type->getInitExpressions(args);
+		alloc_ex = tmp_var->var_type->getAllocEx(args);
 		alloc_ex->data_places.push_back(tmp_var->place);
 		alloc_ex->finish(da, si);
 		da.popSrc(tmp_var->place);

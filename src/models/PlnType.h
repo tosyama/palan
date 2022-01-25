@@ -7,7 +7,7 @@
 
 class PlnAllocator {
 public:
-	virtual PlnExpression* getAllocEx() = 0;
+	virtual PlnExpression* getAllocEx(vector<PlnExpression*>& args) = 0;
 	static PlnExpression* getAllocEx(PlnVariable* var);
 };
 
@@ -79,6 +79,7 @@ public:
 	virtual ~PlnTypeInfo();
 	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode);
 
+	virtual vector<PlnVarType*> getAllocParamTypes() { return {}; };
 	virtual PlnVarType* getVarType(const string& mode = "---");
 
 	static void initBasicTypes();
@@ -90,19 +91,25 @@ public:
 
 class PlnVarType {
 public:
-	PlnVarType(PlnTypeInfo* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
 	PlnTypeInfo* typeinf;
 	string mode;
+
+	PlnVarType(PlnTypeInfo* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
 
 	const string& name() { return typeinf->name; }
 	int data_type();
 	int size();
 	int align();
 	bool has_heap_member();
-	PlnExpression *getAllocEx() {
+
+	virtual void getInitExpressions(vector<PlnExpression*> &init_exps);
+
+	virtual PlnExpression *getAllocEx(vector<PlnExpression*> &args) {
 		if (!typeinf->allocator) return NULL;
-		return typeinf->allocator->getAllocEx();
+		vector<PlnExpression*> args0;
+		return typeinf->allocator->getAllocEx(args0);
 	}
+
 	PlnExpression *getInternalAllocEx(PlnExpression *base_var) {
 		if (!typeinf->internal_allocator) return NULL;
 		return typeinf->internal_allocator->getInternalAllocEx(base_var);

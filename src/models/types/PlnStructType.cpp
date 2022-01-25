@@ -41,7 +41,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 	block->setParent(f);
 	f->implement = block;
 
-	palan::malloc(f->implement, ret_var, struct_type->data_size);
+	palan::malloc(f->implement, ret_var, new PlnExpression(uint64_t(struct_type->data_size)));
 
 	for (PlnStructMemberDef* mdef: struct_type->members) {
 		if (mdef->type->data_type() == DT_OBJECT_REF) {
@@ -52,7 +52,9 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 			member_ex->values[0].asgn_type = ASGN_COPY_REF;
 			vector<PlnExpression*> lvals = { member_ex };
 
-			PlnExpression* alloc_ex = mdef->type->getAllocEx();
+			vector<PlnExpression*> args;
+			mdef->type->getInitExpressions(args);
+			PlnExpression* alloc_ex = mdef->type->getAllocEx(args);
 			vector<PlnExpression*> exps = { alloc_ex };
 
 			auto assign = new PlnAssignment(lvals, exps);
@@ -91,7 +93,9 @@ static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_na
 			member_ex->values[0].asgn_type = ASGN_COPY_REF;
 			vector<PlnExpression*> lvals = { member_ex };
 
-			PlnExpression* alloc_ex = mdef->type->getAllocEx();
+			vector<PlnExpression*> args;
+			mdef->type->getInitExpressions(args);
+			PlnExpression* alloc_ex = mdef->type->getAllocEx(args);
 			vector<PlnExpression*> exps = { alloc_ex };
 
 			auto assign = new PlnAssignment(lvals, exps);

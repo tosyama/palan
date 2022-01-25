@@ -22,7 +22,9 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 {
 	var_type = var_type->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
-	alloc_ex = var_type->getAllocEx();
+	vector<PlnExpression*> args;
+	var_type->getInitExpressions(args);
+	alloc_ex = var_type->getAllocEx(args);
 	alloc_ex->data_places.push_back(var->place);
 
 	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->doCopyFromStaticBuffer);

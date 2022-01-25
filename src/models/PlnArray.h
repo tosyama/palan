@@ -8,7 +8,6 @@
 class PlnArray
 {
 public:
-	static PlnFunction* createObjRefArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, vector<int> &sizes, PlnBlock *block);
 	static PlnFunction* createObjRefArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block);
 	static PlnFunction* createObjRefArrayCopyFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block);
 	static PlnFunction* createObjRefArrayInternalAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block);

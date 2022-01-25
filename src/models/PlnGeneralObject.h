@@ -11,7 +11,7 @@ class PlnSingleObjectAllocator : public PlnAllocator {
 	uint64_t alloc_size;
 public:
 	PlnSingleObjectAllocator(uint64_t alloc_size) : alloc_size(alloc_size) { }
-	PlnExpression* getAllocEx() override;
+	PlnExpression* getAllocEx(vector<PlnExpression*>& args) override;
 };
 
 class PlnSingleObjectFreer : public PlnFreer {
@@ -33,7 +33,7 @@ class PlnNoParamAllocator: public PlnAllocator
 	PlnFunction *alloc_func;
 public:
 	PlnNoParamAllocator(PlnFunction *f) : alloc_func(f) { }
-	PlnExpression* getAllocEx() override;
+	PlnExpression* getAllocEx(vector<PlnExpression*>& args) override;
 };
 
 class PlnSingleParamInternalAllocator: public PlnInternalAllocator

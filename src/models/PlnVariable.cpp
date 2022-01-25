@@ -126,7 +126,10 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 		if (v->var_type->mode[ALLOC_MD] == 'h') {
 			PlnExpression* alloc_ex = NULL;
 			if (i >= init_var_i || vars[i].asgn_type == ASGN_COPY) {
-				alloc_ex = PlnAllocator::getAllocEx(v);
+				vector<PlnExpression*> init_exps;
+				v->var_type->getInitExpressions(init_exps);
+				alloc_ex = v->var_type->getAllocEx(init_exps);
+				// alloc_ex = PlnAllocator::getAllocEx(v);
 				if (!alloc_ex) {
 					PlnCompileError err(E_CantAllocate, v->var_type->name());
 					err.loc = v->loc;

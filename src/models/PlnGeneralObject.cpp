@@ -13,12 +13,12 @@
 #include "expressions/PlnMemCopy.h"
 
 // PlnSingleObjectAllocator
-PlnExpression* PlnSingleObjectAllocator::getAllocEx()
+PlnExpression* PlnSingleObjectAllocator::getAllocEx(vector<PlnExpression*>& args)
 {
 	PlnFunction *alloc_func = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
-	vector<PlnExpression*> args = { new PlnExpression(alloc_size) };
+	vector<PlnExpression*> size_arg = { new PlnExpression(alloc_size) };
 
-	return new PlnFunctionCall(alloc_func, args);
+	return new PlnFunctionCall(alloc_func, size_arg);
 }
 
 // PlnSingleObjectFreer
@@ -42,10 +42,10 @@ PlnDeepCopyExpression* PlnSingleObjectCopyer::getCopyEx()
 }
 
 // PlnNoParamAllocator
-PlnExpression* PlnNoParamAllocator::getAllocEx()
+PlnExpression* PlnNoParamAllocator::getAllocEx(vector<PlnExpression*>& args)
 {
-	vector<PlnExpression*> args;
-	return new PlnFunctionCall(alloc_func, args);
+	vector<PlnExpression*> args0;
+	return new PlnFunctionCall(alloc_func, args0);
 }
 
 // PlnSingleParamInternalAllocator

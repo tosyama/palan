@@ -28,7 +28,8 @@ static PlnTypeInfo* any_type = NULL;
 // PlnAllocator
 PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
 {
-	return var->var_type->getAllocEx();
+	vector<PlnExpression*> args0;
+	return var->var_type->getAllocEx(args0);
 }
 
 // PlnInternalAllocator
@@ -414,6 +415,10 @@ bool PlnVarType::has_heap_member()
 	}
 	
 	return false;
+}
+
+void PlnVarType::getInitExpressions(vector<PlnExpression*> &init_exps)
+{
 }
 
 PlnVarType* PlnVarType::getVarType(const string& mode)

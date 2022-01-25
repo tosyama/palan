@@ -84,7 +84,7 @@ Return value
 Variable Type
 -------------
 *   name\* - Type name string: "[]" any
-    1.  [] - Fixed size array typet
+    1.  [] - Fixed size array type
         *   sizes\* - Expression list ({exp-type:unknown,info:""} - size inference)
 
     2.  any - Specified variable type name
