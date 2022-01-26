@@ -19,10 +19,8 @@ public:
 class PlnFixedArrayVarType : public PlnVarType {
 public:
 	vector<int> sizes;
-	PlnFixedArrayVarType(PlnTypeInfo* typeinf, const string &mode)
-		: PlnVarType(typeinf, mode) 
-	{
-	}
+	PlnFixedArrayVarType(PlnTypeInfo* typeinf, const string &mode) : PlnVarType(typeinf, mode) { }
+	~PlnFixedArrayVarType() {};
 
 	PlnVarType* getVarType(const string& mode) override;
 	PlnTypeConvCap canCopyFrom(PlnVarType *src, PlnAsgnType copymode) override;

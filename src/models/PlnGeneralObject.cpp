@@ -3,23 +3,14 @@
 /// @file	PlnGeneralObject.cpp
 /// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
+#include <boost/assert.hpp>
 #include "../PlnConstants.h"
 #include "expressions/PlnFunctionCall.h"
 #include "PlnGeneralObject.h"
 
-#include <boost/assert.hpp>
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
 #include "expressions/PlnMemCopy.h"
-
-// PlnSingleObjectAllocator
-PlnExpression* PlnSingleObjectAllocator::getAllocEx(vector<PlnExpression*>& args)
-{
-	PlnFunction *alloc_func = PlnFunctionCall::getInternalFunc(IFUNC_MALLOC);
-	vector<PlnExpression*> size_arg = { new PlnExpression(alloc_size) };
-
-	return new PlnFunctionCall(alloc_func, size_arg);
-}
 
 // PlnSingleObjectFreer
 PlnExpression* PlnSingleObjectFreer::getFreeEx(PlnExpression* free_var)
@@ -40,14 +31,6 @@ PlnDeepCopyExpression* PlnSingleObjectCopyer::getCopyEx()
 {
 	return new PlnMemCopy(NULL, NULL, new PlnExpression(len));
 }
-
-// PlnNoParamAllocator
-PlnExpression* PlnNoParamAllocator::getAllocEx(vector<PlnExpression*>& args)
-{
-	vector<PlnExpression*> args0;
-	return new PlnFunctionCall(alloc_func, args0);
-}
-
 // PlnSingleParamInternalAllocator
 PlnExpression* PlnSingleParamInternalAllocator::getInternalAllocEx(PlnExpression* base_var)
 {

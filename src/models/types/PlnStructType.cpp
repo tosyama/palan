@@ -1,7 +1,7 @@
 /// Structure type class definition.
 ///
 /// @file	PlnStructType.cpp
-/// @copyright	2019-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2019-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../../PlnModel.h"
@@ -20,6 +20,7 @@
 #include "../expressions/PlnAssignment.h"
 #include "../expressions/PlnMemCopy.h"
 #include "../expressions/PlnArrayValue.h"
+#include "../expressions/PlnFunctionCall.h"
 #include "PlnStructType.h"
 #include "PlnArrayValueType.h"
 #include "PlnFixedArrayType.h"
@@ -207,7 +208,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 }
 
 PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
-	: PlnTypeInfo(TP_STRUCT), members(move(members))
+	: PlnTypeInfo(TP_STRUCT), members(move(members)), alloc_func(NULL)
 {
 	this->name = name;
 	int alloc_size = 0;
@@ -251,8 +252,7 @@ PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberD
 
 	if (need_alloc_func) {
 		string fname = PlnBlock::generateFuncName("new", {this}, {});
-		PlnFunction *alloc_func = createObjMemberStructAllocFunc(fname, this, parent);
-		allocator = new PlnNoParamAllocator(alloc_func);
+		alloc_func = createObjMemberStructAllocFunc(fname, this, parent);
 
 		fname = PlnBlock::generateFuncName("init", {}, {this});
 		PlnFunction *internal_alloc_func = createInternalObjMemberStructAllocFunc(fname, this, parent);
@@ -277,7 +277,6 @@ PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberD
 		parent->parent_module->functions.push_back(internal_free_func);
 
 	} else {
-		allocator = new PlnSingleObjectAllocator(alloc_size);
 		copyer = new PlnSingleObjectCopyer(alloc_size);
 		freer = new PlnSingleObjectFreer();
 	}
@@ -315,5 +314,31 @@ PlnTypeConvCap PlnStructTypeInfo::canCopyFrom(const string& mode, PlnVarType *sr
 	}
 	
 	return TC_CANT_CONV;
+}
+
+PlnVarType* PlnStructTypeInfo::getVarType(const string& mode)
+{
+	string omode = mode;
+	if (mode[0] == '-') omode[0] = default_mode[0];
+	if (mode[1] == '-') omode[1] = default_mode[1];
+	if (mode[2] == '-') omode[2] = default_mode[2];
+
+	PlnVarType* var_type = new PlnStructVarType(this, omode);
+
+	return var_type;
+}
+
+PlnExpression *PlnStructVarType::getAllocEx(vector<PlnExpression*> &args)
+{
+	BOOST_ASSERT(!args.size());
+	PlnStructTypeInfo* typeinfo = static_cast<PlnStructTypeInfo*>(typeinf);
+
+	if (!typeinfo->has_heap_member) {
+		vector<PlnExpression*> new_args = { new PlnExpression(uint64_t(typeinfo->data_size)) };
+		return new PlnFunctionCall(PlnFunctionCall::getInternalFunc(IFUNC_MALLOC), new_args);
+	}
+
+	BOOST_ASSERT(typeinfo->alloc_func);
+	return new PlnFunctionCall(typeinfo->alloc_func, args);
 }
 

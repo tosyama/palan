@@ -25,12 +25,6 @@ static PlnTypeInfo* ro_cstr_type = NULL;
 static PlnTypeInfo* object_type = NULL;
 static PlnTypeInfo* any_type = NULL;
 
-// PlnAllocator
-PlnExpression* PlnAllocator::getAllocEx(PlnVariable* var)
-{
-	vector<PlnExpression*> args0;
-	return var->var_type->getAllocEx(args0);
-}
 
 // PlnInternalAllocator
 PlnExpression* PlnInternalAllocator::getInternalAllocEx(PlnVariable* var)
@@ -51,14 +45,13 @@ PlnExpression* PlnFreer::getInternalFreeEx(PlnVariable* var)
 // PlnType
 
 PlnTypeInfo::PlnTypeInfo(PlnTypeType type)
-	: type(type), allocator(NULL), internal_allocator(NULL),
+	: type(type), internal_allocator(NULL),
 	freer(NULL), internal_freer(NULL), copyer(NULL)
 {
 }
 
 PlnTypeInfo::~PlnTypeInfo()
 {
-	delete allocator;
 	delete internal_allocator;
 	delete freer;
 	delete copyer;

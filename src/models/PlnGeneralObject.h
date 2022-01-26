@@ -7,13 +7,6 @@
 #include "PlnType.h"
 
 // for single object alloc/free/copy.
-class PlnSingleObjectAllocator : public PlnAllocator {
-	uint64_t alloc_size;
-public:
-	PlnSingleObjectAllocator(uint64_t alloc_size) : alloc_size(alloc_size) { }
-	PlnExpression* getAllocEx(vector<PlnExpression*>& args) override;
-};
-
 class PlnSingleObjectFreer : public PlnFreer {
 public:
 	PlnExpression* getFreeEx(PlnExpression* free_var) override;
@@ -25,15 +18,6 @@ public:
 	PlnSingleObjectCopyer(uint64_t len) : len(len) { }
 	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) override;
 	PlnDeepCopyExpression* getCopyEx() override;
-};
-
-// for custom function call alloc/free/copy.
-class PlnNoParamAllocator: public PlnAllocator
-{
-	PlnFunction *alloc_func;
-public:
-	PlnNoParamAllocator(PlnFunction *f) : alloc_func(f) { }
-	PlnExpression* getAllocEx(vector<PlnExpression*>& args) override;
 };
 
 class PlnSingleParamInternalAllocator: public PlnInternalAllocator

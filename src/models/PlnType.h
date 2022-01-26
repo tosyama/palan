@@ -5,12 +5,6 @@
 
 #include "../PlnModel.h"
 
-class PlnAllocator {
-public:
-	virtual PlnExpression* getAllocEx(vector<PlnExpression*>& args) = 0;
-	static PlnExpression* getAllocEx(PlnVariable* var);
-};
-
 class PlnInternalAllocator {
 public:
 	virtual PlnExpression* getInternalAllocEx(PlnExpression* base_var) = 0;
@@ -62,7 +56,6 @@ public:
 
 	vector<PlnVarType*> var_types;
 
-	PlnAllocator *allocator;
 	PlnInternalAllocator *internal_allocator;
 	PlnFreer *freer;
 	PlnFreer *internal_freer;
@@ -95,6 +88,7 @@ public:
 	string mode;
 
 	PlnVarType(PlnTypeInfo* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
+	virtual ~PlnVarType() {}
 
 	const string& name() { return typeinf->name; }
 	int data_type();
@@ -105,9 +99,8 @@ public:
 	virtual void getInitExpressions(vector<PlnExpression*> &init_exps);
 
 	virtual PlnExpression *getAllocEx(vector<PlnExpression*> &args) {
-		if (!typeinf->allocator) return NULL;
-		vector<PlnExpression*> args0;
-		return typeinf->allocator->getAllocEx(args0);
+		BOOST_ASSERT(false);
+		return NULL;
 	}
 
 	PlnExpression *getInternalAllocEx(PlnExpression *base_var) {

@@ -21,11 +21,12 @@
 #include "../../PlnTreeBuildHelper.h"
 #include "../expressions/PlnAssignment.h"
 
-static PlnFunction* createObjRefArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_typeinf, PlnBlock *block)
+static PlnFunction* registerObjectArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_typeinf, PlnBlock *block)
 {
 	PlnVarType* it = arr_typeinf->item_type;
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
-	f->parent = block;	// TODO: ????? Top level? or same as item_type
+	
+	f->parent = block->getTypeDefinedBlock(it);
 
 	string s1 = "__r1";
 	PlnVarType* ret_vtype = arr_typeinf->getVarType("wmr");
@@ -54,22 +55,33 @@ static PlnFunction* createObjRefArrayAllocFunc(string func_name, PlnFixedArrayTy
 	PlnExpression* alloc_size_ex = PlnMulOperation::create(new PlnExpression(item_num_var), new PlnExpression(item_size));
 	palan::malloc(f->implement, ret_var, alloc_size_ex);
 
-	// add alloc code.
+	// Add item allococation code in loop.
 	PlnVariable* var_i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, var_i, new PlnExpression(item_num_var));
 	{
-		PlnExpression* arr_item = palan::rawArrayItem(ret_var, var_i, block);
-		arr_item->values[0].asgn_type = ASGN_COPY_REF;
-		vector<PlnExpression*> lvals = { arr_item };
+		PlnExpression* arr_item = palan::rawArrayItem(ret_var, var_i, wblock);
 
-		PlnExpression* alloc_ex = it->getAllocEx(next_args);
-		vector<PlnExpression*> exps = { alloc_ex };
+		if (it->data_type() == DT_OBJECT_REF) {
+			arr_item->values[0].asgn_type = ASGN_COPY_REF;
+			vector<PlnExpression*> lvals = { arr_item };
 
-		auto assign = new PlnAssignment(lvals, exps);
-		wblock->statements.push_back(new PlnStatement(assign, wblock));
+			PlnExpression* alloc_ex = it->getAllocEx(next_args);
+			vector<PlnExpression*> exps = { alloc_ex };
+
+			auto assign = new PlnAssignment(lvals, exps);
+			wblock->statements.push_back(new PlnStatement(assign, wblock));
+			
+		} else {
+			BOOST_ASSERT(it->data_type() == DT_OBJECT);
+			PlnExpression* alloc_ex = it->getInternalAllocEx(arr_item);
+			wblock->statements.push_back(new PlnStatement(alloc_ex, wblock));
+
+		}
 
 		palan::incrementUInt(wblock, var_i, 1);
 	}
+
+	f->parent->parent_module->functions.push_back(f);
 
 	return f;
 }
@@ -120,10 +132,7 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 			// allocator
 			{
 				string fname = PlnBlock::generateFuncName("new", {this}, {});
-				PlnFunction* alloc_func = PlnArray::createObjArrayAllocFunc(fname, this, parent);
-				parent->parent_module->functions.push_back(alloc_func);
-
-				allocator = new PlnNoParamAllocator(alloc_func);
+				this->alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
 			}
 
 			// freer
@@ -143,9 +152,7 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		// allocator
 		{
 			string fname = PlnBlock::generateFuncName("new", {this}, {});
-			PlnFunction* alloc_func_x = createObjRefArrayAllocFunc(fname, this, parent);
-			parent->parent_module->functions.push_back(alloc_func_x);
-			this->alloc_func = alloc_func_x;
+			this->alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
 		}
 
 		// freer
@@ -358,22 +365,16 @@ PlnExpression* PlnFixedArrayVarType::getAllocEx(vector<PlnExpression*> &args)
 
 	if (alloc_size == 0) return NULL;
 
-	if (it->mode[ALLOC_MD] != 'h') {
-		// Direct allocation case.
-		if (!it->has_heap_member()) {
-			BOOST_ASSERT(args.size() == 1);
-			PlnExpression* alloc_size_ex = PlnMulOperation::create(args[0], new PlnExpression(uint64_t(item_type()->size())));
-			vector<PlnExpression*> new_args = { alloc_size_ex };
-			return new PlnFunctionCall(PlnFunctionCall::getInternalFunc(IFUNC_MALLOC), new_args);
+	if (it->mode[ALLOC_MD] != 'h' && !it->has_heap_member()) {
+		// Direct allocation case. Use malloc directly.
+		BOOST_ASSERT(args.size() == 1);
+		PlnExpression* alloc_size_ex = PlnMulOperation::create(args[0], new PlnExpression(uint64_t(item_type()->size())));
+		vector<PlnExpression*> new_args = { alloc_size_ex };
+		return new PlnFunctionCall(PlnFunctionCall::getInternalFunc(IFUNC_MALLOC), new_args);
 
-		} else {
-		}
-
-	} else {
-		BOOST_ASSERT(arr_typeinf->alloc_func);
-		return new PlnFunctionCall(arr_typeinf->alloc_func, args);
 	}
 
-	return typeinf->allocator->getAllocEx(args);
+	BOOST_ASSERT(arr_typeinf->alloc_func);
+	return new PlnFunctionCall(arr_typeinf->alloc_func, args);
 }
 

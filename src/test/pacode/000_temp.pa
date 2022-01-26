@@ -5,8 +5,7 @@ ccall printf(...);
 //printf("%s,%s,%s", names[0], names[1], names[2]);
 type Point = [2]flo32;
 
-[3]Point p3 = [1,2][3,4][5,6];
+ [3]Point p3 = [1,2][3,4][5,6];
 // [3][2]flo32 p3 = [1,2][3,4][5,6];
 printf("%.1f ", p3[1][1]);
 
-// [1][2]@[3]int32 x1 = [[1,2,3][4,5,6]];

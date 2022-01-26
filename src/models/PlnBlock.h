@@ -59,6 +59,7 @@ public:
 
 	PlnVarType* getType(const string& type_name, const string& mode);
 	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
+	PlnBlock* getTypeDefinedBlock(PlnVarType* var_type);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);

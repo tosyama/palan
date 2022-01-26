@@ -317,6 +317,7 @@ string PlnBlock::generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, 
 
 PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode)
 {
+	PlnBlock *defined_block = this;
 	bool found_item = false;
 	
 	// Find item from Crrent block
@@ -325,6 +326,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 				[item_type](PlnTypeInfo* t) { return t == item_type->typeinf; });
 
 		if (t != typeinfos.end()) {
+			defined_block = this;
 			found_item = true;
 		}
 	}
@@ -339,6 +341,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 					[item_type](PlnTypeInfo* t) { return t == item_type->typeinf; });
 
 			if (t != typeinfos.end()) {
+				defined_block = parent_module->toplevel;
 				found_item = true;
 				BOOST_ASSERT(item_type == realType(*t, item_type->mode));
 			}
@@ -348,7 +351,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	}
 
 	string name = PlnTypeInfo::getFixedArrayName(item_type, sizes);
-	for (auto t: typeinfos) 
+	for (auto t: defined_block->typeinfos) 
 		if (name == t->name) {
 			PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
 			vtype->sizes = sizes;
@@ -357,10 +360,38 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	
 	auto t = new PlnFixedArrayTypeInfo(name, item_type, sizes, this);
 	t->default_mode = "wmh";
-	typeinfos.push_back(t);
+	defined_block->typeinfos.push_back(t);
 	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
 	vtype->sizes = sizes;
 	return vtype;
+}
+
+PlnBlock* PlnBlock::getTypeDefinedBlock(PlnVarType* var_type)
+{
+	PlnTypeInfo *typeinfo = var_type->typeinf;
+
+	// Find item from Crrent block
+	{
+		auto t = std::find_if(typeinfos.begin(), typeinfos.end(),
+				[typeinfo](PlnTypeInfo* t) { return t == typeinfo; });
+
+		if (t != typeinfos.end()) {
+			return this;
+		}
+	}
+
+	if (PlnBlock* b = parentBlock(this)) {
+		return b->getTypeDefinedBlock(var_type);
+
+	} else { // toplevel always return NULL;
+		vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();	
+		auto t = std::find_if(basic_types.begin(), basic_types.end(),
+				[typeinfo](PlnTypeInfo* t) { return t == typeinfo; });
+
+		BOOST_ASSERT(t != basic_types.end());
+		return parent_module->toplevel;
+	}
+	
 }
 
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_infs)
