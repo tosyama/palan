@@ -14,7 +14,6 @@ public:
 class PlnFreer {
 public:
 	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
-	static PlnExpression* getFreeEx(PlnVariable* var);
 	static PlnExpression* getInternalFreeEx(PlnVariable* var);
 };
 
@@ -73,6 +72,7 @@ public:
 	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode);
 
 	virtual vector<PlnVarType*> getAllocParamTypes() { return {}; };
+	virtual vector<PlnVarType*> getFreeParamTypes() { return {}; };
 	virtual PlnVarType* getVarType(const string& mode = "---");
 
 	static void initBasicTypes();
@@ -108,7 +108,9 @@ public:
 		return typeinf->internal_allocator->getInternalAllocEx(base_var);
 	}
 
-	PlnExpression *getFreeEx(PlnExpression* free_var) { return typeinf->freer->getFreeEx(free_var); }
+	virtual void getFreeArgs(vector<PlnExpression*> &free_args);
+	virtual PlnExpression *getFreeEx(vector<PlnExpression*> &args) { return typeinf->freer->getFreeEx(args[0]); }
+
 	PlnExpression *getInternalFreeEx(PlnExpression* free_var) {
 		if (!typeinf->internal_freer) return NULL;
 		return typeinf->internal_freer->getFreeEx(free_var);

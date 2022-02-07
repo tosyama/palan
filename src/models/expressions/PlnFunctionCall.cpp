@@ -146,7 +146,7 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 					// needs to free after call func.
 					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "free_var");
 					da.pushSrc(tmp_var->place, arg_dps[dp_i], false);
-					PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
+					PlnExpression *free_ex = tmp_var->getFreeEx();
 
 					fcall->free_work_vars.push_back(tmp_var);
 					fcall->free_exs.push_back(free_ex);
@@ -237,7 +237,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (i >= data_places.size()) {
 			if (function->return_vals[i].var_type->mode[ALLOC_MD] == 'h') {
 				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i].local_var->var_type, "ret" + std::to_string(i));
-				PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
+				PlnExpression *free_ex = tmp_var->getFreeEx();
 
 				free_vars.push_back(tmp_var);
 				free_exs.push_back(free_ex);

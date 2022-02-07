@@ -24,6 +24,9 @@ public:
 	PlnVariable(): var_type(NULL), place(NULL), container(NULL),
 		is_tmpvar(false), is_indirect(false), is_global(false) {}
 
+	
+	PlnExpression* getAllocEx();
+	PlnExpression* getFreeEx();
 	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name);
 };
 

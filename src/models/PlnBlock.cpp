@@ -555,7 +555,7 @@ void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& 
 			if (v->var_type->mode[ALLOC_MD]=='h') {
 				auto lt = si.get_lifetime(v);
 				if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
-					PlnExpression* free_var = PlnFreer::getFreeEx(v);
+					PlnExpression* free_var = v->getFreeEx();
 					free_var->finish(da, si);
 					free_vars.push_back(free_var);
 				}

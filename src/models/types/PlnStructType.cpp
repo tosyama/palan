@@ -137,7 +137,8 @@ static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnSt
 			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
+			vector<PlnExpression*> free_args = { member_ex };
+			PlnExpression* free_member = mdef->type->getFreeEx(free_args);
 			ifblock->statements.push_back(new PlnStatement(free_member, block));
 		}
 	}
@@ -163,7 +164,8 @@ static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_nam
 			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
+			vector<PlnExpression*> free_args = { member_ex };
+			PlnExpression* free_member = mdef->type->getFreeEx(free_args);
 			block->statements.push_back(new PlnStatement(free_member, block));
 		}
 	}

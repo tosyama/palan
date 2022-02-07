@@ -71,7 +71,7 @@ public:
 			if (v.getVarType()->mode[ALLOC_MD] == 'h'
 					&& di.item->getAssginType() == ASGN_COPY) {
 				di.save_src_var = PlnVariable::createTempVar(da, v.inf.wk_type, "save src");
-				di.free_ex = PlnFreer::getFreeEx(di.save_src_var);
+				di.free_ex = di.save_src_var->getFreeEx();
 
 				src_ex->data_places.push_back(di.save_src_var->place);
 

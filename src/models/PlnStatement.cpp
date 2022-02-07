@@ -195,7 +195,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 						break;
 					}
 				if (!do_ret) {
-					PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
+					PlnExpression* free_ex = i.var->getFreeEx();
 					free_vars.push_back(free_ex);
 				}
 			}

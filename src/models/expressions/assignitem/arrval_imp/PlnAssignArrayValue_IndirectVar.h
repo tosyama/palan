@@ -117,7 +117,7 @@ public:
 		tmp_var_ex->finish(da,si);
 		dst_item->finish(da,si);
 
-		free_ex = PlnFreer::getFreeEx(tmp_var);
+		free_ex = tmp_var->getFreeEx();
 		free_ex->finish(da, si);
 		da.releaseDp(tmp_var->place);
 	}

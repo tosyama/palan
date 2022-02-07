@@ -8,11 +8,13 @@ public:
 	PlnVarType* item_type;
 	bool has_heap_member;
 	PlnFunction* alloc_func;
+	PlnFunction* free_func;
 
 	PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent);
 	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override;
 
 	vector<PlnVarType*> getAllocParamTypes() override;
+	vector<PlnVarType*> getFreeParamTypes() override;
 	PlnVarType* getVarType(const string& mode) override;
 };
 
@@ -34,4 +36,6 @@ public:
 
 	void getInitExpressions(vector<PlnExpression*> &init_exps) override;
 	PlnExpression *getAllocEx(vector<PlnExpression*> &args) override;
+	void getFreeArgs(vector<PlnExpression*> &free_args) override;
+	PlnExpression *getFreeEx(vector<PlnExpression*> &args) override; 
 };

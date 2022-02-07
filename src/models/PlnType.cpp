@@ -32,11 +32,6 @@ PlnExpression* PlnInternalAllocator::getInternalAllocEx(PlnVariable* var)
 	return var->var_type->getInternalAllocEx(new PlnExpression(var));
 }
  
-// PlnFreer
-PlnExpression* PlnFreer::getFreeEx(PlnVariable* var)
-{
-	return var->var_type->getFreeEx(new PlnExpression(var));
-}
 
 PlnExpression* PlnFreer::getInternalFreeEx(PlnVariable* var)
 {
@@ -411,6 +406,10 @@ bool PlnVarType::has_heap_member()
 }
 
 void PlnVarType::getInitExpressions(vector<PlnExpression*> &init_exps)
+{
+}
+
+void PlnVarType::getFreeArgs(vector<PlnExpression*> &free_args)
 {
 }
 

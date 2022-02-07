@@ -128,7 +128,9 @@ PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArray
 	PlnBlock* wblock = palan::whileLess(ifblock, i, new PlnExpression(item_num));
 	{
 		PlnExpression* arr_item = palan::rawArrayItem(p1_var, i, block);
-		PlnExpression* free_item = it->getFreeEx(arr_item);
+		vector<PlnExpression *> free_args = { arr_item };
+		it->getFreeArgs(free_args);
+		PlnExpression* free_item = it->getFreeEx(free_args);
 		BOOST_ASSERT(free_item);
 		wblock->statements.push_back(new PlnStatement(free_item, wblock));
 
@@ -164,7 +166,9 @@ PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFi
 	PlnBlock* wblock = palan::whileLess(ifblock, i, new PlnExpression(item_num));
 	{
 		PlnExpression* arr_item = palan::rawArrayItem(p1_var, i, block);
-		PlnExpression* free_item = it->getFreeEx(arr_item);
+		vector<PlnExpression *> free_args = { arr_item };
+		it->getFreeArgs(free_args);
+		PlnExpression* free_item = it->getFreeEx(free_args);
 		BOOST_ASSERT(free_item);
 		wblock->statements.push_back(new PlnStatement(free_item, wblock));
 

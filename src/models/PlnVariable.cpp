@@ -129,7 +129,6 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 				vector<PlnExpression*> init_exps;
 				v->var_type->getInitExpressions(init_exps);
 				alloc_ex = v->var_type->getAllocEx(init_exps);
-				// alloc_ex = PlnAllocator::getAllocEx(v);
 				if (!alloc_ex) {
 					PlnCompileError err(E_CantAllocate, v->var_type->name());
 					err.loc = v->loc;
@@ -216,6 +215,13 @@ void PlnVarInit::gen(PlnGenerator& g)
 		ai->genS(g);
 		ai->genD(g);
 	}
+}
+
+PlnExpression* PlnVariable::getFreeEx()
+{
+	vector<PlnExpression *> args = { new PlnExpression(this) };
+	var_type->getFreeArgs(args);
+	return var_type->getFreeEx(args);
 }
 
 PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name)

@@ -91,7 +91,7 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 void PlnClone::finishFree(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(keep_var);
-	free_ex = PlnFreer::getFreeEx(var);
+	free_ex = var->getFreeEx();
 	free_ex->finish(da, si);
 	da.releaseDp(var->place);
 }

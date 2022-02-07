@@ -20,6 +20,7 @@
 #include "../expressions/PlnArrayItem.h"
 #include "../../PlnTreeBuildHelper.h"
 #include "../expressions/PlnAssignment.h"
+#include "../PlnConditionalBranch.h"
 
 static PlnFunction* registerObjectArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_typeinf, PlnBlock *block)
 {
@@ -86,8 +87,65 @@ static PlnFunction* registerObjectArrayAllocFunc(string func_name, PlnFixedArray
 	return f;
 }
 
+static PlnFunction* registerObjectArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_typeinf, PlnBlock *block)
+{
+	PlnVarType* it = arr_typeinf->item_type;
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+
+	f->parent = block->getTypeDefinedBlock(it);
+
+	// first paramater
+	auto to_free_var = f->addParam("__to_free_var", arr_typeinf->getVarType("wmr"), PIO_INPUT, FPM_IN_BYREF, NULL);
+	vector<PlnExpression*> next_args = { new PlnExpression(to_free_var) };
+
+	vector<PlnVarType*> param_types = arr_typeinf->getFreeParamTypes();
+	BOOST_ASSERT(param_types.size() >= 0);
+	PlnVariable* item_num_var = f->addParam("__item_num", param_types[0], PIO_INPUT, FPM_IN_BYVAL, NULL);
+
+	for (int i=1; i<param_types.size(); i++) {
+		string pname = "__p" + to_string(i);
+		next_args.push_back(
+				new PlnExpression(f->addParam(pname, param_types[i], PIO_INPUT, FPM_IN_BYVAL, NULL))
+			);
+	}
+
+	f->implement = new PlnBlock();
+	f->implement->setParent(f);
+
+	// Return if object address is 0.
+	auto ifblock = new PlnBlock();
+	auto if_obj = new PlnIfStatement(new PlnExpression(to_free_var), ifblock, NULL, f->implement);
+	f->implement->statements.push_back(if_obj);
+
+	// Add item free code in loop.
+	PlnVariable* var_i = palan::declareUInt(ifblock, "__i", 0);
+	PlnBlock* wblock = palan::whileLess(ifblock, var_i, new PlnExpression(item_num_var));
+	{
+		PlnExpression* arr_item = palan::rawArrayItem(to_free_var, var_i, wblock);
+		next_args[0] = arr_item;
+
+		if (it->data_type() == DT_OBJECT_REF) {
+			PlnExpression* free_ex = it->getFreeEx(next_args);
+			wblock->statements.push_back(new PlnStatement(free_ex, wblock));
+
+		} else {
+			BOOST_ASSERT(it->data_type() == DT_OBJECT);
+			PlnExpression* free_ex = it->getInternalFreeEx(arr_item);
+			wblock->statements.push_back(new PlnStatement(free_ex, wblock));
+
+		}
+
+		palan::incrementUInt(wblock, var_i, 1);
+	}
+
+	palan::free(ifblock, to_free_var);
+
+	f->parent->parent_module->functions.push_back(f);
+	return f;
+}
+
 PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent)
-	: PlnTypeInfo(TP_FIXED_ARRAY), item_type(item_type), alloc_func(NULL)
+	: PlnTypeInfo(TP_FIXED_ARRAY), item_type(item_type), alloc_func(NULL), free_func(NULL)
 {
 	int alloc_size = item_type->size();
 	for (int s: sizes)
@@ -123,7 +181,6 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		// Direct allocation case.
 		if (!it->has_heap_member()) {
 			BOOST_ASSERT(!it->typeinf->internal_allocator);
-			freer = new PlnSingleObjectFreer();
 			copyer = new PlnSingleObjectCopyer(alloc_size);
 	
 			BOOST_ASSERT(!alloc_func);
@@ -132,16 +189,13 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 			// allocator
 			{
 				string fname = PlnBlock::generateFuncName("new", {this}, {});
-				this->alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
+				alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
 			}
 
 			// freer
 			{
 				string fname = PlnBlock::generateFuncName("del", {}, {this});
-				PlnFunction* free_func = PlnArray::createObjArrayFreeFunc(fname, this, parent);
-				parent->parent_module->functions.push_back(free_func);
-
-				freer = new PlnSingleParamFreer(free_func);
+				free_func = registerObjectArrayFreeFunc(fname, this, parent);
 			}
 
 			// temp
@@ -158,10 +212,7 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		// freer
 		{
 			string fname = PlnBlock::generateFuncName("del", {}, {this});
-			PlnFunction* free_func = PlnArray::createObjRefArrayFreeFunc(fname, this, parent);
-			parent->parent_module->functions.push_back(free_func);
-
-			freer = new PlnSingleParamFreer(free_func);
+			free_func = registerObjectArrayFreeFunc(fname, this, parent);
 		}
 
 		// copyer
@@ -221,6 +272,17 @@ vector<PlnVarType*> PlnFixedArrayTypeInfo::getAllocParamTypes()
 		param_types.insert(param_types.end(), param_type2.begin(), param_type2.end());
 	}
 
+	return param_types;
+}
+
+vector<PlnVarType*> PlnFixedArrayTypeInfo::getFreeParamTypes()
+{
+	vector<PlnVarType*> param_types;
+	if (has_heap_member) {
+		param_types.push_back( PlnVarType::getUint() );
+		vector<PlnVarType*> param_type2 = item_type->typeinf->getFreeParamTypes();
+		param_types.insert(param_types.end(), param_type2.begin(), param_type2.end());
+	}
 	return param_types;
 }
 
@@ -378,3 +440,26 @@ PlnExpression* PlnFixedArrayVarType::getAllocEx(vector<PlnExpression*> &args)
 	return new PlnFunctionCall(arr_typeinf->alloc_func, args);
 }
 
+void PlnFixedArrayVarType::getFreeArgs(vector<PlnExpression*> &free_args)
+{
+	if (static_cast<PlnFixedArrayTypeInfo*>(typeinf)->has_heap_member) {
+		uint64_t sz = 1;
+		for (uint64_t n: sizes) {
+			sz *= n;
+		}
+		free_args.push_back(new PlnExpression(sz));
+		item_type()->getFreeArgs(free_args);
+	}
+}
+
+PlnExpression *PlnFixedArrayVarType::getFreeEx(vector<PlnExpression*> &args)
+{
+	auto arr_typeinf = static_cast<PlnFixedArrayTypeInfo*>(this->typeinf);
+	if (!arr_typeinf->has_heap_member) {
+		BOOST_ASSERT(args.size() == 1);
+		return new PlnFunctionCall(PlnFunctionCall::getInternalFunc(IFUNC_FREE), args);
+	}
+
+	BOOST_ASSERT(arr_typeinf->free_func);
+	return new PlnFunctionCall(arr_typeinf->free_func, args);
+}

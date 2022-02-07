@@ -42,7 +42,7 @@ public:
 			
 			// for free.
 			save4free_var = PlnVariable::createTempVar(da, t, "(save for free)");
-			free_ex = PlnFreer::getFreeEx(save4free_var);
+			free_ex = save4free_var->getFreeEx();
 
 			free_dp = new PlnDataPlace(8, DT_OBJECT_REF);
 			free_dp->comment = &addr_var->name;
