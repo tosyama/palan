@@ -104,7 +104,7 @@ PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnF
 	return f;
 }
 
-PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
+/*PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	uint64_t item_num = arr_type->data_size / it->size();
@@ -140,7 +140,7 @@ PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArray
 	palan::free(ifblock, p1_var);
 
 	return f;
-}
+}*/
 
 PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
@@ -237,7 +237,7 @@ PlnFunction* PlnArray::createObjRefArrayCopyFunc(string func_name, PlnFixedArray
 	}
 
 	return f;
-}*/
+}
 
 PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
@@ -274,4 +274,4 @@ PlnFunction* PlnArray::createObjArrayFreeFunc(string func_name, PlnFixedArrayTyp
 
 	return f;
 }
-
+*/

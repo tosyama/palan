@@ -224,6 +224,13 @@ PlnExpression* PlnVariable::getFreeEx()
 	return var_type->getFreeEx(args);
 }
 
+PlnExpression* PlnVariable::getInternalFreeEx()
+{
+	vector<PlnExpression *> args = { new PlnExpression(this) };
+	var_type->getFreeArgs(args);
+	return var_type->getInternalFreeEx(args);
+}
+
 PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name)
 {
 	auto var = new PlnVariable();

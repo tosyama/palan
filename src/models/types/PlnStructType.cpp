@@ -138,6 +138,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnSt
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
 			vector<PlnExpression*> free_args = { member_ex };
+			mdef->type->getFreeArgs(free_args);
 			PlnExpression* free_member = mdef->type->getFreeEx(free_args);
 			ifblock->statements.push_back(new PlnStatement(free_member, block));
 		}
@@ -165,6 +166,7 @@ static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_nam
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
 			vector<PlnExpression*> free_args = { member_ex };
+			mdef->type->getFreeArgs(free_args);
 			PlnExpression* free_member = mdef->type->getFreeEx(free_args);
 			block->statements.push_back(new PlnStatement(free_member, block));
 		}
@@ -210,7 +212,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 }
 
 PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
-	: PlnTypeInfo(TP_STRUCT), members(move(members)), alloc_func(NULL)
+	: PlnTypeInfo(TP_STRUCT), members(move(members)), alloc_func(NULL), free_func(NULL), internal_free_func(NULL)
 {
 	this->name = name;
 	int alloc_size = 0;
@@ -265,12 +267,10 @@ PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberD
 		copyer = new PlnTwoParamsCopyer(copy_func);
 
 		fname = PlnBlock::generateFuncName("free", {}, {this});
-		PlnFunction *free_func = createObjMemberStructFreeFunc(fname, this, parent);
-		freer = new PlnSingleParamFreer(free_func);
+		free_func = createObjMemberStructFreeFunc(fname, this, parent);
 
 		fname = PlnBlock::generateFuncName("intrfree", {}, {this});
-		PlnFunction *internal_free_func = createObjMemberStructInternalFreeFunc(fname, this, parent);
-		internal_freer = new PlnSingleParamFreer(internal_free_func);
+		internal_free_func = createObjMemberStructInternalFreeFunc(fname, this, parent);
 
 		parent->parent_module->functions.push_back(alloc_func);
 		parent->parent_module->functions.push_back(internal_alloc_func);
@@ -280,7 +280,6 @@ PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberD
 
 	} else {
 		copyer = new PlnSingleObjectCopyer(alloc_size);
-		freer = new PlnSingleObjectFreer();
 	}
 }
 
@@ -344,3 +343,24 @@ PlnExpression *PlnStructVarType::getAllocEx(vector<PlnExpression*> &args)
 	return new PlnFunctionCall(typeinfo->alloc_func, args);
 }
 
+PlnExpression *PlnStructVarType::getFreeEx(vector<PlnExpression*> &args)
+{
+	BOOST_ASSERT(args.size() == 1);
+	PlnStructTypeInfo* typeinfo = static_cast<PlnStructTypeInfo*>(typeinf);
+
+	if (!typeinfo->has_heap_member) {
+		return new PlnFunctionCall(PlnFunctionCall::getInternalFunc(IFUNC_FREE), args);
+	}
+
+	BOOST_ASSERT(typeinfo->free_func);
+	return new PlnFunctionCall(typeinfo->free_func, args);
+}
+
+PlnExpression *PlnStructVarType::getInternalFreeEx(vector<PlnExpression*> &args) 
+{
+	PlnStructTypeInfo* typeinfo = static_cast<PlnStructTypeInfo*>(typeinf);
+	if (!typeinfo->internal_free_func) return NULL;
+	BOOST_ASSERT(args.size());
+
+	return new PlnFunctionCall(typeinfo->internal_free_func, args);
+}

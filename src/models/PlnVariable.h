@@ -27,6 +27,7 @@ public:
 	
 	PlnExpression* getAllocEx();
 	PlnExpression* getFreeEx();
+	PlnExpression* getInternalFreeEx();
 	static PlnVariable* createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name);
 };
 

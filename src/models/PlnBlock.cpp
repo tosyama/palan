@@ -560,7 +560,7 @@ void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& 
 					free_vars.push_back(free_var);
 				}
 			} else if (v->var_type->data_type() == DT_OBJECT) {
-				PlnExpression* free_var = PlnFreer::getInternalFreeEx(v);
+				PlnExpression* free_var = v->getInternalFreeEx();
 				if (free_var) {
 					free_var->finish(da, si);
 					free_vars.push_back(free_var);

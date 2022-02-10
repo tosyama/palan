@@ -11,12 +11,6 @@ public:
 	static PlnExpression* getInternalAllocEx(PlnVariable* var);
 };
 
-class PlnFreer {
-public:
-	virtual PlnExpression* getFreeEx(PlnExpression* free_var) = 0;
-	static PlnExpression* getInternalFreeEx(PlnVariable* var);
-};
-
 class PlnDeepCopyExpression;
 class PlnCopyer {
 public:
@@ -56,8 +50,6 @@ public:
 	vector<PlnVarType*> var_types;
 
 	PlnInternalAllocator *internal_allocator;
-	PlnFreer *freer;
-	PlnFreer *internal_freer;
 	PlnCopyer *copyer;
 
 	struct PlnTypeConvInf {
@@ -99,8 +91,7 @@ public:
 	virtual void getInitExpressions(vector<PlnExpression*> &init_exps);
 
 	virtual PlnExpression *getAllocEx(vector<PlnExpression*> &args) {
-		BOOST_ASSERT(false);
-		return NULL;
+		BOOST_ASSERT(false); return NULL;
 	}
 
 	PlnExpression *getInternalAllocEx(PlnExpression *base_var) {
@@ -109,16 +100,19 @@ public:
 	}
 
 	virtual void getFreeArgs(vector<PlnExpression*> &free_args);
-	virtual PlnExpression *getFreeEx(vector<PlnExpression*> &args) { return typeinf->freer->getFreeEx(args[0]); }
-
-	PlnExpression *getInternalFreeEx(PlnExpression* free_var) {
-		if (!typeinf->internal_freer) return NULL;
-		return typeinf->internal_freer->getFreeEx(free_var);
+	virtual PlnExpression *getFreeEx(vector<PlnExpression*> &args) {
+		BOOST_ASSERT(false); return NULL;
 	}
+
+	virtual PlnExpression *getInternalFreeEx(vector<PlnExpression*> &free_args) {
+		BOOST_ASSERT(false); return NULL;
+	}
+
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
 		if (!typeinf->copyer) return NULL;
 		return typeinf->copyer->getCopyEx(dst_var, src_var);
 	}
+
 	PlnDeepCopyExpression* getCopyEx() {
 		PlnCopyer* copyer = typeinf->copyer;
 		if (!copyer) return NULL;

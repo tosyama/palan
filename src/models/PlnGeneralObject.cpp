@@ -12,15 +12,6 @@
 #include "../PlnGenerator.h"
 #include "expressions/PlnMemCopy.h"
 
-// PlnSingleObjectFreer
-PlnExpression* PlnSingleObjectFreer::getFreeEx(PlnExpression* free_var)
-{
-	PlnFunction *free_func = PlnFunctionCall::getInternalFunc(IFUNC_FREE);
-	vector<PlnExpression*> args = { free_var };
-
-	return new PlnFunctionCall(free_func, args);
-}
-
 // PlnSingleObjectCopyer
 PlnExpression* PlnSingleObjectCopyer::getCopyEx(PlnExpression* dst_var, PlnExpression* src_var)
 {
@@ -36,13 +27,6 @@ PlnExpression* PlnSingleParamInternalAllocator::getInternalAllocEx(PlnExpression
 {
 	vector<PlnExpression*> args = { base_var };
 	return new PlnFunctionCall(alloc_func, args);
-}
-
-// PlnSingleParamFreer
-PlnExpression* PlnSingleParamFreer::getFreeEx(PlnExpression* free_var)
-{
-	vector<PlnExpression*> args = { free_var };
-	return new PlnFunctionCall(free_func, args);
 }
 
 // PlnDeepCopyFuncCall

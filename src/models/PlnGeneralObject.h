@@ -6,12 +6,6 @@
 #include "../PlnModel.h"
 #include "PlnType.h"
 
-// for single object alloc/free/copy.
-class PlnSingleObjectFreer : public PlnFreer {
-public:
-	PlnExpression* getFreeEx(PlnExpression* free_var) override;
-};
-
 class PlnSingleObjectCopyer : public PlnCopyer {
 	uint64_t len;
 public:
@@ -26,14 +20,6 @@ class PlnSingleParamInternalAllocator: public PlnInternalAllocator
 public:
 	PlnSingleParamInternalAllocator(PlnFunction *f) : alloc_func(f) { }
 	PlnExpression* getInternalAllocEx(PlnExpression* base_var) override;
-};
-
-class PlnSingleParamFreer : public PlnFreer
-{
-	PlnFunction *free_func;
-public:
-	PlnSingleParamFreer(PlnFunction *f) : free_func(f) { }
-	PlnExpression* getFreeEx(PlnExpression* free_var) override;
 };
 
 class PlnTwoParamsCopyer : public PlnCopyer
