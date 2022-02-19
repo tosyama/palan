@@ -22,12 +22,6 @@ PlnDeepCopyExpression* PlnSingleObjectCopyer::getCopyEx()
 {
 	return new PlnMemCopy(NULL, NULL, new PlnExpression(len));
 }
-// PlnSingleParamInternalAllocator
-PlnExpression* PlnSingleParamInternalAllocator::getInternalAllocEx(PlnExpression* base_var)
-{
-	vector<PlnExpression*> args = { base_var };
-	return new PlnFunctionCall(alloc_func, args);
-}
 
 // PlnDeepCopyFuncCall
 class PlnDeepCopyFuncCall : public PlnDeepCopyExpression {

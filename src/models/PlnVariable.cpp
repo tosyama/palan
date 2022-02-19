@@ -138,7 +138,11 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			varinits.push_back({v, alloc_ex, NULL});
 
 		} else if (v->var_type->data_type() == DT_OBJECT) {
-			PlnExpression *alloc_ex = PlnInternalAllocator::getInternalAllocEx(v);
+			vector<PlnExpression *> args = {new PlnExpression(v)};
+			v->var_type->getInitExpressions(args);
+			// return var->var_type->getInternalAllocEx(args);
+			//PlnExpression *alloc_ex = PlnInternalAllocator::getInternalAllocEx(v);
+			PlnExpression *alloc_ex = v->var_type->getInternalAllocEx(args);
 			varinits.push_back({v, NULL, alloc_ex});
 
 		} else {

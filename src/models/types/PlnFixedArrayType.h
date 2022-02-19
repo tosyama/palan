@@ -8,6 +8,7 @@ public:
 	PlnVarType* item_type;
 	bool has_heap_member;
 	PlnFunction* alloc_func;
+	PlnFunction* internal_alloc_func;
 	PlnFunction* free_func;
 	PlnFunction* internal_free_func;
 
@@ -37,6 +38,7 @@ public:
 
 	void getInitExpressions(vector<PlnExpression*> &init_exps) override;
 	PlnExpression* getAllocEx(vector<PlnExpression*> &args) override;
+	PlnExpression* getInternalAllocEx(vector<PlnExpression*> &args) override;
 	void getFreeArgs(vector<PlnExpression*> &free_args) override;
 	PlnExpression* getFreeEx(vector<PlnExpression*> &args) override; 
 	PlnExpression* getInternalFreeEx(vector<PlnExpression*> &args) override; 

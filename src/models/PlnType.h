@@ -5,12 +5,6 @@
 
 #include "../PlnModel.h"
 
-class PlnInternalAllocator {
-public:
-	virtual PlnExpression* getInternalAllocEx(PlnExpression* base_var) = 0;
-	static PlnExpression* getInternalAllocEx(PlnVariable* var);
-};
-
 class PlnDeepCopyExpression;
 class PlnCopyer {
 public:
@@ -49,7 +43,6 @@ public:
 
 	vector<PlnVarType*> var_types;
 
-	PlnInternalAllocator *internal_allocator;
 	PlnCopyer *copyer;
 
 	struct PlnTypeConvInf {
@@ -94,9 +87,8 @@ public:
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	PlnExpression *getInternalAllocEx(PlnExpression *base_var) {
-		if (!typeinf->internal_allocator) return NULL;
-		return typeinf->internal_allocator->getInternalAllocEx(base_var);
+	virtual PlnExpression *getInternalAllocEx(vector<PlnExpression*> &args) {
+		BOOST_ASSERT(false); return NULL;
 	}
 
 	virtual void getFreeArgs(vector<PlnExpression*> &free_args);

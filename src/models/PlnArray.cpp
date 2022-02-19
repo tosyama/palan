@@ -67,7 +67,7 @@ static int item_num_of(vector<int> & sizes)
 	}
 
 	return f;
-} */
+} 
 
 PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
@@ -104,7 +104,7 @@ PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnF
 	return f;
 }
 
-/*PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
+PlnFunction* PlnArray::createObjRefArrayFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
 	PlnVarType* it = arr_type->item_type;
 	uint64_t item_num = arr_type->data_size / it->size();
@@ -140,7 +140,7 @@ PlnFunction* PlnArray::createObjRefArrayInternalAllocFunc(string func_name, PlnF
 	palan::free(ifblock, p1_var);
 
 	return f;
-}*/
+}
 
 PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {
@@ -177,6 +177,7 @@ PlnFunction* PlnArray::createObjRefArrayInternalFreeFunc(string func_name, PlnFi
 
 	return f;
 }
+*/
 
 PlnFunction* PlnArray::createObjRefArrayCopyFunc(string func_name, PlnFixedArrayTypeInfo* arr_type, PlnBlock *block)
 {

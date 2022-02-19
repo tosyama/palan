@@ -64,7 +64,8 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 		} else if (mdef->type->data_type() == DT_OBJECT) {
 			auto struct_ex = new PlnExpression(ret_var);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			PlnExpression* internal_alloc_ex = mdef->type->getInternalAllocEx(member_ex);
+			vector<PlnExpression*> member_args = { member_ex };
+			PlnExpression* internal_alloc_ex = mdef->type->getInternalAllocEx(member_args);
 			if (internal_alloc_ex) {
 				block->statements.push_back(new PlnStatement(internal_alloc_ex, block));
 			}
@@ -106,7 +107,8 @@ static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_na
 			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			PlnExpression* internal_alloc_ex = mdef->type->getInternalAllocEx(member_ex);
+			vector<PlnExpression*> member_args = { member_ex };
+			PlnExpression* internal_alloc_ex = mdef->type->getInternalAllocEx(member_args);
 			if (internal_alloc_ex) {
 				block->statements.push_back(new PlnStatement(internal_alloc_ex, block));
 			}
@@ -212,7 +214,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 }
 
 PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
-	: PlnTypeInfo(TP_STRUCT), members(move(members)), alloc_func(NULL), free_func(NULL), internal_free_func(NULL)
+	: PlnTypeInfo(TP_STRUCT), members(move(members)), alloc_func(NULL), internal_alloc_func(NULL), free_func(NULL), internal_free_func(NULL)
 {
 	this->name = name;
 	int alloc_size = 0;
@@ -259,8 +261,7 @@ PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberD
 		alloc_func = createObjMemberStructAllocFunc(fname, this, parent);
 
 		fname = PlnBlock::generateFuncName("init", {}, {this});
-		PlnFunction *internal_alloc_func = createInternalObjMemberStructAllocFunc(fname, this, parent);
-		internal_allocator = new PlnSingleParamInternalAllocator(internal_alloc_func);
+		internal_alloc_func = createInternalObjMemberStructAllocFunc(fname, this, parent);
 
 		fname = PlnBlock::generateFuncName("copy", {}, {this,this});
 		PlnFunction *copy_func = createObjMemberStructCopyFunc(fname, this, parent);
@@ -341,6 +342,13 @@ PlnExpression *PlnStructVarType::getAllocEx(vector<PlnExpression*> &args)
 
 	BOOST_ASSERT(typeinfo->alloc_func);
 	return new PlnFunctionCall(typeinfo->alloc_func, args);
+}
+
+PlnExpression *PlnStructVarType::getInternalAllocEx(vector<PlnExpression*> &args)
+{
+	PlnStructTypeInfo* typeinfo = static_cast<PlnStructTypeInfo*>(typeinf);
+	if (!typeinfo->internal_alloc_func) return NULL;
+	return new PlnFunctionCall(typeinfo->internal_alloc_func, args);
 }
 
 PlnExpression *PlnStructVarType::getFreeEx(vector<PlnExpression*> &args)

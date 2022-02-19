@@ -296,6 +296,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto free_work_var: free_work_vars)
 				g.genLoadDp(free_work_var->place);
 
+			BOOST_ASSERT(function->asm_name != "");
 			g.genCCall(function->asm_name, arg_dtypes, function->has_va_arg);
 
 			for (auto dp: data_places) 
