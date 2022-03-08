@@ -78,9 +78,9 @@ public:
 
 		tmp_var_ex = new PlnExpression(tmp_var);
 		dst_item = PlnDstItem::createDstItem(dst_ex, false);
-		dst_item->setSrcEx(da, si, tmp_var_ex);
 		if (output_place)
 			dst_item->place = output_place;
+		dst_item->setSrcEx(da, si, tmp_var_ex);
 
 		vector<PlnExpression*> val_items = src_ex->getAllItems();
 		vector<PlnExpression*> dst_items;

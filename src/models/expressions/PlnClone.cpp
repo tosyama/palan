@@ -1,7 +1,7 @@
 /// PlnClone model class definition.
 ///
 /// @file	PlnClone.cpp
-/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -22,6 +22,8 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 {
 	var_type = var_type->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
+	values.push_back(var);
+
 	vector<PlnExpression*> args;
 	var_type->getInitExpressions(args);
 	alloc_ex = var_type->getAllocEx(args);
@@ -70,9 +72,8 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 	}
 }
 
-void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnClone::finishCopy(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	BOOST_ASSERT(data_places.size() == 1);
 	if (directAssign) {
 		for (auto ai: assign_items) {
 			ai->finishS(da, si);
@@ -84,7 +85,11 @@ void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		copy_ex->finish(da, si);
 
 	}
+}
 
+void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	BOOST_ASSERT(data_places.size() == 1);
 	da.pushSrc(data_places[0], var->place, !keep_var);
 }
 
@@ -102,7 +107,7 @@ void PlnClone::genAlloc(PlnGenerator& g)
 	g.genLoadDp(var->place);
 }
 
-void PlnClone::gen(PlnGenerator& g)
+void PlnClone::genCopy(PlnGenerator& g)
 {
 	if (directAssign) {
 		for (auto ai: assign_items) {
@@ -113,6 +118,10 @@ void PlnClone::gen(PlnGenerator& g)
 		g.genSaveSrc(copy_dst_dp);
 		copy_ex->gen(g);
 	}
+}
+
+void PlnClone::gen(PlnGenerator& g)
+{
 	g.genSaveSrc(data_places[0]);
 }
 

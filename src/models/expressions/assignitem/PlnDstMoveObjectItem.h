@@ -33,7 +33,7 @@ public:
 
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
-	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
+	PlnFinishRole setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		int index = src_ex->data_places.size();
 
 		auto src_type = src_ex->values[index].getVarType();
@@ -50,6 +50,7 @@ public:
 			dst_dp->do_clear_src = true;
 		}
 		src_ex->data_places.push_back(dst_dp);
+		return FINISH_BY_ASSIGNITEM;
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {

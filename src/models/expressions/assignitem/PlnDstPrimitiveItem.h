@@ -25,7 +25,7 @@ public:
 
 	PlnAsgnType getAssginType() override { return dst_ex->values[0].asgn_type; }
 
-	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo &si, PlnExpression *src_ex) override {
+	PlnFinishRole setSrcEx(PlnDataAllocator &da, PlnScopeInfo &si, PlnExpression *src_ex) override {
 		dst_dp = dst_ex->values[0].getDataPlace(da);
 		if (place == NULL) {
 			int val_ind = src_ex->data_places.size();
@@ -54,6 +54,7 @@ public:
 				src_ex->data_places.push_back(save_src_var->place);
 			}
 		}
+		return FINISH_BY_ASSIGNITEM;
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {

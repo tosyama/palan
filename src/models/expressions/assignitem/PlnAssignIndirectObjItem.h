@@ -44,13 +44,18 @@ public:
 		if (dst_item->getAssginType() == ASGN_COPY) {
 			if (dst_item->need_save) {
 				src_save = new PlnClone(da, src_ex, src_ex->values[0].inf.var->var_type, true);
-				dst_item->setSrcEx(da, si, src_save);
+				PlnFinishRole fr = dst_item->setSrcEx(da, si, src_save);
+				// BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
 				src_save->finishAlloc(da, si);
 				src_ex->finish(da, si);
-				src_save->finish(da, si);
+				src_save->finishCopy(da, si);
+				if (fr == FINISH_BY_ASSIGNITEM) {
+					src_save->finish(da, si);
+				}
 
 			} else {
-				dst_item->setSrcEx(da, si, src_ex);
+				PlnFinishRole fr = dst_item->setSrcEx(da, si, src_ex);
+				BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
 				if (src_ex->data_places.size()) {
 					src_ex->finish(da, si);
 				} else
@@ -58,11 +63,13 @@ public:
 			}
 
 		} else if (dst_item->getAssginType() == ASGN_MOVE) {
-			dst_item->setSrcEx(da, si, src_ex);
+			PlnFinishRole fr = dst_item->setSrcEx(da, si, src_ex);
+			BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
 			src_ex->finish(da, si);
 
 		} else if (dst_item->getAssginType() == ASGN_COPY_REF) {
-			dst_item->setSrcEx(da, si, src_ex);
+			PlnFinishRole fr = dst_item->setSrcEx(da, si, src_ex);
+			BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
 			src_ex->finish(da, si);
 
 		} else {
@@ -90,8 +97,10 @@ public:
 		if (src_save)
 			src_save->genAlloc(g);
 		src_ex->gen(g);
-		if (src_save)
+		if (src_save) {
+			src_save->genCopy(g);
 			src_save->gen(g);
+		}
 	}
 
 	void genD(PlnGenerator& g) override {

@@ -199,6 +199,7 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 
 			if (clones[j]) {
 				clones[j]->data_places.push_back(arg_dps[dp_i]);
+				clones[j]->finishCopy(da, si);
 				clones[j]->finish(da, si);
 			}
 			++j;
@@ -279,7 +280,10 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) {
 				if (clones[i]) clones[i]->genAlloc(g);
 				arg.exp->gen(g);
-				if (clones[i]) clones[i]->gen(g);
+				if (clones[i]) {
+					clones[i]->genCopy(g);
+					clones[i]->gen(g);
+				}
 				i++;
 			}
 
@@ -331,11 +335,12 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) {
 				if (clones[i]) clones[i]->genAlloc(g);
 				arg.exp->gen(g);
-				if (clones[i]) clones[i]->gen(g);
+				if (clones[i]) {
+					clones[i]->genCopy(g);
+					clones[i]->gen(g);
+				}
 				i++;
 			}
-			//for (auto& arg: arguments)
-			//	arg.exp->gen(g);
 
 			for (auto dp: arg_dps)
 				g.genLoadDp(dp, false);

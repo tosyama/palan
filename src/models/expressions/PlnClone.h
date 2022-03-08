@@ -20,10 +20,12 @@ public:
 	~PlnClone();
 
 	void finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si);
+	void finishCopy(PlnDataAllocator& da, PlnScopeInfo& si);
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void finishFree(PlnDataAllocator& da, PlnScopeInfo& si);
 
 	void genAlloc(PlnGenerator& g);
+	void genCopy(PlnGenerator& g);
 	void gen(PlnGenerator& g) override;
 	void genFree(PlnGenerator& g);
 };

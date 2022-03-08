@@ -31,7 +31,8 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		dst_item->setSrcEx(da, si, src_ex);
+		PlnFinishRole fr = dst_item->setSrcEx(da, si, src_ex);
+		BOOST_ASSERT(fr==FINISH_BY_ASSIGNITEM);
 		src_ex->finish(da, si);
 	}
 

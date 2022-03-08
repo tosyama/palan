@@ -16,6 +16,7 @@ class PlnAssignWorkValsItem : public PlnAssignItem
 		PlnDstItem* item;
 		PlnVariable* save_src_var;
 		PlnExpression* copy_src_ex, *free_ex;
+		PlnFinishRole fr;
 	};
 	vector<DstInf> dsts;
 	vector<PlnExpression*> free_exs;
@@ -76,10 +77,11 @@ public:
 				src_ex->data_places.push_back(di.save_src_var->place);
 
 				di.copy_src_ex = new PlnExpression(di.save_src_var);
-				di.item->setSrcEx(da, si, di.copy_src_ex);
+				di.fr = di.item->setSrcEx(da, si, di.copy_src_ex);
 
 			} else {
-				di.item->setSrcEx(da, si, src_ex);
+				PlnFinishRole fr = di.item->setSrcEx(da, si, src_ex);
+				BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
 			}
 			i++;
 		}
@@ -91,7 +93,9 @@ public:
 		for (auto &di: dsts) {
 			if (di.save_src_var) {	// ASGN_COPY
 				da.popSrc(di.save_src_var->place);
-				di.copy_src_ex->finish(da, si);
+				if (di.fr == FINISH_BY_ASSIGNITEM) {
+					di.copy_src_ex->finish(da, si);
+				}
 				di.item->finish(da, si);
 				di.free_ex->finish(da, si);
 				da.releaseDp(di.save_src_var->place);
