@@ -18,7 +18,7 @@
 #include "assignitem/PlnAssignItem.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_type, bool keep_var)
-	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
+	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), src_tmp_var(NULL), keep_var(keep_var)
 {
 	var_type = var_type->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
@@ -32,9 +32,14 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->doCopyFromStaticBuffer);
  
 	if (!directAssign) {
-		copy_ex = var_type->getCopyEx();
-		src_ex->data_places.push_back(copy_ex->srcDp(da));
-		copy_dst_dp = copy_ex->dstDp(da);
+		int val_ind = src_ex->data_places.size();
+		PlnVarType *tmp_vartype = src_ex->values[val_ind].getVarType()->getVarType("rir");
+		src_tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "src tmp var");
+		src_ex->data_places.push_back(src_tmp_var->place);
+
+		PlnExpression* dst_var_ex = new PlnExpression(var);
+		PlnExpression* src_var_ex = new PlnExpression(src_tmp_var);
+		copy_ex = var_type->getCopyEx(dst_var_ex, src_var_ex);
 	}
 	this->src_ex = src_ex;
 }
@@ -81,8 +86,9 @@ void PlnClone::finishCopy(PlnDataAllocator& da, PlnScopeInfo& si)
 		}
 
 	} else {
-		da.pushSrc(copy_dst_dp, var->place, false);
+		da.popSrc(src_tmp_var->place);
 		copy_ex->finish(da, si);
+		da.releaseDp(src_tmp_var->place);
 
 	}
 }
@@ -115,8 +121,9 @@ void PlnClone::genCopy(PlnGenerator& g)
 			ai->genD(g);
 		}
 	} else {
-		g.genSaveSrc(copy_dst_dp);
+		g.genLoadDp(src_tmp_var->place);
 		copy_ex->gen(g);
+
 	}
 }
 

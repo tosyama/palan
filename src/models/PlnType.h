@@ -5,11 +5,9 @@
 
 #include "../PlnModel.h"
 
-class PlnDeepCopyExpression;
 class PlnCopyer {
 public:
 	virtual PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) = 0;
-	virtual PlnDeepCopyExpression* getCopyEx() = 0;
 };
 
 enum PlnTypeConvCap {
@@ -103,12 +101,6 @@ public:
 	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
 		if (!typeinf->copyer) return NULL;
 		return typeinf->copyer->getCopyEx(dst_var, src_var);
-	}
-
-	PlnDeepCopyExpression* getCopyEx() {
-		PlnCopyer* copyer = typeinf->copyer;
-		if (!copyer) return NULL;
-		return typeinf->copyer->getCopyEx();
 	}
 
 	virtual PlnVarType* getVarType(const string& mode = "---");

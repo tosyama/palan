@@ -37,6 +37,10 @@ public:
 		PlnExpression *cpy_dst_ex = dst_ex;
 
 		if (src_ex->type == ET_VALUE || src_ex->type == ET_CLONE) {
+			BOOST_ASSERT(src_ex->values[0].type == VL_VAR
+				|| src_ex->values[0].type == VL_LIT_ARRAY
+				|| src_ex->values[0].type == VL_LIT_STR
+				);
 			src_finish_role = FINISH_BY_DSTITEM;
 
 		} else {
