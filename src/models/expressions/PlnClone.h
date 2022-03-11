@@ -1,7 +1,7 @@
 /// PlnClone model class declaration.
 ///
 /// @file	PlnClone.h
-/// @copyright	2018-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2022 YAMAGUCHI Toshinobu 
 
 class PlnClone : public PlnExpression
 {
@@ -9,6 +9,7 @@ class PlnClone : public PlnExpression
 	PlnDataPlace* copy_dst_dp;
 	PlnExpression *copy_ex;
 	PlnExpression *src_ex;
+	PlnExpression *dup_src_ex;
 	vector<PlnAssignItem*> assign_items;
 
 public:

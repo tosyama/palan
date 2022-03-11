@@ -26,7 +26,8 @@ enum PlnExprsnType {
 	ET_REFVALUE,
 	ET_MCOPY,
 	ET_TRUE,
-	ET_FALSE
+	ET_FALSE,
+	ET_VOID
 };
 
 class PlnModule;
@@ -61,7 +62,6 @@ enum PlnValType {
 	VL_WORK
 };
 
-class PlnArrayLiteral;
 class PlnArrayValue;
 class PlnValue {
 public:
@@ -85,7 +85,6 @@ public:
 	PlnValue(double floValue);
 	PlnValue(string strValue);
 	PlnValue(PlnArrayValue *arr);
-	PlnValue(PlnArrayLiteral *arr);
 	PlnValue(PlnVariable* var);
 	~PlnValue();
 

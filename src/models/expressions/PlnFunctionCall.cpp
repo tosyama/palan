@@ -144,7 +144,7 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 				if (v.type == VL_WORK && v.inf.wk_type->mode[ALLOC_MD]=='h') { // e.g. return value of function
 					BOOST_ASSERT(v.inf.wk_type->mode[ALLOC_MD]=='h');
 					// needs to free after call func.
-					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "free_var");
+					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "(free_var)");
 					da.pushSrc(tmp_var->place, arg_dps[dp_i], false);
 					PlnExpression *free_ex = tmp_var->getFreeEx();
 

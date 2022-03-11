@@ -50,7 +50,7 @@ public:
 
 			} else {	// e.g. ET_ARRAYITEM. save_src_var is use also return value.
 				PlnVarType* t = dst_ex->values[0].inf.var->var_type;
-				save_src_var = PlnVariable::createTempVar(da, t, "save src");
+				save_src_var = PlnVariable::createTempVar(da, t, "(save src)");
 				src_ex->data_places.push_back(save_src_var->place);
 			}
 		}

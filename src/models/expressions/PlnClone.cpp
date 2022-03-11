@@ -18,7 +18,7 @@
 #include "assignitem/PlnAssignItem.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_type, bool keep_var)
-	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), src_tmp_var(NULL), keep_var(keep_var)
+	: PlnExpression(ET_CLONE), src_ex(NULL), dup_src_ex(NULL), free_ex(NULL), copy_ex(NULL), src_tmp_var(NULL), keep_var(keep_var)
 {
 	var_type = var_type->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
@@ -33,13 +33,28 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
  
 	if (!directAssign) {
 		int val_ind = src_ex->data_places.size();
-		PlnVarType *tmp_vartype = src_ex->values[val_ind].getVarType()->getVarType("rir");
-		src_tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "src tmp var");
-		src_ex->data_places.push_back(src_tmp_var->place);
-
 		PlnExpression* dst_var_ex = new PlnExpression(var);
-		PlnExpression* src_var_ex = new PlnExpression(src_tmp_var);
-		copy_ex = var_type->getCopyEx(dst_var_ex, src_var_ex);
+
+		if (src_ex->type == ET_VALUE && (src_ex->values[0].type == VL_VAR || src_ex->values[0].type == VL_LIT_STR)) {
+			// TODO: + VL_LIT_ARRAY or other optimazation methods.
+			BOOST_ASSERT(src_ex->values.size() == 1);
+			if (src_ex->values[0].type == VL_VAR) {
+				dup_src_ex = new PlnExpression(src_ex->values[0].inf.var);
+
+			} else if (src_ex->values[0].type == VL_LIT_STR) {
+				dup_src_ex = new PlnExpression(*src_ex->values[0].inf.strValue);
+			}
+
+			copy_ex = var_type->getCopyEx(dst_var_ex, dup_src_ex);
+
+		} else {
+			PlnVarType *tmp_vartype = src_ex->values[val_ind].getVarType()->getVarType("rir");
+			src_tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "(src tmp var)");
+			src_ex->data_places.push_back(src_tmp_var->place);
+
+			PlnExpression* src_var_ex = new PlnExpression(src_tmp_var);
+			copy_ex = var_type->getCopyEx(dst_var_ex, src_var_ex);
+		}
 	}
 	this->src_ex = src_ex;
 }
@@ -49,6 +64,7 @@ PlnClone::~PlnClone()
 	delete alloc_ex;
 	delete copy_ex;
 	delete free_ex;
+	delete src_tmp_var;
 }
 
 void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -72,8 +88,6 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 			ai->addDstEx(dst_items[i], false);
 			assign_items.push_back(ai);
 		}
-
-		// src_ex->data_places.push_back(var->place);
 	}
 }
 
@@ -85,12 +99,15 @@ void PlnClone::finishCopy(PlnDataAllocator& da, PlnScopeInfo& si)
 			ai->finishD(da, si);
 		}
 
-	} else {
+	} else if (src_tmp_var) {
 		da.popSrc(src_tmp_var->place);
 		copy_ex->finish(da, si);
 		da.releaseDp(src_tmp_var->place);
 
+	} else {
+		copy_ex->finish(da, si);
 	}
+
 }
 
 void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -120,8 +137,12 @@ void PlnClone::genCopy(PlnGenerator& g)
 			ai->genS(g);
 			ai->genD(g);
 		}
-	} else {
+
+	} else if (src_tmp_var) {
 		g.genLoadDp(src_tmp_var->place);
+		copy_ex->gen(g);
+
+	} else {
 		copy_ex->gen(g);
 
 	}

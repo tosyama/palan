@@ -65,7 +65,7 @@ public:
 			tmp_vartype = tmp_vartype->getVarType();
 		}
 
-		tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "tmp var");
+		tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "(tmp var)");
 		BOOST_ASSERT(tmp_var->place->data_type == DT_OBJECT_REF);
 		BOOST_ASSERT(tmp_var->place->size == 8);
 
