@@ -48,7 +48,9 @@ PlnFunction* PlnArray::createObjRefArrayCopyFunc(string func_name, PlnFixedArray
 	{
 		PlnExpression* dst_arr_item = palan::rawArrayItem(f->parameters[0]->var, i, block);
 		PlnExpression* src_arr_item = palan::rawArrayItem(f->parameters[1]->var, i, block);
-		PlnExpression* copy_item = it->getCopyEx(dst_arr_item, src_arr_item);
+		vector<PlnExpression*> args;
+		it->getAllocArgs(args);
+		PlnExpression* copy_item = it->getCopyEx(dst_arr_item, src_arr_item, args);
 		if (copy_item) {
 			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
 		}

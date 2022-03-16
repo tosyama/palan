@@ -25,7 +25,7 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 	values.push_back(var);
 
 	vector<PlnExpression*> args;
-	var_type->getInitExpressions(args);
+	var_type->getAllocArgs(args);
 	alloc_ex = var_type->getAllocEx(args);
 	alloc_ex->data_places.push_back(var->place);
 
@@ -44,8 +44,10 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 			} else if (src_ex->values[0].type == VL_LIT_STR) {
 				dup_src_ex = new PlnExpression(*src_ex->values[0].inf.strValue);
 			}
-
-			copy_ex = var_type->getCopyEx(dst_var_ex, dup_src_ex);
+			
+			vector<PlnExpression*> args;
+			var_type->getAllocArgs(args);
+			copy_ex = var_type->getCopyEx(dst_var_ex, dup_src_ex, args);
 
 		} else {
 			PlnVarType *tmp_vartype = src_ex->values[val_ind].getVarType()->getVarType("rir");
@@ -53,7 +55,9 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 			src_ex->data_places.push_back(src_tmp_var->place);
 
 			PlnExpression* src_var_ex = new PlnExpression(src_tmp_var);
-			copy_ex = var_type->getCopyEx(dst_var_ex, src_var_ex);
+			vector<PlnExpression*> args;
+			var_type->getAllocArgs(args);
+			copy_ex = var_type->getCopyEx(dst_var_ex, src_var_ex, args);
 		}
 	}
 	this->src_ex = src_ex;

@@ -12,8 +12,8 @@
 #include <boost/algorithm/string/join.hpp>
 
 #include "../PlnConstants.h"
+#include "PlnType.h"
 #include "PlnFunction.h"
-#include "PlnGeneralObject.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnVariable.h"

@@ -5,11 +5,6 @@
 
 #include "../PlnModel.h"
 
-class PlnCopyer {
-public:
-	virtual PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) = 0;
-};
-
 enum PlnTypeConvCap {
 	TC_CANT_CONV = 0,
 	TC_SAME = 1,
@@ -40,8 +35,6 @@ public:
 	string default_mode;
 
 	vector<PlnVarType*> var_types;
-
-	PlnCopyer *copyer;
 
 	struct PlnTypeConvInf {
 		PlnTypeInfo *type;
@@ -79,7 +72,8 @@ public:
 	int align();
 	bool has_heap_member();
 
-	virtual void getInitExpressions(vector<PlnExpression*> &init_exps);
+	virtual void getAllocArgs(vector<PlnExpression*> &alloc_exps);
+	virtual void getFreeArgs(vector<PlnExpression*> &free_args);
 
 	virtual PlnExpression *getAllocEx(vector<PlnExpression*> &args) {
 		BOOST_ASSERT(false); return NULL;
@@ -89,7 +83,6 @@ public:
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	virtual void getFreeArgs(vector<PlnExpression*> &free_args);
 	virtual PlnExpression *getFreeEx(vector<PlnExpression*> &args) {
 		BOOST_ASSERT(false); return NULL;
 	}
@@ -98,9 +91,8 @@ public:
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var) {
-		if (!typeinf->copyer) return NULL;
-		return typeinf->copyer->getCopyEx(dst_var, src_var);
+	virtual PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args) {
+		return NULL;
 	}
 
 	virtual PlnVarType* getVarType(const string& mode = "---");

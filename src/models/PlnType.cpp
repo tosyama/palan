@@ -27,13 +27,12 @@ static PlnTypeInfo* any_type = NULL;
 
 // PlnType
 PlnTypeInfo::PlnTypeInfo(PlnTypeType type)
-	: type(type), copyer(NULL)
+	: type(type)
 {
 }
 
 PlnTypeInfo::~PlnTypeInfo()
 {
-	delete copyer;
 }
 
 void PlnTypeInfo::initBasicTypes()
@@ -389,7 +388,7 @@ bool PlnVarType::has_heap_member()
 	return false;
 }
 
-void PlnVarType::getInitExpressions(vector<PlnExpression*> &init_exps)
+void PlnVarType::getAllocArgs(vector<PlnExpression*> &alloc_args)
 {
 }
 

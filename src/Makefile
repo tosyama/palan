@@ -4,7 +4,7 @@ PROGRAM=pac
 SRCS=palan.cpp \
 	models/PlnModule.cpp models/PlnFunction.cpp models/PlnBlock.cpp \
 	models/PlnStatement.cpp models/PlnExpression.cpp models/PlnVariable.cpp \
-	models/PlnType.cpp models/PlnArray.cpp models/PlnGeneralObject.cpp \
+	models/PlnType.cpp models/PlnArray.cpp \
 	models/PlnLoopStatement.cpp \
 	models/PlnConditionalBranch.cpp \
 	models/types/PlnFixedArrayType.cpp \

@@ -59,7 +59,9 @@ public:
 			cpy_dst_ex = new PlnExpression(dst_tmp_var);
 		}
 
-		cpy_ex = dst_ex->values[0].getVarType()->getCopyEx(cpy_dst_ex, cpy_src_ex);
+		vector<PlnExpression*> args;
+		dst_ex->values[0].getVarType()->getAllocArgs(args);
+		cpy_ex = dst_ex->values[0].getVarType()->getCopyEx(cpy_dst_ex, cpy_src_ex, args);
 
 		if (!cpy_ex) {
 			PlnCompileError err(E_CantCopyType, dst_ex->values[0].getVarType()->name());

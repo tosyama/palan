@@ -11,6 +11,7 @@ public:
 	PlnFunction* internal_alloc_func;
 	PlnFunction* free_func;
 	PlnFunction* internal_free_func;
+	PlnFunction* copy_func;
 
 	PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent);
 	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override;
@@ -36,10 +37,11 @@ public:
 
 	}
 
-	void getInitExpressions(vector<PlnExpression*> &init_exps) override;
+	void getAllocArgs(vector<PlnExpression*> &alloc_exps) override;
+	void getFreeArgs(vector<PlnExpression*> &free_args) override;
 	PlnExpression* getAllocEx(vector<PlnExpression*> &args) override;
 	PlnExpression* getInternalAllocEx(vector<PlnExpression*> &args) override;
-	void getFreeArgs(vector<PlnExpression*> &free_args) override;
 	PlnExpression* getFreeEx(vector<PlnExpression*> &args) override; 
 	PlnExpression* getInternalFreeEx(vector<PlnExpression*> &args) override; 
+	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args) override;
 };

@@ -9,7 +9,7 @@
 #include "../../PlnTreeBuildHelper.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
-#include "../PlnGeneralObject.h"
+#include "../PlnType.h"
 #include "../PlnFunction.h"
 #include "../PlnBlock.h"
 #include "../PlnModule.h"
@@ -54,7 +54,7 @@ static PlnFunction* createObjMemberStructAllocFunc(const string& func_name, PlnS
 			vector<PlnExpression*> lvals = { member_ex };
 
 			vector<PlnExpression*> args;
-			mdef->type->getInitExpressions(args);
+			mdef->type->getAllocArgs(args);
 			PlnExpression* alloc_ex = mdef->type->getAllocEx(args);
 			vector<PlnExpression*> exps = { alloc_ex };
 
@@ -96,7 +96,7 @@ static PlnFunction* createInternalObjMemberStructAllocFunc(const string& func_na
 			vector<PlnExpression*> lvals = { member_ex };
 
 			vector<PlnExpression*> args;
-			mdef->type->getInitExpressions(args);
+			mdef->type->getAllocArgs(args);
 			PlnExpression* alloc_ex = mdef->type->getAllocEx(args);
 			vector<PlnExpression*> exps = { alloc_ex };
 
@@ -181,10 +181,10 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 {
 	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
 	string s1 = "__p1", s2 = "__p2";
-	// dst
-	PlnVariable* dst_var = f->addParam(s1, struct_type->getVarType("wcr"), PIO_INPUT, FPM_IN_BYREF, NULL);
 	// src
-	PlnVariable* src_var = f->addParam(s2, struct_type->getVarType("rir"), PIO_INPUT, FPM_IN_BYREF, NULL);
+	PlnVariable* src_var = f->addParam(s1, struct_type->getVarType("rir"), PIO_INPUT, FPM_IN_BYREF, NULL);
+	// dst
+	PlnVariable* dst_var = f->addParam(s2, struct_type->getVarType("wcr"), PIO_INPUT, FPM_IN_BYREF, NULL);
 	f->parent = parent_block;
 
 	auto block = new PlnBlock();
@@ -192,13 +192,16 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 	f->implement = block;
 	
 	for (PlnStructMemberDef* mdef: struct_type->members) {
-			auto dst_struct_ex = new PlnExpression(dst_var);
-			auto dst_member_ex = new PlnStructMember(dst_struct_ex, mdef->name);
+		auto dst_struct_ex = new PlnExpression(dst_var);
+		auto dst_member_ex = new PlnStructMember(dst_struct_ex, mdef->name);
 
-			auto src_struct_ex = new PlnExpression(src_var);
-			auto src_member_ex = new PlnStructMember(src_struct_ex, mdef->name);
+		auto src_struct_ex = new PlnExpression(src_var);
+		auto src_member_ex = new PlnStructMember(src_struct_ex, mdef->name);
+
 		if (mdef->type->data_type() == DT_OBJECT_REF || mdef->type->data_type() == DT_OBJECT) {
-			PlnExpression* copy_member = mdef->type->getCopyEx(dst_member_ex, src_member_ex);
+			vector<PlnExpression *> args;
+			mdef->type->getAllocArgs(args);
+			PlnExpression* copy_member = mdef->type->getCopyEx(dst_member_ex, src_member_ex, args);
 			block->statements.push_back(new PlnStatement(copy_member, block));
 
 		} else {
@@ -263,24 +266,21 @@ PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberD
 		fname = PlnBlock::generateFuncName("init", {}, {this});
 		internal_alloc_func = createInternalObjMemberStructAllocFunc(fname, this, parent);
 
-		fname = PlnBlock::generateFuncName("copy", {}, {this,this});
-		PlnFunction *copy_func = createObjMemberStructCopyFunc(fname, this, parent);
-		copyer = new PlnTwoParamsCopyer(copy_func);
-
 		fname = PlnBlock::generateFuncName("free", {}, {this});
 		free_func = createObjMemberStructFreeFunc(fname, this, parent);
 
 		fname = PlnBlock::generateFuncName("intrfree", {}, {this});
 		internal_free_func = createObjMemberStructInternalFreeFunc(fname, this, parent);
 
+		fname = PlnBlock::generateFuncName("copy", {}, {this,this});
+		copy_func = createObjMemberStructCopyFunc(fname, this, parent);
+
 		parent->parent_module->functions.push_back(alloc_func);
 		parent->parent_module->functions.push_back(internal_alloc_func);
-		parent->parent_module->functions.push_back(copy_func);
 		parent->parent_module->functions.push_back(free_func);
 		parent->parent_module->functions.push_back(internal_free_func);
+		parent->parent_module->functions.push_back(copy_func);
 
-	} else {
-		copyer = new PlnSingleObjectCopyer(alloc_size);
 	}
 }
 
@@ -372,3 +372,18 @@ PlnExpression *PlnStructVarType::getInternalFreeEx(vector<PlnExpression*> &args)
 
 	return new PlnFunctionCall(typeinfo->internal_free_func, args);
 }
+
+PlnExpression *PlnStructVarType::getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args)
+{
+	PlnStructTypeInfo* typeinfo = static_cast<PlnStructTypeInfo*>(typeinf);
+
+	if (!typeinfo->has_heap_member) {
+		return new PlnMemCopy(dst_var, src_var, new PlnExpression(uint64_t(typeinfo->data_size)));
+	}
+
+	vector<PlnExpression*> copy_func_args = {src_var, dst_var};
+	copy_func_args.insert(copy_func_args.end(), args.begin(), args.end());
+
+	return new PlnFunctionCall(typeinfo->copy_func, copy_func_args);
+}
+

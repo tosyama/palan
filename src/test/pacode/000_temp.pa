@@ -1,13 +1,28 @@
 ccall printf(...);
 
-[3]#[10]byte names = ["Alice","Bob","Ken"];
+func set_arrarr([3][4]int32 >>a) -> [3][4]int32 a
+{
+	int32 i, j;
 
-// This spec ? 
- type PointI = [2]int32;
-[3] PointI ap = [1,2][3,4][5,6];
-PointI p1, p2;
- 
-ap[2], ap[1] -> ap[1], ap[2] -> p1, p2;
- 
-printf("[%d %d]", ap[1][0], ap[1][1]);
-printf("[%d %d]", ap[2][0], ap[2][1]);
+	0 -> i;
+	while i<3 {
+		0 -> j;
+		while j<4 {
+			i*4+j -> a[i][j];
+			j+1 -> j;
+		}
+		i+1 -> i;
+	}
+}
+
+func inc_arrarr([3][4]int32 a) -> [3][4]int32 b
+{
+//	a -> b;
+}
+
+[3][4]int32 a1;
+set_arrarr(a1>>) ->> a1;
+inc_arrarr(a1);
+
+
+printf("%d", a1[2][3]);

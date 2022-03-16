@@ -5,8 +5,8 @@
 
 #include <boost/assert.hpp>
 #include "../../PlnConstants.h"
-#include "../PlnGeneralObject.h"
 #include "../PlnModule.h"
+#include "../PlnType.h"
 #include "../PlnStatement.h"
 #include "../PlnBlock.h"
 #include "../PlnFunction.h"
@@ -21,6 +21,9 @@
 #include "../../PlnTreeBuildHelper.h"
 #include "../expressions/PlnAssignment.h"
 #include "../PlnConditionalBranch.h"
+#include "../../PlnGenerator.h"
+#include "../../PlnDataAllocator.h"
+#include "../expressions/PlnMemCopy.h"
 
 static PlnFunction* registerObjectArrayAllocFunc(string func_name, PlnFixedArrayTypeInfo* arr_typeinf, PlnBlock *block)
 {
@@ -207,8 +210,55 @@ static PlnFunction* registerObjectArrayFreeFunc(string func_name, PlnFixedArrayT
 	return f;
 }
 
+static PlnFunction* registerObjectArrayCopyFunc(string func_name, PlnFixedArrayTypeInfo* arr_typeinf, PlnBlock *block)
+{
+	PlnVarType* it = arr_typeinf->item_type;
+	PlnFunction* f = new PlnFunction(FT_PLN, func_name);
+
+	f->parent = block->getTypeDefinedBlock(it);
+
+	// first paramater
+	auto src_var = f->addParam("__src_var", arr_typeinf->getVarType("wmr"), PIO_INPUT, FPM_IN_BYREF, NULL);
+	auto dst_var = f->addParam("__dst_var", arr_typeinf->getVarType("rmr"), PIO_INPUT, FPM_IN_BYREF, NULL);
+
+	PlnVariable* item_num_var;
+	vector<PlnExpression*> next_args;
+	vector<PlnVarType*> param_types = arr_typeinf->getAllocParamTypes();
+	BOOST_ASSERT(param_types.size());
+
+	BOOST_ASSERT(param_types[0]->data_type() == DT_UINT);
+	item_num_var = f->addParam("__item_num", param_types[0], PIO_INPUT, FPM_IN_BYVAL, NULL);
+
+	for (int i=1; i<param_types.size(); i++) {
+		string pname = "__p" + to_string(i);
+		next_args.push_back(
+				new PlnExpression(f->addParam(pname, param_types[i], PIO_INPUT, FPM_IN_BYVAL, NULL))
+			);
+	}
+
+	f->implement = new PlnBlock();
+	f->implement->setParent(f);
+
+	// Add copy code.
+	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
+	PlnBlock* wblock = palan::whileLess(f->implement, i, new PlnExpression(item_num_var));
+	{
+		PlnExpression* dst_arr_item = palan::rawArrayItem(dst_var, i, block);
+		PlnExpression* src_arr_item = palan::rawArrayItem(src_var, i, block);
+		PlnExpression* copy_item = it->getCopyEx(dst_arr_item, src_arr_item, next_args);
+		if (copy_item) {
+			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
+		}
+
+		palan::incrementUInt(wblock, i, 1);
+	}
+	f->parent->parent_module->functions.push_back(f);
+	return f;
+}
+
 PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent)
-	: PlnTypeInfo(TP_FIXED_ARRAY), item_type(item_type), alloc_func(NULL), internal_alloc_func(NULL), free_func(NULL), internal_free_func(NULL)
+	: PlnTypeInfo(TP_FIXED_ARRAY), item_type(item_type),
+	  alloc_func(NULL), internal_alloc_func(NULL), free_func(NULL), internal_free_func(NULL), copy_func(NULL)
 {
 	int alloc_size = item_type->size();
 	for (int s: sizes)
@@ -241,7 +291,7 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		// allocator
 		{
 			string fname = PlnBlock::generateFuncName("new", {this}, {});
-			this->alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
+			alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
 		}
 
 		// freer
@@ -253,10 +303,7 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		// copyer
 		{
 			string fname = PlnBlock::generateFuncName("cpy", {}, {this,this});
-			PlnFunction* copy_func = PlnArray::createObjRefArrayCopyFunc(fname, this, parent);
-			parent->parent_module->functions.push_back(copy_func);
-
-			copyer = new PlnTwoParamsCopyer(copy_func);
+			copy_func = registerObjectArrayCopyFunc(fname, this, parent);
 		}
 
 		if (item_type->data_type() == DT_OBJECT_REF) {
@@ -272,10 +319,7 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 				internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
 			}
 		}
-	} else {
-		copyer = new PlnSingleObjectCopyer(alloc_size);
 	}
-
 }
 
 PlnTypeConvCap PlnFixedArrayTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
@@ -434,7 +478,7 @@ PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType co
 	return TC_CANT_CONV;
 }
 
-void PlnFixedArrayVarType::getInitExpressions(vector<PlnExpression*> &init_exps)
+void PlnFixedArrayVarType::getAllocArgs(vector<PlnExpression*> &alloc_args)
 {
 	BOOST_ASSERT(sizes.size());
 	
@@ -442,11 +486,23 @@ void PlnFixedArrayVarType::getInitExpressions(vector<PlnExpression*> &init_exps)
 	for (uint64_t n: sizes) {
 		sz *= n;
 	}
-	init_exps.push_back(new PlnExpression(sz));
+	alloc_args.push_back(new PlnExpression(sz));
 	auto arr_typeinf = static_cast<PlnFixedArrayTypeInfo*>(this->typeinf);
 
 	if (arr_typeinf->has_heap_member) {
-		item_type()->getInitExpressions(init_exps);
+		item_type()->getAllocArgs(alloc_args);
+	}
+}
+
+void PlnFixedArrayVarType::getFreeArgs(vector<PlnExpression*> &free_args)
+{
+	if (static_cast<PlnFixedArrayTypeInfo*>(typeinf)->has_heap_member) {
+		uint64_t sz = 1;
+		for (uint64_t n: sizes) {
+			sz *= n;
+		}
+		free_args.push_back(new PlnExpression(sz));
+		item_type()->getFreeArgs(free_args);
 	}
 }
 
@@ -482,18 +538,6 @@ PlnExpression* PlnFixedArrayVarType::getInternalAllocEx(vector<PlnExpression*> &
 	return new PlnFunctionCall(arr_typeinf->internal_alloc_func, args);
 }
 
-void PlnFixedArrayVarType::getFreeArgs(vector<PlnExpression*> &free_args)
-{
-	if (static_cast<PlnFixedArrayTypeInfo*>(typeinf)->has_heap_member) {
-		uint64_t sz = 1;
-		for (uint64_t n: sizes) {
-			sz *= n;
-		}
-		free_args.push_back(new PlnExpression(sz));
-		item_type()->getFreeArgs(free_args);
-	}
-}
-
 PlnExpression *PlnFixedArrayVarType::getFreeEx(vector<PlnExpression*> &args)
 {
 	auto arr_typeinf = static_cast<PlnFixedArrayTypeInfo*>(this->typeinf);
@@ -524,3 +568,24 @@ PlnExpression* PlnFixedArrayVarType::getInternalFreeEx(vector<PlnExpression*> &a
 	return new PlnFunctionCall(arr_typeinf->internal_free_func, args);
 }
 
+PlnExpression *PlnFixedArrayVarType::getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args)
+{
+	auto arr_typeinf = static_cast<PlnFixedArrayTypeInfo*>(this->typeinf);
+
+	auto it = arr_typeinf->item_type;
+	uint64_t alloc_size = it->size();
+	BOOST_ASSERT(sizes.size());
+	for (int s: sizes)
+		alloc_size *= s;
+
+	if (alloc_size == 0) return NULL;
+
+	if (!arr_typeinf->has_heap_member) {
+		return new PlnMemCopy(dst_var, src_var, new PlnExpression(alloc_size));
+	}
+
+	vector<PlnExpression*> copy_func_args = {src_var, dst_var};
+	copy_func_args.insert(copy_func_args.end(), args.begin(), args.end());
+
+	return new PlnFunctionCall(arr_typeinf->copy_func, copy_func_args);
+}

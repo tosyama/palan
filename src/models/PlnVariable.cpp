@@ -126,9 +126,9 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 		if (v->var_type->mode[ALLOC_MD] == 'h') {
 			PlnExpression* alloc_ex = NULL;
 			if (i >= init_var_i || vars[i].asgn_type == ASGN_COPY) {
-				vector<PlnExpression*> init_exps;
-				v->var_type->getInitExpressions(init_exps);
-				alloc_ex = v->var_type->getAllocEx(init_exps);
+				vector<PlnExpression*> alloc_args;
+				v->var_type->getAllocArgs(alloc_args);
+				alloc_ex = v->var_type->getAllocEx(alloc_args);
 				if (!alloc_ex) {
 					PlnCompileError err(E_CantAllocate, v->var_type->name());
 					err.loc = v->loc;
@@ -139,9 +139,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 
 		} else if (v->var_type->data_type() == DT_OBJECT) {
 			vector<PlnExpression *> args = {new PlnExpression(v)};
-			v->var_type->getInitExpressions(args);
-			// return var->var_type->getInternalAllocEx(args);
-			//PlnExpression *alloc_ex = PlnInternalAllocator::getInternalAllocEx(v);
+			v->var_type->getAllocArgs(args);
 			PlnExpression *alloc_ex = v->var_type->getInternalAllocEx(args);
 			varinits.push_back({v, NULL, alloc_ex});
 
