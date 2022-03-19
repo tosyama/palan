@@ -79,15 +79,15 @@ public:
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	virtual PlnExpression *getInternalAllocEx(vector<PlnExpression*> &args) {
+	virtual PlnExpression *getInternalAllocEx(PlnExpression* alloc_var, vector<PlnExpression*> &args) {
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	virtual PlnExpression *getFreeEx(vector<PlnExpression*> &args) {
+	virtual PlnExpression *getFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) {
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	virtual PlnExpression *getInternalFreeEx(vector<PlnExpression*> &free_args) {
+	virtual PlnExpression *getInternalFreeEx(PlnExpression* free_var, vector<PlnExpression*> &free_args) {
 		BOOST_ASSERT(false); return NULL;
 	}
 

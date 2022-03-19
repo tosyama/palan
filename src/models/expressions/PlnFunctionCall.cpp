@@ -5,7 +5,7 @@
 /// e.g. ) funcion(a, b) -> c, d;
 ///
 /// @file	PlnFunctionCall.cpp
-/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -68,15 +68,6 @@ PlnFunctionCall::~PlnFunctionCall()
 		delete fv;
 	for (auto fex: free_exs)
 		delete fex;
-}
-
-void PlnFunctionCall::loadArgDps(PlnDataAllocator& da)
-{
-	PlnFunction* f = function;
-	BOOST_ASSERT(!arguments.size());
-	
-	arg_dps = f->createArgDps();
-	da.setArgDps(f->type, arg_dps, false);
 }
 
 static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& da, PlnScopeInfo& si)

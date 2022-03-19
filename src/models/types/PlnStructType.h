@@ -35,8 +35,8 @@ public:
 	~PlnStructVarType() {};
 
 	PlnExpression *getAllocEx(vector<PlnExpression*> &args) override;
-	PlnExpression *getInternalAllocEx(vector<PlnExpression*> &args) override;
-	PlnExpression *getFreeEx(vector<PlnExpression*> &args) override; 
-	PlnExpression *getInternalFreeEx(vector<PlnExpression*> &args) override; 
+	PlnExpression *getInternalAllocEx(PlnExpression* alloc_var, vector<PlnExpression*> &args) override;
+	PlnExpression *getFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) override; 
+	PlnExpression *getInternalFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) override; 
 	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args) override;
 };

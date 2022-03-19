@@ -21,7 +21,6 @@
 #include "types/PlnFixedArrayType.h"
 #include "types/PlnStructType.h"
 #include "types/PlnAliasType.h"
-#include "PlnArray.h"
 #include "PlnModule.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"

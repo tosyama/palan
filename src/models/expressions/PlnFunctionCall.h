@@ -1,7 +1,7 @@
 /// PlnFunctionCall model class declaration.
 ///
 /// @file	PlnFunctionCall.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include "../PlnExpression.h"
 
@@ -63,8 +63,6 @@ public:
 	PlnFunctionCall(PlnFunction* f, vector<PlnArgument> &args);
 	PlnFunctionCall(PlnFunction* f, vector<PlnExpression*> &args);
 	~PlnFunctionCall();
-
-	void loadArgDps(PlnDataAllocator& da);
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;

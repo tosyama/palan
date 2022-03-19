@@ -4,7 +4,7 @@
 /// such as type and memory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -138,9 +138,9 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			varinits.push_back({v, alloc_ex, NULL});
 
 		} else if (v->var_type->data_type() == DT_OBJECT) {
-			vector<PlnExpression *> args = {new PlnExpression(v)};
+			vector<PlnExpression *> args;
 			v->var_type->getAllocArgs(args);
-			PlnExpression *alloc_ex = v->var_type->getInternalAllocEx(args);
+			PlnExpression *alloc_ex = v->var_type->getInternalAllocEx(new PlnExpression(v), args);
 			varinits.push_back({v, NULL, alloc_ex});
 
 		} else {
@@ -221,16 +221,16 @@ void PlnVarInit::gen(PlnGenerator& g)
 
 PlnExpression* PlnVariable::getFreeEx()
 {
-	vector<PlnExpression *> args = { new PlnExpression(this) };
+	vector<PlnExpression *> args;
 	var_type->getFreeArgs(args);
-	return var_type->getFreeEx(args);
+	return var_type->getFreeEx(new PlnExpression(this), args);
 }
 
 PlnExpression* PlnVariable::getInternalFreeEx()
 {
-	vector<PlnExpression *> args = { new PlnExpression(this) };
+	vector<PlnExpression *> args;
 	var_type->getFreeArgs(args);
-	return var_type->getInternalFreeEx(args);
+	return var_type->getInternalFreeEx(new PlnExpression(this), args);
 }
 
 PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name)

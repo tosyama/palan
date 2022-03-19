@@ -27,6 +27,7 @@ PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_
 	vector<PlnExpression*> args;
 	var_type->getAllocArgs(args);
 	alloc_ex = var_type->getAllocEx(args);
+	BOOST_ASSERT(alloc_ex);
 	alloc_ex->data_places.push_back(var->place);
 
 	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->doCopyFromStaticBuffer);
