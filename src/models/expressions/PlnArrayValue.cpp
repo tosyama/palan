@@ -134,7 +134,7 @@ static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayVarType* a
 {
 	BOOST_ASSERT(depth < atype->sizes.size());
 	if (arr_val->item_exps.size() != atype->sizes[depth]) {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->typeinf->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->tname());
 		err.loc = arr_val->loc;
 		throw err;
 	}
@@ -148,7 +148,7 @@ static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayVarType* a
 	} else {
 		for (auto exp: arr_val->item_exps) {
 			if (exp->type != ET_ARRAYVALUE) {
-				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->typeinf->name);
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->tname());
 				err.loc = arr_val->loc;
 				throw err;
 			}
@@ -160,7 +160,7 @@ static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayVarType* a
 static void adjustStructType(PlnArrayValue* arr_val, PlnStructTypeInfo* stype)
 {
 	if (arr_val->item_exps.size() != stype->members.size()) {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), stype->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), stype->tname);
 		err.loc = arr_val->loc;
 		throw err;
 	}
@@ -250,7 +250,7 @@ PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 		return this;
 
 	} else {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), types[0]->tname());
 		err.loc = loc;
 		throw err;
 	}
@@ -358,7 +358,7 @@ static int getInt(PlnExpression *exp) {
 	if (val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8) {
 		return val.inf.intValue;
 	} else {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::floatNumber(), PlnVarType::getSint()->name());
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::floatNumber(), PlnVarType::getSint()->tname());
 		err.loc = exp->loc;
 		throw err;
 	}

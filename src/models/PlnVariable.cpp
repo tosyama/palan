@@ -130,7 +130,7 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 				v->var_type->getAllocArgs(alloc_args);
 				alloc_ex = v->var_type->getAllocEx(alloc_args);
 				if (!alloc_ex) {
-					PlnCompileError err(E_CantAllocate, v->var_type->name());
+					PlnCompileError err(E_CantAllocate, v->var_type->tname());
 					err.loc = v->loc;
 					throw err;
 				}

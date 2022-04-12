@@ -34,6 +34,7 @@ public:
 	PlnStructVarType(PlnTypeInfo* typeinf, const string &mode) : PlnVarType(typeinf, mode) {}
 	~PlnStructVarType() {};
 
+	string tname() override;
 	PlnExpression *getAllocEx(vector<PlnExpression*> &args) override;
 	PlnExpression *getInternalAllocEx(PlnExpression* alloc_var, vector<PlnExpression*> &args) override;
 	PlnExpression *getFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) override; 

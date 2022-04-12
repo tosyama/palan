@@ -9,7 +9,7 @@ public:
 	PlnAliasTypeInfo(const string &name, PlnVarType* orig_type, PlnTypeInfo* orig_type2)
 		: PlnTypeInfo(TP_ALIAS), orig_type(orig_type)
 	{
-		this->name = name;
+		this->tname = name;
 		this->data_type = orig_type->typeinf->data_type;
 		this->data_size = orig_type->typeinf->data_size;
 		this->data_align = orig_type->typeinf->data_align;

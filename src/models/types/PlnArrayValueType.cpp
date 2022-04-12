@@ -16,7 +16,7 @@ PlnArrayValueTypeInfo::PlnArrayValueTypeInfo(PlnArrayValue* arr_val)
 	: PlnTypeInfo(TP_ARRAY_VALUE), arr_val(arr_val)
 {
 	this->default_mode = "rir";
-	this->name = PlnMessage::arrayValue();
+	this->tname = PlnMessage::arrayValue();
 }
 
 PlnVarType* PlnArrayValueTypeInfo::getDefaultType(PlnBlock *block)

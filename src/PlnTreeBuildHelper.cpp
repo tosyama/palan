@@ -81,7 +81,7 @@ void exit(PlnBlock* block, uint64_t result)
 	block->statements.push_back(new PlnStatement(call_free, block));
 }
 
-PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block)
+PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index)
 {
 	PlnValue var_val(var);
 	var_val.asgn_type = ASGN_COPY_REF;
@@ -92,9 +92,10 @@ PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index, PlnBlock* block
 	PlnFixedArrayVarType *farr_type = static_cast<PlnFixedArrayVarType*>(var->var_type);
 	vector<int> raw_sizes = {0};
 
-	PlnVarType* raw_arr_type = block->getFixedArrayType(farr_type->item_type(), raw_sizes, "wmr");
+	PlnVarType* raw_arr_vtype = farr_type->getVarType("wmr");
+	static_cast<PlnFixedArrayVarType*>(raw_arr_vtype)->sizes = raw_sizes;
 
-	return new PlnArrayItem(arr_ex, inds, raw_arr_type);
+	return new PlnArrayItem(arr_ex, inds, raw_arr_vtype);
 }
 
 PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, PlnExpression* loop_num_ex)

@@ -64,7 +64,7 @@ public:
 		cpy_ex = dst_ex->values[0].getVarType()->getCopyEx(cpy_dst_ex, cpy_src_ex, args);
 
 		if (!cpy_ex) {
-			PlnCompileError err(E_CantCopyType, dst_ex->values[0].getVarType()->name());
+			PlnCompileError err(E_CantCopyType, dst_ex->values[0].getVarType()->tname());
 			err.loc = dst_ex->loc;
 			throw err;
 		}

@@ -27,6 +27,8 @@ public:
 	PlnFixedArrayVarType(PlnTypeInfo* typeinf, const string &mode) : PlnVarType(typeinf, mode) { }
 	~PlnFixedArrayVarType() {};
 
+	string tname() override;
+	int size() override;
 	PlnVarType* getVarType(const string& mode) override;
 	PlnTypeConvCap canCopyFrom(PlnVarType *src, PlnAsgnType copymode) override;
 

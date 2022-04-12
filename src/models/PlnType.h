@@ -31,7 +31,7 @@ public:
 	int	data_type;
 	int data_size;
 	int data_align;
-	string name;
+	string tname;
 	string default_mode;
 
 	vector<PlnVarType*> var_types;
@@ -66,9 +66,9 @@ public:
 	PlnVarType(PlnTypeInfo* typeinf, const string &mode): typeinf(typeinf), mode(mode) {}
 	virtual ~PlnVarType() {}
 
-	const string& name() { return typeinf->name; }
+	virtual string tname() { return typeinf->tname; }
+	virtual int size();
 	int data_type();
-	int size();
 	int align();
 	bool has_heap_member();
 

@@ -219,7 +219,7 @@ static PlnFunction* createObjMemberStructCopyFunc(const string& func_name, PlnSt
 PlnStructTypeInfo::PlnStructTypeInfo(const string &name, vector<PlnStructMemberDef*> &members, PlnBlock* parent, const string& default_mode)
 	: PlnTypeInfo(TP_STRUCT), members(move(members)), alloc_func(NULL), internal_alloc_func(NULL), free_func(NULL), internal_free_func(NULL)
 {
-	this->name = name;
+	this->tname = name;
 	int alloc_size = 0;
 	int max_member_align = 1;
 	this->default_mode = default_mode;
@@ -393,3 +393,21 @@ PlnExpression *PlnStructVarType::getCopyEx(PlnExpression* dst_var, PlnExpression
 	return new PlnFunctionCall(typeinfo->copy_func, copy_func_args);
 }
 
+string PlnStructVarType::tname()
+{
+	string base_tname = typeinf->tname;
+
+	if (mode == "rir" || mode == "rmr") {
+		return "@" + base_tname;
+
+	} else if (mode == "wmr" || mode == "wcr" || mode == "wir") {
+		return "@!" + base_tname;
+
+	} else if (mode == "wis") {
+		return "#" + base_tname;
+
+	} else {
+		BOOST_ASSERT(mode == "wmh");
+		return base_tname;
+	}
+}

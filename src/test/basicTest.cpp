@@ -477,7 +477,8 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Require initialize expression for 'b'.");
 
 	testcode = "586_cantusemove_err6";
-	REQUIRE(build(testcode) == "finish:0:2-2 Can not move ownership to 'b'.");
+//	REQUIRE(build(testcode) == "finish:0:2-2 Can not move ownership to 'b'.");
+	REQUIRE(build(testcode) == "success");	// This case ok with down cast.
 
 	testcode = "587_arrind_token_err";
 	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");

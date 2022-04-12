@@ -1,7 +1,7 @@
 /// Block model declaration.
 ///
 /// @file	PlnBlock.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 #include "PlnExpression.h"
@@ -63,6 +63,7 @@ public:
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
+	PlnFunction* getFuncByName(const string& func_name);
 
 	void addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si);
 

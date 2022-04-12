@@ -1,7 +1,7 @@
 /// Type model class definition.
 ///
 /// @file	PlnType.cpp
-/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 #include "../PlnConstants.h"
@@ -43,7 +43,7 @@ void PlnTypeInfo::initBasicTypes()
 	is_initialzed_type = true;
 
 	PlnTypeInfo* sbt = new PlnTypeInfo();
-	sbt->name = "sbyte";
+	sbt->tname = "sbyte";
 	sbt->default_mode = "wis";
 	sbt->data_type = DT_SINT;
 	sbt->data_size = 1;
@@ -51,7 +51,7 @@ void PlnTypeInfo::initBasicTypes()
 	basic_types.push_back(sbt);
 
 	PlnTypeInfo* bt = new PlnTypeInfo();
-	bt->name = "byte";
+	bt->tname = "byte";
 	bt->default_mode = "wis";
 	bt->data_type = DT_UINT;
 	bt->data_size = 1;
@@ -60,7 +60,7 @@ void PlnTypeInfo::initBasicTypes()
 	byte_type = bt;
 
 	PlnTypeInfo* i16t = new PlnTypeInfo();
-	i16t->name = "int16";
+	i16t->tname = "int16";
 	i16t->default_mode = "wis";
 	i16t->data_type = DT_SINT;
 	i16t->data_size = 2;
@@ -68,7 +68,7 @@ void PlnTypeInfo::initBasicTypes()
 	basic_types.push_back(i16t);
 
 	PlnTypeInfo* u16t = new PlnTypeInfo();
-	u16t->name = "uint16";
+	u16t->tname = "uint16";
 	u16t->default_mode = "wis";
 	u16t->data_type = DT_UINT;
 	u16t->data_size = 2;
@@ -76,7 +76,7 @@ void PlnTypeInfo::initBasicTypes()
 	basic_types.push_back(u16t);
 	
 	PlnTypeInfo* i32t = new PlnTypeInfo();
-	i32t->name = "int32";
+	i32t->tname = "int32";
 	i32t->default_mode = "wis";
 	i32t->data_type = DT_SINT;
 	i32t->data_size = 4;
@@ -84,7 +84,7 @@ void PlnTypeInfo::initBasicTypes()
 	basic_types.push_back(i32t);
 
 	PlnTypeInfo* u32t = new PlnTypeInfo();
-	u32t->name = "uint32";
+	u32t->tname = "uint32";
 	u32t->default_mode = "wis";
 	u32t->data_type = DT_UINT;
 	u32t->data_size = 4;
@@ -92,7 +92,7 @@ void PlnTypeInfo::initBasicTypes()
 	basic_types.push_back(u32t);
 
 	PlnTypeInfo* i64t = new PlnTypeInfo();
-	i64t->name = "int64";
+	i64t->tname = "int64";
 	i64t->default_mode = "wis";
 	i64t->data_type = DT_SINT;
 	i64t->data_size = 8;
@@ -101,7 +101,7 @@ void PlnTypeInfo::initBasicTypes()
 	int_type = i64t;
 
 	PlnTypeInfo* u64t = new PlnTypeInfo();
-	u64t->name = "uint64";
+	u64t->tname = "uint64";
 	u64t->default_mode = "wis";
 	u64t->data_type = DT_UINT;
 	u64t->data_size = 8;
@@ -110,7 +110,7 @@ void PlnTypeInfo::initBasicTypes()
 	uint_type = u64t;
 
 	PlnTypeInfo* f32t = new PlnTypeInfo();
-	f32t->name = "flo32";
+	f32t->tname = "flo32";
 	f32t->default_mode = "wis";
 	f32t->data_type = DT_FLOAT;
 	f32t->data_size = 4;
@@ -119,7 +119,7 @@ void PlnTypeInfo::initBasicTypes()
 	flo32_type = f32t;
 
 	PlnTypeInfo* f64t = new PlnTypeInfo();
-	f64t->name = "flo64";
+	f64t->tname = "flo64";
 	f64t->default_mode = "wis";
 	f64t->data_type = DT_FLOAT;
 	f64t->data_size = 8;
@@ -128,7 +128,7 @@ void PlnTypeInfo::initBasicTypes()
 	flo64_type = f64t;
 
 	PlnTypeInfo* t = new PlnTypeInfo();
-	t->name = "_ro_cstr";
+	t->tname = "_ro_cstr";
 	t->default_mode = "rir";
 	t->data_type = DT_OBJECT;
 	t->data_size = 0;
@@ -137,7 +137,7 @@ void PlnTypeInfo::initBasicTypes()
 	ro_cstr_type = t;
 
 	t = new PlnTypeInfo();
-	t->name = "object";
+	t->tname = "object";
 	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT;
 	t->data_size = 0;
@@ -146,7 +146,7 @@ void PlnTypeInfo::initBasicTypes()
 	object_type = t;
 
 	t = new PlnTypeInfo();
-	t->name = "";
+	t->tname = "";
 	t->default_mode = "wmi";
 	t->data_type = DT_UNKNOWN;
 	t->data_size = 0;
@@ -272,8 +272,6 @@ vector<PlnTypeInfo*>& PlnTypeInfo::getBasicTypes()
 	return basic_types;
 }
 
-
-
 string PlnTypeInfo::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 {
 	string arr_name = "[";
@@ -285,14 +283,7 @@ string PlnTypeInfo::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 	}
 	arr_name.back() = ']';
 
-	string item_name = item_type->name();
-	if (item_type->mode == "rir") {
-		item_name = "@" + item_name;
-	} else if (item_type->data_type() == DT_OBJECT) {
-		item_name = "#" + item_name;
-	}
-	
-	return arr_name + item_name;
+	return arr_name + item_type->tname();
 }
 
 PlnTypeConvCap PlnTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
@@ -360,7 +351,7 @@ int PlnVarType::data_type()
 int PlnVarType::size()
 {
 	if (mode[ALLOC_MD] == 'r' || mode[ALLOC_MD] == 'h') {
-		return 8;	// ponter_size
+		return 8;	// pointer_size
 	}
 	return typeinf->data_size;
 }

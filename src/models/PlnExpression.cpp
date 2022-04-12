@@ -183,7 +183,7 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 		} else {
 			PlnVarType *vtype = values[0].getVarType();
 			if (types[0]->canCopyFrom(vtype, ASGN_COPY) == TC_CANT_CONV) {
-				PlnCompileError err(E_IncompatibleTypeAssign, vtype->name(), types[0]->name());
+				PlnCompileError err(E_IncompatibleTypeAssign, vtype->tname(), types[0]->tname());
 				err.loc = loc;
 				throw err;
 			}

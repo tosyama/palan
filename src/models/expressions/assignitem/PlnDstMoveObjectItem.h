@@ -38,7 +38,8 @@ public:
 
 		auto src_type = src_ex->values[index].getVarType();
 		auto dst_type = dst_ex->values[0].getVarType();
-		if (src_type->typeinf != dst_type->typeinf) {
+
+		if (!(dst_type->canCopyFrom(src_type, ASGN_MOVE) & TC_CONV_OK)) {
 			PlnCompileError err(E_CantUseMoveOwnershipTo, dst_ex->values[0].inf.var->name);
 			err.loc = dst_ex->loc;
 			throw err;

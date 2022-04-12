@@ -34,12 +34,12 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 		}
 
 		if (!def) {
-			PlnCompileError err(E_NoMemberName, t->name, member_name);
+			PlnCompileError err(E_NoMemberName, t->tname, member_name);
 			throw err;
 		}
 
 	} else {
-		PlnCompileError err(E_NoMemberName, t->name, member_name);
+		PlnCompileError err(E_NoMemberName, t->tname, member_name);
 		throw err;
 	}
 

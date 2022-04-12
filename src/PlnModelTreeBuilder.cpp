@@ -160,6 +160,7 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 				throw err;
 			}
 		}
+
 		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);
 		ret_vt = arr_t;
 	}
@@ -609,6 +610,7 @@ sz_err:
 	setLoc(&err, var);
 	throw err;
 }
+
 
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 {
@@ -1227,7 +1229,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 			// need to much type completely for move.
 			PlnVarType* src_vtype = src_exps[src_ex_ind]->values[src_val_ind].getVarType();
 			if (src_vtype->typeinf != types.back()->typeinf || src_vtype->mode[IDENTITY_MD] != 'm') {
-				PlnCompileError err(E_CantUseMoveOwnershipFrom, src_vtype->name());
+				PlnCompileError err(E_CantUseMoveOwnershipFrom, src_vtype->tname());
 				err.loc = src_exps[src_ex_ind]->loc;
 				throw err;
 				

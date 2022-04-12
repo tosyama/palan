@@ -62,7 +62,7 @@ static PlnFunction* registerObjectArrayAllocFunc(string func_name, PlnFixedArray
 	PlnVariable* var_i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, var_i, new PlnExpression(item_num_var));
 	{
-		PlnExpression* arr_item = palan::rawArrayItem(ret_var, var_i, wblock);
+		PlnExpression* arr_item = palan::rawArrayItem(ret_var, var_i);
 
 		if (it->data_type() == DT_OBJECT_REF) {
 			arr_item->values[0].asgn_type = ASGN_COPY_REF;
@@ -118,7 +118,7 @@ static PlnFunction* registerObjectArrayInternalAllocFunc(string func_name, PlnFi
 	PlnVariable* var_i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, var_i, new PlnExpression(item_num_var));
 	{
-		PlnExpression* arr_item = palan::rawArrayItem(arr_var, var_i, wblock);
+		PlnExpression* arr_item = palan::rawArrayItem(arr_var, var_i);
 
 		if (it->data_type() == DT_OBJECT_REF) {
 			arr_item->values[0].asgn_type = ASGN_COPY_REF;
@@ -183,7 +183,7 @@ static PlnFunction* registerObjectArrayFreeFunc(string func_name, PlnFixedArrayT
 	PlnVariable* var_i = palan::declareUInt(wrap_block, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(wrap_block, var_i, new PlnExpression(item_num_var));
 	{
-		PlnExpression* arr_item = palan::rawArrayItem(to_free_var, var_i, wblock);
+		PlnExpression* arr_item = palan::rawArrayItem(to_free_var, var_i);
 
 		PlnExpression* free_ex = NULL;
 		if (it->data_type() == DT_OBJECT_REF) {
@@ -239,8 +239,8 @@ static PlnFunction* registerObjectArrayCopyFunc(string func_name, PlnFixedArrayT
 	PlnVariable* i = palan::declareUInt(f->implement, "__i", 0);
 	PlnBlock* wblock = palan::whileLess(f->implement, i, new PlnExpression(item_num_var));
 	{
-		PlnExpression* dst_arr_item = palan::rawArrayItem(dst_var, i, block);
-		PlnExpression* src_arr_item = palan::rawArrayItem(src_var, i, block);
+		PlnExpression* dst_arr_item = palan::rawArrayItem(dst_var, i);
+		PlnExpression* src_arr_item = palan::rawArrayItem(src_var, i);
 		PlnExpression* copy_item = it->getCopyEx(dst_arr_item, src_arr_item, next_args);
 		if (copy_item) {
 			wblock->statements.push_back(new PlnStatement(copy_item, wblock));
@@ -260,18 +260,12 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 	for (int s: sizes)
 		alloc_size *= s;
 	
-	this->name = name;
+	this->tname = name;
 	this->data_type = DT_OBJECT;
 	this->data_size = alloc_size;
 	this->data_align = item_type->align();
 
 	auto it = this->item_type;
-
-	if (alloc_size == 0) {	// 0(?) size exists.
-		// only support free. alloc and copy is not supported because size is undefined.
-		// e.g.) raw array reference.
-		return;
-	}
 
 	if (it->mode[ALLOC_MD] == 'h') {
 		has_heap_member = true;
@@ -283,36 +277,59 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		has_heap_member = false;
 	}
 
+ 	if (alloc_size == 0) {	// 0(?) size exists.
+		// only support free. alloc and copy is not supported because size is undefined.
+		// e.g.) raw array reference.
+		return;
+	}
+
+	// BOOST_ASSERT(it->data_type() != DT_OBJECT_REF || has_heap_member);
+
 	if (has_heap_member) {
 		// allocator
 		{
 			string fname = PlnBlock::generateFuncName("new", {this}, {});
-			alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
+			alloc_func = parent->getFuncByName(fname);
+			if (!alloc_func) {
+				alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
+			}
 		}
 
 		// freer
 		{
 			string fname = PlnBlock::generateFuncName("del", {}, {this});
-			free_func = registerObjectArrayFreeFunc(fname, this, parent, false);
+			free_func = parent->getFuncByName(fname);
+			if (!free_func) {
+				free_func = registerObjectArrayFreeFunc(fname, this, parent, false);
+			}
 		}
 
 		// copyer
 		{
 			string fname = PlnBlock::generateFuncName("cpy", {}, {this,this});
-			copy_func = registerObjectArrayCopyFunc(fname, this, parent);
+			copy_func = parent->getFuncByName(fname);
+			if (!copy_func) {
+				copy_func = registerObjectArrayCopyFunc(fname, this, parent);
+			}
 		}
 
 		if (item_type->data_type() == DT_OBJECT_REF) {
 			// internal_allocator
 			{
 				string fname = PlnBlock::generateFuncName("internal_new", {this}, {});
-				internal_alloc_func = registerObjectArrayInternalAllocFunc(fname, this, parent);
+				internal_alloc_func = parent->getFuncByName(fname);
+				if (!internal_alloc_func) {
+					internal_alloc_func = registerObjectArrayInternalAllocFunc(fname, this, parent);
+				}
 			}
 
 			// internal_freer
 			{
 				string fname = PlnBlock::generateFuncName("internal_del", {}, {this});
-				internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
+				internal_free_func = parent->getFuncByName(fname);
+				if (!internal_free_func) {
+					internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
+				}
 			}
 		}
 	}
@@ -356,6 +373,36 @@ vector<PlnVarType*> PlnFixedArrayTypeInfo::getFreeParamTypes()
 		param_types.insert(param_types.end(), param_type2.begin(), param_type2.end());
 	}
 	return param_types;
+}
+
+string PlnFixedArrayVarType::tname()
+{
+	string base_tname = PlnTypeInfo::getFixedArrayName(static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type, sizes);
+
+	if (mode == "rir" || mode == "rmr") {
+		return "@" + base_tname;
+
+	} else if (mode == "wmr" || mode == "wcr") {
+		return "@!" + base_tname;
+
+	} else if (mode == "wis") {
+		return "#" + base_tname;
+
+	} else {
+		BOOST_ASSERT(mode == "wmh");
+		return base_tname;
+	}
+}
+
+int PlnFixedArrayVarType::size()
+{
+	if (mode[ALLOC_MD] == 'r' || mode[ALLOC_MD] == 'h') {
+		return 8;	// pointer_size
+	}
+	int alloc_size = static_cast<PlnFixedArrayTypeInfo*>(typeinf)->item_type->size();
+	for (int s: sizes)
+		alloc_size *= s;
+	return alloc_size;
 }
 
 PlnVarType* PlnFixedArrayVarType::getVarType(const string& mode)
@@ -553,7 +600,6 @@ PlnExpression *PlnFixedArrayVarType::getFreeEx(PlnExpression* free_var, vector<P
 		BOOST_ASSERT(free_func_args.size() == 1);
 		return new PlnFunctionCall(PlnFunctionCall::getInternalFunc(IFUNC_FREE), free_func_args);
 	}
-
 
 	BOOST_ASSERT(arr_typeinf->free_func);
 	return new PlnFunctionCall(arr_typeinf->free_func, free_func_args);
