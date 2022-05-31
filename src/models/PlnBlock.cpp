@@ -314,7 +314,7 @@ string PlnBlock::generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, 
 	return fname;
 }
 
-PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode)
+PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<PlnExpression*>& init_args, const string& mode)
 {
 	PlnBlock *defined_block = this;
 	bool found_item = false;
@@ -331,7 +331,7 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 	
 	if (!found_item) {
 		if (PlnBlock* b = parentBlock(this)) {
-			return b->getFixedArrayType(item_type, sizes, mode);
+			return b->getFixedArrayType(item_type, init_args, mode);
 
 		} else { // toplevel
 			vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();	
@@ -348,21 +348,18 @@ PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& size
 		}
 	}
 
-	//string name = PlnTypeInfo::getFixedArrayName(item_type, sizes);
 	string name = "[]" + item_type->tname();
 
 	for (auto t: defined_block->typeinfos) 
 		if (name == t->tname) {
-			PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
-			vtype->sizes = sizes;
+			PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(static_cast<PlnFixedArrayTypeInfo*>(t)->getVarType(mode, init_args));
 			return vtype;
 		}
 	
-	auto t = new PlnFixedArrayTypeInfo(name, item_type, sizes, this);
+	auto t = new PlnFixedArrayTypeInfo(name, item_type, this);
 	t->default_mode = "wmh";
 	defined_block->typeinfos.push_back(t);
-	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(t->getVarType(mode));
-	vtype->sizes = sizes;
+	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(static_cast<PlnFixedArrayTypeInfo*>(t)->getVarType(mode, init_args));
 	return vtype;
 }
 

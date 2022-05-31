@@ -8,3 +8,5 @@ ccall printf(@[?]byte format, ...) -> int32;
  printf("%d", a1[2][3]);
  
  [3]#[10]byte names = ["Alice","Bob","Ken"];
+
+ [1,10]int32 xx;

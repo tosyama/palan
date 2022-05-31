@@ -58,7 +58,7 @@ public:
 	void declareAliasType(const string& type_name, PlnVarType* orig_type);
 
 	PlnVarType* getType(const string& type_name, const string& mode);
-	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
+	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<PlnExpression*>& init_args, const string& mode);
 	PlnBlock* getTypeDefinedBlock(PlnVarType* var_type);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError

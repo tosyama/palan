@@ -56,7 +56,7 @@ PlnStructMember::PlnStructMember(PlnExpression* sturct_ex, string member_name)
 	if (var->container->var_type->mode[ACCESS_MD] == 'r') {
 		mode[ACCESS_MD] = 'r';
 	}
-	var->var_type = def->type->typeinf->getVarType(mode);
+	var->var_type = def->type->getVarType(mode);
 	if (def->type->typeinf->type == TP_FIXED_ARRAY) {
 		static_cast<PlnFixedArrayVarType*>(var->var_type)->sizes = static_cast<PlnFixedArrayVarType*>(def->type)->sizes;
 	}

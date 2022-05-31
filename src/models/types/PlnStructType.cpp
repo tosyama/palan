@@ -139,9 +139,7 @@ static PlnFunction* createObjMemberStructFreeFunc(const string& func_name, PlnSt
 			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			vector<PlnExpression*> free_args;
-			mdef->type->getFreeArgs(free_args);
-			PlnExpression* free_member = mdef->type->getFreeEx(member_ex, free_args);
+			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
 			ifblock->statements.push_back(new PlnStatement(free_member, block));
 		}
 	}
@@ -167,9 +165,7 @@ static PlnFunction* createObjMemberStructInternalFreeFunc(const string& func_nam
 			PlnValue var_val(f->parameters[0]->var);
 			auto struct_ex = new PlnExpression(var_val);
 			auto member_ex = new PlnStructMember(struct_ex, mdef->name);
-			vector<PlnExpression*> free_args;
-			mdef->type->getFreeArgs(free_args);
-			PlnExpression* free_member = mdef->type->getFreeEx(member_ex, free_args);
+			PlnExpression* free_member = mdef->type->getFreeEx(member_ex);
 			block->statements.push_back(new PlnStatement(free_member, block));
 		}
 	}
@@ -353,9 +349,8 @@ PlnExpression *PlnStructVarType::getInternalAllocEx(PlnExpression* alloc_var, ve
 	return new PlnFunctionCall(typeinfo->internal_alloc_func, alloc_func_args);
 }
 
-PlnExpression *PlnStructVarType::getFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args)
+PlnExpression *PlnStructVarType::getFreeEx(PlnExpression* free_var)
 {
-	BOOST_ASSERT(args.size() == 0);
 	PlnStructTypeInfo* typeinfo = static_cast<PlnStructTypeInfo*>(typeinf);
 
 	vector<PlnExpression*> free_func_args = { free_var };

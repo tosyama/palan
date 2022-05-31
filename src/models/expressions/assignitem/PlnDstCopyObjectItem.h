@@ -53,7 +53,7 @@ public:
 		}
 
 		if (dst_ex->type != ET_VALUE && place) {
-			PlnVarType *tmp_vartype = dst_ex->values[0].inf.var->var_type->typeinf->getVarType("rir");
+			PlnVarType *tmp_vartype = dst_ex->values[0].inf.var->var_type->getVarType("rir");
 
 			dst_tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "(dst tmp var)");
 			cpy_dst_ex = new PlnExpression(dst_tmp_var);

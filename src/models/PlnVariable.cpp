@@ -221,15 +221,12 @@ void PlnVarInit::gen(PlnGenerator& g)
 
 PlnExpression* PlnVariable::getFreeEx()
 {
-	vector<PlnExpression *> args;
-	var_type->getFreeArgs(args);
-	return var_type->getFreeEx(new PlnExpression(this), args);
+	return var_type->getFreeEx(new PlnExpression(this));
 }
 
 PlnExpression* PlnVariable::getInternalFreeEx()
 {
 	vector<PlnExpression *> args;
-	var_type->getFreeArgs(args);
 	return var_type->getInternalFreeEx(new PlnExpression(this), args);
 }
 

@@ -135,17 +135,17 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 		assertAST(type_name == "[]", vt);
 		assertAST(vt["sizes"].is_array(), vt);
 
-		vector<int> sizes;
+		vector<PlnExpression*> init_args;
 		for (json& i: vt["sizes"]) {
 			if (i["exp-type"]=="token" && i["info"]=="?") {
 				// 0 size is only allowed first. => OK: [?,1,2]int32, NG: [1,?,3]int32
-				if (sizes.size()) {
+				if (init_args.size()) {
 					PlnCompileError err(E_OnlyAllowedAnySizeAtFirst);
 					setLoc(&err, i);
 					throw err;
 				}
 
-				sizes.push_back(0u);
+				init_args.push_back(new PlnExpression(uint64_t(0u)));
 				continue;
 			}
 
@@ -153,7 +153,7 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 
 			int vtype = e->values[0].type;
 			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8)) {
-				sizes.push_back(e->values[0].inf.uintValue);
+				init_args.push_back(new PlnExpression(e->values[0].inf.uintValue));
 			} else {
 				PlnCompileError err(E_OnlyAllowedIntegerHere);
 				setLoc(&err, i);
@@ -161,7 +161,7 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 			}
 		}
 
-		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);
+		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, init_args, mode);
 		ret_vt = arr_t;
 	}
 
@@ -643,9 +643,9 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				// Cstr -> []byte
 				if (t->typeinf == PlnVarType::getReadOnlyCStr()->typeinf) {
 					string mode = "---";
-					int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
-					vector<int> sizes = { size };
-					t = CUR_BLOCK->getFixedArrayType(PlnVarType::getByte(), sizes, mode);
+					uint64_t size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
+					vector<PlnExpression*> init_args = { new PlnExpression(size) };
+					t = CUR_BLOCK->getFixedArrayType(PlnVarType::getByte(), init_args, mode);
 				}
 
 			} catch (PlnCompileError &err) {

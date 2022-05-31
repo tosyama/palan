@@ -13,12 +13,11 @@ public:
 	PlnFunction* internal_free_func;
 	PlnFunction* copy_func;
 
-	PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, vector<int>& sizes, PlnBlock* parent);
+	PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type, PlnBlock* parent);
 	PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode) override;
 
-	vector<PlnVarType*> getAllocParamTypes() override;
-	vector<PlnVarType*> getFreeParamTypes() override;
 	PlnVarType* getVarType(const string& mode) override;
+	PlnVarType* getVarType(const string& mode, vector<PlnExpression*> init_args);
 };
 
 class PlnFixedArrayVarType : public PlnVarType {
@@ -40,10 +39,9 @@ public:
 	}
 
 	void getAllocArgs(vector<PlnExpression*> &alloc_exps) override;
-	void getFreeArgs(vector<PlnExpression*> &free_args) override;
 	PlnExpression* getAllocEx(vector<PlnExpression*> &args) override;
 	PlnExpression* getInternalAllocEx(PlnExpression* alloc_var, vector<PlnExpression*> &args) override;
-	PlnExpression* getFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) override; 
+	PlnExpression* getFreeEx(PlnExpression* free_var) override; 
 	PlnExpression* getInternalFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) override; 
 	PlnExpression* getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args) override;
 };

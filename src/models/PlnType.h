@@ -46,9 +46,6 @@ public:
 	PlnTypeInfo(PlnTypeType type=TP_PRIMITIVE);
 	virtual ~PlnTypeInfo();
 	virtual PlnTypeConvCap canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode);
-
-	virtual vector<PlnVarType*> getAllocParamTypes() { return {}; };
-	virtual vector<PlnVarType*> getFreeParamTypes() { return {}; };
 	virtual PlnVarType* getVarType(const string& mode = "---");
 
 	static void initBasicTypes();
@@ -73,7 +70,6 @@ public:
 	bool has_heap_member();
 
 	virtual void getAllocArgs(vector<PlnExpression*> &alloc_exps);
-	virtual void getFreeArgs(vector<PlnExpression*> &free_args);
 
 	virtual PlnExpression *getAllocEx(vector<PlnExpression*> &args) {
 		BOOST_ASSERT(false); return NULL;
@@ -83,7 +79,7 @@ public:
 		BOOST_ASSERT(false); return NULL;
 	}
 
-	virtual PlnExpression *getFreeEx(PlnExpression* free_var, vector<PlnExpression*> &args) {
+	virtual PlnExpression *getFreeEx(PlnExpression* free_var) {
 		BOOST_ASSERT(false); return NULL;
 	}
 

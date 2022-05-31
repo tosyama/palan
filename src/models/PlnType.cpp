@@ -383,10 +383,6 @@ void PlnVarType::getAllocArgs(vector<PlnExpression*> &alloc_args)
 {
 }
 
-void PlnVarType::getFreeArgs(vector<PlnExpression*> &free_args)
-{
-}
-
 PlnVarType* PlnVarType::getVarType(const string& mode)
 {
 	return typeinf->getVarType(mode);

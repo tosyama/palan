@@ -39,7 +39,12 @@ PlnVarType* PlnArrayValueTypeInfo::getDefaultType(PlnBlock *block)
 				BOOST_ASSERT(false);
 		}
 
-		return block->getFixedArrayType(itype, fixarr_sizes, "---");
+		vector<PlnExpression*> init_args;
+		for (int s: fixarr_sizes) {
+			init_args.push_back(new PlnExpression((uint64_t)s));
+		}
+
+		return block->getFixedArrayType(itype, init_args, "---");
 	}
 
 	PlnCompileError err(E_UnsupportedGrammer, "use only fixed array here.");
