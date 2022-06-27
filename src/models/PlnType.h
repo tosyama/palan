@@ -70,7 +70,7 @@ public:
 	bool has_heap_member();
 
 	virtual void getAllocArgs(vector<PlnExpression*> &alloc_exps);
-
+// LCOV_EXCL_START
 	virtual PlnExpression *getAllocEx(vector<PlnExpression*> &args) {
 		BOOST_ASSERT(false); return NULL;
 	}
@@ -86,6 +86,7 @@ public:
 	virtual PlnExpression *getInternalFreeEx(PlnExpression* free_var, vector<PlnExpression*> &free_args) {
 		BOOST_ASSERT(false); return NULL;
 	}
+// LCOV_EXCL_STOP
 
 	virtual PlnExpression *getCopyEx(PlnExpression* dst_var, PlnExpression* src_var, vector<PlnExpression*> &args) {
 		return NULL;

@@ -24,8 +24,8 @@
 # target="../models/expressions/PlnCmpOperation"
 # target="../models/expressions/PlnReferenceValue"
 # target="../models/types/PlnArrayValueType"
-# target="../models/types/PlnFixedArrayType"
-target="../models/types/PlnStructType"
+target="../models/types/PlnFixedArrayType"
+# target="../models/types/PlnStructType"
 # target="../models/expressions/assignitem/PlnAssignItem"
 targetnm=${target##*/}
 gcovs="${targetnm}.cpp"

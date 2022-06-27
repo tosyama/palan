@@ -1,12 +1,19 @@
 ccall printf(@[?]byte format, ...) -> int32;
 
- [3][4]int32 a1;
- [5][6]int32 a2;
- // set_arrarr(a1>>) ->> a1;
- //inc_arrarr(a1);
- 11 -> a1[2][3];
- printf("%d", a1[2][3]);
- 
- [3]#[10]byte names = ["Alice","Bob","Ken"];
+//  [3][4]int32 a1;
+//  [5][6]int32 a2;
+//  // set_arrarr(a1>>) ->> a1;
+//  //inc_arrarr(a1);
+//  11 -> a1[2][3];
+//  printf("%d", a1[2][3]);
+//  
+//  [3]#[10]byte names = ["Alice","Bob","Ken"];
+// 
+//  [1,10]int32 xx;
 
- [1,10]int32 xx;
+type test {
+	int32 x;
+};
+
+// #[3]#[4]#[5]test zzz;
+#[3]#[4]#[2]int32 zzz;

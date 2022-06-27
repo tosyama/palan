@@ -63,7 +63,6 @@ public:
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
-	PlnFunction* getFuncByName(const string& func_name);
 
 	void addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si);
 

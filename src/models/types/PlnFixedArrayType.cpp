@@ -258,49 +258,34 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 		// allocator
 		{
 			string fname = PlnBlock::generateFuncName("new", {this}, {});
-			alloc_func = parent->getFuncByName(fname);
-			if (!alloc_func) {
-				alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
-			}
+			alloc_func = registerObjectArrayAllocFunc(fname, this, parent);
 		}
 
 		// freer
 		{
 			string fname = PlnBlock::generateFuncName("del", {}, {this});
-			free_func = parent->getFuncByName(fname);
-			if (!free_func) {
-				free_func = registerObjectArrayFreeFunc(fname, this, parent, false);
-			}
+			free_func = registerObjectArrayFreeFunc(fname, this, parent, false);
 		}
 
 		// copyer
 		{
 			string fname = PlnBlock::generateFuncName("cpy", {}, {this,this});
-			copy_func = parent->getFuncByName(fname);
-			if (!copy_func) {
-				copy_func = registerObjectArrayCopyFunc(fname, this, parent);
-			}
+			copy_func = registerObjectArrayCopyFunc(fname, this, parent);
 		}
 
-		if (item_type->data_type() == DT_OBJECT_REF) {
+//		if (item_type->data_type() == DT_OBJECT_REF) {
 			// internal_allocator
 			{
 				string fname = PlnBlock::generateFuncName("internal_new", {this}, {});
-				internal_alloc_func = parent->getFuncByName(fname);
-				if (!internal_alloc_func) {
-					internal_alloc_func = registerObjectArrayInternalAllocFunc(fname, this, parent);
-				}
+				internal_alloc_func = registerObjectArrayInternalAllocFunc(fname, this, parent);
 			}
 
 			// internal_freer
 			{
 				string fname = PlnBlock::generateFuncName("internal_del", {}, {this});
-				internal_free_func = parent->getFuncByName(fname);
-				if (!internal_free_func) {
-					internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
-				}
+				internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
 			}
-		}
+//		}
 	}
 }
 

@@ -316,38 +316,7 @@ string PlnBlock::generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, 
 
 PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<PlnExpression*>& init_args, const string& mode)
 {
-	PlnBlock *defined_block = this;
-	bool found_item = false;
-	// Find item from Crrent block
-	{
-		auto t = std::find_if(typeinfos.begin(), typeinfos.end(),
-				[item_type](PlnTypeInfo* t) { return t == item_type->typeinf; });
-
-		if (t != typeinfos.end()) {
-			defined_block = this;
-			found_item = true;
-		}
-	}
-	
-	if (!found_item) {
-		if (PlnBlock* b = parentBlock(this)) {
-			return b->getFixedArrayType(item_type, init_args, mode);
-
-		} else { // toplevel
-			vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();	
-			auto t = std::find_if(basic_types.begin(), basic_types.end(),
-					[item_type](PlnTypeInfo* t) { return t == item_type->typeinf; });
-
-			if (t != typeinfos.end()) {
-				defined_block = parent_module->toplevel;
-				found_item = true;
-				BOOST_ASSERT(item_type == realType(*t, item_type->mode));
-			}
-
-			BOOST_ASSERT(found_item);
-		}
-	}
-
+	PlnBlock *defined_block = getTypeDefinedBlock(item_type);
 	string name = "[]" + item_type->tname();
 
 	for (auto t: defined_block->typeinfos) 
@@ -543,19 +512,6 @@ next:	;
 	} while (b = parentBlock(b));
 	
 	return NULL;
-}
-
-PlnFunction* PlnBlock::getFuncByName(const string &func_name)
-{
-	PlnFunction *ret_f = NULL;
-	for (auto f: parent_module->functions) {
-		if (f->name == func_name) {
-			BOOST_ASSERT(!ret_f);
-			ret_f = f;
-		}
-	}
-
-	return ret_f;
 }
 
 void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& da, PlnScopeInfo& si)
