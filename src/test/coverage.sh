@@ -34,6 +34,7 @@ gcovs="${targetnm}.cpp"
 #gcovs="PlnDstCopyObjectItem.h"
 #gcovs="PlnAssignWorkValsItem.h"
 #gcovs="PlnAssignArrayValue_IndirectVar.h"
+#gcovs="PlnFixedArrayType.h"
 
 g++ -coverage -std=c++11 -c -g ${target}.cpp -o ../objs/${targetnm}.o
 make LDFLAGS=-coverage -lgcov

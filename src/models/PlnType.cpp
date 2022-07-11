@@ -33,6 +33,9 @@ PlnTypeInfo::PlnTypeInfo(PlnTypeType type)
 
 PlnTypeInfo::~PlnTypeInfo()
 {
+	for(auto vt: var_types) {
+		delete vt;
+	}
 }
 
 void PlnTypeInfo::initBasicTypes()
