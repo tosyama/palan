@@ -273,26 +273,26 @@ PlnFixedArrayTypeInfo::PlnFixedArrayTypeInfo(string &name, PlnVarType* item_type
 			copy_func = registerObjectArrayCopyFunc(fname, this, parent);
 		}
 
-//		if (item_type->data_type() == DT_OBJECT_REF) {
-			// internal_allocator
-			{
-				string fname = PlnBlock::generateFuncName("internal_new", {this}, {});
-				internal_alloc_func = registerObjectArrayInternalAllocFunc(fname, this, parent);
-			}
+		// internal_allocator
+		{
+			string fname = PlnBlock::generateFuncName("internal_new", {this}, {});
+			internal_alloc_func = registerObjectArrayInternalAllocFunc(fname, this, parent);
+		}
 
-			// internal_freer
-			{
-				string fname = PlnBlock::generateFuncName("internal_del", {}, {this});
-				internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
-			}
-//		}
+		// internal_freer
+		{
+			string fname = PlnBlock::generateFuncName("internal_del", {}, {this});
+			internal_free_func = registerObjectArrayFreeFunc(fname, this, parent, true);
+		}
 	}
 }
 
+// LCOV_EXCL_START
 PlnTypeConvCap PlnFixedArrayTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
 {
 	BOOST_ASSERT(false);
 }
+// LCOV_EXCL_STOP
 
 bool debug_ok = false;
 PlnVarType* PlnFixedArrayTypeInfo::getVarType(const string& mode)

@@ -192,7 +192,6 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 			int at = ex->values[0].asgn_type;
 			BOOST_ASSERT(at == ASGN_COPY);
 			di = new PlnDstCopyObjectItem(ex);
-			// BOOST_ASSERT(false);
 
 		} else {
 			BOOST_ASSERT(false);

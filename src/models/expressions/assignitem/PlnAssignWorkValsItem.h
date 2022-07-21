@@ -78,6 +78,7 @@ public:
 
 				di.copy_src_ex = new PlnExpression(di.save_src_var);
 				di.fr = di.item->setSrcEx(da, si, di.copy_src_ex);
+				BOOST_ASSERT(di.fr == FINISH_BY_DSTITEM);
 
 			} else {
 				PlnFinishRole fr = di.item->setSrcEx(da, si, src_ex);
@@ -93,9 +94,10 @@ public:
 		for (auto &di: dsts) {
 			if (di.save_src_var) {	// ASGN_COPY
 				da.popSrc(di.save_src_var->place);
-				if (di.fr == FINISH_BY_ASSIGNITEM) {
+				// No case
+				/*if (di.fr == FINISH_BY_ASSIGNITEM) {
 					di.copy_src_ex->finish(da, si);
-				}
+				} */
 				di.item->finish(da, si);
 				di.free_ex->finish(da, si);
 				da.releaseDp(di.save_src_var->place);

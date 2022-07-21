@@ -10,10 +10,8 @@ ccall printf(@[?]byte format, ...) -> int32;
 //  [3]#[10]byte names = ["Alice","Bob","Ken"];
 // 
 //  [1,10]int32 xx;
+[2]int32 a2;
+[3]int32 a3;
 
-type test {
-	int32 x;
-};
+// a2 ->> a3;
 
-// #[3]#[4]#[5]test zzz;
-#[3]#[4]#[2]int32 zzz;

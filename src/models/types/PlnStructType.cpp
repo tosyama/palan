@@ -322,6 +322,7 @@ PlnVarType* PlnStructTypeInfo::getVarType(const string& mode)
 	if (mode[2] == '-') omode[2] = default_mode[2];
 
 	PlnVarType* var_type = new PlnStructVarType(this, omode);
+	var_types.push_back(var_type);
 
 	return var_type;
 }
