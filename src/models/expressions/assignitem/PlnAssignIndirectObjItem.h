@@ -45,13 +45,14 @@ public:
 			if (dst_item->need_save) {
 				src_save = new PlnClone(da, src_ex, src_ex->values[0].inf.var->var_type, true);
 				PlnFinishRole fr = dst_item->setSrcEx(da, si, src_save);
-				// BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
 				src_save->finishAlloc(da, si);
 				src_ex->finish(da, si);
 				src_save->finishCopy(da, si);
-				if (fr == FINISH_BY_ASSIGNITEM) {
+				BOOST_ASSERT(fr == FINISH_BY_DSTITEM);
+				// No case for Clone
+				/*if (fr == FINISH_BY_ASSIGNITEM) {
 					src_save->finish(da, si);
-				}
+				}*/
 
 			} else {
 				PlnFinishRole fr = dst_item->setSrcEx(da, si, src_ex);

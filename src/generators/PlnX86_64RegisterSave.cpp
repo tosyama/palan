@@ -495,7 +495,7 @@ inline int offset(vector<array<int,2>> &regmap, int regid)
 		if (rmap[0] == regid)
 			return -rmap[1];
 	BOOST_ASSERT(false);
-}
+}	// LCOV_EXCL_LINE
 
 void addRegSaveOpeFromAnalyzedInfo(vector<PlnOpeCode> &opecodes, vector<array<int,2>> &regmap,
 		vector<SaveRegInfo> &saveInfo, vector<SaveRegInfo> &restoreInfo)

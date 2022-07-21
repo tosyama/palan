@@ -45,9 +45,11 @@ public:
 			src_save->finishAlloc(da, si);
 			src_ex->finish(da, si);
 			src_save->finishCopy(da, si);
-			if (fr == FINISH_BY_ASSIGNITEM) {
+			BOOST_ASSERT(fr == FINISH_BY_DSTITEM);
+			// No Case for Clone
+			/* if (fr == FINISH_BY_ASSIGNITEM) {
 				src_save->finish(da, si);
-			}
+			} */
 
 		} else {
 			PlnFinishRole fr = dst_item->setSrcEx(da, si, src_ex);
