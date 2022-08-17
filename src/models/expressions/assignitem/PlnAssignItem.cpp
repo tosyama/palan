@@ -25,6 +25,11 @@
 #include "../../types/PlnFixedArrayType.h"
 #include "PlnAssignItem.h"
 
+enum PlnFinishRole {
+	FINISH_BY_ASSIGNITEM,
+	FINISH_BY_DSTITEM
+};
+
 // PlnDstItem
 class PlnDstItem {
 public:
@@ -34,7 +39,7 @@ public:
 	virtual ~PlnDstItem() {}
 
 	virtual PlnAsgnType getAssginType() = 0;
-	virtual void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
+	virtual PlnFinishRole setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) = 0;
 	// LCOV_EXCL_START
 	virtual void finish(PlnDataAllocator& da, PlnScopeInfo& si) {
 		BOOST_ASSERT(false);
@@ -187,7 +192,6 @@ PlnDstItem* PlnDstItem::createDstItem(PlnExpression* ex, bool need_save)
 			int at = ex->values[0].asgn_type;
 			BOOST_ASSERT(at == ASGN_COPY);
 			di = new PlnDstCopyObjectItem(ex);
-			// BOOST_ASSERT(false);
 
 		} else {
 			BOOST_ASSERT(false);

@@ -62,23 +62,25 @@ public:
 
 		if (tmp_vartype->data_type() == DT_OBJECT) {
 			// ex) [3]#[2][1]int32 a9  = [[1][2]][[3][4]][[5][6]];
-			tmp_vartype = tmp_vartype->typeinf->getVarType();
+			tmp_vartype = tmp_vartype->getVarType();
 		}
 
-		tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "tmp var");
+		tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "(tmp var)");
 		BOOST_ASSERT(tmp_var->place->data_type == DT_OBJECT_REF);
 		BOOST_ASSERT(tmp_var->place->size == 8);
 
-		alloc_ex = tmp_var->var_type->getAllocEx();
+		vector<PlnExpression*> args;
+		tmp_var->var_type->getAllocArgs(args);
+		alloc_ex = tmp_var->var_type->getAllocEx(args);
 		alloc_ex->data_places.push_back(tmp_var->place);
 		alloc_ex->finish(da, si);
 		da.popSrc(tmp_var->place);
 
 		tmp_var_ex = new PlnExpression(tmp_var);
 		dst_item = PlnDstItem::createDstItem(dst_ex, false);
-		dst_item->setSrcEx(da, si, tmp_var_ex);
 		if (output_place)
 			dst_item->place = output_place;
+		dst_item->setSrcEx(da, si, tmp_var_ex);
 
 		vector<PlnExpression*> val_items = src_ex->getAllItems();
 		vector<PlnExpression*> dst_items;
@@ -115,7 +117,7 @@ public:
 		tmp_var_ex->finish(da,si);
 		dst_item->finish(da,si);
 
-		free_ex = PlnFreer::getFreeEx(tmp_var);
+		free_ex = tmp_var->getFreeEx();
 		free_ex->finish(da, si);
 		da.releaseDp(tmp_var->place);
 	}

@@ -23,7 +23,7 @@ PlnExpression* PlnAddOperation::create(PlnExpression* l, PlnExpression* r)
 {
 	if (l->getDataType() == DT_OBJECT_REF || r->getDataType() == DT_OBJECT_REF) {
 		auto exp = (l->getDataType() == DT_OBJECT_REF) ? l : r;
-		string tname = exp->values[0].getVarType()->typeinf->name;
+		string tname = exp->values[0].getVarType()->tname();
 		PlnCompileError err(E_CantUseOperatorHere, tname);
 		err.loc = exp->loc;
 		throw err;
@@ -264,7 +264,7 @@ PlnNegative::PlnNegative(PlnExpression* e)
 	if (e->getDataType() == DT_FLOAT) {
 		v.inf.wk_type = e->values[0].getVarType();
 	} else {
-		v.inf.wk_type = PlnType::getSint()->getVarType();
+		v.inf.wk_type = PlnVarType::getSint();
 	}
 	values.push_back(v);
 }

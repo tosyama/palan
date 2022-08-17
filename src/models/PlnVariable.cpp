@@ -4,7 +4,7 @@
 /// such as type and memory allocation.
 ///
 /// @file	PlnVariable.cpp
-/// @copyright	2017-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -49,17 +49,6 @@ static bool requireInit(PlnVarType* var_type)
 {
 	if (var_type->mode[IDENTITY_MD] == 'i' && var_type->mode[ALLOC_MD] == 'r')
 		return true;
-	
-	/*if (var_type->typeinf->type == TP_FIXED_ARRAY)
-		return requireInit(static_cast<PlnFixedArrayType*>(var_type->typeinf)->item_type);
-	
-	if (var_type->typeinf->type == TP_STRUCT) {
-		PlnStructType* stype = static_cast<PlnStructType*>(var_type->typeinf);
-		for (PlnStructMemberDef* member: stype->members) {
-			if (requireInit(member->type))
-				return true;
-		}
-	}*/
 
 	return false;
 }
@@ -137,9 +126,11 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 		if (v->var_type->mode[ALLOC_MD] == 'h') {
 			PlnExpression* alloc_ex = NULL;
 			if (i >= init_var_i || vars[i].asgn_type == ASGN_COPY) {
-				alloc_ex = PlnAllocator::getAllocEx(v);
+				vector<PlnExpression*> alloc_args;
+				v->var_type->getAllocArgs(alloc_args);
+				alloc_ex = v->var_type->getAllocEx(alloc_args);
 				if (!alloc_ex) {
-					PlnCompileError err(E_CantAllocate, v->var_type->name());
+					PlnCompileError err(E_CantAllocate, v->var_type->tname());
 					err.loc = v->loc;
 					throw err;
 				}
@@ -147,7 +138,9 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 			varinits.push_back({v, alloc_ex, NULL});
 
 		} else if (v->var_type->data_type() == DT_OBJECT) {
-			PlnExpression *alloc_ex = PlnInternalAllocator::getInternalAllocEx(v);
+			vector<PlnExpression *> args;
+			v->var_type->getAllocArgs(args);
+			PlnExpression *alloc_ex = v->var_type->getInternalAllocEx(new PlnExpression(v), args);
 			varinits.push_back({v, NULL, alloc_ex});
 
 		} else {
@@ -224,6 +217,17 @@ void PlnVarInit::gen(PlnGenerator& g)
 		ai->genS(g);
 		ai->genD(g);
 	}
+}
+
+PlnExpression* PlnVariable::getFreeEx()
+{
+	return var_type->getFreeEx(new PlnExpression(this));
+}
+
+PlnExpression* PlnVariable::getInternalFreeEx()
+{
+	vector<PlnExpression *> args;
+	return var_type->getInternalFreeEx(new PlnExpression(this), args);
 }
 
 PlnVariable* PlnVariable::createTempVar(PlnDataAllocator& da, PlnVarType* var_type, const string& name)

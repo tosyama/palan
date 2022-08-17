@@ -8,7 +8,7 @@ void normalCaseTest()
 
 	testcode = "000_temp";
 	REQUIRE(build(testcode) == "success");
-	REQUIRE(exec(testcode) == "Alice,Bob,Ken");
+	REQUIRE(exec(testcode) == "");
 
 	testcode = "002_varint64";
 	REQUIRE(build(testcode) == "success");
@@ -477,7 +477,8 @@ TEST_CASE("Compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:2-2 Require initialize expression for 'b'.");
 
 	testcode = "586_cantusemove_err6";
-	REQUIRE(build(testcode) == "finish:0:2-2 Can not move ownership to 'b'.");
+//	REQUIRE(build(testcode) == "finish:0:2-2 Can not move ownership to 'b'.");
+	REQUIRE(build(testcode) == "success");	// This case ok with down cast.
 
 	testcode = "587_arrind_token_err";
 	REQUIRE(build(testcode) == "0:3-3 Unexpected token '?' was found.");

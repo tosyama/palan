@@ -42,18 +42,7 @@ static PlnVarType* getEditableVarTypeForLocal(PlnVarType* var_type, PlnBlock* bl
 		mode[IDENTITY_MD] = 'c';
 	}
 
-	if (var_type->typeinf->type == TP_FIXED_ARRAY) {
-		// PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(var_type->typeinf);
-		// PlnVarType *editable_item_type = getEditableVarTypeForLocal(atype->item_type, block);
-		// vector<int> sizes = atype->sizes;
-		// var_type = block->getFixedArrayType(editable_item_type, sizes, mode);
-
-	} else if (var_type->typeinf->type == TP_STRUCT) {
-	} else if (var_type->typeinf->type == TP_PRIMITIVE) {
-	} else
-		BOOST_ASSERT(false);
-
-	return var_type->typeinf->getVarType(mode);
+	return var_type->getVarType(mode);
 }
 
 PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
@@ -67,7 +56,7 @@ PlnVariable* PlnFunction::addRetValue(const string& rname, PlnVarType* rtype)
 			if (!rtype) {
 				rtype = return_vals.back().var_type;
 			}
-			if (p->var->var_type->name() != rtype->name())
+			if (p->var->var_type->tname() != rtype->tname())
 				throw PlnCompileError(E_InvalidReturnValType, rname);
 
 			return_vals.push_back({p->var, rtype, true});
@@ -119,7 +108,7 @@ PlnVariable* PlnFunction::addParam(const string& pname, PlnVarType* ptype, int i
 
 string PlnFunction::getParamStr(PlnVarType* vtype, PlnPassingMethod passby)
 {
-	string pname = vtype->name();
+	string pname = vtype->tname();
 	bool is_object = vtype->typeinf->data_type == DT_OBJECT;
 
 	switch (passby) {
@@ -127,11 +116,6 @@ string PlnFunction::getParamStr(PlnVarType* vtype, PlnPassingMethod passby)
 			BOOST_ASSERT(!is_object);
 			break;
 		case FPM_IN_BYREF:	// primitive:@, object:@ or @!
-			if (is_object && vtype->mode[ACCESS_MD]=='w') {
-				pname = "@!" + pname;
-			} else {
-				pname = "@" + pname;
-			}
 			break;
 		case FPM_IN_BYREF_CLONE:	// object:default
 			BOOST_ASSERT(is_object);
@@ -220,7 +204,7 @@ static string mangling(PlnFunction* f)
 	string seed = "";
 	for (auto p: f->parameters) {
 		seed += "|";
-		seed += p->var->var_type->name();
+		seed += p->var->var_type->tname();
 		seed += "." + p->var->var_type->mode;
 		seed += "." + to_string(p->passby);
 	}

@@ -41,15 +41,15 @@ inline PlnVarType* binaryOperationType(PlnExpression* l, PlnExpression* r)
 		}
 
 		if (fsize == 8) {
-			return PlnType::getFlo64()->getVarType();
+			return PlnVarType::getFlo64();
 		} else if (fsize == 4) {
-			return PlnType::getFlo32()->getVarType();
+			return PlnVarType::getFlo32();
 		} else
 			BOOST_ASSERT(false);
 
 	} else if (isUnsigned) {
-		return PlnType::getUint()->getVarType();
+		return PlnVarType::getUint();
 	}
 
-	return PlnType::getSint()->getVarType();
+	return PlnVarType::getSint();
 }

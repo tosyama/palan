@@ -4,10 +4,10 @@
 /// @copyright	2019-2020 YAMAGUCHI Toshinobu 
 
 class PlnArrayValue;
-class PlnArrayValueType : public PlnType {
+class PlnArrayValueTypeInfo : public PlnTypeInfo {
 public:
 	PlnArrayValue *arr_val;
-	PlnArrayValueType(PlnArrayValue* arr_val);
+	PlnArrayValueTypeInfo(PlnArrayValue* arr_val);
 	PlnTypeConvCap canCopyFrom(const string &mode, PlnVarType *src, PlnAsgnType copymode) override;
 
 	PlnVarType* getDefaultType(PlnBlock *block);

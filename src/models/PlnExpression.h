@@ -26,7 +26,8 @@ enum PlnExprsnType {
 	ET_REFVALUE,
 	ET_MCOPY,
 	ET_TRUE,
-	ET_FALSE
+	ET_FALSE,
+	ET_VOID
 };
 
 class PlnModule;
@@ -49,13 +50,6 @@ public:
 	virtual void gen(PlnGenerator& g);
 };
 
-class PlnDeepCopyExpression : public PlnExpression {
-public:
-	PlnDeepCopyExpression(PlnExprsnType type) : PlnExpression(type) {};
-	virtual PlnDataPlace* dstDp(PlnDataAllocator &da) = 0;
-	virtual PlnDataPlace* srcDp(PlnDataAllocator &da) = 0;
-};
-
 // Value (rval)
 enum PlnValType {
 	VL_UNKNOWN,
@@ -68,7 +62,6 @@ enum PlnValType {
 	VL_WORK
 };
 
-class PlnArrayLiteral;
 class PlnArrayValue;
 class PlnValue {
 public:
@@ -92,7 +85,6 @@ public:
 	PlnValue(double floValue);
 	PlnValue(string strValue);
 	PlnValue(PlnArrayValue *arr);
-	PlnValue(PlnArrayLiteral *arr);
 	PlnValue(PlnVariable* var);
 	~PlnValue();
 

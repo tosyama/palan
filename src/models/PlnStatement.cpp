@@ -174,8 +174,10 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (clone)
 			clone->finishAlloc(da, si);
 		e->finish(da, si);
-		if (clone)
+		if (clone) {
+			clone->finishCopy(da, si);
 			clone->finish(da, si);
+		}
 
 		// ret_vars is just used checking requirement of free varialbes.
 		if (e->type == ET_VALUE && e->values[0].type == VL_VAR)
@@ -195,7 +197,7 @@ void PlnReturnStmt::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 						break;
 					}
 				if (!do_ret) {
-					PlnExpression* free_ex = PlnFreer::getFreeEx(i.var);
+					PlnExpression* free_ex = i.var->getFreeEx();
 					free_vars.push_back(free_ex);
 				}
 			}
@@ -219,8 +221,10 @@ void PlnReturnStmt::gen(PlnGenerator& g)
 		if (clones[i])
 			clones[i]->genAlloc(g);
 		e->gen(g);
-		if (clones[i])
+		if (clones[i]) {
+			clones[i]->genCopy(g);
 			clones[i]->gen(g);
+		}
 		i++;
 	}
 

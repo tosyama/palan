@@ -33,16 +33,19 @@ public:
 
 	PlnAsgnType getAssginType() override { return ASGN_MOVE; }
 
-	void setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
+	PlnFinishRole setSrcEx(PlnDataAllocator &da, PlnScopeInfo& si, PlnExpression *src_ex) override {
 		int index = src_ex->data_places.size();
 
 		auto src_type = src_ex->values[index].getVarType();
 		auto dst_type = dst_ex->values[0].getVarType();
-		if (src_type->typeinf != dst_type->typeinf) {
+
+		// It shoud be checked at buildAssignment of TreeBuilder
+		BOOST_ASSERT(dst_type->canCopyFrom(src_type, ASGN_MOVE) & TC_CONV_OK);
+		/*if (!(dst_type->canCopyFrom(src_type, ASGN_MOVE) & TC_CONV_OK)) {
 			PlnCompileError err(E_CantUseMoveOwnershipTo, dst_ex->values[0].inf.var->name);
 			err.loc = dst_ex->loc;
 			throw err;
-		}
+		}*/
 		
 		dst_dp = dst_ex->values[0].getDataPlace(da);
 		if (src_ex->values[index].type == VL_VAR
@@ -50,6 +53,7 @@ public:
 			dst_dp->do_clear_src = true;
 		}
 		src_ex->data_places.push_back(dst_dp);
+		return FINISH_BY_ASSIGNITEM;
 	}
 
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override {
@@ -61,7 +65,7 @@ public:
 		auto var = dst_ex->values[0].inf.var;
 		auto lt = si.get_lifetime(var);
 		if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
-			free_ex = PlnFreer::getFreeEx(var);
+			free_ex = var->getFreeEx();
 			free_ex->finish(da, si);
 		}
 

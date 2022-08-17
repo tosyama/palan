@@ -20,7 +20,7 @@ PlnArrayValue::PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral)
 {
 	PlnValue aval;
 	aval.type = VL_WORK;
-	PlnType* atype = new PlnArrayValueType(this);
+	PlnTypeInfo* atype = new PlnArrayValueTypeInfo(this);
 	atype->default_mode = "rni";
 	aval.inf.wk_type = atype->getVarType();
 	values.push_back(aval);
@@ -77,7 +77,7 @@ PlnArrayValue::PlnArrayValue(const PlnArrayValue& src)
 
 	PlnValue aval;
 	aval.type = VL_WORK;
-	PlnType* atype = new PlnArrayValueType(this);
+	PlnTypeInfo* atype = new PlnArrayValueTypeInfo(this);
 	aval.inf.wk_type = atype->getVarType();
 	isLiteral = src.isLiteral;
 	doCopyFromStaticBuffer = src.doCopyFromStaticBuffer;
@@ -130,17 +130,17 @@ bool PlnArrayValue::isFixedArray(const vector<PlnExpression*> &items, vector<int
 	return true;
 }
 
-static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayType* atype, int depth=0)
+static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayVarType* atype, int depth=0)
 {
 	BOOST_ASSERT(depth < atype->sizes.size());
 	if (arr_val->item_exps.size() != atype->sizes[depth]) {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->tname());
 		err.loc = arr_val->loc;
 		throw err;
 	}
 
 	if (depth == atype->sizes.size()-1) { // check item
-		vector<PlnVarType*> types = { atype->item_type };
+		vector<PlnVarType*> types = { atype->item_type() };
 		for (auto& exp: arr_val->item_exps) {
 			exp = exp->adjustTypes(types);
 		}
@@ -148,7 +148,7 @@ static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayType* atyp
 	} else {
 		for (auto exp: arr_val->item_exps) {
 			if (exp->type != ET_ARRAYVALUE) {
-				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->name);
+				PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), atype->tname());
 				err.loc = arr_val->loc;
 				throw err;
 			}
@@ -157,10 +157,10 @@ static void adjustFixedArrayType(PlnArrayValue* arr_val, PlnFixedArrayType* atyp
 	}
 }
 
-static void adjustStructType(PlnArrayValue* arr_val, PlnStructType* stype)
+static void adjustStructType(PlnArrayValue* arr_val, PlnStructTypeInfo* stype)
 {
 	if (arr_val->item_exps.size() != stype->members.size()) {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), stype->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), stype->tname);
 		err.loc = arr_val->loc;
 		throw err;
 	}
@@ -177,7 +177,7 @@ static void adjustStructType(PlnArrayValue* arr_val, PlnStructType* stype)
 static bool isIncludesObjectRefMember(PlnVarType* item_type)
 {
 	if (item_type->typeinf->type == TP_FIXED_ARRAY) {
-		PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(item_type->typeinf);
+		PlnFixedArrayTypeInfo *farr_type = static_cast<PlnFixedArrayTypeInfo*>(item_type->typeinf);
 		PlnVarType* sub_item_type = farr_type->item_type;
 		
 		if (sub_item_type->data_type() == DT_OBJECT_REF)
@@ -186,7 +186,7 @@ static bool isIncludesObjectRefMember(PlnVarType* item_type)
 			return isIncludesObjectRefMember(sub_item_type);
 
 	} else if (item_type->typeinf->type == TP_STRUCT) {
-		PlnStructType *strct_type = static_cast<PlnStructType*>(item_type->typeinf);
+		PlnStructTypeInfo *strct_type = static_cast<PlnStructTypeInfo*>(item_type->typeinf);
 		for (auto member_def: strct_type->members) {
 			if (member_def->type->data_type() == DT_OBJECT_REF) {
 				return true;
@@ -205,50 +205,52 @@ static bool isIncludesObjectRefMember(PlnVarType* item_type)
 PlnExpression* PlnArrayValue::adjustTypes(const vector<PlnVarType*> &types)
 {
 	BOOST_ASSERT(types.size() == 1);
-	PlnType* type = types[0]->typeinf;
+	PlnTypeInfo* type = types[0]->typeinf;
 	if (type->type == TP_FIXED_ARRAY)  {
-		PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(type);
+		PlnFixedArrayVarType* atype = static_cast<PlnFixedArrayVarType*>(types[0]);
 		adjustFixedArrayType(this, atype);
 
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
 
-		if (isLiteral && atype->item_type->data_type() != DT_OBJECT_REF) {
-			if (atype->item_type->data_type() == DT_OBJECT) {
+		if (isLiteral && atype->item_type()->data_type() != DT_OBJECT_REF) {
+			if (atype->item_type()->data_type() == DT_OBJECT) {
 				// Check recursively if item_type includes DT_OBJECT_REF.
-				if (isIncludesObjectRefMember(atype->item_type)) {
-					values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+				if (isIncludesObjectRefMember(atype->item_type())) {
+					values[0].inf.wk_type = types[0]->getVarType("rni");
 
 				} else {	// Dynamic allcation only object.
 					doCopyFromStaticBuffer = true;
-					values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+					values[0].inf.wk_type = types[0]->getVarType("rir");
 				}
 
 			} else {	// item data_type == DT_SINT .. DT_FLOAT
 				doCopyFromStaticBuffer = true;
-				values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+				values[0].inf.wk_type = types[0]->getVarType("rir");
 			}
 		} else {
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+			values[0].inf.wk_type = types[0]->getVarType("rni");
 		}
+		static_cast<PlnFixedArrayVarType*>(values[0].inf.wk_type)->sizes = atype->sizes;
+
 		return this;
 
 	} else if (type->type == TP_STRUCT) {
-		PlnStructType* stype = static_cast<PlnStructType*>(type);
+		PlnStructTypeInfo* stype = static_cast<PlnStructTypeInfo*>(type);
 		adjustStructType(this, stype);
 
 		delete values[0].inf.wk_type->typeinf;	// PlnArrayValueType
 
 		if (isLiteral && !isIncludesObjectRefMember(types[0])) {
 			doCopyFromStaticBuffer = true;
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rir");
+			values[0].inf.wk_type = types[0]->getVarType("rir");
 		} else {
-			values[0].inf.wk_type = types[0]->typeinf->getVarType("rni");
+			values[0].inf.wk_type = types[0]->getVarType("rni");
 		}
 
 		return this;
 
 	} else {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), type->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::arrayValue(), types[0]->tname());
 		err.loc = loc;
 		throw err;
 	}
@@ -282,7 +284,7 @@ void PlnArrayValue::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 	// Assign each element
 	if (doCopyFromStaticBuffer) {
 		BOOST_ASSERT(data_places.size() == 1);
-		PlnType* type = values[0].inf.wk_type->typeinf;
+		PlnTypeInfo* type = values[0].inf.wk_type->typeinf;
 
 		PlnDataPlace* dp = NULL;
 		if (type->type == TP_FIXED_ARRAY)
@@ -334,11 +336,13 @@ vector<PlnExpression*> PlnArrayValue::getAllItems()
 {
 	vector<PlnExpression*> items;
 	if (values[0].inf.wk_type->typeinf->type == TP_FIXED_ARRAY) {
-		PlnFixedArrayType *farr_type = static_cast<PlnFixedArrayType*>(values[0].inf.wk_type->typeinf);
+		// PlnFixedArrayTypeInfo *farr_type = static_cast<PlnFixedArrayTypeInfo*>(values[0].inf.wk_type->typeinf);
+		// pushArrayValItemExp(this, farr_type->sizes, items);
+		PlnFixedArrayVarType *farr_type = static_cast<PlnFixedArrayVarType*>(values[0].inf.wk_type);
 		pushArrayValItemExp(this, farr_type->sizes, items);
 
 	} else if (values[0].inf.wk_type->typeinf->type == TP_STRUCT) {
-		PlnStructType *struct_type = static_cast<PlnStructType*>(values[0].inf.wk_type->typeinf);
+		PlnStructTypeInfo *struct_type = static_cast<PlnStructTypeInfo*>(values[0].inf.wk_type->typeinf);
 		vector<int> sizes = { static_cast<int>(struct_type->members.size()) };
 		pushArrayValItemExp(this, sizes, items);
 
@@ -354,7 +358,7 @@ static int getInt(PlnExpression *exp) {
 	if (val.type == VL_LIT_INT8 || val.type == VL_LIT_UINT8) {
 		return val.inf.intValue;
 	} else {
-		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::floatNumber(), PlnType::getSint()->name);
+		PlnCompileError err(E_IncompatibleTypeAssign, PlnMessage::floatNumber(), PlnVarType::getSint()->tname());
 		err.loc = exp->loc;
 		throw err;
 	}
@@ -375,17 +379,16 @@ static void setStringROData(vector<PlnRoData>& rodata, PlnVarType* var_type, Pln
 	BOOST_ASSERT(item_val.type == VL_LIT_STR);
 	BOOST_ASSERT(var_type->typeinf->type == TP_FIXED_ARRAY);
 
-	PlnFixedArrayType* arr_type = static_cast<PlnFixedArrayType*>(var_type->typeinf);
-	BOOST_ASSERT(arr_type->item_type->size() == 1);
-	BOOST_ASSERT(arr_type->item_type->data_type() == DT_SINT || arr_type->item_type->data_type() == DT_UINT);
+	PlnFixedArrayVarType* arr_type = static_cast<PlnFixedArrayVarType*>(var_type);
+	BOOST_ASSERT(arr_type->item_type()->size() == 1);
+	BOOST_ASSERT(arr_type->item_type()->data_type() == DT_SINT || arr_type->item_type()->data_type() == DT_UINT);
 	BOOST_ASSERT(arr_type->sizes.size() == 1);
-	
 	int arr_size = arr_type->sizes[0];
 	string &s = *item_val.inf.strValue;
 	
 	BOOST_ASSERT(arr_size >= s.size());
 	PlnRoData datainf;
-	datainf.data_type = arr_type->item_type->data_type();
+	datainf.data_type = arr_type->item_type()->data_type();
 	datainf.size = 1;
 	datainf.alignment = align ? align : 1;
 
@@ -411,13 +414,14 @@ static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<Pl
 		BOOST_ASSERT(var_type->data_type() == DT_OBJECT || var_type->data_type() == DT_OBJECT_REF);
 		BOOST_ASSERT(index == 0);
 
-		PlnFixedArrayType* arr_type = static_cast<PlnFixedArrayType*>(var_type->typeinf);
+	//	PlnFixedArrayTypeInfo* arr_type = static_cast<PlnFixedArrayTypeInfo*>(var_type->typeinf);
+		PlnFixedArrayVarType* arr_type = static_cast<PlnFixedArrayVarType*>(var_type);
 		PlnVarType *item_type;
 		if (arr_dim < arr_type->sizes.size()) {
 			item_type = var_type;
 			arr_dim++;
 		} else {
-			item_type = arr_type->item_type;
+			item_type = arr_type->item_type();
 			arr_dim = 1;
 		}
 
@@ -435,7 +439,7 @@ static void setROData(vector<PlnRoData>& rodata, PlnVarType* var_type, vector<Pl
 		}
 		
 	} else if (var_type->typeinf->type == TP_STRUCT) {
-		PlnStructType* stype = static_cast<PlnStructType*>(var_type->typeinf);
+		PlnStructTypeInfo* stype = static_cast<PlnStructTypeInfo*>(var_type->typeinf);
 		bool first = true;
 		for (auto member: stype->members) {
 			int member_align = 0;

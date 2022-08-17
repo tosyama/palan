@@ -1,7 +1,7 @@
 /// PlnClone model class definition.
 ///
 /// @file	PlnClone.cpp
-/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -18,19 +18,48 @@
 #include "assignitem/PlnAssignItem.h"
 
 PlnClone::PlnClone(PlnDataAllocator& da, PlnExpression* src_ex, PlnVarType* var_type, bool keep_var)
-	: PlnExpression(ET_CLONE), src_ex(NULL), free_ex(NULL), copy_ex(NULL), keep_var(keep_var)
+	: PlnExpression(ET_CLONE), src_ex(NULL), dup_src_ex(NULL), free_ex(NULL), copy_ex(NULL), src_tmp_var(NULL), keep_var(keep_var)
 {
-	var_type = var_type->typeinf->getVarType();
+	var_type = var_type->getVarType();
 	var = PlnVariable::createTempVar(da, var_type, "(clone)");
-	alloc_ex = var_type->getAllocEx();
+	values.push_back(var);
+
+	vector<PlnExpression*> args;
+	var_type->getAllocArgs(args);
+	alloc_ex = var_type->getAllocEx(args);
+	BOOST_ASSERT(alloc_ex);
 	alloc_ex->data_places.push_back(var->place);
 
 	directAssign = (src_ex->type == ET_ARRAYVALUE && !static_cast<PlnArrayValue*>(src_ex)->doCopyFromStaticBuffer);
  
 	if (!directAssign) {
-		copy_ex = var_type->getCopyEx();
-		src_ex->data_places.push_back(copy_ex->srcDp(da));
-		copy_dst_dp = copy_ex->dstDp(da);
+		int val_ind = src_ex->data_places.size();
+		PlnExpression* dst_var_ex = new PlnExpression(var);
+
+		if (src_ex->type == ET_VALUE && (src_ex->values[0].type == VL_VAR || src_ex->values[0].type == VL_LIT_STR)) {
+			// TODO: + VL_LIT_ARRAY or other optimazation methods.
+			BOOST_ASSERT(src_ex->values.size() == 1);
+			if (src_ex->values[0].type == VL_VAR) {
+				dup_src_ex = new PlnExpression(src_ex->values[0].inf.var);
+
+			} else if (src_ex->values[0].type == VL_LIT_STR) {
+				dup_src_ex = new PlnExpression(*src_ex->values[0].inf.strValue);
+			}
+			
+			vector<PlnExpression*> args;
+			var_type->getAllocArgs(args);
+			copy_ex = var_type->getCopyEx(dst_var_ex, dup_src_ex, args);
+
+		} else {
+			PlnVarType *tmp_vartype = src_ex->values[val_ind].getVarType()->getVarType("rir");
+			src_tmp_var = PlnVariable::createTempVar(da, tmp_vartype, "(src tmp var)");
+			src_ex->data_places.push_back(src_tmp_var->place);
+
+			PlnExpression* src_var_ex = new PlnExpression(src_tmp_var);
+			vector<PlnExpression*> args;
+			var_type->getAllocArgs(args);
+			copy_ex = var_type->getCopyEx(dst_var_ex, src_var_ex, args);
+		}
 	}
 	this->src_ex = src_ex;
 }
@@ -40,6 +69,7 @@ PlnClone::~PlnClone()
 	delete alloc_ex;
 	delete copy_ex;
 	delete free_ex;
+	delete src_tmp_var;
 }
 
 void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
@@ -63,33 +93,38 @@ void PlnClone::finishAlloc(PlnDataAllocator& da, PlnScopeInfo& si)
 			ai->addDstEx(dst_items[i], false);
 			assign_items.push_back(ai);
 		}
-
-		// src_ex->data_places.push_back(var->place);
 	}
 }
 
-void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+void PlnClone::finishCopy(PlnDataAllocator& da, PlnScopeInfo& si)
 {
-	BOOST_ASSERT(data_places.size() == 1);
 	if (directAssign) {
 		for (auto ai: assign_items) {
 			ai->finishS(da, si);
 			ai->finishD(da, si);
 		}
 
-	} else {
-		da.pushSrc(copy_dst_dp, var->place, false);
+	} else if (src_tmp_var) {
+		da.popSrc(src_tmp_var->place);
 		copy_ex->finish(da, si);
+		da.releaseDp(src_tmp_var->place);
 
+	} else {
+		copy_ex->finish(da, si);
 	}
 
+}
+
+void PlnClone::finish(PlnDataAllocator& da, PlnScopeInfo& si)
+{
+	BOOST_ASSERT(data_places.size() == 1);
 	da.pushSrc(data_places[0], var->place, !keep_var);
 }
 
 void PlnClone::finishFree(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(keep_var);
-	free_ex = PlnFreer::getFreeEx(var);
+	free_ex = var->getFreeEx();
 	free_ex->finish(da, si);
 	da.releaseDp(var->place);
 }
@@ -100,17 +135,26 @@ void PlnClone::genAlloc(PlnGenerator& g)
 	g.genLoadDp(var->place);
 }
 
-void PlnClone::gen(PlnGenerator& g)
+void PlnClone::genCopy(PlnGenerator& g)
 {
 	if (directAssign) {
 		for (auto ai: assign_items) {
 			ai->genS(g);
 			ai->genD(g);
 		}
-	} else {
-		g.genSaveSrc(copy_dst_dp);
+
+	} else if (src_tmp_var) {
+		g.genLoadDp(src_tmp_var->place);
 		copy_ex->gen(g);
+
+	} else {
+		copy_ex->gen(g);
+
 	}
+}
+
+void PlnClone::gen(PlnGenerator& g)
+{
 	g.genSaveSrc(data_places[0]);
 }
 

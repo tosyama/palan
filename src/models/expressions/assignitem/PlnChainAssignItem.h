@@ -40,8 +40,10 @@ public:
 	}
 
 	void finishS(PlnDataAllocator& da, PlnScopeInfo& si) override {
-		for (auto &di: dsts)
-			di.item->setSrcEx(da, si, src_ex);
+		for (auto &di: dsts) {
+			PlnFinishRole fr = di.item->setSrcEx(da, si, src_ex);
+			BOOST_ASSERT(fr == FINISH_BY_ASSIGNITEM);
+		}
 
 		src_ex->finish(da, si);
 	}

@@ -1,7 +1,7 @@
 /// Conditinal branch model classes definition.
 ///
 /// @file	PlnConditionalBranch.cpp
-/// @copyright	2018-2020 YAMAGUCHI Toshinobu 
+/// @copyright	2018-2022 YAMAGUCHI Toshinobu 
 
 #include "boost/assert.hpp"
 #include "../PlnConstants.h"
@@ -18,6 +18,7 @@ PlnIfStatement::PlnIfStatement
 {
 	type = ST_IF;
 	inf.block = block;
+	block->setParent(parent);
 	this->parent = parent;
 
 	this->condition = PlnBoolExpression::create(condition);

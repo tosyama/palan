@@ -1,7 +1,7 @@
 /// Block model declaration.
 ///
 /// @file	PlnBlock.h
-/// @copyright	2017-2019 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include "../PlnModel.h"
 #include "PlnExpression.h"
@@ -29,7 +29,7 @@ public:
 		PlnExpression *ex;
 	};
 	vector<PlnConst> consts;
-	vector<PlnType*> types;
+	vector<PlnTypeInfo*> typeinfos;
 	vector<PlnFunction*> funcs;
 	
 	PlnModule* parent_module;
@@ -55,10 +55,11 @@ public:
 
 	void declareType(const string& type_name);
 	void declareType(const string& type_name, vector<PlnStructMemberDef*>& members);
-	void declareAliasType(const string& type_name, PlnType* orig_type);
+	void declareAliasType(const string& type_name, PlnVarType* orig_type);
 
 	PlnVarType* getType(const string& type_name, const string& mode);
-	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode);
+	PlnVarType* getFixedArrayType(PlnVarType* item_type, vector<PlnExpression*>& init_args, const string& mode);
+	PlnBlock* getTypeDefinedBlock(PlnVarType* var_type);
 
 	PlnFunction* getFunc(const string& func_name, vector<PlnArgInf> &arg_infs); // throw PlnCompileError
 	PlnFunction* getFuncProto(const string& func_name, vector<string>& param_types);
@@ -68,5 +69,5 @@ public:
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si);
 	void gen(PlnGenerator& g);
 
-	static string generateFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types);
+	static string generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, vector<PlnTypeInfo*> arg_types);
 };

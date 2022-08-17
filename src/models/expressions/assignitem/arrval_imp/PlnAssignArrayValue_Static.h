@@ -37,8 +37,8 @@ public:
 		BOOST_ASSERT(dst_ex->values[0].asgn_type != ASGN_MOVE);
 
 		dst_item = PlnDstItem::createDstItem(dst_ex, false);
-		dst_item->setSrcEx(da, si, src_ex);
 		dst_item->place = output_place;
+		dst_item->setSrcEx(da, si, src_ex);
 		src_ex->finish(da, si);
 	}
 

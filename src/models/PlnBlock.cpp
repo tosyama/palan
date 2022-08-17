@@ -4,16 +4,16 @@
 /// Block: "{" statements "}"
 ///
 /// @file	PlnBlock.cpp
-/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
-
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
+//
 #include <boost/assert.hpp>
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/join.hpp>
 
 #include "../PlnConstants.h"
+#include "PlnType.h"
 #include "PlnFunction.h"
-#include "PlnGeneralObject.h"
 #include "PlnBlock.h"
 #include "PlnStatement.h"
 #include "PlnVariable.h"
@@ -21,7 +21,6 @@
 #include "types/PlnFixedArrayType.h"
 #include "types/PlnStructType.h"
 #include "types/PlnAliasType.h"
-#include "PlnArray.h"
 #include "PlnModule.h"
 #include "../PlnDataAllocator.h"
 #include "../PlnGenerator.h"
@@ -45,7 +44,7 @@ PlnBlock::~PlnBlock()
 		delete stmt;
 	for (auto cons: consts)
 		delete cons.ex;
-	for (auto t: types)
+	for (auto t: typeinfos)
 		delete t;
 }
 
@@ -235,43 +234,46 @@ PlnExpression* PlnBlock::getConst(const string& name)
 
 void PlnBlock::declareType(const string& type_name)
 {
-	PlnType* t = new PlnType();
-	t->name = type_name;
+	PlnTypeInfo* t = new PlnTypeInfo();
+	t->tname = type_name;
 	t->default_mode = "wmr";
 	t->data_type = DT_OBJECT;
 	t->data_size = 0;
-	types.push_back(t);
+	typeinfos.push_back(t);
 }
 
 void PlnBlock::declareType(const string& type_name, vector<PlnStructMemberDef*> &members)
 {
-	auto t = new PlnStructType(type_name, members, this, "wmh");
-	types.push_back(t);
+	auto t = new PlnStructTypeInfo(type_name, members, this, "wmh");
+	typeinfos.push_back(t);
 }
 
-void PlnBlock::declareAliasType(const string& type_name, PlnType* orig_type)
+void PlnBlock::declareAliasType(const string& type_name, PlnVarType* orig_type)
 {
 	BOOST_ASSERT(orig_type);
 
-	auto t = new PlnAliasType(type_name, orig_type);
-	types.push_back(t);
+	auto t = new PlnAliasTypeInfo(type_name, orig_type, orig_type->typeinf);
+	typeinfos.push_back(t);
 }
 
-static PlnVarType* realType(PlnType *t, const string& mode) {
-	while (t->type == TP_ALIAS) {
-		t = static_cast<PlnAliasType*>(t)->orig_type;
+static PlnVarType* realType(PlnTypeInfo *t, const string& mode) {
+	if (t->type == TP_ALIAS) {
+		PlnAliasTypeInfo *at = static_cast<PlnAliasTypeInfo*>(t);
+		PlnVarType *vtype = at->orig_type->getVarType(mode);
+		BOOST_ASSERT(vtype->typeinf->type != TP_ALIAS);
+		return vtype;
 	}
 	return t->getVarType(mode);
 }
 
 PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 {
-	// Crrent block
+	// Crrent blockstatic_cast<PlnAliasType*>(t)->orig_type
 	{
-		auto t = std::find_if(types.begin(), types.end(),
-				[type_name](PlnType* t) { return t->name == type_name; });
+		auto t = std::find_if(typeinfos.begin(), typeinfos.end(),
+				[type_name](PlnTypeInfo* t) { return t->tname == type_name; });
 
-		if (t != types.end())
+		if (t != typeinfos.end())
 			return realType(*t, mode);
 	}
 
@@ -282,10 +284,10 @@ PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 
 	// Search default type if toplevel: parentBlock(this) == NULL
 	{
-		vector<PlnType*> &basic_types = PlnType::getBasicTypes();
+		vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();
 
 		auto t = std::find_if(basic_types.begin(), basic_types.end(),
-				[type_name](PlnType* t) { return t->name == type_name; });
+				[type_name](PlnTypeInfo* t) { return t->tname == type_name; });
 
 		if (t != basic_types.end())
 			return realType(*t, mode);
@@ -294,13 +296,13 @@ PlnVarType* PlnBlock::getType(const string& type_name, const string& mode)
 	return NULL;
 }
 
-string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vector<PlnType*> arg_types)
+string PlnBlock::generateFuncName(string fname, vector<PlnTypeInfo*> ret_types, vector<PlnTypeInfo*> arg_types)
 {
 	string ret_name, arg_name;
 	for (auto t: ret_types)
-		ret_name += "_" + t->name;
+		ret_name += "_" + t->tname;
 	for (auto t: arg_types)
-		arg_name += "_" + t->name;
+		arg_name += "_" + t->tname;
 	boost::replace_all(fname, "_", "__");
 
 	fname = "_" + fname + ret_name + + "_" +arg_name;
@@ -312,47 +314,50 @@ string PlnBlock::generateFuncName(string fname, vector<PlnType*> ret_types, vect
 	return fname;
 }
 
-PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<int>& sizes, const string& mode)
+PlnVarType* PlnBlock::getFixedArrayType(PlnVarType* item_type, vector<PlnExpression*>& init_args, const string& mode)
 {
-	bool found_item = false;
+	PlnBlock *defined_block = getTypeDefinedBlock(item_type);
+	string name = "[]" + item_type->tname();
+
+	for (auto t: defined_block->typeinfos) 
+		if (name == t->tname) {
+			PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(static_cast<PlnFixedArrayTypeInfo*>(t)->getVarType(mode, init_args));
+			return vtype;
+		}
 	
+	auto t = new PlnFixedArrayTypeInfo(name, item_type, this);
+	t->default_mode = "wmh";
+	defined_block->typeinfos.push_back(t);
+	PlnFixedArrayVarType *vtype = static_cast<PlnFixedArrayVarType*>(static_cast<PlnFixedArrayTypeInfo*>(t)->getVarType(mode, init_args));
+	return vtype;
+}
+
+PlnBlock* PlnBlock::getTypeDefinedBlock(PlnVarType* var_type)
+{
+	PlnTypeInfo *typeinfo = var_type->typeinf;
+
 	// Find item from Crrent block
 	{
-		auto t = std::find_if(types.begin(), types.end(),
-				[item_type](PlnType* t) { return t == item_type->typeinf; });
+		auto t = std::find_if(typeinfos.begin(), typeinfos.end(),
+				[typeinfo](PlnTypeInfo* t) { return t == typeinfo; });
 
-		if (t != types.end()) {
-			found_item = true;
-			BOOST_ASSERT(item_type == realType(*t, item_type->mode));
-		}
-	}
-	
-	if (!found_item) {
-		if (PlnBlock* b = parentBlock(this)) {
-			return b->getFixedArrayType(item_type, sizes, mode);
-
-		} else { // toplevel
-			vector<PlnType*> &basic_types = PlnType::getBasicTypes();	
-			auto t = std::find_if(basic_types.begin(), basic_types.end(),
-					[item_type](PlnType* t) { return t == item_type->typeinf; });
-
-			if (t != types.end()) {
-				found_item = true;
-				BOOST_ASSERT(item_type == realType(*t, item_type->mode));
-			}
-
-			BOOST_ASSERT(found_item);
+		if (t != typeinfos.end()) {
+			return this;
 		}
 	}
 
-	string name = PlnType::getFixedArrayName(item_type, sizes);
-	for (auto t: types) 
-		if (name == t->name) return t->getVarType(mode);
+	if (PlnBlock* b = parentBlock(this)) {
+		return b->getTypeDefinedBlock(var_type);
+
+	} else { // toplevel (parentBlock is NULL)
+		vector<PlnTypeInfo*> &basic_types = PlnTypeInfo::getBasicTypes();	
+		auto t = std::find_if(basic_types.begin(), basic_types.end(),
+				[typeinfo](PlnTypeInfo* t) { return t == typeinfo; });
+
+		BOOST_ASSERT(t != basic_types.end());
+		return parent_module->toplevel;
+	}
 	
-	auto t = new PlnFixedArrayType(name, item_type, sizes, this);
-	t->default_mode = "wmh";
-	types.push_back(t);
-	return t->getVarType(mode);
 }
 
 PlnFunction* PlnBlock::getFunc(const string& func_name, vector<PlnArgInf> &arg_infs)
@@ -516,12 +521,12 @@ void PlnBlock::addFreeVars(vector<PlnExpression*> &free_vars, PlnDataAllocator& 
 			if (v->var_type->mode[ALLOC_MD]=='h') {
 				auto lt = si.get_lifetime(v);
 				if (lt == VLT_ALLOCED || lt == VLT_INITED || lt == VLT_PARTLY_FREED) {
-					PlnExpression* free_var = PlnFreer::getFreeEx(v);
+					PlnExpression* free_var = v->getFreeEx();
 					free_var->finish(da, si);
 					free_vars.push_back(free_var);
 				}
 			} else if (v->var_type->data_type() == DT_OBJECT) {
-				PlnExpression* free_var = PlnFreer::getInternalFreeEx(v);
+				PlnExpression* free_var = v->getInternalFreeEx();
 				if (free_var) {
 					free_var->finish(da, si);
 					free_vars.push_back(free_var);

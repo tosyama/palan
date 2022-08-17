@@ -6,13 +6,13 @@
 /// @file	PlnCmpOperation.cpp
 /// @copyright	2018-2020 YAMAGUCHI Toshinobu 
 
+#include "boost/assert.hpp"
 #include "../../PlnConstants.h"
 #include "PlnCmpOperation.h"
 #include "../../PlnDataAllocator.h"
 #include "../../PlnGenerator.h"
 #include "../PlnType.h"
 
-#include "boost/assert.hpp"
 
 #define CREATE_CHECK_FLAG(ex)	bool is_##ex##_int = false, is_##ex##_uint = false, is_##ex##_flo = false;	\
 	union {int64_t i; uint64_t u; double d;} ex##val; \
@@ -99,7 +99,7 @@ PlnCmpOperation::PlnCmpOperation(PlnExpression* l, PlnExpression* r, PlnCmpType 
 	PlnValue v;
 	v.type = VL_WORK;
 	v.asgn_type = NO_ASGN;
-	v.inf.wk_type = PlnType::getSint()->getVarType();
+	v.inf.wk_type = PlnVarType::getSint();
 	values.push_back(v);
 }
 

@@ -5,7 +5,7 @@
 /// e.g. ) funcion(a, b) -> c, d;
 ///
 /// @file	PlnFunctionCall.cpp
-/// @copyright	2017-2021 YAMAGUCHI Toshinobu 
+/// @copyright	2017-2022 YAMAGUCHI Toshinobu 
 
 #include <boost/assert.hpp>
 
@@ -68,15 +68,6 @@ PlnFunctionCall::~PlnFunctionCall()
 		delete fv;
 	for (auto fex: free_exs)
 		delete fex;
-}
-
-void PlnFunctionCall::loadArgDps(PlnDataAllocator& da)
-{
-	PlnFunction* f = function;
-	BOOST_ASSERT(!arguments.size());
-	
-	arg_dps = f->createArgDps();
-	da.setArgDps(f->type, arg_dps, false);
 }
 
 static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& da, PlnScopeInfo& si)
@@ -144,9 +135,9 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 				if (v.type == VL_WORK && v.inf.wk_type->mode[ALLOC_MD]=='h') { // e.g. return value of function
 					BOOST_ASSERT(v.inf.wk_type->mode[ALLOC_MD]=='h');
 					// needs to free after call func.
-					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "free_var");
+					PlnVariable *tmp_var = PlnVariable::createTempVar(da, argval.param->var->var_type, "(free_var)");
 					da.pushSrc(tmp_var->place, arg_dps[dp_i], false);
-					PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
+					PlnExpression *free_ex = tmp_var->getFreeEx();
 
 					fcall->free_work_vars.push_back(tmp_var);
 					fcall->free_exs.push_back(free_ex);
@@ -199,6 +190,7 @@ static vector<PlnDataPlace*> loadArgs(PlnFunctionCall *fcall, PlnDataAllocator& 
 
 			if (clones[j]) {
 				clones[j]->data_places.push_back(arg_dps[dp_i]);
+				clones[j]->finishCopy(da, si);
 				clones[j]->finish(da, si);
 			}
 			++j;
@@ -237,7 +229,7 @@ void PlnFunctionCall::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 		if (i >= data_places.size()) {
 			if (function->return_vals[i].var_type->mode[ALLOC_MD] == 'h') {
 				PlnVariable *tmp_var = PlnVariable::createTempVar(da, function->return_vals[i].local_var->var_type, "ret" + std::to_string(i));
-				PlnExpression *free_ex = PlnFreer::getFreeEx(tmp_var);
+				PlnExpression *free_ex = tmp_var->getFreeEx();
 
 				free_vars.push_back(tmp_var);
 				free_exs.push_back(free_ex);
@@ -279,7 +271,10 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) {
 				if (clones[i]) clones[i]->genAlloc(g);
 				arg.exp->gen(g);
-				if (clones[i]) clones[i]->gen(g);
+				if (clones[i]) {
+					clones[i]->genCopy(g);
+					clones[i]->gen(g);
+				}
 				i++;
 			}
 
@@ -296,6 +291,7 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto free_work_var: free_work_vars)
 				g.genLoadDp(free_work_var->place);
 
+			BOOST_ASSERT(function->asm_name != "");
 			g.genCCall(function->asm_name, arg_dtypes, function->has_va_arg);
 
 			for (auto dp: data_places) 
@@ -330,11 +326,12 @@ void PlnFunctionCall::gen(PlnGenerator &g)
 			for (auto arg: arguments) {
 				if (clones[i]) clones[i]->genAlloc(g);
 				arg.exp->gen(g);
-				if (clones[i]) clones[i]->gen(g);
+				if (clones[i]) {
+					clones[i]->genCopy(g);
+					clones[i]->gen(g);
+				}
 				i++;
 			}
-			//for (auto& arg: arguments)
-			//	arg.exp->gen(g);
 
 			for (auto dp: arg_dps)
 				g.genLoadDp(dp, false);
@@ -365,18 +362,18 @@ static void initInternalFunctions()
 
 	f = new PlnFunction(FT_C, "__malloc");
 	f->asm_name = "malloc";
-	f->addParam("size", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_IN_BYVAL, NULL);
-	f->addRetValue(ret_name, PlnType::getObject()->getVarType());
+	f->addParam("size", PlnVarType::getSint(), PIO_INPUT, FPM_IN_BYVAL, NULL);
+	f->addRetValue(ret_name, PlnVarType::getObject());
 	internalFuncs[IFUNC_MALLOC] = f;
 
 	f = new PlnFunction(FT_C, "__free");
 	f->asm_name = "free";
-	f->addParam("ptr", PlnType::getObject()->getVarType(), PIO_INPUT, FPM_IN_BYREF, NULL);
+	f->addParam("ptr", PlnVarType::getObject(), PIO_INPUT, FPM_IN_BYREF, NULL);
 	internalFuncs[IFUNC_FREE] = f;
 
 	f = new PlnFunction(FT_C, "__exit");
 	f->asm_name = "exit";
-	f->addParam("status", PlnType::getSint()->getVarType(), PIO_INPUT, FPM_IN_BYVAL, NULL);
+	f->addParam("status", PlnVarType::getSint(), PIO_INPUT, FPM_IN_BYVAL, NULL);
 	f->never_return = true;
 	internalFuncs[IFUNC_EXIT] = f;
 }

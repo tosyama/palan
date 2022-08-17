@@ -1,7 +1,7 @@
 # What is Palan?
 Palan is a programming language (compiler) that is developing little by little, aiming at a language that can be an alternative to C language, which is simpler and safer. 
 
-Main added features of ver0.4 are object can be allocate stack or struct member directly. You can develop some practical programs by using Palan ver 0.4. (e.g. Tetris on console)
+Main added features of ver. 0.4 are object can be allocate stack or struct member directly. You can develop some practical programs by using Palan ver. 0.4. (e.g. Tetris on console)
 
 Although it run faster than the gcc -O0 in many cases, because it compiles to the assembler and optimize performance by register allocation for integer.
 
@@ -9,7 +9,7 @@ Although it run faster than the gcc -O0 in many cases, because it compiles to th
 The aim of language is that makes both clarity and simplicity compatible. Also, although it is just sense, my feeling when programming by Palan is important.
 
 # Sample program and explanation
-Although Palan ver0.4 has limited language features, you can develop a simple quick sort program like below.
+Although Palan ver. 0.4 has limited language features, you can develop a simple quick sort program like below.
 
 ```
 ccall printf(...);
@@ -83,7 +83,7 @@ There is no start function like main, the program is basically executed in order
 ccall printf(...);
 ```
 
-In the Palan ver0.4, it links with the standard C library by default. By declaring with `ccall`, you can use preferred functions of the library. `...` represents a variable length argument.
+In the Palan ver. 0.4, it links with the standard C library by default. By declaring with `ccall`, you can use preferred functions of the library. `...` represents a variable length argument.
 
 ```
 // init data.
@@ -165,7 +165,7 @@ The Palan compiler pac works on the following environment.
 - Library: g++ (gcc 5.5.0/as/ld) or later(gcc 7.3.0), libboost-program-options
 
 # Installation
-Palan ver 0.4 does not provide a binary file for installation. You need to clone and build the source from github. Please read README.md for the build method.
+Palan ver. 0.4 does not provide a binary file for installation. You need to clone and build the source from github. Please read README.md for the build method.
 
 # Command line reference
 The Palan compiler (pac) is the command line tool on the console.
@@ -214,7 +214,7 @@ After `//` description, it becomes a comment. The description is ignored until t
 ```
 
 # Primitive types
-In Palan ver 0.4, following integer types and floating point number types are available.  
+In Palan ver. 0.4, following integer types and floating point number types are available.  
 
 |Type name|Description|Minimum|Maximum|
 |:--------|:----------|:------|:------|
@@ -453,11 +453,10 @@ i + 3 -> i; // Assign 126 to i
 f () -> i, j; // Function f returns multiple values, each of which can be assigned.
 ```
 You can also use multiple assignment to swap values.
-**Note:** The specification changed from ver 0.1.
 
 ```
 int32 i, j = 1, 2;
-i, j -> j,i;  // Swap values. it become i: 2, j: 1
+i,j -> j,i;  // Swap values. it become i: 2, j: 1
 ```
 
 If you use an assignment operator for an array variable or array of array, all elements are copied. (Deep copy)
@@ -513,7 +512,7 @@ You must always be aware of rounding errors in floating point comparisons.
 
 ## Increment/decrement operation
 You can increment/decrement a variable by using `++`/`--` operator.
-You cannot use with another expressons because they are statements.
+You cannot use with another expressions because they are statements.
 
 |Operator|Name|Description|Example|
 |:-------|:---|:----------|:------|
@@ -552,7 +551,9 @@ foo (a >>, x, y) - >> a, result; // Argument for moving ownership, multiple retu
 foo (a) -> a; // Passing by content copy
 
 func foo () {...} // The function definition can be later
-func foo (int32 x, y) {...}
+func foo (int32 x, y) -> int32 {...}
+func foo ([10]int32 >>a, int32 x, y) -> [10]int32 a {...}
+func foo ([10]int32 a) {...}
 ...
 ```
 

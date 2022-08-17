@@ -135,17 +135,17 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 		assertAST(type_name == "[]", vt);
 		assertAST(vt["sizes"].is_array(), vt);
 
-		vector<int> sizes;
+		vector<PlnExpression*> init_args;
 		for (json& i: vt["sizes"]) {
 			if (i["exp-type"]=="token" && i["info"]=="?") {
 				// 0 size is only allowed first. => OK: [?,1,2]int32, NG: [1,?,3]int32
-				if (sizes.size()) {
+				if (init_args.size()) {
 					PlnCompileError err(E_OnlyAllowedAnySizeAtFirst);
 					setLoc(&err, i);
 					throw err;
 				}
 
-				sizes.push_back(0u);
+				init_args.push_back(new PlnExpression(uint64_t(0u)));
 				continue;
 			}
 
@@ -153,14 +153,15 @@ static PlnVarType* getVarTypeFromJson(json& var_type, PlnScopeStack& scope)
 
 			int vtype = e->values[0].type;
 			if (e->type == ET_VALUE && (vtype == VL_LIT_INT8 || vtype == VL_LIT_UINT8)) {
-				sizes.push_back(e->values[0].inf.uintValue);
+				init_args.push_back(new PlnExpression(e->values[0].inf.uintValue));
 			} else {
 				PlnCompileError err(E_OnlyAllowedIntegerHere);
 				setLoc(&err, i);
 				throw err;
 			}
 		}
-		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, sizes, mode);
+
+		PlnVarType* arr_t = CUR_BLOCK->getFixedArrayType(ret_vt, init_args, mode);
 		ret_vt = arr_t;
 	}
 
@@ -316,7 +317,7 @@ void registerPrototype(json& proto, PlnScopeStack& scope)
 				throw err;
 
 			} else if (param["name"] == "...") {
-				var_type = PlnType::getAny()->getVarType();
+				var_type = PlnVarType::getAny();
 
 			} else {
 				var_type = getVarTypeFromJson(param["var-type"], scope);
@@ -562,21 +563,21 @@ static PlnVarType* getDefaultType(PlnValue &val, PlnBlock *block)
 	if (val.type == VL_VAR)
 		return val.inf.var->var_type;
 	else if (val.type == VL_LIT_INT8)
-		return PlnType::getSint()->getVarType();
+		return PlnVarType::getSint();
 	else if (val.type == VL_LIT_UINT8)
-		return PlnType::getUint()->getVarType();
+		return PlnVarType::getUint();
 	else if (val.type == VL_LIT_FLO8)
-		return PlnType::getFlo64()->getVarType();
+		return PlnVarType::getFlo64();
 	else if (val.type == VL_WORK) {
 		if (val.inf.wk_type->typeinf->type == TP_ARRAY_VALUE) {
-			return static_cast<PlnArrayValueType*>(val.inf.wk_type->typeinf)->getDefaultType(block);
+			return static_cast<PlnArrayValueTypeInfo*>(val.inf.wk_type->typeinf)->getDefaultType(block);
 		} else {
 			return val.inf.wk_type;
 		}
 	} else if (val.type == VL_LIT_STR)
-		return PlnType::getReadOnlyCStr()->getVarType();
+		return PlnVarType::getReadOnlyCStr();
 	else if (val.type == VL_LIT_ARRAY)
-		return static_cast<PlnArrayValueType*>(val.inf.arrValue->values[0].inf.wk_type->typeinf)->getDefaultType(block);
+		return static_cast<PlnArrayValueTypeInfo*>(val.inf.arrValue->values[0].inf.wk_type->typeinf)->getDefaultType(block);
 	else
 		BOOST_ASSERT(false);
 } // LCOV_EXCL_LINE
@@ -610,6 +611,7 @@ sz_err:
 	throw err;
 }
 
+
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 {
 	assertAST(var_init["vars"].is_array(), var_init);
@@ -639,11 +641,11 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 				t = getDefaultType(inits[init_ex_ind]->values[init_val_ind], CUR_BLOCK);
 
 				// Cstr -> []byte
-				if (t->typeinf == PlnType::getReadOnlyCStr()) {
+				if (t->typeinf == PlnVarType::getReadOnlyCStr()->typeinf) {
 					string mode = "---";
-					int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
-					vector<int> sizes = { size };
-					t = CUR_BLOCK->getFixedArrayType(PlnType::getByte()->getVarType(), sizes, mode);
+					uint64_t size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
+					vector<PlnExpression*> init_args = { new PlnExpression(size) };
+					t = CUR_BLOCK->getFixedArrayType(PlnVarType::getByte(), init_args, mode);
 				}
 
 			} catch (PlnCompileError &err) {
@@ -655,18 +657,20 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			vector<int> sizes;
 			PlnValue &val = inits[init_ex_ind]->values[init_val_ind];
 
-			PlnType *tt = val.getVarType()->typeinf;
+			PlnTypeInfo *tt = val.getVarType()->typeinf;
 			if (tt->type == TP_FIXED_ARRAY) {
-				while (tt->type == TP_FIXED_ARRAY) {
-					PlnFixedArrayType* atype = static_cast<PlnFixedArrayType*>(tt);
+				PlnFixedArrayVarType* atype = static_cast<PlnFixedArrayVarType*>(val.getVarType());
+				while (atype) {
 					for (int sz: atype->sizes) {
 						sizes.push_back(sz);	
 					}
-					tt = atype->item_type->typeinf;
+					tt = atype->typeinf;
+					atype = dynamic_cast<PlnFixedArrayVarType*>(atype->item_type());
 				}
+
 			} else if (tt->type == TP_ARRAY_VALUE) {
-				sizes = static_cast<PlnArrayValueType*>(tt)->getArraySizes();
-			} else if (tt == PlnType::getReadOnlyCStr()) {
+				sizes = static_cast<PlnArrayValueTypeInfo*>(tt)->getArraySizes();
+			} else if (tt == PlnVarType::getReadOnlyCStr()->typeinf) {
 				int size = inits[init_ex_ind]->values[init_val_ind].inf.strValue->size()+1;
 				sizes.push_back(size);
 			}
@@ -797,7 +801,7 @@ void registerType(json& type, PlnScopeStack &scope)
 		PlnVarType* t = getVarTypeFromJson(type["var-type"], scope);
 		string type_name = type["name"];
 
-		CUR_BLOCK->declareAliasType(type_name, t->typeinf);
+		CUR_BLOCK->declareAliasType(type_name, t);
 
 	} else {
 		BOOST_ASSERT(false);
@@ -947,7 +951,7 @@ PlnStatement* buildOpeAssignment(json& opeasgn, PlnScopeStack& scope, json& ast)
 			BOOST_ASSERT(var_val->values[0].type == VL_VAR);
 			auto sub_block = new PlnBlock();
 			sub_block->setParent(CUR_BLOCK);
-			PlnVarType *t = var_val->values[0].inf.var->var_type->typeinf->getVarType("w-r");
+			PlnVarType *t = var_val->values[0].inf.var->var_type->getVarType("w-r");
 			PlnVariable *v = sub_block->declareVariable("__tmp", t, false);
 
 			vector<PlnValue> vars = {v};
@@ -1225,7 +1229,7 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 			// need to much type completely for move.
 			PlnVarType* src_vtype = src_exps[src_ex_ind]->values[src_val_ind].getVarType();
 			if (src_vtype->typeinf != types.back()->typeinf || src_vtype->mode[IDENTITY_MD] != 'm') {
-				PlnCompileError err(E_CantUseMoveOwnershipFrom, src_vtype->name());
+				PlnCompileError err(E_CantUseMoveOwnershipFrom, src_vtype->tname());
 				err.loc = src_exps[src_ex_ind]->loc;
 				throw err;
 				
