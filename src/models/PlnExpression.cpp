@@ -188,6 +188,8 @@ PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
 				throw err;
 			}
 		}
+	} else {
+		// ex) f() -> value1, value2
 	}
 	return this;
 }

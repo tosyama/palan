@@ -15,3 +15,5 @@ ccall printf(@[?]byte format, ...) -> int32;
 
 // a2 ->> a3;
 
+@[2]int32 x = a2;
+// object x2 = a2;
