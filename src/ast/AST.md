@@ -93,7 +93,7 @@ Variable Type
     1.  --- - dafault: depend on type
     2.  rir - read-only reference (@)
     3.  wcr - writable reference (@!)
-    4.  wis - writable stack/direct allocation (#)
+    4.  wis - writable stack/direct allocation ($)
 
 *   loc - Location integer array
 

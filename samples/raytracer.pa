@@ -77,13 +77,13 @@ type jpeg_compress_struct {
 	int32 num_components;	// int num_components;
 	J_COLOR_SPACE jpeg_color_space;
 	ptr comp_info; // jpeg_component_info *comp_info;
-	#[4]ptr quant_tbl_ptrs; // JQUANT_TBL *quant_tbl_ptrs[4];
-	#[4]int32 q_scale_factor; // int q_scale_factor[NUM_QUANT_TBLS]; // NUM_QUANT_TBLS = 4
-	#[4]ptr dc_huff_tbl_ptrs; // JHUFF_TBL *dc_huff_tbl_ptrs[4];
-	#[4]ptr ac_huff_tbl_ptrs; // JHUFF_TBL *ac_huff_tbl_ptrs[4];
-	#[16]byte arith_dc_L; // UINT8 arith_dc_L[16];
-	#[16]byte arith_dc_U; // UINT8 arith_dc_U[16];
-	#[16]byte arith_ac_K; // UINT8 arith_ac_K[16];
+	$[4]ptr quant_tbl_ptrs; // JQUANT_TBL *quant_tbl_ptrs[4];
+	$[4]int32 q_scale_factor; // int q_scale_factor[NUM_QUANT_TBLS]; // NUM_QUANT_TBLS = 4
+	$[4]ptr dc_huff_tbl_ptrs; // JHUFF_TBL *dc_huff_tbl_ptrs[4];
+	$[4]ptr ac_huff_tbl_ptrs; // JHUFF_TBL *ac_huff_tbl_ptrs[4];
+	$[16]byte arith_dc_L; // UINT8 arith_dc_L[16];
+	$[16]byte arith_dc_U; // UINT8 arith_dc_U[16];
+	$[16]byte arith_ac_K; // UINT8 arith_ac_K[16];
 	int32 num_scans;	// int num_scans;
 	ptr scan_info; // const jpeg_scan_info *scan_info;
 	boolean raw_data_in;
@@ -110,11 +110,11 @@ type jpeg_compress_struct {
 	int32 min_DCT_v_scaled_size;	// int min_DCT_v_scaled_size;    /* smallest DCT_v_scaled_size of any component */
 	JDIMENSION total_iMCU_rows;
 	int32 comps_in_scan; // int comps_in_scan;
-	#[4]ptr cur_comp_info; // jpeg_component_info *cur_comp_info[4];
+	$[4]ptr cur_comp_info; // jpeg_component_info *cur_comp_info[4];
 	JDIMENSION MCUs_per_row;
 	JDIMENSION MCU_rows_in_scan;
 	int32 blocks_in_MCU; // int blocks_in_MCU;
-	#[10]int32 MCU_membership; // int MCU_membership[10];
+	$[10]int32 MCU_membership; // int MCU_membership[10];
 	int32 Ss; // int Ss;
 	int32 Se; // int Se;
 	int32 Ah; // int Ah;
@@ -209,7 +209,7 @@ func normalize(@!Vec3f v)
 
 func reflect(@!Vec3f ret, @Vec3f I, @Vec3f N)
 {
-	#Vec3f tmp;
+	$Vec3f tmp;
 	tmp.mulvf(N, 2.0*mul(I, N));
 	I.x - tmp.x -> ret.x;
 	I.y - tmp.y -> ret.y;
@@ -221,7 +221,7 @@ func refract(@!Vec3f ret, @Vec3f I, @Vec3f N, flo32 eta_t, flo32 eta_i = 1.0)
 	flo32 cosi = -fmaxf(-1.0, fminf(1.0, mul(I, N)));
 
 	if cosi < 0 {
-	 	#Vec3f nN;
+	 	$Vec3f nN;
 		nN.neg(N);
 		ret.refract(I, nN, eta_i, eta_t);	// if the ray comes from inside the object, swap the airt and the media
 		return;
@@ -234,7 +234,7 @@ func refract(@!Vec3f ret, @Vec3f I, @Vec3f N, flo32 eta_t, flo32 eta_i = 1.0)
 
 	if k>=0 {
 		ret.mulvf(I, eta);
-		#Vec3f tmp;
+		$Vec3f tmp;
 		tmp.mulvf(N, eta*cosi - sqrtf(k));
 		ret.add(tmp, ret);
 	}
@@ -355,7 +355,7 @@ func render(@[PN]Sphere spheres, @[LN]Light lights)
 	while j < height {
 		i = 0;
 		while i < width {
-			#Vec3f dir = [
+			$Vec3f dir = [
 				(i+0.5) - width/2.0,
 				-(j+0.5) + height/2.0,
 				-height/(2.0 * tanf(fov/2.0))
@@ -377,7 +377,7 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	0.2, 0.7, 0.8 -> r, g, b;
 	if depth > 4 { return }
 
-	#Vec3f point, N;
+	$Vec3f point, N;
 	boolean is_intersect,
 	Material material
 		= scene_intersect(orig, dir, spheres, point!, N!);
@@ -385,32 +385,32 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	if !is_intersect { return }
 
 	// reflect
-	#Vec3f reflect_dir;
+	$Vec3f reflect_dir;
 	reflect_dir.reflect(dir, N);
 	reflect_dir.normalize();
-	#Vec3f reflect_orig;
+	$Vec3f reflect_orig;
 	reflect_orig.mulvf(N, 1.0e-3);
 	if mul(reflect_dir, N) < 0 {
 		reflect_orig.sub(point, reflect_orig);
 	} else {
 		reflect_orig.add(point, reflect_orig);
 	}
-	#Color3f reflect_color;
+	$Color3f reflect_color;
 	cast_ray(reflect_orig, reflect_dir, spheres, lights, depth+1)
 		-> reflect_color.r, reflect_color.g, reflect_color.b;
 
 	// refract
-	#Vec3f refract_dir;
+	$Vec3f refract_dir;
 	refract_dir.refract(dir, N, material.refractive_index);
 	refract_dir.normalize();
-	#Vec3f refract_orig;
+	$Vec3f refract_orig;
 	refract_orig.mulvf(N, 1.0e-3);
 	if mul(refract_dir, N) < 0 {
 		refract_orig.sub(point, refract_orig);
 	} else {
 	 	refract_orig.add(point, refract_orig);
 	}
-	#Color3f refract_color;
+	$Color3f refract_color;
 	cast_ray(refract_orig, refract_dir, spheres, lights, depth+1)
 	 	-> refract_color.r, refract_color.g, refract_color.b;
 	
@@ -419,14 +419,14 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 	i = 0;
 	while i<LN {
 		@Light l = lights[i];
-		#Vec3f light_dir;
+		$Vec3f light_dir;
 		light_dir.sub(l.position, point);
 		flo32 light_distance = norm(light_dir);
 		light_dir.normalize();
 
 		{	// shadow
-			#Vec3f shadow_orig;
-			#Vec3f n;
+			$Vec3f shadow_orig;
+			$Vec3f n;
 			n.mulvf(N, 1.0e-3);
 			if mul(light_dir, N) < 0 {
 				shadow_orig.sub(point, n);
@@ -434,13 +434,13 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 				shadow_orig.add(point, n);
 			}
 
-			#Vec3f shadow_pt, tmp_N;
+			$Vec3f shadow_pt, tmp_N;
 			boolean is_intersect_shadow,
 			Material tmp_mate
 				= scene_intersect(shadow_orig, light_dir, spheres, shadow_pt!, tmp_N!);
 
 			if is_intersect_shadow {
-				#Vec3f shadow_dir;
+				$Vec3f shadow_dir;
 				shadow_dir.sub(shadow_pt, shadow_orig);
 				if norm(shadow_dir) < light_distance {
 					i++;
@@ -454,7 +454,7 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 		 -> diffuse_light_intensity;
 
 		{ // specular
-			#Vec3f tmp;
+			$Vec3f tmp;
 			tmp.neg(light_dir);
 			tmp.reflect(tmp, N);
 			specular_light_intensity + powf(fmaxf(0.0, -mul(tmp, dir)), material.specular_exponent) * l.intensity
@@ -463,14 +463,14 @@ func cast_ray(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @[LN]Light lights, i
 		i++;
 	 }
 
-	#Color3f diffuse_color = material.diffuse_color;
-	#Color3f specular_color = [1.0, 1.0, 1.0];
+	$Color3f diffuse_color = material.diffuse_color;
+	$Color3f specular_color = [1.0, 1.0, 1.0];
 	diffuse_color.mul_color(diffuse_light_intensity * material.albedo[0]);
 	specular_color.mul_color(specular_light_intensity * material.albedo[1]);
 	reflect_color.mul_color(material.albedo[2]);
 	refract_color.mul_color(material.albedo[3]);
 
-	#Color3f ret = diffuse_color;
+	$Color3f ret = diffuse_color;
 	ret.add_color(specular_color)
 		.add_color(reflect_color)
 	 	.add_color(refract_color);
@@ -489,7 +489,7 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @!Vec3f hit, 
 		if is_intersect_i && dist_i < distance {
 			@Sphere sp = spheres[i];
 			dist_i -> distance;
-			#Vec3f tmp;
+			$Vec3f tmp;
 			tmp.mulvf(dir, dist_i);
 			hit.add(orig, tmp);
 			N.sub(hit, sp.center);
@@ -501,7 +501,7 @@ func scene_intersect(@Vec3f orig, @Vec3f dir, @[PN]Sphere spheres, @!Vec3f hit, 
 
 	if fabsf(dir.y) > 1.0e-3 {
 		flo32 d = -(orig.y + 4.0) / dir.y;	// the checkerboard plane has equebyt y = -4
-		#Vec3f pt;
+		$Vec3f pt;
 		pt.mulvf(dir, d); 
 		pt.add(orig, pt);
 		if d>0 && fabsf(pt.x)<10 && pt.z<-10 && pt.z>-30 && d < distance {
@@ -526,7 +526,7 @@ func sphere_ray_intersect(@Sphere sp, @Vec3f orig, dir)
 {
 	FALSE -> is_intersect;
 
-	#Vec3f L;
+	$Vec3f L;
 	L.sub(sp.center, orig);
 	flo32 tca = mul(L, dir);
 	flo32 d2 = mul(L, L) - tca*tca;
