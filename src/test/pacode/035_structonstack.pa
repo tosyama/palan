@@ -18,10 +18,10 @@ type B {
 
 {
 	// init test
-	#A a_stk = [1,2];
+	$A a_stk = [1,2];
  	A a_heap = [3,4];
- 	#A a2_stk = a_heap;
-	#A a3_stk;
+ 	$A a2_stk = a_heap;
+	$A a3_stk;
 
 	// member access
 	a_stk.b + a2_stk.b -> a3_stk.a;
@@ -45,8 +45,8 @@ type B {
 int64 x = 99;
 mtrace();
 {
-	#A a = [1,2];
-	#B b;
+	$A a = [1,2];
+	$B b;
 
 	a->b.o;
 	b.o.b -> x;
@@ -58,7 +58,7 @@ printf(" %d", x);
 // 	test2->testx;
 // 	testx->test2;
 	
-//	#B b;	// NG
+//	$B b;	// NG
 
 //	4->zz[2];
 

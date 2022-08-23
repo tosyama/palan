@@ -86,6 +86,7 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %token AT_EXCL	"@!"
 %token DBL_PLUS	"++"
 %token DBL_MINUS "--"
+%token INVALID_CHAR "invalid character"
 
 %type <string>	strs
 %type <string>	arg_opt
@@ -132,10 +133,10 @@ int yylex(	palan::PlnParser::semantic_type* yylval,
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-'
 %left '*' '/' '%' '&'
-%right UMINUS '!' '@' '#'
+%right UMINUS '!' '@' '$'
 %left '.'
 
-%start module	
+%start module
 
 %%
 module: /* empty */
@@ -1335,7 +1336,7 @@ type_prefix_ref: '@'
 		json t = { { "mode", "wcr" } };
 		$$.push_back(move(t));
 	}
-	| '#'
+	| '$'
 	{
 		json t = { { "mode", "wis" } };
 		$$.push_back(move(t));
@@ -1352,7 +1353,7 @@ type_prefix_ref: '@'
 		$1.push_back(move(t));
 		$$ = move($1);
 	}
-	| type_prefix_arr '#'
+	| type_prefix_arr '$'
 	{
 		json t = { { "mode", "wis" } };
 		$1.push_back(move(t));

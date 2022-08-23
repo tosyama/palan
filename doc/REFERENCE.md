@@ -319,10 +319,10 @@ If you omit the number of elements when initializing array variables, it will be
 
 ## Direct allocation of object elements
 In default, objects such as arrays or structures are placed at heap area, and array elements keep referenc of them.
-You can place the opject at element area directy by prefixing the element's type name with `#`.
+You can place the opject at element area directy by prefixing the element's type name with `$`.
 
 ```
-[2]#[3]int32 a;   // The Memory allocation is same as [2,3]int32.
+[2]$[3]int32 a;   // The Memory allocation is same as [2,3]int32.
 ```
 
 # Structure
@@ -339,12 +339,12 @@ User userA;  // The declaration of User variable userA.
 ```
 ## Direct allocation of object members
 In default, objects such as arrays or structures are placed at heap area, and structure members keep referenc of them.
-You can place the opject at member area directy by prefixing the member's type name with `#`.
+You can place the opject at member area directy by prefixing the member's type name with `$`.
 
 ```
 type User {
 	int64 id;
-	#[80]byte name;	// This object is placed at structure area.
+	$[80]byte name;	// This object is placed at structure area.
 	int16 age;
 };
 ```
@@ -375,12 +375,12 @@ User userB;
 # Allocation for stack area
 In default, object variables such as arrays or structures are placed at heap area.
 This allocation process possible to be bottle neck of performance in cases.
-You can optimaize performance by placing the objects on stack area by prefixing type with `#`.
+You can optimaize performance by placing the objects on stack area by prefixing type with `$`.
 However you should be careful for stack overflow.
 
 ```
-#[3]int32 a = [1,2,3];
-#User u = [101, "Alice", 12];
+$[3]int32 a = [1,2,3];
+$User u = [101, "Alice", 12];
 ```
 
 

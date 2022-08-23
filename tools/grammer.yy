@@ -57,7 +57,7 @@ int yylex();
 %left '<' '>' OPE_LE OPE_GE
 %left '+' '-' '|'
 %left '*' '/' '%' '&'
-%left UMINUS '!' '@' '#'
+%left UMINUS '!' '@' '$'
 %left '.'
 
 %start module	
@@ -354,10 +354,10 @@ type: ID
 
 type_prefix_ref: '@'
 	| AT_EXCL
-	| '#'
+	| '$'
 	| type_prefix_arr '@'
 	| type_prefix_arr AT_EXCL
-	| type_prefix_arr '#'
+	| type_prefix_arr '$'
 	;
 
 type_prefix_arr: array_vals

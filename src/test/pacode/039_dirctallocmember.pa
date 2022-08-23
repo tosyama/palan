@@ -1,13 +1,13 @@
 ccall printf(@[?]byte format, ...) -> int32;
 
 type A {
-	#[10]int32 a;
+	$[10]int32 a;
 	int32 b;
 };
 
 type B {
 	int32 c;
-	#A aa;
+	$A aa;
 	int32 z;
 };
 // Assignment.
@@ -38,7 +38,7 @@ type C {
 	int32 b;
 };
 
-[3]#C arr = [1,2][3,4][5,6];
+[3]$C arr = [1,2][3,4][5,6];
 printf("%d ", arr[1].b);
 
 [11,12][21,22][31,32] -> arr;
@@ -66,19 +66,19 @@ type inc_obj_ref {
 type jpeg_compress_struct {
 	jpeg_error_mgr err;// struct jpeg_error_mgr *err;
 	ptr comp_info; // jpeg_component_info *comp_info;
-	#[4]ptr quant_tbl_ptrs;
-	#inc_obj_ref dummy;
+	$[4]ptr quant_tbl_ptrs;
+	$inc_obj_ref dummy;
 };
 
 jpeg_compress_struct js;
 
 type User {
 	int64 id;
-	#[16]byte name1, name2;
+	$[16]byte name1, name2;
 	int16 age;
 };
 
-#User u = [101, "Alice","Bob", 12];
+$User u = [101, "Alice","Bob", 12];
 
 printf("%s,%s,%d", u.name1, u.name2, u.age);
 

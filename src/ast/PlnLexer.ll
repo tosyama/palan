@@ -58,7 +58,8 @@ enum {
 	DBL_EQ_ARROW	= PlnParser::token::DBL_EQ_ARROW,
 	AT_EXCL		= PlnParser::token::AT_EXCL,
 	DBL_PLUS	= PlnParser::token::DBL_PLUS,
-	DBL_MINUS	= PlnParser::token::DBL_MINUS
+	DBL_MINUS	= PlnParser::token::DBL_MINUS,
+	INVALID_CHAR	= PlnParser::token::INVALID_CHAR
 };
 
 static string& unescape(string& str);
@@ -82,7 +83,7 @@ DBL_ARROW	"->>"
 EQ_ARROW	"=>"
 DBL_EQ_ARROW	"=>>"
 AT_EXCL		"@!"
-DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."|"#"
+DELIMITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."|"$"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 COMMENT1	\/\/[^\n]*\n
 POST_KW ([ \t\r\n(]|{COMMENT1})*		/* To keep priority than FUNC_ID. */
@@ -180,8 +181,7 @@ extern/{POST_KW} 	{ return KW_EXTERN; }
 [ \t]+		{ loc.step(); }
 \r\n|\r|\n	{ loc.lines(); loc.step(); }
 .	{
-		cerr << "Lexer: Unrecognized char \"" << yytext[0] << "\"" << endl;
-		loc.step();
+		return INVALID_CHAR;
 	}
 
 %%
