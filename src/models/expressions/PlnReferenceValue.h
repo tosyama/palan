@@ -12,7 +12,8 @@ public:
 	PlnReferenceValue(PlnExpression *refvar_ex);
 	~PlnReferenceValue();
 
-	PlnExpression* adjustTypes(const vector<PlnVarType*> &types) override;
+	PlnExpression* preprocess(const PlnVarType *dst_type);
+
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 };

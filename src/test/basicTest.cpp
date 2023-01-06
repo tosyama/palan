@@ -573,7 +573,7 @@ TEST_CASE("Array description compile error test", "[basic]")
 	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to 'int64'.");
 
 	testcode = "529_arrlit_type_err3";
-	REQUIRE(build(testcode) == "0:2-3 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
+	REQUIRE(build(testcode) == "0:3-3 Incompatible types in assignment of 'array value' to '[2,3]int64'.");
 
 	testcode = "530_arrlit_type_err4";
 	REQUIRE(build(testcode) == "0:1-1 Incompatible types in assignment of 'array value' to '[3]int64'.");

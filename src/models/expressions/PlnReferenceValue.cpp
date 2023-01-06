@@ -46,17 +46,9 @@ PlnReferenceValue::~PlnReferenceValue()
 	delete refvar_ex;
 }
 
-PlnExpression* PlnReferenceValue::adjustTypes(const vector<PlnVarType*> &types)
+PlnExpression* PlnReferenceValue::preprocess(const PlnVarType *dst_type)
 {
-	BOOST_ASSERT(types.size() == 1);
-	PlnVarType *vtype = values[0].getVarType();
-	if (types[0]->canCopyFrom(vtype, ASGN_COPY) == TC_CANT_CONV) {
-		PlnCompileError err(E_IncompatibleTypeAssign, vtype->tname(), types[0]->tname());
-		err.loc = loc;
-		throw err;
-	}
-	
-	if (types[0]->mode[ALLOC_MD] == 'r') { // lea (%src)  %dst -> mov %src %dst
+	if (dst_type->mode[ALLOC_MD] == 'r') { // lea (%src)  %dst -> mov %src %dst
 		auto ret_ex = refvar_ex;
 		refvar_ex = NULL;
 		delete this;

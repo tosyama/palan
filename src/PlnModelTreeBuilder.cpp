@@ -11,6 +11,7 @@
 #include "PlnConstants.h"
 #include "PlnMessage.h"
 #include "PlnException.h"
+#include "PlnTreeBuildHelper.h"
 #include "models/PlnType.h"
 #include "models/PlnModule.h"
 #include "models/PlnFunction.h"
@@ -611,6 +612,30 @@ sz_err:
 	throw err;
 }
 
+PlnExpression* preprocess(vector<PlnVarType*> &dst_types, vector<PlnAsgnType> &asgn_types, PlnExpression* src_ex)
+{
+	PlnExpression *ret_src_ex = src_ex;
+
+	if (dst_types.size() == 1)
+		ret_src_ex = palan::preprocessSrcEx(src_ex, dst_types[0]);
+
+	int i=0;
+	for (auto dst_type: dst_types) {
+		if (i >= ret_src_ex->values.size()) break;
+
+		PlnVarType *src_type = ret_src_ex->values[i].getVarType();
+
+		if (dst_type->canCopyFrom(src_type, asgn_types[i]) == TC_CANT_CONV) {
+			PlnCompileError err(E_IncompatibleTypeAssign, src_type->tname(), dst_type->tname());
+
+			err.loc = ret_src_ex->loc;
+			throw err;
+		}
+		i++;
+	}
+
+	return ret_src_ex;
+}
 
 PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 {
@@ -621,8 +646,9 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			inits.push_back(buildExpression(exp, scope));
 		}
 
-	vector<PlnValue> vars;
+	vector<PlnValue> vals;
 	vector<PlnVarType*> types;
+	vector<PlnAsgnType> asgn_types;
 	int init_ex_ind = 0;
 	int init_val_ind = 0;
 	for (json &var: var_init["vars"]) {
@@ -690,17 +716,18 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			setLoc(&err, var);
 			throw err;
 		}
-		vars.push_back(v);
 		types.push_back(v->var_type);
+		vals.push_back(v);
 
 		// set asgn_type
 		if (var["get-owner"] == true) {
-			vars.back().asgn_type = ASGN_MOVE;
+			vals.back().asgn_type = ASGN_MOVE;
 		} else if (v->var_type->data_type() == DT_OBJECT_REF && v->var_type->mode[ALLOC_MD] == 'r') {
-			vars.back().asgn_type = ASGN_COPY_REF;
+			vals.back().asgn_type = ASGN_COPY_REF;
 		} else {
-			vars.back().asgn_type = ASGN_COPY;
+			vals.back().asgn_type = ASGN_COPY;
 		}
+		asgn_types.push_back(vals.back().asgn_type);
 
 		setLoc(v, var);
 
@@ -708,18 +735,19 @@ PlnVarInit* buildVarInit(json& var_init, PlnScopeStack &scope)
 			if (init_val_ind+1 < inits[init_ex_ind]->values.size()) {
 				init_val_ind++;
 			} else {
-				inits[init_ex_ind] = inits[init_ex_ind]->adjustTypes(types);
+				inits[init_ex_ind] = preprocess(types, asgn_types, inits[init_ex_ind]);
 				init_ex_ind++;
 				init_val_ind = 0;
 				types.clear();
+				asgn_types.clear();
 			}
 		}
 	}
 
 	if (inits.size()) {
-		return new PlnVarInit(vars, &inits);
+		return new PlnVarInit(vals, &inits);
 	} else {
-		return new PlnVarInit(vars);
+		return new PlnVarInit(vals);
 	}
 }
 
@@ -841,6 +869,7 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 	int ri = 0;
 	for (int ri=0; ri<ret_vals.size(); ri++) {
 		vector<PlnVarType*> types;
+		vector<PlnAsgnType> asgn_types;
 		PlnExpression* e = ret_vals[ri];
 		for (int i=0; i<e->values.size(); i++) {
 			if (ti >= f->return_vals.size()) {
@@ -849,9 +878,10 @@ PlnStatement* buildReturn(json& ret, PlnScopeStack& scope)
 				throw err;
 			}
 			types.push_back(f->return_vals[ti].var_type);
+			asgn_types.push_back(ASGN_COPY);
 			ti++;
 		}
-		ret_vals[ri] = e->adjustTypes(types);
+		ret_vals[ri] = preprocess(/*vars, */types, asgn_types, e);
 	}
 	
 	try {
@@ -1179,6 +1209,7 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 		for (auto& arg: args) {
 			bool do_adjust = true;
 			vector<PlnVarType*> types;
+			vector<PlnAsgnType> asgn_types;
 
 			for (auto& argvinf: arg.inf) {
 				if (argvinf.param->var->name == "...") {
@@ -1186,10 +1217,26 @@ PlnExpression* buildFuncCall(json& fcall, PlnScopeStack &scope)
 					break;
 				}
 				types.push_back(argvinf.param->var->var_type);
+				switch(argvinf.param->passby) {
+					case FPM_IN_BYVAL:
+					case FPM_IN_BYREF_CLONE:
+						asgn_types.push_back(ASGN_COPY);
+						break;
+					case FPM_IN_BYREF:
+						asgn_types.push_back(ASGN_COPY_REF);
+						break;
+					case FPM_IN_BYREF_MOVEOWNER:
+						asgn_types.push_back(ASGN_MOVE);
+						break;
+					default:
+						asgn_types.push_back(ASGN_COPY);
+						break;
+				}
 			}
 
-			if (do_adjust)
-				arg.exp = arg.exp->adjustTypes(types);
+			if (do_adjust) {
+				arg.exp = preprocess(types, asgn_types, arg.exp);
+			}
 		}
 
 		return new PlnFunctionCall(f, args);
@@ -1214,7 +1261,8 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 	assertAST(dst.is_array(), asgn);
 
 	vector<PlnExpression*> dst_vals;
-	vector<PlnVarType*> types;
+	vector<PlnVarType*> temp_dst_types;
+	vector<PlnAsgnType> temp_asgn_types;
 
 	int src_ex_ind = 0;
 	int src_val_ind = 0;
@@ -1223,12 +1271,13 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 		BOOST_ASSERT(dst_vals.back()->values[0].type == VL_VAR);
 		BOOST_ASSERT(dst_vals.back()->values[0].getVarType()->mode[ACCESS_MD] != 'r');
 
-		types.push_back(dst_vals.back()->values[0].inf.var->var_type);
+		temp_dst_types.push_back(dst_vals.back()->values[0].getVarType());
+		temp_asgn_types.push_back(dst_vals.back()->values[0].asgn_type);
 
 		if (dst_vals.back()->values[0].asgn_type == ASGN_MOVE) {
 			// need to much type completely for move.
 			PlnVarType* src_vtype = src_exps[src_ex_ind]->values[src_val_ind].getVarType();
-			if (src_vtype->typeinf != types.back()->typeinf || src_vtype->mode[IDENTITY_MD] != 'm') {
+			if (src_vtype->typeinf != dst_vals.back()->values[0].inf.var->var_type->typeinf || src_vtype->mode[IDENTITY_MD] != 'm') {
 				PlnCompileError err(E_CantUseMoveOwnershipFrom, src_vtype->tname());
 				err.loc = src_exps[src_ex_ind]->loc;
 				throw err;
@@ -1240,10 +1289,11 @@ PlnExpression* buildAssignment(json& asgn, PlnScopeStack &scope)
 			if (src_val_ind+1 < src_exps[src_ex_ind]->values.size()) {
 				src_val_ind++;
 			} else {
-				src_exps[src_ex_ind] = src_exps[src_ex_ind]->adjustTypes(types);
+				src_exps[src_ex_ind] = preprocess(/*temp_dst_vars, */temp_dst_types, temp_asgn_types, src_exps[src_ex_ind]);
 				src_ex_ind++;
 				src_val_ind = 0;
-				types.clear();
+				temp_dst_types.clear();
+				temp_asgn_types.clear();
 			}
 		}
 	}

@@ -18,6 +18,8 @@
 #include "models/expressions/PlnAssignment.h"
 #include "models/expressions/PlnCmpOperation.h"
 #include "models/expressions/PlnFunctionCall.h"
+#include "models/expressions/PlnArrayValue.h"
+#include "models/expressions/PlnReferenceValue.h"
 #include "models/types/PlnFixedArrayType.h"
 
 namespace palan
@@ -110,6 +112,23 @@ PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, PlnExpression* loop_num_e
 	wblock->setParent(block);
 
 	return wblock;
+}
+
+PlnExpression* preprocessSrcEx(PlnExpression* src_ex, PlnVarType* dst_type)
+{
+	PlnExpression *ret_src_ex = src_ex;
+
+	if (src_ex->type == ET_VALUE && src_ex->values[0].type == VL_LIT_ARRAY) {
+		src_ex->values[0].inf.arrValue->preprocess(dst_type);
+
+	} else if (src_ex->type == ET_REFVALUE) {
+		ret_src_ex = static_cast<PlnReferenceValue*>(src_ex)->preprocess(dst_type);
+
+	} else if (src_ex->type == ET_ARRAYVALUE) {
+		static_cast<PlnArrayValue*>(src_ex)->preprocess(dst_type);
+	}
+
+	return ret_src_ex;
 }
 
 } // end namespace

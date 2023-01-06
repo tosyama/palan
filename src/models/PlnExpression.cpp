@@ -168,32 +168,6 @@ int PlnExpression::getDataType(int val_ind)
 	return values[val_ind].getVarType()->data_type();
 }
 
-PlnExpression* PlnExpression::adjustTypes(const vector<PlnVarType*> &types)
-{
-	if (type == ET_VALUE) {
-		BOOST_ASSERT(types.size()==1);
-		if (values[0].type == VL_LIT_ARRAY) {
-			try {
-				values[0].inf.arrValue->adjustTypes(types);
-			} catch (PlnCompileError& err) {
-				err.loc = loc;
-				throw;
-			}
-			
-		} else {
-			PlnVarType *vtype = values[0].getVarType();
-			if (types[0]->canCopyFrom(vtype, ASGN_COPY) == TC_CANT_CONV) {
-				PlnCompileError err(E_IncompatibleTypeAssign, vtype->tname(), types[0]->tname());
-				err.loc = loc;
-				throw err;
-			}
-		}
-	} else {
-		// ex) f() -> value1, value2
-	}
-	return this;
-}
-
 void PlnExpression::finish(PlnDataAllocator& da, PlnScopeInfo& si)
 {
 	BOOST_ASSERT(data_places.size() <= 1);

@@ -15,11 +15,10 @@ public:
 	PlnArrayValue(vector<PlnExpression*> &exps, bool isLiteral);
 	PlnArrayValue(const PlnArrayValue& src);
 
-	PlnExpression* adjustTypes(const vector<PlnVarType*> &types) override;
-
 	void finish(PlnDataAllocator& da, PlnScopeInfo& si) override;
 	void gen(PlnGenerator& g) override;
 
+	void preprocess(PlnVarType *dst_type);
 	vector<PlnExpression*> getAllItems();
 	PlnDataPlace* getROArrayDp(PlnDataAllocator& da);	// for PlnExpression
 	PlnDataPlace* getROStructDp(PlnDataAllocator& da);	// for PlnExpression

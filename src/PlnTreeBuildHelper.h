@@ -17,5 +17,7 @@ namespace palan
 	PlnArrayItem* rawArrayItem(PlnVariable* var, PlnVariable* index);
 
 	PlnBlock* whileLess(PlnBlock* block, PlnVariable *var, PlnExpression* loop_num_ex);
+
+	PlnExpression* preprocessSrcEx(PlnExpression* src_ex, PlnVarType* dst_type); 
 }
 
