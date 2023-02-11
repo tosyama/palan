@@ -16,4 +16,14 @@ ccall printf(@[?]byte format, ...) -> int32;
 // a2 ->> a3;
 
 @[2]int32 x = a2;
-// object x2 = a2;
+addr64 x2 = a2;
+addr64 o = 1;
+
+int64 i64;
+
+x2 -> i64;
+x2 + 1 -> o;
+x2++;
+a2 -> x2;
+//[2]int32 xx = x2;
+

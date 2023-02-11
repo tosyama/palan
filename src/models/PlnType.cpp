@@ -22,7 +22,7 @@ static PlnTypeInfo* uint_type = NULL;
 static PlnTypeInfo* flo32_type = NULL;
 static PlnTypeInfo* flo64_type = NULL;
 static PlnTypeInfo* ro_cstr_type = NULL;
-static PlnTypeInfo* object_type = NULL;
+static PlnTypeInfo* addr64_type = NULL;
 static PlnTypeInfo* any_type = NULL;
 
 // PlnType
@@ -140,13 +140,13 @@ void PlnTypeInfo::initBasicTypes()
 	ro_cstr_type = t;
 
 	t = new PlnTypeInfo();
-	t->tname = "object";
-	t->default_mode = "wmr";
-	t->data_type = DT_OBJECT;
-	t->data_size = 0;
+	t->tname = "addr64";
+	t->default_mode = "wis";
+	t->data_type = DT_ADDRESS;
+	t->data_size = 8;
 	t->data_align = 8;
 	basic_types.push_back(t);
-	object_type = t;
+	addr64_type = t;
 
 	t = new PlnTypeInfo();
 	t->tname = "";
@@ -291,8 +291,16 @@ string PlnTypeInfo::getFixedArrayName(PlnVarType* item_type, vector<int>& sizes)
 
 PlnTypeConvCap PlnTypeInfo::canCopyFrom(const string& mode, PlnVarType *src, PlnAsgnType copymode)
 {
+	if (this == addr64_type) {
+		return TC_UP_CAST;
+	}
+
 	if (this == src->typeinf)
 		return TC_SAME;
+	
+	if (src->typeinf == addr64_type) {
+		return TC_DOWN_CAST;
+	}
 	
 	// reference should be same type.
 	if (mode[ALLOC_MD] == 'r')
@@ -421,9 +429,9 @@ PlnVarType* PlnVarType::getReadOnlyCStr(const string& mode)
 	return ro_cstr_type->getVarType(mode);
 }
 
-PlnVarType* PlnVarType::getObject(const string& mode)
+PlnVarType* PlnVarType::getAddr64(const string& mode)
 {
-	return object_type->getVarType(mode);
+	return addr64_type->getVarType(mode);
 }
 
 PlnVarType* PlnVarType::getAny(const string& mode)

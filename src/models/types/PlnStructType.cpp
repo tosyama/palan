@@ -290,7 +290,7 @@ PlnTypeConvCap PlnStructTypeInfo::canCopyFrom(const string& mode, PlnVarType *sr
 	if (this == src->typeinf)
 		return TC_SAME;
 
-	if (src->typeinf == PlnVarType::getObject()->typeinf) {
+	if (src->typeinf == PlnVarType::getAddr64()->typeinf) {
 		return TC_DOWN_CAST;
 	}
 

@@ -73,8 +73,10 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 					// Compatibility is assured at adjustTypes().
 					BOOST_ASSERT(dst_type->canCopyFrom(src_type, ASGN_COPY) != TC_CANT_CONV);
 
-					// Validation of referece var
-					if (dst_type->mode[ALLOC_MD] == 'r') {
+					if (dst_type->typeinf == PlnVarType::getAddr64()->typeinf) {
+						// Do nothing
+					} else if (dst_type->mode[ALLOC_MD] == 'r') {
+						// Validation of referece var
 						int val_type = ex->values[i].type;
 						if (!(val_type == VL_LIT_ARRAY || val_type == VL_LIT_STR || val_type == VL_VAR)
 								&& (src_type->mode[ALLOC_MD] != 'r')) {
@@ -83,7 +85,6 @@ PlnVarInit::PlnVarInit(vector<PlnValue>& vars, vector<PlnExpression*> *inits)
 							err.loc = ex->loc;
 							throw err;
 
-							BOOST_ASSERT(false);
 						}
 						if (val_type == VL_VAR) {
 							PlnVariable* container = ex->values[i].inf.var->container;

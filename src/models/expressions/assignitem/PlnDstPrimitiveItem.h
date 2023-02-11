@@ -30,9 +30,11 @@ public:
 		if (place == NULL) {
 			int val_ind = src_ex->data_places.size();
 			src_ex->data_places.push_back(dst_dp);
-			if (src_ex->getDataType(val_ind) != DT_OBJECT_REF) {
+			if (src_ex->getDataType(val_ind) != DT_OBJECT_REF
+					&& src_ex->getDataType(val_ind) != DT_ADDRESS) {
 				// DT_SINT/DT_UINT/DT_FLOAT
 				if (dst_dp->data_type == DT_OBJECT_REF) {
+					BOOST_ASSERT(src_ex->values[0].type == VL_VAR);
 					auto allocmode = src_ex->values[0].inf.var->var_type->mode[ALLOC_MD];
 					if (allocmode != 'r') {
 						dst_dp->load_address = true;

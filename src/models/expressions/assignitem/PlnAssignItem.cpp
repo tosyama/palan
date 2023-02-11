@@ -75,7 +75,7 @@ PlnAssignItem* PlnAssignItem::createAssignItem(PlnExpression* ex)
 
 		if (v.type == VL_VAR) {
 			int dt = ex->values[0].getVarType()->data_type();
-			if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT) {
+			if (dt == DT_SINT || dt == DT_UINT || dt == DT_FLOAT || dt == DT_ADDRESS) {
 				return new PlnAssignPrimitiveItem(ex);
 
 			} else if (dt == DT_OBJECT_REF) {

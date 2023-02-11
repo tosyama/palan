@@ -23,6 +23,7 @@ SRCS=palan.cpp \
 	models/expressions/PlnReferenceValue.cpp \
 	models/expressions/PlnArrayValue.cpp \
 	models/expressions/PlnClone.cpp \
+	models/expressions/PlnTypeCast.cpp \
 	models/expressions/assignitem/PlnAssignItem.cpp \
 	generators/PlnX86_64Generator.cpp \
 	generators/PlnX86_64DataAllocator.cpp \

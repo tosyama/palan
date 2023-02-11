@@ -25,10 +25,12 @@ hi def link		paDelimiter         Delimiter
 syn keyword     paSIntType			sbyte int16 int32 int64 
 syn keyword     paUIntType          byte uint16 uint32 uint64 
 syn keyword     paFloType			flo32 flo64 
+syn keyword		paAddrType			addr64
 
 hi def link     paSIntType			Type
 hi def link     paUIntType			Type
 hi def link     paFloType			Type
+hi def link     paAddrType			Type
 
 syn region      paComment           start="//" end="$" contains=@Spell
 hi def link     paComment           Comment

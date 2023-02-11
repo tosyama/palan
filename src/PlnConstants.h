@@ -12,6 +12,7 @@ enum {
 	DT_FLOAT,	/// Floating-point number.
 	DT_OBJECT,	/// Instance of object.
 	DT_OBJECT_REF,	/// Address of object.
+	DT_ADDRESS,	/// for Address calculationn.
 	DT_UNKNOWN	/// Unkown data type. Not initialized.
 };
 

@@ -389,7 +389,7 @@ PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType co
 		}
 	} else
 		BOOST_ASSERT(copymode == ASGN_COPY);
-
+	
 	if (src->typeinf->type == TP_FIXED_ARRAY) {
 		auto src_farrvt = static_cast<PlnFixedArrayVarType*>(src);
 		BOOST_ASSERT(src_farrvt->sizes.size());
@@ -460,7 +460,7 @@ PlnTypeConvCap PlnFixedArrayVarType::canCopyFrom(PlnVarType *src, PlnAsgnType co
 	}
 
 
-	if (src->typeinf == PlnVarType::getObject()->typeinf) {
+	if (src->typeinf == PlnVarType::getAddr64()->typeinf) {
 		return TC_DOWN_CAST;
 	}
 

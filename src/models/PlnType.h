@@ -101,6 +101,6 @@ public:
 	static PlnVarType* getFlo32(const string& mode = "---");
 	static PlnVarType* getFlo64(const string& mode = "---");
 	static PlnVarType* getReadOnlyCStr(const string& mode = "---");
-	static PlnVarType* getObject(const string& mode = "---");
+	static PlnVarType* getAddr64(const string& mode = "---");
 	static PlnVarType* getAny(const string& mode = "---");
 };
