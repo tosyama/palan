@@ -816,6 +816,13 @@ Expression model
 ----------------
 Same structure as AST expressions (see ASTSpec.md) with the following additions:
 
+- category - Present on an expression whose value has, or needs, an owner (absent on anything else):
+  - `owned` - an `id` naming a variable that owns its storage and releases it at scope exit (a heap
+    struct or array, not a `$` variable)
+  - `expiring` - a call returning an owned value that has no owner yet: an array as a heap block, a
+    struct as contents written to storage the receiver provides
+  - `owner-view` - a pointer cast to an owned type (`p as T`): what it points to, viewed as an owner
+    that is no Palan variable
 - value-type - Resolved Variable type object (same structure as var-type in ASTSpec.md).
   Present on all expression kinds except bare call with no return type.
   - lit-int: the expected type when used in a typed context (e.g. `int32 x = 10;` → int32);
@@ -1193,9 +1200,8 @@ Additional fields per expression kind:
     the hidden first argument. Such a call has no value and is always the `body` of an `expr`
     statement; where its value is used, SA emits a `temp` whose `body` declares the storage and
     makes the call, and whose `value` names the storage with `"category":"expiring"`. Where the
-    receiver provides storage of its own (see Struct variable declaration and Value categories
-    in SpecAndDesign.md §4), that storage is the `ret-dest`. A C function's by-value struct
-    return type is normalized to `pntr(struct)` when it is registered, as a Palan `-> T` is.
+    receiver provides storage of its own (see Struct variable declaration and SpecAndDesign.md
+    §4), that storage is the `ret-dest`. A C function's by-value struct return type is normalized to `pntr(struct)` when it is registered, as a Palan `-> T` is.
   - struct-arg added on an argument (in `args`) given to a C function's by-value struct
     parameter: `{"size":<total struct size in bytes>,"eightbytes":[...]}`, with `eightbytes` as
     in `struct-ret` (`[]` for MEMORY class). The argument expression itself is a pointer to the
