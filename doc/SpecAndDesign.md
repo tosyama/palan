@@ -6,27 +6,21 @@ This document specifies the goals, scope, architecture, and requirements for the
 ## 2. Goals
 - Palan aims to be a simpler, safer, and more enjoyable programming language alternative to C.
 
-### 2.1 Iteration Goal (2026-11-10)
-version: 0.2.5 — a library type written as naturally as a built-in one
+### 2.1 Iteration Goal (2026-11-14)
+version: 0.2.6 — modules that libraries can be combined from
 
-`std/utf8`'s `utf8` should read like a string type of the language, while staying an ordinary
-library type the compiler knows nothing about. What it lacks is added to the language as general
-features any library type can use, not as special cases for `utf8` (3.8):
+Libraries can be combined and can keep state (3.7):
 
-- A string literal converts to a struct through the function named like the type.
-- A type defines comparison (`==`, `<`), appending (`<<`) and copying into an existing value (`->`).
-- Functions take default arguments and variadic arguments; `len` and `for` read the length of an
-  array sized at run time.
-- A type defines how `for` iterates over it.
-- A character literal may be any Unicode code point, written as is or as `\u{...}`.
-- A type's fields can be hidden or read-only outside its module.
+- A type is identified by its module, so two modules may export types of one name (doc/Issues.md
+  #31 of 0.2.5).
+- A library's interface holds only its main source's own declarations; a type is published with
+  its contents hidden as an `opaque` type, owned and released like a struct.
+- An imported module's `global` variables are initialized, and can be exported (doc/Issues.md #24
+  of 0.2.5).
 
-`std/utf8` is then reworked on these features (3.9), and the standard library gets a reference of
-its own, moved out of PalanReference.md.
+The other open issues are then each fixed, accepted as a stated limitation, or left.
 
-Out of scope: method-form calls (`x.f()`) of functions not taking `@!` first; grapheme clusters
-and other Unicode data (case mapping, normalization); conversion between numbers and text;
-compile-time evaluation of functions.
+Out of scope: lazily initialized globals; copying or creating an `opaque` value outside its module.
 
 
 ## 3. Command-line Tools' Responsibilities and Design
@@ -127,7 +121,7 @@ Design:
  whose target is missing or unsupported is an error.
  A module's top-level statements are its exported function `<module>..main`, which takes argc and
  argv. The entry point `_start` (from `--entry`) calls it with argc and argv from the initial
- stack, then `exit(0)`.
+ stack, then `exit(0)`; from 0.2.6 it calls the module's `..init` first (3.7).
 
  Calling convention:
  - C and Palan function calls share the x86-64 System V argument assignment: integer/pointer
@@ -227,6 +221,9 @@ into a program uses them too, in place of the program's.
 
 ### 3.7 Modules and Libraries
 
+**Status.** Type identity, the interface's contents, `opaque` types, module initialization and
+exported globals are the design of 0.2.6, not yet implemented; the rest is implemented.
+
 **Module identity.** A module's identity is the module part of its symbols (SASpec.md's Symbol
 names). It comes from its source alone, never from the entry or the source's location:
 
@@ -242,6 +239,24 @@ says; a leading digit gets a `_` in front rather than being escaped, which `as` 
 reads better; so a few names meet (`1x.pa` and `_1x.pa`), as do `a/util.pa` and `b/util.pa` declaring
 nothing. One identity in a program is an error; declaring `library proj.a;` and `library proj.b;`
 lets them coexist.
+
+**Type identity.** A Palan struct or enum is identified by its module and its name, exported or not:
+`__pln_L<len><module>_<Name>`, with the identity's `.` written `_2e` (`std.utf8`'s `Point` is
+`__pln_L10std_2eutf8_Point`) and a block's type adding its order (`__pln_L4util_2_Point`). This name
+is what sa.json, symbols (a type's `->` is `__pln_cp_<len><that name>`) and the allocators' keys
+use; a message shows the written name. A C type keeps its C name, global as in C.
+
+- Before 0.2.6 an exported type was identified by its written name alone, so two modules exporting
+  `Point` were `E_DuplicateTypeName` and library types took a prefix (`utf8mode`); a private type
+  had a hash of its module in place of `<len><module>`. Both now take one form.
+- The identity itself rather than a hash: it reads in assembly and symbol tables, and two modules
+  never meet. Escaping `.` as `_2e` cannot meet an identity's own `_2e`, which is already `_5f2e`;
+  the length marks where the identity ends. The written name cannot be used, since the generated
+  allocators are C and take no `.`.
+- Not taken: identifying a type by its package (`library std;`), which would leave two modules of
+  one package colliding.
+- `utf8mode` and `utf8iter` keep their names: imported without an alias, a type's name is written
+  bare in the importer, where `mode` would collide more often.
 
 **Finding a library.** PalanReference.md's Using a Library states the rules. A library path has no
 `.`, since a module is named and not a file. A package found under two `libpath`s is an error rather
@@ -267,23 +282,28 @@ export func open([]uint8 path) -> @!Writer;
 
 A library's is written by `--lib`, and `palan-gen-ast --interface` writes one module's own
 declarations in the same form (3.2), keeping every private one and each `import "..."` as an absolute
-path, since merging is `--lib`'s. An ordinary `import "..."` needs none: palan-sa reads the imported
-module's AST, and a library's AST comes from its `.pai`, so palan-sa has one kind of input. An error
-in an imported source module is reported at its own line, and one in a library at its `.pai`'s.
+path. An ordinary `import "..."` needs none: palan-sa reads the imported module's AST, and a
+library's AST comes from its `.pai`, so palan-sa has one kind of input. An error in an imported
+source module is reported at its own line, and one in a library at its `.pai`'s.
 
-The modules a main source reaches are merged into its one `.pai`, so how the library's source is
-divided is not published:
+A library's `.pai` holds only its main source's own declarations, so how the library's source is
+divided is never published:
 
-- Public: the main's exports, and the exported types of other modules that they use, directly or
-  through other public types or any type alias, since a function's symbol holds what an alias stands
-  for. Any other export of an internal module is visible only inside the library; one needed only by
-  a private struct or a const is written as private.
-- Private: the types and consts the public declarations need, the main's before those of internal
-  modules, and renamed if two share a name. A top-level private type's symbol holds its name and not
-  its position, so leaving others out does not change it.
-- `import <...>` of another library stays as written, whether public declarations need it or not,
-  since its archive is linked. An `import "..."` of an internal module disappears.
-- `link "m";` lists the libraries of every merged module's `link` clauses. The statement is accepted
+- Public: the main's exports. Private: the main's types and consts the public declarations need.
+- A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
+  declarations need it or not, since its archive is linked). A C type comes through
+  `cinclude ... export`. An `import "..."` of an internal module disappears.
+- A public declaration naming a type of an internal module — directly, through an alias or through
+  a field of a type it names — is an error of `--lib`. A type a library publishes is declared in
+  its main, which internal modules import to use it (imports may be circular), or published with
+  its contents hidden as an `opaque` type.
+- Before 0.2.6, the exported types of internal modules that public declarations used were written
+  into the main's `.pai` as the main's own, and private ones renamed (`__m<n>_<Name>`) when two
+  shared a name; the reader then identified them by the main's module, unlike their objects. Not
+  taken: stating each such type's module in the `.pai` (`export type Kept from std.kept {...}`, or a
+  statement switching the module of the declarations after it), which would publish the library's
+  internal modules.
+- `link "m";` lists the libraries of every module's `link` clauses. The statement is accepted
   only in a `.pai`. An object file named by a `link` clause goes into the archive instead.
 - `built "<version>";` records the tools' version, and `target "<name>";` the target. Reading a `.pai`
   of another version or target is an error, so a path holds one target's libraries, and libraries for
@@ -296,8 +316,8 @@ statements, and a macro constant is written as its value. A function without a b
 in a `.pai`. A top-level variable appears only if a const uses it, as its type with the sizes filled
 in (`[]int32 a = [1, 2, 3];` is `[3]int32 a;`), so changing a value leaves the interface as it was. A
 const naming anything else that cannot be written, such as a variable whose value only running gives,
-is left out with it: no declaration could use it either (`E_ConstUsedBeforeKnown`). `--lib` rejects a module permitting a function to
-use its global, since a library's top level never runs.
+is left out with it: no declaration could use it either (`E_ConstUsedBeforeKnown`). An exported
+`global` is written without its initializer (`export global int64 count;`).
 
 `cinclude <stdio.h> export FILE, fpos_t;` names the C types the module's public declarations use.
 It limits nothing in the module, which uses the whole header as without it; it only puts the
@@ -310,6 +330,62 @@ A local header (`cinclude "x.h" export T;`) that the public declarations need is
 its path would not exist for the reader, so `--lib` reports an error rather than write such a `.pai`.
 A local header used only in bodies does not reach the interface.
 
+**Opaque types.** `export type Handle = opaque K.Inner;` declares a type of its module whose
+contents are `K.Inner`'s, which only modules able to write `K.Inner` see; a `.pai` writes it
+`export type Handle = opaque;`. It lets a library publish a type defined in an internal module, or
+hide a type of its main, without the reader learning its layout or its module.
+
+- It is a type of its own, not an alias: an alias stands for its type in a function's symbol, which
+  would name the internal module (`get(Handle)` would link as `get` of `K.Inner`).
+- A user owns, borrows and moves it as a struct (`Handle`, `@Handle`, `@!Handle`, `->>`, `>>`,
+  `<<=`, an owned field or element), and it is released when its owner is. What needs its layout
+  is an error: a declaration without an initializer, a copy (`Handle b = a;`, `->`), `$Handle`,
+  a field access. Copying and creating one outside its module are left out until wanted.
+- The module converts with `as`: a borrow by the pointer cast any pointer has (`@h as @K.Inner`),
+  and an owned value between the opaque type and its contents only (`return x as Handle;`,
+  `K.Inner x <<= h as K.Inner;`), given only by a move. Only a module able to write the contents'
+  type can do the latter.
+- Release: a function of the type's module marked `release` (`export func close(Handle h)
+  release;`), taking the owned type alone and returning nothing, one per type, is called wherever
+  the value is released (scope exit, reassignment, an owning field or element), as a destructor
+  is; called explicitly (`close(h>>)`) it takes the value over and nothing is released twice.
+  Without one, a generated function releases the contents. Either is reached by a symbol made of
+  the type's identity alone, carried with the type as a type's `->` is (3.8), so the `.pai` needs
+  nothing more and the user's allocators can call it. In the release function, a parameter not
+  moved away is released by the generated function, not by the release function again.
+- Not taken: rejecting a value not explicitly closed (a linear type), which needs flow analysis
+  (doc/Issues.md #13) and cannot follow fields and elements; a borrowed handle only, released
+  explicitly as C's `DIR`, which leaves the user to free.
+- `opaque` and `release` are reserved words.
+
+**Module initialization.** Every module has a hidden function `<module>..init`, which no written
+function's symbol can be (theirs end in a parameter list or `.v`), not written in a `.pai`. It calls
+the `..init` of each module it imports, then initializes its `global` variables in declaration
+order, once (a flag in the module). The entry's `_start` calls the entry's `..init`, then its
+`..main` (the top-level statements, which still run only for the entry). A library's internal
+modules are initialized through its main's, so a program needs to know only what it imports.
+
+- Before 0.2.6 a `global` was initialized where its top-level statement stood, so a module whose
+  functions used one could not be imported (`E_ImportModuleWithGlobals`) or built into a library
+  (`E_LibModuleWithGlobals`), and a top-level statement before the declaration could not reach a
+  function using it (`E_GlobalUsedBeforeDecl`). All three go.
+- An initializer cannot name an ordinary top-level variable, since it does not exist for an imported
+  module; the entry follows the same rule, so a module compiles the same whichever is the entry.
+- In a circle of imports, modules are initialized in import order, and a function reached from one
+  may see another's globals not initialized yet (zero, an owner NULL), as in Go's or C++'s static
+  initialization.
+- A module wanting its state built at a time of its user's choosing declares the variable without
+  an initializer and exports a function setting it. Not taken: initializing on first use (a check at
+  every access), or an import deferring a module's initialization, which another import of the same
+  module would defeat and a library's internal modules would not receive.
+
+**Exported globals.** `export global int64 count = 0 for inc!;` exports a `global` variable, used in
+an importer as in its own module: a `global` statement there names it (`global count for f, g!;`,
+`global M.count for f;` under an alias) to let the importer's functions read it, or with `!` write
+it, and the importer's top-level statements use it freely. It can be imported by name like a function.
+A module keeping a variable from other writers does not export it, but publishes functions. Its
+symbol is its label, `<module>.<name>`.
+
 **Building a library.** `palan --lib -o <dir> main.pa` compiles the modules `main.pa` reaches, which
 must all declare the same first name, and writes under `<dir>`, as given, the main's identity as a
 path: `<dir>/std/utf8.pai` and `<dir>/std/utf8.a`. Each public module is built this way, one archive each, so a
@@ -319,8 +395,8 @@ detect an older copy left in another's archive.
 The source tree's layout does not matter to the result. `--lib` then reads the interface back
 through palan-gen-ast and `palan-sa --interface`, and compares the symbols it gives the public
 functions with those the main source compiled to. So an interface that lacks something, such as a C
-type no `export` clause names, or that names a function differently from its object, such as through
-an alias of an internal module's private type, fails here and not at the library's first user. Nothing
+type no `export` clause names, or that names a function differently from its object, fails here and
+not at the library's first user. Nothing
 is written to `<dir>` until this passes. Every module's top level remains in its object (a test
 written there is linked when the object is), but runs only for an entry.
 
