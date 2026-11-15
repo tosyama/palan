@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <functional>
 #include <cstdint>
+#include <optional>
 #include "PlnSemanticAnalyzer.h"
 #include "PlnSaMessage.h"
 #include "PlnSaInternal.h"
@@ -1759,9 +1760,10 @@ void PlnSemanticAnalyzer::requireAssignable(const string& name, const json& locN
 	}
 }
 
-// A global's declaration lowers as a top-level variable's does; its value then
-// lives in static storage under its label instead of in the frame.
-void PlnSemanticAnalyzer::sa_global_decl(const json& stmt, json& out)
+// A global's declaration lowers as a top-level variable's does, into the
+// module's `..init`; its value then lives in static storage under its label
+// instead of in the frame. The top level sees it as before, bound at its entry.
+void PlnSemanticAnalyzer::sa_global_decl(const json& stmt)
 {
 	if (varScopes.size() != 1 || currentFunc_) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_GlobalNotTopLevel) << endl;
@@ -1771,6 +1773,12 @@ void PlnSemanticAnalyzer::sa_global_decl(const json& stmt, json& out)
 	plain.erase("global");
 	string name = stmt["vars"][0]["name"];
 	string label = symbolScope_ + "." + name;
+
+	swap(varScopes, initVarScopes_);
+	swap(arrayScopeVars_, initScopeVars_);
+	swap(staticBindings_, initBindings_);
+	globalInitTopScope_ = &initVarScopes_[0];
+	globalInitName_ = name;
 	bool labeled = false;
 	for (auto& s : sa_var_decl(plain)) {
 		if (!labeled && s.value("stmt-type", "") == "var-decl")
@@ -1783,12 +1791,24 @@ void PlnSemanticAnalyzer::sa_global_decl(const json& stmt, json& out)
 					}
 					labeled = true;
 				}
-		out.push_back(move(s));
+		initBody_.push_back(move(s));
 	}
 	BOOST_ASSERT(labeled);
+	globalInitTopScope_ = nullptr;
+	optional<ScopeVar> scopeVar;
 	for (auto& v : arrayScopeVars_.back())
-		if (v.name == name) v.global = true;
-	const json& type = *findVar(name);
+		if (v.name == name) {
+			v.global = true;
+			scopeVar = v;
+		}
+	json type = *findVar(name);
+	swap(varScopes, initVarScopes_);
+	swap(arrayScopeVars_, initScopeVars_);
+	swap(staticBindings_, initBindings_);
+
+	declareVar(name, type, &stmt);
+	if (scopeVar) arrayScopeVars_.back().push_back(*scopeVar);
+	bindStatic(name, label, type);
 	GlobalVar g{label, type, &stmt, {}, {}}; // LCOV_EXCL_BR_LINE
 	if (!isArrBorrowVar(type) && !isStructBorrow(type)) {
 		g.view[0] = storageBorrowType(name, type, false);
@@ -1846,74 +1866,34 @@ void PlnSemanticAnalyzer::declarePermittedGlobals(const string& funcName, const 
 	}
 }
 
-// Every call and function address in `node`, with its location.
-static void collectCallees(const json& node, vector<pair<string, json>>& out)
+// Runs once: a circle of imports reaches it again while it runs. The flag is
+// set first, so such a call returns at once.
+void PlnSemanticAnalyzer::emitInitFunc()
 {
-	if (node.is_object()) {
-		string et = node.value("expr-type", "");
-		if ((et == "call" && node.value("func-type", "") == "palan") || et == "func-ref")
-			out.push_back({node["name"].get<string>(), node.value("loc", json())});
-		for (auto& [k, v] : node.items()) collectCallees(v, out);
-	} else if (node.is_array()) {
-		for (auto& v : node) collectCallees(v, out);
+	// LCOV_EXCL_BR_START
+	string name = moduleId_ + "..init";
+	json body = json::array();
+	if (!initImports_.empty() || !initBody_.empty()) {
+		json flagType = {{"type-kind","prim"},{"type-name","uint8"}};
+		string flag = "__init_done";
+		string label = name + ".done";
+		sa["globals"].push_back({{"label", label}, {"var-type", flagType}});
+		initBindings_.insert(initBindings_.begin(), json{{"name", flag}, {"label", label}, {"var-type", flagType}});
+		json id = {{"expr-type","id"},{"name",flag},{"var-type",flagType},{"value-type",flagType}};
+		auto lit = [&](const char* v) { return json{{"expr-type","lit-int"},{"value",v},{"value-type",flagType}}; };
+		json cond = {{"expr-type","cmp"},{"op","!="},{"left",id},{"right",lit("0")},
+			{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+		body.push_back({{"stmt-type","if"},{"cond",move(cond)},
+			{"then",{{"stmt-type","block"},{"body",json::array({{{"stmt-type","return"}}})}}}});
+		body.push_back({{"stmt-type","assign"},{"name",flag},{"value",lit("1")}});
+		for (auto& m : initImports_)
+			body.push_back({{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name",m + "..init"},
+				{"func-type","palan"},{"args",json::array()}}}});
+		for (auto& s : initBody_) body.push_back(move(s));
 	}
-}
-
-// A global is initialized where it is declared, so the top level may not
-// reach a function using it before that.
-void PlnSemanticAnalyzer::checkGlobalsReachedBeforeDecl() const
-{
-	map<string, vector<pair<string, json>>> callees;
-	for (auto& f : sa["functions"])
-		collectCallees(f["body"], callees[f["name"].get<string>()]);
-
-	auto reaches = [&](const string& from, const set<string>& targets) {
-		set<string> seen;
-		vector<string> todo = {from}; // LCOV_EXCL_BR_LINE
-		while (!todo.empty()) {
-			string s = todo.back();
-			todo.pop_back();
-			if (targets.count(s)) return true;
-			if (!seen.insert(s).second) continue;
-			auto c = callees.find(s);
-			if (c != callees.end())
-				for (auto& [callee, loc] : c->second) todo.push_back(callee);
-		} // LCOV_EXCL_BR_LINE
-		return false;
-	}; // LCOV_EXCL_BR_LINE
-
-	vector<pair<string, json>> before;
-	// A global's own initializer runs before it is set too.
-	for (auto& stmt : sa["statements"]) {
-		collectCallees(stmt, before);
-		if (stmt.value("stmt-type", "") == "var-decl" && stmt["vars"][0].contains("label")) {
-			const GlobalVar& g = globals_.at(stmt["vars"][0]["name"].get<string>());
-			for (auto& [fn, w] : g.funcs) {
-				set<string> targets(topFuncSymbols_.at(fn).begin(), topFuncSymbols_.at(fn).end());
-				for (auto& [callee, loc] : before)
-					if (reaches(callee, targets)) {
-						json at = loc.is_null() ? *g.decl : json{{"loc", loc}};
-						cerr << locPrefix(at) << PlnSaMessage::getMessage(
-							E_GlobalUsedBeforeDecl, stmt["vars"][0]["name"].get<string>(), fn) << endl;
-						exit(1);
-					} // LCOV_EXCL_LINE
-			}
-		}
-	}
-} // LCOV_EXCL_BR_LINE
-
-void PlnSemanticAnalyzer::rejectImportedGlobals(const json& importStmt, const json& impAst) const
-{
-	if (!impAst["ast"].contains("statements")) return;
-	set<string> globals;
-	for (auto& s : impAst["ast"]["statements"]) {
-		string t = s.value("stmt-type", "");
-		if (t == "var-decl" && s.value("global", false))
-			globals.insert(s["vars"][0]["name"].get<string>());
-		else if (t == "global-permit" && globals.count(s["name"].get<string>()) && !s["funcs"].empty()) {
-			cerr << locPrefix(importStmt) << PlnSaMessage::getMessage(
-				E_ImportModuleWithGlobals, s["name"].get<string>()) << endl;
-			exit(1);
-		}
-	}
+	json func = {{"name",name},{"func-type","palan"},{"export",true},{"parameters",json::array()},{"body",move(body)}};
+	if (!initBindings_.empty()) func["globals"] = initBindings_;
+	sa["functions"].push_back(move(func));
+	sa["init"] = name;
+	// LCOV_EXCL_BR_STOP
 }

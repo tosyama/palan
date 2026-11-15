@@ -1427,13 +1427,15 @@ TEST(codegen, entry) {
     cleanTestEnv();
     string asmf = "out/entry.s";
 
-    string err = execTestCommand("palan-codegen --entry app..main -o " + asmf);
+    string err = execTestCommand("palan-codegen --entry app..init --entry app..main -o " + asmf);
     ASSERT_EQ(err, "");
 
+    // Each call reloads argc and argv, which the one before may clobber.
     string asm_text = readFile(asmf);
     ASSERT_NE(asm_text.find("\t.globl _start\n_start:\n"
-                            "\tmovq (%rsp), %rdi\n\tleaq 8(%rsp), %rsi\n"
-                            "\tcall app..main\n\tmovl $0, %edi\n\tcall exit\n"), string::npos);
+                            "\tmovq (%rsp), %rdi\n\tleaq 8(%rsp), %rsi\n\tcall app..init\n"
+                            "\tmovq (%rsp), %rdi\n\tleaq 8(%rsp), %rsi\n\tcall app..main\n"
+                            "\tmovl $0, %edi\n\tcall exit\n"), string::npos);
     ASSERT_NE(asm_text.find("\t.section .data\n"),         string::npos);
     ASSERT_NE(asm_text.find("\t.globl __dso_handle\n"),    string::npos);
     ASSERT_NE(asm_text.find("\t.hidden __dso_handle\n"),   string::npos);

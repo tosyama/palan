@@ -20,7 +20,6 @@ enum PlnBuildMgrMessageCode {
 	E_LibNeedsOutput,
 	E_LibModuleNotDeclared,	// arg1: source file
 	E_LibPackageMismatch,	// arg1: source file, arg2: its package, arg3: the main's package
-	E_LibModuleWithGlobals,	// arg1: source file, arg2: variable name
 	E_LibSymbolMismatch,	// arg1: main source file, arg2: symbol
 	E_LibraryNotFound,		// arg1: importing file, arg2: module
 	E_LibraryInTwoPlaces,	// arg1: package, arg2, arg3: directories

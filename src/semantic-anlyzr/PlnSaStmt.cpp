@@ -20,7 +20,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 		else if (t == "cinclude") sa_cinclude(stmt);
 		else if (t == "expr" && chainsFromStore(stmt["body"])) { for (auto& s : sa_store_scope(stmt)) result.push_back(s); }
 		else if (t == "expr")     result.push_back(sa_expression_stmt(stmt));
-		else if (t == "var-decl" && stmt.value("global", false)) sa_global_decl(stmt, result);
+		else if (t == "var-decl" && stmt.value("global", false)) sa_global_decl(stmt);
 		else if (t == "var-decl") { for (auto& s : sa_var_decl(stmt)) result.push_back(s); }
 		else if (t == "global-permit") sa_global_permit(stmt);
 		else if (isStoreStmt(stmt)) { for (auto& s : sa_store_scope(stmt)) result.push_back(s); }

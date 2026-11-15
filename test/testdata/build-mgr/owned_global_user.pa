@@ -1,0 +1,2 @@
+import "owned_global.pa";
+export func twice() -> int32 { return total() * 2; }

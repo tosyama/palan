@@ -16,10 +16,14 @@ Root
 - main\* - The module's top-level function, whose body is `statements`: `name` (its symbol,
   `<module>..main`; see Symbol names) and `parameters` (`__argc` int64 and `__argv`
   `pntr(pntr(uint8))`, in the Function definition model's form), and `globals` as a Palan
-  function has (the C globals the top level uses). It is exported, and the program's `_start`,
-  built at link time for the entry module, calls it.
-- globals - The module's `global` variables, each a static slot codegen emits in `.bss`:
-  `label` (`<module>.<name>`) and `var-type`. Omitted when there are none.
+  function has (the module's `global` variables and the C globals the top level uses). It is
+  exported, and the program's `_start`, built at link time for the entry module, calls it after
+  `init`.
+- init\* - The symbol of the module's initialization function, `<module>..init`, which `functions`
+  defines (see Module initialization below).
+- globals - The module's static slots, each emitted by codegen in `.bss`: its `global` variables
+  (`label` `<module>.<name>`) and `init`'s flag (`<module>..init.done`), with `var-type`. Omitted
+  when there are none.
 - str-literals\* - String literal table (collected by SA, used by codegen for .rodata)
 - functions\* - Processed Palan function list (empty array when no functions defined)
 - statements\* - Top-level statement list. When a top-level statement names the implicit
@@ -215,8 +219,8 @@ SA-annotated statements.
 
 - name\* - Symbol name of the function (see "Symbol names" below), not the written name
 - func-type\* - "palan"
-- export - `true` for an exported function, for a type's `->` and for an opaque type's release
-  function, which codegen makes global
+- export - `true` for an exported function, for a type's `->`, for an opaque type's release
+  function and for the module's `..init`, which codegen makes global
 - parameters\* - Parameter list (Palan parameter: name, var-type; empty array when no parameters)
 - ret-type - Return variable type (single-return functions only)
 - rets - Return value list (multi-return functions only)
@@ -244,8 +248,9 @@ Note: cinclude statements are not present in function bodies (they are top-level
 Every Palan function links by a symbol SA builds from its module and its parameter types, so
 functions of one name (overloads, or the same function exported by two modules) have distinct
 symbols. It is the `name` of the function, of a `call` resolved to it and of a `func-ref` to it.
-C functions and syscalls are not renamed. A module's top-level function is `<module>..main`, which
-no other function's symbol can be: theirs always end in a parameter list or `.v`.
+C functions and syscalls are not renamed. A module's top-level function is `<module>..main` and its
+initialization function `<module>..init`, which no other function's symbol can be: theirs always
+end in a parameter list or `.v`.
 
 `<module>..<name>.<param>.<param>...` — `<name>.v` when there are no parameters.
 
@@ -394,7 +399,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   named there, and inlined at each reference site (see Type Aliases in
   PalanReference.md)
 - global-permit statements are consumed by SA and not emitted. A `var-decl` with `global` is
-  emitted as a top-level variable's is, its variable given `label` (see Static variables below);
+  emitted into the module's `..init` as a top-level variable's would be, its variable given
+  `label` (see Static variables below);
   it is `E_GlobalNotTopLevel` anywhere but the top level, as a `global-permit` is. A permit names
   a `global` variable of the module or a C global visible there (`E_GlobalPermitUnknownVar`) and
   top-level Palan functions of the module (`E_GlobalPermitNotFunc`), each once
@@ -1801,24 +1807,34 @@ and `return` of a stack struct or `$[+]T` returns a copy. `return` of a stack ar
 
 A `global` variable of the module and a C global are static variables: a name bound to a slot at
 an assembly label. Expressions and statements refer to one by `name`, as to any variable; what
-binds the name is a function's (or `main`'s) `globals` entry, made at its entry, or, for a
-`global` variable at the top level, its `var-decl`, whose variable carries `label`. The slot holds
-what a frame variable's value would be, a pointer for an array or struct.
+binds the name is a function's (`main`'s, `..init`'s) `globals` entry, made at its entry, or, in
+`..init`, a `global` variable's `var-decl`, whose variable carries `label`. The slot holds what a
+frame variable's value would be, a pointer for an array or struct.
 
 - A Palan global's `label` is `<module>.<name>`; its `var-decl` lowers as a top-level variable's
   does, except that a `frame-alloc` becomes a `static-alloc` and what it owns is never freed (a
-  value it is reassigned away from still is).
+  value it is reassigned away from still is). `main` binds every Palan global with its own type.
 - A function sees a Palan global its permit lists as it would a parameter: an array or struct as
   `storageBorrowType` gives (`@` without `!`, `@!` with it), and the function cannot assign the
   variable itself (`E_GlobalNotReplaceable`); anything else with the variable's type, assignable
   only with `!` (`E_GlobalNotWritable`).
 - A C global's `label` is its C name. It is readable anywhere it is visible, and writable at the
   top level after a `global` statement names it, or in a function a permit lists with `!`.
-- A top-level statement before a Palan global's `var-decl`, the declaration's own initializer
-  included, whose calls or function addresses reach a function permitted to use it is
-  `E_GlobalUsedBeforeDecl`; reaching is followed through every function's calls and function
-  addresses. Importing a module whose AST permits a function to use one of its Palan globals is
-  `E_ImportModuleWithGlobals`.
+
+### Module initialization
+
+`<module>..init` (in `functions`, exported, no parameters) is generated for every module, since
+each importer calls it. Its body, when the module imports something or declares a `global`:
+
+1. `if` its flag `__init_done` (bound in its `globals` to `<module>..init.done`, `uint8`) is not
+   0, `return`; then `1 -> __init_done`, so a circle of imports reaching it again returns at once.
+2. An `expr` `call` with no arguments of the `..init` of each module the source imports, anywhere
+   in it, in order of first import, the module itself excepted.
+3. The `global` variables' declarations, in source order.
+
+An initializer is analyzed in a scope of its own holding the globals declared before it, so it
+cannot use an ordinary top-level variable (`E_GlobalInitUsesTopVar`); temporaries and C globals it
+uses belong to `..init`.
 
 ### field-assign statement → sa.json
 

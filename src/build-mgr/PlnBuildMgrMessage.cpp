@@ -63,11 +63,6 @@ string PlnBuildMgrMessage::getMessage(PlnBuildMgrMessageCode msg_code, string ar
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01" && arg3 != "\x01");
 			return "palan: '" + arg1 + "' belongs to library '" + arg2 + "', not '" + arg3 + "'";
 
-		case E_LibModuleWithGlobals:
-			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
-			return "palan: '" + arg1 + "' permits a function to use its global '" + arg2
-				+ "', but a library's top level never runs";
-
 		case E_LibSymbolMismatch:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
 			return "palan: the interface of '" + arg1 + "' declares '" + arg2

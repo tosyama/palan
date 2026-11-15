@@ -1036,7 +1036,7 @@ TEST(sa, syscall_decl) {
 	json jout = run_sa("../test/testdata/sa/188_syscall_decl.pa");
 	ASSERT_TRUE(jout.is_object());
 
-	ASSERT_EQ(jout["functions"].size(), 1u);
+	ASSERT_EQ(jout["functions"].size(), 2u);
 	ASSERT_EQ(funcName(jout["functions"][0]["name"]), "main");
 }
 

@@ -236,16 +236,6 @@ static bool checkLibraryModules(const vector<json>& asts)
 			cerr << PlnBuildMgrMessage::getMessage(E_LibPackageMismatch, source, packageOf(id), packageOf(main_id)) << endl;
 			return false;
 		}
-		set<string> globals;
-		for (auto& s : ast["ast"].value("statements", json::array())) {
-			string t = s.value("stmt-type", "");
-			if (t == "var-decl" && s.value("global", false))
-				globals.insert(s["vars"][0]["name"].get<string>());
-			else if (t == "global-permit" && globals.count(s["name"].get<string>()) && !s["funcs"].empty()) {
-				cerr << PlnBuildMgrMessage::getMessage(E_LibModuleWithGlobals, source, s["name"].get<string>()) << endl;
-				return false;
-			}
-		}
 	}
 	return true;
 }
@@ -554,15 +544,16 @@ int main(int argc, char* argv[])
 
 	// The entry is chosen here, at link time: every module compiles the same
 	// whichever role it plays, and only this stub names the first one's
-	// top-level function.
+	// initialization and top-level functions.
 	fs::create_directories(entry_dir);
 	{
 		string base = ast_files[0].substr(0, ast_files[0].size() - 9);
 		ifstream f(base + ".sa.json");
-		string main_symbol = json::parse(f)["main"]["name"];
+		json sa = json::parse(f);
 		string entry_s = entry_dir + "/entry.s";
 		string entry_o = entry_dir + "/entry.o";
-		if (int ret = runToolTo({exec_path + "/palan-codegen", "--entry", main_symbol, "--target", target}, entry_s)) // LCOV_EXCL_BR_LINE
+		if (int ret = runToolTo({exec_path + "/palan-codegen", "--entry", sa["init"], "--entry", sa["main"]["name"], // LCOV_EXCL_BR_LINE
+				"--target", target}, entry_s)) // LCOV_EXCL_BR_LINE
 			return ret;
 		if (int ret = runToolTo({"as", entry_s}, entry_o)) // LCOV_EXCL_BR_LINE
 			return ret;

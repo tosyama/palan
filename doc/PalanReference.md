@@ -2860,7 +2860,8 @@ This writes `<dir>/std/utf8.pai`, the interface a person reads to learn the libr
   public declaration using a struct or enum of another file, directly, through a type alias or
   through a field, is a compile error; an [opaque type](#opaque-types) of the main file may hold
   one.
-- A file permitting a function to use its `global` is a compile error, since a library's top level never runs.
+- The global variables of every file are initialized when a program using the library starts,
+  as an imported file's are (see [Global Variables](#global-variables)).
 - The interface may rename a constant or type alias of another file to a name starting with `__`
   (see [Lexical Rules](#2-lexical-rules)).
 
@@ -2893,9 +2894,9 @@ int64 x = 10;
 printf("%lld\n", x);
 ```
 
-- Top-level statements run when the program starts, only in the file being built. The
-  top-level statements of an imported file are not executed, so a module can hold its own tests
-  or usage examples.
+- Top-level statements run when the program starts, only in the file being built, after the
+  [global variables](#global-variables) of every file are initialized. The top-level statements
+  of an imported file are not executed, so a module can hold its own tests or usage examples.
 - The top-level statements see the program's command-line arguments as `args`, a read-only
   borrowed variable-length array of C strings (`@[+]@[]uint8`). `args[0]` is the program's
   path, and `len(args)` counts it. `args` is a borrow, so it is used by name: `len(args)`,
@@ -2947,13 +2948,25 @@ func cmp(@int32 a, @int32 b) -> int32 r {
   it reads (or writes) the elements and fields, but cannot replace the variable itself. A
   number or pointer variable it can assign only with `!`; what a pointer points to keeps the
   pointer's own type (`@!T` stays writable through).
-- The variable is initialized where it is declared, so a top-level statement before the
-  declaration may not call a listed function, directly or through other functions, nor take its
-  address (a compile error).
+- Global variables are initialized when the program starts, before any top-level statement
+  runs, in every file of the program: each file once, the files it imports first, then its own
+  in declaration order. So a listed function works wherever it is called, even from a top-level
+  statement before the declaration.
+- An initializer cannot use an ordinary top-level variable or `args`, which do not exist yet
+  (a compile error). It can use constants, functions and the global variables declared before it.
+- When files import each other in a circle, they are initialized in import order, and a function
+  reached from one may see another's global variables not yet initialized (zero, or an empty owner).
+- To build the state when the user chooses, declare the variable without an initializer and
+  export a function that sets it:
+
+  ```palan
+  type Config { int32 level; };
+  global Config config for configure!;
+  export func configure(int32 level) { level -> config.level; }
+  ```
+
 - What a global variable owns lives until the program ends; it is not freed at the end of the
   top level. A value it is reassigned away from at the top level is freed as usual.
-- A file whose global variables are used by its functions cannot be imported, since an imported
-  file's top-level statements, which would initialize them, do not run.
 
 ---
 

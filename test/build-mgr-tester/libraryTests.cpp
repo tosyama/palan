@@ -103,6 +103,32 @@ printf("%.1f %.1f\n", norm(@a), G.norm(@b));
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "5.0 10.0\n");
 }
 
+// The library's main initializes its internal module first, through the
+// import, so the program needs only what it imports.
+TEST(build_mgr, library_module_globals) {
+	cleanTestEnv();
+	writeFile("out/src/count.pa", R"(library kit;
+import "inner.pa";
+global int32 base = innerStart() + 1 for next!;
+export func next() -> int32 { base + 1 -> base; return base; }
+)");
+	writeFile("out/src/inner.pa", R"(library kit;
+cinclude <stdio.h>;
+func start() -> int32 { puts("inner"); return 10; }
+global int32 seed = start() for innerStart;
+export func innerStart() -> int32 { return seed; }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/count.pa"), "");
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/count>;
+cinclude <stdio.h>;
+printf("%d\n", next());
+printf("%d\n", next());
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "inner\n12\n13\n");
+}
+
 // The program reads the defaults from the interface alone, through an alias too.
 TEST(build_mgr, library_parameter_defaults) {
 	cleanTestEnv();

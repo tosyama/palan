@@ -1,0 +1,4 @@
+cinclude <stdio.h>;
+func mk() -> int32 { puts("init b"); return 7; }
+global int32 bv = mk() for getb;
+export func getb() -> int32 { return bv; }

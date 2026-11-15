@@ -519,15 +519,10 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
 			return "'" + arg2 + "' is already permitted to use '" + arg1 + "'.";
 
-		case E_GlobalUsedBeforeDecl:
+		case E_GlobalInitUsesTopVar:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
-			return "this reaches '" + arg2 + "', which uses global variable '" + arg1
-			       + "', before '" + arg1 + "' is declared.";
-
-		case E_ImportModuleWithGlobals:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "cannot import a module whose functions use its global variable '" + arg1
-			       + "': an imported module's top level does not run, so '" + arg1 + "' is never initialized.";
+			return "the initializer of global '" + arg2 + "' cannot use top-level variable '" + arg1
+			       + "': globals are initialized before the top level runs.";
 
 		case E_InterfaceAsProgram:
 			BOOST_ASSERT(arg1 != "\x01");

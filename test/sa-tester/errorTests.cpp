@@ -1400,21 +1400,17 @@ TEST(sa_error, global_var)
 		{"error_883_permit_not_global.pa", ":2:1: error: 'x' is not a global variable: declare it with 'global', or cinclude the C global first."},
 		{"error_884_permit_not_func.pa", ":1:24: error: 'y' is not a function at the top level of this module."},
 		{"error_885_permit_duplicate.pa", ":2:14: error: 'f' is already permitted to use 'x'."},
-		{"error_886_global_before_decl.pa", ":1:1: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
-		{"error_887_global_before_decl_indirect.pa", ":1:1: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
-		{"error_888_global_before_decl_ref.pa", ":2:8: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
 		{"error_889_global_read_only.pa", ":3:2: error: cannot write to 'x': " + notWritable},
 		{"error_890_global_replace.pa", ":3:2: error: cannot assign to 'a': a function writes the elements or fields of an array or struct global variable, but does not replace it."},
 		{"error_891_global_read_only_elem.pa", ":3:2: error: cannot write through read-only pointer"},
 		{"error_892_c_global_read_only_func.pa", ":4:2: error: cannot write to 'stderr': " + notWritable},
-		{"error_893_import_global.pa", ":1:1: error: cannot import a module whose functions use its global variable 'x'"},
 		{"error_894_global_param_clash.pa", ":2:1: error: Variable 'x' is already declared."},
-		{"error_895_global_init_uses_self.pa", ":1:18: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
 		{"error_896_global_addr_read_only.pa", ":3:14: error: cannot write to 'x': " + notWritable},
+		{"error_1069_global_init_top_var.pa", ":2:18: error: the initializer of global 'x' cannot use top-level variable 'n': globals are initialized before the top level runs."},
+		{"error_1070_global_init_args.pa", ":1:18: error: the initializer of global 'n' cannot use top-level variable 'args': globals are initialized before the top level runs."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
-		genModuleAst("../test/testdata/sa/lib_sa_global.pa");
 		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
 		ASSERT_EQ(execTestCommand(
 			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");

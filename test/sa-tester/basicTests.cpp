@@ -499,8 +499,8 @@ TEST(sa, void_func) {
 
 	ASSERT_TRUE(jout.is_object());
 
-	// greet function: no ret-type, body has bare return
-	ASSERT_EQ(jout["functions"].size(), 1u);
+	// greet function: no ret-type, body has bare return; then the module's ..init
+	ASSERT_EQ(jout["functions"].size(), 2u);
 	const json& greet = jout["functions"][0];
 	ASSERT_EQ(funcName(greet["name"]), "greet");
 	ASSERT_FALSE(greet.contains("ret-type"));
@@ -1365,19 +1365,33 @@ TEST(sa, global_var)
 	cleanTestEnv();
 	json jout = run_sa("../test/testdata/sa/329_global.pa");
 	ASSERT_TRUE(jout.is_object());
-	ASSERT_EQ(jout["globals"].size(), 3);
+	// The three globals, then the initialization's flag.
+	ASSERT_EQ(jout["globals"].size(), 4);
 	ASSERT_EQ(jout["globals"][0]["label"], "_329_global.hits");
+	ASSERT_EQ(jout["globals"][3]["label"], "_329_global..init.done");
 
+	// Globals are initialized in the module's ..init, so the top level only
+	// binds them; what a global owns is never freed.
+	ASSERT_EQ(jout["init"], "_329_global..init");
 	const auto& stmts = jout["statements"];
-	ASSERT_EQ(stmts[0]["vars"][0]["label"], "_329_global.hits");
-	// A `$T` global's storage is static too, so it outlives the top level.
-	const auto& origin = stmts[4]["vars"][0];
+	ASSERT_EQ(stmts.size(), 1);
+	ASSERT_EQ(stmts[0]["body"]["name"], "_329_global..count.v");
+	ASSERT_EQ(jout["main"]["globals"][0]["label"], "_329_global.hits");
+
+	const auto& init = jout["functions"].back();
+	ASSERT_EQ(init["name"], "_329_global..init");
+	ASSERT_EQ(init["export"], true);
+	ASSERT_EQ(init["globals"][0]["label"], "_329_global..init.done");
+	const auto& body = init["body"];
+	ASSERT_EQ(body[0]["stmt-type"], "if");
+	ASSERT_EQ(body[1]["name"], "__init_done");
+	ASSERT_EQ(body[2]["vars"][0]["label"], "_329_global.hits");
+	// A `$T` global's storage is static too, so it outlives the initialization.
+	const auto& origin = body[6]["vars"][0];
 	ASSERT_EQ(origin["label"], "_329_global.origin");
 	ASSERT_EQ(origin["init"]["expr-type"], "static-alloc");
 	ASSERT_EQ(origin["init"]["label"], "_329_global.origin.data");
-	// What a global owns is never freed: the call is the last statement.
-	ASSERT_EQ(stmts.size(), 8);
-	ASSERT_EQ(stmts[7]["body"]["name"], "_329_global..count.v");
+	ASSERT_EQ(body.size(), 9);
 
 	const auto& fs = jout["functions"];
 	// count: a writable scalar and a C global it is permitted to write.

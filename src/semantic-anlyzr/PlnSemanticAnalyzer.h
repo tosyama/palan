@@ -223,6 +223,17 @@ class PlnSemanticAnalyzer {
 	// only read.
 	json staticBindings_ = json::array();
 	map<string, bool> readOnlyGlobals_;  // -> true for an array or struct, never replaced
+	// The module's `..init`, whose scope holds the globals declared so far:
+	// their initializers run there, before any top-level statement.
+	vector<map<string, json>> initVarScopes_ = {{}};
+	vector<vector<ScopeVar>>  initScopeVars_ = {{}};
+	json                      initBindings_ = json::array();
+	json                      initBody_ = json::array();
+	vector<string>            initImports_;  // module identities, in import order
+	// While a global's initializer is analyzed: the top-level scope it cannot
+	// use, and the global's name.
+	const map<string, json>*  globalInitTopScope_ = nullptr;
+	string                    globalInitName_;
 	// The location each enclosing 'for' iterates over, as a path from its
 	// variable: "." + field, or "[]" for any index. Its storage and length are
 	// held for the whole loop.
@@ -344,11 +355,10 @@ class PlnSemanticAnalyzer {
 	void        requireAssignable(const string& name, const json& locNode) const;
 	bool        isStaticBound(const string& name) const;
 	json        storageBorrowType(const string& name, const json& varType, bool isMutable) const;
-	void        sa_global_decl(const json& stmt, json& out);
+	void        sa_global_decl(const json& stmt);
 	void        sa_global_permit(const json& stmt);
 	void        declarePermittedGlobals(const string& funcName, const json& funcDef);
-	void        checkGlobalsReachedBeforeDecl() const;
-	void        rejectImportedGlobals(const json& importStmt, const json& impAst) const;
+	void        emitInitFunc();
 	bool        isLocalVar(const string& name) const;
 	bool        isOwnedVar(const string& name) const;
 	bool        isFrameVar(const string& name) const;

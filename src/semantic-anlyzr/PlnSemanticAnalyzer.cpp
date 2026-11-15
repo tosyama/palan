@@ -230,6 +230,10 @@ void PlnSemanticAnalyzer::undefinedNameError(const json& at, const json& ref, Pl
 	                      : macro == "not-constant" ? E_CMacroNotConstant
 	                      : undefinedCode;
 	string name = ref["name"].get<string>();
+	if (code == E_UndefinedVariable && globalInitTopScope_ && globalInitTopScope_->count(name)) {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_GlobalInitUsesTopVar, name, globalInitName_) << endl;
+		exit(1);
+	}
 	if (code == E_UndefinedVariable) {
 		vector<string> spellings = enumeratorSpellings(name);
 		if (!spellings.empty()) {
@@ -1253,15 +1257,17 @@ void PlnSemanticAnalyzer::analysis(const json &ast, const string& astPath)
 		for (auto& s : sa["statements"]) stmts.push_back(move(s));
 		sa["statements"] = move(stmts);
 	}
-	if (pendingAliases_)
+	if (pendingAliases_) {
 		resolvePending(sa["statements"]);
+		resolvePending(initBody_);
+	}
 	// 3. Process each function body
 	if (ast["ast"].contains("functions"))
 		sa_functions(ast["ast"]["functions"]);
 	emitReleaseFuncs();
+	emitInitFunc();
 	if (!staticBindings_.empty())
 		sa["main"]["globals"] = staticBindings_;
-	checkGlobalsReachedBeforeDecl();
 	// 4. Emit the libraries collected from cinclude `link` clauses, after
 	//    steps 2-3 since a cinclude may sit inside a block or function body.
 	for (auto& lib : linkLibs_) sa["libs"].push_back(lib);
@@ -1514,13 +1520,13 @@ void PlnSemanticAnalyzer::sa_import(const json& stmt)
 {
 	json imp_ast = loadImportAst(stmt);
 	if (imp_ast.is_null()) return;
-	importModule(stmt, imp_ast);
+	const string& id = importModule(stmt, imp_ast).moduleId_;
+	if (id != moduleId_ && find(initImports_.begin(), initImports_.end(), id) == initImports_.end())
+		initImports_.push_back(id);
 }
 
 PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const json& imp_ast)
 {
-
-	rejectImportedGlobals(stmt, imp_ast);
 	PlnSemanticAnalyzer& sub = importTypeContext(imp_ast);
 	adoptExportedTypes(stmt, imp_ast, sub);
 

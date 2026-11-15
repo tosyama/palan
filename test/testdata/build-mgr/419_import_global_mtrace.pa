@@ -1,0 +1,5 @@
+import "trace_on.pa";
+import "owned_global_user.pa";
+import "owned_global.pa";
+cinclude <stdio.h>;
+printf("%d %d\n", total(), twice());

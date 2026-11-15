@@ -1,2 +1,4 @@
-global int32 x = 0 for f;
-export func f() { x + 1 -> x; }
+cinclude <stdio.h>;
+func start() -> int32 { puts("lib_global init"); return 10; }
+global int32 x = start() for f!;
+export func f() -> int32 { x + 1 -> x; return x; }

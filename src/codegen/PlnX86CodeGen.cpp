@@ -258,16 +258,18 @@ void PlnX86CodeGen::emitStringLiteral(const string& label, const string& value)
 // must not inherit these methods; see the ticket for the deferred VProg-level
 // VGlobal promotion if a second backend or a second compiler-emitted global
 // ever appears.
-void PlnX86CodeGen::emitEntry(const string& mainSymbol)
+void PlnX86CodeGen::emitEntry(const vector<string>& symbols)
 {
     // The kernel enters _start with %rsp 16-byte aligned and argc, argv[0..]
     // on the stack, so a plain call keeps the callee's alignment standard.
     emitSection(".text");
     emitGlobal("_start");
     emitLabel("_start");
-    out << "\tmovq (%rsp), %rdi\n";
-    out << "\tleaq 8(%rsp), %rsi\n";
-    out << "\tcall " << mainSymbol << "\n";
+    for (auto& symbol : symbols) {
+        out << "\tmovq (%rsp), %rdi\n";
+        out << "\tleaq 8(%rsp), %rsi\n";
+        out << "\tcall " << symbol << "\n";
+    }
     out << "\tmovl $0, %edi\n";
     out << "\tcall exit\n";
 

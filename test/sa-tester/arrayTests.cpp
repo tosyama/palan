@@ -796,7 +796,7 @@ TEST(sa, varr_borrow)
 	json jout = run_sa("../test/testdata/sa/296_varr_borrow.pa");
 	ASSERT_TRUE(jout.is_object());
 	const auto& funcs = jout["functions"];
-	ASSERT_EQ(funcs.size(), 3);
+	ASSERT_EQ(funcs.size(), 4);
 	ASSERT_EQ(funcs[0]["name"], "_296_varr_borrow..add.WVint32.int32");
 	ASSERT_EQ(funcs[1]["name"], "_296_varr_borrow..total.RVint32");
 	const auto& param = funcs[1]["parameters"][0]["var-type"];
@@ -863,7 +863,7 @@ TEST(sa, varr_return_param)
 	json jout = run_sa("../test/testdata/sa/298_varr_return_param.pa");
 	ASSERT_TRUE(jout.is_object());
 	const auto& funcs = jout["functions"];
-	ASSERT_EQ(funcs.size(), 4);
+	ASSERT_EQ(funcs.size(), 5);
 
 	// The named return is allocated at entry and not freed.
 	const auto& mk = funcs[0]["body"];
@@ -1182,7 +1182,7 @@ TEST(sa, arr_return_param)
 	json jout = run_sa("../test/testdata/sa/309_arr_return_param.pa");
 	ASSERT_TRUE(jout.is_object());
 	const auto& funcs = jout["functions"];
-	ASSERT_EQ(funcs.size(), 6);
+	ASSERT_EQ(funcs.size(), 7);
 	const string m = "_309_arr_return_param..";
 
 	// The named return is allocated at entry and not freed.

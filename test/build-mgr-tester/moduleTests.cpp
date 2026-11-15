@@ -574,11 +574,45 @@ TEST(build_mgr, global_var_mtrace) {
 	EXPECT_EQ(frees, 1);
 }
 
+// An imported module's globals are initialized before the entry's top level runs.
 TEST(build_mgr, import_global_var) {
 	cleanTestEnv();
-	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/372_import_global.pa");
-	ASSERT_NE(out.find("372_import_global.pa:1:1: error: cannot import a module whose functions use its global variable 'x'"),
-		string::npos) << out;
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/372_import_global.pa"),
+		"lib_global init\nmain\n11\n12\n");
+}
+
+// A module imported twice is initialized once, after the modules it imports.
+TEST(build_mgr, init_order) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/416_init_order.pa"),
+		"init b\ninit a\n8 7\n");
+}
+
+// In a circle, the module reached second sees the first's globals still zero.
+TEST(build_mgr, init_circle) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/417_init_circle.pa"),
+		"b sees 0\na sees 2\n1 2\n");
+}
+
+TEST(build_mgr, global_before_decl) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/418_global_before_decl.pa"), "5\n1\n");
+}
+
+// The first import's initializer starts tracing, so the owned global of a
+// module imported twice shows its one allocation, never freed.
+TEST(build_mgr, import_global_var_mtrace) {
+	cleanTestEnv();
+	string bin = "/tmp/palan_import_global_mtrace_bin";
+	ASSERT_EQ(execTestCommand("bin/palan -o " + bin + " ../test/testdata/build-mgr/419_import_global_mtrace.pa"), "");
+	string traceFile = "/tmp/palan_import_global_mtrace.log";
+	ASSERT_EQ(execTestCommand(
+		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
+		"MALLOC_TRACE=" + traceFile + " " + bin), "6 12\n");
+	auto [allocs, frees] = parseMtraceLog(traceFile);
+	EXPECT_EQ(allocs, 1);
+	EXPECT_EQ(frees, 0);
 }
 
 TEST(build_mgr, global_after_unrelated_call) {
@@ -824,7 +858,7 @@ TEST(build_mgr, lib_archive_links_without_the_source) {
 	EXPECT_EQ(execTestCommand("ar t " + archive + " | sort"),
 		"demo.demo.__allocators.o\ndemo.demo.o\ndemo.shapes.__allocators.o\ndemo.shapes.o\n");
 	// A program's first use of the archive: only the stub is not from it.
-	ASSERT_EQ(execTestCommand("lib/palan/dev/tools/palan-codegen --entry demo.demo..main --target " PALAN_TARGET " -o out/entry.s"), "");
+	ASSERT_EQ(execTestCommand("lib/palan/dev/tools/palan-codegen --entry demo.demo..init --entry demo.demo..main --target " PALAN_TARGET " -o out/entry.s"), "");
 	ASSERT_EQ(execTestCommand("as out/entry.s -o out/entry.o"), "");
 	ASSERT_EQ(execTestCommand("ld out/entry.o " + archive + " -lc -lm -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o out/demo"), "");
 	string output = execTestCommand(
@@ -907,8 +941,6 @@ TEST(build_mgr, lib_errors) {
 		"return1::palan: '" + lib_build + "plain.pa' has no library declaration, which every module of a library needs\n");
 	EXPECT_EQ(execTestCommand(libBuild("err_package.pa")),
 		"return1::palan: '" + lib_build + "other_package.pa' belongs to library 'other', not 'demo'\n");
-	EXPECT_EQ(execTestCommand(libBuild("err_global.pa")),
-		"return1::palan: '" + lib_build + "err_global.pa' permits a function to use its global 'hits', but a library's top level never runs\n");
 	EXPECT_EQ(execTestCommand(libBuild("err_local_header.pa")),
 		"return1::" + lib_build + "err_local_header.pa:2:1: error: a library's public declaration cannot yet use a C type of the local header 'local_type.h': its reader would not find the header.\n");
 	EXPECT_NE(execTestCommand(libBuild("err_no_export_clause.pa")).find("FILE"), string::npos);

@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 
 	int opt, option_index = 0;
 	char *output_file = NULL;
-	char *entry_symbol = NULL;
+	vector<string> entry_symbols;
 	string entry_target = PALAN_TARGET;
 
 	while (0 < (opt = getopt_long(argc, argv, "hvo:e:", long_options, NULL))) {
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 				output_file = optarg;
 				break;
 			case 'e':
-				entry_symbol = optarg;
+				entry_symbols.push_back(optarg);
 				break;
 			case 't':
 				entry_target = optarg;
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (entry_symbol) {
+	if (!entry_symbols.empty()) {
 		if (argc != optind || !output_file) {
 			cerr << "Usage: palan-codegen -e <symbol> -o <file>" << endl;
 			return 1;
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 			cerr << "palan-codegen: Could not open output file '" << output_file << "'." << endl;
 			return 1;
 		}
-		PlnX86CodeGen(asmfile).emitEntry(entry_symbol);
+		PlnX86CodeGen(asmfile).emitEntry(entry_symbols);
 		return 0;
 	}
 

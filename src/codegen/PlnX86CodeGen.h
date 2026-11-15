@@ -71,5 +71,5 @@ public:
 
     void emit(const VProg& prog, const vector<RegAllocResult>& allocs) override;
     // The program entry: a _start that calls mainSymbol(argc, argv), then exit(0).
-    void emitEntry(const string& mainSymbol);
+    void emitEntry(const vector<string>& symbols);
 };

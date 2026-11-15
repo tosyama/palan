@@ -1,6 +1,7 @@
 cinclude <stdio.h>;
 cinclude <mcheck.h>;
-mtrace();
+func trace() -> int32 { mtrace(); return 1; }
+global int32 tracing = trace();
 global [3]int32 a = [1, 2, 3] for sum;
 func sum() -> int32 s {
     0 -> s;

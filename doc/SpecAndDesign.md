@@ -38,7 +38,7 @@ Design:
  skipping every step whose result is still valid (5.1). A module compiles the same whichever module
  is the entry. The allocators the modules need are generated as one more module (see 3.6). The entry
  is chosen only at link time: `palan-codegen --entry` emits a `_start` calling the given module's
- top-level function, and all object files and the archives of the libraries used are linked with
+ initialization function and then its top-level function, and all object files and the archives of the libraries used are linked with
  `ld` to create the final executable. Two modules with one identity are reported here, before `ld`.
  The target is decided once, here. It is passed to palan-gen-ast, which records it in ast.json for
  the rest of the pipeline, and to `palan-codegen --entry`, which has no such file to read.
@@ -120,8 +120,9 @@ Design:
  The code generator reads sa.json and emits x86-64 AT&T syntax assembly for use with `as`. An sa.json
  whose target is missing or unsupported is an error.
  A module's top-level statements are its exported function `<module>..main`, which takes argc and
- argv. The entry point `_start` (from `--entry`) calls it with argc and argv from the initial
- stack, then `exit(0)`; from 0.2.6 it calls the module's `..init` first (3.7).
+ argv. The entry point `_start` calls each symbol `--entry` names, in the order given (the
+ module's `..init` (3.7), then its `..main`), each with argc and argv from the initial stack,
+ then `exit(0)`.
 
  Calling convention:
  - C and Palan function calls share the x86-64 System V argument assignment: integer/pointer
@@ -221,8 +222,8 @@ into a program uses them too, in place of the program's.
 
 ### 3.7 Modules and Libraries
 
-**Status.** Module initialization and exported globals are the design of 0.2.6, not yet
-implemented; the rest is implemented.
+**Status.** Exported globals are the design of 0.2.6, not yet implemented; the rest is
+implemented.
 
 **Module identity.** A module's identity is the module part of its symbols (SASpec.md's Symbol
 names). It comes from its source alone, never from the entry or the source's location:

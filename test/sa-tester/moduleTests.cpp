@@ -796,7 +796,7 @@ TEST(sa, nested_func_symbols)
 	for (auto& f : jout["functions"]) names.insert(f["name"].get<string>());
 	const string m = "_291_nested_2dfunc_2dsymbols..";
 	ASSERT_EQ(names, (set<string>{m + "a.v", m + "a.v..f.v", m + "a.v..f.v..g.v",
-		m + "a.v..b1..k.v", m + "a.v..b2..k.v", m + "b1..k.v"}));
+		m + "a.v..b1..k.v", m + "a.v..b2..k.v", m + "b1..k.v", m + "init"}));
 }
 
 // The .pai is what a library's users compile against, so a program must come out

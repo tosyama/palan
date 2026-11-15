@@ -1,0 +1,7 @@
+cinclude <stdio.h>;
+show();
+global int32 x = 5 for show;
+global int32 y = peek() + 1 for peek;
+func show() { printf("%d\n", x); }
+func peek() -> int32 { return y; }
+printf("%d\n", y);

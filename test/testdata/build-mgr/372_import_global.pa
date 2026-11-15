@@ -1,2 +1,5 @@
+cinclude <stdio.h>;
+puts("main");
 import "lib_global.pa";
-f();
+printf("%d\n", f());
+printf("%d\n", f());

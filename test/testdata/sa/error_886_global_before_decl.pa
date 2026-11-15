@@ -1,3 +1,0 @@
-f();
-global int32 x = 0 for f;
-func f() { }

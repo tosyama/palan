@@ -190,8 +190,7 @@ enum PlnSaMessageCode {
 	E_GlobalPermitUnknownVar,	// arg1: variable name
 	E_GlobalPermitNotFunc,	// arg1: function name
 	E_GlobalPermitDuplicate,	// arg1: variable name, arg2: function name
-	E_GlobalUsedBeforeDecl,	// arg1: variable name, arg2: function name
-	E_ImportModuleWithGlobals,	// arg1: variable name
+	E_GlobalInitUsesTopVar,	// arg1: variable name, arg2: global name
 	E_InterfaceAsProgram,	// arg1: file path
 	E_OperatorFuncArity,	// arg1: operator, arg2: parameter counts it takes
 	E_OperatorFuncNoStruct,	// arg1: operator

@@ -1,0 +1,3 @@
+cinclude <mcheck.h>;
+func start() -> int32 { mtrace(); return 1; }
+global int32 tracing = start();
