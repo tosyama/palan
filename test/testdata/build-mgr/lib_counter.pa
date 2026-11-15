@@ -1,0 +1,4 @@
+cinclude <stdio.h>;
+export global int64 count = 10 for inc!, show;
+export func inc() { count + 1 -> count; }
+export func show() { printf("lib %ld\n", count); }

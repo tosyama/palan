@@ -281,6 +281,8 @@ static int buildLibrary(const vector<json>& asts, const string& base, const vect
 	json symbols = json::parse(symbols_in), sa = json::parse(sa_in);
 	set<string> defined;
 	for (auto& f : sa["functions"]) defined.insert(f["name"].get<string>());
+	for (auto& g : sa.value("globals", json::array()))
+		if (g.value("export", false)) defined.insert(g["label"].get<string>());
 	for (auto& symbol : symbols)
 		if (!defined.count(symbol)) {
 			cerr << PlnBuildMgrMessage::getMessage(E_LibSymbolMismatch, source.string(), symbol) << endl;

@@ -615,6 +615,39 @@ TEST(build_mgr, import_global_var_mtrace) {
 	EXPECT_EQ(frees, 0);
 }
 
+// Both modules read and write one counter: the importer's top level freely,
+// the functions a `global` statement permits, and its own global's initializer.
+TEST(build_mgr, export_global) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/420_export_global.pa"),
+		"lib 1111\nmain 1111 1111 20\n");
+}
+
+TEST(build_mgr, export_global_alias) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/421_export_global_alias.pa"), "23 23\n");
+}
+
+// Replacing an imported owned global frees what it held, once; what it
+// owns afterwards lives on.
+TEST(build_mgr, export_global_mtrace) {
+	cleanTestEnv();
+	string bin = "/tmp/palan_export_global_mtrace_bin";
+	ASSERT_EQ(execTestCommand("bin/palan -o " + bin + " ../test/testdata/build-mgr/422_export_global_mtrace.pa"), "");
+	string traceFile = "/tmp/palan_export_global_mtrace.log";
+	ASSERT_EQ(execTestCommand(
+		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
+		"MALLOC_TRACE=" + traceFile + " " + bin), "18 3 5\n");
+	auto [allocs, frees] = parseMtraceLog(traceFile);
+	EXPECT_EQ(allocs, 5);
+	EXPECT_EQ(frees, 2);
+}
+
+TEST(build_mgr, import_global_in_func) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/423_import_global_in_func.pa"), "15\n");
+}
+
 TEST(build_mgr, global_after_unrelated_call) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/389_global_after_unrelated_call.pa"), "x\n1\n");

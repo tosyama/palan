@@ -509,7 +509,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_GlobalPermitUnknownVar:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "'" + arg1 + "' is not a global variable: declare it with 'global', or cinclude the C global first.";
+			return "'" + arg1 + "' is not a global variable: declare it with 'global', import it, or cinclude the C global first.";
 
 		case E_GlobalPermitNotFunc:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -523,6 +523,11 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
 			return "the initializer of global '" + arg2 + "' cannot use top-level variable '" + arg1
 			       + "': globals are initialized before the top level runs.";
+
+		case E_ExportedGlobalSizeNotConst:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "the sizes of exported global '" + arg1
+			       + "' must be constants or its array literal's: an importer cannot know them otherwise.";
 
 		case E_InterfaceAsProgram:
 			BOOST_ASSERT(arg1 != "\x01");

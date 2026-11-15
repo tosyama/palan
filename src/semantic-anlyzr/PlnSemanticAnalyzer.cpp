@@ -992,7 +992,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 			if (stmt.contains("targets"))
 				for (auto& tg : stmt["targets"]) targets.insert(tg.get<string>());
 			for (auto& d : (*mod.moduleAstRoot_)["ast"]["statements"]) {
-				if (!d.value("export", false)) continue;
+				if (!d.value("export", false) || !isTypeDecl(d["stmt-type"])) continue;
 				string name = d["name"].get<string>();
 				if (stmt.contains("targets") && !targets.count(name)) continue;
 				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, &mod, &d});
@@ -1168,24 +1168,53 @@ const json* PlnSemanticAnalyzer::topVarType(const string& name)
 	// Only an array's length can make a const; any other variable is left to
 	// its statement.
 	string spec = vt.value("specifier", "");
-	if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")) {
-		ensureTypeRefs(vt);
-		vt = resolveKnownType(*v.stmt, vt);
-		// A size known only at run time would have its expression analyzed
-		// before the functions it may call are registered.
-		bool constSizes = true;
-		for (const json* l = &vt; l->value("type-kind", "") == "arr"; l = &(*l)["base-type"]) {
-			const json& size = (*l)["size-expr"];
-			constSizes = constSizes && (size.is_null() || (!hasCall(size) && !firstNonConstName(size)));
-		}
-		if (constSizes && var.contains("init") && var["init"].value("expr-type", "") == "arr-lit")
-			fillArrLitSizes(*v.stmt, name, vt, var["init"]["items"]);
-		if (constSizes && !vt["size-expr"].is_null())
-			v.type = arrVarStorage(*v.stmt, vt).type;
-	}
+	if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")
+			&& fixArrDeclSizes(*v.stmt, var, vt) && !vt["size-expr"].is_null())
+		v.type = arrVarStorage(*v.stmt, vt).type;
 	program_->resolving.pop_back();
 	v.state = TopDecl::Done;
 	return v.type.is_null() ? nullptr : &v.type;
+} // LCOV_EXCL_BR_LINE
+
+bool PlnSemanticAnalyzer::fixArrDeclSizes(const json& stmt, const json& var, json& vt)
+{
+	ensureTypeRefs(vt);
+	vt = resolveKnownType(stmt, vt);
+	// A size known only at run time would have its expression analyzed
+	// before the functions it may call are registered.
+	for (const json* l = &vt; l->value("type-kind", "") == "arr"; l = &(*l)["base-type"]) {
+		const json& size = (*l)["size-expr"];
+		if (!size.is_null() && (hasCall(size) || firstNonConstName(size))) return false;
+	}
+	if (var.contains("init") && var["init"].value("expr-type", "") == "arr-lit")
+		fillArrLitSizes(stmt, var["name"], vt, var["init"]["items"]);
+	return true;
+} // LCOV_EXCL_BR_LINE
+
+json PlnSemanticAnalyzer::exportedGlobalType(const json& stmt)
+{
+	const json& var = stmt["vars"][0];
+	string name = var["name"];
+	json vt = var["var-type"];
+	takeVarStorage(vt);
+	program_->resolving.push_back({this, name, &stmt});
+	string spec = vt.value("specifier", "");
+	if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")) {
+		if (!fixArrDeclSizes(stmt, var, vt)) {
+			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ExportedGlobalSizeNotConst, name) << endl;
+			exit(1);
+		}
+		vt = arrVarStorage(stmt, vt).type;
+	} else {
+		ensureTypeRefs(vt);
+		vt = resolveKnownType(stmt, vt);
+		if (vt.value("type-kind", "") == "prim" && structDefs_.count(vt.value("type-name", "")))
+			vt = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",vt["type-name"]}}}}; // LCOV_EXCL_BR_LINE
+		else
+			vt = deepNormalizePrimToStruct(stmt, normalizeArrBorrowType(stmt, vt));
+	}
+	program_->resolving.pop_back();
+	return vt;
 } // LCOV_EXCL_BR_LINE
 
 // A const left to its statement is unknown until then.
@@ -1513,6 +1542,9 @@ json PlnSemanticAnalyzer::interfaceSymbols(const json& ast)
 		for (auto& decl : ast["ast"]["statements"])
 			if (decl.value("stmt-type", "") == "opaque-def")
 				symbols.push_back(sub.structDefs_.at(sub.topTypeIdentity(decl["name"])).releaseFunc);
+	// The probe has imported each exported global, its type read back.
+	for (auto& g : globals_)
+		symbols.push_back(g.second.label);
 	return symbols;
 } // LCOV_EXCL_BR_LINE
 
@@ -1529,6 +1561,7 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const j
 {
 	PlnSemanticAnalyzer& sub = importTypeContext(imp_ast);
 	adoptExportedTypes(stmt, imp_ast, sub);
+	importGlobals(stmt, sub);
 
 	if (!imp_ast.contains("export")) return sub;
 
@@ -1561,4 +1594,57 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const j
 		currentScope[operatorFuncNames().count(fname) ? "" : alias][fname].push_back(funcEntry);
 	}
 	return sub;
+}
+
+// A function reaches a global only through a top-level `global` statement,
+// unless it imports the module itself.
+void PlnSemanticAnalyzer::importGlobals(const json& stmt, PlnSemanticAnalyzer& sub)
+{
+	// LCOV_EXCL_BR_START
+	if (sub.moduleId_ == moduleId_ || !(*sub.moduleAstRoot_)["ast"].contains("statements")) return;
+	string alias = stmt.value("alias", "");
+	set<string> targets;
+	bool selective = stmt.contains("targets");
+	if (selective)
+		for (auto& t : stmt["targets"]) targets.insert(t.get<string>());
+	bool topLevel = !currentFunc_ && varScopes.size() == 1;
+
+	for (auto& d : (*sub.moduleAstRoot_)["ast"]["statements"]) {
+		if (!d.value("global", false) || !d.value("export", false)) continue;
+		string name = d["vars"][0]["name"];
+		if (selective && !targets.count(name)) continue;
+		string written = alias.empty() ? name : alias + "." + name;
+		string label = sub.moduleId_ + "." + name;
+		// The same module imported again into this scope.
+		if (varScopes.back().count(written) && any_of(staticBindings_.begin(), staticBindings_.end(),
+				[&](const json& b) { return b["name"] == written && b["label"] == label; }))
+			continue;
+
+		json type = sub.exportedGlobalType(d);
+		adoptVarTypeDeps(sub, type, stmt);
+		optional<ScopeVar> scopeVar;
+		if (isOwnedBlock(type)) {
+			json astType = d["vars"][0]["var-type"];
+			bool heap = takeVarStorage(astType) == VarStorage::Heap;
+			// Only `->>` into the global releases what it held.
+			scopeVar = ScopeVar{written, heap ? makeOwnedFreeStmt(written, type) : json(), heap, true};
+		}
+		bindGlobal(written, label, type, scopeVar, &stmt);
+		if (topLevel) {
+			// The module's own globals initialized after the import may read it.
+			swap(varScopes, initVarScopes_);
+			swap(arrayScopeVars_, initScopeVars_);
+			swap(staticBindings_, initBindings_);
+			bindGlobal(written, label, type, scopeVar, &stmt);
+			swap(varScopes, initVarScopes_);
+			swap(arrayScopeVars_, initScopeVars_);
+			swap(staticBindings_, initBindings_);
+			registerGlobal(written, label, type, &d);
+		}
+		if (!alias.empty()) {
+			importScopes.back()[alias];
+			qualifiedGlobals_ = true;
+		}
+	}
+	// LCOV_EXCL_BR_STOP
 }

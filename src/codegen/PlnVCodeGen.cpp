@@ -1076,8 +1076,8 @@ VProg PlnVCodeGen::generate(const Module& module)
     // Populate .rodata entries
     for (auto& d : module.strLiterals)
         prog.data.push_back(VStringLiteral{d.label, d.value}); // LCOV_EXCL_BR_LINE
-    for (auto& label : module.globalLabels)
-        prog.bss.push_back({label, 8, 8}); // LCOV_EXCL_BR_LINE
+    for (auto& g : module.globals)
+        prog.bss.push_back({g.label, 8, 8, g.isExport}); // LCOV_EXCL_BR_LINE
 
     for (auto& pf : module.functions) {
         VFunc vf;

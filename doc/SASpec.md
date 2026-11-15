@@ -22,8 +22,9 @@ Root
 - init\* - The symbol of the module's initialization function, `<module>..init`, which `functions`
   defines (see Module initialization below).
 - globals - The module's static slots, each emitted by codegen in `.bss`: its `global` variables
-  (`label` `<module>.<name>`) and `init`'s flag (`<module>..init.done`), with `var-type`. Omitted
-  when there are none.
+  (`label` `<module>.<name>`) and `init`'s flag (`<module>..init.done`), with `var-type`, and
+  `export: true` for an `export global`, whose label codegen makes global. Omitted when there are
+  none. An imported global's slot is its own module's.
 - str-literals\* - String literal table (collected by SA, used by codegen for .rodata)
 - functions\* - Processed Palan function list (empty array when no functions defined)
 - statements\* - Top-level statement list. When a top-level statement names the implicit
@@ -402,7 +403,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   emitted into the module's `..init` as a top-level variable's would be, its variable given
   `label` (see Static variables below);
   it is `E_GlobalNotTopLevel` anywhere but the top level, as a `global-permit` is. A permit names
-  a `global` variable of the module or a C global visible there (`E_GlobalPermitUnknownVar`) and
+  a `global` variable of the module, one imported at the top level (`M.count` under an alias, the
+  alias checked by `E_UnknownAlias`) or a C global visible there (`E_GlobalPermitUnknownVar`) and
   top-level Palan functions of the module (`E_GlobalPermitNotFunc`), each once
   (`E_GlobalPermitDuplicate`).
 - const-decl statements are consumed by SA and not emitted; the value is
@@ -1820,6 +1822,14 @@ frame variable's value would be, a pointer for an array or struct.
   only with `!` (`E_GlobalNotWritable`).
 - A C global's `label` is its C name. It is readable anywhere it is visible, and writable at the
   top level after a `global` statement names it, or in a function a permit lists with `!`.
+- An imported `export global` keeps its module's label and is bound by `name` as written: `count`,
+  or `M.count` under an alias, which SA reads from a field access or a field assignment on the
+  alias where no variable hides it. It is visible from the import to the end of the enclosing
+  scope. An import at the top level binds it in `main` and `..init` with its own type, and lets
+  permits name it; one in a function binds it there with its own type, readable and writable. Its
+  type comes from its declaration alone, the sizes an array literal gives filled in, so a source and
+  its interface give one type; a size known only at run time is `E_ExportedGlobalSizeNotConst`. A
+  name already declared in the scope, by the module or by another import, is `E_DuplicateVarDecl`.
 
 ### Module initialization
 

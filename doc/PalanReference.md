@@ -2861,7 +2861,9 @@ This writes `<dir>/std/utf8.pai`, the interface a person reads to learn the libr
   through a field, is a compile error; an [opaque type](#opaque-types) of the main file may hold
   one.
 - The global variables of every file are initialized when a program using the library starts,
-  as an imported file's are (see [Global Variables](#global-variables)).
+  as an imported file's are (see [Global Variables](#global-variables)). The main file's
+  [exported global variables](#exporting-global-variables) are published, without their
+  initializers (`export global [3]int32 primes;`).
 - The interface may rename a constant or type alias of another file to a name starting with `__`
   (see [Lexical Rules](#2-lexical-rules)).
 
@@ -2967,6 +2969,44 @@ func cmp(@int32 a, @int32 b) -> int32 r {
 
 - What a global variable owns lives until the program ends; it is not freed at the end of the
   top level. A value it is reassigned away from at the top level is freed as usual.
+
+### Exporting Global Variables
+
+`export global` lets the files importing this one use the variable as their own global
+variable:
+
+```palan
+// counter.pa
+export global int64 count = 0 for inc!;
+export func inc() { count + 1 -> count; }
+```
+
+```palan
+// main.pa
+cinclude <stdio.h>;
+import "counter.pa";
+global count for report;
+
+func report() { printf("%ld\n", count); }
+
+inc();
+count + 10 -> count;   // the top-level statements read and write it freely
+report();              // 11
+```
+
+- In the importing file, the top-level statements use it freely, and a `global` statement there
+  lets its functions read it, or with `!` write it, as for its own global variables.
+- Under an alias import, write it with the alias: `C.count`, and `global C.count for report;`.
+  A variable named `C` hides the alias.
+- A selective import names it like a function: `import count from "counter.pa";`.
+- An `import` inside a function lets that function read and write it, without a `global`
+  statement. Inside a block, it is visible only in the block.
+- An imported variable whose name the file already declares, or which two unaliased imports both
+  export, is a compile error; import one of them with an alias.
+- The sizes of an exported array must be constants or come from its array literal
+  (`export global []int32 primes = [2, 3, 5];`); a size known only at run time is a compile error.
+- To keep a variable from being written by other files, do not export it; export functions that
+  read or change it.
 
 ---
 

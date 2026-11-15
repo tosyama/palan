@@ -1,0 +1,1 @@
+export global int64 count = 5;

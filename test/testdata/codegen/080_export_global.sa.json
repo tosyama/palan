@@ -1,0 +1,287 @@
+{
+  "alloc-shapes": [],
+  "functions": [
+    {
+      "body": [
+        {
+          "cond": {
+            "expr-type": "cmp",
+            "left": {
+              "expr-type": "id",
+              "name": "__init_done",
+              "value-type": {
+                "type-kind": "prim",
+                "type-name": "uint8"
+              },
+              "var-type": {
+                "type-kind": "prim",
+                "type-name": "uint8"
+              }
+            },
+            "op": "!=",
+            "right": {
+              "expr-type": "lit-int",
+              "value": "0",
+              "value-type": {
+                "type-kind": "prim",
+                "type-name": "uint8"
+              }
+            },
+            "value-type": {
+              "type-kind": "prim",
+              "type-name": "bool"
+            }
+          },
+          "stmt-type": "if",
+          "then": {
+            "body": [
+              {
+                "stmt-type": "return"
+              }
+            ],
+            "stmt-type": "block"
+          }
+        },
+        {
+          "name": "__init_done",
+          "stmt-type": "assign",
+          "value": {
+            "expr-type": "lit-int",
+            "value": "1",
+            "value-type": {
+              "type-kind": "prim",
+              "type-name": "uint8"
+            }
+          }
+        },
+        {
+          "stmt-type": "var-decl",
+          "vars": [
+            {
+              "init": {
+                "expr-type": "lit-int",
+                "loc": [
+                  1,
+                  25,
+                  1,
+                  26
+                ],
+                "value": "1",
+                "value-type": {
+                  "type-kind": "prim",
+                  "type-name": "int64"
+                }
+              },
+              "label": "_080_export_global.n",
+              "name": "n",
+              "var-type": {
+                "type-kind": "prim",
+                "type-name": "int64"
+              }
+            }
+          ]
+        },
+        {
+          "stmt-type": "var-decl",
+          "vars": [
+            {
+              "init": {
+                "args": [
+                  {
+                    "expr-type": "mul",
+                    "left": {
+                      "expr-type": "lit-int",
+                      "loc": [
+                        2,
+                        16,
+                        2,
+                        17
+                      ],
+                      "value": "2",
+                      "value-type": {
+                        "type-kind": "prim",
+                        "type-name": "uint64"
+                      }
+                    },
+                    "right": {
+                      "expr-type": "lit-uint",
+                      "value": "4",
+                      "value-type": {
+                        "type-kind": "prim",
+                        "type-name": "uint64"
+                      }
+                    },
+                    "value-type": {
+                      "type-kind": "prim",
+                      "type-name": "uint64"
+                    }
+                  }
+                ],
+                "expr-type": "call",
+                "func-type": "c",
+                "name": "malloc",
+                "value-type": {
+                  "arr-size": 2,
+                  "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "int32"
+                  },
+                  "type-kind": "pntr"
+                }
+              },
+              "label": "_080_export_global.a",
+              "name": "a",
+              "var-type": {
+                "arr-size": 2,
+                "base-type": {
+                  "type-kind": "prim",
+                  "type-name": "int32"
+                },
+                "type-kind": "pntr"
+              }
+            }
+          ]
+        },
+        {
+          "stmt-type": "var-decl",
+          "vars": [
+            {
+              "init": {
+                "expr-type": "lit-int",
+                "loc": [
+                  3,
+                  18,
+                  3,
+                  19
+                ],
+                "value": "2",
+                "value-type": {
+                  "type-kind": "prim",
+                  "type-name": "int64"
+                }
+              },
+              "label": "_080_export_global.m",
+              "name": "m",
+              "var-type": {
+                "type-kind": "prim",
+                "type-name": "int64"
+              }
+            }
+          ]
+        }
+      ],
+      "export": true,
+      "func-type": "palan",
+      "globals": [
+        {
+          "label": "_080_export_global..init.done",
+          "name": "__init_done",
+          "var-type": {
+            "type-kind": "prim",
+            "type-name": "uint8"
+          }
+        }
+      ],
+      "name": "_080_export_global..init",
+      "parameters": []
+    }
+  ],
+  "globals": [
+    {
+      "export": true,
+      "label": "_080_export_global.n",
+      "var-type": {
+        "type-kind": "prim",
+        "type-name": "int64"
+      }
+    },
+    {
+      "export": true,
+      "label": "_080_export_global.a",
+      "var-type": {
+        "arr-size": 2,
+        "base-type": {
+          "type-kind": "prim",
+          "type-name": "int32"
+        },
+        "type-kind": "pntr"
+      }
+    },
+    {
+      "label": "_080_export_global.m",
+      "var-type": {
+        "type-kind": "prim",
+        "type-name": "int64"
+      }
+    },
+    {
+      "label": "_080_export_global..init.done",
+      "var-type": {
+        "type-kind": "prim",
+        "type-name": "uint8"
+      }
+    }
+  ],
+  "init": "_080_export_global..init",
+  "libs": [],
+  "main": {
+    "globals": [
+      {
+        "label": "_080_export_global.n",
+        "name": "n",
+        "var-type": {
+          "type-kind": "prim",
+          "type-name": "int64"
+        }
+      },
+      {
+        "label": "_080_export_global.a",
+        "name": "a",
+        "var-type": {
+          "arr-size": 2,
+          "base-type": {
+            "type-kind": "prim",
+            "type-name": "int32"
+          },
+          "type-kind": "pntr"
+        }
+      },
+      {
+        "label": "_080_export_global.m",
+        "name": "m",
+        "var-type": {
+          "type-kind": "prim",
+          "type-name": "int64"
+        }
+      }
+    ],
+    "name": "_080_export_global..main",
+    "parameters": [
+      {
+        "name": "__argc",
+        "var-type": {
+          "type-kind": "prim",
+          "type-name": "int64"
+        }
+      },
+      {
+        "name": "__argv",
+        "var-type": {
+          "base-type": {
+            "base-type": {
+              "type-kind": "prim",
+              "type-name": "uint8"
+            },
+            "type-kind": "pntr"
+          },
+          "type-kind": "pntr"
+        }
+      }
+    ]
+  },
+  "objs": [],
+  "original": "/tmp/claude-1000/-home-ubuntu-dev-palanx/63b96d3f-de03-46c1-8d92-e246e4969136/scratchpad/080_export_global.pa",
+  "statements": [],
+  "str-literals": [],
+  "target": "x86_64-linux-gnu"
+}

@@ -1480,7 +1480,7 @@ void PlnSemanticAnalyzer::adoptExportedTypes(const json& stmt, const json& impAs
 
 	string alias = stmt.value("alias", "");
 	for (auto& d : impAst["ast"]["statements"]) {
-		if (!d.value("export", false)) continue;
+		if (!d.value("export", false) || !isTypeDecl(d["stmt-type"])) continue;
 		string name = d["name"].get<string>();
 		if (selective && !targets.count(name)) continue;
 		string written = alias.empty() ? name : alias + "." + name;
@@ -1543,11 +1543,7 @@ void PlnSemanticAnalyzer::adoptStruct(PlnSemanticAnalyzer& sub, const string& na
 	if (!adopted) return;
 	for (auto& f : def.fields) {
 		if (f.typeKind == "owned" || f.typeKind == "embed-arr" || f.typeKind == "embed-varr") {
-			adoptTypeDeps(sub, f.type, locNode);
-			// The defining module got the builtins of each `[+]U` level from
-			// varrStorageType; a field access here needs them too.
-			for (const json* t = &f.type; t->contains("base-type"); t = &(*t)["base-type"])
-				if (isVarrStorage(*t)) recordVarrShape(*t);
+			adoptVarTypeDeps(sub, f.type, locNode);
 			continue;
 		}
 		if (sub.structDefs_.count(f.typeName)) {
@@ -1583,6 +1579,15 @@ void PlnSemanticAnalyzer::adoptEnum(const PlnSemanticAnalyzer& sub, const string
 	if (written.empty()) return;
 	if (alias.empty()) bindImportedTypeName(locNode, written, sub.typeAliases_.at(written));
 	setTypeNameable(written, alias.empty(), alias);
+}
+
+// The defining module got the builtins of each `[+]U` level from
+// varrStorageType; an access here needs them too.
+void PlnSemanticAnalyzer::adoptVarTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)
+{
+	adoptTypeDeps(sub, type, locNode);
+	for (const json* t = &type; t->contains("base-type"); t = &(*t)["base-type"])
+		if (isVarrStorage(*t)) recordVarrShape(*t);
 }
 
 void PlnSemanticAnalyzer::adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)
@@ -1771,8 +1776,11 @@ void PlnSemanticAnalyzer::sa_global_decl(const json& stmt)
 	}
 	json plain = stmt;
 	plain.erase("global");
+	plain.erase("export");
 	string name = stmt["vars"][0]["name"];
 	string label = symbolScope_ + "." + name;
+	bool exported = stmt.value("export", false);
+	json importedType = exported ? exportedGlobalType(stmt) : json();
 
 	swap(varScopes, initVarScopes_);
 	swap(arrayScopeVars_, initScopeVars_);
@@ -1806,17 +1814,33 @@ void PlnSemanticAnalyzer::sa_global_decl(const json& stmt)
 	swap(arrayScopeVars_, initScopeVars_);
 	swap(staticBindings_, initBindings_);
 
-	declareVar(name, type, &stmt);
+	BOOST_ASSERT(!exported || importedType == type);
+
+	bindGlobal(name, label, type, scopeVar, &stmt);
+	registerGlobal(name, label, type, &stmt);
+	json entry = {{"label", label}, {"var-type", type}}; // LCOV_EXCL_BR_LINE
+	if (exported) entry["export"] = true; // LCOV_EXCL_BR_LINE
+	sa["globals"].push_back(move(entry));
+} // LCOV_EXCL_BR_LINE
+
+void PlnSemanticAnalyzer::bindGlobal(const string& name, const string& label, const json& type,
+                                     const optional<ScopeVar>& scopeVar, const json* locNode)
+{
+	declareVar(name, type, locNode);
 	if (scopeVar) arrayScopeVars_.back().push_back(*scopeVar);
 	bindStatic(name, label, type);
-	GlobalVar g{label, type, &stmt, {}, {}}; // LCOV_EXCL_BR_LINE
+}
+
+// After bindGlobal: a function's view of an owned block depends on its ScopeVar.
+void PlnSemanticAnalyzer::registerGlobal(const string& name, const string& label, const json& type, const json* decl)
+{
+	GlobalVar g{label, type, decl, {}, {}}; // LCOV_EXCL_BR_LINE
 	if (!isArrBorrowVar(type) && !isStructBorrow(type)) {
 		g.view[0] = storageBorrowType(name, type, false);
 		g.view[1] = storageBorrowType(name, type, true);
 	}
 	globals_[name] = move(g);
-	sa["globals"].push_back({{"label", label}, {"var-type", type}}); // LCOV_EXCL_BR_LINE
-} // LCOV_EXCL_BR_LINE
+}
 
 void PlnSemanticAnalyzer::sa_global_permit(const json& stmt)
 {
@@ -1827,11 +1851,13 @@ void PlnSemanticAnalyzer::sa_global_permit(const json& stmt)
 	string name = stmt["name"];
 	map<string, bool>* funcs;
 	auto g = globals_.find(name);
+	size_t dot = name.find('.');
 	if (g != globals_.end()) {
 		funcs = &g->second.funcs;
-	} else if (!findVar(name) && findCGlobal(name)) { // LCOV_EXCL_BR_LINE
+	} else if (dot == string::npos && !findVar(name) && findCGlobal(name)) { // LCOV_EXCL_BR_LINE
 		funcs = &cGlobalPermits_[name];
 	} else {
+		if (dot != string::npos) requireAlias(stmt, name.substr(0, dot));
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_GlobalPermitUnknownVar, name) << endl;
 		exit(1);
 	}

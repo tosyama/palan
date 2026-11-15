@@ -14,7 +14,11 @@
 json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 {
 	json result = json::array();
-	for (auto& stmt : stmts) {
+	for (auto& rawStmt : stmts) {
+		// A type declaration is tracked by its address (prescannedDecls_).
+		json resolved = qualifiedGlobals_ && !isTypeDecl(rawStmt["stmt-type"])
+		              ? resolveQualifiedGlobals(rawStmt) : json();
+		const json& stmt = resolved.is_null() ? rawStmt : resolved;
 		string t = stmt["stmt-type"];
 		if      (t == "import")   sa_import(stmt);
 		else if (t == "cinclude") sa_cinclude(stmt);
@@ -24,7 +28,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 		else if (t == "var-decl") { for (auto& s : sa_var_decl(stmt)) result.push_back(s); }
 		else if (t == "global-permit") sa_global_permit(stmt);
 		else if (isStoreStmt(stmt)) { for (auto& s : sa_store_scope(stmt)) result.push_back(s); }
-		else if (prescannedDecls_.count(&stmt)) continue;
+		else if (prescannedDecls_.count(&rawStmt)) continue;
 		else if (t == "struct-def")   sa_struct_def(stmt);
 		else if (t == "opaque-def")   sa_opaque_def(stmt);
 		else if (t == "type-alias")   sa_type_alias(stmt);
@@ -115,6 +119,64 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 		}
 	}
 	return result;
+}
+
+// Null when nothing changes. A statement list (a block's, a loop's body) is
+// left to sa_statements, which reaches it in its own scope; an `else if`'s
+// condition is not, so it is resolved here with its `if`.
+json PlnSemanticAnalyzer::resolveQualifiedGlobals(const json& node) const
+{
+	// LCOV_EXCL_BR_START
+	// The global `M.count` that a field access, or a field-assign's target, names.
+	auto globalOf = [&](const json& n) -> string {
+		if (n.value("expr-type", "") != "field-access" && n.value("stmt-type", "") != "field-assign") return "";
+		if (n["object"].value("expr-type", "") != "id") return "";
+		string alias = typeNameWritten(n["object"]);
+		if (alias.empty()) return "";
+		string q = alias + "." + n["field"].get<string>();
+		return findVar(q) || globals_.count(q) ? q : "";
+	};
+	if (node.is_object()) {
+		if (node.value("stmt-type", "") == "block") return json();
+		string q = globalOf(node);
+		if (!q.empty()) {
+			if (node.contains("expr-type")) {
+				json id = {{"expr-type", "id"}, {"name", q}};
+				if (node.contains("loc")) id["loc"] = node["loc"];
+				return id;
+			}
+			json assign = node;
+			assign["stmt-type"] = "assign";
+			assign["name"] = q;
+			assign.erase("object");
+			assign.erase("field");
+			json value = resolveQualifiedGlobals(assign["value"]);
+			if (!value.is_null()) assign["value"] = move(value);
+			return assign;
+		}
+		json out;
+		for (auto& [k, v] : node.items()) {
+			if (k == "functions") continue;
+			json r = resolveQualifiedGlobals(v);
+			if (r.is_null()) continue;
+			if (out.is_null()) out = node;
+			out[k] = move(r);
+		}
+		return out;
+	}
+	if (node.is_array()) {
+		if (!node.empty() && node[0].is_object() && node[0].contains("stmt-type")) return json();
+		json out;
+		for (size_t i = 0; i < node.size(); i++) {
+			json r = resolveQualifiedGlobals(node[i]);
+			if (r.is_null()) continue;
+			if (out.is_null()) out = node;
+			out[i] = move(r);
+		}
+		return out;
+	}
+	return json();
+	// LCOV_EXCL_BR_STOP
 }
 
 void PlnSemanticAnalyzer::sa_functions(const json& funcs)

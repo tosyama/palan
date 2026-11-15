@@ -819,6 +819,61 @@ TEST(sa, import_through_interface) {
 	ASSERT_EQ(json::parse(f), fromSource);
 }
 
+// An imported global is bound to its module's label wherever it is used, and
+// is not one of the importer's own; `G.count` is its id under an alias.
+TEST(sa, import_global) {
+	cleanTestEnv();
+	genModuleAst("../test/testdata/sa/lib_sa_global.pa");
+	json jout = run_sa("../test/testdata/sa/349_import_global.pa");
+	ASSERT_TRUE(jout.is_object());
+	ASSERT_EQ(jout["globals"].size(), 2);
+	ASSERT_EQ(jout["globals"][0]["label"], "_349_import_global.twice");
+	ASSERT_FALSE(jout["globals"][0].contains("export"));
+	auto bindings = [&](const string& suffix) {
+		map<string, json> out;
+		for (auto& f : jout["functions"])
+			if (f["name"].get<string>().ends_with(suffix))
+				for (auto& g : f.value("globals", json::array())) out[g["name"]] = g;
+		return out;
+	};
+	auto bump = bindings("..bump.v");
+	ASSERT_EQ(bump["count"]["label"], "lib_sa_global.count");
+	auto sum = bindings("..sum.v");
+	ASSERT_EQ(sum["G.arr"]["label"], "lib_sa_global.arr");
+	ASSERT_EQ(sum["G.arr"]["var-type"]["mutable"], false);
+	ASSERT_EQ(sum["G.arr"]["var-type"]["arr-size"], 3);
+	auto init = bindings("..init");
+	ASSERT_EQ(init["count"]["label"], "lib_sa_global.count");
+	const json& stmt = jout["statements"][1];
+	ASSERT_EQ(stmt["stmt-type"], "assign");
+	ASSERT_EQ(stmt["name"], "G.count");
+
+	json lib = run_sa("../test/testdata/sa/lib_sa_global.pa");
+	ASSERT_TRUE(lib.is_object());
+	for (auto& g : lib["globals"]) {
+		string label = g["label"];
+		bool exported = !label.ends_with(".hidden") && !label.ends_with(".done");
+		ASSERT_EQ(g.value("export", false), exported) << label;
+	}
+}
+
+// Its interface gives an imported global the type its source does.
+TEST(sa, import_global_through_interface) {
+	cleanTestEnv();
+	const string lib = "../test/testdata/sa/lib_sa_global.pa";
+	const string entry = "../test/testdata/sa/349_import_global.pa";
+	string libAst = moduleAstPath(lib);
+	ASSERT_EQ(execTestCommand("palan-gen-ast " + lib + " -o " + libAst + " --interface out/lib_sa_global.pai"), "");
+	json fromSource = run_sa(entry);
+	ASSERT_TRUE(fromSource.is_object());
+
+	ASSERT_EQ(execTestCommand("palan-gen-ast out/lib_sa_global.pai -o " + libAst), "");
+	string entryAst = moduleAstPath(entry);
+	ASSERT_EQ(execTestCommand("palan-sa " + entryAst + " -o out/from_pai.sa.json"), "");
+	ifstream f("out/from_pai.sa.json");
+	ASSERT_EQ(json::parse(f), fromSource);
+}
+
 // Every owner of an opaque type releases it through the function its module
 // defines, which calls the one marked `release` or releases the contents.
 TEST(sa, opaque_type) {

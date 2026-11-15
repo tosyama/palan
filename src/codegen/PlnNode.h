@@ -456,6 +456,7 @@ struct PlnFunc {
 struct Module {
     string original;
     vector<StrLiteralDef>    strLiterals;
-    vector<string>           globalLabels;  // this module's global slots
+    struct GlobalSlot { string label; bool isExport; };
+    vector<GlobalSlot>       globals;  // this module's global slots
     vector<PlnFunc>          functions;
 };

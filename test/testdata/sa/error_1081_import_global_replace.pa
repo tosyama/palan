@@ -1,0 +1,3 @@
+import "lib_sa_global.pa" as G;
+global G.arr for f!;
+func f() { [4, 5, 6] -> G.arr; }

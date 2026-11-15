@@ -1397,7 +1397,7 @@ TEST(sa_error, global_var)
 		{"error_881_global_in_func.pa", ":2:2: error: 'global' is allowed only at the top level of a module."},
 		{"error_882_global_in_block.pa", ":2:2: error: 'global' is allowed only at the top level of a module."},
 		{"error_937_permit_in_block.pa", ":2:3: error: 'global' is allowed only at the top level of a module."},
-		{"error_883_permit_not_global.pa", ":2:1: error: 'x' is not a global variable: declare it with 'global', or cinclude the C global first."},
+		{"error_883_permit_not_global.pa", ":2:1: error: 'x' is not a global variable: declare it with 'global', import it, or cinclude the C global first."},
 		{"error_884_permit_not_func.pa", ":1:24: error: 'y' is not a function at the top level of this module."},
 		{"error_885_permit_duplicate.pa", ":2:14: error: 'f' is already permitted to use 'x'."},
 		{"error_889_global_read_only.pa", ":3:2: error: cannot write to 'x': " + notWritable},
@@ -1411,6 +1411,38 @@ TEST(sa_error, global_var)
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
+		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, import_global)
+{
+	const string notWritable = "a global variable is written only where a 'global' statement permits it";
+	const pair<string, string> cases[] = {
+		{"error_1071_import_global_not_permitted.pa", ":2:28: error: Undefined variable 'count'."},
+		{"error_1072_import_global_read_only.pa", ":3:12: error: cannot write to 'count': " + notWritable},
+		{"error_1073_import_global_alias_read_only.pa", ":3:12: error: cannot write to 'G.count': " + notWritable},
+		{"error_1074_permit_unknown_alias.pa", ":1:1: error: Undefined variable or module alias 'X'."},
+		{"error_1075_permit_unknown_qualified.pa", ":2:1: error: 'G.nothing' is not a global variable"},
+		{"error_1076_import_global_clash.pa", ":2:1: error: Variable 'count' is already declared."},
+		{"error_1077_import_global_twice_name.pa", ":2:1: error: Variable 'count' is already declared."},
+		{"error_1078_import_global_unqualified_under_alias.pa", ":2:1: error: Undefined variable 'count'."},
+		{"error_1079_block_import_global_outside.pa", ":2:1: error: Undefined variable 'count'."},
+		{"error_1080_func_import_global_outside.pa", ":2:28: error: Undefined variable 'count'."},
+		{"error_1081_import_global_replace.pa", ":3:12: error: cannot assign to 'G.arr': a function writes the "
+		 "elements or fields of an array or struct global variable, but does not replace it."},
+		{"error_1082_export_global_run_size.pa", ":2:1: error: the sizes of exported global 'a' must be constants "
+		 "or its array literal's: an importer cannot know them otherwise."},
+		{"error_1083_import_hidden_global.pa", ":2:1: error: Undefined variable 'hidden'."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		genModuleAst("../test/testdata/sa/lib_sa_global.pa");
+		genModuleAst("../test/testdata/sa/lib_sa_global2.pa");
 		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
 		ASSERT_EQ(execTestCommand(
 			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");

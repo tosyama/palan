@@ -222,9 +222,6 @@ into a program uses them too, in place of the program's.
 
 ### 3.7 Modules and Libraries
 
-**Status.** Exported globals are the design of 0.2.6, not yet implemented; the rest is
-implemented.
-
 **Module identity.** A module's identity is the module part of its symbols (SASpec.md's Symbol
 names). It comes from its source alone, never from the entry or the source's location:
 
@@ -400,6 +397,15 @@ an importer as in its own module: a `global` statement there names it (`global c
 it, and the importer's top-level statements use it freely. It can be imported by name like a function.
 A module keeping a variable from other writers does not export it, but publishes functions. Its
 symbol is its label, `<module>.<name>`.
+
+- An `import` in a function lets that function use the module's globals without a `global`
+  statement: the scope is the function's, so nothing else reaches them.
+- An importer's type comes from the declaration alone, with the sizes an array literal gives, so
+  a source and its `.pai` give one type. A size only running gives is an error: the lengths live in
+  the module's `..init`, which no importer reads.
+- `M.count` reaches palan-sa as a field access on `M`; it becomes the id `M.count` as each
+  statement is entered, not in palan-gen-ast, since whether `M` is an alias depends on the scope (a
+  variable `M` hides it).
 
 **Building a library.** `palan --lib -o <dir> main.pa` compiles the modules `main.pa` reaches, which
 must all declare the same first name, and writes under `<dir>`, as given, the main's identity as a

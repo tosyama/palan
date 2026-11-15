@@ -1,0 +1,6 @@
+export type Pt { int32 x; };
+export global int64 count = 0;
+export global []int32 arr = [1, 2, 3];
+export global Pt pt;
+export global [+]int32 log;
+global int64 hidden = 1;

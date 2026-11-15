@@ -453,6 +453,7 @@ Statement model
     - global - Boolean, true for a `global` declaration (omitted when false); `vars` then holds
       exactly one typed variable; any other `global` declaration (a type-omitted or tuple one) is
       a `not-impl` statement instead.
+    - export - Boolean, true for an `export global` declaration (omitted when false)
     - vars\* - Variable declaration list
       - name\* - Variable name string
       - var-type\* - Variable type
@@ -549,7 +550,7 @@ Statement model
   22. global-permit - the functions allowed to use a global variable: the `for` list of a
       `global` declaration (emitted right after its `var-decl`) or a later `global name for ...;`,
       or, with no list, `global name;`
-    - name\* - Variable name string
+    - name\* - Variable name string; an imported global under an alias is one name `M.count`
     - funcs\* - Permitted function list, in source order (empty for `global name;`)
       - name\* - Function name string (an operator for an operator function)
       - writable\* - Boolean, true when written with a trailing `!`

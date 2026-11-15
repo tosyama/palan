@@ -129,6 +129,39 @@ printf("%d\n", next());
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "inner\n12\n13\n");
 }
 
+// Only the main's exported globals are published; the program uses them
+// from the interface and the archive alone.
+TEST(build_mgr, library_export_global) {
+	cleanTestEnv();
+	writeFile("out/src/m.pa", R"(library kit;
+import "inner.pa";
+export global int64 hits = 0 for hit!;
+export global []int32 primes = [2, 3, 5];
+global secret for peek;
+export func hit() { hits + 1 -> hits; }
+export func peek() -> int64 { return secret; }
+)");
+	writeFile("out/src/inner.pa", R"(library kit;
+export global int64 secret = 7;
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/m.pa"), "");
+	string pai = fileText("out/libs/kit/m.pai");
+	ASSERT_NE(pai.find("export global int64 hits;\nexport global [3]int32 primes;\n"), string::npos) << pai;
+	ASSERT_EQ(pai.find("secret"), string::npos) << pai;
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/m>;
+import <kit/m> as K;
+cinclude <stdio.h>;
+global hits for f;
+func f() -> int64 { return hits; }
+hit();
+K.hits + 10 -> K.hits;
+printf("%ld %ld %d %d %ld\n", hits, f(), primes[2], K.primes[0], peek());
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "11 11 5 2 7\n");
+}
+
 // The program reads the defaults from the interface alone, through an alias too.
 TEST(build_mgr, library_parameter_defaults) {
 	cleanTestEnv();

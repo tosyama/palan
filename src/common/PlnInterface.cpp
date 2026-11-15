@@ -318,7 +318,12 @@ string Writer::write()
 	for (auto& lib : libs_) out += "link \"" + lib + "\";\n";
 	for (auto& s : stmts) {
 		string kind = s.value("stmt-type", "");
-		if (kind == "var-decl") {
+		if (kind == "var-decl" && s.value("global", false) && s.value("export", false)) {
+			// The initializer is left in the module; the sizes it gives are not.
+			const json& v = s["vars"][0];
+			auto sized = sizedArrayType(v, consts);
+			out += "export global " + type(sized ? *sized : v["var-type"]) + " " + v["name"].get<string>() + ";\n";
+		} else if (kind == "var-decl") {
 			for (auto& v : s["vars"]) {
 				auto used = usedVars.find(&v);
 				if (used != usedVars.end()) out += type(used->second) + " " + v["name"].get<string>() + ";\n";
@@ -530,6 +535,8 @@ json Merger::merged()
 		string kind = s.value("stmt-type", "");
 		bool isDecl = kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
+		if (kind == "var-decl" && s.value("global", false) && s.value("export", false))
+			mark({0, s["vars"][0]["name"]});
 	}
 	json funcs = main.value("export", json::array());
 	for (auto& f : funcs) {
@@ -582,6 +589,11 @@ json Merger::merged()
 					walk(var["var-type"], m, true);
 					var["name"] = finals_.at(key);
 					decl["vars"].push_back(move(var));
+				}
+				// An internal module's global, reached through a const, is published as no global.
+				if (m != 0 || !isPublic({m, s["vars"][0]["name"]})) {
+					decl.erase("global");
+					decl.erase("export");
 				}
 				if (!decl["vars"].empty()) out.push_back(move(decl));
 			} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"

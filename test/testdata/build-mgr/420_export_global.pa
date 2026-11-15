@@ -1,0 +1,11 @@
+cinclude <stdio.h>;
+import "lib_counter.pa";
+global int64 twice = count * 2;
+global count for bump!, peek;
+func bump() { count + 100 -> count; }
+func peek() -> int64 { return count; }
+inc();
+bump();
+count + 1000 -> count;
+show();
+printf("main %ld %ld %ld\n", count, peek(), twice);

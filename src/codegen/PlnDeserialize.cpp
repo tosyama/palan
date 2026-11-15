@@ -478,7 +478,7 @@ Module deserialize(const json& sa)
     }
 
     for (auto& g : sa.value("globals", json::array()))
-        mod.globalLabels.push_back(g["label"]);
+        mod.globals.push_back({g["label"], g.value("export", false)});
 
     if (sa.contains("functions")) {
         for (auto& jf : sa["functions"]) {

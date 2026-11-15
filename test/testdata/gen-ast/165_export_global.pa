@@ -1,0 +1,8 @@
+export global int64 count = 0 for inc!;
+export global []int32 arr = [1, 2];
+global M.count for f, g!;
+global M.count;
+export global n = 1;
+func inc() { }
+func f() { }
+func g() { }

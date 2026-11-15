@@ -1,0 +1,10 @@
+import "trace_on.pa";
+import "lib_store.pa" as S;
+cinclude <stdio.h>;
+S.add(1);
+S.log.push(2);
+5 -> S.origin.x;
+[+]int32 n = [7, 8];
+n ->> S.log;
+S.add(3);
+printf("%d %ld %d\n", S.total(), len(@S.log), S.origin.x);

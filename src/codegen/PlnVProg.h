@@ -163,7 +163,7 @@ struct VFloatLiteral {
 };
 
 struct FrameBlock { int size; int align; };
-struct StaticBlock { string label; int size; int align; };
+struct StaticBlock { string label; int size; int align; bool isExport = false; };
 
 struct VFunc {
     string         name;

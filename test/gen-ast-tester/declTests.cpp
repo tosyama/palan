@@ -1264,6 +1264,29 @@ TEST(gen_ast, interface_ignores_what_only_runs) {
 		"export func f() -> int64 { return 1; }\nexport func g() -> int32 { return 1; }\n"));
 }
 
+// An exported global is published without its initializer, but with the
+// sizes its array literal gives, and reads back as one.
+TEST(gen_ast, interface_export_global) {
+	cleanTestEnv();
+	auto paiOf = [](const string& source) {
+		ofstream("out/m.pa") << source;
+		EXPECT_EQ(execTestCommand("palan-gen-ast out/m.pa -o out/m.json --interface out/m.pai"), "");
+		return readText("out/m.pai");
+	};
+	string pai = paiOf("export global int64 count = 3 for f!;\nexport global []int32 arr = [1, 2];\n"
+		"global int64 hidden = 1;\nfunc f() { }\n");
+	ASSERT_NE(pai.find("export global int64 count;\nexport global [2]int32 arr;\n"), string::npos) << pai;
+	ASSERT_EQ(pai.find("hidden"), string::npos) << pai;
+	ASSERT_EQ(pai, paiOf("export global int64 count = 4;\nexport global []int32 arr = [5, 6];\n"));
+
+	json jout = json::parse(execTestCommand("palan-gen-ast out/m.pai"));
+	const auto& stmts = jout["ast"]["statements"];
+	ASSERT_EQ(stmts[0]["stmt-type"], "var-decl");
+	ASSERT_EQ(stmts[0]["global"], true);
+	ASSERT_EQ(stmts[0]["export"], true);
+	ASSERT_FALSE(stmts[0]["vars"][0].contains("init"));
+}
+
 TEST(gen_ast, c_headers) {
 	cleanTestEnv();
 	json jout = json::parse(execTestCommand("palan-gen-ast ../test/testdata/gen-ast/035_cinclude_local_header.pa"));

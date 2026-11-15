@@ -212,6 +212,8 @@ class PlnSemanticAnalyzer {
 		map<string, bool> funcs;    // permitted top-level function name -> writable
 	};
 	map<string, GlobalVar> globals_;
+	// Set once an alias import brings a global, so `M.count` may appear.
+	bool qualifiedGlobals_ = false;
 	// The C globals a `global` statement has named, with the functions it permits.
 	map<string, map<string, bool>> cGlobalPermits_;
 	// This module's top-level Palan functions: written name -> their symbols.
@@ -356,6 +358,18 @@ class PlnSemanticAnalyzer {
 	bool        isStaticBound(const string& name) const;
 	json        storageBorrowType(const string& name, const json& varType, bool isMutable) const;
 	void        sa_global_decl(const json& stmt);
+	// The type an exported global has wherever it is imported, from its declaration
+	// alone: the initializer gives only an array literal's sizes.
+	json        exportedGlobalType(const json& stmt);
+	// Declares a global in the current scope and binds it to its label.
+	void        bindGlobal(const string& name, const string& label, const json& type,
+	                       const optional<ScopeVar>& scopeVar, const json* locNode);
+	// Lets `global` statements name a global bound at the top level.
+	void        registerGlobal(const string& name, const string& label, const json& type, const json* decl);
+	void        importGlobals(const json& stmt, PlnSemanticAnalyzer& sub);
+	// `M.count` of an imported global, written as a field access, becomes its
+	// id, so later passes meet one shape whatever reads the statement raw.
+	json        resolveQualifiedGlobals(const json& node) const;
 	void        sa_global_permit(const json& stmt);
 	void        declarePermittedGlobals(const string& funcName, const json& funcDef);
 	void        emitInitFunc();
@@ -417,6 +431,9 @@ class PlnSemanticAnalyzer {
 	// The type the declaration of the top-level variable `name` gives it,
 	// taken from the declaration's shape alone, or null.
 	const json* topVarType(const string& name);
+	// Resolves an array variable's declared type, filling the sizes its array
+	// literal gives; false if a size is known only at run time.
+	bool fixArrDeclSizes(const json& stmt, const json& var, json& vt);
 	void rejectDeferredConstRefs(const json& locNode, const json& node) const;
 	void adoptImportedType(ImportedType& t);
 	// Runs `f` once no declaration is being resolved: resolving a pointee
@@ -429,6 +446,8 @@ class PlnSemanticAnalyzer {
 	void adoptEnum(const PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
 	               const json& locNode);
 	void adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
+	// adoptTypeDeps for the type of a variable or an owned field.
+	void adoptVarTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
 	void setTypeNameable(const string& name, bool nameable, const string& alias);
 	// Records `name` as defined by `origin`; false if it already was, exits if
 	// another module or a cincluded header defined it.

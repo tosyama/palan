@@ -1,0 +1,3 @@
+import "lib_sa_global.pa";
+global count for f;
+func f() { 1 -> count; }

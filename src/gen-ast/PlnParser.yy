@@ -167,12 +167,13 @@ struct BodyList {
 
 	// Only a single typed variable can be global; anything else stays
 	// unimplemented for SA to report.
-	static json globalDecl(const json& var, const palan::PlnParser::location_type& loc)
+	static json globalDecl(const json& var, const palan::PlnParser::location_type& loc, bool exported = false)
 	{
 		json j;
-		if (var.contains("var-type") && !var.contains("not-impl"))
+		if (var.contains("var-type") && !var.contains("not-impl")) {
 			j = {{"stmt-type", "var-decl"}, {"global", true}, {"vars", json::array({var})}}; // LCOV_EXCL_BR_LINE
-		else
+			if (exported) j["export"] = true; // LCOV_EXCL_BR_LINE
+		} else
 			j = {{"stmt-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
 		LOC(j, loc); // LCOV_EXCL_BR_LINE
 		return j;
@@ -548,10 +549,18 @@ expr_stmt: import
 	{ $$ = globalDecl($2, @$); }
 	| KW_GLOBAL var_declaration KW_FOR global_funcs
 	{ $$ = json::array({globalDecl($2, @$), globalPermit($2.value("name", ""), $4, @$)}); } // LCOV_EXCL_BR_LINE
+	| KW_EXPORT KW_GLOBAL var_declaration
+	{ $$ = globalDecl($3, @$, true); }
+	| KW_EXPORT KW_GLOBAL var_declaration KW_FOR global_funcs
+	{ $$ = json::array({globalDecl($3, @$, true), globalPermit($3.value("name", ""), $5, @$)}); } // LCOV_EXCL_BR_LINE
 	| KW_GLOBAL ID
 	{ $$ = globalPermit($2, PList<json>(), @$); }
 	| KW_GLOBAL ID KW_FOR global_funcs
 	{ $$ = globalPermit($2, $4, @$); }
+	| KW_GLOBAL ID '.' ID
+	{ $$ = globalPermit($2 + "." + $4, PList<json>(), @$); } // LCOV_EXCL_BR_LINE
+	| KW_GLOBAL ID '.' ID KW_FOR global_funcs
+	{ $$ = globalPermit($2 + "." + $4, $6, @$); } // LCOV_EXCL_BR_LINE
 	| ID STRING
 	{ $$ = interfaceStmt(ast, $1, $2, lexer.inputFile, buildTarget, @$); }
 	| const_decl

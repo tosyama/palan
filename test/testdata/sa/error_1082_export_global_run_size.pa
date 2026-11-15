@@ -1,0 +1,2 @@
+func n() -> int64 { return 3; }
+export global [n()]int32 a;

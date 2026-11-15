@@ -1331,6 +1331,19 @@ TEST(codegen, struct_ret_flo64) {
     ASSERT_EQ(execTestCommand("as " + asmf + " -o out/079_struct_ret_flo64.o"), "");
 }
 
+// Another module links to an exported global's slot, never to a private one.
+TEST(codegen, export_global) {
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/080_export_global.sa.json";
+    string asmf = "out/080_export_global.s";
+    ASSERT_EQ(run_codegen(sa, asmf), "");
+    string asm_text = readFile(asmf);
+    ASSERT_NE(asm_text.find("\t.globl _080_export_global.n\n_080_export_global.n:"), string::npos);
+    ASSERT_NE(asm_text.find("\t.globl _080_export_global.a\n_080_export_global.a:"), string::npos);
+    ASSERT_EQ(asm_text.find(".globl _080_export_global.m"), string::npos);
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/080_export_global.o"), "");
+}
+
 TEST(codegen, struct_ret_memory) {
     // >16 bytes: MEMORY class -- the ret-dest pointer is passed as the hidden
     // first argument; no register-based eightbyte store follows the call.

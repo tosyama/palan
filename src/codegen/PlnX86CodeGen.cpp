@@ -44,6 +44,7 @@ void PlnX86CodeGen::emit(const VProg& prog, const vector<RegAllocResult>& allocs
         emitSection(".bss");
         for (auto& b : prog.bss) {
             out << "\t.align " << b.align << "\n";
+            if (b.isExport) emitGlobal(b.label);
             emitLabel(b.label);
             out << "\t.zero " << b.size << "\n";
         }

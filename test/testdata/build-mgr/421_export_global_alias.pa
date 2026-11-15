@@ -1,0 +1,9 @@
+cinclude <stdio.h>;
+import "lib_counter.pa" as C;
+import count from "lib_counter.pa" as D;
+global C.count for twice!;
+func twice() { C.count * 2 -> C.count; }
+C.inc();
+twice();
+D.count + 1 -> D.count;
+printf("%ld %ld\n", C.count, D.count);
