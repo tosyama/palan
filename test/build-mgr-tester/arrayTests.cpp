@@ -680,6 +680,12 @@ TEST(build_mgr, for_struct_mtrace) {
 	expectMtraceRun("413_for_struct_mtrace", "1 2 3 2 \n", 34);
 }
 
+// Opaque values held in fields, rows and `[+]`, returned among several values,
+// and copied and converted where their contents are visible.
+TEST(build_mgr, opaque_mtrace) {
+	expectMtraceRun("415_opaque_mtrace", "5 5\n3\nclose 9\nclose 8\nclose 7\nclose 6\nclose 5\n", 24);
+}
+
 TEST(build_mgr, top_var_const_in_sig) {
 	cleanTestEnv();
 	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/369_top_var_const.pa");

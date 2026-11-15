@@ -95,6 +95,13 @@ struct StructDef {
 	bool built() const { return ownsFields || hasInits; }
 	// The symbol of its own '->', which it carries to every module it reaches.
 	string copyFunc;
+	// An opaque type: owned through one pointer like a struct, laid out as its
+	// contents, which are null where they are not known (a `.pai`). It is
+	// released through releaseFunc, which its module defines.
+	bool   isOpaque = false;
+	json   contents;       // as a declaration's resolved var-type
+	json   contentsOwned;  // as its owner holds it
+	string releaseFunc;
 	// false = tag is known but its layout isn't (C incomplete-type equivalent, e.g. FILE).
 	// Only usable through a pointer (@T/@!T); buildStructDef sets this true on success.
 	bool   isComplete = false;
@@ -271,6 +278,8 @@ class PlnSemanticAnalyzer {
 	// Whether a type has a '->' decides how it is laid out and copied, which a
 	// type declaration may ask before any function is registered.
 	set<const json*>       copyFuncStructs_;
+	// Opaque types of this module -> the symbol of their `release` function.
+	map<string, string>    releaseFuncs_;
 	// A top-level variable, whose type a const's value may need before the
 	// statements are analyzed.
 	struct TopVar {
@@ -582,6 +591,7 @@ class PlnSemanticAnalyzer {
 	void registerCStruct(const json& cincludeStmt, const json& s);  // consume c2ast "structs" entry, register in structDefs_
 	json sa_struct_var_decl(const json& stmt, VarStorage storage); // returns array of statements
 	json sa_type_alias(const json& stmt);         // consume type-alias, register in typeAliases_
+	json sa_opaque_def(const json& stmt);
 	void foldTypeSizes(json& type);
 	json sa_const_decl(const json& stmt);         // consume const-decl, register in constDecls_
 	json sa_enum_def(const json& stmt);           // consume enum-def, register in enumDefs_/typeAliases_
@@ -643,6 +653,8 @@ class PlnSemanticAnalyzer {
 	void  validateNativeSig(const json& funcDef);
 	void  validateOperatorSig(const json& funcDef);
 	void  registerCopyFunc(json& funcEntry, const string& scope);
+	void  registerReleaseFunc(const json& funcEntry, const string& scope);
+	void  emitReleaseFuncs();
 	void  validateVariadicSig(const json& funcDef);
 	json  normalizeArrBorrowType(const json& locNode, const json& type);
 	json  varrBorrowType(const json& locNode, const json& arr, bool isMutable);
@@ -700,7 +712,19 @@ class PlnSemanticAnalyzer {
 	bool outsideTypeModule(const string& structName) const;
 	// Look up a struct already known to be registered (name presence must be checked
 	// by the caller beforehand) and reject it if its layout isn't known yet.
-	const StructDef& requireCompleteStruct(const string& structName, const json& locNode);
+	const StructDef& requireCompleteStruct(const string& structName, const json& locNode, const string& use = "this");
+	// The opaque type a pointer (an owner or a borrow) points to, or null.
+	const StructDef* opaqueDefOf(const json& vt) const;
+	// A struct's own storage, which is passed and returned by value; an opaque
+	// type's is only ever its owner, a pointer.
+	bool isStructValue(const json& vt) const;
+	// Whether this module can write the type of an opaque type's contents,
+	// which lets it allocate, copy and convert them.
+	bool opaqueContentsVisible(const StructDef& def) const;
+	json asOpaqueContents(json value, const StructDef& def) const;
+	bool holdsOpaque(const json& vt) const;
+	json opaqueConversion(const json& expr, const json& src, const json& written);
+	json sa_opaque_var_decl(const json& stmt, VarStorage storage);
 	// `entry` must be a cinclude'd C function entry already processed by
 	// normalizeCFuncSig -- the only producer of "_unsupported-sig". No-op if
 	// the signature is fully representable.

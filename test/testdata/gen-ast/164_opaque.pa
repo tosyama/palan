@@ -1,0 +1,4 @@
+type Inner { int32 x; };
+export type Handle = opaque Inner;
+type Bytes = opaque [+]uint8;
+func close(Handle h) release { }

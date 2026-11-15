@@ -494,6 +494,58 @@ void PlnSemanticAnalyzer::registerCopyFunc(json& funcEntry, const string& scope)
 	BOOST_ASSERT(structDefs_.at(name).copyFunc == funcEntry["symbol"].get<string>()); // LCOV_EXCL_BR_LINE
 }
 
+// The release function is reached only through the opaque type's own release
+// function, which its module defines (emitReleaseFuncs), so only that module
+// needs to know it.
+void PlnSemanticAnalyzer::registerReleaseFunc(const json& funcEntry, const string& scope)
+{
+	auto fail = [&](PlnSaMessageCode code, const string& arg = "\x01") {
+		cerr << locPrefix(funcEntry) << PlnSaMessage::getMessage(code, arg) << endl;
+		exit(1);
+	};
+	const json& params = funcEntry["parameters"];
+	bool shaped = params.size() == 1 && !params[0].contains("init") && !funcEntry.contains("ret-type") // LCOV_EXCL_BR_LINE
+		&& !funcEntry.contains("rets") && isStructStorage(params[0]["var-type"]) && opaqueDefOf(params[0]["var-type"]); // LCOV_EXCL_BR_LINE
+	if (!shaped) fail(E_ReleaseFuncSig);
+	string name = params[0]["var-type"]["base-type"]["type-name"];
+	auto origin = typeOrigins_.find(name);
+	if (origin == typeOrigins_.end() || origin->second != moduleId_ || scope != moduleId_) fail(E_ReleaseFuncPlace);
+	auto [it, added] = releaseFuncs_.emplace(name, funcEntry["symbol"].get<string>());
+	if (!added && it->second != funcEntry["symbol"].get<string>())
+		fail(E_ReleaseFuncDup, typeDisplayName({{"type-kind", "prim"}, {"type-name", name}}));
+}
+
+// Each opaque type of this module gets the function every owner releases it
+// with. NULL, an owner whose value was moved away, releases nothing.
+void PlnSemanticAnalyzer::emitReleaseFuncs()
+{
+	// LCOV_EXCL_BR_START
+	for (auto& [name, def] : structDefs_) {
+		if (!def.isOpaque) continue;
+		auto origin = typeOrigins_.find(name);
+		if (origin == typeOrigins_.end() || origin->second != moduleId_) continue;
+		json vt = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",name}}}};
+		json h = {{"expr-type","id"},{"name","h"},{"var-type",vt},{"value-type",vt}};
+		json release;
+		auto user = releaseFuncs_.find(name);
+		if (user != releaseFuncs_.end())
+			release = {{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name",user->second},
+				{"func-type","palan"},{"args",json::array({h})}}}};
+		else
+			release = makeOwnedValueFreeStmt(asOpaqueContents(h, def));
+		json bytePtr = {{"type-kind","pntr"},{"base-type",{{"type-kind","prim"},{"type-name","uint8"}}},{"mutable",false}};
+		json voidPtr = {{"type-kind","pntr"},{"base-type",{{"type-kind","prim"},{"type-name","void"}}}};
+		json cond = {{"expr-type","cmp"},{"op","!="},{"left",wrapConvert(h, bytePtr)},
+			{"right",{{"expr-type","lit-int"},{"value","0"},{"value-type",voidPtr}}},
+			{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+		json ifStmt = {{"stmt-type","if"},{"cond",move(cond)},
+			{"then",{{"stmt-type","block"},{"body",json::array({move(release)})}}}};
+		sa["functions"].push_back({{"name",def.releaseFunc},{"func-type","palan"},{"export",true},
+			{"parameters",json::array({{{"name","h"},{"var-type",vt}}})},{"body",json::array({move(ifStmt)})}});
+	}
+	// LCOV_EXCL_BR_STOP
+}
+
 // An operator function is called only where an operand is a struct, and an
 // operand is never written with '@!' (see sa_operator_call), but for the one
 // '<<' appends to.
@@ -795,6 +847,8 @@ json PlnSemanticAnalyzer::normalizeFuncSig(const json& f, const string& scope)
 	else
 		funcEntry["symbol"] = scope + ".."
 			+ funcSymbol(funcEntry["name"].get<string>(), funcEntry.value("parameters", json::array()));
+	if (funcEntry.value("release", false))
+		registerReleaseFunc(funcEntry, scope);
 	return funcEntry;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
@@ -918,10 +972,10 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 		if (t == "var-decl") {
 			for (size_t i = 0; i < stmt["vars"].size(); i++)
 				topVars_.emplace(stmt["vars"][i]["name"].get<string>(), TopVar{&stmt, i, (int)pos});
-		} else if (t == "struct-def" || t == "enum-def" || t == "type-alias" || t == "const-decl") {
+		} else if (isTypeDecl(t) || t == "const-decl") {
 			string name = stmt["name"].get<string>();
 			topDecls_.emplace(name, TopDecl{&stmt, TopDecl::Pending, (int)pos});
-			if (t == "struct-def") declaredStructs_.insert(topTypeIdentity(name));
+			if (declaresStructType(t)) declaredStructs_.insert(topTypeIdentity(name));
 		} else if (t == "cinclude") {
 			registerCIncludeTypes(stmt);
 		} else if (t == "import") {
@@ -938,7 +992,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 				string name = d["name"].get<string>();
 				if (stmt.contains("targets") && !targets.count(name)) continue;
 				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, &mod, &d});
-				if (d["stmt-type"] == "struct-def") declaredStructs_.insert(mod.topTypeIdentity(name));
+				if (declaresStructType(d["stmt-type"])) declaredStructs_.insert(mod.topTypeIdentity(name));
 			}
 		}
 	}
@@ -948,7 +1002,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 	for (auto& stmt : stmts) {
 		addDeclaredVarNames(stmt, vars);
 		string t = stmt.value("stmt-type", "");
-		if (t != "struct-def" && t != "enum-def" && t != "type-alias" && t != "const-decl") continue;
+		if (!isTypeDecl(t) && t != "const-decl") continue;
 		string name = stmt["name"].get<string>();
 		bool clash = topDecls_.at(name).stmt != &stmt || isWrittenNameTaken(name);
 		if (t == "const-decl") clash = clash || vars.count(name) || findVar(name);
@@ -957,7 +1011,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 				t == "const-decl" ? E_DuplicateConstDecl : E_DuplicateTypeName, name) << endl;
 			exit(1);
 		}
-		if (t == "struct-def" || t == "enum-def") declareTypeIdentity(stmt, 0);
+		if (declaresStructType(t) || t == "enum-def") declareTypeIdentity(stmt, 0);
 	}
 }
 
@@ -965,7 +1019,7 @@ void PlnSemanticAnalyzer::ensureTypeName(const string& name, bool viaPointer)
 {
 	auto d = topDecls_.find(name);
 	if (d != topDecls_.end()) {
-		if (viaPointer && (*d->second.stmt)["stmt-type"] == "struct-def")
+		if (viaPointer && declaresStructType((*d->second.stmt)["stmt-type"]))
 			whenSettled([this, name] { ensureTypeName(name, false); });
 		else
 			resolveTopDecl(name, d->second);
@@ -974,7 +1028,7 @@ void PlnSemanticAnalyzer::ensureTypeName(const string& name, bool viaPointer)
 	auto t = importedTypes_.find(name);
 	if (t == importedTypes_.end() || t->second.adopted) return;
 	const json& decl = *t->second.decl;
-	if (viaPointer && decl["stmt-type"] == "struct-def") {
+	if (viaPointer && declaresStructType(decl["stmt-type"])) {
 		// The pointer's type names the struct by its program-wide name now;
 		// its layout comes with the adoption.
 		typeAliases_[name] = {{"type-kind", "prim"}, {"type-name", t->second.module->topTypeIdentity(decl["name"])}}; // LCOV_EXCL_BR_LINE
@@ -1057,6 +1111,7 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	if      (t == "struct-def") sa_struct_def(stmt);
 	else if (t == "enum-def")   sa_enum_def(stmt);
 	else if (t == "type-alias") sa_type_alias(stmt);
+	else if (t == "opaque-def") sa_opaque_def(stmt);
 	else resolved = resolveTopConst(d);
 	if (resolved) prescannedDecls_.insert(&stmt);
 	resolving.pop_back();
@@ -1203,6 +1258,7 @@ void PlnSemanticAnalyzer::analysis(const json &ast, const string& astPath)
 	// 3. Process each function body
 	if (ast["ast"].contains("functions"))
 		sa_functions(ast["ast"]["functions"]);
+	emitReleaseFuncs();
 	if (!staticBindings_.empty())
 		sa["main"]["globals"] = staticBindings_;
 	checkGlobalsReachedBeforeDecl();
@@ -1446,6 +1502,11 @@ json PlnSemanticAnalyzer::interfaceSymbols(const json& ast)
 	}
 	for (auto& f : ast["ast"].value("functions", json::array()))
 		if (f["name"] == "->") symbols.push_back(sub.normalizeFuncSig(f, sub.moduleId_)["symbol"]);
+	// Every owner of an opaque type the interface declares releases it through this.
+	if (ast["ast"].contains("statements"))
+		for (auto& decl : ast["ast"]["statements"])
+			if (decl.value("stmt-type", "") == "opaque-def")
+				symbols.push_back(sub.structDefs_.at(sub.topTypeIdentity(decl["name"])).releaseFunc);
 	return symbols;
 } // LCOV_EXCL_BR_LINE
 

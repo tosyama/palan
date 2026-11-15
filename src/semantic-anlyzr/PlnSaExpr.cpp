@@ -127,6 +127,11 @@ bool PlnSemanticAnalyzer::outsideTypeModule(const string& structName) const
 const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName, const string& fieldName, const json& locNode,
                                                         bool forWrite)
 {
+	if (structDefs_.at(structName).isOpaque) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueField,
+			typeDisplayName({{"type-kind", "prim"}, {"type-name", structName}})) << endl;
+		exit(1);
+	}
 	const StructDef& def = requireCompleteStruct(structName, locNode);
 	auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fieldName; });
 	if (it == def.fields.end()) {
@@ -151,15 +156,115 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 // This only distinguishes "layout not yet known" (an incomplete/opaque struct,
 // e.g. C's FILE) from "fully laid out": callers needing the former distinguished
 // from "no such struct" must check that separately before calling this.
-const StructDef& PlnSemanticAnalyzer::requireCompleteStruct(const string& structName, const json& locNode)
+const StructDef& PlnSemanticAnalyzer::requireCompleteStruct(const string& structName, const json& locNode,
+                                                            const string& use)
 {
 	const StructDef& def = structDefs_[structName];
+	if (def.isOpaque) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueNeedsLayout,
+			typeDisplayName({{"type-kind", "prim"}, {"type-name", structName}}), use) << endl;
+		exit(1);
+	}
 	if (!def.isComplete) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_IncompleteStructType, structName,
 		                                                        def.incompleteReason, def.keyword()) << endl;
 		exit(1);
 	}
 	return def;
+}
+
+const StructDef* PlnSemanticAnalyzer::opaqueDefOf(const json& vt) const
+{
+	if (!isStructPntr(vt) && !isStructBorrow(vt)) return nullptr;
+	auto it = structDefs_.find(vt["base-type"].value("type-name", ""));
+	return it != structDefs_.end() && it->second.isOpaque ? &it->second : nullptr;
+}
+
+// An owned value between an opaque type and its contents keeps its pointer and
+// its owner, which a move then resets; null when neither side is opaque.
+json PlnSemanticAnalyzer::opaqueConversion(const json& expr, const json& src, const json& written)
+{
+	const json& from = src["value-type"];
+	json resolved = resolveKnownType(expr, written);
+	const StructDef* fromOpaque = isStructStorage(from) ? opaqueDefOf(from) : nullptr;
+	const StructDef* toOpaque = nullptr;
+	if (isStructType(resolved) && structDefs_.at(resolved["type-name"].get<string>()).isOpaque)
+		toOpaque = &structDefs_.at(resolved["type-name"].get<string>());
+	// A borrow is cast as any pointer is.
+	if ((!fromOpaque && !toOpaque) || resolved.value("type-kind", "") == "pntr") return json();
+	bool owned = isOwnedBlock(from);
+	const StructDef* def = nullptr;
+	json target;
+	if (toOpaque && owned && opaqueContentsVisible(*toOpaque) && copyShapeMatch(from, toOpaque->contentsOwned)) {
+		def = toOpaque;
+		target = toStructPntrType(resolved);
+	} else if (fromOpaque && owned && opaqueContentsVisible(*fromOpaque)) {
+		json out = ownedTypeOf(expr, resolved);
+		if (!out.is_null() && copyShapeMatch(fromOpaque->contentsOwned, out)) {
+			def = fromOpaque;
+			target = move(out);
+		}
+	}
+	if (!def) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_OpaqueConvert,
+			typeDisplayName({{"type-kind", "prim"}, {"type-name", (toOpaque ? toOpaque : fromOpaque)->name}})) << endl;
+		exit(1);
+	}
+	json conv = wrapConvert(src, target);
+	conv["category"] = "opaque-convert";
+	return conv;
+} // LCOV_EXCL_BR_LINE
+
+bool PlnSemanticAnalyzer::isStructValue(const json& vt) const
+{
+	return isStructStorage(vt) && !opaqueDefOf(vt);
+}
+
+bool PlnSemanticAnalyzer::opaqueContentsVisible(const StructDef& def) const
+{
+	if (def.contents.is_null()) return false;
+	bool visible = true;
+	function<void(const json&)> walk = [&](const json& t) {
+		if (!t.is_object()) return;
+		if (t.value("type-kind", "") == "struct") {
+			string name = t["type-name"].get<string>();
+			// A C struct is written by its own name wherever its header is.
+			bool written = structDefs_.count(name) && !typeOrigins_.count(name);
+			for (auto& [w, bound] : typeAliases_)
+				written = written || (bound.value("type-kind", "") == "prim" && bound.value("type-name", "") == name);
+			visible = visible && written;
+		}
+		if (t.contains("base-type")) walk(t["base-type"]);
+	};
+	walk(def.contentsOwned);
+	return visible;
+}
+
+bool PlnSemanticAnalyzer::holdsOpaque(const json& vt) const
+{
+	if (!vt.is_object()) return false;
+	if (vt.value("type-kind", "") == "struct") {
+		auto it = structDefs_.find(vt["type-name"].get<string>());
+		if (it == structDefs_.end()) return false;
+		if (it->second.isOpaque) return true;
+		for (auto& f : it->second.fields) {
+			if (f.typeKind == "embed" && holdsOpaque({{"type-kind", "struct"}, {"type-name", f.typeName}}))
+				return true;
+			if (f.typeKind != "raw-ptr" && holdsOpaque(f.type)) return true;
+		}
+		return false;
+	}
+	// A pointer to what it does not own holds nothing.
+	if (isPtrBorrow(vt) && !vt.contains("arr-size")) return false;
+	return vt.contains("base-type") && holdsOpaque(vt["base-type"]);
+}
+
+// The same pointer, seen as the contents' owner or, from a borrow, a borrow of them.
+json PlnSemanticAnalyzer::asOpaqueContents(json value, const StructDef& def) const
+{
+	json vt = def.contentsOwned;
+	if (value["value-type"].contains("mutable")) vt["mutable"] = value["value-type"]["mutable"];
+	return wrapConvert(value, vt);
 }
 
 void PlnSemanticAnalyzer::requireSupportedCFuncSig(const json& entry, const string& funcName, const json& locNode)
@@ -1235,7 +1340,7 @@ int64_t PlnSemanticAnalyzer::typeByteSize(const json& locNode, json t)
 	}
 	string name = t["type-name"].get<string>();
 	if (structDefs_.count(name))
-		return requireCompleteStruct(name, locNode).totalSize;
+		return requireCompleteStruct(name, locNode, "'sizeof'").totalSize;
 	return elemSizeBytes(name);
 }
 
@@ -1340,6 +1445,8 @@ json PlnSemanticAnalyzer::sa_expr_cast(const json& expr)
 	noteEscape(src);
 	const json& from = src["value-type"];
 	json written = fillKeptTypes(expr, expr["target-type"], from, from);
+	json opaqueConv = opaqueConversion(expr, src, written);
+	if (!opaqueConv.is_null()) return opaqueConv;
 
 	// A pointer viewed as the owner of what it points to: no bits change, and
 	// whether it really holds that is the programmer's responsibility.

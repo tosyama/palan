@@ -2768,6 +2768,60 @@ int64 x = c.log[0];    // compile error: private
   struct that is not exported, they are a compile error.
 - A library's interface lists hidden fields with their marks, since the struct's layout needs them.
 
+### Opaque Types
+
+`type Name = opaque T;` declares a type of its own holding a value of `T`, without letting other
+files see what `T` is. Only a file that can write `T` reaches the contents:
+
+```palan
+// file.pa
+cinclude <stdio.h>;
+type Conn { int32 fd; [+]uint8 buf; };
+export type Handle = opaque Conn;
+
+export func open(int32 fd) -> Handle {
+    Conn c;
+    fd -> c.fd;
+    return c as Handle;           // the owned value moves into the Handle
+}
+export func fd(@Handle h) -> int32 { return (h as @Conn).fd; }
+export func close(Handle h) release { printf("closing %d\n", fd(@h)); }
+```
+
+```palan
+// main.pa
+import "file.pa";
+Handle h = open(3);
+int32 n = fd(@h);
+Handle g <<= h;                   // moved, not copied
+close(g>>);                       // released now, and not again
+// h is released when its scope ends; close prints for it
+```
+
+- `T` is anything a variable owns: a struct (Palan's or C's), an array of constant sizes or a
+  `[+]T`. A pointer, a `$T`, a primitive or an [incomplete C struct](#incomplete-struct-types-opaque-handles) is a compile error.
+- A value is owned, borrowed and moved as a struct is (`Handle`, `@Handle`, `@!Handle`, `<<=`,
+  `->>`, `>>`), passed and returned, and released when its owner is.
+- Where `T` cannot be written, what needs its layout is a compile error: a declaration without an
+  initializer, a copy (`Handle b = a;`, `a -> b`, passing `a` to a `Handle` parameter), `sizeof`.
+  Where it can, a declaration without an initializer allocates the contents and a copy copies
+  them. A field access and `$Handle` are compile errors everywhere.
+- `x as Handle` and `h as T` convert an owned value between the type and its contents, in a file
+  that can write `T`, and only as a move: `<<=`, `->>`, `>>` or `return` (`T c <<= h as T;`). A
+  borrow is cast as any pointer is (`@h as @T`).
+- A field or an element of an opaque type (`type W { Handle h; };`, `[4]Handle`, `[+]Handle`)
+  starts empty, as a variable is after `>>`, and is filled by `->>` (`open(3) ->> w.h;`).
+  Releasing an empty one does nothing. Copying a value holding one is not supported in this
+  version, nor is `push` of one that is not moved (`v.push(h>>)`, `v.push(open(3))`).
+- A function marked `release`, in the file declaring the type, taking the owned type alone and
+  returning nothing, is called whenever a value of the type is released. Called as an ordinary
+  function, it takes the value over (`close(g>>)`), so it is not released twice. Its own
+  parameter is released as the contents when it ends. A type has at most one; without one, the
+  contents are released as they would be by themselves.
+- A [library](#building-a-library) may publish an opaque type whose contents are a type of another
+  of its files. Its interface writes `export type Handle = opaque;`.
+- `opaque` and `release` are reserved words.
+
 ### Module Names (`library`)
 
 A module's name comes from its file alone, not from where it is or what imports it. It is the file
@@ -2804,7 +2858,8 @@ This writes `<dir>/std/utf8.pai`, the interface a person reads to learn the libr
   is visible only inside the library.
 - A type the library publishes is declared in the main file, which the other files may import. A
   public declaration using a struct or enum of another file, directly, through a type alias or
-  through a field, is a compile error.
+  through a field, is a compile error; an [opaque type](#opaque-types) of the main file may hold
+  one.
 - A file permitting a function to use its `global` is a compile error, since a library's top level never runs.
 - The interface may rename a constant or type alias of another file to a name starting with `__`
   (see [Lexical Rules](#2-lexical-rules)).

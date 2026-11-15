@@ -226,6 +226,15 @@ enum PlnSaMessageCode {
 	E_StructLitHiddenField,	// arg1: struct type display name, arg2: field name, arg3: "private" or "readonly"
 	E_StructLitPositionalHidden,	// arg1: struct type display name
 	E_StructLitHiddenNoInit,	// arg1: struct type display name, arg2: field name, arg3: "private" or "readonly"
+	E_OpaqueContents,	// arg1: contents type display name
+	E_OpaqueNeedsLayout,	// arg1: opaque type display name, arg2: what needs the layout
+	E_OpaqueField,		// arg1: opaque type display name
+	E_OpaqueConvert,	// arg1: opaque type display name
+	E_OpaqueConvertMove,
+	E_OpaqueHeldCopy,	// arg1: the copied type's display name
+	E_ReleaseFuncSig,
+	E_ReleaseFuncPlace,
+	E_ReleaseFuncDup,	// arg1: opaque type display name
 };
 
 class PlnSaMessage

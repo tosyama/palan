@@ -145,7 +145,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			string tname = vtype["type-name"].get<string>();
 			if (structDefs_.count(tname)) {
 				const StructDef& target = structDefs_.at(tname);
-				if (!target.isComplete) {
+				if (!target.isComplete && !target.isOpaque) {
 					cerr << errPrefix << PlnSaMessage::getMessage(E_IncompleteStructType, tname,
 					                                  target.incompleteReason, target.keyword()) << endl;
 					exit(1);
@@ -962,7 +962,7 @@ void PlnSemanticAnalyzer::enterBlockDecls(const json& stmts)
 	for (auto& stmt : stmts) {
 		addDeclaredVarNames(stmt, vars);
 		string t = stmt.value("stmt-type", "");
-		if (t != "struct-def" && t != "enum-def" && t != "type-alias" && t != "const-decl") continue;
+		if (!isTypeDecl(t) && t != "const-decl") continue;
 		string name = stmt["name"].get<string>();
 		bool varTaken = t == "const-decl" && (findVar(name) || vars.count(name));
 		if (varTaken || isDeclNameTaken(name) || find(names.begin(), names.end(), name) != names.end()) {
@@ -972,7 +972,7 @@ void PlnSemanticAnalyzer::enterBlockDecls(const json& stmts)
 		}
 		names.push_back(name);
 		topDecls_.emplace(name, TopDecl{&stmt});
-		if (t == "struct-def" || t == "enum-def") declareTypeIdentity(stmt, ++blockTypeSeq_);
+		if (declaresStructType(t) || t == "enum-def") declareTypeIdentity(stmt, ++blockTypeSeq_);
 	}
 	blockDeclNames_.push_back(names);
 	blockImportedTypes_.emplace_back();
@@ -985,7 +985,7 @@ void PlnSemanticAnalyzer::declareTypeIdentity(const json& stmt, int seq)
 	string internal = isAllocatorsModule(moduleId_) ? name : PlnSaMessage::typeIdentity(moduleId_, seq, name);
 	typeIdentities_[name] = internal;
 	// A pointer may name the struct before its layout is resolved.
-	if (stmt["stmt-type"] == "struct-def") {
+	if (declaresStructType(stmt["stmt-type"])) {
 		typeAliases_[name] = {{"type-kind", "prim"}, {"type-name", internal}}; // LCOV_EXCL_BR_LINE
 		declaredStructs_.insert(internal);
 	}
@@ -1195,6 +1195,34 @@ json PlnSemanticAnalyzer::sa_type_alias(const json& stmt)
 	typeAliases_[name] = move(type);
 	return json::array();
 }
+
+json PlnSemanticAnalyzer::sa_opaque_def(const json& stmt)
+{
+	string written = stmt["name"].get<string>();
+	string name = declaredTypeName(written);
+	declareTypeName(name, stmt);
+	typeAliases_.emplace(written, json{{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
+	StructDef def;
+	def.name = name;
+	def.isOpaque = true;
+	def.releaseFunc = releaseFuncSymbol(name);
+	if (stmt.contains("contents")) {
+		json resolved = resolveKnownType(stmt, stmt["contents"]);
+		bool ownable = resolved.value("type-kind", "") == "arr"
+			|| (isStructType(resolved) && (structDefs_.at(resolved["type-name"].get<string>()).isComplete
+			                               || structDefs_.at(resolved["type-name"].get<string>()).isOpaque));
+		json owned = ownable ? ownedTypeOf(stmt, resolved) : json();
+		if (owned.is_null() || !isOwnedBlock(owned)) {
+			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_OpaqueContents,
+				typeDisplayName(stmt["contents"])) << endl;
+			exit(1);
+		}
+		def.contents = move(resolved);
+		def.contentsOwned = move(owned);
+	}
+	structDefs_[name] = move(def);
+	return json::array();
+} // LCOV_EXCL_BR_LINE
 
 // An alias is written where other names are in scope, even in another module,
 // so its sizes take the values their names have where it is declared.
@@ -1467,7 +1495,7 @@ void PlnSemanticAnalyzer::adoptExportedType(const json& stmt, const json& decl, 
 	string name = decl["name"].get<string>();
 	sub.ensureTypeName(name, false);
 	string kind = decl["stmt-type"].get<string>();
-	if (kind == "struct-def") {
+	if (declaresStructType(kind)) {
 		string id = sub.topTypeIdentity(name);
 		adoptStruct(sub, id, name, alias, stmt);
 		if (!alias.empty())
@@ -1565,9 +1593,59 @@ void PlnSemanticAnalyzer::adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& ty
 	if (t->contains("enum")) adoptEnum(sub, (*t)["enum"].get<string>(), "", "", locNode);
 }
 
+// A module seeing the contents allocates and copies them in a hidden owner of
+// their type, which the variable then takes over, so its release is still the
+// opaque type's.
+json PlnSemanticAnalyzer::sa_opaque_var_decl(const json& stmt, VarStorage storage)
+{
+	// LCOV_EXCL_BR_START
+	const string& typeName = stmt["vars"][0]["var-type"]["type-name"].get<string>();
+	const StructDef& def = structDefs_.at(typeName);
+	if (storage == VarStorage::Frame) requireCompleteStruct(typeName, stmt, "'$'");
+	json vt = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",typeName}}}};
+	json result = json::array();
+	for (auto& var : stmt["vars"]) {
+		string name = var["name"].get<string>();
+		json init, copySrc;
+		if (var.contains("init")) {
+			json given = sa_expression(var["init"]);
+			if (given.value("category", "") == "opaque-convert") {
+				cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_OpaqueConvertMove) << endl;
+				exit(1);
+			}
+			if (isExpiringOwned(given) && given["value-type"] == vt) init = move(given);
+			else copySrc = move(given);
+		}
+		if (init.is_null()) {
+			if (!opaqueContentsVisible(def))
+				requireCompleteStruct(typeName, stmt, copySrc.is_null() ? "a declaration without an initializer" : "a copy");
+			string hidden = "__opq_" + to_string(tempVarCounter_++);
+			json decl = stmt;
+			decl["vars"] = json::array({{{"name",hidden},{"var-type",def.contents}}});
+			for (auto& s : sa_resolved_var_decl(decl, {VarStorage::Heap})) result.push_back(move(s));
+			const json& hvt = *findVar(hidden);
+			json hiddenId = {{"expr-type","id"},{"name",hidden},{"var-type",hvt},{"value-type",hvt}};
+			if (!copySrc.is_null())
+				result.push_back(makeCopyStmt(stmt, hiddenId, opaqueDefOf(copySrc.value("value-type", json())) == &def
+				                              ? asOpaqueContents(copySrc, def) : copySrc, CopyInto::New));
+			result.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",name},{"var-type",vt},
+				{"init",wrapConvert(hiddenId, vt)}}})}});
+			result.push_back({{"stmt-type","assign"},{"name",hidden},
+				{"value",{{"expr-type","lit-int"},{"value","0"},{"value-type",hvt}}}});
+		} else {
+			result.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",name},{"var-type",vt},{"init",init}}})}});
+		}
+		declareVar(name, vt, &stmt);
+		addOwnedScopeVar(name, makeOwnedFreeStmt(name, vt));
+	}
+	return result;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 json PlnSemanticAnalyzer::sa_struct_var_decl(const json& stmt, VarStorage storage)
 {
 	const string& structName = stmt["vars"][0]["var-type"]["type-name"].get<string>();
+	if (structDefs_.at(structName).isOpaque) return sa_opaque_var_decl(stmt, storage);
 	const StructDef& def = requireCompleteStruct(structName, stmt);
 	json pntr_type = {{"type-kind","pntr"},
 	                  {"base-type",{{"type-kind","struct"},{"type-name",structName}}}}; // LCOV_EXCL_BR_LINE

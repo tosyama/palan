@@ -186,6 +186,73 @@ printf("%d %d %ld\n", b.mode, ws[0].in.keep, len(@ws));
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "I2 T2 I4 T4 2 4 1\n");
 }
 
+// A library hides an internal module's type behind an opaque one: users own,
+// move and hold it, and release it through the library, with or without a
+// function marked `release`.
+TEST(build_mgr, library_opaque_type) {
+	cleanTestEnv();
+	writeFile("out/src/conn.pa", R"(library net;
+export type Conn { int32 fd; [+]int32 log; };
+export func touch(@!Conn c, int32 fd) { fd -> c.fd; c.log.push(fd); }
+)");
+	writeFile("out/src/sock.pa", R"(library net;
+cinclude <stdio.h>;
+import "conn.pa" as C;
+export type Sock = opaque C.Conn;
+export type Buf = opaque [+]int32;
+export func open(int32 fd) -> Sock {
+	C.Conn c;
+	C.touch(@!c, fd);
+	return c as Sock;
+}
+export func fd(@Sock s) -> int32 { return (s as @C.Conn).fd; }
+export func close(Sock s) release { printf("close %d\n", fd(@s)); }
+export func buf(int32 n) -> Buf {
+	[+]int32 v;
+	v.resize(n);
+	return v as Buf;
+}
+export func size(@Buf b) -> int64 { return len(b as @[+]int32); }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/sock.pa"), "");
+	fs::remove_all("out/src");
+	string pai = fileText("out/libs/net/sock.pai");
+	EXPECT_EQ(pai.find("Conn"), string::npos) << pai;
+	EXPECT_NE(pai.find("export type Sock = opaque;\nexport type Buf = opaque;\n"), string::npos) << pai;
+	EXPECT_NE(pai.find("export func close(Sock s) release;\n"), string::npos) << pai;
+
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <net/sock>;
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type Peer { Sock s; int32 id; };
+{
+	mtrace();
+	Sock a = open(1);
+	Sock b <<= a;
+	close(b>>);
+	Peer p;
+	open(2) ->> p.s;
+	[3]Sock ss;
+	open(3) ->> ss[1];
+	[+]Sock vs;
+	vs.push(open(4));
+	Buf f = buf(5);
+	printf("%d %ld
+", fd(@p.s), size(@f));
+}
+)");
+	ASSERT_EQ(execTestCommand("bin/palan -o out/p out/app/main.pa"), "");
+	string output = execTestCommand(
+		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so MALLOC_TRACE=out/t.log out/p");
+	ASSERT_EQ(output, "close 1\n2 5\nclose 4\nclose 3\nclose 2\n");
+	expectBalancedMtrace("out/t.log", 18);
+
+	writeFile("out/app/copy.pa", "libpath \"../libs\";\nimport <net/sock>;\nSock a = open(1);\nSock b = a;\n");
+	ASSERT_NE(execTestCommand("bin/palan -o out/c out/app/copy.pa").find(
+		"copy.pa:4:1: error: a copy needs the contents of the opaque type 'Sock'"), string::npos);
+}
+
 // Two libraries each export a Point, with its own layout, allocators and '->'.
 TEST(build_mgr, libraries_exporting_one_type_name) {
 	cleanTestEnv();

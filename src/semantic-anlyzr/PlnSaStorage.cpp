@@ -197,8 +197,9 @@ json PlnSemanticAnalyzer::sizedArrLevel(const json& locNode, const json& arr, op
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ArrBorrowUnsupportedElem) << endl;
 		exit(1);
 	}
-	// An owned struct element is built by its allocator, which needs its layout.
-	if (!isMutable && isStruct) requireCompleteStruct(tname, locNode);
+	// An owned struct element is built by its allocator, which needs its
+	// layout; an opaque one starts empty.
+	if (!isMutable && isStruct && !structDefs_.at(tname).isOpaque) requireCompleteStruct(tname, locNode);
 	out["base-type"] = isStruct ? toStructPntrType(leaf) : leaf;
 	return out;
 } // LCOV_EXCL_BR_LINE
@@ -281,7 +282,8 @@ json PlnSemanticAnalyzer::varrStorageType(const json& locNode, const json& arr)
 	} else if (!embedded && elemSizeBytes(name) >= 0) {
 		elem = base;
 	} else if (structDefs_.count(name)) {
-		const StructDef& def = requireCompleteStruct(name, locNode);
+		const StructDef& def = !embedded && structDefs_.at(name).isOpaque ? structDefs_.at(name)
+		                     : requireCompleteStruct(name, locNode);
 		if (embedded && def.ownsFields) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedOwningType, name) << endl;
 			exit(1);
@@ -741,6 +743,16 @@ json PlnSemanticAnalyzer::allocElemDesc(const json& elem, bool inPlace)
 		json leaf = allocElemDesc((*cur)["base-type"], cur->value("embedded", false));
 		return {{"kind","embed-row"},{"key","C" + symbolType(shapeElem(elem))},{"depth",depth},{"elem",move(leaf)}};
 	}
+	// The allocators know an opaque type only by name, as a slot that starts
+	// NULL and is released through its type's release function. Its size is
+	// any a declaration may have: nothing allocates it there.
+	if (const StructDef* opaque = isStructStorage(elem) ? opaqueDefOf(elem) : nullptr) {
+		if (allocShapeNames_.insert(opaque->name).second)
+			sa["alloc-shapes"].push_back({{"shape-kind","opaque"},{"shape-name",opaque->name},{"total-size",8},
+			                              {"release-func",opaque->releaseFunc}});
+		return {{"kind","opaque"},{"key",symbolType(elem)},{"name",opaque->name},
+		        {"release-func",opaque->releaseFunc},{"size",8}};
+	}
 	if (isStructStorage(elem)) {
 		string name = elem["base-type"]["type-name"];
 		recordAllocShape(name);
@@ -784,7 +796,7 @@ json PlnSemanticAnalyzer::layoutElem(const json& elem)
 	}
 	if (kind == "struct") {
 		const StructDef& def = structDefs_.at(out["type-name"].get<string>());
-		if (def.built() || assignsByFunc(out)) return out;
+		if (def.isOpaque || def.built() || assignsByFunc(out)) return out;
 		string bytes = "__pln_B" + to_string(def.totalSize);
 		byteTypes_[bytes] = def.totalSize;
 		out["type-name"] = bytes;
@@ -957,6 +969,9 @@ json PlnSemanticAnalyzer::makeOwnedValueFreeStmt(json value, json lens)
 		return json{{"stmt-type","expr"},{"body",{
 			{"expr-type","call"},{"name","free"},{"func-type","c"},{"args",move(args)}}}};
 	};
+	if (const StructDef* opaque = opaqueDefOf(vt))
+		return {{"stmt-type","expr"},{"body",{
+			{"expr-type","call"},{"name",opaque->releaseFunc},{"func-type","palan"},{"args",move(args)}}}};
 	if (isStructStorage(vt)) {
 		string name = vt["base-type"]["type-name"];
 		if (!structDefs_.at(name).ownsFields) return freeCall();
@@ -1016,6 +1031,10 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 {
 	const json& t = dst["value-type"];
 	const json& st = src["value-type"];
+	if (src.value("category", "") == "opaque-convert") {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueConvertMove) << endl;
+		exit(1);
+	}
 	// A lone struct may be copied from a '@T' as well as from another struct's
 	// storage; a `[+]T` takes any run of its elements and their count.
 	bool match = isStructStorage(t) ? isStructPntr(st) && st["base-type"] == t["base-type"]
@@ -1050,6 +1069,16 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 		json body = json::array({decl, makeCopyStmt(locNode, dst, tempId, into), makeOwnedFreeStmt(temp, st)});
 		return {{"stmt-type","block"},{"body",move(body)}};
 		// LCOV_EXCL_BR_STOP
+	}
+
+	if (const StructDef* opaque = opaqueDefOf(t)) {
+		if (!opaqueContentsVisible(*opaque)) requireCompleteStruct(opaque->name, locNode, "a copy");
+		return makeCopyStmt(locNode, asOpaqueContents(dst, *opaque), asOpaqueContents(src, *opaque), into);
+	}
+	// The allocators copy what a value holds, and know an opaque type's name only.
+	if (holdsOpaque(isOwnedBlock(t) ? t : withoutArrPermission(t))) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueHeldCopy, typeDisplayName(t)) << endl;
+		exit(1);
 	}
 
 	// LCOV_EXCL_BR_START
@@ -1171,7 +1200,7 @@ json PlnSemanticAnalyzer::structAllocExpr(const string& name, bool build)
 
 void PlnSemanticAnalyzer::markStructRet(json& call, const json& locNode)
 {
-	if (!call.contains("value-type") || !isStructStorage(call["value-type"]))
+	if (!call.contains("value-type") || !isStructValue(call["value-type"]))
 		return;
 	const StructDef& def = requireCompleteStruct(call["value-type"]["base-type"]["type-name"].get<string>(), locNode);
 	call["struct-ret"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_)}}; // LCOV_EXCL_BR_LINE

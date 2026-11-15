@@ -1,0 +1,15 @@
+import "lib_sa_opaque.pa";
+type W { Handle h; int32 n; };
+func use() {
+	Handle h = make(1);
+	Handle g <<= h;
+	close(g>>);
+	W w;
+	make(2) ->> w.h;
+	[+]Handle v;
+	v.push(make(3));
+	Handle p = v.pop();
+	[2]Handle a;
+	(Handle t, int32 n) = two(4);
+}
+use();

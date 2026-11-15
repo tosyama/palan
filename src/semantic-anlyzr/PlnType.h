@@ -139,5 +139,6 @@ const std::map<std::string, std::string>& operatorFuncNames();
 // allocators declare it in C to call it. A type has one '->', so its name,
 // the type's identity in the program, is enough, wherever an interface puts it.
 std::string copyFuncSymbol(const std::string& typeName);
+std::string releaseFuncSymbol(const std::string& typeName);
 // A type as one identifier-safe word, distinct for distinct types.
 std::string symbolType(const json& t);

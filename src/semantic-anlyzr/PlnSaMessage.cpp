@@ -1005,6 +1005,44 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "no struct literal of '" + arg1 + "' can be written outside the module defining it: its " + arg3
 			       + " field '" + arg2 + "' has no initializer.";
 
+		case E_OpaqueContents:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "an opaque type holds what a variable owns through one pointer (a struct, an array of "
+			       "constant sizes or a '[+]T'), not '" + arg1 + "'.";
+
+		case E_OpaqueNeedsLayout:
+			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
+			return arg2 + " needs the contents of the opaque type '" + arg1
+			       + "', which only a module able to write their type knows.";
+
+		case E_OpaqueField:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' is opaque and has no fields: its module reaches the contents through 'as'.";
+
+		case E_OpaqueConvert:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "an owned '" + arg1 + "' is converted only to or from its contents' type, in a module "
+			       "able to write that type.";
+
+		case E_OpaqueConvertMove:
+			return "an owned value converted between an opaque type and its contents is given by a move: "
+			       "'<<=', '->>', '>>' or 'return'.";
+
+		case E_OpaqueHeldCopy:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' holds an opaque value, and copying one held in another value is not "
+			       "supported in this version.";
+
+		case E_ReleaseFuncSig:
+			return "a 'release' function takes one owned opaque type of its module and returns nothing.";
+
+		case E_ReleaseFuncPlace:
+			return "a 'release' function is defined at the top level of the module defining its opaque type.";
+
+		case E_ReleaseFuncDup:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' has another 'release' function; a type has one.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

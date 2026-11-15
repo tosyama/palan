@@ -39,7 +39,7 @@ Root
   manager unions it across modules and passes each path to `ld` after the program's own objects.
 - alloc-shapes\* - List of shape descriptors for arrays and structs requiring custom allocators.
   Empty array when no qualifying var-decls are present.
-  Four entry kinds: struct, bytes, arr and varr.
+  Five entry kinds: struct, bytes, opaque, arr and varr.
 
   The arr and varr entries describe their element by its layout: the element as `data` (or the
   array) holds it, with each integer type replaced by the signed one of its width (`uint32` and
@@ -48,7 +48,9 @@ Root
   alike thus share their functions; whoever reads an integer from one extends it as its own
   type says. The element:
   - elem\* - `{"kind", "key", "size"}` and the type: `"prim"` with `"type"` (a primitive),
-    `"struct"` with `"name"` (an owned slot holding a struct `T`, 8 bytes), `"embed-struct"`
+    `"struct"` with `"name"` (an owned slot holding a struct `T`, 8 bytes), `"opaque"` with
+    `"name"` and `"release-func"` (an owned slot holding an opaque type, 8 bytes; see the opaque
+    entry), `"embed-struct"`
     with `"name"` (the struct itself, `total-size` bytes), or `"varr"` with `"name"` (an owned
     slot holding a `[+]U`, 8 bytes; the name is its header type, `__pln_varr_U`) and `"shape-key"`
     (the `[+]U`'s own entry), or, for a row `[n]U`, `"row"` (an owned slot holding the row's
@@ -128,6 +130,16 @@ Root
   - shape-name\* - `__pln_B<n>`
   - total-size\* - `n`
 
+  **Opaque entry** (an opaque type an owned field or element holds): build-mgr declares it as
+  a type of `total-size` bytes only to name the slots, and declares its release function in
+  `__allocators.h` as `void <symbol>(void *p);`. A slot starts NULL and is dropped by calling
+  the release function; nothing holding one is copied (palan-sa rejects it), so its copy
+  helpers call `abort()`, and `push` stores the value it is given as the slot:
+  - shape-kind\* - "opaque"
+  - shape-name\* - The type's identity
+  - total-size\* - 8
+  - release-func\* - The type's release function (see Symbol names)
+
   **Struct entry** (a struct owning fields, or holding a type with its own `->`):
   - shape-kind\* - "struct"
   - shape-name\* - Struct name string
@@ -203,11 +215,13 @@ SA-annotated statements.
 
 - name\* - Symbol name of the function (see "Symbol names" below), not the written name
 - func-type\* - "palan"
-- export - `true` for an exported function and for a type's `->`, which codegen makes global
+- export - `true` for an exported function, for a type's `->` and for an opaque type's release
+  function, which codegen makes global
 - parameters\* - Parameter list (Palan parameter: name, var-type; empty array when no parameters)
 - ret-type - Return variable type (single-return functions only)
 - rets - Return value list (multi-return functions only)
-- ret-slot - Present when the single return value is a struct: `{"name":<variable>,"size":<bytes>,
+- ret-slot - Present when the single return value is a struct (not an opaque type, which is
+  returned as its owner, a pointer): `{"name":<variable>,"size":<bytes>,
   "eightbytes":[...]}` (`eightbytes` as in a call's `struct-ret`). The body writes the value into
   the struct variable `name` (the named return, or `__ret` for an unnamed one) and returns with a
   bare `return`. With `"eightbytes":[]` (MEMORY class) `name` is bound at entry to the hidden
@@ -243,6 +257,12 @@ among such blocks of the enclosing function or of the top level (`util..a.v..b1.
 A type's `->` (SpecAndDesign.md 3.8) is `__pln_cp_` and the struct as a `<param>` writes it
 (`__pln_cp_24__pln_L10std_2eutf8_utf8`): a type has one, so the type alone names it, and the generated allocators
 declare it in C, which takes no `.`.
+
+An opaque type's release function (SpecAndDesign.md 3.7) is `__pln_rl_` and the type as a
+`<param>` writes it. SA defines it in the type's module, as a function of that name taking the
+owned type (`h`): it does nothing when `h` is NULL, and otherwise calls the function marked
+`release`, or without one releases the contents. Everything releasing such a value calls it, and
+the function marked `release` releases its own parameter as the contents.
 
 - `<name>`: the function's name; an operator function's is a word that starts with a digit, so that
   no written name can be it: `0add` `0sub` `0mul` `0div` `0mod` `0eq` `0lt` `0app` for

@@ -1,0 +1,3 @@
+import "lib_sa_opaque.pa";
+[4]int32 a;
+Handle h <<= a as Handle;

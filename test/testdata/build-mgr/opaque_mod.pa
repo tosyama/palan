@@ -1,0 +1,23 @@
+cinclude <stdio.h>;
+type Inner { int32 x; [+]int32 log; };
+export type Handle = opaque Inner;
+export type Plain = opaque [4]int32;
+type Q = opaque Plain;
+export type Bag = opaque Q;
+export func two(int32 v) -> Handle h, int32 n {
+	v -> n;
+	@!Inner i = @!h as @!Inner;
+	v -> i.x;
+	i.log.push(v);
+}
+export func mk(int32 v) -> Handle {
+	Inner i;
+	v -> i.x;
+	return i as Handle;
+}
+export func x(@Handle h) -> int32 { return (h as @Inner).x; }
+export func close(Handle h) release { printf("close %d\n", x(@h)); }
+export func bag() -> Bag {
+	Q q;
+	return q as Bag;
+}

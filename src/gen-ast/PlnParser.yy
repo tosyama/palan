@@ -267,10 +267,24 @@ struct BodyList {
 			PlnGenAstMessage::getMessage(E_VariadicNotLast)));
 	}
 
+	// Only an interface may leave an opaque type's contents out: a source
+	// declaring the type must say what it holds.
+	static json opaqueOfInterface(const string& file, const string& name, bool exported,
+	                              const palan::PlnParser::location_type& loc)
+	{
+		if (!isInterfaceFile(file))
+			throw runtime_error(PlnGenAstMessage::locatedError(file, loc.begin.line, loc.begin.column,
+				PlnGenAstMessage::getMessage(E_InterfaceOnly, "an opaque type without its contents")));
+		json t = {{"name", name}, {"opaque", nullptr}}; // LCOV_EXCL_BR_LINE
+		if (exported) t["export"] = true;
+		LOC(t, loc); // LCOV_EXCL_BR_LINE
+		return t;
+	} // LCOV_EXCL_BR_LINE
+
 	// A parameter or return the compiler does not implement stays in the
 	// signature as is, so SA can reject the function where it is defined.
 	static json funcDecl(json& ast, bool exported, json fn, const vector<json>& params, const json& ret,
-	                     const palan::PlnParser::location_type& loc)
+	                     bool release, const palan::PlnParser::location_type& loc)
 	{
 		// Frame storage is a property of a local declaration, and a name after
 		// only unimplemented entries has no type to inherit; such a parameter or
@@ -289,6 +303,7 @@ struct BodyList {
 			fn["rets"] = rejectUnimplemented(ret["rets"].get<vector<json>>());
 		else if (ret.contains("ret-type"))
 			fn["ret-type"] = ret["ret-type"];
+		if (release) fn["release"] = true;
 		LOC(fn, loc); // LCOV_EXCL_BR_LINE
 		if (exported) {
 			fn["export"] = true;
@@ -320,6 +335,8 @@ struct BodyList {
 %token KW_FUNC	"func"
 %token KW_TYPE	"type"
 %token KW_ENUM	"enum"
+%token KW_OPAQUE	"opaque"
+%token KW_RELEASE	"release"
 %token KW_CONSTRUCT	"construct"
 %token KW_INTERFACE	"interface"
 %token KW_CONST	"const"
@@ -374,6 +391,7 @@ struct BodyList {
 %type <json>	global_func
 %type <NodeRef>	func_def func_item syscall_decl
 %type <json>	return_def syscall_ret ret_type
+%type <bool>	release_mark
 %type <json>	return
 %type <vector<json>>	paramaters
 %type <PList<json>>	expressions
@@ -542,6 +560,10 @@ expr_stmt: import
 	{
 		if ($1.contains("alias-of")) {
 			$$ = {{"stmt-type", "type-alias"}, {"name", $1["name"]}, {"type", move($1["alias-of"])}}; // LCOV_EXCL_BR_LINE
+			LOC($$, @$); // LCOV_EXCL_BR_LINE
+		} else if ($1.contains("opaque")) {
+			$$ = {{"stmt-type", "opaque-def"}, {"name", $1["name"]}}; // LCOV_EXCL_BR_LINE
+			if (!$1["opaque"].is_null()) $$["contents"] = move($1["opaque"]);
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		} else if ($1.contains("enumerators")) {
 			$$ = {{"stmt-type", "enum-def"}, {"name", $1["name"]}, {"enumerators", move($1["enumerators"])}}; // LCOV_EXCL_BR_LINE
@@ -914,6 +936,14 @@ type_decl: KW_TYPE ID implememts '{' type_members '}'
 	{ $$ = {{"name", $2}, {"alias-of", move($4)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_EXPORT KW_TYPE ID '=' type_expr
 	{ $$ = {{"name", $3}, {"alias-of", move($5)}, {"export", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| KW_TYPE ID '=' KW_OPAQUE type_expr
+	{ $$ = {{"name", $2}, {"opaque", move($5)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| KW_EXPORT KW_TYPE ID '=' KW_OPAQUE type_expr
+	{ $$ = {{"name", $3}, {"opaque", move($6)}, {"export", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| KW_TYPE ID '=' KW_OPAQUE
+	{ $$ = opaqueOfInterface(lexer.inputFile, $2, false, @$); }
+	| KW_EXPORT KW_TYPE ID '=' KW_OPAQUE
+	{ $$ = opaqueOfInterface(lexer.inputFile, $3, true, @$); }
 	| KW_TYPE ID
 	{ $$ = json{}; }
 	| KW_EXPORT KW_TYPE ID
@@ -1319,22 +1349,22 @@ store_loc
 	}
 	;
 
-func_def: KW_FUNC func_name '(' paramaters ')' return_def block_obj
+func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 	{
-		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, @$); // LCOV_EXCL_BR_LINE
-		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $7}}, {} }); // LCOV_EXCL_BR_LINE
-	}
-	| KW_EXPORT KW_FUNC func_name '(' paramaters ')' return_def block_obj
-	{
-		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, $7, @$); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $8}}, {} }); // LCOV_EXCL_BR_LINE
 	}
-	| KW_EXPORT KW_FUNC func_name '(' paramaters ')' return_def ';'
+	| KW_EXPORT KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
+	{
+		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$); // LCOV_EXCL_BR_LINE
+		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $9}}, {} }); // LCOV_EXCL_BR_LINE
+	}
+	| KW_EXPORT KW_FUNC func_name '(' paramaters ')' return_def release_mark ';'
 	{
 		if (!isInterfaceFile(lexer.inputFile))
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
 				PlnGenAstMessage::getMessage(E_InterfaceOnly, "a function without a body")));
-		$$ = leafNode(funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, @$)); // LCOV_EXCL_BR_LINE
+		$$ = leafNode(funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$)); // LCOV_EXCL_BR_LINE
 	}
 	// A type's '->', which comes with the type rather than being exported.
 	| KW_FUNC func_name '(' paramaters ')' return_def ';'
@@ -1342,8 +1372,14 @@ func_def: KW_FUNC func_name '(' paramaters ')' return_def block_obj
 		if (!isInterfaceFile(lexer.inputFile))
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
 				PlnGenAstMessage::getMessage(E_InterfaceOnly, "a function without a body")));
-		$$ = leafNode(funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, @$)); // LCOV_EXCL_BR_LINE
+		$$ = leafNode(funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, false, @$)); // LCOV_EXCL_BR_LINE
 	}
+	;
+
+release_mark: /* empty */
+	{ $$ = false; }
+	| KW_RELEASE
+	{ $$ = true; }
 	;
 
 func_name: ID
@@ -1377,12 +1413,12 @@ func_item: func_def
 // function (Linux syscall ABI, not System V -- see doc/SpecAndDesign.md).
 syscall_decl: KW_SYSCALL ID '(' paramaters ')' syscall_ret '=' expression ';'
 	{
-		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "syscall"}, {"syscall-number", $8}}, $4, $6, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "syscall"}, {"syscall-number", $8}}, $4, $6, false, @$); // LCOV_EXCL_BR_LINE
 		$$ = leafNode(move(fn)); // LCOV_EXCL_BR_LINE
 	}
 	| KW_EXPORT KW_SYSCALL ID '(' paramaters ')' syscall_ret '=' expression ';'
 	{
-		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "syscall"}, {"syscall-number", $9}}, $5, $7, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "syscall"}, {"syscall-number", $9}}, $5, $7, false, @$); // LCOV_EXCL_BR_LINE
 		$$ = leafNode(move(fn)); // LCOV_EXCL_BR_LINE
 	}
 	;

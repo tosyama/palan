@@ -19,6 +19,17 @@
 using json = nlohmann::json;
 using namespace std;
 
+// A type owned through a pointer and named by its identity: a struct, or an
+// opaque type, which is one whose layout is its contents'.
+inline bool declaresStructType(const string& stmtType)
+{
+	return stmtType == "struct-def" || stmtType == "opaque-def";
+}
+inline bool isTypeDecl(const string& stmtType)
+{
+	return declaresStructType(stmtType) || stmtType == "enum-def" || stmtType == "type-alias";
+}
+
 // LCOV_EXCL_BR_START
 inline json wrapConvert(const json& expr, const json& to_type) {
 	// Adding or dropping an enum label changes no bits, so no convert node.

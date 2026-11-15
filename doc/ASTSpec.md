@@ -58,6 +58,8 @@ Function definition model
      - parameters\* - Parameter list (Palan parameter, see below; empty array when no parameters)
      - ret-type - Return variable type (unnamed single return only; omitted for void and named returns)
      - rets - Named return list (Palan parameter, see below; omitted for an unnamed return and void)
+     - release - Boolean, true when marked `release`, as the function releasing an opaque type
+       (SpecAndDesign.md 3.7; omitted when false)
      - block\* - Block object (function body; see Block object below). Absent for a function a
        `.pai` declares (SpecAndDesign.md 3.7): an exported one, or a type's `->`, which a `.pai`
        writes unexported
@@ -417,7 +419,7 @@ Used in `func-def` bodies and standalone block statements.
 
 Statement model
 ---------------
-- stmt-type\* - Statement type: "import" "cinclude" "expr" "var-decl" "assign" "arr-assign" "struct-def" "type-alias" "const-decl" "field-assign" "return" "tapple-decl" "tapple-assign" "block" "if" "while" "for" "break" "continue" "not-impl" "enum-def" "global-permit"
+- stmt-type\* - Statement type: "import" "cinclude" "expr" "var-decl" "assign" "arr-assign" "struct-def" "type-alias" "const-decl" "field-assign" "return" "tapple-decl" "tapple-assign" "block" "if" "while" "for" "break" "continue" "not-impl" "enum-def" "global-permit" "opaque-def"
 - loc\* - Location Array
   1. import - import module statement
     - path-type\* - Path type string: "src" "inc"
@@ -552,6 +554,12 @@ Statement model
       - name\* - Function name string (an operator for an operator function)
       - writable\* - Boolean, true when written with a trailing `!`
       - loc\* - Location Array
+  23. opaque-def - opaque type definition (`type Name = opaque type_expr;`; consumed by SA, not
+      emitted to sa.json)
+    - name\* - Type name string
+    - export - Boolean, true if declared with `export` (omitted when false)
+    - contents - The type it holds (same Variable type object format); omitted in a `.pai`, which
+      writes `type Name = opaque;`
 
 Expression model
 ----------------

@@ -819,6 +819,32 @@ TEST(sa, import_through_interface) {
 	ASSERT_EQ(json::parse(f), fromSource);
 }
 
+// Every owner of an opaque type releases it through the function its module
+// defines, which calls the one marked `release` or releases the contents.
+TEST(sa, opaque_type) {
+	cleanTestEnv();
+	const string id = "__pln_L13lib_sa_opaque_Handle";
+	const string release = "__pln_rl_" + to_string(id.size()) + id;
+	json lib = run_sa("../test/testdata/sa/lib_sa_opaque.pa");
+	ASSERT_TRUE(lib.is_object());
+	const json* rl = nullptr;
+	for (auto& f : lib["functions"])
+		if (f["name"] == release) rl = &f;
+	ASSERT_NE(rl, nullptr);
+	ASSERT_TRUE((*rl)["export"].get<bool>());
+	const json& call = (*rl)["body"][0]["then"]["body"][0]["body"];
+	ASSERT_EQ(call["name"], "lib_sa_opaque..close.P" + to_string(id.size()) + id);
+
+	json jout = run_sa("../test/testdata/sa/348_opaque.pa");
+	ASSERT_TRUE(jout.is_object());
+	string text = jout.dump();
+	ASSERT_NE(text.find("\"name\":\"" + release + "\""), string::npos);
+	bool shape = false;
+	for (auto& s : jout["alloc-shapes"])
+		shape = shape || (s["shape-kind"] == "opaque" && s["release-func"] == release);
+	ASSERT_TRUE(shape);
+}
+
 TEST(sa_error, library_import_without_its_location) {
 	cleanTestEnv();
 	ofstream("out/m.pa") << "import <p/z>;\n";

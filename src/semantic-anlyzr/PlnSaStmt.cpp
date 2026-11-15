@@ -26,6 +26,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 		else if (isStoreStmt(stmt)) { for (auto& s : sa_store_scope(stmt)) result.push_back(s); }
 		else if (prescannedDecls_.count(&stmt)) continue;
 		else if (t == "struct-def")   sa_struct_def(stmt);
+		else if (t == "opaque-def")   sa_opaque_def(stmt);
 		else if (t == "type-alias")   sa_type_alias(stmt);
 		else if (t == "const-decl")   sa_const_decl(stmt);
 		else if (t == "enum-def")     sa_enum_def(stmt);
@@ -54,6 +55,13 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 						returned = name;
 				}
 				json ret = sa_return_stmt(retStmt);
+				// `return x as T` between an opaque type and its contents moves x.
+				if (returned.empty() && ret.contains("values")
+						&& ret["values"][0].value("category", "") == "opaque-convert") {
+					const json& conv = retStmt["values"][0]["src"];
+					if (conv.value("expr-type", "") == "id" && isOwnedVar(conv["name"]))
+						returned = conv["name"];
+				}
 				if (!retSlot_.empty() && ret.contains("values"))
 					for (auto& s : returnIntoSlot(retStmt, ret, returned)) result.push_back(s);
 				else if (returned.empty())
@@ -665,7 +673,7 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	// A named return owning a block is allocated at body entry, where an
 	// initializer can't run yet. A struct is written into storage the caller
 	// provides, which the function sees as a variable it does not own.
-	auto isStructRet = [&](const json& t) { return isStructStorage(sigType(funcDef, t)); };
+	auto isStructRet = [&](const json& t) { return isStructValue(sigType(funcDef, t)); };
 	auto allocatedAtEntry = [&](const json& t) { return isOwnedBlock(sigType(funcDef, t)) && !isStructRet(t); };
 	json ownedParams = json::array();
 	// A variadic parameter is an array sized at run time, as a local `[n]E` is,
@@ -718,8 +726,15 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	funcBodyScopeIdx_ = arrayScopeVars_.size() - 1;  // = 1
 	// The caller hands an owned argument over (a copy, or a call's result), so
 	// the function frees it as one of its own variables.
-	for (auto& name : ownedParams)
-		addOwnedScopeVar(name, makeOwnedFreeStmt(name, *findVar(name)));
+	// A release function's own parameter releases its contents: releasing it
+	// as its type would call the release function again.
+	for (auto& name : ownedParams) {
+		const json& vt = *findVar(name);
+		const StructDef* opaque = funcDef.value("release", false) ? opaqueDefOf(vt) : nullptr;
+		json id = {{"expr-type","id"},{"name",name},{"var-type",vt},{"value-type",vt}}; // LCOV_EXCL_BR_LINE
+		addOwnedScopeVar(name, opaque ? makeOwnedValueFreeStmt(asOpaqueContents(id, *opaque))
+		                              : makeOwnedFreeStmt(name, vt));
+	}
 	// The array is the caller's, as a frame array is no one's to free; the
 	// elements it owns are the function's.
 	if (!variadic.empty())
@@ -775,7 +790,7 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 		}
 	} else if (saFunc.contains("rets") && saFunc["rets"].size() >= 2) {
 		for (auto& r : saFunc["rets"]) {
-			if (!isStructStorage(r["var-type"])) continue;
+			if (!isStructValue(r["var-type"])) continue;
 			r["slot"] = true;
 			json init = structInitStmt(r["name"], r["var-type"]);
 			if (!init.is_null()) body.push_back(move(init));
@@ -1604,6 +1619,12 @@ void PlnSemanticAnalyzer::appendTransferSourceReset(json& stmts, const json& stm
 {
 	if (saValue.value("category", "") == "expiring")
 		return;
+	if (saValue.value("category", "") == "opaque-convert") {
+		json converted = stmt;
+		converted["value"] = stmt["value"]["src"];
+		appendTransferSourceReset(stmts, converted, saValue["src"], op);
+		return;
+	}
 	// A pointer viewed as an owner is no Palan owner to reset.
 	if (saValue.value("category", "") == "owner-view") {
 		if (saValue.value("read-only", false)) {
@@ -1884,12 +1905,12 @@ json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector
 		// A frame variable can't take a returned array block over, so it is
 		// declared from the temp, which moves the block's contents into the
 		// frame and frees the block.
-		bool movesIntoFrame = storage == VarStorage::Frame && isOwnedBlock(retType) && !isStructStorage(retType);
+		bool movesIntoFrame = storage == VarStorage::Frame && isOwnedBlock(retType) && !isStructValue(retType);
 		// A length known only at run time is no signature's, so such an array
 		// copies from the returned one.
 		json declared = varType.value("type-kind","") == "arr" ? takeOverType(stmt, varType)
 		              : sigType(stmt, varType);
-		if (isStructStorage(retType) && declared == retType) {
+		if (isStructValue(retType) && declared == retType) {
 			declareVar(name, retType);
 			structDest(name, retType, storage);
 			continue;
@@ -1906,7 +1927,7 @@ json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector
 			name = temp;
 		}
 		declareVar(name, retType);
-		if (isStructStorage(retType)) {
+		if (isStructValue(retType)) {
 			structDest(name, retType, VarStorage::Heap);
 			continue;
 		}

@@ -21,8 +21,8 @@ void PlnAllocShapes::add(const json& sa)
 	if (!sa.contains("alloc-shapes")) return;
 	for (auto& shape : sa["alloc-shapes"]) {
 		string kind = shape.value("shape-kind", "");
-		// A bytes shape is a struct the module only declares.
-		bool isStruct = kind == "struct" || kind == "bytes";
+		// A bytes or opaque shape is a struct the module only declares.
+		bool isStruct = kind == "struct" || kind == "bytes" || kind == "opaque";
 		string key = isStruct ? "struct:" + shape["shape-name"].get<string>() : shape["shape-key"].get<string>();
 		if (!seen.insert(key).second) continue;
 		(isStruct ? structs : arrays).push_back(shape);
@@ -43,9 +43,12 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	    << "void *realloc(void *ptr, unsigned long size);\n"
 	    << "void abort(void);\n";
 	// A type's '->' is a Palan function, called as C calls it.
-	for (auto& shape : shapes.structs)
+	for (auto& shape : shapes.structs) {
 		if (shape.contains("copy-func"))
 			hdr << "void " << shape["copy-func"].get<string>() << "(const void *src, void *dst);\n";
+		if (shape.contains("release-func"))
+			hdr << "void " << shape["release-func"].get<string>() << "(void *p);\n";
+	}
 }
 
 void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const string& library)
@@ -132,6 +135,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		string popped;     // what pop returns
 		string run;        // a copy's source run of elements
 		string data;       // the header's data pointer
+		string release;    // an opaque element's release function
 		shared_ptr<const ElemOps> leaf;   // a row's element
 	};
 	map<string, const json*> varrElemDescs;
@@ -183,9 +187,10 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			return e;
 		}
 		e.type = kind == "prim" ? desc["type"] : desc["name"];
+		e.release = desc.value("release-func", "");
 		bool isVarr = kind == "varr" || kind == "embed-varr";
 		e.nlens = isVarr ? opsOf(*varrElemDescs.at(e.inner)).nlens : 0;
-		e.owned = kind == "struct" || isVarr;
+		e.owned = kind == "struct" || kind == "opaque" || isVarr;
 		e.embedded = kind == "embed-struct";
 		e.built = e.owned || (e.embedded && hasOwned(e.type));
 		e.assigns = isVarr ? opsOf(*varrElemDescs.at(e.inner)).assigns // LCOV_EXCL_BR_LINE
@@ -247,6 +252,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		if (e.kind == "embed-varr") return indent + "__pln_init_" + e.inner + "(@!" + slot + ", 0, 0" + lenArgs(names) + ");\n";
 		if (e.kind == "embed-row") return indent + "__pln_build_" + e.key + "(" + slot + " as " + e.data + ", 0, 1" + lenArgs(names) + ");\n";
 		if (e.kind == "varr") return indent + "calloc(1, 24) -> " + slot + ";\n";
+		if (e.kind == "opaque") return indent + "NULL -> " + slot + ";\n";
 		if (e.kind == "row") {
 			const ElemOps& l = *e.leaf;
 			string s = indent + "malloc(" + names[0] + " * " + sizeOf(l, rest(names, 1)) + ") -> " + slot + ";\n";
@@ -260,6 +266,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		if (e.kind == "embed-varr") return "__pln_fini_" + e.inner + "(@!" + slot + lenArgs(names) + ");";
 		if (e.kind == "embed-row") return "__pln_drop_" + e.key + "(" + slot + " as " + e.data + ", 0, 1" + lenArgs(names) + ");";
 		if (e.kind == "varr") return "__pln_free_" + e.inner + "(" + slot + lenArgs(names) + ");";
+		if (e.kind == "opaque") return e.release + "(" + slot + ");";
 		if (e.kind == "row") {
 			const ElemOps& l = *e.leaf;
 			if (!l.owned) return "free(" + slot + ");";
@@ -270,6 +277,8 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 	// dst is the slot as its build fills it, a writable reference.
 	auto elemSet = [&](const ElemOps& e, const string& dst, const string& src, const vector<string>& names) {
+		// SA copies nothing holding an opaque value, whose layout this module does not know.
+		if (e.kind == "opaque") return string("abort();");
 		if (e.kind == "embed-varr")
 			return "__pln_copy_" + e.inner + "(@!" + dst + ", " + src + ".data, " + src + ".len" + lenArgs(names) + ");";
 		if (e.kind == "embed-row")
@@ -506,7 +515,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 
 	// Struct allocator/free functions, for structs owning fields
 	for (auto& shape : struct_shapes) {
-		if (shape["shape-kind"] == "bytes") continue;
+		if (shape["shape-kind"] == "bytes" || shape["shape-kind"] == "opaque") continue;
 		string name = shape["shape-name"];
 		struct OwnedField { string slot; ElemOps e; vector<string> lens; };
 		vector<OwnedField> owned;
@@ -712,11 +721,11 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		// A struct (an inner `[+]T`'s header too) comes as the caller's to
 		// own, as a struct parameter's argument does: an owned one becomes the
 		// slot, and one laid out in place is copied into it and freed.
-		bool takesStruct = e.kind == "varr" || e.kind == "struct" || e.kind == "embed-struct";
+		bool takesStruct = e.kind == "varr" || e.kind == "struct" || e.kind == "opaque" || e.kind == "embed-struct";
 		out << "export func __pln_push_" << key << "(@!" << hdr << " h, " << (takesStruct ? "@!" : "")
 		    << e.value << " x" << mp << ") {\n"
 		    << "    if h.len == h.cap { __pln_reserve_" << key << "(h, h.len + 1" << ma << "); }\n";
-		if (e.kind == "varr" || e.kind == "struct")
+		if (e.kind == "varr" || e.kind == "struct" || e.kind == "opaque")
 			out << "    x -> h.data[h.len];\n";
 		else if (e.owned)
 			out << "    __pln_build_" << e.key << "(h.data, h.len, h.len + 1" << ma << ");\n"

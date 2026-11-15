@@ -221,8 +221,8 @@ into a program uses them too, in place of the program's.
 
 ### 3.7 Modules and Libraries
 
-**Status.** Type identity, the interface's contents, `opaque` types, module initialization and
-exported globals are the design of 0.2.6, not yet implemented; the rest is implemented.
+**Status.** Module initialization and exported globals are the design of 0.2.6, not yet
+implemented; the rest is implemented.
 
 **Module identity.** A module's identity is the module part of its symbols (SASpec.md's Symbol
 names). It comes from its source alone, never from the entry or the source's location:
@@ -341,10 +341,18 @@ hide a type of its main, without the reader learning its layout or its module.
 
 - It is a type of its own, not an alias: an alias stands for its type in a function's symbol, which
   would name the internal module (`get(Handle)` would link as `get` of `K.Inner`).
+- The contents are any type a variable owns through one pointer: a struct, Palan's or C's, an owned
+  array of constant sizes or a `[+]T`. `$T`, a pointer, a primitive or an incomplete C struct owns
+  nothing and is an error.
 - A user owns, borrows and moves it as a struct (`Handle`, `@Handle`, `@!Handle`, `->>`, `>>`,
-  `<<=`, an owned field or element), and it is released when its owner is. What needs its layout
-  is an error: a declaration without an initializer, a copy (`Handle b = a;`, `->`), `$Handle`,
-  a field access. Copying and creating one outside its module are left out until wanted.
+  `<<=`, an owned field or element), and it is released when its owner is. Where the contents'
+  type cannot be written, what needs its layout is an error: a declaration without an initializer,
+  a copy (`Handle b = a;`, `->`). Where it can, these allocate and copy the contents. `$Handle` and
+  a field access are errors everywhere; the module reaches the contents through `as`.
+- An owned field or element of an opaque type starts empty (NULL, as after a move) wherever it is
+  created, so a type holding one is allocated the same in every module; `->>` or `<<=` fills it,
+  and releasing an empty one does nothing. Copying a value holding one is left out until wanted:
+  the allocators that would copy it know the opaque type by its name only.
 - The module converts with `as`: a borrow by the pointer cast any pointer has (`@h as @K.Inner`),
   and an owned value between the opaque type and its contents only (`return x as Handle;`,
   `K.Inner x <<= h as K.Inner;`), given only by a move. Only a module able to write the contents'
@@ -353,10 +361,12 @@ hide a type of its main, without the reader learning its layout or its module.
   release;`), taking the owned type alone and returning nothing, one per type, is called wherever
   the value is released (scope exit, reassignment, an owning field or element), as a destructor
   is; called explicitly (`close(h>>)`) it takes the value over and nothing is released twice.
-  Without one, a generated function releases the contents. Either is reached by a symbol made of
-  the type's identity alone, carried with the type as a type's `->` is (3.8), so the `.pai` needs
-  nothing more and the user's allocators can call it. In the release function, a parameter not
-  moved away is released by the generated function, not by the release function again.
+  Without one, the contents are released. Either is reached through a function generated in the
+  type's module, whose symbol is made of the type's identity alone (`__pln_rl_<len><identity>`),
+  carried with the type as a type's `->` is (3.8), so the `.pai` needs nothing more and the user's
+  allocators can call it; it does nothing for an empty value, so neither the release function nor
+  the user checks for one. In the release function, a parameter not moved away releases its
+  contents, not the release function again.
 - Not taken: rejecting a value not explicitly closed (a linear type), which needs flow analysis
   (doc/Issues.md #13) and cannot follow fields and elements; a borrowed handle only, released
   explicitly as C's `DIR`, which leaves the user to free.

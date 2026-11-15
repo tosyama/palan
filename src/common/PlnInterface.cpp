@@ -158,6 +158,7 @@ string Writer::funcDecl(const json& f, bool exported) const
 	if (f.contains("rets")) s += " -> " + vars(f, f["rets"], true);
 	else if (f.contains("ret-type")) s += " -> " + type(f["ret-type"]);
 	if (isSyscall) s += " = " + expr(f["syscall-number"]);
+	if (f.value("release", false)) s += " release";
 	return s + ";\n";
 }
 
@@ -168,6 +169,8 @@ string Writer::statement(const json& s) const
 	string name = s.value("name", "");
 	if (kind == "const-decl") return "const " + name + " = " + expr(s["value"]) + ";\n";
 	if (kind == "type-alias") return exported + "type " + name + " = " + type(s["type"]) + ";\n";
+	if (kind == "opaque-def")
+		return exported + "type " + name + " = opaque" + (s.contains("contents") ? " " + type(s["contents"]) : "") + ";\n";
 	if (kind == "enum-def") {
 		string out = exported + "type " + name + " enum {\n";
 		for (auto& e : s["enumerators"]) {
@@ -322,7 +325,7 @@ string Writer::write()
 			}
 		} else if (kind == "const-decl") {
 			if (consts.count(s["name"])) out += statement(s);
-		} else if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
+		} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
 				|| (kind == "cinclude" && s.contains("export-types"))) {
 			out += statement(s);
 		}
@@ -382,7 +385,8 @@ Merger::Merger(const json& main, const vector<json>& internals)
 		const json& list = (*modules_[m])["ast"].contains("statements") ? stmts(m) : noStmts;
 		for (auto& s : list) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "const-decl")
+			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			    || kind == "const-decl")
 				decls_[m][s["name"]] = {&s, nullptr};
 			else if (kind == "var-decl")
 				for (auto& v : s["vars"]) decls_[m][v["name"]] = {&s, &v};
@@ -437,7 +441,7 @@ void Merger::ref(json& nameNode, int m, bool rename)
 		}
 		string kind = (*decls_[key->first].at(key->second).stmt)["stmt-type"];
 		// A type is identified by its module, which the .pai, read as the main's, would change.
-		if (key->first != 0 && (kind == "struct-def" || kind == "enum-def")) {
+		if (key->first != 0 && (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def")) {
 			string at = (*modules_[fromModule_])["original"].get<string>();
 			if (from_ && from_->contains("loc"))
 				at += ":" + to_string((*from_)["loc"][0].get<int>()) + ":" + to_string((*from_)["loc"][1].get<int>());
@@ -486,7 +490,12 @@ void Merger::walk(json& node, int m, bool rename)
 json Merger::declBody(const Key& key) const
 {
 	const Decl& d = decls_[key.first].at(key.second);
-	if (!d.var) return *d.stmt;
+	// An opaque type's contents are what the library keeps to itself.
+	if (!d.var) {
+		json body = *d.stmt;
+		if (body["stmt-type"] == "opaque-def") body.erase("contents");
+		return body;
+	}
 	json body = *d.var;
 	body.erase("init");
 	return body;
@@ -519,7 +528,7 @@ json Merger::merged()
 	const json& mainStmts = main["ast"].contains("statements") ? stmts(0) : noStmts;
 	for (auto& s : mainStmts) {
 		string kind = s.value("stmt-type", "");
-		bool isDecl = kind == "struct-def" || kind == "enum-def" || kind == "type-alias";
+		bool isDecl = kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
 	}
 	json funcs = main.value("export", json::array());
@@ -575,10 +584,11 @@ json Merger::merged()
 					decl["vars"].push_back(move(var));
 				}
 				if (!decl["vars"].empty()) out.push_back(move(decl));
-			} else if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "const-decl") {
+			} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			           || kind == "const-decl") {
 				Key key{m, s["name"]};
 				if (!reached_.count(key)) continue;
-				json decl = s;
+				json decl = declBody(key);
 				walk(decl, m, true);
 				decl["name"] = finals_.at(key);
 				if (!isPublic(key)) decl.erase("export");

@@ -39,6 +39,8 @@ enum {
 	KW_FUNC =	PlnParser::token::KW_FUNC,
 	KW_TYPE =	PlnParser::token::KW_TYPE,
 	KW_ENUM =	PlnParser::token::KW_ENUM,
+	KW_OPAQUE =	PlnParser::token::KW_OPAQUE,
+	KW_RELEASE =	PlnParser::token::KW_RELEASE,
 	KW_CONSTRUCT =	PlnParser::token::KW_CONSTRUCT,
 	KW_INTERFACE =	PlnParser::token::KW_INTERFACE,
 	KW_CONST =	PlnParser::token::KW_CONST,
@@ -155,6 +157,8 @@ COMMENT1	\/\/[^\n]*\n
 <*>"func" { return KW_FUNC; }
 <*>"type" { return KW_TYPE; }
 <*>"enum" { return KW_ENUM; }
+<*>"opaque" { return KW_OPAQUE; }
+<*>"release" { return KW_RELEASE; }
 <*>"construct" { return KW_CONSTRUCT; }
 <*>"interface" { return KW_INTERFACE; }
 <*>"const" { return KW_CONST; }

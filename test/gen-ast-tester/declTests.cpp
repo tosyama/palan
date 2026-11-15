@@ -63,6 +63,21 @@ TEST(gen_ast, type_alias) {
 	ASSERT_EQ(s["type"]["type-name"], "int64");
 }
 
+TEST(gen_ast, opaque_type) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/164_opaque.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const auto& stmts = jout["ast"]["statements"];
+	ASSERT_EQ(stmts[1]["stmt-type"], "opaque-def");
+	ASSERT_EQ(stmts[1]["name"], "Handle");
+	ASSERT_EQ(stmts[1]["contents"]["type-name"], "Inner");
+	ASSERT_TRUE(stmts[1]["export"].get<bool>());
+	ASSERT_EQ(stmts[2]["contents"]["specifier"], "variable");
+	ASSERT_FALSE(stmts[2].contains("export"));
+	ASSERT_TRUE(jout["ast"]["functions"][0]["release"].get<bool>());
+}
+
 TEST(gen_ast, const_decl) {
 	cleanTestEnv();
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/102_const_decl.pa");
@@ -1156,6 +1171,7 @@ TEST(gen_ast, interface_text) {
 		"export type Shown {\n\tHidden h;\n\t@FILE fp;\n};\n"
 		"export type Color enum {\n\tRed,\n\tGreen = 5,\n};\n"
 		"export type Size = int64;\n"
+		"export type Handle = opaque Hidden;\n"
 		"const N = 3 * (8192 + 1);\n"
 		"[3]int32 lit;\n"
 		"[2]$[2]int32 rows;\n"
@@ -1167,7 +1183,8 @@ TEST(gen_ast, interface_text) {
 		"export func h();\n"
 		"export func k(int32 a, int32 b = N + 1, Color c = Color.Green, @[]uint8 s = \"a\\tb\", bool on = true, flo64 d = -1.5) -> int32;\n"
 		"export func va(int32 a, [...]@Shown xs);\n"
-		"export syscall sys(int64 x) -> int64 = 39;\n");
+		"export syscall sys(int64 x) -> int64 = 39;\n"
+		"export func close(Handle h) release;\n");
 }
 
 static json withoutLoc(json j) {
@@ -1199,13 +1216,13 @@ TEST(gen_ast, interface_reads_back_as_the_source) {
 		vector<json> kept;
 		for (auto& s : source["ast"]["statements"]) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
+			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
 				kept.push_back(withoutLoc(s));
 		}
 		vector<json> read;
 		for (auto& s : pai["ast"]["statements"]) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
+			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
 				read.push_back(withoutLoc(s));
 		}
 		ASSERT_EQ(json(read), json(kept)) << file;

@@ -1,0 +1,25 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+import "opaque_mod.pa";
+type W { Handle h; [2]Handle hh; };
+func f() {
+	(Handle h, int32 n) = two(5);
+	printf("%d %d\n", x(@h), n);
+	Plain p;
+	3 -> (@!p as @![4]int32)[1];
+	Plain c = p;
+	[4]int32 a <<= c as [4]int32;
+	printf("%d\n", a[1]);
+	Bag b = bag();
+	[2][2]Handle m;
+	mk(6) ->> m[1][0];
+	[2]W ws;
+	mk(7) ->> ws[1].hh[1];
+	[+]Handle v;
+	v.resize(2);
+	mk(8) ->> v[0];
+	v.push(mk(9));
+	Handle q = v.pop();
+}
+mtrace();
+f();

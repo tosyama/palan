@@ -1,0 +1,4 @@
+type Inner { int32 x; };
+type H = opaque Inner;
+Inner i;
+H h = i as H;
