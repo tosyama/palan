@@ -1,0 +1,3 @@
+const K = 3;
+export type Arr = [K]int32;
+export func sum(@Arr a) -> int32 { return a[0] + a[1] + a[2]; }

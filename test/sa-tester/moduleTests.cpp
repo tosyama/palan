@@ -272,6 +272,16 @@ TEST(sa, import_type)
 	ASSERT_EQ(x["args"][0]["value-type"]["base-type"]["type-name"], "Vec");
 }
 
+// The alias's size is K as its module declares it, not the importer's K.
+TEST(sa, import_alias_size)
+{
+	cleanTestEnv();
+	genModuleAst("../test/testdata/sa/lib_sa_alias_size.pa");
+	json jout = run_sa("../test/testdata/sa/347_import_alias_size.pa");
+	ASSERT_TRUE(jout.is_object());
+	ASSERT_EQ(jout["statements"][1]["vars"][0]["init"]["value"], "3");
+}
+
 TEST(sa, import_type_alias)
 {
 	cleanTestEnv();

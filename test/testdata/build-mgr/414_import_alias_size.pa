@@ -1,0 +1,9 @@
+cinclude <stdio.h>;
+import "lib_alias_size.pa";
+const K = 2;
+type Box { Arr a; };
+Box b;
+1 -> b.a[0];
+2 -> b.a[1];
+3 -> b.a[2];
+printf("%ld %d\n", len(@b.a), sum(@b.a));

@@ -580,6 +580,7 @@ class PlnSemanticAnalyzer {
 	void registerCStruct(const json& cincludeStmt, const json& s);  // consume c2ast "structs" entry, register in structDefs_
 	json sa_struct_var_decl(const json& stmt, VarStorage storage); // returns array of statements
 	json sa_type_alias(const json& stmt);         // consume type-alias, register in typeAliases_
+	void foldTypeSizes(json& type);
 	json sa_const_decl(const json& stmt);         // consume const-decl, register in constDecls_
 	json sa_enum_def(const json& stmt);           // consume enum-def, register in enumDefs_/typeAliases_
 	// `written` is how source names it, `name` its program-wide name.

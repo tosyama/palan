@@ -1185,8 +1185,25 @@ json PlnSemanticAnalyzer::sa_type_alias(const json& stmt)
 {
 	// An alias has no program-wide name to claim: it is only written.
 	string name = stmt["name"].get<string>();
-	typeAliases_[name] = resolveWrittenType(stmt, stmt["type"]);
+	json type = resolveWrittenType(stmt, stmt["type"]);
+	foldTypeSizes(type);
+	typeAliases_[name] = move(type);
 	return json::array();
+}
+
+// An alias is written where other names are in scope, even in another module,
+// so its sizes take the values their names have where it is declared.
+void PlnSemanticAnalyzer::foldTypeSizes(json& type)
+{
+	if (type.is_array()) {
+		for (auto& e : type) foldTypeSizes(e);
+		return;
+	}
+	if (!type.is_object()) return;
+	for (auto& [key, value] : type.items()) {
+		if (key == "size-expr" && !value.is_null()) value = foldConstExpr(value);
+		else foldTypeSizes(value);
+	}
 }
 
 json PlnSemanticAnalyzer::sa_const_decl(const json& stmt)
