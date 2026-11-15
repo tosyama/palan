@@ -30,3 +30,11 @@ inline std::string allocatorsModuleOf(const std::string& moduleId)
 {
 	return isLibraryModule(moduleId) ? moduleId + "." PALAN_ALLOCATORS_MODULE : PALAN_ALLOCATORS_MODULE;
 }
+
+// build-mgr claims these identities, so no source module has one.
+inline bool isAllocatorsModule(const std::string& moduleId)
+{
+	static const std::string suffix = "." PALAN_ALLOCATORS_MODULE;
+	return moduleId == PALAN_ALLOCATORS_MODULE
+		|| (moduleId.size() > suffix.size() && moduleId.compare(moduleId.size() - suffix.size(), suffix.size(), suffix) == 0);
+}

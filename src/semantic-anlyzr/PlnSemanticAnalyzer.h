@@ -250,12 +250,12 @@ class PlnSemanticAnalyzer {
 	// null for a cinclude'd C enum (whose first definition wins).
 	struct EnumDef { map<string, int64_t> values; json loc; };
 	map<string, EnumDef>   enumDefs_;
-	// Defining module of each Palan struct and enum name. These names are
-	// program-wide identities (build-mgr keys struct allocators by them), so a
-	// name may come from one module only. A C type or an alias has no entry.
+	// Defining module of each Palan struct and enum identity. Build-mgr keys
+	// struct allocators by these names, so one comes from one module only. A C
+	// type or an alias has no entry.
 	map<string, string>    typeOrigins_;
-	// Imported type names source may not write unqualified -> the module
-	// alias to write them with.
+	// Imported type names (as written in their module) source may not write
+	// unqualified -> the module alias to write them with.
 	map<string, string>    hiddenTypeNames_;
 	// A top-level struct/enum/alias/const declaration, resolved when first
 	// needed, so neither source order nor which of two files importing each
@@ -299,11 +299,11 @@ class PlnSemanticAnalyzer {
 	// under their written names while the block is analyzed. Shadowing is an
 	// error, so leaving the block erases them without hiding an outer entry.
 	vector<vector<string>> blockDeclNames_;
-	// Written name -> program-wide name of each unexported top-level
-	// struct/enum and each one of the enclosing blocks. Modules and blocks may
-	// reuse a name, the allocators and sa.json may not.
-	map<string, string>    localTypeNames_;
-	int                    localTypeSeq_ = 0;
+	// Written name -> identity of each top-level struct/enum and each one of
+	// the enclosing blocks. Modules and blocks may reuse a name, the allocators
+	// and sa.json may not.
+	map<string, string>    typeIdentities_;
+	int                    blockTypeSeq_ = 0;
 	// Type names (`T` or `V.T`) each enclosing block's imports made writable.
 	vector<vector<string>> blockImportedTypes_;
 	// Program-wide type resolution state, shared by every module's analyzer.
@@ -399,15 +399,15 @@ class PlnSemanticAnalyzer {
 	// taken from the declaration's shape alone, or null.
 	const json* topVarType(const string& name);
 	void rejectDeferredConstRefs(const json& locNode, const json& node) const;
-	void adoptImportedType(ImportedType& t, const string& alias);
+	void adoptImportedType(ImportedType& t);
 	// Runs `f` once no declaration is being resolved: resolving a pointee
 	// earlier could report a cycle a pointer breaks.
 	void whenSettled(function<void()> f);
 	void adoptExportedTypes(const json& stmt, const json& impAst, PlnSemanticAnalyzer& sub);
 	void adoptExportedType(const json& stmt, const json& decl, PlnSemanticAnalyzer& sub);
-	void adoptStruct(PlnSemanticAnalyzer& sub, const string& name, bool nameable, const string& alias,
+	void adoptStruct(PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
 	                 const json& locNode);
-	void adoptEnum(const PlnSemanticAnalyzer& sub, const string& name, bool nameable, const string& alias,
+	void adoptEnum(const PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
 	               const json& locNode);
 	void adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
 	void setTypeNameable(const string& name, bool nameable, const string& alias);
@@ -415,7 +415,8 @@ class PlnSemanticAnalyzer {
 	// another module or a cincluded header defined it.
 	bool claimTypeName(const string& name, const string& origin, const json& locNode);
 	void declareTypeName(const string& name, const json& stmt);
-	void requireNotPalanType(const string& name, const json& locNode, bool isStruct) const;
+	void requireNotPalanType(const string& name, const json& locNode) const;
+	bool namesPalanType(const json& binding) const;  // a binding in typeAliases_
 	// Binds a type an import makes writable; exits if the name is bound to another type.
 	void bindImportedTypeName(const json& locNode, const string& name, const json& type);
 	// Exits if `written` names a Palan type this scope cannot write.
@@ -563,7 +564,8 @@ class PlnSemanticAnalyzer {
 	void recordElemShape(const AllocShapeRef& shape);
 	json varrData(json varr);
 	void enterBlockDecls(const json& stmts);
-	void declareLocalTypeName(const json& stmt, int seq);
+	void declareTypeIdentity(const json& stmt, int seq);
+	string topTypeIdentity(const string& written) const;
 	void leaveBlockDecls();
 	string declaredTypeName(const string& written) const;
 	bool isDeclNameTaken(const string& name) const;

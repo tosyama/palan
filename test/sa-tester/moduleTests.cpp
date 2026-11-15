@@ -253,7 +253,7 @@ TEST(sa, import_type)
 {
 	cleanTestEnv();
 	genLibSaTypes();
-	json jout = run_sa("../test/testdata/sa/228_import_type.pa");
+	json jout = written(run_sa("../test/testdata/sa/228_import_type.pa"));
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	// Laid out from the exporting module, where the non-exported Inner and
@@ -282,11 +282,23 @@ TEST(sa, import_alias_size)
 	ASSERT_EQ(jout["statements"][1]["vars"][0]["init"]["value"], "3");
 }
 
+// Two modules exporting Vec: each is identified by its module.
+TEST(sa, import_same_type_name)
+{
+	cleanTestEnv();
+	genLibSaTypes();
+	json jout = run_sa("../test/testdata/sa/346_import_same_type_name.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	ASSERT_EQ(stmts[0]["vars"][0]["var-type"]["base-type"]["type-name"], "__pln_L12lib_sa_types_Vec");
+	ASSERT_EQ(stmts[1]["vars"][0]["var-type"]["base-type"]["type-name"], "__pln_L13lib_sa_types2_Vec");
+}
+
 TEST(sa, import_type_alias)
 {
 	cleanTestEnv();
 	genLibSaTypes();
-	json jout = run_sa("../test/testdata/sa/229_import_type_alias.pa");
+	json jout = written(run_sa("../test/testdata/sa/229_import_type_alias.pa"));
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	ASSERT_EQ(stmts[0]["vars"][0]["init"]["args"][0]["value"], "24");
@@ -601,11 +613,10 @@ TEST(sa, unexported_type_name)
 	cleanTestEnv();
 	json jout = run_sa("../test/testdata/sa/277_unexported_type_name.pa");
 	ASSERT_TRUE(jout.is_object());
-	// Another module may declare its own A; an importer writes B as is.
 	const json& st = jout["statements"];
 	string a = st[0]["vars"][0]["var-type"]["base-type"]["type-name"];
-	ASSERT_TRUE(regex_match(a, regex("__pln_L[0-9a-f]{16}_A"))) << a;
-	ASSERT_EQ(st[1]["vars"][0]["var-type"]["base-type"]["type-name"], "B");
+	ASSERT_EQ(a, "__pln_L25_277_unexported_type_name_A");
+	ASSERT_EQ(st[1]["vars"][0]["var-type"]["base-type"]["type-name"], "__pln_L25_277_unexported_type_name_B");
 	ASSERT_EQ(jout["alloc-shapes"][1]["owned-fields"][0]["elem"]["name"], a);
 }
 
@@ -617,7 +628,7 @@ TEST(sa, block_type_scope)
 	// The two block-local P's get distinct program-wide names; the written
 	// name reaches no type.
 	string out = jout.dump();
-	regex internal("__pln_L[0-9a-f]{16}_[0-9]+_P\\b");
+	regex internal("__pln_L[0-9]+_258_block_type_scope_[0-9]+_P\\b");
 	set<string> ps;
 	for (sregex_iterator it(out.begin(), out.end(), internal), end; it != end; ++it)
 		ps.insert(it->str());

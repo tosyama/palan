@@ -2,4 +2,4 @@ library demo;
 []int32 table = [1, 2, 3];
 []int32 unused = [1];
 const K = len(@table);
-export type Rows { [K]int32 a; };
+export type Row = [K]int32;

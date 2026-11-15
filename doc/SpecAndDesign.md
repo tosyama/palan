@@ -244,7 +244,8 @@ lets them coexist.
 `__pln_L<len><module>_<Name>`, with the identity's `.` written `_2e` (`std.utf8`'s `Point` is
 `__pln_L10std_2eutf8_Point`) and a block's type adding its order (`__pln_L4util_2_Point`). This name
 is what sa.json, symbols (a type's `->` is `__pln_cp_<len><that name>`) and the allocators' keys
-use; a message shows the written name. A C type keeps its C name, global as in C.
+use; a message shows the written name. A C type keeps its C name, global as in C. So does a type
+declared in a generated allocators module, whose names are already the types' identities.
 
 - Before 0.2.6 an exported type was identified by its written name alone, so two modules exporting
   `Point` were `E_DuplicateTypeName` and library types took a prefix (`utf8mode`); a private type
@@ -286,10 +287,13 @@ path. An ordinary `import "..."` needs none: palan-sa reads the imported module'
 library's AST comes from its `.pai`, so palan-sa has one kind of input. An error in an imported
 source module is reported at its own line, and one in a library at its `.pai`'s.
 
-A library's `.pai` holds only its main source's own declarations, so how the library's source is
-divided is never published:
+A library's `.pai` declares types only of its main source, so how the library's source is divided is
+never published:
 
 - Public: the main's exports. Private: the main's types and consts the public declarations need.
+- The consts and aliases of internal modules the public declarations need are written as the main's,
+  renamed (`__m<n>_<Name>`) when two share a name: they identify nothing, since a symbol holds what
+  they stand for.
 - A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
   declarations need it or not, since its archive is linked). A C type comes through
   `cinclude ... export`. An `import "..."` of an internal module disappears.
@@ -459,7 +463,7 @@ paths.
 
 - So it is defined only in `T`'s module, not exported, and the StructDef carries its symbol
   (`copyFunc`) to every module `T` reaches. The symbol is named by the type's identity alone
-  (`__pln_cp_4utf8`, SASpec.md's Symbol names) and is a global C identifier, since the generated
+  (`__pln_cp_24__pln_L10std_2eutf8_utf8`, SASpec.md's Symbol names) and is a global C identifier, since the generated
   allocators call it.
 - The source is the same type only: a `->` from another type would be an implicit conversion under
   another name.

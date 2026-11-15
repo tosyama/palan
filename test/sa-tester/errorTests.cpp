@@ -907,13 +907,12 @@ TEST(sa_error, import_type)
 		{"error_426_import_type_not_selected.pa", ":2:1: error: unknown type 'Vec'."},
 		{"error_427_import_type_private_dep.pa", ":2:1: error: unknown type 'Inner'."},
 		{"error_428_import_type_local_conflict.pa", ":2:1: error: type 'Vec' is already defined."},
-		{"error_429_import_type_module_conflict.pa", ":2:1: error: type 'Vec' is already defined."},
 		// The imported module's own path and line, not the importer's.
 		{"error_430_import_bad_struct_def.pa", "lib_sa_bad_struct.pa:2:1: error: unsupported struct field type."},
 		// A block's import makes its types writable only in that block.
 		{"error_568_block_import_type_outside.pa", ":4:1: error: unknown type 'Vec'."},
 		{"error_569_block_import_alias_outside.pa", ":4:1: error: unknown type 'MyInt'."},
-		{"error_570_block_import_enum_outside.pa", ":4:11: error: unknown type 'Color'."},
+		{"error_570_block_import_enum_outside.pa", ":4:11: error: Undefined variable 'Color'."},
 		{"error_571_block_import_qualified_outside.pa", ":4:1: error: unknown type 'V.Vec'."},
 		// PP is lib's P, a different type from main's P of the same name.
 		{"error_641_import_alias_private_type.pa", ":4:1: error: cannot convert '@!P' to '@!P'."},

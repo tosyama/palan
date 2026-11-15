@@ -1043,7 +1043,7 @@ TEST(sa, alias_cast)
 {
 	cleanTestEnv();
 	genLibSaTypes();
-	json jout = run_sa("../test/testdata/sa/236_alias_cast.pa");
+	json jout = written(run_sa("../test/testdata/sa/236_alias_cast.pa"));
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	ASSERT_EQ(stmts[1]["vars"][0]["init"]["expr-type"], "convert");

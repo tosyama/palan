@@ -921,7 +921,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 		} else if (t == "struct-def" || t == "enum-def" || t == "type-alias" || t == "const-decl") {
 			string name = stmt["name"].get<string>();
 			topDecls_.emplace(name, TopDecl{&stmt, TopDecl::Pending, (int)pos});
-			if (t == "struct-def" && stmt.value("export", false)) declaredStructs_.insert(name);
+			if (t == "struct-def") declaredStructs_.insert(topTypeIdentity(name));
 		} else if (t == "cinclude") {
 			registerCIncludeTypes(stmt);
 		} else if (t == "import") {
@@ -938,7 +938,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 				string name = d["name"].get<string>();
 				if (stmt.contains("targets") && !targets.count(name)) continue;
 				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, &mod, &d});
-				if (d["stmt-type"] == "struct-def") declaredStructs_.insert(name);
+				if (d["stmt-type"] == "struct-def") declaredStructs_.insert(mod.topTypeIdentity(name));
 			}
 		}
 	}
@@ -950,7 +950,6 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 		string t = stmt.value("stmt-type", "");
 		if (t != "struct-def" && t != "enum-def" && t != "type-alias" && t != "const-decl") continue;
 		string name = stmt["name"].get<string>();
-		bool localType = (t == "struct-def" || t == "enum-def") && !stmt.value("export", false);
 		bool clash = topDecls_.at(name).stmt != &stmt || isWrittenNameTaken(name);
 		if (t == "const-decl") clash = clash || vars.count(name) || findVar(name);
 		if (clash) {
@@ -958,7 +957,7 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 				t == "const-decl" ? E_DuplicateConstDecl : E_DuplicateTypeName, name) << endl;
 			exit(1);
 		}
-		if (localType) declareLocalTypeName(stmt, 0);
+		if (t == "struct-def" || t == "enum-def") declareTypeIdentity(stmt, 0);
 	}
 }
 
@@ -974,19 +973,16 @@ void PlnSemanticAnalyzer::ensureTypeName(const string& name, bool viaPointer)
 	}
 	auto t = importedTypes_.find(name);
 	if (t == importedTypes_.end() || t->second.adopted) return;
-	size_t dot = name.find('.');
-	string alias = dot == string::npos ? "" : name.substr(0, dot);
 	const json& decl = *t->second.decl;
 	if (viaPointer && decl["stmt-type"] == "struct-def") {
 		// The pointer's type names the struct by its program-wide name now;
 		// its layout comes with the adoption.
-		if (!alias.empty())
-			typeAliases_[name] = {{"type-kind", "prim"}, {"type-name", decl["name"]}}; // LCOV_EXCL_BR_LINE
+		typeAliases_[name] = {{"type-kind", "prim"}, {"type-name", t->second.module->topTypeIdentity(decl["name"])}}; // LCOV_EXCL_BR_LINE
 		ImportedType* it = &t->second;
-		whenSettled([this, it, alias] { if (!it->adopted) adoptImportedType(*it, alias); });
+		whenSettled([this, it] { if (!it->adopted) adoptImportedType(*it); });
 		return;
 	}
-	adoptImportedType(t->second, alias);
+	adoptImportedType(t->second);
 } // LCOV_EXCL_BR_LINE
 
 void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
@@ -1021,17 +1017,13 @@ void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
 
 void PlnSemanticAnalyzer::ensureStructDef(const string& name)
 {
-	for (auto& [written, internal] : localTypeNames_)
+	for (auto& [written, internal] : typeIdentities_)
 		if (internal == name) {
 			ensureTypeName(written, false);
 			return;
 		}
-	if (topDecls_.count(name)) {
-		ensureTypeName(name, false);
-		return;
-	}
 	for (auto& [key, t] : importedTypes_)
-		if ((*t.decl)["name"] == name) {
+		if (t.module->topTypeIdentity((*t.decl)["name"]) == name) {
 			ensureTypeName(key, false);
 			return;
 		}
@@ -1152,12 +1144,9 @@ void PlnSemanticAnalyzer::rejectDeferredConstRefs(const json& locNode, const jso
 	}
 }
 
-void PlnSemanticAnalyzer::adoptImportedType(ImportedType& t, const string& alias)
+void PlnSemanticAnalyzer::adoptImportedType(ImportedType& t)
 {
 	adoptExportedType(*t.importStmt, *t.decl, *t.module);
-	if (!alias.empty() && (*t.decl)["stmt-type"] == "struct-def")
-		typeAliases_[alias + "." + (*t.decl)["name"].get<string>()] =
-			{{"type-kind", "prim"}, {"type-name", (*t.decl)["name"]}}; // LCOV_EXCL_BR_LINE
 	t.adopted = true;
 } // LCOV_EXCL_BR_LINE
 
@@ -1233,7 +1222,7 @@ const json& PlnSemanticAnalyzer::result()
 // policy as a native "type X = ...;" alias.
 void PlnSemanticAnalyzer::registerTypeAliasChecked(const json& locNode, const string& aliasName, const json& resolved)
 {
-	requireNotPalanType(aliasName, locNode, false);
+	requireNotPalanType(aliasName, locNode);
 	auto it = typeAliases_.find(aliasName);
 	if (it == typeAliases_.end()) {
 		typeAliases_[aliasName] = resolved;

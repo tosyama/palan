@@ -186,15 +186,34 @@ printf("%d %d %ld\n", b.mode, ws[0].in.keep, len(@ws));
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "I2 T2 I4 T4 2 4 1\n");
 }
 
-// The reader would identify a private type of an internal module by the main's
-// module, so its '->' could not be linked.
-TEST(build_mgr, library_copy_func_of_an_internal_private_type) {
+// Two libraries each export a Point, with its own layout, allocators and '->'.
+TEST(build_mgr, libraries_exporting_one_type_name) {
 	cleanTestEnv();
-	writeFile("out/src/inner.pa", "library kit;\ntype In { [+]int32 v; };\n"
-		"func ->(@In src, @!In dst) { src.v -> dst.v; }\nexport type Box { In in; };\n");
-	writeFile("out/src/box.pa", "library kit;\nimport \"inner.pa\";\nexport func mk() -> Box b { }\n");
-	EXPECT_NE(execTestCommand("bin/palan --lib -o out/libs out/src/box.pa").find("as a type with its own '->'"),
-		string::npos);
+	writeFile("out/src/a/pt.pa", R"(library ka;
+export type Point { int32 x; [+]int32 tags; };
+func ->(@Point src, @!Point dst) { src.x + 100 -> dst.x; src.tags -> dst.tags; }
+export func mk(int32 x) -> Point p { x -> p.x; p.tags.push(x); }
+export func show(@Point p) -> int32 { return p.x + p.tags[0]; }
+)");
+	writeFile("out/src/b/pt.pa", R"(library kb;
+export type Point { flo64 y; int64 n; };
+export func mk(flo64 y) -> Point p { y -> p.y; 2 -> p.n; }
+export func show(@Point p) -> int64 { return p.n; }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/a/pt.pa"), "");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/b/pt.pa"), "");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+cinclude <stdio.h>;
+import <ka/pt>;
+import <kb/pt> as B;
+Point a = mk(1);
+Point c = mk(5);
+a -> c;
+[+]B.Point bs;
+bs.push(B.mk(1.5));
+printf("%d %ld %.1f\n", show(@c), B.show(@bs[0]), bs[0].y);
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "102 2 1.5\n");
 }
 
 // The interface keeps hidden fields, which the user's allocators lay out and copy.

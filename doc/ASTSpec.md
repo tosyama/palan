@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Json Specification
 ============================================
 
-ver. 0.2.5
+ver. 0.2.6
 
 \* - Required
 

@@ -1,7 +1,7 @@
 Palan Semantic Analyzer JSON Specification
 ==========================================
 
-ver. 0.2.5
+ver. 0.2.6
 
 Output of palan-sa. Extends the AST JSON format (see ASTSpec.md) with resolved
 type information and pre-collected literal tables.
@@ -241,7 +241,7 @@ among such blocks of the enclosing function or of the top level (`util..a.v..b1.
 `util..b1..f.v`).
 
 A type's `->` (SpecAndDesign.md 3.8) is `__pln_cp_` and the struct as a `<param>` writes it
-(`__pln_cp_4utf8`): a type has one, so the type alone names it, and the generated allocators
+(`__pln_cp_24__pln_L10std_2eutf8_utf8`): a type has one, so the type alone names it, and the generated allocators
 declare it in C, which takes no `.`.
 
 - `<name>`: the function's name; an operator function's is a word that starts with a digit, so that
@@ -255,7 +255,7 @@ declare it in C, which takes no `.`.
   with a `library` declaration (`std.utf8.__allocators`), which SA names in the calls it makes to them.
 - `<param>`: the parameter's normalized `var-type`, each type self-delimiting:
   - prim: its name (`int32`, `flo64`, `bool`, `void`); an enum: `N<len><enum name><base prim>`
-  - struct: `<len><type-name>`
+  - struct: `<len><type-name>`, the type's identity (the examples here write the name alone)
   - pntr: `E` if `embedded`, `S<stride>_` if `stride`, `A<arr-size>_` if `arr-size`, then `P`
     (no `mutable`: owned or by value), `R` (`mutable: false`) or `W` (`mutable: true`), then the
     base type
@@ -359,13 +359,13 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     unbound. Writing an unbound Palan type name is `E_UnqualifiedAliasType` (imported
     under an alias) or `E_UnknownType`. C types are copied without binding; they are
     global as in C and written by their own name.
-  - Struct and enum names are program-wide identities (build-mgr keys struct allocators
-    by them). Each records its defining module, so the same name from a second module,
-    or one a C type has, is `E_DuplicateTypeName`. An alias has no program-wide name.
-    An exported struct/enum keeps its written name. One that is not exported is named
-    `__pln_L<module hash>_<Name>` in sa.json, and one declared in a block
-    `__pln_L<module hash>_<seq>_<Name>`, so modules and blocks may each declare their own;
-    a message shows the written name.
+  - A struct or enum is named by its identity in sa.json (build-mgr keys struct
+    allocators by it): `__pln_L<len><module>_<Name>`, with the module's `.` written `_2e`
+    and `<len>` that string's length (`std.utf8`'s `utf8` is `__pln_L10std_2eutf8_utf8`),
+    exported or not, and `__pln_L<len><module>_<seq>_<Name>` for one declared in a block.
+    Modules and blocks may each declare their own; a message shows the written name. A
+    type of a generated allocators module (`__allocators`, `<module>.__allocators`) keeps
+    its written name, already an identity. An alias has no identity.
   - A type declaration clashes only with names written in its scope: a type an import
     makes writable, a C type, a const, or another declaration. An imported type that is
     not writable does not clash.
@@ -417,7 +417,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   - Struct, enum, type-alias, and const declarations inside a block (a function body
     included) are resolved on entry, before its functions are pre-registered, and are
     not visible outside it; nor are the type names a block's import makes writable.
-    A block's struct or enum is named `__pln_L<module hash>_<n>_<Name>` wherever the
+    A block's struct or enum is named `__pln_L<len><module>_<n>_<Name>` wherever the
     type appears in sa.json (`type-name`, `alloc-shapes`), so blocks may reuse a name.
 
 - **if** - if / if-else statement

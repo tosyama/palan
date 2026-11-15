@@ -357,6 +357,8 @@ private:
 	map<pair<string, string>, const json*> cIncludes_;
 	vector<pair<string, string>> cOrder_;
 	map<Key, string> finals_;
+	const json* from_ = nullptr;  // the declaration being walked
+	int fromModule_ = 0;
 
 	const json& stmts(int m) const { return (*modules_[m])["ast"]["statements"]; }
 	optional<Key> find(int m, const string& written) const;
@@ -429,8 +431,21 @@ void Merger::ref(json& nameNode, int m, bool rename)
 	string written = nameNode;
 	auto key = find(m, written);
 	if (key) {
-		if (rename) nameNode = finals_.at(*key);
-		else mark(*key);
+		if (rename) {
+			nameNode = finals_.at(*key);
+			return;
+		}
+		string kind = (*decls_[key->first].at(key->second).stmt)["stmt-type"];
+		// A type is identified by its module, which the .pai, read as the main's, would change.
+		if (key->first != 0 && (kind == "struct-def" || kind == "enum-def")) {
+			string at = (*modules_[fromModule_])["original"].get<string>();
+			if (from_ && from_->contains("loc"))
+				at += ":" + to_string((*from_)["loc"][0].get<int>()) + ":" + to_string((*from_)["loc"][1].get<int>());
+			throw runtime_error(at + ": error: a library's public declaration cannot use the type '" + written
+				+ "' of the internal module '" + (*modules_[key->first])["original"].get<string>()
+				+ "': declare it in the main source.");
+		}
+		mark(*key);
 		return;
 	}
 	auto c = cTypes_[m].find(written);
@@ -477,18 +492,18 @@ json Merger::declBody(const Key& key) const
 	return body;
 }
 
-// An exported type's name is its identity in the program, and the main's other
-// names are in its symbols, so another module's private ones give way.
+// The main's names are in its types' identities and its symbols, so an
+// internal module's const or alias gives way.
 void Merger::assignFinalNames()
 {
 	set<string> taken;
 	for (auto& [id, names] : cNames_) taken.insert(names.begin(), names.end());
 	for (auto& key : reached_)
-		if (isPublic(key)) {
+		if (key.first == 0) {
 			taken.insert(key.second);
 			finals_[key] = key.second;
 		}
-	for (int m = 0; m < modules_.size(); m++)
+	for (int m = 1; m < modules_.size(); m++)
 		for (auto& [name, decl] : decls_[m]) {
 			Key key{m, name};
 			if (!reached_.count(key) || finals_.count(key)) continue;
@@ -508,10 +523,15 @@ json Merger::merged()
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
 	}
 	json funcs = main.value("export", json::array());
-	walk(funcs, 0, false);
+	for (auto& f : funcs) {
+		from_ = &f;
+		walk(f, 0, false);
+	}
 	while (!queue_.empty()) {
 		Key key = queue_.back();
 		queue_.pop_back();
+		from_ = decls_[key.first].at(key.second).stmt;
+		fromModule_ = key.first;
 		// A signature's symbol holds what an alias stands for, so an alias, even a
 		// private one, hides nothing. Only a layout depends on a private struct's fields.
 		const json& stmt = *decls_[key.first].at(key.second).stmt;

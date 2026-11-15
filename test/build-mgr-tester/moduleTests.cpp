@@ -806,13 +806,13 @@ TEST(build_mgr, lib_interface_merges_what_the_main_publishes) {
 		"type Dup {\n\tint16 keep;\n};\n"
 		"type Used {\n\tint32 q;\n\t[2]int32 owned;\n};\n"
 		"const C = 2;\n"
-		"export type W {\n\t@T t;\n\t[C]int32 c;\n\t@Dup d;\n};\n"
-		"const N = 3;\n"
 		"type OnlyInPrivate {\n\tint32 i;\n};\n"
 		"type Priv {\n\tint32 x;\n\t@OnlyInPrivate i;\n};\n"
-		"type __m1_Dup {\n\tint8 a;\n};\n"
 		"export type Color enum {\n\tRed,\n\tBlue,\n};\n"
-		"export type T {\n\t[N]int32 a;\n\t@Priv p;\n\t@FILE f;\n\t@__m1_Dup d;\n};\n"
+		"export type T {\n\t[C]int32 a;\n\tBytes b;\n\t@Priv p;\n\t@FILE f;\n\t@Dup d;\n};\n"
+		"export type W {\n\t@T t;\n\t[C]int32 c;\n\t@Dup d;\n};\n"
+		"const __m1_C = 4;\n"
+		"export type Bytes = [__m1_C]int8;\n"
 		"export func value(@Used u, Color c) -> int32;\n"
 		"export func many() -> [+]T;\n");
 }
@@ -830,7 +830,7 @@ TEST(build_mgr, lib_archive_links_without_the_source) {
 	string output = execTestCommand(
 		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so MALLOC_TRACE=out/trace.log out/demo");
 	ASSERT_EQ(output, "len 2 1 q 7\n");
-	expectBalancedMtrace("out/trace.log", 12);
+	expectBalancedMtrace("out/trace.log", 15);
 }
 
 // Same object file names in one archive: every module's allocators, and a file name of two directories.
@@ -848,15 +848,6 @@ TEST(build_mgr, lib_leaving_out_a_private_type_keeps_the_symbols) {
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\ntype B {\n\tint32 b;\n};\nexport func get(@B b) -> int32;\n");
 }
 
-// The symbol of `get` holds the type the private alias stands for.
-TEST(build_mgr, lib_type_behind_a_private_alias_stays_public) {
-	cleanTestEnv();
-	ASSERT_EQ(execTestCommand(libBuild("private_alias_public.pa")), "");
-	EXPECT_EQ(fileText(string(libOut) + "demo/private_alias_public.pai"),
-		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\ntype A = Kept;\n"
-		"export type Kept {\n\tint32 k;\n};\nexport func get(@A a) -> int32;\n");
-}
-
 TEST(build_mgr, lib_local_header_used_only_in_bodies) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand(libBuild("body_header.pa")), "");
@@ -872,16 +863,16 @@ TEST(build_mgr, lib_named_return_initial_value) {
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\nexport func count() -> int32 n;\n");
 }
 
-// The other module's array stays for the const its public type is sized by; the unused one does not.
+// The other module's array stays for the const its public alias is sized by; the unused one does not.
 TEST(build_mgr, lib_const_from_an_array_through_a_selective_import) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand(libBuild("sized.pa")), "");
 	EXPECT_EQ(fileText(string(libOut) + "demo/sized.pai"),
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\n"
-		"export type Color enum {\n\tRed,\n\tBlue,\n};\n"
+		"export type Rows {\n\tRow a;\n};\n"
 		"[3]int32 table;\nconst K = len(@table);\n"
-		"export type Rows {\n\t[K]int32 a;\n};\n"
-		"export func first(@Rows r, Color c) -> int32;\n");
+		"export type Row = [K]int32;\n"
+		"export func first(@Rows r) -> int32;\n");
 }
 
 // Another module's const of the same name gives way, as it does for a type's size.
@@ -891,14 +882,15 @@ TEST(build_mgr, lib_parameter_defaults) {
 	EXPECT_EQ(fileText(string(libOut) + "demo/defaults.pai"),
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\n"
 		"const K = 2;\n"
-		"const __m1_K = 3;\n"
 		"export type Mode enum {\n\tFast,\n\tSlow,\n};\n"
-		"export type Box {\n\t[__m1_K]int32 a;\n};\n"
+		"export type Box {\n\tArr a;\n};\n"
+		"const __m1_K = 3;\n"
+		"export type Arr = [__m1_K]int32;\n"
 		"export func put(@!Box b, int32 v = K * 10, Mode m = Mode.Slow, @[]uint8 tag = \"none\");\n");
 }
 
 TEST(build_mgr, lib_library_module_has_its_own_allocators) {
-	expectMtraceRun("398_library_allocators", "1 3\n", 12);
+	expectMtraceRun("398_library_allocators", "1 3\n", 13);
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
 	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/lib_build/shapes.pa.alloc/" PALAN_ALLOCATORS_MODULE ".pa.o"));
 	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/398_library_allocators.pa.d/" PALAN_ALLOCATORS_MODULE ".pa.o"));
@@ -920,6 +912,12 @@ TEST(build_mgr, lib_errors) {
 	EXPECT_EQ(execTestCommand(libBuild("err_local_header.pa")),
 		"return1::" + lib_build + "err_local_header.pa:2:1: error: a library's public declaration cannot yet use a C type of the local header 'local_type.h': its reader would not find the header.\n");
 	EXPECT_NE(execTestCommand(libBuild("err_no_export_clause.pa")).find("FILE"), string::npos);
-	EXPECT_NE(execTestCommand(libBuild("err_private_alias.pa")).find("which its object does not define"), string::npos);
+	string internal = "': declare it in the main source.\n";
+	EXPECT_EQ(execTestCommand(libBuild("err_internal_type.pa")),
+		"return1::" + lib_build + "err_internal_type.pa:3:1: error: a library's public declaration cannot use the type 'K.Kept' of the internal module '" + lib_build + "kept.pa" + internal);
+	EXPECT_EQ(execTestCommand(libBuild("err_internal_field.pa")),
+		"return1::" + lib_build + "err_internal_field.pa:3:1: error: a library's public declaration cannot use the type 'K.Kept' of the internal module '" + lib_build + "kept.pa" + internal);
+	EXPECT_EQ(execTestCommand(libBuild("err_private_alias.pa")),
+		"return1::" + lib_build + "private_alias.pa:3:1: error: a library's public declaration cannot use the type 'Hidden' of the internal module '" + lib_build + "private_alias.pa" + internal);
 	EXPECT_FALSE(fs::exists("out/lib"));
 }

@@ -413,8 +413,8 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	// allocators touch nothing else, and the full field list cannot
 	// be re-expressed as Palan source in general (C unions, synthesized
 	// anonymous tags, embedded types not declared in this module).
-	// Exported, because SA keeps only an exported type's name, and
-	// these must keep the program-wide names the shapes carry.
+	// Their names are the identities the shapes carry, which SA keeps for
+	// this module's types.
 	// Byte ranges of each struct outside its owned pointer fields,
 	// declared as __pln_padN fields and copied as they are.
 	map<string, vector<pair<string, int64_t>>> struct_pads;

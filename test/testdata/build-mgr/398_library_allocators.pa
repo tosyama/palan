@@ -5,7 +5,7 @@ cinclude <mcheck.h>;
 type Mine { [2]int32 a; };
 mtrace();
 {
-	[+]S.T t = D.many();
+	[+]D.T t = D.many();
 	[+]Mine m;
 	m.resize(3);
 	printf("%ld %ld\n", len(@t), len(@m));

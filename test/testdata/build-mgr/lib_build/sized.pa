@@ -1,4 +1,4 @@
 library demo;
-import Color from "shapes.pa";
-import Rows from "sized_rows.pa";
-export func first(@Rows r, Color c) -> int32 { return r.a[0]; }
+import Row from "sized_rows.pa";
+export type Rows { Row a; };
+export func first(@Rows r) -> int32 { return r.a[0]; }

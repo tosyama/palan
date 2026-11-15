@@ -234,9 +234,9 @@ public:
 	static string getMessage(PlnSaMessageCode msg_code,
 	                         string arg1="\x01", string arg2="\x01",
 	                         string arg3="\x01");
-	// The program-wide name of an unexported struct/enum, or one declared in
-	// a block. A message shows it as written.
-	static string localTypeName(const string& moduleId, int seq, const string& name);
+	// The program-wide name of a Palan struct/enum; seq is a block's order, 0
+	// at the top level. A message shows it as written.
+	static string typeIdentity(const string& moduleId, int seq, const string& name);
 	static string writtenTypeName(const string& typeName);
 private:
 	static string format(PlnSaMessageCode msg_code, string arg1, string arg2, string arg3);

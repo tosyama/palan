@@ -1,6 +1,6 @@
 # Palan Language Reference
 
-**Version:** v0.2.5
+**Version:** v0.2.6
 
 Palan is a compiled systems programming language designed as a simpler, safer, and more enjoyable alternative to C. It targets developers who want low-level control and direct access to C libraries, without the sharp edges of C syntax. Palan code compiles to native x86-64 binaries via AT&T assembly, with no runtime overhead.
 
@@ -2723,8 +2723,8 @@ flo32 l = len2(@p);
 - A selective import lists types alongside functions: `import vec3, len2 from "vec3.pa";`.
 - An exported type may use the declaring file's non-exported types, consts, and cincluded
   headers; those are not made nameable in the importing file.
-- An exported struct or enum name is shared by the whole program: two files exporting the
-  same name is a compile error once one file reaches both.
+- Two files may export types of the same name; a file importing both writes at least one of
+  them with its alias (`import "b.pa" as B;` and `B.Point`).
 - A file may declare a type with the name of an imported type it cannot write unqualified
   (one imported as `V.T`, or only brought along by another imported type). Declaring a type
   with a name an import makes writable is a compile error.
@@ -2799,12 +2799,15 @@ export func length([]uint8 s) -> int64 { ... }
 This writes `<dir>/std/utf8.pai`, the interface a person reads to learn the library, and
 `<dir>/std/utf8.a`, the code, for the target being built for.
 
-- The interface holds the main file's `export`s, the exported types of other files they use, and
-  whatever private types and constants those need. Any other `export` of an imported file is
-  visible only inside the library, including a type only a private type uses.
+- The interface holds the main file's `export`s and whatever private types and constants those
+  need, including the constants and type aliases of other files. Any `export` of an imported file
+  is visible only inside the library.
+- A type the library publishes is declared in the main file, which the other files may import. A
+  public declaration using a struct or enum of another file, directly, through a type alias or
+  through a field, is a compile error.
 - A file permitting a function to use its `global` is a compile error, since a library's top level never runs.
-- The interface may rename a private type to a name starting with `__` (see [Lexical Rules](#2-lexical-rules)).
-- Publishing a function with a type alias of another file's private type is a compile error.
+- The interface may rename a constant or type alias of another file to a name starting with `__`
+  (see [Lexical Rules](#2-lexical-rules)).
 
 ### Using a Library
 

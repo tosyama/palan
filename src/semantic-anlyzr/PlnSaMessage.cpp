@@ -8,41 +8,53 @@
 #include "PlnSaMessage.h"
 #include "../common/PlnDefs.h"
 #include <boost/assert.hpp>
-#include <cstdio>
-#include <regex>
-#include <cstdint>
+#include <cctype>
 
-using std::regex;
 using std::to_string;
 
-static const char localTypePrefix[] = "__pln_L";
+static const char typePrefix[] = "__pln_L";
 
-string PlnSaMessage::localTypeName(const string& moduleId, int seq, const string& name)
+string PlnSaMessage::typeIdentity(const string& moduleId, int seq, const string& name)
 {
-	// FNV-1a: the module's part must be the same in every build of it.
-	// A top-level type (seq 0) has only its name: a library's interface leaves
-	// other private types out, and the name must stay the one in the object.
-	uint64_t h = 14695981039346656037ull;
-	for (unsigned char c : moduleId) h = (h ^ c) * 1099511628211ull;
-	char hex[17];
-	snprintf(hex, sizeof hex, "%016llx", (unsigned long long)h);
-	return localTypePrefix + string(hex) + "_" + (seq ? to_string(seq) + "_" : "") + name;
+	string module;
+	for (char c : moduleId) module += c == '.' ? "_2e" : string(1, c);
+	return typePrefix + to_string(module.size()) + module + "_" + (seq ? to_string(seq) + "_" : "") + name;
 }
 
-static const regex& localTypePart()
+// Drops the module part of every type identity in `s`, whose length says
+// where it ends. A seq is all digits, which no written name starts with.
+static string dropTypeModules(const string& s)
 {
-	static const regex part(string(localTypePrefix) + "[0-9a-f]{16}_([0-9]+_)?"); // LCOV_EXCL_BR_LINE
-	return part;
+	static const size_t prefixLen = sizeof typePrefix - 1;
+	string out;
+	size_t pos = 0;
+	for (size_t at; (at = s.find(typePrefix, pos)) != string::npos; ) {
+		out.append(s, pos, at - pos);
+		size_t p = at + prefixLen, digits = p;
+		while (digits < s.size() && isdigit((unsigned char)s[digits])) digits++;
+		size_t end = digits == p ? string::npos : digits + stoul(s.substr(p, digits - p));
+		if (end >= s.size() || s[end] != '_') { // LCOV_EXCL_BR_LINE
+			out.append(typePrefix); // LCOV_EXCL_LINE
+			pos = p; // LCOV_EXCL_LINE
+			continue; // LCOV_EXCL_LINE
+		}
+		pos = end + 1;
+		size_t seq = pos;
+		while (seq < s.size() && isdigit((unsigned char)s[seq])) seq++;
+		if (seq > pos && seq < s.size() && s[seq] == '_') pos = seq + 1;
+	}
+	out.append(s, pos, string::npos);
+	return out;
 }
 
 string PlnSaMessage::writtenTypeName(const string& typeName)
 {
-	return regex_replace(typeName, localTypePart(), "");
+	return dropTypeModules(typeName);
 }
 
 string PlnSaMessage::getMessage(PlnSaMessageCode msg_code, string arg1, string arg2, string arg3)
 {
-	return regex_replace(format(msg_code, arg1, arg2, arg3), localTypePart(), "");
+	return dropTypeModules(format(msg_code, arg1, arg2, arg3));
 }
 
 string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2, string arg3)

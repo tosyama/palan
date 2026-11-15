@@ -1,4 +1,0 @@
-library demo;
-import "kept.pa" as K;
-type A = K.Kept;
-export func get(@A a) -> int32 { return a.k; }

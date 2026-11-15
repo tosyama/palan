@@ -1448,8 +1448,7 @@ vector<string> PlnSemanticAnalyzer::enumeratorSpellings(const string& name) cons
 		string enumName = t["enum"].get<string>();
 		if (!enumDefs_.at(enumName).values.count(name)) continue;
 		size_t dot = written.find('.');
-		bool own = declaredTypeName(written) == enumName // LCOV_EXCL_BR_LINE
-		        || (dot != string::npos && written.substr(dot + 1) == enumName);
+		bool own = written.substr(dot == string::npos ? 0 : dot + 1) == PlnSaMessage::writtenTypeName(enumName);
 		auto [it, isNew] = spelling.emplace(enumName, written);
 		if (!isNew && own) it->second = written;
 	}

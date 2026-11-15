@@ -905,7 +905,7 @@ TEST(sa, varr_return_param)
 TEST(sa, varr_struct)
 {
 	cleanTestEnv();
-	json jout = run_sa("../test/testdata/sa/299_varr_struct.pa");
+	json jout = written(run_sa("../test/testdata/sa/299_varr_struct.pa"));
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	ASSERT_EQ(stmts.size(), 12);
