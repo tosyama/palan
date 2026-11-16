@@ -124,7 +124,20 @@ string CParser::synthesizeAnonTag(const CToken* at)
 	return tag;
 }
 
+// Each form of a declaration backtracks to its start when it fails, so the
+// position worth reporting is the furthest token any form examined. Kept per
+// token vector: macro bodies and included files are parsed from other vectors.
+static const vector<CToken*>* furthestTokens = nullptr;
+static int furthestIndex = 0;
+
+static void noteReached(const vector<CToken*> &tokens, int index)
+{
+	if (&tokens == furthestTokens && index > furthestIndex)
+		furthestIndex = index;
+}
+
 bool consume(CTokenType expected_type, const vector<CToken*> &tokens, int &index) {
+	noteReached(tokens, index);
 	if (index < tokens.size()) {
 		CToken* token = tokens[index];
 		if (token->type == expected_type) {
@@ -138,6 +151,7 @@ bool consume(CTokenType expected_type, const vector<CToken*> &tokens, int &index
 
 
 bool consume_kw(CTokenKeyword expected_keyword, const vector<CToken*> &tokens, int &index) {
+	noteReached(tokens, index);
 	if (index < tokens.size()) {
 		CToken* token = tokens[index];
 		if (token->type == TT_KEYWORD && token->info.keyword == expected_keyword) {
@@ -150,6 +164,7 @@ bool consume_kw(CTokenKeyword expected_keyword, const vector<CToken*> &tokens, i
 #define CONSUME_KW(kw) consume_kw(kw, tokens, index)
 
 bool consume_punc(int expected_punc, const vector<CToken*> &tokens, int &index) {
+	noteReached(tokens, index);
 	if (index < tokens.size()) {
 		CToken* token = tokens[index];
 		if (token->type == TT_PUNCTUATOR && token->info.punc == expected_punc) {
@@ -2088,6 +2103,8 @@ int CParser::parse(json &ast, const vector<CToken*> &tokens)
 	
 	while(index < tokens.size()) {
 		if (index >= tokens.size()) return 0;
+		furthestTokens = &tokens;
+		furthestIndex = index;
 
 		if (CONSUME(TT_INCLUDE)) {
 			CToken* token = tokens[index - 1];
@@ -2097,8 +2114,9 @@ int CParser::parse(json &ast, const vector<CToken*> &tokens)
 			// parsed declaration and function definition
 			
 		} else {
-			CLexer* err_lexer = lexers[tokens[index]->lexer_no];
-			CToken0& err_t0 = err_lexer->tokens[tokens[index]->token0_no];
+			const CToken* err_token = tokens[min(furthestIndex, (int)tokens.size() - 1)];
+			CLexer* err_lexer = lexers[err_token->lexer_no];
+			CToken0& err_t0 = err_lexer->tokens[err_token->token0_no];
 			cerr << err_lexer->infile.fname << ":" << err_t0.line_no << ":" << err_t0.pos + 1
 				<< ": error: " << PlnC2AstMessage::getMessage(E_UnhandledToken) << endl;
 			return 1;
