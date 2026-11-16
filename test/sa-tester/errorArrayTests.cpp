@@ -464,6 +464,8 @@ TEST(sa_error, varr)
 		{"error_734_varr_push_no_match.pa", ":4:1: error: No function 'push' takes (@![+]int32, int64); there are push(@![+]flo64, flo64), push(@![+]int32, int32)."},
 		{"error_735_varr_borrow_needs_addr.pa", ":2:11: error: a variable-length array given to '@[+]T'/'@![+]T' must be written as '@name' or '@!name'."},
 		{"error_736_arr_len_needs_addr.pa", ":2:11: error: an array given to 'len' must be written as '@name'."},
+		{"error_1084_len_not_array.pa", ":2:15: error: 'len' takes an array; this value is 'int32'."},
+		{"error_1085_len_not_array_chain.pa", ":2:11: error: 'len' takes an array; this value is 'flo64'."},
 		{"error_861_len_addr_of_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_862_varr_borrow_addr_of.pa", ":4:3: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_863_len_addr_of_varr_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},

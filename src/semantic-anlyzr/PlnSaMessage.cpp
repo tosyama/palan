@@ -552,6 +552,10 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ArrLenNeedsAddrOf:
 			return "an array given to 'len' must be written as '@name'.";
 
+		case E_LenNotArray:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'len' takes an array; this value is '" + arg1 + "'.";
+
 		case E_StructLitFieldCount:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");

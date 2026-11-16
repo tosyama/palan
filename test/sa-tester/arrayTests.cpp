@@ -738,6 +738,24 @@ TEST(sa, varr_builtins)
 	ASSERT_EQ(stmts[7]["body"]["args"][1]["name"], "n");
 }
 
+// The length depends on the type, or on the root variable for a length kept at
+// run time, so an index with a call is not evaluated, like sizeof's operand.
+TEST(sa, len_call_index)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/350_len_call_index.pa");
+	ASSERT_TRUE(jout.is_object());
+	map<string, json> init;
+	for (auto& s : jout["statements"])
+		if (s["stmt-type"] == "var-decl") init[s["vars"][0]["name"]] = s["vars"][0]["init"];
+	for (auto [name, value] : {pair{"n", "3"}, {"m", "3"}, {"r", "2"}}) {
+		ASSERT_EQ(init[name]["expr-type"], "lit-int") << name;
+		ASSERT_EQ(init[name]["value"], value) << name;
+	}
+	ASSERT_EQ(init["q"]["expr-type"], "convert");
+	ASSERT_EQ(init["q"]["src"]["name"], "__b_d1");
+}
+
 // A constant-size array's len is folded to its size, like sizeof.
 TEST(sa, arr_len)
 {

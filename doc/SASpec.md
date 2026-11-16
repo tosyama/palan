@@ -415,11 +415,12 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   before it is typed, in every expression position; `E_ConstExprOverflow`/`E_ConstExprDivByZero`
   reject an invalid one
 - `len(@a)` / `len(@!a)` / `a -> len()` of an array level with `arr-size` (a variable, row, field or
-  borrowed array, whose expression has no call) folds to that `arr-size`, so it is no call and
-  no candidate. Of a `run-size` level it is the length kept for it (`__<name>_d<k>` of the
-  location's root variable, converted to int64), which is not folded; of a level with neither
-  (`[]T` parameter) it is E_ArrLenNotConst; without `@`, E_ArrLenNeedsAddrOf unless a user
-  function named `len` exists
+  borrowed array) folds to that `arr-size`, so it is no call and no candidate; like `sizeof`, the
+  location's indexes are not evaluated. Of a `run-size` level it is the length kept for it
+  (`__<name>_d<k>` of the location's root variable, converted to int64), which is not folded; of
+  a level with neither (`[]T` parameter) it is E_ArrLenNotConst; without `@`, E_ArrLenNeedsAddrOf
+  unless a user function named `len` exists. A value that is neither an array nor a `[+]T` is
+  E_LenNotArray unless a user function named `len` exists
 - not-impl statements (ASTSpec.md) are rejected, never emitted: `E_VarTypeInferenceNotImpl` when
   the statement carries `untyped-var`, `E_StmtNotImplemented` otherwise; a not-impl expression in
   value position is rejected as `E_ExprNotImplemented`

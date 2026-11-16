@@ -329,7 +329,7 @@ TEST(build_mgr, varr_builtins) {
 TEST(build_mgr, arr_len) {
 	cleanTestEnv();
 	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/331_arr_len.pa");
-	ASSERT_EQ(output, "10 20 30 10 20 30 \n5 6 2\n");
+	ASSERT_EQ(output, "10 20 30 10 20 30 \n5 6 2\n3 4\n");
 }
 
 TEST(build_mgr, len_borrow) {

@@ -174,6 +174,7 @@ enum PlnSaMessageCode {
 	E_VarrBorrowNeedsAddrOf,
 	E_ArrLenNotConst,
 	E_ArrLenNeedsAddrOf,
+	E_LenNotArray,	// arg1: the value's type display name
 	E_VarrBorrowSized,
 	E_ArrowBindsTighter,	// arg1: operator
 	E_VarrElemSized,

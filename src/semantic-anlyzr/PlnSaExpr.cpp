@@ -518,7 +518,8 @@ json PlnSemanticAnalyzer::foldConstExpr(const json& expr)
 } // LCOV_EXCL_BR_LINE
 
 // The array of `len(@a)`, `len(h)` of a borrow h, or `a -> len()`, when it is a
-// location: an `a` with a call to evaluate is left to the call's analysis.
+// location. Like sizeof, its indexes are not evaluated: the length depends on
+// the type alone, or on the root variable for a length kept at run time.
 const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 {
 	auto lenCall = [&](const json& call, size_t argc) {
@@ -541,6 +542,7 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 		if (!lenCall(expr["call"], 0)) return nullptr;
 		arr = &expr["value"];
 	}
+	const json& given = *arr;
 	if (arr->value("expr-type", "") == "addr-of") {
 		const json& addrOf = *arr;
 		arr = &addrOf["object"];
@@ -549,17 +551,27 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 			exit(1);
 		}
 	}
-	if (!isLocationExpr(*arr) || hasCall(*arr)) return nullptr;
-	if (!isArrLevel(operandValueType(*arr))) return nullptr;
-	// Without '@' it is a call; one of the user's functions may take the array.
-	if (!borrowed) {
+	auto userLenExists = [&]() {
 		vector<Callee> cands = findCallees("len");
-		if (any_of(cands.begin(), cands.end(), [](const Callee& c) { return !(*c.def).value("inline", false); }))
-			return nullptr;
-		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ArrLenNeedsAddrOf) << endl;
-		exit(1);
+		return any_of(cands.begin(), cands.end(), [](const Callee& c) { return !(*c.def).value("inline", false); });
+	};
+	// A chain's value was judged in its `a -> len()` form already.
+	if (arr->value("expr-type", "") == "chained-value") return nullptr;
+	bool isLocation = isLocationExpr(*arr);
+	if (!isLocation && (isAggregateLit(*arr) || userLenExists())) return nullptr;
+	json vt = operandValueType(*arr);
+	if (isArrLevel(vt) && isLocation) {
+		// Without '@' it is a call; one of the user's functions may take the array.
+		if (!borrowed) {
+			if (userLenExists()) return nullptr;
+			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ArrLenNeedsAddrOf) << endl;
+			exit(1);
+		}
+		return arr;
 	}
-	return arr;
+	if (isArrLevel(vt) || isVarrPntr(vt) || userLenExists()) return nullptr;
+	cerr << locPrefix(given) << PlnSaMessage::getMessage(E_LenNotArray, typeDisplayName(vt)) << endl;
+	exit(1);
 }
 
 // Like sizeof, a constant length needs only the array's type.
