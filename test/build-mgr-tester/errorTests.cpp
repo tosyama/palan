@@ -5,7 +5,9 @@
 
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <fstream>
 #include "../test-base/testBase.h"
+#include "../../src/common/PlnDefs.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -35,6 +37,21 @@ TEST(build_mgr_error, could_not_open_file) {
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan no_such_file.pa");
 	ASSERT_NE(out.find("could not open file"), string::npos);
+}
+
+TEST(build_mgr_error, no_work_dir) {
+	cleanTestEnv();
+	string out = execTestCommand("env -u HOME -u PALAN_WORK bin/palan ../test/testdata/build-mgr/001_helloworld.pa");
+	ASSERT_NE(out.find("palan: neither PALAN_WORK nor HOME is set"), string::npos);
+	out = execTestCommand("env -u HOME PALAN_WORK= bin/palan --clean");
+	ASSERT_NE(out.find("palan: neither PALAN_WORK nor HOME is set"), string::npos);
+}
+
+TEST(build_mgr_error, could_not_create_work_dir) {
+	cleanTestEnv();
+	ofstream("out/file").close();
+	string out = execTestCommand("PALAN_WORK=out/file bin/palan ../test/testdata/build-mgr/001_helloworld.pa");
+	ASSERT_NE(out.find("palan: could not create directory 'out/file/" PALAN_TARGET "'"), string::npos);
 }
 
 TEST(build_mgr_error, unsupported_target) {

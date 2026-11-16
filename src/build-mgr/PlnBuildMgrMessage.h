@@ -13,7 +13,8 @@ enum PlnBuildMgrMessageCode {
 	M_Version,
 	E_WrongNumberOfArgs,
 	E_CouldNotOpenFile,		// arg1: file path
-	E_PalanDirNotDirectory,	// arg1: path string
+	E_CouldNotCreateDir,	// arg1: directory, arg2: reason
+	E_NoWorkDir,
 	E_FailedToExecute,		// arg1: program name, arg2: strerror text
 	E_UnsupportedTarget,	// arg1: target name
 	E_DuplicateModuleId,	// arg1: source file, arg2: identity, arg3: other source file

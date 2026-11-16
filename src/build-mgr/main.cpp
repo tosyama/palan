@@ -29,7 +29,7 @@ using namespace std;
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-static string getPalanDirPath();
+static string getWorkDirPath(const string& target);
 
 // Run a pipeline tool and map the outcome onto build-mgr's historical return
 // convention: 0 on success, the child's exit status when it failed, -1 when
@@ -371,14 +371,21 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	string palan_dir_path = getPalanDirPath();
+	string palan_work_path = getWorkDirPath(target);
+	if (palan_work_path.empty())
+		return 1;
 
 	if (do_clean) {
-		fs::remove_all(palan_dir_path + "/work");
+		fs::remove_all(palan_work_path);
 		return 0;
 	}
 
-	string palan_work_path = palan_dir_path + "/work/" + target;
+	error_code ec;
+	fs::create_directories(palan_work_path, ec);
+	if (ec) {
+		cerr << PlnBuildMgrMessage::getMessage(E_CouldNotCreateDir, palan_work_path, ec.message()) << endl;
+		return 1;
+	}
 
 	if ((argc-optind) < 1 || (output_specified && (argc-optind) != 1)) {
 		cerr << PlnBuildMgrMessage::getMessage(E_WrongNumberOfArgs) << endl;
@@ -615,20 +622,17 @@ int main(int argc, char* argv[])
 	return 0;
 } // LCOV_EXCL_BR_LINE -- closing brace of a function with many local strings/paths; the branch coverpoints here are compiler-generated destructor dispatch, not source-level conditionals
 
-string getPalanDirPath()
+string getWorkDirPath(const string& target)
 {
-	string home_path = getenv("HOME");
-	string palan_path = home_path + "/.palan";
-	
-	if (fs::exists(palan_path)) {
-		if (!fs::is_directory(palan_path)) {
-			cerr << PlnBuildMgrMessage::getMessage(E_PalanDirNotDirectory, palan_path) << endl;
-			return "";
-		}
-	}
+	const char* work = getenv("PALAN_WORK");
+	if (work && *work)
+		return string(work) + "/" + target;
 
-	// create palan dirs
-	fs::create_directories(palan_path + "/work");
-	return palan_path;
+	const char* home = getenv("HOME");
+	if (!home || !*home) {
+		cerr << PlnBuildMgrMessage::getMessage(E_NoWorkDir) << endl;
+		return "";
+	}
+	return string(home) + "/.palan/work/" + target;
 }
 

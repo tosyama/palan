@@ -579,8 +579,10 @@ are:
 
 ## 5. Working Directory and Output Files
 ### 5.1 Working Directory
-The working directory for all command-line tools is `~/.palan/work/<target>/` by default. Work files
-are of two kinds:
+The working directory for all command-line tools is `<work>/<target>/`, where `<work>` is
+`$PALAN_WORK` if set and not empty, else `~/.palan/work` (an error if `HOME` is not set either).
+`palan --clean` removes only `<work>/<target>/`, as `PALAN_WORK` may name a directory holding
+other files. Work files are of two kinds:
 
 ```
 ~/.palan/work/<target>/
@@ -655,8 +657,8 @@ it is per target.
   layout holds only what is installed. CMake builds the tools, then builds `std` from `src/std/`
   with them, then the testers. `std-tester` runs it. CMake lists the public mains and runs `--lib`
   for each in one step, again when a tool or any source in `src/std/` changes, since `--lib` does not
-  detect an older copy of a shared module (3.7). That step keeps its work files in the build tree,
-  not in the user's `~/.palan/work/`.
+  detect an older copy of a shared module (3.7). That step keeps its work files in the build tree
+  through `PALAN_WORK`, not in the user's `~/.palan/work/`.
 - Installation: `cmake --install` writes the layout to the prefix, or under `DESTDIR` as a package
   build does. Every destination is relative to the prefix, and `uninstall` and the documents are
   separate components, so that a package can leave them out. A test installs to a temporary

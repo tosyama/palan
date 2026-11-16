@@ -36,9 +36,12 @@ string PlnBuildMgrMessage::getMessage(PlnBuildMgrMessageCode msg_code, string ar
 			BOOST_ASSERT(arg1 != "\x01");
 			return "palan: could not open file '" + arg1 + "'";
 
-		case E_PalanDirNotDirectory:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "palan: '" + arg1 + "' exists but is not a directory";
+		case E_CouldNotCreateDir:
+			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
+			return "palan: could not create directory '" + arg1 + "': " + arg2;
+
+		case E_NoWorkDir:
+			return "palan: neither PALAN_WORK nor HOME is set";
 
 		case E_FailedToExecute:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");

@@ -68,6 +68,9 @@ Options go before the source file; everything after it is passed to the program 
 [Program Structure](#program-structure) for `args`). Without `-o`, the executable is built among
 the intermediate files under `~/.palan/work/`, not in the current directory.
 
+The environment variable `PALAN_WORK` names another directory for the intermediate files, in place
+of `~/.palan/work/`. `--clean` removes only what `palan` put there.
+
 ---
 
 ## 2. Lexical Rules

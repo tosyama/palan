@@ -287,10 +287,23 @@ TEST(build_mgr, import_float)
 
 TEST(build_mgr, clean) {
 	cleanTestEnv();
-	// Its own HOME, so the work files the other tests reuse stay.
+	// Its own work directories, so the work files the other tests reuse stay.
 	fs::create_directories("out/home/.palan/work/" PALAN_TARGET);
 	ASSERT_EQ(execTestCommand("HOME=out/home bin/palan --clean"), "");
-	ASSERT_FALSE(fs::exists("out/home/.palan/work"));
+	ASSERT_FALSE(fs::exists("out/home/.palan/work/" PALAN_TARGET));
+
+	fs::create_directories("out/work/" PALAN_TARGET);
+	fs::create_directories("out/work/mine");
+	ASSERT_EQ(execTestCommand("PALAN_WORK=out/work bin/palan --clean"), "");
+	ASSERT_FALSE(fs::exists("out/work/" PALAN_TARGET));
+	ASSERT_TRUE(fs::exists("out/work/mine"));
+}
+
+TEST(build_mgr, palan_work) {
+	cleanTestEnv();
+	string out = execTestCommand("PALAN_WORK=out/work bin/palan ../test/testdata/build-mgr/001_helloworld.pa");
+	ASSERT_EQ(out, "Hello World!\n");
+	ASSERT_TRUE(fs::exists("out/work/" PALAN_TARGET + fs::absolute("../test/testdata/build-mgr/001_helloworld.pa").lexically_normal().string() + ".ast.json"));
 }
 
 TEST(build_mgr, method_call) {
