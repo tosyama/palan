@@ -1,0 +1,2 @@
+const N = 0;
+[+][+]int64 vv; for copy a in vv[N] { vv[0].push(1); }

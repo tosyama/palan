@@ -285,9 +285,9 @@ json PlnSemanticAnalyzer::sa_loop_body(const json& astBody, const json& heads, j
 	return body;
 }
 
-// The path checkRangeChange compares: a variable, then "." + field or "[]"
-// for an element, whatever its index.
-static bool locationPath(const json& e, vector<string>& path)
+// The path checkRangeChange compares: a variable, then "." + field, or
+// "[<n>]" for an element at a constant index and "[]" for one at any other.
+bool PlnSemanticAnalyzer::locationPath(const json& e, vector<string>& path)
 {
 	string et = e.value("expr-type", "");
 	if (et == "id") {
@@ -299,10 +299,23 @@ static bool locationPath(const json& e, vector<string>& path)
 		return true;
 	}
 	if (et == "arr-index" && locationPath(e["array"], path)) {
-		path.push_back("[]");
+		optional<ConstVal> idx = evalConst(e["index"]);
+		if (idx && idx->kind == ConstVal::Kind::Int)
+			path.push_back("[" + to_string(idx->i) + "]");
+		else if (idx && idx->kind == ConstVal::Kind::Uint)
+			path.push_back("[" + to_string(idx->u) + "]");
+		else
+			path.push_back("[]");
 		return true;
 	}
 	return false;
+}
+
+// Elements at different constant indices are different arrays; an index
+// known only at run time may be either.
+static bool samePathStep(const string& a, const string& b)
+{
+	return a == b || (a == "[]" && b[0] == '[') || (b == "[]" && a[0] == '[');
 }
 
 // A 'for' holds the storage and the length of what it iterates over until it
@@ -315,7 +328,7 @@ void PlnSemanticAnalyzer::checkRangeChange(const json& locNode, const json& locA
 	if (pinnedRanges_.empty() || !locationPath(locAst, path))
 		return;
 	for (auto& r : pinnedRanges_) {
-		if (path.size() > r.path.size() || !equal(path.begin(), path.end(), r.path.begin()))
+		if (path.size() > r.path.size() || !equal(path.begin(), path.end(), r.path.begin(), samePathStep))
 			continue;
 		if (path.size() == r.path.size()) {
 			if (r.borrow && change != RangeChange::Borrow) continue;

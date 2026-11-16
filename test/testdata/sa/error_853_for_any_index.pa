@@ -1,1 +1,0 @@
-[+][+]int64 vv; for copy a in vv[0] { vv[1].push(1); }

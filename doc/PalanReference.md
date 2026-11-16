@@ -705,8 +705,9 @@ printf("\n");                          // 0:20 1:40 2:60
 - The body cannot change `arr`'s length or replace it, directly or through what contains it:
   `push`, `pop`, `resize`, `->>` into or out of it, `->` into a variable-length one, and passing
   `@!arr` are compile errors. Writing elements, changing an inner array (`m[0].push(1)` in
-  `for copy r in m`) and `@arr` are fine. A change made through another borrow of `arr` is not
-  detected.
+  `for copy r in m`) and `@arr` are fine. So is changing an element at another constant index
+  (`vv[1].push(1)` in `for copy a in vv[0]`); one at a variable index may be the same element and
+  is rejected. A change made through another borrow of `arr` is not detected.
 
 A struct can be iterated over when its type defines two functions, `iter` and `next`:
 

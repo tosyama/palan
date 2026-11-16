@@ -1280,9 +1280,10 @@ TEST(sa_error, for_loop)
 		{"error_850_for_container_borrow.pa", ":3:30: error: cannot change what a 'for' loop iterates over ('s.arr')."},
 		{"error_851_for_borrow_arg.pa", ":2:42: error: cannot change what a 'for' loop iterates over ('p')."},
 		{"error_852_for_borrow_decl.pa", ":1:42: error: cannot change what a 'for' loop iterates over ('p')."},
-		{"error_853_for_any_index.pa", ":1:39: error: cannot change what a 'for' loop iterates over ('vv[]')."},
+		{"error_853_for_var_index.pa", ":1:52: error: cannot change what a 'for' loop iterates over ('vv[0]')."},
+		{"error_1086_for_same_const_index.pa", ":2:39: error: cannot change what a 'for' loop iterates over ('vv[0]')."},
 		{"error_854_for_field_transfer.pa", ":2:33: error: cannot change what a 'for' loop iterates over ('s.arr')."},
-		{"error_855_for_elem_copy.pa", ":1:51: error: cannot change what a 'for' loop iterates over ('vv[]')."},
+		{"error_855_for_elem_copy.pa", ":1:51: error: cannot change what a 'for' loop iterates over ('vv[0]')."},
 		// '@a' is the element itself, written through a read-only view of the range.
 		{"error_869_for_ro_elem_write.pa", ":1:33: error: cannot write through read-only pointer '@T'"},
 		{"error_870_for_ro_elem_write_owned.pa", ":2:18: error: cannot write through read-only pointer '@T'"},
