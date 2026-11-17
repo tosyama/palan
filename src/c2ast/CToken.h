@@ -35,7 +35,6 @@ typedef enum {
 
 	TT_PP_NUMBER,
 	TT_CHAR,
-	TT_INCLUDE,
 
 	TT_NOT_VALID_TOKEN,
 } CTokenType;
@@ -64,8 +63,8 @@ typedef enum {
 	TK_ENUM,
 	TK_VOID,
 	TK_BOOL,
-
-	TK_RETURN,
+	TK_COMPLEX,
+	TK_INT128,
 
 	TK_INLINE,
 	TK_RESTRICT,
@@ -89,7 +88,6 @@ public:
 		int punc;
 		int ch;
 		string *str;
-		vector<CToken*> *tokens;	// for TT_INCLUDE
 	} info;
 	vector<CMacro*> *hide_set;
 

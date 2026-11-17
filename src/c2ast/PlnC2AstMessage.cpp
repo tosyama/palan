@@ -46,6 +46,9 @@ string PlnC2AstMessage::getMessage(PlnC2AstMessageCode msg_code, string arg1)
 		case E_InvalidDefinedSyntax:
 			return "invalid syntax in 'defined'";
 
+		case E_InvalidHasIncludeSyntax:
+			return "'__has_include' expects (\"FILENAME\") or (<FILENAME>)";
+
 		case E_MalformedMacroArgList:
 			return "malformed macro argument list";
 

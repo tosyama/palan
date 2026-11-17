@@ -20,9 +20,6 @@ CToken0::CToken0(CToken0Type type, int line_no, int pos, int len)
 CToken::CToken(CTokenType type, int lexer_no, int token0_no)
 	: type(type), lexer_no(lexer_no), token0_no(token0_no), hide_set(NULL)
 {
-	if (type == TT_INCLUDE) {
-		info.tokens = new vector<CToken*>();
-	}
 }
 
 CToken::CToken(const CToken& token)
@@ -43,7 +40,7 @@ CToken::CToken(const CToken& token)
 		case TT_STR:
 			info.str = new string(*token.info.str); break; // LCOV_EXCL_BR_LINE
 	
-		default: // TT_INCLUDE
+		default:
 			BOOST_ASSERT(false);
 	}
 
@@ -63,9 +60,6 @@ CToken::CToken(const string& s, int lexer_no, int token0_no)
 
 CToken::~CToken()
 {
-	if (type == TT_INCLUDE) {
-		delete info.tokens;
-	}
 	if (hide_set) {
 		delete hide_set;
 	}

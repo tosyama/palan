@@ -47,6 +47,7 @@ public:
 	}
 
 	CMacro* macro_exists(const string& id);
+	CToken* hasInclude(const CToken* t, list<CToken*> &unprocessed_tokens);
 	vector<CToken*> scan_macro(list<CToken*> &unprocessed_tokens, bool in_if_directive=false);
 	vector<CToken*> expand_macro_tokens(CMacro *m, vector<list<CToken*>> &args, vector<CMacro*> *hide_set);
 	vector<CToken*> expandObjectMacroBody(CMacro *m);
@@ -60,5 +61,5 @@ public:
 	bool preprocess(const string& filepath, vector<CToken*> *tokens=NULL);
 	void outputError(const CPreprocessError& err);
 
-	void dumpPreprocessed(ostream& os, vector<CToken*> *tokens=NULL);
+	void dumpPreprocessed(ostream& os);
 };

@@ -359,6 +359,18 @@ TEST(sa_error, c_unsupported_func_param)
 	ASSERT_NE(sa.find("'function pointer'"), string::npos);
 }
 
+// A complex number has no Palan type, though complex.h is read.
+TEST(sa_error, c_complex)
+{
+	cleanTestEnv();
+	string ast_out = "out/test.ast.json";
+	ASSERT_EQ(execTestCommand(
+		"palan-gen-ast ../test/testdata/sa/error_1091_c_complex.pa -o " + ast_out), "");
+	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+	ASSERT_NE(sa.find(":3:1: error: cannot call C function 'cabs': its signature uses 'double _Complex'"),
+		string::npos) << sa;
+}
+
 TEST(sa_error, c_unsupported_anon_strct_param)
 {
 	// `void f(struct { int a; } *p);` -- an inline anonymous struct behind a

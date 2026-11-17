@@ -33,7 +33,7 @@ TEST(c2ast, func_macro_no_paren) {
     cleanTestEnv();
     string output;
     output = execTestCommand("palan-c2ast -d ../test/testdata/c2ast/048_func_macro_no_paren.h");
-    ASSERT_EQ(output, "int testproc(){return F;return F+1;return F;return (2+1);return (3+1);}");
+    ASSERT_EQ(output, "int testproc(){returnF;returnF+1;returnF;return(2+1);return(3+1);}");
     output = execTestCommand("palan-c2ast ../test/testdata/c2ast/048_func_macro_no_paren.h");
     ASSERT_NE(output.find("{\"name\":\"K\"}"), string::npos);
 }
@@ -42,7 +42,7 @@ TEST(c2ast, token_paste_nonid) {
     cleanTestEnv();
     string output;
     output = execTestCommand("palan-c2ast -d ../test/testdata/c2ast/002_token_paste.h");
-    ASSERT_EQ(output, "int testproc(){return val1;return 1val;return 12;return int_t;}");
+    ASSERT_EQ(output, "int testproc(){returnval1;return1val;return12;returnint_t;}");
 }
 
 TEST(c2ast, pragma_once) {
@@ -474,6 +474,22 @@ TEST(c2ast, func_alias_macro) {
 
     ast = json::parse(execTestCommand("palan-c2ast -s stdio.h"));
     ASSERT_EQ(funcs("sscanf")[0]["symbol"], "__isoc99_sscanf");
+}
+
+// `linux` in <linux/types.h> is not expanded, and "#ifdef __has_include" holds.
+TEST(c2ast, has_include) {
+    cleanTestEnv();
+    json ast = json::parse(execTestCommand("palan-c2ast ../test/testdata/c2ast/057_has_include.h"));
+    vector<string> names;
+    for (auto& f : ast["ast"]["functions"]) names.push_back(f["name"]);
+    ASSERT_EQ(names, vector<string>({"hi_found", "hi_defined"}));
+}
+
+TEST(c2ast, include_in_enum) {
+    cleanTestEnv();
+    json ast = json::parse(execTestCommand("palan-c2ast ../test/testdata/c2ast/058_enum_include.h"));
+    ASSERT_EQ(ast["ast"]["enums"][0]["enumerators"], json::parse(
+        R"([{"name":"ei_a","value":"1"},{"name":"ei_b","value":"4"},{"name":"ei_last","value":"5"}])"));
 }
 
 // The state file and predefined.h are the tool's input, not the source's headers.

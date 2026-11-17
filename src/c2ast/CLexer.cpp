@@ -12,6 +12,7 @@
 #include <iostream>
 #include <cstring>
 #include <cstdint>
+#include <map>
 
 using namespace std;
 #include "CFileInfo.h"
@@ -19,6 +20,17 @@ using namespace std;
 #include "CLexer.h"
 
 vector<string> CLexer::keywords;
+
+// GCC's alternate keyword spellings. GCC takes them as keywords whether or
+// not __GNUC__ is defined, and Linux kernel headers rely on that.
+static const map<string, CTokenKeyword> gnuAlternates = {
+	{"__const", TK_CONST}, {"__const__", TK_CONST},
+	{"__volatile", TK_VOLATILE}, {"__volatile__", TK_VOLATILE},
+	{"__inline", TK_INLINE}, {"__inline__", TK_INLINE},
+	{"__signed", TK_SIGNED}, {"__signed__", TK_SIGNED},
+	{"__restrict", TK_RESTRICT}, {"__restrict__", TK_RESTRICT},
+	{"__complex__", TK_COMPLEX},
+};
 
 static int read_number(string& str, int n);
 static int read_id(string& str, int n);
@@ -47,7 +59,8 @@ CLexer::CLexer(CFileInfo &infile) : infile(move(infile)), no(-1)
 		keywords[TK_ENUM] = "enum";
 		keywords[TK_VOID] = "void";
 		keywords[TK_BOOL] = "_Bool";
-		keywords[TK_RETURN] = "return";
+		keywords[TK_COMPLEX] = "_Complex";
+		keywords[TK_INT128] = "__int128";
 		keywords[TK_INLINE] = "inline";
 		keywords[TK_RESTRICT] = "restrict";
 		keywords[TK_VOLATILE] = "volatile";
@@ -337,6 +350,12 @@ CToken* CLexer::createToken(int n)
 				t->info.keyword = (CTokenKeyword)i;
 				return t;
 			}
+		}
+		auto alt = gnuAlternates.find(str);
+		if (alt != gnuAlternates.end()) {
+			t = new CToken(TT_KEYWORD, no, n); // LCOV_EXCL_BR_LINE
+			t->info.keyword = alt->second;
+			return t;
 		}
 
 		t = new CToken(TT_ID, no, n); // LCOV_EXCL_BR_LINE

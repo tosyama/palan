@@ -3037,6 +3037,9 @@ cinclude <math.h> link "m";  // link against libm (-lm) when building
 ### Function Calls
 
 - `cinclude` makes C functions visible from the declaration point to the end of the enclosing scope.
+- A C function whose signature uses a C type Palan cannot represent (`long double`, `va_list`,
+  `__int128`, a `_Complex` type) can be cincluded, but calling it is a compile error. `tgmath.h`
+  cannot be cincluded: it requires a GNU compiler.
 - With an alias, functions are accessible only via the qualified form `alias.funcName(...)`.
 - The number of arguments must match the number of parameters; a variadic C function takes at least
   its fixed parameters. A C function declared with empty parentheses `f()` takes no arguments, the

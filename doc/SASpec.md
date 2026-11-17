@@ -1567,7 +1567,8 @@ Before a `cinclude`d C function's parameters/return type (or a C global's single
 a named `strct`/`union`→`struct`) and then check every type against `unrepresentableTypeName`, which recognizes:
 
 - A `prim` type-name not resolved to a known Palan primitive (e.g. `flt128` for C's `long
-  double` when no typedef maps it to something usable).
+  double` when no typedef maps it to something usable, or the C spellings c2ast gives
+  `__int128` and the `_Complex` types, such as `double _Complex`).
 - `arr` (a bare array type-kind — the `[n]@T`/`[n]@!T` pointer-slot-array shape has already
   normalized to `pntr` by this point), a `func` whose parameters or return are not all
   primitives or pointers representable by these same rules (a variadic one, or one taking a

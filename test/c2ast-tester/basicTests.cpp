@@ -17,7 +17,7 @@ TEST(c2ast, basic_tests) {
     cleanTestEnv();
     string output;
     output = execTestCommand("palan-c2ast -d ../test/testdata/000_temp_c_header.h");
-    ASSERT_EQ(output, "int testproc(){H((A+H(1)));123;return xSz;}");
+    ASSERT_EQ(output, "int testproc(){H((A+H(1)));123;returnxSz;}");
 }
 
 TEST(c2ast, explicit_target) {
@@ -698,6 +698,42 @@ TEST(c2ast, struct_typedef_name) {
     // A reserved name gives way to the next one that is not, and is kept when there is none.
     ASSERT_EQ(structs["tr_s"]["typedef-name"], "tr_t");
     ASSERT_EQ(structs["tq_s"]["typedef-name"], "_Tq_t");
+}
+
+// GCC's alternate keywords and qualifier placements, as glibc and Linux headers
+// write them; a function's body is skipped and a static one is not exported.
+TEST(c2ast, gnu_spellings) {
+    cleanTestEnv();
+    json ast = json::parse(execTestCommand("palan-c2ast ../test/testdata/c2ast/056_gnu_spellings.h"));
+    map<string, json> funcs;
+    for (auto& f : ast["ast"]["functions"]) funcs[f["name"]] = f;
+    auto param = [&](const string& f, int i) { return funcs[f]["parameters"][i]["var-type"]; };
+    auto prim = [](const string& name) { return json{{"type-kind", "prim"}, {"type-name", name}}; };
+    auto ptr = [](json base) { return json{{"type-kind", "pntr"}, {"base-type", base}}; };
+    json constChar = prim("int8");
+    constChar["const"] = true;
+    ASSERT_EQ(param("f_const_after", 0), ptr(constChar));
+    ASSERT_EQ(param("f_const_after", 1)["base-type"]["const"], true);
+    ASSERT_EQ(param("f_unnamed_restrict", 0), ptr(constChar));
+    ASSERT_EQ(param("f_unnamed_restrict", 1), ptr(prim("void")));
+    ASSERT_EQ(param("f_arr_qualified", 0), ptr(ptr(prim("int8"))));
+    ASSERT_EQ(param("f_arr_qualified", 1), ptr(prim("int32")));
+    ASSERT_EQ(param("f_arr_qualified", 2), ptr(prim("int32")));
+    ASSERT_EQ(funcs["f_signed"]["ret-type"], prim("int8"));
+    ASSERT_EQ(param("f_signed", 0), prim("int16"));
+    ASSERT_EQ(funcs["f_const_alt"]["ret-type"], ptr(constChar));
+    ASSERT_EQ(funcs["f_complex"]["ret-type"], prim("double _Complex"));
+    ASSERT_EQ(param("f_complex", 0), prim("float _Complex"));
+    ASSERT_EQ(param("f_complex", 1), prim("double _Complex"));
+    ASSERT_EQ(param("f_complex", 2), prim("long double _Complex"));
+    ASSERT_EQ(funcs["f_int128"]["ret-type"], prim("unsigned __int128"));
+    ASSERT_EQ(param("f_int128", 1), prim("__int128"));
+    ASSERT_EQ(funcs.count("f_static_inline"), 0u);
+    ASSERT_EQ(funcs["f_inline"]["ret-type"], prim("int32"));
+    map<string, string> constants;
+    for (auto& c : ast["ast"]["constants"]) constants[c["name"]] = c["value"];
+    ASSERT_EQ(constants, (map<string, string>{{"sz_cf", "8"}, {"al_cf", "4"}, {"sz_cd", "16"},
+        {"sz_cld", "32"}, {"al_cld", "16"}, {"sz_i128", "16"}}));
 }
 
 // --- Input file edge cases ---

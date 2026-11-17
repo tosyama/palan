@@ -174,6 +174,13 @@ TEST(c2ast_error, error_in_middle_of_declaration) {
 	ASSERT_NE(out.find("error_040_mid_declaration.h:1:40: error: unexpected token"), string::npos);
 }
 
+TEST(c2ast_error, has_include_syntax) {
+	cleanTestEnv();
+	string out = execTestCommand("palan-c2ast ../test/testdata/c2ast/error_041_has_include_syntax.h");
+	ASSERT_NE(out.find("error_041_has_include_syntax.h:1:5: error: '__has_include' expects (\"FILENAME\") or (<FILENAME>)"),
+		string::npos) << out;
+}
+
 TEST(c2ast_error, unsupported_attribute_args) {
 	const pair<string, string> cases[] = {
 		{"error_035_aligned_enum.h", ":1:14: error: attribute 'aligned' is not supported here"},

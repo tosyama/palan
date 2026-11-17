@@ -57,11 +57,6 @@ using namespace std;
 // 				cout << c0 << endl;
 // 				break;
 // 			}
-// 		case TT_INCLUDE:
-// 		{
-// 			cout << "INCLUDE " << endl;
-// 			break;
-// 		}
 // 		default:
 // 			cout << "OTHER ";
 // 			cout << token->type << endl;
@@ -552,19 +547,21 @@ void CParser::nameAnonEnumByTypedef(json &vt, const string &typedefName)
 	vt["type-name"] = typedefName;
 }
 
+// Qualifiers and `_Complex` may come before or after the type specifier, in any
+// order ("const volatile int", "char const *", "double _Complex").
 bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, int &result_index)
 {
 	int index = result_index;
-
-	// "inline"/"volatile"/"const" may appear in any order (e.g. "const volatile
-	// int", "volatile const int"), so consume them in a loop rather than a fixed
-	// sequence -- a fixed sequence would silently miss "const" in the other order.
-	bool is_const = false;
+	bool is_const = false, is_complex = false;
+	auto qualifier = [&]() {
+		if (CONSUME_KW(TK_INLINE) || CONSUME_KW(TK_VOLATILE)) return true;
+		if (CONSUME_KW(TK_CONST)) return is_const = true;
+		if (CONSUME_KW(TK_COMPLEX)) return is_complex = true;
+		return false;
+	};
 	json attrs = json::object();
 	for (;;) {
-		if (CONSUME_KW(TK_INLINE)) continue;
-		if (CONSUME_KW(TK_VOLATILE)) continue;
-		if (CONSUME_KW(TK_CONST)) { is_const = true; continue; }
+		if (qualifier()) continue;
 		int before = index;
 		if (!attribute_specifiers(attrs, tokens, index)) return false;
 		if (index != before) continue;
@@ -572,15 +569,30 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 	}
 	if (!attrs.empty()) ast["attributes"] = attrs;
 
-	// Single point applying `const` to the resolved var-type, so every branch
-	// below (prim/typedef/struct/union/enum) reflects it the same way instead of
-	// each carrying its own copy of "if (is_const) ...".
-	auto set_vt = [&](json vt) {
-		if (is_const) vt["const"] = true;
-		ast["var-type"] = move(vt);
-	};
+	if (!type_specifier(ast, tokens, index)) return false;
+	while (qualifier())
+		;
+	json &vt = ast["var-type"];
+	if (is_complex) {
+		static const map<string, string> complexNames = {
+			{"flo32", "float _Complex"}, {"flo64", "double _Complex"}, {"flt128", "long double _Complex"},
+		}; // LCOV_EXCL_BR_LINE
+		auto it = vt.value("type-kind", "") == "prim" ? complexNames.find(vt["type-name"].get<string>())
+			: complexNames.end();
+		if (it == complexNames.end()) return false;
+		vt["type-name"] = it->second;
+	}
+	if (is_const) vt["const"] = true;
+	result_index = index;
+	return true;
+} // LCOV_EXCL_BR_LINE
+
+bool CParser::type_specifier(json &ast, const vector<CToken*> &tokens, int &result_index)
+{
+	int index = result_index;
+	auto set_type = [&](json vt) { ast["var-type"] = move(vt); };
 	auto set_prim = [&](const char* name) {
-		set_vt({{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
+		set_type({{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
 	}; // LCOV_EXCL_BR_LINE
 
 	if (CONSUME(TT_ID)) {	// typedef name
@@ -589,14 +601,24 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 		if (it != typedefs_.end()) {
 			json vt = it->second;
 			vt["typedef-name"] = name;
-			set_vt(move(vt));
+			set_type(move(vt));
 		} else {
-			set_vt({{"type-kind", "user"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
+			set_type({{"type-kind", "user"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
 		}
 		result_index = index;
 		return true;
 	}
 
+	{
+		bool is_unsigned = CONSUME_KW(TK_UNSIGNED);
+		if (!is_unsigned) CONSUME_KW(TK_SIGNED);
+		if (CONSUME_KW(TK_INT128)) {
+			set_prim(is_unsigned ? "unsigned __int128" : "__int128");
+			result_index = index;
+			return true;
+		}
+		index = result_index;
+	}
 	if (unsigned_char(tokens, index)) { set_prim("uint8"); result_index = index; return true; }
 	if (signed_char(tokens, index))   { set_prim("int8");  result_index = index; return true; }
 	if (unsigned_long_long(tokens, index)) { set_prim("uint64"); result_index = index; return true; }
@@ -624,7 +646,7 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 			if (!tagName.empty()) {
 				vt["type-name"] = tagName;
 			}
-			set_vt(move(vt));
+			set_type(move(vt));
 			result_index = index;
 			return true;
 		}
@@ -638,7 +660,7 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 			if (!tagName.empty()) {
 				vt["type-name"] = tagName;
 			}
-			set_vt(move(vt));
+			set_type(move(vt));
 			result_index = index;
 			return true;
 		}
@@ -656,7 +678,7 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 			if (!enum_attrs.empty())
 				throwUnsupportedAttribute(enum_attrs.contains("packed") ? "packed" : "aligned",
 					tokens[attr_start]);
-			set_vt({{"type-kind", "enum"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
+			set_type({{"type-kind", "enum"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
 			result_index = index;
 			return true;
 		}
@@ -768,6 +790,11 @@ bool CParser::declarator_tail(json &decl, const vector<CToken*> &tokens, int &re
 
 	while (true) {
 		if (CONSUME_PUNC('[')) {
+			// A parameter's "[restrict]" or "[static n]" qualifies only the
+			// pointer the callee receives.
+			while (CONSUME_KW(TK_CONST) || CONSUME_KW(TK_VOLATILE) || CONSUME_KW(TK_RESTRICT)
+					|| CONSUME_KW(TK_STATIC))
+				;
 			json arr_size_value;
 			if (!CONSUME_PUNC(']')) {
 				constant_expression(arr_size_value, tokens, index);
@@ -800,20 +827,22 @@ bool CParser::declarator_tail(json &decl, const vector<CToken*> &tokens, int &re
 	return true;
 } // LCOV_EXCL_BR_LINE
 
-// Advances `index` from the token just after an already-consumed '(' to the position
-// just after its matching ')', tracking nested parens (a parameter list inside the
-// group, e.g. "(*signal(int))(int)", may itself contain '(' / ')'). Sets `close_index`
-// to the token index of that matching ')' itself, which declarator() uses to confirm a
-// grouped declarator's inner parse consumed exactly up to it (see declarator() below).
-static bool skipToMatchingParen(const vector<CToken*> &tokens, int &index, int &close_index)
+// Advances `index` from the token just after an already-consumed `open` to the
+// position just after its matching `close`, tracking nested pairs (a parameter list
+// inside a group, e.g. "(*signal(int))(int)", may itself contain '(' / ')'). Sets
+// `close_index` to the token index of that matching `close` itself, which declarator()
+// uses to confirm a grouped declarator's inner parse consumed exactly up to it (see
+// declarator() below).
+static bool skipToMatching(const vector<CToken*> &tokens, int &index, int &close_index,
+		int open = '(', int close = ')')
 {
 	int depth = 1;
 	while (index < (int)tokens.size()) {
 		CToken* token = tokens[index];
 		if (token->type == TT_PUNCTUATOR) {
-			if (token->info.punc == '(') {
+			if (token->info.punc == open) {
 				depth++;
-			} else if (token->info.punc == ')') {
+			} else if (token->info.punc == close) {
 				depth--;
 				if (depth == 0) {
 					close_index = index;
@@ -853,8 +882,11 @@ bool CParser::declarator(json &decl, const vector<CToken*> &tokens, int &result_
 
 	if (!attribute_specifiers(attrs, tokens, index)) return fail();
 	while (CONSUME_PUNC('*')) {
-		bool ptr_const = CONSUME_KW(TK_CONST);       // e.g. int * const p
-		CONSUME_KW(TK_VOLATILE);
+		bool ptr_const = false;
+		for (;;) {
+			if (CONSUME_KW(TK_CONST)) ptr_const = true;
+			else if (!CONSUME_KW(TK_VOLATILE) && !CONSUME_KW(TK_RESTRICT)) break;
+		}
 		decl["var-type"] = {{"type-kind", "pntr"}, {"base-type", move(decl["var-type"])}}; // LCOV_EXCL_BR_LINE
 		if (ptr_const) decl["var-type"]["const"] = true;
 		if (!attribute_specifiers(attrs, tokens, index)) return fail();
@@ -863,10 +895,9 @@ bool CParser::declarator(json &decl, const vector<CToken*> &tokens, int &result_
 	int group_index = -1, close_index = -1;
 	if (CONSUME_PUNC('(')) {
 		group_index = index;
-		if (!skipToMatchingParen(tokens, index, close_index)) return fail();
+		if (!skipToMatching(tokens, index, close_index)) return fail();
 
 	} else if (!is_typeonly) {
-		CONSUME_KW(TK_RESTRICT); // C99 restrict qualifier
 		if (!CONSUME(TT_ID)) return fail();
 		decl["name"] = *tokens[index-1]->info.id;
 	}
@@ -998,19 +1029,13 @@ bool CParser::declaration(json &ast, const vector<CToken*> &tokens, int &result_
 				result_index = index;
 				return true;
 
-			} else if (is_top_level && decls.size() == 1 && CONSUME_PUNC('{')) {
-				// function definition
-				for (;;) {
-					if (declaration(ast, tokens, index, false))
-						continue;
-
-					if (statement(ast, tokens, index))
-						continue;
-
-					break;
-				}
-
-				EXPECT_PUNC('}');
+			} else if (is_top_level && decls.size() == 1
+					&& decls[0]["var-type"].value("type-kind", "") == "func" && CONSUME_PUNC('{')) {
+				// A function definition is a declaration: its body (inline asm,
+				// statements) is nothing Palan calls into.
+				int close_index;
+				if (!skipToMatching(tokens, index, close_index, '{', '}')) return false;
+				emitDeclarator(ast, decls[0], is_typedef, is_static, is_extern, is_top_level);
 				result_index = index;
 				return true;
 			}
@@ -1115,38 +1140,6 @@ void CParser::registerTypedef(const string &name, json vt)
 {
 	vt.erase("typedef-name");
 	typedefs_[name] = move(vt);
-}
-
-bool CParser::statement(json &ast, const vector<CToken*> &tokens, int &result_index)
-{
-	int index = result_index;
-
-	if (expression(ast, tokens, index)) {
-		EXPECT_PUNC(';');
-		result_index = index;
-		return true;
-	}
-	if (jump_statement(ast, tokens, index)) {
-		result_index = index;
-		return true;
-	}
-
-	return false;
-}
-
-bool CParser::jump_statement(json &ast, const vector<CToken*> &tokens, int &result_index)
-{
-	int index = result_index;
-
-	if (CONSUME_KW(TK_RETURN)) {
-		json return_value;
-		constant_expression(return_value, tokens, index);
-		EXPECT_PUNC(';');
-		result_index = index;
-		return true;
-	}
-
-	return false;
 }
 
 // A value-AST "lit-int" follows the Palan AST convention for "value-type": present only
@@ -1424,7 +1417,7 @@ bool CParser::attribute_specifiers(json &attrs, const vector<CToken*> &tokens, i
 			else if (name == "vector_size" || name == "mode") unsupported();
 			if (CONSUME_PUNC('(')) {
 				int args = index, close_index;
-				if (!skipToMatchingParen(tokens, index, close_index)) return false;
+				if (!skipToMatching(tokens, index, close_index)) return false;
 				if (name == "aligned") {
 					json n;
 					unsigned long long v = 0;
@@ -1455,14 +1448,18 @@ bool CParser::typeSizeAlign(const json &vt, long long &size, long long &align)
 {
 	string tk = vt.value("type-kind", "");
 	if (tk == "prim") {
-		static const map<string, int> sizes = {
-			{"int8", 1}, {"uint8", 1}, {"bool", 1}, {"int16", 2}, {"uint16", 2},
-			{"int32", 4}, {"uint32", 4}, {"flo32", 4}, {"int64", 8}, {"uint64", 8},
-			{"flo64", 8}, {"flt128", 16},
+		// A complex number is its two parts, aligned as one.
+		static const map<string, pair<int, int>> sizes = {
+			{"int8", {1, 1}}, {"uint8", {1, 1}}, {"bool", {1, 1}}, {"int16", {2, 2}}, {"uint16", {2, 2}},
+			{"int32", {4, 4}}, {"uint32", {4, 4}}, {"flo32", {4, 4}}, {"int64", {8, 8}}, {"uint64", {8, 8}},
+			{"flo64", {8, 8}}, {"flt128", {16, 16}},
+			{"__int128", {16, 16}}, {"unsigned __int128", {16, 16}},
+			{"float _Complex", {8, 4}}, {"double _Complex", {16, 8}}, {"long double _Complex", {32, 16}},
 		}; // LCOV_EXCL_BR_LINE
 		auto it = sizes.find(vt.value("type-name", ""));
 		if (it == sizes.end()) return false;
-		size = align = it->second;
+		size = it->second.first;
+		align = it->second.second;
 		return true;
 	}
 	if (tk == "pntr") {
@@ -2122,11 +2119,7 @@ int CParser::parse(json &ast, const vector<CToken*> &tokens)
 		furthestTokens = &tokens;
 		furthestIndex = index;
 
-		if (CONSUME(TT_INCLUDE)) {
-			CToken* token = tokens[index - 1];
-			if (parse(ast, *(token->info.tokens))) return 1;
-
-		} else if (declaration(ast, tokens, index, true)) {
+		if (declaration(ast, tokens, index, true)) {
 			// parsed declaration and function definition
 			
 		} else {

@@ -69,6 +69,7 @@ class CParser {
 	void emitDeclarator(json &ast, json &decl,
 			bool is_typedef, bool is_static, bool is_extern, bool is_top_level);
 	bool declaration_specifiers(json &ast, const vector<CToken*> &tokens, int &result_index);
+	bool type_specifier(json &ast, const vector<CToken*> &tokens, int &result_index);
 	bool declarator(json &ast, const vector<CToken*> &tokens, int &result_index, bool is_typeonly);
 	bool declarator_tail(json &ast, const vector<CToken*> &tokens, int &result_index);
 	bool parameter_list(vector<json> &params, const vector<CToken*> &tokens, int &result_index);
@@ -76,8 +77,6 @@ class CParser {
 	bool enum_definition(string &name, const vector<CToken*> &tokens, int &result_index);
 	bool attribute_specifiers(json &attrs, const vector<CToken*> &tokens, int &result_index);
 
-	bool statement(json &ast, const vector<CToken*> &tokens, int &result_index);
-	bool jump_statement(json &ast, const vector<CToken*> &tokens, int &result_index);
 
 	// This subtree (primary_expression .. expression) builds a value-AST node into
 	// `value` for the small set of forms we can compute (literal, +/-, cast, sizeof);
