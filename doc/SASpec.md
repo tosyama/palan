@@ -110,19 +110,19 @@ Root
   `"embed-struct"`, shape key `evarr_T`, functions `__pln_*_evarr_T`) keeps the elements in
   `data` like a primitive's, `T` taking its `total-size` bytes and owning nothing; `push` copies
   the struct it is given in and frees it, and `pop` returns a newly allocated copy. `push`'s
-  struct (a `[+]U` element's header too) is the caller's to give, as a struct parameter's
-  argument is: the built-in's parameter is the owned `T`, and the generated function takes it
-  as `@!T` (`W` in its symbol), since it keeps or frees the struct itself. With a `[+]U`
+  struct (a `[+]U` element's header too, and a row) is the caller's to give, as a struct
+  parameter's argument is: the built-in's parameter is the owned `T` (`[n]U`), and the generated
+  function takes it as `@!T` (`@![]U`; `W` in its symbol), since it keeps or frees it itself. With a `[+]U`
   element (elem kind `"varr"`) the slots hold the elements' headers the same way: a new element is
   an empty header (`calloc(1, 24)`), a dropped one is freed with `__pln_free_varr_U`, and a copy
   into one is `__pln_copy_varr_U`; `push` stores the header it is given, which the caller hands
   over. With a row `[n]U` (elem kind `"row"`) a slot holds the row's own block: a new one is
   `malloc(n * …)`, its data left undefined and its owned elements built, a dropped one has them dropped (unless the slot
-  is NULL, after `->>`) and is freed, and `push` and `copy` copy the elements from the row they
-  are given (`[]U x`; `copy`'s source is `[][n]U`). `pop` returns the slot's block. Rows laid
+  is NULL, after `->>`) and is freed, `push` stores the row it is given as the slot, and `copy` copies
+  the elements from its source (`[][n]U`). `pop` returns the slot's block. Rows laid
   out in place (`[+]$[n]U`, `[+]$[n]$[m]U`, elem kind `"embed-row"`, shape key `evarr_…`) are
   consecutive slots of their element, built, dropped and copied through the element's own helpers; `push`
-  takes `[]U`, `copy` takes the run of elements (`[]U` for owned ones, `@U` otherwise), and
+  moves the row's slots in and frees its block, `copy` takes the run of elements (`[]U` for owned ones, `@U` otherwise), and
   `pop` moves the row into a newly allocated block:
   - shape-kind\* - "varr"
   - shape-key\* - Shape key string (e.g. "varr\_int32", "varr\_P9\_\_pln\_B16", "evarr\_9\_\_pln\_B16")

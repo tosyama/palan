@@ -565,7 +565,7 @@ TEST(build_mgr, varr_row_mtrace) {
 	ASSERT_EQ(output, 
 		"[1 2 3 4][5 6 7 8][9 10 11 12]\n12 1 0\n42\n\n[1 2 3 9][1 2 3 4][5 6 7 8]\n"
 		"[1 2 3 4]\n9 5\n3 7 3\n3\n7 4 1\n");
-	expectBalancedMtrace(traceFile, 42);
+	expectBalancedMtrace(traceFile, 40);
 }
 
 // Rows laid out in place: owned elements in them are built, dropped and
@@ -582,7 +582,7 @@ TEST(build_mgr, evarr_row_mtrace) {
 		"MALLOC_TRACE=" + traceFile + " "
 		"/tmp/palan_evarr_row_mtrace_bin");
 	ASSERT_EQ(output, "7 3\n12 9 0 4\n77 10\n2 2 3\n5 7 0 3 1\n5 1 2\n4 3\n");
-	expectBalancedMtrace(traceFile, 77);
+	expectBalancedMtrace(traceFile, 80);
 }
 
 TEST(build_mgr, varr_row_owned_mtrace) {
@@ -597,7 +597,7 @@ TEST(build_mgr, varr_row_owned_mtrace) {
 		"MALLOC_TRACE=" + traceFile + " "
 		"/tmp/palan_varr_row_owned_mtrace_bin");
 	ASSERT_EQ(output, "5 7 3 7\n4 5 1\n2 1 0\n6 1 1\n");
-	expectBalancedMtrace(traceFile, 82);
+	expectBalancedMtrace(traceFile, 76);
 }
 
 // A fixed array of rows of a run-time length and `[+][n]T` share the row
@@ -623,7 +623,7 @@ TEST(build_mgr, nested_fixed_mtrace) {
 
 // `[+][3]int32` and `[+][4]int32` share their functions, which take the length.
 TEST(build_mgr, varr_nested_rows_mtrace) {
-	expectMtraceRun("346_varr_nested_rows_mtrace", "2 9 1 3 4\n4 6 6\n6 5 7\n8\n", 98);
+	expectMtraceRun("346_varr_nested_rows_mtrace", "2 9 1 3 4\n4 6 7\n6 5 7\n8\n", 94);
 }
 
 TEST(build_mgr, embed_rows_mtrace) {

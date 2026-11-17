@@ -1066,7 +1066,7 @@ TEST(sa_error, named_ret_single_return_value)
 TEST(sa_error, lit_arg)
 {
 	const pair<string, string> cases[] = {
-		{"error_495_lit_arg_needs_at.pa", ":3:1: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@[..]' or '@![..]' for a literal)."},
+		{"error_495_lit_arg_needs_at.pa", ":3:1: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@{..}', '@!{..}', '@[..]' or '@![..]' for a literal)."},
 		{"error_496_arr_lit_arg_needs_at.pa", ":2:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@[..]' or '@![..]' for a literal)."},
 		{"error_497_lit_arg_count.pa", ":2:5: error: array 'a' has size 3 but its array literal has 2 elements."},
 		{"error_498_lit_arg_field_count.pa", ":3:5: error: struct 'P' has 2 fields but its literal has 1 values."},

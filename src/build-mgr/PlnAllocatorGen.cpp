@@ -718,21 +718,26 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "    realloc(h.data, c * " << size << ") -> h.data;\n"
 		    << "    c -> h.cap;\n"
 		    << "}\n";
-		// A struct (an inner `[+]T`'s header too) comes as the caller's to
-		// own, as a struct parameter's argument does: an owned one becomes the
-		// slot, and one laid out in place is copied into it and freed.
-		bool takesStruct = e.kind == "varr" || e.kind == "struct" || e.kind == "opaque" || e.kind == "embed-struct";
-		out << "export func __pln_push_" << key << "(@!" << hdr << " h, " << (takesStruct ? "@!" : "")
-		    << e.value << " x" << mp << ") {\n"
+		// A struct or a row (an inner `[+]T`'s header too) comes as the
+		// caller's to own, as a parameter of its type takes its argument: a
+		// block of its own becomes the slot, and one laid out in place has
+		// what it holds moved into the slots and is freed.
+		bool movesSlots = e.kind == "embed-row" && e.owned;
+		string pushed = movesSlots ? e.popped : (e.kind != "prim" ? "@!" : "") + e.value;
+		out << "export func __pln_push_" << key << "(@!" << hdr << " h, " << pushed << " x" << mp << ") {\n"
 		    << "    if h.len == h.cap { __pln_reserve_" << key << "(h, h.len + 1" << ma << "); }\n";
-		if (e.kind == "varr" || e.kind == "struct" || e.kind == "opaque")
-			out << "    x -> h.data[h.len];\n";
-		else if (e.owned)
-			out << "    __pln_build_" << e.key << "(h.data, h.len, h.len + 1" << ma << ");\n"
-			    << "    __pln_set_" << e.key << "(h.data, h.len, x" << ma << ");\n";
-		else if (e.embedded)
+		// Owned elements' slots are pointers, which '@!' cannot address.
+		if (movesSlots) {
+			string n = countOf(e, names);
+			out << "    int64 j = 0;\n"
+			    << "    while j < " << n << " {\n"
+			    << "        x[j] -> h.data[h.len * " << n << " + j];\n"
+			    << "        j + 1 -> j;\n"
+			    << "    }\n"
+			    << "    free(x);\n";
+		} else if (e.embedded)
 			out << "    memcpy(" << slotAddr(e, "h.data", "h.len", names) << ", x, " << size << ");\n"
-			    << (e.kind == "embed-struct" ? "    free(x);\n" : "");
+			    << "    free(x);\n";
 		else
 			out << "    x -> h.data[h.len];\n";
 		out << "    h.len + 1 -> h.len;\n"

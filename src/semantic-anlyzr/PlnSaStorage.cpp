@@ -518,7 +518,8 @@ GenElem genElem(const json& e, bool inPlace, int64_t stride)
 		while (cur->value("embedded", false) && isArrLevel((*cur)["base-type"])) cur = &(*cur)["base-type"];
 		GenElem l = genElem((*cur)["base-type"], cur->value("embedded", false), cur->value("stride", (int64_t)0));
 		g = l;
-		g.value = l.slots;
+		// push moves owned elements in as the pointers their slots hold.
+		g.value = l.owned ? permPtrTo(l.build, true) : l.slots;
 		g.run = l.owned ? ptrTo(l.own) : permPtrTo(l.type, false);
 		return g;
 	}
@@ -554,11 +555,12 @@ GenElem genElem(const json& e, bool inPlace, int64_t stride)
 } // LCOV_EXCL_BR_LINE
 } // namespace
 
-// push owns the struct it is given, as a struct parameter does; the generated
-// one takes it as a pointer and keeps it in the slot instead of freeing it.
-static json pushedValue(json value)
+// push owns the struct or row it is given, as such a parameter does; the
+// generated one takes it as a pointer and keeps it in the slot, or moves what
+// it holds into the slots and frees it.
+static json pushedValue(const json& elem, json value)
 {
-	if (isStructStorage(value)) value["mutable"] = true;
+	if (isArrLevel(elem) || isStructStorage(value)) value["mutable"] = true;
 	return value;
 }
 
@@ -589,7 +591,7 @@ static string allocSymbolIn(const string& allocators, const AllocShapeRef& shape
 			json header = {{"type-kind","struct"},{"type-name","__pln_" + allocShapeKey(shape)}};
 			if (op != "alloc") params.push_back(permPtrTo(header, true));
 			if (op == "alloc" || op == "init") params.insert(params.end(), {i64, i64});   // len, cap
-			else if (op == "push") params.push_back(pushedValue(g.value));
+			else if (op == "push") params.push_back(pushedValue(shapeElem(shape.elem), g.value));
 			else if (op == "resize") params.push_back(i64);
 			else if (op == "copy" || op == "assign") params.insert(params.end(), {g.run, i64});
 		}
@@ -841,18 +843,15 @@ void PlnSemanticAnalyzer::recordVarrShape(const json& vt)
 	recordElemShape(shape);
 }
 
-// push takes an element by value and pop returns one; a struct goes as its
-// storage, which push takes over and pop's caller owns.
+// push takes an element by value and pop returns one; a struct or a row goes
+// as its storage, which push takes over and pop's caller owns.
 json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl, const string& allocators)
 {
 	// LCOV_EXCL_BR_START
 	json i64 = {{"type-kind","prim"},{"type-name","int64"}};
 	const json& elem = varr["base-type"];
 	bool embedded = varr.value("embedded", false);
-	// A row is pushed from a borrow of one and popped as an owned array.
-	json value = elem.value("type-kind","") == "struct" ? json{{"type-kind","pntr"},{"base-type",elem}}
-	           : isArrLevel(elem) ? withArrPermission(elem, false) : elem;
-	const json& popped = isArrLevel(elem) ? elem : value;
+	json value = elem.value("type-kind","") == "struct" ? json{{"type-kind","pntr"},{"base-type",elem}} : elem;
 	auto self = [&](bool isMutable) {
 		json vt = varrPntrType(elem, embedded);
 		vt["mutable"] = isMutable;
@@ -873,7 +872,7 @@ json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl, const string& 
 	add("len", json::array({self(false)}), &i64);
 	add("push", json::array({self(true), {{"name","x"},{"var-type",value}}}), nullptr);
 	add("resize", json::array({self(true), {{"name","n"},{"var-type",i64}}}), nullptr);
-	add("pop", json::array({self(true)}), &popped);
+	add("pop", json::array({self(true)}), &value);
 	return defs;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE

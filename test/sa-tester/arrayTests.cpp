@@ -1073,7 +1073,9 @@ TEST(sa, varr_row)
 	ASSERT_EQ(elem.contains("mutable"), false);
 	const auto& push = stmts[2]["body"];
 	ASSERT_EQ(funcName(push["name"]), "__pln_push_varr_Pint32");
-	ASSERT_EQ(push["args"][1]["value-type"]["mutable"], false);
+	// The row is copied into a block that push takes over.
+	ASSERT_EQ(push["args"][1]["expr-type"], "temp");
+	ASSERT_EQ(push["args"][1]["value"]["value-type"], elem);
 	ASSERT_EQ(push["args"][2]["value"], "4");
 
 	// `[4]int32 r = v.pop();` takes the popped row over; a discarded one is freed.
@@ -1190,6 +1192,9 @@ TEST(sa, varr_row_len_args)
 	ASSERT_EQ(funcName(x["name"]), "__pln_push_varr_Pint32");
 	ASSERT_EQ(x["args"][2]["value"], "3");
 	ASSERT_EQ(z["args"][2]["value"], "4");
+	// A row given away with '>>' is taken without a copy.
+	ASSERT_EQ(z["args"][1]["category"], "expiring");
+	ASSERT_EQ(z["args"][1]["reset"][0]["name"], "q");
 }
 
 // An owned `[n]T` parameter takes a copy, or a call's result as it is; a

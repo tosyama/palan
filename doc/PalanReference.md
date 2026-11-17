@@ -1247,7 +1247,8 @@ printf("%ld %d\n", t.sum, t.count);   // 12 2
   a temporary would be lost.
 - The right operand is passed as an operand of `+` is, and chooses among overloads the same way.
 - `<<` binds as the shifts do: `s << a + b` appends `a + b`, and `s << x -> f()` is `f(s << x)`.
-- `[+]T` has no `<<`; it uses `push`.
+- `[+]T` has no `<<`; it uses `push`. For a `[+]uint8`, `v << "abc"` would not say whether it
+  adds the bytes or one element.
 
 ---
 
@@ -1795,7 +1796,7 @@ element as in other arrays, without bounds checking. Four built-in functions wor
 | Function | Meaning |
 |----------|---------|
 | `len(@v)` | the number of elements, an `int64` |
-| `push(@!v, x)` | appends a copy of `x` |
+| `push(@!v, x)` | appends `x`, a copy of it unless it is moved (`x>>`) |
 | `resize(@!v, n)` | sets the length to `n` (an `int64`); new elements are undefined, as an array variable's are |
 | `pop(@!v)` | removes the last element and returns it |
 
@@ -1917,16 +1918,18 @@ printf("%ld %ld\n", len(@m[0]), len(@m[1]));      // 0 1
 
 [+][3]int32 rows;            // rows of 3
 [3]int32 r = [1, 2, 3];
-rows.push(@r);               // copies r in
-rows.resize(2);
-printf("%ld %d\n", len(@rows), rows[0][2]);       // 2 3
+rows.push(r);                // copies r in
+rows.push([4, 5, 6]);
+rows.resize(3);
+printf("%ld %d\n", len(@rows), rows[1][2]);       // 3 6
 
 [2][+]int32 two;             // two variable-length arrays
 4 -> two[1].push();
 printf("%d\n", two[1][0]);   // 4
 ```
 
-- `push` copies a struct or a row in; `pop` returns an element the caller then owns.
+- `push` takes a struct or a row as a parameter of its type does: a copy, or the value itself
+  when it is moved (`rows.push(r>>)`); `pop` returns an element the caller then owns.
 - `$` cannot lay out something that owns storage: `[+]$[+]T` and `$[+]T` as an element are
   compile errors.
 - A `[+]T` struct field is described in [Array Fields](#array-fields).

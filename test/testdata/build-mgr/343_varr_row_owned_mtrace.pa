@@ -10,25 +10,25 @@ mtrace();
 	7 -> p[1][1].q.y;
 	[+][2]P q = p;
 	[2]P r = q.pop();
-	q.push(@r);
-	q.push(@r);
+	q.push(r);
+	q.push(r>>);
 	q[2] ->> r;
 	printf("%d %d %d %d\n", r[0].x, q[1][1].q.y, q->len(), p[1][1].q.y);
 
 	[+][3][+]int32 n = [[[1], [], [2, 3]]];
 	4 -> n[0][1].push();
 	[3][+]int32 nr = n.pop();
-	n.push(@nr);
-	n.push(@nr);
+	n.push(nr);
+	n.push(nr);
 	[[[5], [], []]] -> n;
 	printf("%d %d %d\n", nr[1][0], n[0][0][0], n->len());
 
 	[+][+][2]int32 d = [[[1, 2]], []];
-	d[1].push(@d[0][0]);
+	d[1].push(d[0][0]);
 	[2]int32 dr = d[0].pop();
 	printf("%d %d %d\n", d[1][0][1], dr[0], d[0]->len());
 
 	[3][+][2]int32 e = [[[1, 2]], [], [[3, 4], [5, 6]]];
-	e[1].push(@e[2].pop());
+	e[1].push(e[2].pop());
 	printf("%d %d %d\n", e[1][0][1], e[2]->len(), e[0][0][0]);
 }

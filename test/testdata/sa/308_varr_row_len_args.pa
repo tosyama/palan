@@ -2,5 +2,5 @@
 [+][4]int32 z;
 [3]int32 r;
 [4]int32 q;
-x.push(@r);
-z.push(@q);
+x.push(r);
+z.push(q>>);
