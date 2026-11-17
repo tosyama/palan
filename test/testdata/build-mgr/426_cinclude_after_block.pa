@@ -1,0 +1,12 @@
+func f() {
+	cinclude <stdio.h>;
+	printf("in f\n");
+}
+func g() {
+	cinclude <stdio.h>;
+	printf("in g %d\n", EOF);
+}
+cinclude <stdio.h>;
+f();
+g();
+printf("top\n");

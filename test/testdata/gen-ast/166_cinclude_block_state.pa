@@ -1,0 +1,13 @@
+int32 a = B_VAL;
+{
+	cinclude "166_cinclude_block_state_outer.h";
+	{
+		cinclude "166_cinclude_block_state.h";
+		int32 b = B_VAL;
+	}
+	int32 c = OUTER_VAL;
+	int32 d = B_VAL;
+}
+int32 e = OUTER_VAL;
+cinclude "166_cinclude_block_state.h";
+int32 f = B_VAL;

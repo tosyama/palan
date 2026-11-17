@@ -506,6 +506,23 @@ TEST(gen_ast, cinclude_macro_state) {
 	ASSERT_EQ(stmts[5]["vars"][0]["init"]["expr-type"], "id");
 }
 
+TEST(gen_ast, cinclude_block_state) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/166_cinclude_block_state.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	auto& stmts = jout["ast"]["statements"];
+	auto& outer = stmts[1]["body"];
+
+	ASSERT_EQ(stmts[0]["vars"][0]["init"]["expr-type"], "id");
+	ASSERT_EQ(outer[1]["body"][1]["vars"][0]["init"]["value"], "7");
+	ASSERT_EQ(outer[2]["vars"][0]["init"]["value"], "3");
+	ASSERT_EQ(outer[3]["vars"][0]["init"]["expr-type"], "id");
+	ASSERT_EQ(stmts[2]["vars"][0]["init"]["expr-type"], "id");
+	ASSERT_EQ(stmts[3]["functions"][0]["name"], "block_state_f");
+	ASSERT_EQ(stmts[4]["vars"][0]["init"]["value"], "7");
+}
+
 TEST(gen_ast, cinclude_global) {
 	cleanTestEnv();
 	// c2ast exports file-scope "extern" object declarations into

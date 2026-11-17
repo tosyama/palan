@@ -3120,10 +3120,10 @@ building it as a library (see [Building a Library](#building-a-library)).
   declarations use `size_t` and `FILE`. Typedefs that bottom out in a pointer type are not carried
   over this way.
 - Macros carry over the same way: a header sees every macro the headers cincluded before it in the
-  file defined or `#undef`ed, so its `#ifdef`s and macro uses work as in C. A header that an
-  earlier cinclude already read is skipped by its include guard, as in C, and its declarations
-  come from that earlier cinclude. So if the earlier cinclude is inside a block, the skipped
-  functions can't be called outside that block (see `doc/Issues.md`).
+  same or an enclosing scope defined or `#undef`ed, so its `#ifdef`s and macro uses work as in C.
+  A header that such a cinclude already read is skipped by its include guard, as in C, and its
+  declarations come from that earlier cinclude. What a block's cincludes carry over ends with the
+  block: a later `cinclude` of the same header outside it reads the header again.
 - If multiple cincluded headers introduce the same typedef name resolving to the *same* underlying
   type, the first registration silently wins. If they resolve to *different* underlying types, this
   is a compile error.
@@ -3181,12 +3181,10 @@ building it as a library (see [Building a Library](#building-a-library)).
 - A macro constant whose type C fixes — an unsigned or long suffix (`1U`, `5L`), `sizeof`, or an
   integer cast, as in ncurses' `A_REVERSE` (`unsigned int`) — keeps that type, and meets other operands
   through the [usual arithmetic conversions](#3-type-system) like any typed value.
-- Substitution is text-order only, not lexically scoped like a cincluded C function or `const`:
-  a reference resolves against the last cincluded header that defines the name, textually
-  before that reference, anywhere in the rest of the file — including past the end of the block
-  the `cinclude` itself appears in. A reference that textually precedes every cincluding
-  `cinclude` is left unresolved (`Undefined function`/`Undefined variable`), even if a later
-  `cinclude` in the same file would otherwise define it.
+- A reference resolves against the last cincluded header that defines the name, textually
+  before that reference, up to the end of the block the `cinclude` appears in. A reference that
+  textually precedes every cincluding `cinclude` is left unresolved (`Undefined function`/`Undefined
+  variable`), even if a later `cinclude` in the same file would otherwise define it.
 - A later cincluded header may redefine or `#undef` a macro, as in C. References after that
   `cinclude` see the new value, or no macro at all.
 - A macro constant silently takes priority over any same-named variable, parameter, or `const` in

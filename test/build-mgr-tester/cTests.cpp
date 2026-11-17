@@ -779,6 +779,12 @@ TEST(build_mgr, inet_ntoa) {
 	ASSERT_EQ(output, "127.0.0.1 2130706433\n2\n");
 }
 
+TEST(build_mgr, cinclude_after_block) {
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/426_cinclude_after_block.pa");
+	ASSERT_EQ(output, "in f\nin g -1\ntop\n");
+}
+
 TEST(build_mgr, c_func_alias_macro) {
 	cleanTestEnv();
 	// Each name is a glibc macro for another symbol; the old sscanf would read

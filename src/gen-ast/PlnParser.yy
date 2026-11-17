@@ -10,7 +10,7 @@
 
 %defines
 %define api.parser.class	{PlnParser}
-%parse-param	{PlnLexer& lexer}	{json& ast}	{MacroTable& macros}	{string& cState}	{const string& buildTarget}
+%parse-param	{PlnLexer& lexer}	{json& ast}	{MacroTable& macros}	{CStateHistory& cState}	{const string& buildTarget}
 %lex-param	{PlnLexer& lexer}
 
 %code requires
@@ -25,6 +25,7 @@
 
 #include "../../lib/json/single_include/nlohmann/json.hpp"
 #include "PlnGenAstMacroFold.h"
+#include "PlnGenAstC2Ast.h"
 
 using std::vector;
 using std::string;
@@ -121,7 +122,6 @@ struct BodyList {
 	#include "PlnLexer.h"
 	#include "PlnGenAstMessage.h"
 	#include "PlnGenAstInternal.h"
-	#include "PlnGenAstC2Ast.h"
 	#include "../common/PlnDefs.h"
 	#include "../common/PlnStrLit.h"
 
@@ -137,6 +137,16 @@ struct BodyList {
 		PlnLexer& lexer)
 	{
 		return lexer.yylex(*yylval, *location);
+	}
+
+	// A header cincluded in a block is read again by a later cinclude outside
+	// it, and its macros fold only inside it.
+	static void closeCIncludeScope(CStateHistory& cState, MacroTable& macros,
+		const palan::PlnParser::location_type& open, const palan::PlnParser::location_type& close)
+	{
+		if (!cState.closeScope({open.begin.line, open.begin.column}, {close.begin.line, close.begin.column}))
+			return;
+		closeMacroScope(macros, {(int)open.begin.line, (int)open.begin.column}, {(int)close.begin.line, (int)close.begin.column});
 	}
 
 // glr2.cc grows the GLR stack by memcpy-ing items and then destroying the
@@ -488,9 +498,9 @@ expr_stmt: import
 		$$["stmt-type"] = "cinclude";
 
 		json c_ast = execute_c2ast($$["path-type"], $$["path"],
-		                          fs::path(lexer.inputFile).parent_path().string(), cState, buildTarget);
+		                          fs::path(lexer.inputFile).parent_path().string(), cState.current(), buildTarget);
 		if (c_ast.is_object() && c_ast.contains("c-state")) {
-			cState = c_ast["c-state"].dump();
+			cState.push({@$.begin.line, @$.begin.column}, c_ast["c-state"].dump());
 			for (auto& header : c_ast["headers"]) ast["c-headers"].push_back(header);
 		}
 		if (c_ast.is_object() && c_ast.contains("ast")) {
@@ -746,7 +756,7 @@ link_libs: STRING
 	;
 
 block: '{' statements '}'
-	{ $$ = $2; }
+	{ $$ = $2; closeCIncludeScope(cState, macros, @1, @3); }
 	;
 
 body_list_e: expr_stmt
@@ -819,7 +829,7 @@ block_body_items: /* empty */
 	;
 
 block_obj: '{' block_body_items '}'
-	{ $$ = $2; }
+	{ $$ = $2; closeCIncludeScope(cState, macros, @1, @3); }
 	;
 
 standalone_block: block_obj

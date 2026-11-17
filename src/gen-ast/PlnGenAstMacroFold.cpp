@@ -47,8 +47,15 @@ static const MacroEntry* findMacroAt(const MacroTable& macros, const string& nam
 	auto it = macros.find(name);
 	if (it == macros.end()) return nullptr;
 	for (auto e = it->second.rbegin(); e != it->second.rend(); ++e)
-		if (isAfterMacroLoc(loc, e->loc)) return &*e;
+		if (isAfterMacroLoc(loc, e->loc) && (e->end.is_null() || !isAfterMacroLoc(loc, e->end))) return &*e;
 	return nullptr;
+}
+
+void closeMacroScope(MacroTable& macros, const json& open, const json& close)
+{
+	for (auto& [name, entries] : macros)
+		for (auto e = entries.rbegin(); e != entries.rend() && isAfterMacroLoc(e->loc, open); ++e)
+			if (e->end.is_null()) e->end = close;
 }
 
 void foldMacroConstants(json& node, const MacroTable& macros)
