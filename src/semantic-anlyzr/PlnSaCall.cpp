@@ -300,8 +300,8 @@ string PlnSemanticAnalyzer::calleesText(const string& name, const vector<Callee>
 // argument matches but for a writable borrow given as read-only. Those needing
 // a string literal converted are only looked at when no other fits, and are
 // ranked the same way among themselves, a converted argument as exact.
-Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name,
-                                         const vector<Callee>& cands, const vector<CallArg>& args)
+CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<Callee>& cands,
+                                               const vector<CallArg>& args)
 {
 	struct Fitting {
 		vector<Callee> viable, exact, narrowed;
@@ -334,21 +334,29 @@ Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name
 	// Converting is the last resort, so that adding a conversion function
 	// changes no call that resolves without one.
 	const Fitting& fit = plain.viable.empty() ? converting : plain;
-	if (fit.viable.size() == 1) return fit.viable[0];
-	if (fit.viable.empty()) {
+	if (fit.viable.size() == 1) return {fit.viable[0], {}};
+	if (fit.viable.empty()) return {};
+	// A candidate fitting through its defaults or its variadic parameter is not
+	// ranked against the others, so that a reader follows no further rule to
+	// tell which one is called.
+	if (!fit.unranked && fit.exact.size() == 1) return {fit.exact[0], {}};
+	if (!fit.unranked && fit.exact.empty() && fit.narrowed.size() == 1) return {fit.narrowed[0], {}};
+	return {nullopt, fit.unranked ? fit.viable : !fit.exact.empty() ? fit.exact
+	                 : !fit.narrowed.empty() ? fit.narrowed : fit.viable};
+}
+
+Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name,
+                                         const vector<Callee>& cands, const vector<CallArg>& args)
+{
+	CalleeChoice choice = chooseCallee(name, cands, args);
+	if (choice.chosen) return *choice.chosen;
+	if (choice.tied.empty()) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_NoMatchingFunc,
 			name, argTypesText(args), calleesText(name, cands)) << endl;
 		exit(1);
 	}
-	// A candidate fitting through its defaults or its variadic parameter is not
-	// ranked against the others, so that a reader follows no further rule to
-	// tell which one is called.
-	if (!fit.unranked && fit.exact.size() == 1) return fit.exact[0];
-	if (!fit.unranked && fit.exact.empty() && fit.narrowed.size() == 1) return fit.narrowed[0];
-	const vector<Callee>& best = fit.unranked ? fit.viable : !fit.exact.empty() ? fit.exact
-	                           : !fit.narrowed.empty() ? fit.narrowed : fit.viable;
 	cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_AmbiguousCall,
-		name, calleesText(name, best)) << endl;
+		name, calleesText(name, choice.tied)) << endl;
 	exit(1);
 }
 

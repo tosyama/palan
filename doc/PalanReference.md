@@ -1125,6 +1125,13 @@ show(2.5);          // float 2.5
   ambiguous: write `f(int32(x))`.
 - A literal matches exactly only its default type: `int64` for an integer, `uint64` with `u`,
   `flo64` for a decimal. With `f(int32)` and `f(int64)`, `f(1)` calls `f(int64)`.
+- An arithmetic expression with a literal in it is taken as a literal is, unless an operand is
+  known to be a struct, which makes the expression an [operator function](#operator-functions)
+  call. Known to be a struct are a variable, a field reached from one, and a call whose functions
+  all return one struct type or whose arguments, all of these kinds, choose a function returning
+  one. Given `h(int32) -> vec2` and `h(flo64) -> flo64`, `g(h(n) * 2.0)` with an `int32 n` passes
+  a `vec2`, while `g(h(2.5) * 2.0)` is taken as a number: a literal argument is typed only once
+  `g` is chosen.
 - A method-form call `x.f()` considers only the functions whose first parameter is `@!`. In a
   chained call `v -> f()`, `v` fits a `@T` parameter as `@v`.
 - A function name used as a value takes the function of the pointer type it is given to:

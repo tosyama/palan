@@ -1386,6 +1386,12 @@ TEST(build_mgr, operator_func_mtrace) {
 		"1.5 2.5 3.5\n0.5 1.5 2.5\n-1 -2 -3\n-1.5 -2.5 -3.5\n1.5 3 4.5\n0 -1 -2\n3\n2.5 4.5 6.5\n", 4);
 }
 
+// A call whose functions return a struct or a number is told by its argument,
+// so the operator over it is a struct the overloaded 'g' takes.
+TEST(build_mgr, overload_inner_call_mtrace) {
+	expectMtraceRun("425_overload_inner_call_mtrace", "vec2 2 4\nflo64 5\n", 0);
+}
+
 // '<<' chains through the borrow each call returns; a returned or converted
 // right operand is released after the statement.
 TEST(build_mgr, append_mtrace) {

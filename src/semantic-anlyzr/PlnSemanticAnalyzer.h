@@ -143,6 +143,13 @@ struct CallArg {
 	json probe;
 };
 
+// The outcome of choosing among overloads: the function chosen, or else the
+// ones tied for it (none when no function fits).
+struct CalleeChoice {
+	optional<Callee> chosen;
+	vector<Callee>   tied;
+};
+
 // Narrowed: exact but for a writable outermost pointer given as read-only.
 // Converted: fits only once a string literal is converted to the parameter's struct.
 enum class ArgFit { None, Converted, Viable, Narrowed, Exact };
@@ -397,6 +404,7 @@ class PlnSemanticAnalyzer {
 	vector<Callee> findCalleesByAlias(const string& alias, const string& name) const;
 	size_t countCallees(const json& call) const;
 	void   requireAlias(const json& locNode, const string& alias) const;
+	CalleeChoice chooseCallee(const string& name, const vector<Callee>& cands, const vector<CallArg>& args);
 	Callee selectCallee(const json& locNode, const string& name, const vector<Callee>& cands,
 	                    const vector<CallArg>& args);
 	ArgFit argFit(const CallArg& arg, const json& param, size_t argIdx, bool isCFunc, const string& funcName);
@@ -513,7 +521,7 @@ class PlnSemanticAnalyzer {
 	json saCallArgs(const json& locNode, const json& args, const json& funcParams,
 	                bool isCFunc, const string& funcName);
 	bool takesExpectedType(const json& expr);
-	json knownValueType(const json& expr) const;
+	json knownValueType(const json& expr);
 	vector<CallArg> analyzeCallArgs(const json& args);
 	optional<SaDiag> callArgMismatch(const json& argAst, const json& saArg, const json& param,
 	                                 size_t argIdx, bool isCFunc, const string& funcName);

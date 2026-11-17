@@ -1042,9 +1042,11 @@ bool PlnSemanticAnalyzer::takesExpectedType(const json& rawExpr)
 }
 
 // The type of a variable, of a field reached from one, or of a call whose
-// functions all return one type, told without analyzing the expression; null
-// for anything else, or where analyzing it would report an error.
-json PlnSemanticAnalyzer::knownValueType(const json& expr) const
+// functions all return one type or whose arguments are all of these, told
+// without analyzing the expression; null for anything else, or where
+// analyzing it would report an error. A call with a literal argument stays
+// unknown: the literal's type waits for the enclosing call's choice.
+json PlnSemanticAnalyzer::knownValueType(const json& expr)
 {
 	string et = expr.value("expr-type", "");
 	if (et == "id") {
@@ -1061,13 +1063,31 @@ json PlnSemanticAnalyzer::knownValueType(const json& expr) const
 		return json();
 	}
 	if (et == "call") {
+		const string& name = expr["name"].get<string>();
+		vector<Callee> cands = findCallees(name);
 		json ret;
-		for (auto& c : findCallees(expr["name"].get<string>())) {
+		bool oneType = true;
+		for (auto& c : cands) {
 			const json* r = c.def->contains("ret-type") ? &(*c.def)["ret-type"] : nullptr;
-			if (!r || (!ret.is_null() && ret != *r)) return json();
+			if (!r || (!ret.is_null() && ret != *r)) { oneType = false; break; }
 			ret = *r;
 		} // LCOV_EXCL_BR_LINE
-		return ret;
+		if (oneType) return ret;
+		vector<CallArg> args;
+		for (auto& a : expr.value("args", json::array())) {
+			string aet = a.value("expr-type", "");
+			if (aet == "chained-value" || isAggregateLit(a) || namesOverloadedFunc(a) || takesExpectedType(a))
+				return json();
+			json vt = knownValueType(a);
+			if (vt.is_null()) return json();
+			// What callArgMismatch reads of an analyzed argument.
+			json peeked = {{"expr-type", aet}, {"value-type", vt}}; // LCOV_EXCL_BR_LINE
+			if (aet == "id") peeked["var-type"] = vt;
+			args.push_back({a, false, move(peeked)});
+		}
+		CalleeChoice choice = chooseCallee(name, cands, args);
+		if (!choice.chosen) return json();
+		return choice.chosen->def->value("ret-type", json());
 	}
 	return json();
 }

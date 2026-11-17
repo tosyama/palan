@@ -1501,6 +1501,9 @@ TEST(sa_error, give_and_take)
 		{"error_922_operator_func_ambiguous.pa", ":5:10: error: Ambiguous function call '-': it can mean -(@vec2), -(vec2)."},
 		{"error_923_operator_func_no_match.pa",
 		 ":4:10: error: No function '+' takes (vec2, flo64); there are +(@vec2, @vec2)."},
+		// A call left unchosen while its operator's function is chosen reports as itself.
+		{"error_1090_overload_inner_call_ambiguous.pa",
+		 ":9:3: error: Ambiguous function call 'h': it can mean h(int32), h(flo64)."},
 		{"error_951_compare_func_ret.pa", ":2:1: error: operator function '==' must return 'bool'."},
 		{"error_952_compare_func_arity.pa", ":2:1: error: operator function '<' must take two parameters."},
 		{"error_953_compare_func_writable_param.pa",

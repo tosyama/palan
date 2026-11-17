@@ -1454,6 +1454,19 @@ TEST(sa, operator_func_overload_arg)
 	ASSERT_EQ(names, vector<string>({gVec2, gVec2, "_331_operator_func_overload_arg..g.int32"}));
 }
 
+// A call whose functions return different types is told by its arguments,
+// unless one is a literal.
+TEST(sa, overload_inner_call)
+{
+	cleanTestEnv();
+	json jout = written(run_sa("../test/testdata/sa/351_overload_inner_call.pa"));
+	ASSERT_TRUE(jout.is_object());
+	vector<string> names;
+	for (auto& s : jout["statements"])
+		if (s["stmt-type"] == "expr") names.push_back(s["body"]["name"]);
+	ASSERT_EQ(names, vector<string>({"_351_overload_inner_5fcall..g.P4vec2", "_351_overload_inner_5fcall..g.flo64"}));
+}
+
 // A character literal of 128 or more takes an integer type of 32 bits or
 // more; an ASCII one also a byte, and one with no type to take is an int.
 TEST(sa, code_point_literal)
