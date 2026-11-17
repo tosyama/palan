@@ -1,0 +1,12 @@
+struct ta_s { int a; };
+typedef struct ta_s ta_t;
+typedef ta_t ta2_t;
+typedef struct ta_s ta3_t;
+struct tb_s;
+typedef struct tb_s *tb_p;
+typedef struct { int c; } tc_t;
+typedef union tu_u tu_t;
+typedef struct tr_s __tr_t;
+typedef struct tr_s tr_t;
+typedef struct tr_s tr2_t;
+typedef struct tq_s _Tq_t;

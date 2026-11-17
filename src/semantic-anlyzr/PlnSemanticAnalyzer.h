@@ -256,6 +256,8 @@ class PlnSemanticAnalyzer {
 	int pendingAliases_ = 0;
 	// Registered struct type definitions
 	map<string, StructDef> structDefs_;
+	// C struct tag -> the typedef name messages call it by (from c2ast).
+	map<string, string>    cStructDisplayNames_;
 	set<string>            allocShapeNames_;  // dedup guard for struct alloc-shapes
 	// __pln_B<n> -> n: the struct an element struct owning nothing is laid out as.
 	map<string, int>       byteTypes_;
@@ -740,6 +742,8 @@ class PlnSemanticAnalyzer {
 	const FieldLayout& findFieldOrExit(const string& structName, const string& fieldName, const json& locNode,
 	                                   bool forWrite);
 	bool outsideTypeModule(const string& structName) const;
+	string structDisplayName(const string& structName) const;
+	string typeDisplayName(const json& t) const;
 	// Look up a struct already known to be registered (name presence must be checked
 	// by the caller beforehand) and reject it if its layout isn't known yet.
 	const StructDef& requireCompleteStruct(const string& structName, const json& locNode, const string& use = "this");

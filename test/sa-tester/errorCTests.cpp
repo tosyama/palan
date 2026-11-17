@@ -958,3 +958,20 @@ TEST(sa_error, c_struct_arg)
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, c_struct_typedef_name)
+{
+	const pair<string, string> cases[] = {
+		{"error_1087_c_struct_typedef_field.pa", ":3:2: error: struct 'cs_a_t' has no field 'w'."},
+		{"error_1088_c_struct_typedef_arg.pa", ":3:2: error: cannot convert '@!cs_a_t' to '@!cs_b_t'."},
+		{"error_1089_c_struct_tag_field.pa", ":3:2: error: struct 'cs_c' has no field 'w'."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

@@ -135,11 +135,11 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 	const StructDef& def = requireCompleteStruct(structName, locNode);
 	auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fieldName; });
 	if (it == def.fields.end()) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownField, structName, fieldName, def.keyword()) << endl;
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownField, structDisplayName(structName), fieldName, def.keyword()) << endl;
 		exit(1);
 	}
 	if (!it->unsupported.empty()) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnsupportedCFieldType, structName, fieldName, it->unsupported) << endl;
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnsupportedCFieldType, structDisplayName(structName), fieldName, it->unsupported) << endl;
 		exit(1);
 	}
 	if ((it->access == "private" || (it->access == "readonly" && forWrite)) && outsideTypeModule(structName)) {
@@ -166,7 +166,7 @@ const StructDef& PlnSemanticAnalyzer::requireCompleteStruct(const string& struct
 		exit(1);
 	}
 	if (!def.isComplete) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_IncompleteStructType, structName,
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_IncompleteStructType, structDisplayName(structName),
 		                                                        def.incompleteReason, def.keyword()) << endl;
 		exit(1);
 	}

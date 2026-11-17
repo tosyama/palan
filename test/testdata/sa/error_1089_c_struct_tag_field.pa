@@ -1,0 +1,4 @@
+cinclude "error_1087_c_struct_typedef.h";
+func f(@!cs_c p) {
+	1 -> p.w;
+}

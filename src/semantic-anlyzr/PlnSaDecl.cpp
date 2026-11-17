@@ -147,7 +147,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			if (structDefs_.count(tname)) {
 				const StructDef& target = structDefs_.at(tname);
 				if (!target.isComplete && !target.isOpaque) {
-					cerr << errPrefix << PlnSaMessage::getMessage(E_IncompleteStructType, tname,
+					cerr << errPrefix << PlnSaMessage::getMessage(E_IncompleteStructType, structDisplayName(tname),
 					                                  target.incompleteReason, target.keyword()) << endl;
 					exit(1);
 				}
@@ -203,7 +203,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			}
 			const StructDef& sub = structDefs_.at(structName);
 			if (!sub.isComplete) {
-				cerr << errPrefix << PlnSaMessage::getMessage(E_IncompleteStructType, structName,
+				cerr << errPrefix << PlnSaMessage::getMessage(E_IncompleteStructType, structDisplayName(structName),
 				                                  sub.incompleteReason, sub.keyword()) << endl;
 				exit(1);
 			}
@@ -836,7 +836,7 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 		json structVT = {{"type-kind", "pntr"}, {"base-type", {{"type-kind", "struct"}, {"type-name", def.name}}}}; // LCOV_EXCL_BR_LINE
 		json value = sa_expression(literalConversion(item, structVT));
 		if (!value.contains("value-type") || !isStructPntr(value["value-type"])) {
-			cerr << locPrefix(item) << PlnSaMessage::getMessage(E_StructLitExpected, def.name) << endl;
+			cerr << locPrefix(item) << PlnSaMessage::getMessage(E_StructLitExpected, structDisplayName(def.name)) << endl;
 			exit(1);
 		}
 		const json& vt = value["value-type"];
@@ -859,7 +859,7 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 		}
 		if (items.size() != def.fields.size()) {
 			cerr << locPrefix(item) << PlnSaMessage::getMessage(E_StructLitFieldCount,
-			                                  def.name, to_string(def.fields.size()), to_string(items.size())) << endl;
+			                                  structDisplayName(def.name), to_string(def.fields.size()), to_string(items.size())) << endl;
 			exit(1);
 		}
 		for (size_t k = 0; k < items.size(); k++)
@@ -869,7 +869,7 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 			string fn = named["name"].get<string>();
 			auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fn; });
 			if (it == def.fields.end()) {
-				cerr << locPrefix(named) << PlnSaMessage::getMessage(E_UnknownField, def.name, fn, def.keyword()) << endl;
+				cerr << locPrefix(named) << PlnSaMessage::getMessage(E_UnknownField, structDisplayName(def.name), fn, def.keyword()) << endl;
 				exit(1);
 			}
 			if (outside && !it->access.empty()) {
@@ -892,7 +892,7 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 				exit(1);
 			}
 			if (!given[k]) {
-				cerr << locPrefix(item) << PlnSaMessage::getMessage(E_StructLitMissingField, def.name, def.fields[k].name) << endl;
+				cerr << locPrefix(item) << PlnSaMessage::getMessage(E_StructLitMissingField, structDisplayName(def.name), def.fields[k].name) << endl;
 				exit(1);
 			}
 		}
@@ -903,7 +903,7 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 		const FieldLayout& f = def.fields[k];
 		const json& v = *given[k];
 		if (!f.unsupported.empty()) {
-			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_UnsupportedCFieldType, def.name, f.name, f.unsupported) << endl;
+			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_UnsupportedCFieldType, structDisplayName(def.name), f.name, f.unsupported) << endl;
 			exit(1);
 		}
 		string structName = fieldStructName(f);
@@ -927,7 +927,7 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 			continue;
 		}
 		if (f.typeKind != "prim") {
-			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_StructLitFieldType, def.name, f.name) << endl;
+			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_StructLitFieldType, structDisplayName(def.name), f.name) << endl;
 			exit(1);
 		}
 		json fieldType = fieldValueType(f);
@@ -1142,6 +1142,8 @@ void PlnSemanticAnalyzer::registerCStruct(const json& cincludeStmt, const json& 
 {
 	string name = s["name"].get<string>();
 	requireNotPalanType(name, cincludeStmt);
+	if (s.contains("typedef-name"))
+		cStructDisplayNames_[name] = s["typedef-name"].get<string>();
 	auto existing = structDefs_.find(name);
 	if (existing != structDefs_.end() && existing->second.isComplete)
 		return;  // first complete definition wins

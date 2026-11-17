@@ -177,6 +177,10 @@ AST in. Same field-list shape as the native `struct-def` statement.
   is aligned to 1. Omitted otherwise.
 - aligned - Integer from `__attribute__((aligned(N)))` on the struct/union itself (16 for a bare
   `aligned`): its alignment is at least N. Omitted otherwise.
+- typedef-name - The first typedef declared directly over the tag (`typedef struct a_s a_t;`,
+  not `typedef a_t b_t;` or a pointer typedef), which SA's messages name the struct by. A C
+  reserved name (`__FILE`) gives way to a later one that is not (`FILE`). Omitted when there is
+  none, or when the typedef name is the tag itself.
 - fields - Field list; omitted when this header never gives the tag a body (forward
   declaration or bare reference only). SA registers such a tag as an incomplete struct
   (usable only through a pointer) rather than leaving the name unresolved — see SASpec.md.

@@ -1022,6 +1022,11 @@ bool CParser::declaration(json &ast, const vector<CToken*> &tokens, int &result_
 
 } // LCOV_EXCL_BR_LINE
 
+static bool isReservedName(const string& name)
+{
+	return name.size() >= 2 && name[0] == '_' && (name[1] == '_' || isupper((unsigned char)name[1]));
+}
+
 // Classifies one completed declarator (the first in a declaration, or any
 // comma-separated successor) and emits it into the appropriate AST channel,
 // or registers it into typedefs_, or discards it. This is the single point
@@ -1065,7 +1070,18 @@ void CParser::emitDeclarator(json &ast, json &decl,
 			// (see its call site) and written it into vt's "type-name" before
 			// this function runs, so that case and the tagged one are
 			// indistinguishable here.
-			registerTypedef(decl["name"].get<string>(), vt);
+			const string& name = decl["name"].get<string>();
+			// A message names the struct by the first typedef written over
+			// `struct Tag` itself, since Palan code uses that name. A C reserved
+			// name gives way to a later one: glibc declares `__FILE` before `FILE`.
+			auto it = structIndex_.find(vt["type-name"].get<string>());
+			if (it != structIndex_.end() && !vt.contains("typedef-name") && name != it->first) {
+				json& entry = capturedStructs_[it->second];
+				if (!entry.contains("typedef-name")
+						|| (isReservedName(entry["typedef-name"].get<string>()) && !isReservedName(name)))
+					entry["typedef-name"] = name;
+			}
+			registerTypedef(name, vt);
 		} else if (tk == "user") {
 			// An unresolved name may be an earlier cinclude's typedef, which SA
 			// resolves; registering keeps this typedef's references pointing at it.

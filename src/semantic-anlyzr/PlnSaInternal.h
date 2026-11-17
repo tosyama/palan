@@ -661,20 +661,25 @@ inline bool ownsElems(const json& arrType)
 	    && (isOwnedBlock(elem) || (isArrLevel(elem) && !elem.contains("mutable")));
 }
 
+inline string PlnSemanticAnalyzer::structDisplayName(const string& structName) const {
+	auto it = cStructDisplayNames_.find(structName);
+	return it != cStructDisplayNames_.end() ? it->second : structName;
+}
+
 // Renders an SA type as source-like text for diagnostics: a struct's own
 // storage as "T", a borrow as "@T"/"@!T", an array as "[20][10]int32" or
 // "[3]$[?]int32" (an unknown size shows as "?"), with a borrowed array's
 // "@"/"@!" once in front although each of its levels carries "mutable".
-inline string typeDisplayName(const json& t) {
+inline string PlnSemanticAnalyzer::typeDisplayName(const json& t) const {
 	if (!t.is_object() || !t.contains("type-kind")) // LCOV_EXCL_BR_LINE -- no real producer emits this
 		return "malformed type"; // LCOV_EXCL_LINE
 	const string kind = t["type-kind"].get<string>();
 	if (kind == "prim") {
 		if (t.contains("enum")) return t["enum"].get<string>();
-		return t.value("type-name", "malformed type"); // LCOV_EXCL_BR_LINE -- no real producer emits this
+		return structDisplayName(t.value("type-name", "malformed type")); // LCOV_EXCL_BR_LINE -- no real producer emits this
 	}
 	if (kind == "struct")
-		return t.value("type-name", "anonymous struct");
+		return structDisplayName(t.value("type-name", "anonymous struct"));
 	if (kind == "func") {
 		string out = "func(";
 		for (auto& p : t["parameters"]) {

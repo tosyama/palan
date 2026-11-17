@@ -142,10 +142,10 @@ TEST(build_mgr_error, c_unsupported_sig) {
 
 TEST(build_mgr_error, dirent_owned_dir) {
 	// DIR resolves to `struct __dirstream`, which dirent.h only
-	// forward-declares; the diagnostic names the underlying tag, not the alias.
+	// forward-declares; the diagnostic names it by its typedef.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_056_dirent_owned_dir.pa");
-	ASSERT_NE(out.find("struct '__dirstream' is only forward-declared"), string::npos);
+	ASSERT_NE(out.find("struct 'DIR' is only forward-declared"), string::npos);
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 
@@ -164,7 +164,7 @@ TEST(build_mgr_error, dirent_incomplete_field) {
 	// reached via field access (`d.fd`) through a `@!DIR` handle.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_058_dirent_incomplete_field.pa");
-	ASSERT_NE(out.find("struct '__dirstream' is only forward-declared"), string::npos);
+	ASSERT_NE(out.find("struct 'DIR' is only forward-declared"), string::npos);
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 

@@ -685,4 +685,19 @@ TEST(c2ast, bool_keyword) {
     ASSERT_EQ(structs[0]["fields"][0]["var-type"], prim_bool);
 }
 
+TEST(c2ast, struct_typedef_name) {
+    cleanTestEnv();
+    json ast = json::parse(execTestCommand("palan-c2ast ../test/testdata/c2ast/055_struct_typedef_name.h"));
+    map<string, json> structs;
+    for (auto& s : ast["ast"]["structs"]) structs[s["name"]] = s;
+    // The first typedef written over the tag itself; not one through another typedef.
+    ASSERT_EQ(structs["ta_s"]["typedef-name"], "ta_t");
+    ASSERT_EQ(structs["tu_u"]["typedef-name"], "tu_t");
+    ASSERT_FALSE(structs["tb_s"].contains("typedef-name"));
+    ASSERT_FALSE(structs["tc_t"].contains("typedef-name"));
+    // A reserved name gives way to the next one that is not, and is kept when there is none.
+    ASSERT_EQ(structs["tr_s"]["typedef-name"], "tr_t");
+    ASSERT_EQ(structs["tq_s"]["typedef-name"], "_Tq_t");
+}
+
 // --- Input file edge cases ---

@@ -812,7 +812,7 @@ TEST(sa_error, sizeof)
 {
 	const pair<string, string> cases[] = {
 		{"error_406_sizeof_unknown_type.pa", ":1:12: error: unknown type 'Foo'."},
-		{"error_407_sizeof_incomplete_struct.pa", ":2:12: error: struct '__dirstream' is only forward-declared"},
+		{"error_407_sizeof_incomplete_struct.pa", ":2:12: error: struct 'DIR' is only forward-declared"},
 		{"error_408_sizeof_unsized_arr.pa", ":1:12: error: every array size in the type of 'sizeof' must be a compile-time constant."},
 		{"error_409_sizeof_arr_size_not_const.pa", ":2:12: error: every array size in the type of 'sizeof' must be a compile-time constant."},
 		{"error_410_sizeof_embed_prim.pa", ":1:12: error: '$' applies only to a struct element or a '$[m]' row, not 'int32'."},
@@ -1512,7 +1512,7 @@ TEST(sa_error, give_and_take)
 		// A derived '>' looks for '<' with the operands swapped.
 		{"error_956_derived_compare_no_func.pa", ":4:14: error: No operator function '<' takes (ver, int64)."},
 		{"error_957_c_struct_ptr_compare.pa",
-		 ":2:13: error: No operator function '==' takes (@!_IO_FILE, @!_IO_FILE)."},
+		 ":2:13: error: No operator function '==' takes (@!FILE, @!FILE)."},
 		{"error_958_wide_char_uint8.pa", ":1:11: error: character literal U+00E9 needs an integer type of 32 bits or more, not 'uint8': no byte of UTF-8 text holds it."},
 		// A comparison types no literal by the other operand, so it is checked there.
 		{"error_959_wide_char_compare_byte.pa", ":1:48: error: character literal U+00E9 needs an integer type of 32 bits or more, not 'uint8': no byte of UTF-8 text holds it."},
