@@ -114,7 +114,6 @@ enum PlnSaMessageCode {
 	E_DictLitArgType,	// arg1: parameter name, arg2: parameter type
 	E_LitArgCFunc,	// arg1: C function name
 	E_CopyShapeMismatch,	// arg1: destination shape, arg2: source shape
-	E_CopyUnsupportedShape,	// arg1: shape
 	E_AddrOfBorrowed,	// arg1: variable name
 	E_EmbedElemNotStruct,	// arg1: element type
 	E_NamedRetInitOnStruct,	// arg1: return name
@@ -133,7 +132,6 @@ enum PlnSaMessageCode {
 	E_TransferToSelf,	// arg1: variable name
 	E_GivenChangedByLaterArg,	// arg1: variable name
 	E_UnsizedArrRowSizeNotConst,
-	E_UnsizedArrRowUnsupported,
 	E_ArrElemShapeMismatch,	// arg1: expected shape, arg2: actual shape
 	E_ArgCountMismatch,	// arg1: function name, arg2: expected count, arg3: actual count
 	E_UnknownEnumerator,	// arg1: enumerator name, arg2: enum type name

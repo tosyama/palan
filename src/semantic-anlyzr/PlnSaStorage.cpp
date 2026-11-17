@@ -62,10 +62,6 @@ json PlnSemanticAnalyzer::unsizedArrToPntr(const json& locNode, const json& type
 	}
 	json bt = type["base-type"];
 	bool sizedRow = bt.value("type-kind","") == "arr" && !bt["size-expr"].is_null();
-	if (sizedRow && astLeaf(bt).value("type-kind","") == "pntr") {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnsizedArrRowUnsupported) << endl;
-		exit(1);
-	}
 	if (type.value("embedded", false)) {
 		json pntr = {{"type-kind","pntr"},{"embedded",true}}; // LCOV_EXCL_BR_LINE
 		if (isStructType(bt)) {
@@ -234,13 +230,10 @@ json PlnSemanticAnalyzer::ownedFieldType(const json& locNode, const json& vtype)
 	requireKnownTypeNames(locNode, vtype);
 	if (isVarrAstType(vtype)) return varrElemType(locNode, vtype);
 	const json* t = &vtype;
-	int levels = 0;
-	for (; t->value("type-kind","") == "arr" && !isVarrAstType(*t); t = &(*t)["base-type"], levels++) {
+	for (; t->value("type-kind","") == "arr" && !isVarrAstType(*t); t = &(*t)["base-type"]) {
 		if ((*t)["size-expr"].is_null()) unsupported();
 		fieldArrSize(locNode, (*t)["size-expr"]);
 	}
-	// Rows of pointer slots, which no array variable can declare either.
-	if (t->value("type-kind","") == "pntr" && levels > 1) unsupported();
 	return sizedArrLevel(locNode, vtype, nullopt);
 }
 
@@ -272,10 +265,6 @@ json PlnSemanticAnalyzer::varrStorageType(const json& locNode, const json& arr)
 			exit(1);
 		}
 	} else if (base.value("type-kind","") == "arr") {
-		if (astLeaf(base).value("type-kind","") == "pntr") {
-			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_StmtNotImplemented) << endl;
-			exit(1);
-		}
 		elem = sizedArrLevel(locNode, base, nullopt);
 	} else if (!embedded && base.value("type-kind","") == "pntr") {
 		elem = ptrSlotElemType(locNode, base);
@@ -1124,12 +1113,6 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 		return memcpyStmt(inPlaceSizeExpr(owned, depth, [&](size_t k) { return runtimeLen(*root, k); }));
 	// LCOV_EXCL_BR_START
 	auto [elem, lens] = ownedRun(owned, locationLens(dst));
-	const json* leaf = &elem;
-	while (isArrLevel(*leaf)) leaf = &(*leaf)["base-type"];
-	if (isPtrBorrow(*leaf)) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_CopyUnsupportedShape, typeDisplayName(t)) << endl;
-		exit(1);
-	}
 	recordArrShape(elem);
 	json args = json::array({dst, src});
 	for (auto& len : lens) args.push_back(len);

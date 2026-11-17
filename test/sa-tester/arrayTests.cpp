@@ -1197,6 +1197,25 @@ TEST(sa, varr_row_len_args)
 	ASSERT_EQ(z["args"][1]["reset"][0]["name"], "q");
 }
 
+// A row of pointer slots keeps the slots' type, and its helpers lay them out as int64.
+TEST(sa, varr_ptr_slot_rows)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/352_varr_ptr_slot_rows.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	const auto& row = stmts[0]["vars"][0]["var-type"]["base-type"]["base-type"];
+	ASSERT_EQ(row["arr-size"], 2);
+	ASSERT_EQ(row["base-type"]["type-kind"], "pntr");
+	ASSERT_EQ(row["base-type"]["mutable"], false);
+	ASSERT_EQ(row["base-type"]["base-type"]["type-kind"], "struct");
+	const auto& shapes = jout["alloc-shapes"];
+	ASSERT_EQ(shapes.size(), 1);
+	ASSERT_EQ(shapes[0]["shape-key"], "varr_Pint64");
+	ASSERT_EQ(shapes[0]["elem"]["elem"]["kind"], "prim");
+	ASSERT_EQ(funcName(stmts[2]["body"]["name"]), "__pln_push_varr_Pint64");
+}
+
 // An owned `[n]T` parameter takes a copy, or a call's result as it is; a
 // returned borrow is copied, and the caller takes the result over.
 TEST(sa, arr_return_param)

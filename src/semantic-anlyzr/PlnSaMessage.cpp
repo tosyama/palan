@@ -624,10 +624,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg2 != "\x01");
 			return "cannot copy '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's.";
 
-		case E_CopyUnsupportedShape:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "copying '" + arg1 + "' is not supported in this version.";
-
 		case E_AddrOfBorrowed:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name.";
@@ -724,9 +720,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_UnsizedArrRowSizeNotConst:
 			return "the row size in '[][m]T' or '[+][m]T' must be a compile-time constant.";
-
-		case E_UnsizedArrRowUnsupported:
-			return "'[][m]T' does not support rows of '@T'/'@!T' pointers in this version.";
 
 		case E_ArrElemShapeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");

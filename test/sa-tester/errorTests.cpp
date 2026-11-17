@@ -568,7 +568,6 @@ TEST(sa_error, unknown_type_name)
 		{"error_364_unsized_rows_ret_mismatch.pa", ":2:2: error: array shape '[?][4]int32' does not match '[?][3]int32'"},
 		{"error_365_unsized_rows_slot_mismatch.pa", ":3:1: error: array shape '[2][4]int32' does not match '[?][3]int32'"},
 		{"error_366_unsized_rows_size_not_const.pa", ":2:1: error: the row size in '[][m]T' or '[+][m]T' must be a compile-time constant."},
-		{"error_368_unsized_rows_ptr_elem.pa", ":2:1: error: '[][m]T' does not support rows of '@T'/'@!T' pointers in this version."},
 		{"error_369_unsized_rows_1d_borrow.pa", ":3:1: error: array shape '@[3]int32' does not match '[?][3]int32'"},
 		{"error_370_slot_arr_ret_as_owned_rows.pa", ":3:2: error: array shape '[?]@!int32' does not match '[?][?]int32'"},
 		{"error_371_borrow_elems_arg_as_owned.pa", ":6:1: error: array shape '[1]@!P' does not match '[?]P'"},

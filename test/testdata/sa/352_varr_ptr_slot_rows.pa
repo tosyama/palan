@@ -1,2 +1,4 @@
 type P { int32 x; };
 [+][2]@P v;
+[2]@P r;
+v.push(r);

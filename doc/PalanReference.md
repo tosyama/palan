@@ -1516,7 +1516,8 @@ exit. A slot borrows what it points to and never owns it: store into it with `->
 memory from C `malloc`, or an array as `@!arr`) and free that memory yourself. `->>` into a slot is a compile error.
 `[n]@![]$[m]T` and `[n]@![]$T` are slots the same way, pointing at contiguous rows or structs.
 `[n]@[]T` declares read-only slots the same way: they take `@arr` as well as `@!arr`, and
-nothing can be written through them.
+nothing can be written through them. Slots can be the elements of rows as other elements can
+(`[n][m]@T`, `[n]$[m]@T`, `[+][m]@T`, a `[n][m]@T` field, a `[][m]@T` parameter).
 
 ```palan
 int64 rows = 4;
@@ -2107,8 +2108,7 @@ Array **variables** (this section) allow non-constant `n`, except a stack array 
 - An array declared at the top level (outside any block) is not freed when the top-level statements end; the OS reclaims the memory at process exit.
 - Boundary checking is not performed.
 - `[n]$T` is not supported when `T` owns fields.
-- `[+][n]@T` (a variable-length array of rows of pointer slots) and a `[][+]T` parameter are not
-  supported.
+- A `[][+]T` parameter is not supported.
 
 ---
 

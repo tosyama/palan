@@ -644,6 +644,12 @@ TEST(build_mgr, varr_ptr_slot_mtrace) {
 		"3 6\n101 102 103\n102 2\n5 103 101\n5 7\n102 2 7\nHi 1\n", 21);
 }
 
+// Rows of pointer slots are rows of int64 to their helpers.
+TEST(build_mgr, ptr_slot_rows_mtrace) {
+	expectMtraceRun("427_ptr_slot_rows_mtrace",
+		"2 3 12\n3 1 3 2 3\n1 3\n2 13 13\n2\n5 6\n", 31);
+}
+
 TEST(build_mgr, for_loop) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand("bin/palan -o out/for_bin ../test/testdata/build-mgr/362_for.pa"), "");

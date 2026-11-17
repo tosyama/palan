@@ -522,8 +522,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     row size must be a constant (E_UnsizedArrRowSizeNotConst). Further levels follow the same
     rules at any depth (`[+][m][n]U`, `[+][m]$[n]U`). For a pointer element (`[+]@T`, `[+]@!T`,
     `[+]@[]T`), `pntr(T, mutable)`, the slot a `[n]@T` element is; it borrows and is laid out as
-    an `int64`, so its shape key is `varr_int64`. A row of pointers (`[+][n]@T`) is not supported
-    (E_StmtNotImplemented). Below, `T` stands for `E` and `varr_T` for the shape key, made from
+    an `int64`, so its shape key is `varr_int64`. A row of pointer slots (`[+][n]@T`) is laid out as
+    a row of `int64` the same way (`varr_Pint64`). Below, `T` stands for `E` and `varr_T` for the shape key, made from
     `E`'s layout.
   - `init`: `__pln_alloc_varr_T(len, cap)` (see the varr `alloc-shapes` entry): `(0, 0)` for
     `[+]T`, `(0, n)` for `[+n]T` (`n` is converted to uint64 like `[n]T`'s size), and `(n, n)`

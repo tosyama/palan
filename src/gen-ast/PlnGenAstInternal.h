@@ -192,12 +192,8 @@ inline bool isDeclarableVarType(const json& t)
 		if (pk == "prim" || pk == "func")
 			return true;  // array of pointers (@T, @!@T, @func(...) elements)
 	}
-	if (btk == "arr" && bt.value("specifier", "") == "raw" && !bt["size-expr"].is_null()) {
-		// fixed-size multidim array (also covers embedded-struct arrays), but not rows of pointers
-		const json* leaf = &bt;
-		while (leaf->value("type-kind", "") == "arr" && !isVarrType(*leaf)) leaf = &(*leaf)["base-type"];
-		return leaf->value("type-kind", "") != "pntr" && isDeclarableVarType(bt);
-	}
+	if (btk == "arr" && bt.value("specifier", "") == "raw" && !bt["size-expr"].is_null())
+		return isDeclarableVarType(bt);  // fixed-size multidim array (also covers embedded-struct arrays)
 	return false;
 }
 
