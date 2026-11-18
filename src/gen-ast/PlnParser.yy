@@ -295,7 +295,7 @@ struct BodyList {
 	// A parameter or return the compiler does not implement stays in the
 	// signature as is, so SA can reject the function where it is defined.
 	static json funcDecl(json& ast, bool exported, json fn, const vector<json>& params, const json& ret,
-	                     bool release, const palan::PlnParser::location_type& loc)
+	                     bool release, const palan::PlnParser::location_type& loc, bool cExport = false)
 	{
 		// Frame storage is a property of a local declaration, and a name after
 		// only unimplemented entries has no type to inherit; such a parameter or
@@ -318,6 +318,7 @@ struct BodyList {
 		LOC(fn, loc); // LCOV_EXCL_BR_LINE
 		if (exported) {
 			fn["export"] = true;
+			if (cExport) fn["c-export"] = true;
 			ast["export"].push_back(fn);
 		}
 		return fn;
@@ -402,7 +403,7 @@ struct BodyList {
 %type <json>	global_func
 %type <NodeRef>	func_def func_item syscall_decl
 %type <json>	return_def syscall_ret ret_type
-%type <bool>	release_mark
+%type <bool>	release_mark func_export
 %type <json>	return
 %type <vector<json>>	paramaters
 %type <PList<json>>	expressions
@@ -1373,17 +1374,17 @@ func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, $7, @$); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $8}}, {} }); // LCOV_EXCL_BR_LINE
 	}
-	| KW_EXPORT KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
+	| func_export KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 	{
-		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$, $1); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $9}}, {} }); // LCOV_EXCL_BR_LINE
 	}
-	| KW_EXPORT KW_FUNC func_name '(' paramaters ')' return_def release_mark ';'
+	| func_export KW_FUNC func_name '(' paramaters ')' return_def release_mark ';'
 	{
 		if (!isInterfaceFile(lexer.inputFile))
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
 				PlnGenAstMessage::getMessage(E_InterfaceOnly, "a function without a body")));
-		$$ = leafNode(funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$)); // LCOV_EXCL_BR_LINE
+		$$ = leafNode(funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$, $1)); // LCOV_EXCL_BR_LINE
 	}
 	// A type's '->', which comes with the type rather than being exported.
 	| KW_FUNC func_name '(' paramaters ')' return_def ';'
@@ -1392,6 +1393,17 @@ func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
 				PlnGenAstMessage::getMessage(E_InterfaceOnly, "a function without a body")));
 		$$ = leafNode(funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, false, @$)); // LCOV_EXCL_BR_LINE
+	}
+	;
+
+func_export: KW_EXPORT
+	{ $$ = false; }
+	| KW_EXPORT STRING
+	{
+		if ($2 != "C")
+			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @2.begin.line, @2.begin.column,
+				PlnGenAstMessage::getMessage(E_UnknownLinkage, $2)));
+		$$ = true;
 	}
 	;
 

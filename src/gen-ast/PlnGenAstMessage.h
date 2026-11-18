@@ -39,6 +39,7 @@ enum PlnMessageCode {
 	E_InvalidCodePointEscape,	// the escape as written
 	E_VariadicNotLast,
 	E_UnknownFieldMarker,	// the word before the field's type
+	E_UnknownLinkage,		// the string after export
 };
 
 class PlnGenAstMessage

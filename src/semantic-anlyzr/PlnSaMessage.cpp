@@ -718,6 +718,11 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' was given away and is NULL here; fill it with '->>' before using it.";
 
+		case E_CExportFunc:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "function '" + arg1 + "' cannot be exported to C: " + arg2 + ".";
+
 		case E_TransferToSelf:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'->>' cannot give '" + arg1 + "' to itself.";

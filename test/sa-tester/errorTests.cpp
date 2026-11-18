@@ -120,6 +120,24 @@ TEST(sa_error, export_in_function) {
 	ASSERT_NE(sa.find("not allowed inside a function"), string::npos);
 }
 
+TEST(sa_error, c_export) {
+	const pair<string, string> cases[] = {
+		{"error_1119_c_export_overload.pa", ":2:1: error: function 'add' cannot be exported to C: it is overloaded."},
+		{"error_1120_c_export_overload_after.pa", ":2:1: error: function 'add' cannot be exported to C: it is overloaded."},
+		{"error_1121_c_export_rets.pa", ":1:1: error: function 'divmod' cannot be exported to C: it returns several values."},
+		{"error_1122_c_export_variadic.pa", ":1:1: error: function 'sum' cannot be exported to C: it is variadic."},
+		{"error_1123_c_export_default.pa", ":1:1: error: function 'scale' cannot be exported to C: it has default arguments."},
+		{"error_1124_c_export_operator.pa", ":2:1: error: function '+' cannot be exported to C: it is an operator."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand("palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		EXPECT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
 TEST(sa_error, multi_ret_bare_return) {
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";

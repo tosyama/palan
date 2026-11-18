@@ -71,10 +71,11 @@ const json* PlnSemanticAnalyzer::findPlnFuncDef(const json& funcDef) const
 }
 
 // One function brought in more than once (a header included again, a module
-// imported again) has one key.
+// imported again, a C-named function and its C declaration) has one key.
 string PlnSemanticAnalyzer::calleeKey(const json& def, bool isC) const
 {
 	if (isC) return "c:" + cLinkName(def).get<string>();
+	if (def.value("c-export", false)) return "c:" + def["name"].get<string>();
 	string key = def.value("_module", moduleId_) + ":" + def["name"].get<string>();
 	for (auto& p : def.value("parameters", json::array()))
 		key += "|" + p["var-type"].dump();
@@ -105,9 +106,12 @@ vector<Callee> PlnSemanticAnalyzer::findCalleesByAlias(const string& alias, cons
 vector<Callee> PlnSemanticAnalyzer::findCallees(const string& name) const
 {
 	vector<Callee> cands;
-	set<string> seen;
+	map<string, size_t> seen;
+	// A C-named function takes the place of its C declaration, keeping its own types.
 	auto add = [&](const json& def, bool isC) {
-		if (seen.insert(calleeKey(def, isC)).second) cands.push_back({&def, isC});
+		auto [it, added] = seen.emplace(calleeKey(def, isC), cands.size());
+		if (added) cands.push_back({&def, isC});
+		else if (!isC && cands[it->second].isC) cands[it->second] = {&def, false};
 	};
 	for (auto it = cFuncScopes.rbegin(); it != cFuncScopes.rend(); ++it) {
 		auto f = it->find(name);

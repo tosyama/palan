@@ -294,12 +294,18 @@ void PlnSemanticAnalyzer::registerPlnFunc(const string& name, const json& def, c
 	for (auto& scope : plnFuncScopes) {
 		auto it = scope.find(name);
 		if (it == scope.end()) continue;
-		for (auto& other : it->second)
+		for (auto& other : it->second) {
+			if (other.value("c-export", false) || def.value("c-export", false)) {
+				cerr << locPrefix(locNode)
+				     << PlnSaMessage::getMessage(E_CExportFunc, name, "it is overloaded") << endl;
+				exit(1);
+			}
 			if (sameParamTypes(other, def)) {
 				cerr << locPrefix(locNode)
 				     << PlnSaMessage::getMessage(E_DuplicateFuncDef, name) << endl;
 				exit(1);
 			}
+		}
 	}
 	plnFuncScopes.back()[name].push_back(def);
 }
@@ -471,6 +477,22 @@ void PlnSemanticAnalyzer::validateVariadicSig(const json& funcDef)
 	if (operatorFuncNames().count(name)) fail(E_OperatorFuncVariadic);
 	if (any_of(params.begin(), params.end(), [](const json& p) { return p.contains("init"); }))
 		fail(E_VariadicWithDefault);
+}
+
+// C calls the function directly by its name, so it is one function with
+// the signature a callback has.
+void PlnSemanticAnalyzer::validateCExportSig(const json& funcDef)
+{
+	const json& params = funcDef["parameters"];
+	string has;
+	if (operatorFuncNames().count(funcDef["name"].get<string>())) has = "it is an operator";
+	else if (funcDef.value("rets", json::array()).size() > 1) has = "it returns several values";
+	else if (palanVariadicParam(params)) has = "it is variadic";
+	else if (any_of(params.begin(), params.end(), [](const json& p) { return p.contains("default"); }))
+		has = "it has default arguments";
+	if (has.empty()) return;
+	cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_CExportFunc, funcDef["name"].get<string>(), has) << endl;
+	exit(1);
 }
 
 // A type's '->' is part of the type, as how it is freed is: every module
@@ -851,7 +873,10 @@ json PlnSemanticAnalyzer::normalizeFuncSig(const json& f, const string& scope)
 		registerCopyFunc(funcEntry, scope);
 	else if (funcEntry.value("func-type", "") == "syscall")
 		validateSyscallDecl(funcEntry);
-	else
+	else if (funcEntry.value("c-export", false)) {
+		validateCExportSig(funcEntry);
+		funcEntry["symbol"] = funcEntry["name"];
+	} else
 		funcEntry["symbol"] = scope + ".."
 			+ funcSymbol(funcEntry["name"].get<string>(), funcEntry.value("parameters", json::array()));
 	if (funcEntry.value("release", false))

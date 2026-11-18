@@ -2704,6 +2704,33 @@ export func add(int32 a, int32 b) -> int32 {
 
 Functions without `export` are file-private and not accessible from other files.
 
+### Exporting a Function to C
+
+`export "C"` also lets C code linked into the program (see [Link Libraries](#link-libraries))
+call the function by its name:
+
+```palan
+// scale.pa
+cinclude "scale.h" link "scale.o";   // scale.h: int32_t scaled(int32_t v); int32_t twice_scaled(int32_t v);
+export "C" func scaled(int32 v) -> int32 { return v * 10; }
+```
+
+```c
+// scale.c
+#include "scale.h"
+int32_t twice_scaled(int32_t v) { return 2 * scaled(v); }
+```
+
+- The C name is the function's name, so it cannot be overloaded in its file. Its signature follows
+  the rules of a [callback](#passing-a-palan-function-as-a-callback): no several return values,
+  no variadic parameter, no default arguments, and it cannot be an operator function.
+- Other Palan files import it as any exported function, and a library's interface writes it as
+  `export "C" func scaled(int32 v) -> int32;`.
+- A C declaration of the same name, such as one in the header the C code includes, is the same
+  function: a call takes the Palan function's types. It is not checked against them.
+- A name a C library already defines, such as `puts`, is not reported, and may replace that
+  function for the whole program.
+
 ### Importing a File
 
 ```palan

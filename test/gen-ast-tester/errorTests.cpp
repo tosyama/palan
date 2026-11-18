@@ -299,6 +299,7 @@ TEST(gen_ast_error, invalid_code_point_escape) {
 		{"error_033_code_point_unclosed.pa", ":1:11: error: Invalid code point escape '\\u{41" + rule},
 		{"error_034_code_point_no_brace.pa", ":1:11: error: Invalid code point escape '\\u" + rule},
 		{"error_035_field_marker.pa", ":1:17: error: Expected 'private' or 'readonly' before the field's type, but found 'publik'."},
+		{"error_036_unknown_linkage.pa", ":1:8: error: Unknown linkage \"X\": only \"C\" can follow 'export'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -735,6 +735,7 @@ class PlnSemanticAnalyzer {
 	void  registerReleaseFunc(const json& funcEntry, const string& scope);
 	void  emitReleaseFuncs();
 	void  validateVariadicSig(const json& funcDef);
+	void  validateCExportSig(const json& funcDef);
 	json  normalizeArrBorrowType(const json& locNode, const json& type);
 	json  varrBorrowType(const json& locNode, const json& arr, bool isMutable);
 	json  varrStorageType(const json& locNode, const json& arr);

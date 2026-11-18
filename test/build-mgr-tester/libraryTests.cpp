@@ -407,6 +407,27 @@ printf("%d\n", sum3());
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "6\n");
 }
 
+TEST(build_mgr, library_c_export) {
+	cleanTestEnv();
+	writeFile("out/src/cb.h", "#include <stdint.h>\nint32_t quad(int32_t v);\n");
+	writeFile("out/src/cb.c", "#include \"cb.h\"\nint32_t twice(int32_t v);\nint32_t quad(int32_t v) { return twice(twice(v)); }\n");
+	ASSERT_EQ(execTestCommand("gcc -c -O1 out/src/cb.c -o out/src/cb.o"), "");
+	writeFile("out/src/twice.pa", R"(library calc;
+cinclude "cb.h" link "cb.o";
+export "C" func twice(int32 v) -> int32 { return v * 2; }
+export func quad4() -> int32 { return quad(4); }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/twice.pa"), "");
+	string pai = fileText("out/libs/calc/twice.pai");
+	EXPECT_NE(pai.find("export \"C\" func twice(int32 v) -> int32;\n"), string::npos) << pai;
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <calc/twice>;
+cinclude <stdio.h>;
+printf("%d %d\n", twice(5), quad4());
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "10 16\n");
+}
+
 TEST(build_mgr, library_using_a_library) {
 	buildGeoLibrary();
 	buildDrawLibrary();

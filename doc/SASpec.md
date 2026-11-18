@@ -249,7 +249,7 @@ Note: cinclude statements are not present in function bodies (they are top-level
 Every Palan function links by a symbol SA builds from its module and its parameter types, so
 functions of one name (overloads, or the same function exported by two modules) have distinct
 symbols. It is the `name` of the function, of a `call` resolved to it and of a `func-ref` to it.
-C functions and syscalls are not renamed. A module's top-level function is `<module>..main` and its
+C functions, syscalls and `export "C"` functions are not renamed. A module's top-level function is `<module>..main` and its
 initialization function `<module>..init`, which no other function's symbol can be: theirs always
 end in a parameter list or `.v`.
 

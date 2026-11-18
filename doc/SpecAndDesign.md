@@ -412,6 +412,18 @@ symbol is its label, `<module>.<name>`.
   statement is entered, not in palan-gen-ast, since whether `M` is an alias depends on the scope (a
   variable `M` hides it).
 
+**C-named functions.** `export "C" func add(...)` gives the function the symbol `add`, so C code
+linked in can call it by name. There is one symbol, not an alias beside the usual one: Palan calls
+it by `add` too, and a `.pai` writes `export "C"` so an importer gives it the same. The name is the
+Palan name, so the function cannot be overloaded within its module, and its signature follows a
+callback's rules, since C calls it directly.
+
+- A C declaration of the same name is not checked against it: a library reading its own C header,
+  which declares the function for its C code, is the expected use. Two definitions fail at link
+  time; one replacing a libc function does not, and is the writer's to avoid.
+- A call that sees both the C declaration and the Palan function is to one function, and takes the
+  Palan one's types, which carry ownership the C declaration cannot.
+
 **Building a library.** `palan --lib -o <dir> main.pa` compiles the modules `main.pa` reaches, which
 must all declare the same first name, and writes under `<dir>`, as given, the main's identity as a
 path: `<dir>/std/utf8.pai` and `<dir>/std/utf8.a`. Each public module is built this way, one archive each, so a

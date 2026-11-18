@@ -1,0 +1,2 @@
+type vec2 { int32 x; int32 y; };
+export "C" func +(@vec2 a, @vec2 b) -> int32 { return a.x + b.x; }

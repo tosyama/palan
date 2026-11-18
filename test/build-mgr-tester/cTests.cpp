@@ -473,6 +473,12 @@ TEST(build_mgr, link_obj) {
 	ASSERT_EQ(runWithCObj("295_link_obj"), "6\n");
 }
 
+// C calls the functions by name, and Palan calls them past the header's declarations.
+TEST(build_mgr, c_export) {
+	cleanTestEnv();
+	ASSERT_EQ(runWithCObj("431_c_export"), "80 6\n30 11\n");
+}
+
 TEST(build_mgr, link_failure) {
 	for (string opt : {"", "-o out/u "}) {
 		cleanTestEnv();
