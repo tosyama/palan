@@ -642,7 +642,17 @@ class PlnSemanticAnalyzer {
 	json enumTypeNamed(const string& name) const; // enum value-type for a type name, or null
 	string typeNameWritten(const json& obj) const;
 	json aliasCast(const json& expr, const string& typeName);
-	json sa_expr_cast(const json& expr);
+	json sa_expr_cast(const json& expr, bool moving);
+	json castLens(const json& expr, const json& written, json view);
+	// The source of a move, which alone may be an array cast to other sizes.
+	json sa_move_source(const json& ast, const PlnType* expectedType = nullptr);
+	// The lengths of the levels of the array `value` has, outermost first.
+	json valueLens(const json& value);
+	void checkMoveShape(const json& locNode, const json& value, const json& to, bool inherits);
+	json inheritRunLens(const string& name, const json& varType, const json& value);
+	json minLen(const json& a, const json& b, json& body);
+	json copyRows(const json& locNode, const json& dst, const json& dstLens,
+	              const json& src, const json& srcLens, const json& count, CopyInto into);
 	json resolveEnumerator(const json& expr);     // `Name.X` as a lit-int, or null for a field access
 	vector<string> enumeratorSpellings(const string& name) const;
 	int64_t typeByteSize(const json& locNode, json type);  // `sizeof(type)`, type resolved
@@ -819,7 +829,7 @@ class PlnSemanticAnalyzer {
 	void checkGivenOwners(const json& locNode, const vector<json>& argAsts, const json& saArgs);
 	bool isGlobalName(const string& name) const;
 	// `T b <<= v`: the initializer as a pinned value b takes over; its evaluation goes to pre.
-	json takeOverInit(const json& stmt, const json& var, VarStorage storage, json& pre);
+	json takeOverInit(const json& stmt, json& var, VarStorage storage, json& pre);
 	// `value ->> target`: releases what target holds, stores, and resets the source.
 	json transferStmts(const json& stmt, json targetRelease, json store, const json& value);
 	json sa_return_stmt(const json& stmt);

@@ -1,0 +1,62 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type S { int32 x; [+]int32 v; };
+type F { [4]int32 f; };
+func last4([4]int32 a) -> int32 r
+{
+	a[3] -> r;
+}
+mtrace();
+{
+	int64 n = 2;
+	int64 m = 4;
+	[n]int32 a;
+	7 -> a[1];
+	[m]int32 b;
+	a ->> b;
+	[m]int32 c <<= b;
+	[3][m]int32 mm;
+	5 -> mm[2][3];
+	[n]int32 r;
+	mm[2] ->> r;
+	printf("%d %d %d %d\n", int32(len(@c)), c[1], int32(len(@r)), r[3]);
+
+	[m]int32 x;
+	6 -> x[3];
+	x as [m]int32 ->> mm[2];
+	[m]int32 y;
+	8 -> y[3];
+	F f;
+	y as [4]int32 ->> f.f;
+	[m]int32 z;
+	9 -> z[3];
+	[4]int32 k <<= z as [4]int32;
+	[m]int32 w;
+	3 -> w[3];
+	int32 l = 0;
+	w as [4]int32 ->> last4() -> l;
+	printf("%d %d %d %d\n", mm[2][3], f.f[3], k[3], l);
+
+	[n]$[m]int32 e;
+	[3]$[n]int32 g;
+	4 -> e[1][1];
+	e -> g;
+	[n][m]int32 h;
+	[3][3]int32 j;
+	2 -> h[1][2];
+	h -> j;
+	printf("%d %d %d\n", g[1][1], j[1][2], int32(len(@g[2])));
+
+	[n]S s;
+	[m]S t;
+	s[1].v.push(11);
+	s -> t;
+	[+]int32 v = [5, 6, 7];
+	[m]int32 p;
+	v -> p;
+	[n]int32 q;
+	v -> q;
+	q -> v;
+	printf("%d %d %d %d\n", t[1].v[0], p[2], q[1], int32(len(@v)));
+}
+muntrace();

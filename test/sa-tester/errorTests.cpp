@@ -1489,7 +1489,6 @@ TEST(sa_error, give_and_take)
 		{"error_915_owner_view_target_shape.pa", ":3:1: error: cannot transfer '[4]int8' into '[4]int32'"},
 		// A `[]T` parameter keeps no length, nor does a `[+]T` take one from the array it copies.
 		{"error_916_copy_from_unsized_borrow.pa", ":4:2: error: cannot copy '[?]int32' into '[4]int32'"},
-		{"error_917_varr_copy_from_run_size.pa", ":4:1: error: cannot copy '[?]int32' into '[+]int32'"},
 		{"error_918_operator_func_arity.pa", ":2:1: error: operator function '%' must take two parameters."},
 		{"error_919_operator_func_no_struct.pa",
 		 ":1:1: error: operator function '*' must take a struct ('T' or '@T') parameter."},

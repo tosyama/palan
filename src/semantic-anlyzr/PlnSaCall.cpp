@@ -16,6 +16,7 @@ static json makeTempExpr(json body, json value, json release)
 	json out = {{"expr-type","temp"},{"body",move(body)},{"release",move(release)}};
 	if (value.contains("value-type")) out["value-type"] = value["value-type"];
 	if (value.contains("category")) out["category"] = value["category"];
+	if (value.value("resized", false)) out["resized"] = true;
 	out["value"] = move(value);
 	return out;
 }
@@ -971,6 +972,12 @@ optional<SaDiag> PlnSemanticAnalyzer::callArgMismatch(const json& argAst, const 
 	const json& paramVT = param["var-type"];
 	// What an owned parameter takes is copied into it.
 	if (!isCFunc && isOwnedBlock(paramVT)) {
+		if (givenIn(argAst) && isArrLevel(paramVT)) {
+			MoveFit fit = moveShapeFit(saArg["value-type"], paramVT, /*inherits=*/false, saArg.value("resized", false));
+			if (fit == MoveFit::Match) return nullopt;
+			return SaDiag{fit == MoveFit::RunSize ? E_MoveRunSize : E_TransferShapeMismatch, // LCOV_EXCL_BR_LINE
+			              typeDisplayName(paramVT), typeDisplayName(saArg["value-type"])};
+		}
 		if (copySourceMatch(saArg["value-type"], paramVT)) return nullopt;
 		return SaDiag{E_IncompatibleTypes, typeDisplayName(saArg["value-type"]), typeDisplayName(paramVT)}; // LCOV_EXCL_BR_LINE
 	}

@@ -1254,6 +1254,13 @@ TEST(build_mgr, runtime_size_ownership_mtrace) {
 	expectMtraceRun("376_runtime_size_ownership_mtrace", "1 4 3 10\n3:1 1:1 \n7 9\n5 5\n", 43);
 }
 
+TEST(build_mgr, runtime_size_move_copy_mtrace) {
+	// A variable given an array takes its size; a row, a field, a constant-size
+	// variable or a parameter keeps its own, given an array through a cast. A
+	// copy goes as far as the shorter at each level, rows in place one by one.
+	expectMtraceRun("429_runtime_size_move_copy_mtrace", "2 7 4 5\n6 8 9 3\n4 2 2\n11 7 6 2\n", 42);
+}
+
 TEST(build_mgr, owner_view_target_mtrace) {
 	// A block given to a C pointer viewed as its owner is held there until it is
 	// taken back over, sized at run time on both sides.

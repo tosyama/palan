@@ -195,12 +195,13 @@ json PlnSemanticAnalyzer::opaqueConversion(const json& expr, const json& src, co
 	bool owned = isOwnedBlock(from);
 	const StructDef* def = nullptr;
 	json target;
-	if (toOpaque && owned && opaqueContentsVisible(*toOpaque) && copyShapeMatch(from, toOpaque->contentsOwned)) {
+	auto moves = [](const json& f, const json& t) { return moveShapeFit(f, t, false, false) == MoveFit::Match; };
+	if (toOpaque && owned && opaqueContentsVisible(*toOpaque) && moves(from, toOpaque->contentsOwned)) {
 		def = toOpaque;
 		target = toStructPntrType(resolved);
 	} else if (fromOpaque && owned && opaqueContentsVisible(*fromOpaque)) {
 		json out = ownedTypeOf(expr, resolved);
-		if (!out.is_null() && copyShapeMatch(fromOpaque->contentsOwned, out)) {
+		if (!out.is_null() && moves(fromOpaque->contentsOwned, out)) {
 			def = fromOpaque;
 			target = move(out);
 		}
@@ -933,7 +934,7 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		sa_expr["value-type"] = {{"type-kind", "prim"}, {"type-name", "bool"}}; // LCOV_EXCL_BR_LINE
 
 	} else if (expr_type == "cast") {
-		return sa_expr_cast(expr);
+		return sa_expr_cast(expr, false);
 
 	} else if (expr_type == "call") {
 		if (expr.contains("converts-to")) return sa_expr_call(expr);
@@ -1466,7 +1467,34 @@ json PlnSemanticAnalyzer::ownedCastType(const json& locNode, const json& written
 	return owned;
 } // LCOV_EXCL_BR_LINE
 
-json PlnSemanticAnalyzer::sa_expr_cast(const json& expr)
+// An array type with its levels' sizes left out, which are all a cast to
+// another array type may change.
+static json withoutArrSizes(json t)
+{
+	for (json* cur = &t; isArrLevel(*cur); cur = &(*cur)["base-type"]) {
+		cur->erase("arr-size");
+		cur->erase("run-size");
+		if (isArrLevel((*cur)["base-type"])) cur->erase("stride");
+	}
+	return t;
+} // LCOV_EXCL_BR_LINE
+
+// The lengths a cast to an array type sets on the levels it gives a length
+// known only at run time, kept for a variable taking the array over.
+json PlnSemanticAnalyzer::castLens(const json& expr, const json& written, json view)
+{
+	bool runSized = false;
+	for (const json* t = &view["value-type"]; isArrLevel(*t); t = &(*t)["base-type"])
+		runSized = runSized || t->value("run-size", false);
+	if (runSized) {
+		json lens = json::array();
+		for (auto& len : arrVarStorage(expr, resolveKnownType(expr, written)).lens) lens.push_back(move(len));
+		view["lens"] = move(lens);
+	}
+	return view;
+} // LCOV_EXCL_BR_LINE
+
+json PlnSemanticAnalyzer::sa_expr_cast(const json& expr, bool moving)
 {
 	if (expr["src"].value("expr-type", "") == "transfer") {
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_TransferCast) << endl;
@@ -1483,6 +1511,19 @@ json PlnSemanticAnalyzer::sa_expr_cast(const json& expr)
 	// A pointer viewed as the owner of what it points to: no bits change, and
 	// whether it really holds that is the programmer's responsibility.
 	json owned = ownedCastType(expr, written);
+	// An owned array given away at other sizes, which only a move may do, as
+	// whether it has them is the programmer's responsibility.
+	if (!owned.is_null() && isArrLevel(owned) && isArrLevel(from) && isOwnedBlock(from)) {
+		if (!moving || withoutArrSizes(from) != withoutArrSizes(owned)) {
+			cerr << locPrefix(expr) << PlnSaMessage::getMessage(moving ? E_TransferShapeMismatch : E_ResizeNotMoved,
+				typeDisplayName(owned), typeDisplayName(from)) << endl;
+			exit(1);
+		}
+		json view = wrapConvert(src, owned);
+		view["category"] = "resized";
+		view["resized"] = true;
+		return castLens(expr, written, move(view));
+	}
 	if (!owned.is_null()) {
 		if (from.value("type-kind", "") != "pntr" || !from.contains("mutable")) {
 			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_OwnerViewNeedsPtr, typeDisplayName(written)) << endl;
@@ -1490,8 +1531,9 @@ json PlnSemanticAnalyzer::sa_expr_cast(const json& expr)
 		}
 		json view = wrapConvert(src, owned);
 		view["category"] = "owner-view";
+		view["resized"] = true;
 		if (!from["mutable"].get<bool>()) view["read-only"] = true;
-		return view;
+		return castLens(expr, written, move(view));
 	}
 
 	json resolved = resolveKnownType(expr, written);

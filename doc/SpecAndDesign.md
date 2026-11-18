@@ -582,9 +582,13 @@ are:
   and a part of it).
 - Ownership is part of a function pointer type, and only a C function named in a cast may change it,
   as C's types say nothing about it: ownership leaves or enters Palan only where the call says so.
-- An array level sized at run time is freed and copied by the lengths its owner keeps, and a
-  size known only at run time on either side matches any size; that the sizes agree is the
-  programmer's responsibility (doc/Issues.md #21).
+- An array does not carry its lengths: a variable keeps those its type leaves to run time, and a
+  row shares its parent's. A variable given an array takes its lengths over. A row, a field, a
+  parameter or a constant size cannot, so a move there needs sizes known at compile time on both
+  sides, or a cast (`a as [m]T`) saying they agree, which is not checked. The cast is allowed only
+  on what is given away: read through, it would read past a shorter array.
+- A copy goes as far as the shorter of the two at each level, which needs no agreement. Rows laid
+  out in place whose lengths may differ have different strides, so they are copied one by one.
 
 ## 5. Working Directory and Output Files
 ### 5.1 Working Directory

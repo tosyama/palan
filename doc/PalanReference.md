@@ -233,6 +233,8 @@ cinclude <stdlib.h>;
   as it is. A `@X` pointer can be viewed this way only to copy from it. A `@!X` location is
   viewed this way to be given a value: `v ->> loc as T` (see
   [Ownership Across C Functions](#ownership-across-c-functions)).
+- From an owned array to the same array of other sizes (`a as [m]T`), only where it is given
+  away (see [Sizes Known Only at Run Time](#sizes-known-only-at-run-time)).
 
 A value is never cast into an owned type — a cast never creates ownership — and a struct value
 can't be cast into a pointer: take its address first (`@!s as @!uint8`).
@@ -1278,24 +1280,34 @@ cinclude <stdio.h>;
 ### Sizes Known Only at Run Time
 
 An array variable whose size is known only at run time (`[n]int32 a;` for a variable `n`) keeps
-that size from its declaration. It is moved, given, taken over and copied like any other
-array, by the sizes of the variable or row receiving the value or releasing it; that the two
-sizes agree is the program's responsibility, as it is not checked:
+that size from its declaration, and the rows of `[3][m]int32 mm;` share the one `mm` keeps. An
+array does not carry its size with it:
 
 ```palan
-int64 n = 100;
+int64 n = 2;
+int64 m = 4;
 [n]int32 a;
-[n]int32 b <<= a;        // a is now NULL
-[n]int32 c;
-b -> c;                  // copies n elements
-int64 len_a = len(@a);   // n
-for copy x in c { }      // n times
+[m]int32 b;
+a ->> b;                    // b takes a's size: len(@b) is 2, and a is now NULL
+[m]int32 c;
+b -> c;                     // copies 2 elements, the shorter of the two
+[3][m]int32 mm;
+[n]int32 d;
+d as [m]int32 ->> mm[1];    // a row's size cannot change: the cast says d has it
 ```
 
+- A variable given an array (`->>`, `<<=`) takes over its size: `[m]int32 e <<= a;` has `a`'s.
+- A row, a field, a parameter, a return value and a variable of constant size keep theirs. An
+  array is given to one only if both sizes are known at compile time and are equal, or through
+  a cast to the receiver's size, which is not checked.
+- `a as [m]T` gives the array `a` owns other sizes, with the same element type and layout. It is
+  written only where the array is given away (`->>`, `<<=`, `>>`, `return`), and `a` becomes
+  NULL as usual.
+- `->` copies each level as far as the shorter of the two goes; the receiving array keeps its
+  size. Sizes known at compile time on both sides must still be equal.
 - `len` and `for` read the size kept, as for a row of the variable (`len(@m[0])`,
   `for copy x in m[0]`).
-- A `[]T` parameter keeps no size, so it cannot be copied from into an array, and a `[+]T`
-  cannot copy from an array whose size is known only at run time.
+- A `[]T` parameter keeps no size, so it cannot be copied from into an array.
 - A parameter's or return value's sizes are known at compile time.
 
 ### Stack Arrays (`$[n]T`)
@@ -1545,7 +1557,8 @@ minos[0][3] -> mino[0];      // copy one struct element
 
 - The source must have the same element type and layout as the destination, and the same sizes
   where both are known at compile time; otherwise it is a compile error. A source may be borrowed
-  (`@[n]T`, `@T`). A size known only at run time is [the owner's](#sizes-known-only-at-run-time).
+  (`@[n]T`, `@T`). A size known only at run time is copied
+  [up to the shorter one](#sizes-known-only-at-run-time).
 - What the destination owns is copied too: owned struct fields and arrays, and the structs of a
   `[n]T` array, get copies of the source's. A `@T`/`@!T` pointer is copied as a pointer.
 - A struct returned by a function is copied the same way, and then freed. A `[]T` return has
@@ -1672,7 +1685,8 @@ NULL) or a call result:
 ```
 
 - `b` must own its array or struct: not a `$` variable, a borrow or a primitive. `v` must have
-  `b`'s type (for an array, the same sizes where both are known at compile time).
+  `b`'s type (for an array, the same sizes where both are known at compile time; a size `b`
+  leaves to run time is [`v`'s](#sizes-known-only-at-run-time)).
 
 #### Ownership Across C Functions
 
@@ -1886,8 +1900,8 @@ printf("%ld\n", len(@m));    // 5
 
 - A `[+]T` parameter receives a copy of the argument. Returning a borrow (`return v;` for a
   `@[+]T v`) returns a copy, as for a struct.
-- Copying into a `[+]T` takes any number of elements and sets the length to it; a `[+]T` cannot
-  be copied into a `[n]T`.
+- Copying into a `[+]T` takes any number of elements and sets the length to it. Copying a `[+]T`
+  into a `[n]T` copies as many as both have; the `[n]T` keeps its size.
 - Changing the length can move the elements, so a borrow of an element (`@!v[i]`) or the
   elements given to a `[]T` must not be kept across a `push` or `resize`. This is not checked.
 

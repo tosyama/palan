@@ -833,6 +833,32 @@ inline bool copyShapeMatch(const json& from, const json& to) {
 	    && from.value("type-name","") == to.value("type-name","");
 }
 
+// Whether a level of the array vt has a length known only at run time.
+inline bool hasRunSize(const json& vt)
+{
+	for (const json* t = &vt; isArrLevel(*t); t = &(*t)["base-type"])
+		if (t->value("run-size", false)) return true;
+	return false;
+}
+
+// A move hands a block over with the lengths it has. A level the receiving
+// variable keeps a length for at run time (`inherits`) takes them over; any
+// other level's length is fixed, so a length known only at run time on either
+// side cannot be shown to agree with it, unless a cast (`resized`) sets it.
+enum class MoveFit { Match, Mismatch, RunSize };
+inline MoveFit moveShapeFit(const json& from, const json& to, bool inherits, bool resized)
+{
+	if (!isArrLevel(to) || !isArrLevel(from))
+		return copyShapeMatch(from, to) ? MoveFit::Match : MoveFit::Mismatch;
+	if (!copyShapeMatch(from, to))
+		return MoveFit::Mismatch;
+	MoveFit fit = moveShapeFit(from["base-type"], to["base-type"], inherits, resized);
+	bool fixed = !(inherits && to.value("run-size", false));
+	if (fit == MoveFit::Match && fixed && !resized && (!from.contains("arr-size") || !to.contains("arr-size")))
+		return MoveFit::RunSize;
+	return fit;
+}
+
 // An array type as its owner holds it, without a borrow's permissions.
 inline json withoutArrPermission(json t)
 {
@@ -850,9 +876,10 @@ inline bool varrCopySourceMatch(const json& from, const json& vt)
 {
 	const json& elem = vt["base-type"]["base-type"];
 	// A writable pointer slot may be copied into a read-only one, as between sized arrays.
+	bool sized = from.contains("arr-size") || from.value("run-size", false);
 	if (isPtrBorrow(elem)) {
 		const json* fe = isVarrPntr(from) ? &from["base-type"]["base-type"]
-		               : isArrLevel(from) && from.contains("arr-size") && !from.value("embedded", false)
+		               : isArrLevel(from) && sized && !from.value("embedded", false)
 		               ? &from["base-type"] : nullptr;
 		return fe && copyShapeMatch(*fe, elem);
 	}
@@ -862,15 +889,27 @@ inline bool varrCopySourceMatch(const json& from, const json& vt)
 	// A contiguous struct array's type has the same shape as a lone struct's
 	// storage, so only its stride tells it from one.
 	if (isVarrEmbedded(vt))
-		return from.contains("stride") && from.contains("arr-size") && withoutArrPermission(from["base-type"]) == elem;
-	return isArrLevel(from) && from.contains("arr-size") && !from.value("embedded", false)
+		return from.contains("stride") && sized && withoutArrPermission(from["base-type"]) == elem;
+	return isArrLevel(from) && sized && !from.value("embedded", false)
 	    && withoutArrPermission(from["base-type"]) == elem;
 }
 // What a copy into vt, other than a lone struct, can take: a `[+]T` any run
-// of its elements, anything else the same shape.
+// of its elements, a sized array the elements of a `[+]T` laid out the same
+// way, anything else the same shape.
 inline bool copySourceMatch(const json& from, const json& vt)
 {
-	return isVarrStorage(vt) ? varrCopySourceMatch(from, vt) : copyShapeMatch(from, vt);
+	if (isVarrStorage(vt)) return varrCopySourceMatch(from, vt);
+	if (isVarrPntr(from) && isArrLevel(vt) && (vt.contains("arr-size") || vt.value("run-size", false))) {
+		const json& fe = from["base-type"]["base-type"];
+		if (isPtrBorrow(fe) || isPtrBorrow(vt["base-type"]))
+			return isPtrBorrow(fe) && !vt.value("embedded", false) && copyShapeMatch(fe, vt["base-type"]);
+		json asVarr = {{"type-kind","pntr"},{"base-type",from["base-type"]}};
+		json run = withoutArrPermission(vt);
+		run.erase("arr-size");
+		run["run-size"] = true;
+		return varrCopySourceMatch(run, asVarr);
+	}
+	return copyShapeMatch(from, vt);
 }
 
 // An array is borrowed with one permission for every level down to its

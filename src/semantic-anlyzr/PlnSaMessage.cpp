@@ -622,7 +622,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_CopyShapeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
-			return "cannot copy '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's.";
+			return "cannot copy '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and sizes, the same where both are known at compile time.";
 
 		case E_AddrOfBorrowed:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -702,7 +702,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_TransferShapeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
-			return "cannot transfer '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's.";
+			return "cannot transfer '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time.";
 
 		case E_TransferToNonOwnedVar:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -1039,6 +1039,16 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ReleaseFuncDup:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' has another 'release' function; a type has one.";
+
+		case E_MoveRunSize:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "cannot transfer '" + arg2 + "' into '" + arg1 + "': its size cannot change there, and a size known "
+			       "only at run time cannot be shown to match it; set the size with 'as' if they match.";
+
+		case E_ResizeNotMoved:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "an array cast to '" + arg1 + "' can only be given away: '<<=', '->>', '>>' or 'return'.";
 
 		default:
 			BOOST_ASSERT(false);

@@ -454,7 +454,7 @@ json PlnSemanticAnalyzer::sa_var_decl(const json& stmt)
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
-json PlnSemanticAnalyzer::takeOverInit(const json& stmt, const json& var, VarStorage storage, json& pre)
+json PlnSemanticAnalyzer::takeOverInit(const json& stmt, json& var, VarStorage storage, json& pre)
 {
 	const string& name = var["name"].get<string>();
 	if (storage == VarStorage::Frame) {
@@ -467,12 +467,25 @@ json PlnSemanticAnalyzer::takeOverInit(const json& stmt, const json& var, VarSto
 		exit(1);
 	}
 	json value = giveValue(var["init"], stmt, "<<=", pre, pre);
-	if (!copyShapeMatch(value["value-type"], owned)) {
-		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TransferShapeMismatch,
-			typeDisplayName(owned), typeDisplayName(value["value-type"])) << endl;
-		exit(1);
+	checkMoveShape(stmt, value, owned, /*inherits=*/true);
+	// A length the declaration leaves to run time is the one the array has,
+	// held in a temp so that the level stays one known only at run time.
+	// LCOV_EXCL_BR_START
+	if (hasRunSize(owned)) {
+		json lens = valueLens(value);
+		const json u64 = {{"type-kind","prim"},{"type-name","uint64"}};
+		json* level = &var["var-type"];
+		size_t k = 0;
+		for (const json* t = &owned; isArrLevel(*t); t = &(*t)["base-type"], level = &(*level)["base-type"], k++) {
+			if (!t->value("run-size", false)) continue;
+			string temp = "__len_" + to_string(tempVarCounter_++);
+			declareVar(temp, u64);
+			pre.push_back({{"stmt-type","var-decl"},
+			               {"vars",json::array({{{"name",temp},{"var-type",u64},{"init",wrapConvert(lens[k], u64)}}})}});
+			(*level)["size-expr"] = {{"expr-type","id"},{"name",temp}};
+		}
 	}
-	// Sizes known only at run time on either side are the variable's from here on.
+	// LCOV_EXCL_BR_STOP
 	value["value-type"] = owned;
 	return {{"expr-type", "pinned"}, {"sa", move(value)}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE

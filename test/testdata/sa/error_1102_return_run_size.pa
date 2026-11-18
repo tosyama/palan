@@ -1,0 +1,5 @@
+func g(int64 n) -> [4]int32
+{
+	[n]int32 a;
+	return a;
+}

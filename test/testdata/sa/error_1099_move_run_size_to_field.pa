@@ -1,0 +1,5 @@
+type S { [4]int32 f; };
+int64 n = 2;
+S s;
+[n]int32 a;
+a ->> s.f;
