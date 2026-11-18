@@ -1059,7 +1059,7 @@ TEST(sa_error, expr_rooted_access)
 TEST(sa_error, literal_conversion)
 {
 	const string noCopy = "error: cannot copy '[?]uint8' into 'text'";
-	const string borrowed = "error: a string literal converted to 'text' is a temporary value with no owner to borrow from";
+	const string borrowed = "error: a literal converted to 'text' is a temporary value with no owner to borrow from";
 	const pair<string, string> cases[] = {
 		{"error_987_literal_no_conversion.pa", ":2:1: " + noCopy},
 		{"error_988_literal_conversion_needs_args.pa", ":3:1: " + noCopy},
@@ -1071,6 +1071,10 @@ TEST(sa_error, literal_conversion)
 		{"error_996_literal_borrowed_assign.pa", ":5:1: " + borrowed},
 		{"error_993_literal_conversion_overloads.pa", ":7:1: error: Ambiguous function call 'f': it can mean f(@other), f(@text)."},
 		{"error_994_literal_no_conversion_arg.pa", ":8:1: error: cannot convert '[?]uint8' to '@text'."},
+		{"error_1092_numeric_no_conversion.pa", ":2:1: error: cannot copy 'int64' into 'big'"},
+		{"error_1093_numeric_conversion_ambiguous.pa", ":4:9: error: Ambiguous function call 'big': it can mean big(int32), big(int16)."},
+		{"error_1094_numeric_borrowed_var.pa", ":3:10: error: a literal converted to 'big' is a temporary value"},
+		{"error_1095_numeric_var_expr.pa", ":4:1: error: cannot copy 'int64' into 'big'"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

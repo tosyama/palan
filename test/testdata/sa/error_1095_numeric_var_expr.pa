@@ -1,0 +1,4 @@
+type big { int64 v; };
+func big(int64 n) -> big b { }
+int64 x = 3;
+big a = x * 3;

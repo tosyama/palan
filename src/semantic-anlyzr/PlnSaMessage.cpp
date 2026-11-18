@@ -647,7 +647,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_ConvertedLiteralToBorrow:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "a string literal converted to '" + arg1 + "' is a temporary value with no owner to "
+			return "a literal converted to '" + arg1 + "' is a temporary value with no owner to "
 			       "borrow from; declare a '" + arg1 + "' variable initialized with it and borrow that "
 			       "(only a call argument or an operator's operand can borrow it directly).";
 

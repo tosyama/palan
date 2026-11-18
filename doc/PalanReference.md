@@ -1144,8 +1144,9 @@ show(2.5);          // float 2.5
   ambiguous: with `f(int32)` and
   `f(int32, int32 = 0)`, `f(1)` is a compile error, and `f(1, 0)` calls the second. A function
   using defaults or a variadic parameter is called when it is the only one that fits.
-- A string literal [converts](#conversion-from-a-string-literal) to a struct parameter only when no
-  function fits without the conversion, so `f(@[]uint8)` is chosen over `f(@name)` for `f("Ann")`.
+- A literal [converts](#conversion-from-a-literal) to a struct parameter only when no function
+  fits without the conversion, so `f(@[]uint8)` is chosen over `f(@name)` for `f("Ann")`, and
+  `f(int64)` over `f(big)` for `f(12)`.
   Among those needing it, the rules above apply, a converted argument counting as exact.
 
 ### Operator Functions
@@ -2421,11 +2422,12 @@ own it. So is binding a pointer returned by a call that was given such a struct
 Returning a struct the function doesn't own — a parameter, a field, or an array element — returns
 a copy of it (including what it owns), which the caller owns.
 
-### Conversion from a String Literal
+### Conversion from a Literal
 
-A function named like a struct type, returning it and callable with a string literal alone (its
-other parameters have [defaults](#default-arguments) or are [variadic](#variadic-arguments)),
-converts a string literal to that type wherever a value of the type, or a `@T` of it, is expected:
+A function named like a struct type, returning it and callable with a literal alone (its other
+parameters have [defaults](#default-arguments) or are [variadic](#variadic-arguments)), converts a
+string, integer or floating-point literal to that type wherever a value of the type, or a `@T` of
+it, is expected:
 
 ```palan
 type name { [+]uint8 bytes; };
@@ -2435,6 +2437,13 @@ func greet(@name who) { ... }
 name a = "Ann";          // name a = name("Ann");
 "Bob" -> a;              // name("Bob") -> a;
 greet("Cy");             // greet(@name("Cy"));
+
+type big { [+]uint32 digits; };
+func big(int64 n) -> big b { ... }
+func big(flo64 f) -> big b { ... }
+
+big x = 12;              // big x = big(12);
+big y = 1.5;             // big y = big(1.5);
 ```
 
 - It happens in a variable's initializer, the source of `->`, an argument (a variadic one too),
@@ -2444,11 +2453,15 @@ greet("Cy");             // greet(@name("Cy"));
   the statement has been evaluated. Binding it to a `@T` variable, field or return is a compile
   error, since nothing would own it: declare a `T` variable initialized with the literal and
   borrow that.
-- Only a string literal converts. Another value is converted by calling the function
-  (`name(getenv("HOME"))`). Nothing converts for a `@!T`, and `"Ann" as name` is a compile error.
+- A [const](#constant-declarations) or a constant expression converts as the literal it folds to,
+  computed in the literal's default type (`int64`, `uint64` or `flo64`): `big x = 12 * 3;` is
+  `big(36)`. Any other value is converted by calling the function (`name(getenv("HOME"))`,
+  `big(n * 3)`), and so is `true`, an enum value or a character literal, which have types of their
+  own. Nothing converts for a `@!T`, and `"Ann" as name` is a compile error.
 - The functions are those of the name visible at the literal, including those of a module
-  imported with an alias (`import "names.pa" as N;` converts for `N.name`). If several can be
-  called with the literal alone, it is a compile error.
+  imported with an alias (`import "names.pa" as N;` converts for `N.name`). Among those callable
+  with the literal alone, one is chosen as for an [overloaded](#overloading) call: `big(int64)` for
+  `12` and `big(flo64)` for `1.5` above. If none ranks first, it is a compile error.
 - In an [overloaded](#overloading) call, a candidate needing a conversion is considered only when
   no other fits.
 

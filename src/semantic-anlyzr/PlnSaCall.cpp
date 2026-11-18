@@ -199,9 +199,8 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
                                    bool isCFunc, const string& funcName)
 {
 	const json& paramVT = param["var-type"];
-	// A string literal never fits a struct parameter as it is.
-	if (arg.ast.value("expr-type", "") == "lit-str" && literalConversion(arg.ast, paramVT) != arg.ast) // LCOV_EXCL_BR_LINE
-		return ArgFit::Converted;
+	// A literal never fits a struct parameter as it is.
+	if (literalConversion(arg.ast, paramVT) != arg.ast) return ArgFit::Converted;
 	auto fitOf = [&](const json& ast, const json& sa0) {
 		json sa = takesVarrData(sa0["value-type"], &paramVT, isCFunc) ? varrData(sa0) : sa0;
 		if (callArgMismatch(ast, sa, param, argIdx, isCFunc, funcName)) return ArgFit::None;
@@ -298,7 +297,7 @@ string PlnSemanticAnalyzer::calleesText(const string& name, const vector<Callee>
 // Among several functions of one name, the one every argument fits; when more
 // than one fits, the one every argument matches exactly, or else the one every
 // argument matches but for a writable borrow given as read-only. Those needing
-// a string literal converted are only looked at when no other fits, and are
+// a literal converted are only looked at when no other fits, and are
 // ranked the same way among themselves, a converted argument as exact.
 CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<Callee>& cands,
                                                const vector<CallArg>& args)
@@ -820,18 +819,32 @@ vector<Callee> PlnSemanticAnalyzer::forProtocolCallees(const string& name, const
 	return fit;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
-// The functions converting a string literal to the struct `structVT` points
+// What a literal conversion converts `ast` to: the literal it folds to, unless
+// that literal has a type of its own (a bool, a character, a C constant), or
+// null when it folds to none.
+json PlnSemanticAnalyzer::convertibleLiteral(const json& ast)
+{
+	json lit = foldConstExpr(ast);
+	string et = lit.value("expr-type", "");
+	if (et == "lit-str" || et == "lit-uint" || et == "lit-flo") return lit;
+	if (et == "lit-int" && !lit.contains("value-type") && !lit.contains("char")) return lit;
+	return json();
+}
+
+// The functions converting the literal `lit` to the struct `structVT` points
 // to: those visible by the type's name, under any alias since a conversion is
 // never written qualified, returning the struct and callable with the literal
 // alone.
-vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT)
+vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT, const json& lit)
 {
 	const json& structType = structVT["base-type"];
 	string name = PlnSaMessage::writtenTypeName(structType["type-name"].get<string>());
 	vector<Callee> found = findCalleesUnderAnyAlias(name);
 
-	json lit = {{"expr-type", "lit-str"}}; // LCOV_EXCL_BR_LINE
-	vector<CallArg> litArgs{{lit, false, {{"expr-type", "lit-str"}, {"value-type", strLitType()}}}}; // LCOV_EXCL_BR_LINE
+	// As analyzeCallArgs gives the literal: a number waits for the parameter's type.
+	bool isStr = lit["expr-type"] == "lit-str";
+	vector<CallArg> litArgs{isStr ? CallArg{lit, false, {{"expr-type", "lit-str"}, {"value-type", strLitType()}}} // LCOV_EXCL_BR_LINE
+	                              : CallArg{lit, true, json(), false, literalDefaultType(lit)}}; // LCOV_EXCL_BR_LINE
 	vector<Callee> convs;
 	set<string> seen;
 	for (auto& c : found) {
@@ -851,20 +864,22 @@ vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT)
 	return convs;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
-// A string literal where a struct `T` or a borrow `@T` is expected, as the
-// call converting it would be written: `T(lit)` or `@T(lit)`. Anything else
-// is returned as it is.
+// A literal where a struct `T` or a borrow `@T` is expected, as the call
+// converting it would be written: `T(lit)` or `@T(lit)`. Anything else is
+// returned as it is.
 json PlnSemanticAnalyzer::literalConversion(const json& ast, const json& toVT)
 {
-	if (ast.value("expr-type", "") != "lit-str" || !isStructPntr(toVT) || toVT.value("mutable", false)) // LCOV_EXCL_BR_LINE
-		return ast;
+	if (!isStructPntr(toVT) || toVT.value("mutable", false)) return ast; // LCOV_EXCL_BR_LINE
+	json lit = convertibleLiteral(ast);
+	if (lit.is_null()) return ast;
 	json storage = toVT;
 	storage.erase("mutable");
-	if (literalConversions(storage).empty()) return ast;
+	if (literalConversions(storage, lit).empty()) return ast;
 	// LCOV_EXCL_BR_START
+	if (ast.contains("loc")) lit["loc"] = ast["loc"];
 	json call = {{"expr-type", "call"},
 	             {"name", PlnSaMessage::writtenTypeName(storage["base-type"]["type-name"].get<string>())},
-	             {"args", json::array({ast})}, {"converts-to", storage}};
+	             {"args", json::array({lit})}, {"converts-to", storage}};
 	if (ast.contains("loc")) call["loc"] = ast["loc"];
 	if (isStructStorage(toVT)) return call;
 	json borrow = {{"expr-type", "addr-of"}, {"mutable", false}, {"object", move(call)}};
@@ -879,7 +894,7 @@ json PlnSemanticAnalyzer::sa_expr_call(const json& expr)
 	if (expr.contains("converts-to")) {
 		json call = expr;
 		call.erase("converts-to");
-		return makeCall(call, literalConversions(expr["converts-to"]), callName);
+		return makeCall(call, literalConversions(expr["converts-to"], expr["args"][0]), callName);
 	}
 	if (expr.contains("iterates")) {
 		json call = expr;

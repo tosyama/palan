@@ -1891,3 +1891,37 @@ TEST(sa, literal_conversion)
 	ASSERT_EQ(funcName(words["name"]), "words");
 	ASSERT_EQ(words["ret-dest"]["name"], "w");
 }
+
+TEST(sa, numeric_literal_conversion)
+{
+	cleanTestEnv();
+	json jout = written(run_sa("../test/testdata/sa/353_numeric_literal_conversion.pa"));
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	// The overload taking the literal's default type converts it; a constant
+	// expression or const is folded first.
+	auto paramType = [](const json& call) {
+		string name = call["name"];
+		return name.substr(name.rfind('.') + 1);
+	};
+	auto isConversion = [&](const json& call, const string& from, const string& value) {
+		return call["expr-type"] == "call" && funcName(call["name"]) == "big"
+		    && paramType(call) == from && call["args"][0]["value"] == value;
+	};
+	ASSERT_TRUE(isConversion(stmts[1]["body"], "int64", "12"));
+	ASSERT_TRUE(isConversion(stmts[2]["body"][1]["body"], "flo64", "1.5"));
+	ASSERT_TRUE(isConversion(stmts[3]["body"]["args"][0]["body"][1]["body"], "int64", "-12"));
+	// An overload taking the literal as it is wins over a conversion.
+	ASSERT_EQ(paramType(stmts[4]["vars"][0]["init"]), "int64");
+	// Operator operands.
+	ASSERT_TRUE(isConversion(stmts[6]["body"]["args"][1]["body"][1]["body"], "int64", "2"));
+	ASSERT_TRUE(isConversion(stmts[7]["vars"][0]["init"]["args"][1]["body"][1]["body"], "int64", "36"));
+	// A struct literal's field, array literal elements, and return.
+	ASSERT_TRUE(isConversion(stmts[9]["body"][1]["body"], "int64", "10"));
+	ASSERT_TRUE(isConversion(stmts[12]["body"][1]["body"], "int64", "1"));
+	ASSERT_TRUE(isConversion(stmts[13]["body"][1]["body"], "int64", "2"));
+	ASSERT_TRUE(isConversion(jout["functions"][7]["body"][1]["body"], "int64", "7"));
+	// A string const converts as the literal does.
+	ASSERT_EQ(funcName(stmts[15]["body"]["name"]), "name");
+	ASSERT_EQ(stmts[15]["body"]["ret-dest"]["name"], "n");
+}

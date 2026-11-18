@@ -151,7 +151,7 @@ struct CalleeChoice {
 };
 
 // Narrowed: exact but for a writable outermost pointer given as read-only.
-// Converted: fits only once a string literal is converted to the parameter's struct.
+// Converted: fits only once a literal is converted to the parameter's struct.
 enum class ArgFit { None, Converted, Viable, Narrowed, Exact };
 
 // A diagnostic decided without exiting, so a check can also just test a fit.
@@ -415,7 +415,8 @@ class PlnSemanticAnalyzer {
 	json   makeCall(const json& expr, const vector<Callee>& cands, const string& writtenName);
 	vector<Callee> findCalleesUnderAnyAlias(const string& name) const;
 	vector<Callee> forProtocolCallees(const string& name, const json& structVT) const;
-	vector<Callee> literalConversions(const json& structVT);
+	json   convertibleLiteral(const json& ast);
+	vector<Callee> literalConversions(const json& structVT, const json& lit);
 	json   literalConversion(const json& ast, const json& toVT);
 	vector<Callee> usableCallees(const json& expr, const vector<Callee>& cands) const;
 

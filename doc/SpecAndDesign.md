@@ -444,12 +444,16 @@ Two rules run through all of it:
 - An operand is evaluated in the order it is written, also when the function takes it in another
   position (a derived comparison).
 
-**String literal conversion.** The function named like the type is the conversion, so no syntax is
+**Literal conversion.** The function named like the type is the conversion, so no syntax is
 added.
 
-- Only a string literal converts implicitly, so an allocation and a copy are never hidden behind a
-  byte array that was not meant to become text. Integer and floating-point literals are left for
-  later (doc/Issues.md #33).
+- Only a value that folds to a literal converts implicitly (a literal, a const, a constant
+  expression), so an allocation and a copy are never hidden behind a byte array that was not meant
+  to become text. A constant expression is a literal wherever it is written, so it is folded in its
+  default type first (`big n = 12 * 3;` is `big(36)`). A literal with a type of its own (`true`, an
+  enum value, a character, `NULL`) does not convert.
+- The conversion is chosen among the functions callable with the literal alone as any overloaded
+  call is: one taking the literal's default type exactly wins.
 - The function is chosen by visibility, as an operator function is: a module may add one for a type
   it imports, and an alias does not hide it, since a conversion is never written qualified.
 - A candidate needing a conversion is considered only when none fits without one, so adding a

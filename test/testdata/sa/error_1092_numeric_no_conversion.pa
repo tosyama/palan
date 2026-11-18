@@ -1,0 +1,2 @@
+type big { int64 v; };
+big a = 12;

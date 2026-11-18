@@ -1422,6 +1422,10 @@ TEST(build_mgr, literal_conversion_mtrace) {
 		"init copy borrow owned v1 v2 ret cmp gt chained opret field field2 e2 e1 \n", 64);
 }
 
+TEST(build_mgr, numeric_literal_conversion_mtrace) {
+	expectMtraceRun("428_numeric_literal_conversion_mtrace", "12 15 -12 i3 30 eq 7 10 2 \n", 33);
+}
+
 TEST(build_mgr, chain_ahead_of_receiver_mtrace) {
 	expectMtraceRun("386_chain_ahead_of_receiver_mtrace", "5\n1 4\n1 4\n1 5\n4\n4\n4\n", 10);
 }
