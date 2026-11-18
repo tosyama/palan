@@ -591,3 +591,32 @@ TEST(sa_error, run_size_move)
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, use_after_given)
+{
+	const string given = " error: 'a' was given away and is NULL here; fill it with '->>' before using it.";
+	const pair<string, string> cases[] = {
+		{"error_1106_given_len.pa", ":4:16:" + given},
+		{"error_1107_given_read.pa", ":4:11:" + given},
+		{"error_1108_given_copy_into.pa", ":5:1:" + given},
+		{"error_1109_given_again.pa", ":5:1:" + given},
+		{"error_1110_given_by_arg.pa", ":4:6:" + given},
+		{"error_1111_given_by_take.pa", ":2:25:" + given},
+		{"error_1112_given_param.pa", ":5:9: error: 'p' was given away"},
+		{"error_1113_given_in_if.pa", ":9:6:" + given},
+		// Reached from the loop's head after the previous iteration gave it.
+		{"error_1114_given_prev_iteration.pa", ":5:7:" + given},
+		{"error_1115_given_break.pa", ":11:16:" + given},
+		{"error_1116_given_continue.pa", ":7:6:" + given},
+		{"error_1117_given_in_cond.pa", ":3:12:" + given},
+		{"error_1118_given_for_range.pa", ":5:14:" + given},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

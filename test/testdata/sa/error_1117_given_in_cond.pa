@@ -1,0 +1,4 @@
+func take([3]int32 x) -> bool { return true; }
+[3]int32 a;
+while take(a>>) {
+}

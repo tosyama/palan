@@ -60,6 +60,8 @@ void PlnSemanticAnalyzer::enterScope()
 
 void PlnSemanticAnalyzer::leaveScope()
 {
+	for (auto& [name, type] : varScopes.back())
+		given_.flow.vars.erase(name);
 	varScopes.pop_back();
 	cFuncScopes.pop_back();
 	cGlobalScopes.pop_back();
@@ -92,6 +94,7 @@ void PlnSemanticAnalyzer::declareVar(const string& name, const json& type, const
 		             || (*v->second.stmt)["loc"] != loc_node->value("loc", json()) || v->second.type == type);
 	}
 	varScopes.back()[name] = type;
+	given_.flow.vars[name] = {false, given_.seq};
 }
 
 const json* PlnSemanticAnalyzer::findVar(const string& name) const

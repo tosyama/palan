@@ -446,6 +446,8 @@ json PlnSemanticAnalyzer::sa_var_decl(const json& stmt)
 			json& var = one["vars"][0];
 			var["init"] = takeOverInit(one, var, storage[i], result);
 			var.erase("ownership-transfer");
+			// The next variable's initializer runs after this one has taken it.
+			applyPendingGiven();
 		}
 		for (auto& s : sa_resolved_var_decl(one, {storage[i]}))
 			result.push_back(move(s));
@@ -1733,9 +1735,12 @@ json PlnSemanticAnalyzer::sa_struct_var_decl(const json& stmt, VarStorage storag
 	return result;
 } // LCOV_EXCL_BR_LINE
 
-const json* PlnSemanticAnalyzer::lookupVar(const string& name, const json& locNode)
+const json* PlnSemanticAnalyzer::lookupVar(const string& name, const json& locNode, bool use)
 {
-	if (const json* vt = findVar(name)) return vt;
+	if (const json* vt = findVar(name)) {
+		if (use) checkNotGiven(name, locNode);
+		return vt;
+	}
 	const json* g = findCGlobal(name);
 	if (!g) return nullptr;
 	requireSupportedCGlobal(*g, name, locNode);

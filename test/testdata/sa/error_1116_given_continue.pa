@@ -1,0 +1,12 @@
+[3]int32 a;
+[3]int32 b;
+int32 i = 0;
+int32 x = 0;
+while i < 3 {
+	i + 1 -> i;
+	x + a[0] -> x;
+	if i == 2 {
+		a ->> b;
+		continue;
+	}
+}

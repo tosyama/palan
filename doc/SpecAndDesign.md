@@ -580,6 +580,11 @@ are:
 - `v>>` sets `v` to NULL only once all of the call's arguments have been evaluated, so a later
   argument can still borrow from it (`uv_write(req>>, s, @req.buf, ...)`, as C passes a request
   and a part of it).
+- A use after a give is found in the one pass that analyzes the code, so a loop is not analyzed
+  twice: a use is recorded for each loop it reaches from the head without a fill, and checked when
+  the loop ends against what its iterations leave. A give takes effect when its statement ends,
+  since a store may be analyzed twice (`pending-alias`) and the arguments after `v>>` may borrow
+  `v`; a use later in the same statement is not found.
 - Ownership is part of a function pointer type, and only a C function named in a cast may change it,
   as C's types say nothing about it: ownership leaves or enters Palan only where the call says so.
 - An array does not carry its lengths: a variable keeps those its type leaves to run time, and a

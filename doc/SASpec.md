@@ -1500,6 +1500,11 @@ E_MoveFromReadOnlyView).
   `expiring`, which `b` takes over as it does a call result, declared as an array variable is
   (its run-time sizes kept). Another type is E_TransferShapeMismatch, a `$` variable E_TakeIntoFrameVar, and a variable owning no block
   E_TransferToNonOwnedVar.
+- A local variable that has given its whole value away is NULL until `->>` fills it, and any
+  other use of it is E_UseAfterGiven, at the use (PalanReference.md states which are uses). It
+  becomes given when its statement (or `<<=` initializer) ends. Paths merge as given if given on
+  any; a use a loop's head reaches before a fill is checked when the loop ends against the end of
+  its body and each `continue`.
 - A cast whose target is an owned struct or array (`ownedTypeOf`) from a `@!X`/`@X` pointer is a
   `convert` to the owned type with category `owner-view` (and `read-only: true` from `@X`);
   from anything else it is E_OwnerViewNeedsPtr. An `owner-view` is copied where an owned

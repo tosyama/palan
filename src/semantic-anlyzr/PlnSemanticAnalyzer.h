@@ -261,6 +261,28 @@ class PlnSemanticAnalyzer {
 	// `pending-alias` statements waiting for that to be known.
 	set<string> escapedVars_;
 	int pendingAliases_ = 0;
+	// Which local variables have given their whole value away (`->>`, `>>`,
+	// `<<=`), along the statements' flow. `since` is the loop entry count when
+	// the variable was last declared or filled; a use in a loop entered after
+	// it reaches that loop's previous iteration. Names are unique among the
+	// scopes in effect (declareVar), so a name identifies its variable.
+	struct GivenState { bool given = false; int since = 0; };
+	struct GivenFlow { map<string, GivenState> vars; bool reachable = true; };
+	struct GivenLoop {
+		int entry;
+		map<string, json> exposed;  // first use reaching the loop's head, by name
+		GivenFlow entry_flow, back{{}, false}, exit{{}, false};
+	};
+	struct GivenTracking {
+		GivenFlow flow;
+		vector<GivenLoop> loops;
+		// Applied when the statement ends: the same statement may be analyzed
+		// twice (pending-alias), and the arguments after `x>>` may borrow x.
+		vector<pair<string, bool>> pending;  // name, given (else filled)
+		int seq = 0;
+	};
+	GivenTracking given_;
+	bool nullCompare_ = false;  // the variable being analyzed is compared with NULL
 	// Registered struct type definitions
 	map<string, StructDef> structDefs_;
 	// C struct tag -> the typedef name messages call it by (from c2ast).
@@ -361,7 +383,14 @@ class PlnSemanticAnalyzer {
 	void        declareVar(const string& name, const json& type, const json* loc_node = nullptr);
 	const json* findVar(const string& name) const;
 	// findVar, or else a C global, which the current function then binds.
-	const json* lookupVar(const string& name, const json& locNode);
+	// `use` is false only for the variable `->>` fills.
+	const json* lookupVar(const string& name, const json& locNode, bool use = true);
+	void        checkNotGiven(const string& name, const json& locNode);
+	void        checkRootNotGiven(const json& location);
+	void        applyPendingGiven();
+	static void mergeGivenFlow(GivenFlow& into, const GivenFlow& from);
+	void        enterGivenLoop();
+	void        leaveGivenLoop();
 	void        bindStatic(const string& name, const string& label, const json& type);
 	void        requireAssignable(const string& name, const json& locNode) const;
 	bool        isStaticBound(const string& name) const;

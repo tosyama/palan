@@ -1261,6 +1261,11 @@ TEST(build_mgr, runtime_size_move_copy_mtrace) {
 	expectMtraceRun("429_runtime_size_move_copy_mtrace", "2 7 4 5\n6 8 9 3\n4 2 2\n11 7 6 2\n", 42);
 }
 
+TEST(build_mgr, given_flow_mtrace) {
+	// Filled again before each use, or given only on a path that leaves.
+	expectMtraceRun("430_given_flow_mtrace", "6 3 3 8\n11 1 1\n", 10);
+}
+
 TEST(build_mgr, owner_view_target_mtrace) {
 	// A block given to a C pointer viewed as its owner is held there until it is
 	// taken back over, sized at run time on both sides.

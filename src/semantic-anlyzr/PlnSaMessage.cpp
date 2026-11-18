@@ -714,6 +714,10 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "'" + arg1 + "' is given away with '>>' and set to NULL just before the call, "
 			       "but this later argument of the same call may change it.";
 
+		case E_UseAfterGiven:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' was given away and is NULL here; fill it with '->>' before using it.";
+
 		case E_TransferToSelf:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'->>' cannot give '" + arg1 + "' to itself.";

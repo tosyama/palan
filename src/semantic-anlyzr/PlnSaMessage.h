@@ -236,6 +236,7 @@ enum PlnSaMessageCode {
 	E_ReleaseFuncDup,	// arg1: opaque type display name
 	E_MoveRunSize,		// arg1: destination shape, arg2: source shape
 	E_ResizeNotMoved,	// arg1: target type name
+	E_UseAfterGiven,	// arg1: variable name
 };
 
 class PlnSaMessage

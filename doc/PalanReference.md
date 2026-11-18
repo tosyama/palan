@@ -1688,6 +1688,31 @@ NULL) or a call result:
   `b`'s type (for an array, the same sizes where both are known at compile time; a size `b`
   leaves to run time is [`v`'s](#sizes-known-only-at-run-time)).
 
+#### Using a Variable After It Is Given Away
+
+A local variable or parameter that has given its whole value away (`->>`, `>>`, `<<=`) holds
+NULL, and using it is a compile error until `->>` fills it again. Any appearance counts as a use
+(`len(@a)` too, `@a`, `-> a`, giving it away again, `return a`), except comparing the variable
+itself with `NULL` (`a == NULL`, `a != NULL`) and the release at scope exit.
+
+```palan
+[3]int32 a;
+[3]int32 b;
+a ->> b;
+len(@a);                     // error: 'a' was given away
+[3]int32 t;
+t ->> a;                     // a holds t's array
+len(@a);                     // 3
+```
+
+- A use is judged along each path to it: given on any path that reaches it (one branch of an
+  `if`, a `break` reaching past the loop) is an error, and a path ending in `return` reaches
+  nothing. In a loop, a use reached from the loop's start before `->>` fills the variable is an
+  error if the end of an iteration (or a `continue`) leaves it given.
+- A variable becomes given when its statement ends (for `<<=`, when its initializer does): the
+  rest of the same statement is not checked, as the arguments after `v>>` may still borrow it.
+- A field or element given away, and a global, are not checked.
+
 #### Ownership Across C Functions
 
 A C function's pointer parameter only borrows, as C's types say nothing about who frees what. A

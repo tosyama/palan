@@ -1,0 +1,7 @@
+[3]int32 a;
+[3]int32 b;
+[2]int32 r;
+for copy e in @r {
+	a[0] + e -> a[1];
+	a ->> b;
+}

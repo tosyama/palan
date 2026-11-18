@@ -568,6 +568,8 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ArrLenNeedsAddrOf) << endl;
 			exit(1);
 		}
+		// A constant length reads nothing, but the variable holds no array.
+		checkRootNotGiven(*arr);
 		return arr;
 	}
 	if (isArrLevel(vt) || isVarrPntr(vt) || userLenExists()) return nullptr;
@@ -1128,12 +1130,17 @@ json PlnSemanticAnalyzer::sa_expr_cmp(const json& expr)
 {
 	rejectArrowOperand(expr, expr["op"].get<string>());
 	json probes[2];
-	bool structOperand = false, nullOperand = false;
+	json folded[2] = {foldConstExpr(expr["left"]), foldConstExpr(expr["right"])};
+	bool structOperand = false, nullOperand = isNullPtrLit(folded[0]) || isNullPtrLit(folded[1]);
+	string op = expr["op"];
 	for (int i : {0, 1}) {
-		const json operand = foldConstExpr(expr[i ? "right" : "left"]);
-		if (isNullPtrLit(operand)) nullOperand = true;
+		const json& operand = folded[i];
 		if (isAggregateLit(operand) || operand.value("expr-type", "") == "lit-int") continue; // LCOV_EXCL_BR_LINE
+		// Whether a variable is NULL may be asked after it gave its value away.
+		bool saved = nullCompare_;
+		nullCompare_ = nullOperand && (op == "==" || op == "!=") && operand.value("expr-type", "") == "id";
 		probes[i] = sa_expression(expr[i ? "right" : "left"]);
+		nullCompare_ = saved;
 		structOperand = structOperand || isStructPntr(probes[i]["value-type"]);
 	}
 	if (structOperand && !nullOperand)

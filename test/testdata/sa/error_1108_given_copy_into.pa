@@ -1,0 +1,5 @@
+type P { int32 x; };
+P a;
+P b;
+a ->> b;
+b -> a;

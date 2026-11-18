@@ -80,6 +80,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 				result.push_back(ret);
 			} else
 				result.push_back(sa_return_stmt(stmt)); // LCOV_EXCL_BR_LINE
+			given_.flow.reachable = false;
 		}
 		else if (t == "tapple-decl") { for (auto& s : sa_tapple_decl(stmt)) result.push_back(s); }
 		else if (t == "tapple-assign" && chainsFromStore(stmt["value"])) { for (auto& s : sa_store_scope(stmt)) result.push_back(s); }
@@ -93,6 +94,9 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 				for (auto& s : frees) result.push_back(s);
 			}
 			result.push_back(sa_break_stmt(stmt));
+			// A function in a loop's body has no loop of its own here.
+			if (!given_.loops.empty()) mergeGivenFlow(given_.loops.back().exit, given_.flow);
+			given_.flow.reachable = false;
 		}
 		else if (t == "continue") {
 			if (!whileScopeStack_.empty()) {
@@ -101,6 +105,9 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 				for (auto& s : loopSteps_.back()) result.push_back(s);
 			}
 			result.push_back(sa_continue_stmt(stmt));
+			// A function in a loop's body has no loop of its own here.
+			if (!given_.loops.empty()) mergeGivenFlow(given_.loops.back().back, given_.flow);
+			given_.flow.reachable = false;
 		}
 		else if (t == "not-impl") {
 			if (stmt.contains("untyped-var"))
@@ -118,6 +125,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_InternalError, "2") << endl;
 			exit(1);
 		}
+		applyPendingGiven();
 	}
 	return result;
 }
@@ -228,7 +236,11 @@ json PlnSemanticAnalyzer::sa_if_stmt(const json& stmt)
 	json result;
 	result["stmt-type"] = "if";
 	result["cond"] = sa_expression(stmt["cond"]);
+	applyPendingGiven();
+	GivenFlow before = given_.flow;
 	result["then"] = sa_block(stmt["then"]);
+	GivenFlow afterThen = move(given_.flow);
+	given_.flow = move(before);
 	if (stmt.contains("else")) {
 		const json& els = stmt["else"];
 		if (els["stmt-type"] == "if")
@@ -236,6 +248,7 @@ json PlnSemanticAnalyzer::sa_if_stmt(const json& stmt)
 		else
 			result["else"] = sa_block(els);
 	}
+	mergeGivenFlow(given_.flow, afterThen);
 	if (stmt.contains("loc"))
 		result["loc"] = stmt["loc"];
 	return result;
@@ -245,8 +258,11 @@ json PlnSemanticAnalyzer::sa_while_stmt(const json& stmt)
 {
 	json result;
 	result["stmt-type"] = "while";
+	enterGivenLoop();
 	result["cond"] = sa_expression(stmt["cond"]);
+	applyPendingGiven();
 	result["body"] = sa_loop_body(stmt["body"], json::array(), json::array());
+	leaveGivenLoop();
 	if (stmt.contains("loc"))
 		result["loc"] = stmt["loc"];
 	return result;
@@ -284,6 +300,89 @@ json PlnSemanticAnalyzer::sa_loop_body(const json& astBody, const json& heads, j
 	whileScopeStack_.pop_back();
 	leaveScope();
 	return body;
+}
+
+// A variable that has given its value away holds NULL, so any use of it is
+// an error until '->>' fills it again. A use a loop's head reaches is checked
+// again when the loop ends, against what its iterations leave.
+void PlnSemanticAnalyzer::checkNotGiven(const string& name, const json& locNode)
+{
+	if (!given_.flow.reachable || nullCompare_) return;
+	auto v = given_.flow.vars.find(name);
+	GivenState st = v == given_.flow.vars.end() ? GivenState{} : v->second;
+	if (st.given) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UseAfterGiven, name) << endl;
+		exit(1);
+	}
+	for (auto& loop : given_.loops)
+		if (loop.entry > st.since) loop.exposed.emplace(name, locNode);
+}
+
+// The variable a location (`a`, `a.f[i]`, `@a`) is part of.
+void PlnSemanticAnalyzer::checkRootNotGiven(const json& location)
+{
+	const json* e = &location;
+	for (;;) {
+		string et = e->value("expr-type", "");
+		if (et == "field-access" || et == "addr-of") e = &(*e)["object"];
+		else if (et == "arr-index") e = &(*e)["array"];
+		else break;
+	}
+	if (e->value("expr-type", "") == "id" && findVar((*e)["name"].get<string>()))
+		checkNotGiven((*e)["name"].get<string>(), e->contains("loc") ? *e : location);
+}
+
+void PlnSemanticAnalyzer::applyPendingGiven()
+{
+	if (given_.flow.reachable)
+		for (auto& [name, given] : given_.pending) {
+			GivenState& st = given_.flow.vars[name];
+			st.given = given;
+			if (!given) st.since = given_.seq;
+		}
+	given_.pending.clear();
+}
+
+// Given on any path is given; a use is checked against the oldest fill.
+void PlnSemanticAnalyzer::mergeGivenFlow(GivenFlow& into, const GivenFlow& from)
+{
+	if (!from.reachable) return;
+	if (!into.reachable) {
+		into = from;
+		return;
+	}
+	for (auto& [name, st] : into.vars) {
+		auto f = from.vars.find(name);
+		GivenState other = f == from.vars.end() ? GivenState{} : f->second;
+		st.given = st.given || other.given;
+		st.since = min(st.since, other.since);
+	}
+	for (auto& [name, st] : from.vars)
+		if (!into.vars.count(name)) into.vars[name] = {st.given, 0};
+}
+
+void PlnSemanticAnalyzer::enterGivenLoop()
+{
+	given_.loops.push_back({++given_.seq, {}, given_.flow});
+}
+
+// The loop's head is reached from before it and from the end of each
+// iteration (or a 'continue'); it is left from its head or by a 'break'.
+void PlnSemanticAnalyzer::leaveGivenLoop()
+{
+	GivenLoop loop = move(given_.loops.back());
+	given_.loops.pop_back();
+	mergeGivenFlow(loop.back, given_.flow);
+	for (auto& [name, locNode] : loop.exposed) {
+		auto v = loop.back.vars.find(name);
+		if (loop.back.reachable && v != loop.back.vars.end() && v->second.given) {
+			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UseAfterGiven, name) << endl;
+			exit(1);
+		}
+	}
+	given_.flow = move(loop.entry_flow);
+	mergeGivenFlow(given_.flow, loop.back);
+	mergeGivenFlow(given_.flow, loop.exit);
 }
 
 // The path checkRangeChange compares: a variable, then "." + field, or
@@ -478,7 +577,9 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	if (pinned) pinnedRanges_.push_back({move(path), isVarrPntr(arrType), !viaAddrOf && rangeBorrow});
 	string idxName = stmt.value("index", idx);
 	forIndexVars_.insert(idxName);
+	enterGivenLoop();
 	json body = sa_loop_body(astBody, heads, move(step));
+	leaveGivenLoop();
 	forIndexVars_.erase(idxName);
 	if (pinned) pinnedRanges_.pop_back();
 	block.push_back({{"stmt-type","while"},{"cond",move(cond)},{"body",move(body)},{"loc",loc}});
@@ -661,7 +762,9 @@ json PlnSemanticAnalyzer::sa_for_struct(const json& stmt, const json& rangeVT, j
 	if (pinned) pinnedRanges_.push_back({move(path), true, false});
 	string idxName = stmt.value("index", idx);
 	forIndexVars_.insert(idxName);
+	enterGivenLoop();
 	json body = sa_loop_body(astBody, heads, move(step));
+	leaveGivenLoop();
 	forIndexVars_.erase(idxName);
 	if (pinned) pinnedRanges_.pop_back();
 	json cond = sa_expression({{"expr-type","lit-int"},{"value","1"},{"loc",loc},
@@ -735,6 +838,8 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	auto savedPermitFunc     = move(permitFunc_);
 	auto savedStaticBindings = move(staticBindings_);
 	auto savedReadOnlyGlobals = move(readOnlyGlobals_);
+	auto savedGiven          = move(given_);
+	given_ = {};
 	permitFunc_ = topLevel ? funcDef["name"].get<string>() : "";
 	staticBindings_ = json::array();
 	readOnlyGlobals_.clear();
@@ -926,6 +1031,7 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	staticBindings_  = move(savedStaticBindings);
 	readOnlyGlobals_ = move(savedReadOnlyGlobals);
 	blockSymbolSeq_  = savedBlockSymbolSeq;
+	given_           = move(savedGiven);
 
 	sa["functions"].push_back(saFunc);
 } // LCOV_EXCL_BR_LINE
@@ -933,7 +1039,7 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 json PlnSemanticAnalyzer::sa_assign_stmt(const json& stmt)
 {
 	string name = stmt["name"];
-	const json* varType = lookupVar(name, stmt);
+	const json* varType = lookupVar(name, stmt, !stmt.value("ownership-transfer", false));
 	if (varType == nullptr) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_UndefinedVariable, name) << endl;
 		exit(1);
@@ -1039,6 +1145,7 @@ json PlnSemanticAnalyzer::sa_transfer_to_var(const json& stmt, const string& nam
 	checkMoveShape(stmt, value, varType, /*inherits=*/true);
 	// Its block was released by the lengths it had.
 	for (auto& s : inheritRunLens(name, varType, value)) result.push_back(move(s));
+	given_.pending.push_back({name, false});
 	return result;
 } // LCOV_EXCL_BR_LINE
 
@@ -1751,6 +1858,8 @@ void PlnSemanticAnalyzer::appendTransferSourceReset(json& stmts, const json& stm
 	if (et == "id" && saValue.value("category", "") == "owned") {
 		stmts.push_back({{"stmt-type", "assign"}, {"name", saValue["name"]}, // LCOV_EXCL_BR_LINE
 		                 {"value", nullOf(saValue["value-type"])}});
+		// Any function may fill a global again.
+		if (!isGlobalName(saValue["name"])) given_.pending.push_back({saValue["name"], true});
 		return;
 	}
 	if (et == "field-access" || et == "arr-index") {

@@ -1,0 +1,6 @@
+type P { int32 x; };
+func f(P p) -> int32
+{
+	P q <<= p;
+	return p.x;
+}
