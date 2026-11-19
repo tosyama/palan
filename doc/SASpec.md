@@ -1431,6 +1431,17 @@ it, the registry's function type compares it (so a C callback type never matches
   `len`, `for` and copies read as for a local `[n]E`. `xs` is no owner: its elements owning blocks
   are released at exit by the array helper's `fini`, as a frame array's are, and the array itself
   cannot be moved or taken (E_TransferFromNonOwner).
+- A `spread` (AST) is the last argument (E_SpreadPlace, also anywhere outside a call's arguments)
+  and the only one past the other parameters (E_SpreadPosition) of a Palan variadic parameter
+  (E_SpreadNotVariadic, also for C's `...` and `len`). Its value is analyzed as any argument: an
+  array keeping a length (E_SpreadNotArray; a `[]T`, E_SpreadUnsized), not written `@a`
+  (E_SpreadBorrow), whose type `copySourceMatch`es `xs`'s (E_SpreadElemMismatch). Among overloads
+  only such candidates fit, unranked.
+- A given spread (`transfer`, or a call returning an owned array) passes the block it pins, a
+  `[+]T`'s data pinned too; any other is copied (`CopyInto::New`) into a heap array `__va_<n>`
+  (`____va_<n>_d0` holding a length known at run time). The `temp` frees only the block (and a
+  `[+]T`'s header) after the call, since the callee releases the elements; the count is the
+  source's length, or the copy's own.
 
 ### String literal conversion
 

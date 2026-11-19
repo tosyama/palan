@@ -569,8 +569,13 @@ vector<VReg> PlnVCodeGen::lowerArgs(const vector<unique_ptr<Expr>>& args, VFunc&
             r = c;
         }
     }
+    // A reset is a statement of its own, which would flush the releases
+    // pending for after the call.
+    vector<const Stmt*> releases = move(pendingReleases_);
+    pendingReleases_.clear();
     for (auto s : pendingResets_)
         lowerStmt(*s, func);
+    pendingReleases_ = move(releases);
     pendingResets_ = move(outer);
     return regs;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here

@@ -1,0 +1,4 @@
+func pick([3]int64 a) -> int32 { return 1; }
+func pick([...]int32 xs) -> int32 { return 2; }
+[3]int64 a;
+pick(...a);

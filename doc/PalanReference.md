@@ -962,10 +962,32 @@ say(", ");                        //  (0)
 - A function pointer type can end with `[...]T` (`@func(int32, [...]int64) -> int64`) and is
   called the same way. It is a different type from one taking `@[]T`, and a variadic function
   cannot be given to a C function as a callback.
-- An existing array cannot be passed as the arguments: `sum(1, a)` for an array `a` is an
-  error.
+- `...a` passes the array `a` as all of the arguments (see below).
 - An argument borrowing a temporary value held inside another call, such as `f(id(@mk()))` where
   `id` returns the borrow it is given, is a compile error: keep the value in a variable first.
+
+`...a` passes an existing array as all of the arguments, as a `[n]T` parameter takes an array:
+
+```palan
+func avg([...]int64 xs) -> int64 { return sum(0, ...xs) / len(@xs); }
+
+[3]int64 a = [1, 2, 3];
+printf("%ld\n", sum(1, ...a));     // 7: the callee gets a copy
+printf("%ld\n", avg(...a));        // 2
+printf("%ld\n", sum(0, ...a>>));   // 6: a itself is passed, and a is now NULL
+```
+
+- It is the last argument and the only one for the variadic parameter: `sum(1, 2, ...a)` is an
+  error. It is written only to a Palan variadic parameter, not to C's `...`.
+- `...a` passes a copy: what the function writes into its elements does not reach `a`.
+  `...a>>` passes `a` itself without a copy, and `a` becomes NULL (see
+  [Giving Values Away](#giving-values-away--and-taking-them-over-)). A call returning an array is
+  passed without a copy too (`...mk()`). Either way the struct elements are the function's.
+- `a` is any array with a length: a `[n]T` (also sized at run time), a `[+]T`, a row, a field,
+  a borrowed `@[n]T` or `@[+]T`, or the function's own variadic parameter. A `[]T` keeps no
+  length and cannot be spread.
+- The elements must be exactly `T`, as for [copying](#copying--); they are not converted:
+  `[3]int32` cannot be spread into `[...]int64`, nor `[n]$T` into `[...]T`.
 
 ### Method-Form Calls
 
@@ -1668,7 +1690,8 @@ big ->> total();             // the same, chained
   or element, a value a call returns, or a pointer viewed as an owner (`p as T`).
 - `v>>` is written only as a call argument to a parameter that owns it, and cannot be cast.
   Given to a `@T`/`@!T` parameter, a C function's pointer parameter, or a variadic argument, it
-  is a compile error, since nothing would own it.
+  is a compile error, since nothing would own it. A whole array is given to a variadic parameter
+  as `...a>>` (see [Variadic Arguments](#variadic-arguments)).
 - The call's arguments are evaluated left to right, and `v>>` reads `v` where it is written, but
   `v` becomes NULL only after all of them, just before the call. Another argument can still
   borrow from it, as a C function taking a request and a part of it expects

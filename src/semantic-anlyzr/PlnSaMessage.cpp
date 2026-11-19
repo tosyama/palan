@@ -723,6 +723,36 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg2 != "\x01");
 			return "function '" + arg1 + "' cannot be exported to C: " + arg2 + ".";
 
+		case E_SpreadPlace:
+			return "'...' spreads an array only as the last argument of a call.";
+
+		case E_SpreadNotVariadic:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'...' spreads an array only into a variadic parameter '[...]T', which '" + arg1 + "' does not have.";
+
+		case E_SpreadPosition:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "the spread array gives all of '" + arg1 + "' of '" + arg2
+			     + "': it must be the only argument after the other parameters'.";
+
+		case E_SpreadNotArray:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'...' spreads an array, but this is " + arg1 + ".";
+
+		case E_SpreadBorrow:
+			return "'...' takes the array as a by-value parameter does: write '...a' for a copy or '...a>>' to give it, not '@a'.";
+
+		case E_SpreadUnsized:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' keeps no length, so it cannot be spread with '...'.";
+
+		case E_SpreadElemMismatch:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "'...' cannot spread '" + arg2 + "' into '" + arg1
+			     + "': the elements must be of exactly its type, since they are not converted.";
+
 		case E_TransferToSelf:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'->>' cannot give '" + arg1 + "' to itself.";

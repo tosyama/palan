@@ -128,6 +128,23 @@ TEST(sa_error, c_export) {
 		{"error_1122_c_export_variadic.pa", ":1:1: error: function 'sum' cannot be exported to C: it is variadic."},
 		{"error_1123_c_export_default.pa", ":1:1: error: function 'scale' cannot be exported to C: it has default arguments."},
 		{"error_1124_c_export_operator.pa", ":2:1: error: function '+' cannot be exported to C: it is an operator."},
+		{"error_1125_spread_not_last.pa", ":3:8: error: '...' spreads an array only as the last argument of a call."},
+		{"error_1126_spread_outside_call.pa", ":2:17: error: '...' spreads an array only as the last argument of a call."},
+		{"error_1127_spread_mixed.pa", ":3:11: error: the spread array gives all of 'xs' of 'sum': it must be the only argument after the other parameters'."},
+		{"error_1128_spread_no_fixed.pa", ":3:5: error: the spread array gives all of 'xs' of 'sum': it must be the only argument after the other parameters'."},
+		{"error_1129_spread_not_variadic.pa", ":3:3: error: '...' spreads an array only into a variadic parameter '[...]T', which 'f' does not have."},
+		{"error_1130_spread_c_variadic.pa", ":3:15: error: '...' spreads an array only into a variadic parameter '[...]T', which 'printf' does not have."},
+		{"error_1131_spread_unsized.pa", ":2:44: error: '[?]int64' keeps no length, so it cannot be spread with '...'."},
+		{"error_1132_spread_not_array.pa", ":3:8: error: '...' spreads an array, but this is 'int64'."},
+		{"error_1133_spread_literal.pa", ":2:8: error: '...' spreads an array, but this is an array literal."},
+		{"error_1134_spread_elem_mismatch.pa", ":3:1: error: '...' cannot spread '[3]int32' into '[...]int64': the elements must be of exactly its type, since they are not converted."},
+		{"error_1135_spread_embedded.pa", ":4:1: error: '...' cannot spread '[2]$P' into '[...]P': the elements must be of exactly its type, since they are not converted."},
+		{"error_1136_spread_borrow.pa", ":3:8: error: '...' takes the array as a by-value parameter does: write '...a' for a copy or '...a>>' to give it, not '@a'."},
+		{"error_1137_spread_give_borrowed.pa", ":2:49: error: '>>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
+		{"error_1138_spread_give_variadic.pa", ":2:51: error: '>>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
+		{"error_1139_spread_use_after_given.pa", ":4:11: error: 'a' was given away and is NULL here; fill it with '->>' before using it."},
+		{"error_1140_spread_overload_no_match.pa", ":4:1: error: No function 'pick' takes (...[3]int64); there are pick([3]int64), pick([...]int32)."},
+		{"error_1141_spread_len.pa", ":2:15: error: '...' spreads an array only into a variadic parameter '[...]T', which 'len' does not have."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

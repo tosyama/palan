@@ -332,6 +332,24 @@ TEST(gen_ast, variadic_param) {
 	ASSERT_EQ(fp["parameters"][1]["var-type"]["base-type"]["type-name"], "int64");
 }
 
+TEST(gen_ast, spread_arg) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/168_spread_arg.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const auto& sts = jout["ast"]["statements"];
+	const auto& copy = sts[0]["body"]["args"][1];
+	ASSERT_EQ(copy["expr-type"], "spread");
+	ASSERT_EQ(copy["value"]["name"], "a");
+	ASSERT_EQ(copy["loc"], json({1, 8, 1, 12}));
+	const auto& given = sts[1]["body"]["args"][0];
+	ASSERT_EQ(given["expr-type"], "spread");
+	ASSERT_EQ(given["value"]["expr-type"], "transfer");
+	ASSERT_EQ(sts[2]["body"]["args"][0]["expr-type"], "spread");
+	ASSERT_EQ(sts[3]["body"]["args"][1]["expr-type"], "spread");
+	ASSERT_EQ(sts[4]["body"]["call"]["args"][0]["expr-type"], "spread");
+}
+
 TEST(gen_ast, func_arr_at_struct_param) {
 	cleanTestEnv();
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/030_func_arr_at_struct_param.pa");

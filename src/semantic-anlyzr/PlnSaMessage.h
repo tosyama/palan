@@ -238,6 +238,13 @@ enum PlnSaMessageCode {
 	E_ResizeNotMoved,	// arg1: target type name
 	E_UseAfterGiven,	// arg1: variable name
 	E_CExportFunc,		// arg1: function name, arg2: what it has
+	E_SpreadPlace,
+	E_SpreadNotVariadic,	// arg1: function name
+	E_SpreadPosition,	// arg1: parameter name, arg2: function name
+	E_SpreadNotArray,	// arg1: what the value is, a quoted type name or a phrase
+	E_SpreadBorrow,
+	E_SpreadUnsized,	// arg1: value type name
+	E_SpreadElemMismatch,	// arg1: parameter type, arg2: value type
 };
 
 class PlnSaMessage

@@ -391,7 +391,7 @@ struct BodyList {
 %type <PList<string>>	import_ids link_libs c_type_names cinclude_export
 %type <vector<string>>	link_clause
 %type <string>	import_as func_name op_func_name library_decl library_name
-%type <json>	expression term store_loc
+%type <json>	expression term store_loc argument
 %type <PList<json>>	arguments
 %type <json>	array_desc array_row dict_desc
 %type <PList<json>>	array_rows array_items dict_items
@@ -1260,10 +1260,16 @@ tapple_inner: expression
 
 arguments: /* empty */
 	{ }
-	| expression
+	| argument
 	{ $$ = PList<json>().push($1); }
-	| arguments ',' expression
+	| arguments ',' argument
 	{ $$ = $1.push($3); }
+	;
+
+argument: expression
+	{ $$ = move($1); }
+	| ELLIPSIS expression
+	{ $$ = {{"expr-type", "spread"}, {"value", move($2)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
 array_desc: array_row

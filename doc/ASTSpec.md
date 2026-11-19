@@ -572,7 +572,7 @@ Statement model
 
 Expression model
 ----------------
-- expr-type\* - Expression type string: "lit-str" "lit-int" "lit-uint" "lit-flo" "id" "add" "sub" "mul" "div" "mod" "neg" "cmp" "call" "cast" "arr-index" "field-access" "member-call" "logical-and" "logical-or" "logical-not" "addr-of" "not-impl" "bitand" "bitor" "bitxor" "shl" "shr" "append" "bitnot" "arr-lit" "dict-lit" "sizeof" "chain-call" "transfer" "call-ptr"
+- expr-type\* - Expression type string: "lit-str" "lit-int" "lit-uint" "lit-flo" "id" "add" "sub" "mul" "div" "mod" "neg" "cmp" "call" "cast" "arr-index" "field-access" "member-call" "logical-and" "logical-or" "logical-not" "addr-of" "not-impl" "bitand" "bitor" "bitxor" "shl" "shr" "append" "bitnot" "arr-lit" "dict-lit" "sizeof" "chain-call" "transfer" "call-ptr" "spread"
 - loc\* - Location Array
   1. lit-str - String literal
     - value\* - The bytes as escaped text: printable ASCII and valid UTF-8 characters as they
@@ -732,6 +732,9 @@ Expression model
       consumed by SA, which makes it a `call` (see SASpec.md "Usual arithmetic conversions")
     - left\*  - Expression model appended to
     - right\* - Expression model appended
+  36. spread - `...a`, an array passed as all of a variadic parameter's arguments; only as a call
+      argument, which SA checks (see SASpec.md "Variadic arguments")
+    - value\* - Expression model of the array; a `transfer` for `...a>>`
 
 Note: Unary minus on a `lit-int` without `value-type` is folded into a single `lit-int` with a negative
 `value` (`-42` → `"value":"-42"`), so SA range-checks it as one value. Any other operand (including a

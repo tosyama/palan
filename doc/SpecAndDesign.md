@@ -520,8 +520,15 @@ with different defaults share a pointer type.
 **Variadic arguments.** `[...]E` is written as an array because the body sees one.
 
 - The caller lays the arguments out in a temporary array in its frame and passes its address and
-  its count (NULL and 0 for none). A header like a `[+]T`'s was not taken: nothing needs it until
-  arrays can be spread into a call (doc/Issues.md #29), and the address and count serve that too.
+  its count (NULL and 0 for none). A header like a `[+]T`'s was not taken: the address and count
+  serve an array spread into the call (`...a`) as well.
+- A spread array follows a by-value array parameter: `...a` passes a copy, so the callee writing
+  an element does not reach `a`, and `...a>>` passes `a` itself. Passing primitives without a copy
+  was not taken, since the callee may write them. The callee owns the elements either way, so the
+  caller frees only the array's block after the call. A spread is the only argument for the
+  parameter: mixed with single ones it would need a new array even when given. Its elements must
+  match exactly, as for `->`; converting them is left out while the copy could. A `[]T` has no
+  count to pass.
 - In the body it has the representation of a local array sized at run time (4), the count being
   its length, rather than one of its own. Struct elements are the callee's, as a `T` parameter is; the array stays the
   caller's.

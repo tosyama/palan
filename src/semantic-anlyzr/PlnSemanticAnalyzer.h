@@ -141,6 +141,7 @@ struct CallArg {
 	json sa;
 	bool chained = false;
 	json probe;
+	bool spread = false;  // `...a`: ast is a
 };
 
 // The outcome of choosing among overloads: the function chosen, or else the
@@ -558,6 +559,10 @@ class PlnSemanticAnalyzer {
 	json ownedBlockArg(const json& locNode, const json& arg, CallArg& ca, const json& param,
 	                   size_t argIdx, const string& funcName);
 	json variadicArrayArg(const json& locNode, const json& elemVT, json elems, const string& funcName);
+	CallArg spreadCallArg(const json& rawArg, bool last);
+	optional<SaDiag> spreadMismatch(const json& vt, const json& elemVT) const;
+	void checkSpreadPlace(const json& locNode, const json& args, const json& funcParams, const string& funcName);
+	json spreadArrayArg(const json& locNode, CallArg& ca, const json& elemVT, json& count);
 	json bindCallArgs(const json& locNode, vector<CallArg>& args, const json& funcParams,
 	                  bool isCFunc, const string& funcName);
 	[[noreturn]] void reportDiag(const json& locNode, const SaDiag& diag) const;

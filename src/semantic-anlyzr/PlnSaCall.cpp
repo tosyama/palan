@@ -257,6 +257,7 @@ string PlnSemanticAnalyzer::argTypesText(const vector<CallArg>& args)
 		const json& vt = !a.pending ? a.sa["value-type"]
 		               : a.chained && a.probe.contains("value-type") ? a.probe["value-type"]
 		               : a.probe;
+		if (a.spread) text += "...";
 		text += vt.is_object() ? typeDisplayName(vt) // LCOV_EXCL_BR_LINE
 		      : namesOverloadedFunc(a.ast) ? string("function")
 		      : string("literal");
@@ -311,6 +312,7 @@ CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<
 		vector<Callee> viable, exact, narrowed;
 		bool unranked = false;
 	} plain, converting;
+	bool spread = !args.empty() && args.back().spread;
 	for (auto& c : cands) {
 		const json& params = (*c.def)["parameters"];
 		const json* palanVariadic = palanVariadicParam(params);
@@ -318,8 +320,9 @@ CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<
 		size_t fixedCount = params.size() - (variadic ? 1 : 0);
 		size_t required = requiredArgCount(params, fixedCount);
 		if (args.size() < required || (!variadic && args.size() > fixedCount)) continue;
+		if (spread && (!palanVariadic || args.size() != fixedCount + 1)) continue;
 		json elemParam = palanVariadic ? variadicElemParam(*palanVariadic) : json();
-		size_t checked = palanVariadic ? args.size() : min(fixedCount, args.size());
+		size_t checked = spread ? fixedCount : palanVariadic ? args.size() : min(fixedCount, args.size());
 		bool fits = true, converts = false;
 		ArgFit worst = args.size() == fixedCount ? ArgFit::Exact : ArgFit::Viable;
 		for (size_t i = 0; i < checked && fits; i++) {
@@ -328,6 +331,8 @@ CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<
 			converts = converts || f == ArgFit::Converted;
 			worst = min(worst, f == ArgFit::Converted ? ArgFit::Exact : f);
 		}
+		if (fits && spread)
+			fits = !spreadMismatch(args.back().sa["value-type"], elemParam["var-type"]);
 		if (!fits) continue;
 		Fitting& to = converts ? converting : plain;
 		to.unranked = to.unranked || args.size() < fixedCount || palanVariadic;
@@ -931,6 +936,7 @@ json PlnSemanticAnalyzer::sa_expr_call(const json& expr)
 json PlnSemanticAnalyzer::saCallArgs(const json& locNode, const json& args, const json& funcParams,
                                       bool isCFunc, const string& funcName)
 {
+	checkSpreadPlace(locNode, args, funcParams, funcName);
 	bool isVariadic = palanVariadicParam(funcParams) || isCVariadicSig(funcParams);
 	size_t fixedCount = funcParams.size() - (isVariadic ? 1 : 0);
 	// C's `()` arrives as an empty list just like `(void)` and is checked as
@@ -953,7 +959,12 @@ json PlnSemanticAnalyzer::saCallArgs(const json& locNode, const json& args, cons
 vector<CallArg> PlnSemanticAnalyzer::analyzeCallArgs(const json& args)
 {
 	vector<CallArg> callArgs;
-	for (auto& rawArg : args) {
+	for (size_t i = 0; i < args.size(); i++) {
+		const json& rawArg = args[i];
+		if (rawArg.value("expr-type", "") == "spread") {
+			callArgs.push_back(spreadCallArg(rawArg, i + 1 == args.size()));
+			continue;
+		}
 		CallArg a;
 		a.chained = rawArg.value("expr-type", "") == "chained-value";
 		a.ast = a.chained ? rawArg["value"] : rawArg;
@@ -968,6 +979,57 @@ vector<CallArg> PlnSemanticAnalyzer::analyzeCallArgs(const json& args)
 	}
 	return callArgs;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// `...a`, analyzed as an array that keeps its length.
+CallArg PlnSemanticAnalyzer::spreadCallArg(const json& rawArg, bool last)
+{
+	auto fail = [&](PlnSaMessageCode code, string arg1 = "\x01") {
+		cerr << locPrefix(rawArg) << PlnSaMessage::getMessage(code, arg1) << endl;
+		exit(1);
+	};
+	if (!last) fail(E_SpreadPlace);
+	CallArg a;
+	a.spread = true;
+	a.pending = false;
+	a.ast = rawArg["value"];
+	if (a.ast.value("expr-type", "") == "addr-of") fail(E_SpreadBorrow);
+	if (isAggregateLitArg(a.ast)) fail(E_SpreadNotArray, "an array literal");
+	if (namesOverloadedFunc(a.ast)) fail(E_SpreadNotArray, "a function");
+	a.sa = sa_arg_expression(a.ast);
+	const json& vt = a.sa["value-type"];
+	if (!isVarrPntr(vt) && !isArrLevel(vt)) fail(E_SpreadNotArray, "'" + typeDisplayName(vt) + "'");
+	if (isArrLevel(vt) && !vt.contains("arr-size") && !vt.value("run-size", false))
+		fail(E_SpreadUnsized, typeDisplayName(vt));
+	return a;
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// The spread array takes the place of every argument for the `[...]E` parameter.
+void PlnSemanticAnalyzer::checkSpreadPlace(const json& locNode, const json& args, const json& funcParams,
+                                           const string& funcName)
+{
+	if (args.empty() || args.back().value("expr-type", "") != "spread") return;
+	const json* variadic = palanVariadicParam(funcParams);
+	const json& at = args.back().contains("loc") ? args.back() : locNode;
+	if (!variadic) {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_SpreadNotVariadic, funcName) << endl;
+		exit(1);
+	}
+	if (args.size() != funcParams.size()) {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_SpreadPosition, variadic->value("name", ""), funcName) << endl;
+		exit(1);
+	}
+}
+
+// The elements are not converted, so they must be the callee's array's own.
+optional<SaDiag> PlnSemanticAnalyzer::spreadMismatch(const json& vt, const json& elemVT) const
+{
+	// LCOV_EXCL_BR_START
+	json xs = {{"type-kind","pntr"},{"run-size",true},{"base-type",elemVT}};
+	if (copySourceMatch(vt, xs)) return nullopt;
+	json param = {{"type-kind","pntr"},{"variadic",true},{"base-type",elemVT}};
+	return SaDiag{E_SpreadElemMismatch, typeDisplayName(param), typeDisplayName(vt)};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
 
 // Whether an analyzed argument fits a parameter, and if not, why.
 optional<SaDiag> PlnSemanticAnalyzer::callArgMismatch(const json& argAst, const json& saArg,
@@ -1190,8 +1252,14 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 	}
 	json saArgs = json::array();
 	vector<json> argAsts;
+	json spreadCount;
 	for (size_t argIdx = 0; argIdx < args.size(); argIdx++) {
 		CallArg& ca = args[argIdx];
+		if (ca.spread) {
+			argAsts.push_back(ca.ast);
+			saArgs.push_back(spreadArrayArg(locNode, ca, elemParam["var-type"], spreadCount));
+			continue;
+		}
 		const json* param = argIdx < fixedCount ? &funcParams[argIdx] : palanVariadic ? &elemParam : nullptr;
 		const json* paramVT = param ? &(*param)["var-type"] : nullptr;
 		if (paramVT) {
@@ -1256,7 +1324,9 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 		saArgs.push_back(saArg);
 	}
 	checkGivenOwners(locNode, argAsts, saArgs);
-	if (palanVariadic) {
+	if (!spreadCount.is_null()) {
+		saArgs.push_back(move(spreadCount));
+	} else if (palanVariadic) {
 		json elems = json::array();
 		while (saArgs.size() > fixedCount) {
 			elems.insert(elems.begin(), move(saArgs.back()));
@@ -1304,6 +1374,67 @@ json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elem
 	}
 	json array = {{"expr-type","id"},{"name",name},{"var-type",arrType},{"value-type",arrType}};
 	json temp = makeTempExpr(move(body), move(array), move(release));
+	if (!reset.empty()) temp["reset"] = move(reset);
+	return temp;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The array `...a` gives a `[...]E` parameter: a copy, or the array itself
+// when it is given away. The callee releases the elements either way, so only
+// the block is freed after the call.
+json PlnSemanticAnalyzer::spreadArrayArg(const json& locNode, CallArg& ca, const json& elemVT, json& count)
+{
+	json src = move(ca.sa);
+	if (auto d = spreadMismatch(src["value-type"], elemVT)) reportDiag(locNode, *d);
+	// LCOV_EXCL_BR_START
+	json body = json::array(), release = json::array(), reset = json::array();
+	if (src.value("expr-type", "") == "temp") {
+		for (auto& s : src["body"]) body.push_back(move(s));
+		for (auto& s : src["release"]) release.push_back(move(s));
+		for (auto& s : src.value("reset", json::array())) reset.push_back(s);
+		src = json(src["value"]);
+	}
+	const json vt = src["value-type"];
+	const json u64 = {{"type-kind","prim"},{"type-name","uint64"}};
+	auto idOf = [](const string& name, const json& type) {
+		return json{{"expr-type","id"},{"name",name},{"var-type",type},{"value-type",type}};
+	};
+	auto countOf = [&](const json& len) {
+		int64_t n = constArrSize(len);
+		return n >= 0 ? json{{"expr-type","lit-int"},{"value",to_string(n)},{"value-type",u64}} : wrapConvert(len, u64);
+	};
+	json value;
+	if (givenIn(ca.ast) || isExpiringOwned(src)) {
+		if (src.value("expr-type", "") != "id") src = idOf(pinTemp(move(src), locNode, body), vt);
+		count = countOf(valueLens(src)[0]);
+		if (isVarrPntr(vt)) {
+			json data = varrData(src);
+			json dataType = data["value-type"];
+			string dataName = pinTemp(move(data), locNode, body);
+			value = idOf(dataName, dataType);
+			release.push_back(makeFreeStmt(dataName, dataType));
+		} else {
+			value = src;
+		}
+		release.push_back(makeFreeStmt(src["name"].get<string>(), vt));
+	} else {
+		if (hasCall(src)) src = pinValue(move(src), ca.ast, body)["sa"];
+		json len = countOf(valueLens(src)[0]);
+		string name = "__va_" + to_string(tempVarCounter_++);
+		json arrType = {{"type-kind","pntr"},{"base-type",elemVT}};
+		setArrSize(arrType, len);
+		json decl = {{"stmt-type","var-decl"},{"loc",locNode.value("loc", json::array())},
+		             {"vars",json::array({{{"name",name}}})}};
+		enterScope();
+		for (auto& s : sa_arr_var_decl(decl, VarStorage::Heap, Storage{arrType, {len}}, false)) body.push_back(move(s));
+		value = idOf(name, arrType);
+		body.push_back(makeCopyStmt(locNode, value, src, CopyInto::New));
+		takeScopeRelease(name);
+		leaveScope();
+		count = arrType.contains("arr-size") ? len : idOf("__" + name + "_d0", u64);
+		release.push_back(makeFreeStmt(name, arrType));
+	}
+	json temp = makeTempExpr(move(body), move(value), move(release));
 	if (!reset.empty()) temp["reset"] = move(reset);
 	return temp;
 	// LCOV_EXCL_BR_STOP

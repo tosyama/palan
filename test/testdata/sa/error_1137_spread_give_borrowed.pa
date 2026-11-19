@@ -1,0 +1,2 @@
+func sum(int32 base, [...]int64 xs) -> int64 { return 0; }
+func g(@[3]int64 p) -> int64 { return sum(0, ...p>>); }

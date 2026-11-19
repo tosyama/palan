@@ -1,0 +1,55 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; [+]int32 tags; };
+func mk(int32 x) -> P p { x -> p.x; p.tags.push(x); }
+func mk2() -> [2]P r { mk(7) ->> r[0]; mk(8) ->> r[1]; }
+func total([...]P ps) -> int32 t {
+	for @p in ps { t + p.x -> t; }
+}
+func keep([...]P ps) -> P {
+	P kept;
+	ps[1] ->> kept;
+	99 -> ps[0].x;
+	return kept;
+}
+func fwd([...]P ps) -> int32 { return total(...ps); }
+func count([...]P ps) -> int32 t {
+	for @p in ps {
+		if p == NULL { t + 100 -> t; } else { t + p.x -> t; }
+	}
+}
+func fwdTaken([...]P ps) -> int32 {
+	P k;
+	ps[0] ->> k;
+	return k.x + count(...ps);
+}
+func bsum([...]@P ps) -> int32 t {
+	for @p in ps { t + p.x -> t; }
+}
+mtrace();
+{
+	[2]P a;
+	mk(1) ->> a[0];
+	mk(2) ->> a[1];
+	printf("%d\n", total(...a));
+	P k = keep(...a);
+	printf("%d %d %d\n", k.x, a[0].x, a[1].x);
+	printf("%d\n", fwd(...a));
+	printf("%d\n", total(...a>>));
+	printf("%d\n", a == NULL);
+	[+]P v;
+	v.push(mk(3));
+	v.push(mk(4));
+	printf("%d\n", total(...v));
+	P k2 = keep(...v>>);
+	printf("%d %d\n", k2.x, v == NULL);
+	printf("%d\n", total(...mk2()));
+	[2]@P bs;
+	@k -> bs[0];
+	@k -> bs[1];
+	printf("%d\n", bsum(...bs));
+	[2]P c;
+	mk(5) ->> c[0];
+	mk(6) ->> c[1];
+	printf("%d\n", fwdTaken(...c));
+}

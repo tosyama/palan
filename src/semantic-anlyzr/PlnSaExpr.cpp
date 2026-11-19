@@ -558,6 +558,10 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 	};
 	// A chain's value was judged in its `a -> len()` form already.
 	if (arr->value("expr-type", "") == "chained-value") return nullptr;
+	if (arr->value("expr-type", "") == "spread") {
+		cerr << locPrefix(*arr) << PlnSaMessage::getMessage(E_SpreadNotVariadic, "len") << endl;
+		exit(1);
+	}
 	bool isLocation = isLocationExpr(*arr);
 	if (!isLocation && (isAggregateLit(*arr) || userLenExists())) return nullptr;
 	json vt = operandValueType(*arr);
@@ -980,6 +984,10 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 
 	} else if (expr_type == "transfer") {
 		return sa_expr_transfer(expr);
+
+	} else if (expr_type == "spread") {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_SpreadPlace) << endl;
+		exit(1);
 
 	} else if (expr_type == "field-access") {
 		json enumerator = resolveEnumerator(expr);

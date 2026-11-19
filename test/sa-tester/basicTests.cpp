@@ -1567,6 +1567,52 @@ TEST(sa, variadic)
 	ASSERT_TRUE(calls[2]["args"][0]["release"].empty());
 }
 
+TEST(sa, spread_arg)
+{
+	cleanTestEnv();
+	json jout = written(run_sa("../test/testdata/sa/354_spread_arg.pa"));
+	ASSERT_TRUE(jout.is_object());
+	vector<json> calls;
+	for (auto& st : jout["statements"])
+		if (st["stmt-type"] == "expr") calls.push_back(st["body"]);
+	auto freed = [](const json& temp) {
+		vector<string> names;
+		for (auto& r : temp["release"]) {
+			EXPECT_EQ(r["body"]["name"], "free");
+			names.push_back(r["body"]["args"][0]["name"]);
+		}
+		return names;
+	};
+	// A copy: a new array, copied into, whose block alone is freed.
+	const auto& copy = calls[0]["args"];
+	ASSERT_EQ(copy.size(), 2u);
+	ASSERT_EQ(copy[0]["expr-type"], "temp");
+	ASSERT_EQ(copy[0]["value"]["name"], "__va_0");
+	ASSERT_EQ(copy[0]["body"][1]["stmt-type"], "expr");
+	ASSERT_EQ(freed(copy[0]), vector<string>({"__va_0"}));
+	ASSERT_FALSE(copy[0].contains("reset"));
+	ASSERT_EQ(copy[1]["value"], "3");
+	ASSERT_EQ(copy[1]["value-type"]["type-name"], "uint64");
+	// A length known at run time is the copy's own.
+	ASSERT_EQ(calls[1]["args"][0]["value"]["value-type"]["run-size"], true);
+	ASSERT_EQ(calls[1]["args"][1]["name"], "____va_1_d0");
+	// A given `[+]T`: its data is passed, and the data and the header are freed.
+	const auto& varr = calls[2]["args"];
+	ASSERT_EQ(varr[0]["value"]["name"], varr[0]["release"][0]["body"]["args"][0]["name"]);
+	ASSERT_EQ(freed(varr[0]).size(), 2u);
+	ASSERT_TRUE(varr[0].contains("reset"));
+	ASSERT_EQ(varr[1]["src"]["offset"], 0);
+	// Only the variadic one of the overloads takes a spread.
+	ASSERT_NE(calls[3]["name"].get<string>().find("pick.Xint64"), string::npos);
+	// A given array is passed as it is.
+	const auto& given = calls[4]["args"];
+	ASSERT_EQ(given[0]["reset"][0]["name"], "a");
+	ASSERT_EQ(freed(given[0]), vector<string>({given[0]["value"]["name"].get<string>()}));
+	// A variadic parameter is copied with its length.
+	const auto& fwd = jout["functions"][1]["body"][0]["values"][0]["args"];
+	ASSERT_EQ(fwd[0]["body"][0]["vars"][0]["init"]["name"], "__xs_d0");
+}
+
 // '==' and '<' are called for struct operands; the other comparisons are
 // derived from them, and a comparison with NULL stays a pointer comparison.
 TEST(sa, compare_func)

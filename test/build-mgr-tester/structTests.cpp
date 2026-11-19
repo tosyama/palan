@@ -1434,6 +1434,18 @@ TEST(build_mgr, copy_null_elem_mtrace) {
 	expectMtraceRun("432_copy_null_elem_mtrace", "1 2 -1\n1 1\n1\n1 5\n1\n7\n1 2 1\n3\n", 69);
 }
 
+// '...a' passes a copy the callee may write, '...a>>' the array itself, whose
+// block alone the caller frees after the call.
+TEST(build_mgr, spread_arg_mtrace) {
+	expectMtraceRun("433_spread_arg_mtrace", "n=3 7\n1\nn=3 6\nn=3 6\nn=4 6\nn=2 11\nn=2 11\nn=3 6\nn=2 3\n7\nn=3 11\nn=3 6\nn=2 42\nx, y\nn=3 6\n1\nn=2 11\nn=4 6\n1 1\n", 25);
+}
+
+// Struct elements are the callee's whether copied or given; a NULL one is
+// passed on as NULL.
+TEST(build_mgr, spread_struct_mtrace) {
+	expectMtraceRun("434_spread_struct_mtrace", "3\n2 1 2\n3\n3\n1\n7\n4 1\n15\n4\n111\n", 99);
+}
+
 // Each converted literal is released where a struct the call returns would be.
 TEST(build_mgr, literal_conversion_mtrace) {
 	expectMtraceRun("408_literal_conversion_mtrace",
