@@ -314,6 +314,22 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			return "__pln_assignrun_" + e.leaf->key + "(" + dst + ", " + src + ", " + names[0] + lenArgs(names, 1) + ");";
 		return structAssign(e.type, dst, src);
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+	// A slot pointing at a block of its own is NULL once `->>` has moved it out.
+	auto slotMayBeNull = [](const ElemOps& e) {
+		return e.kind == "struct" || e.kind == "varr" || e.kind == "row";
+	};
+	// The body of a run's copy loop: a NULL source element leaves the slot
+	// NULL, and a NULL slot is built before it is copied into whole.
+	auto keepingNull = [&](const ElemOps& e, const string& copy, const string& ma) {
+		string set = "__pln_set_" + e.key + "(dst, i, " + borrowed(e, "src[i]") + ma + ");";
+		if (!slotMayBeNull(e)) return "        " + copy + "\n";
+		string slots = "dst as " + e.data;
+		string build = "__pln_build_" + e.key + "(" + slots + ", i, i + 1" + ma + ");";
+		string fill = copy == set ? "            if dst[i] == NULL { " + build + " }\n            " + set + "\n"
+		            : "            if dst[i] == NULL { " + build + " " + set + " }\n            else { " + copy + " }\n";
+		return "        if src[i] == NULL { __pln_clear_" + e.key + "(" + slots + ", i" + ma + "); }\n"
+		       "        else {\n" + fill + "        }\n";
+	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 	set<string> elemHelpersDone;
 	function<void(const ElemOps&)> emitElemHelpers = [&](const ElemOps& e) {
 		if (!e.built || !elemHelpersDone.insert(e.key).second) return;
@@ -378,10 +394,15 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << runHead
 		    << "    int64 i = 0;\n"
 		    << "    while i < n {\n"
-		    << "        __pln_set_" << e.key << "(dst, i, " << borrowed(e, "src[i]") << ma << ");\n"
+		    << keepingNull(e, "__pln_set_" + e.key + "(dst, i, " + borrowed(e, "src[i]") + ma + ");", ma)
 		    << "        i + 1 -> i;\n"
 		    << "    }\n"
 		    << "}\n";
+		if (slotMayBeNull(e))
+			out << "func __pln_clear_" << e.key << "([]" << e.buildElem << " slots, int64 i" << mp << ") {\n"
+			    << "    " << elemDrop(e, "slots[i]", "    ", names) << "\n"
+			    << "    NULL -> slots[i];\n"
+			    << "}\n";
 	};
 
 	// __pln_assignrun_E writes a run of elements into a run of existing ones.
@@ -390,6 +411,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	function<void(const ElemOps&)> emitAssignHelpers = [&](const ElemOps& e) {
 		if (!e.assigns || !assignHelpersDone.insert(e.key).second) return;
 		if (e.leaf) emitAssignHelpers(*e.leaf);
+		if (slotMayBeNull(e)) emitElemHelpers(e);
 		vector<string> names = lenNames(e.nlens);
 		string mp = lenParams(e.nlens), ma = lenArgs(names);
 		string dstRun = e.owned ? "[]" + e.ownElem : e.data;
@@ -406,7 +428,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		if (e.kind == "embed-struct")
 			out << "        " << structAssign(e.type, "@!dst[i]", "@src[i]") << "\n";
 		else
-			out << "        __pln_aset_" << e.key << "(dst, i, " << borrowed(e, "src[i]") << ma << ");\n";
+			out << keepingNull(e, "__pln_aset_" + e.key + "(dst, i, " + borrowed(e, "src[i]") + ma + ");", ma);
 		out << "        i + 1 -> i;\n"
 		    << "    }\n"
 		    << "}\n";

@@ -78,8 +78,10 @@ Root
   an element): build-mgr generates `__pln_alloc_arr_E(n)`, `__pln_init_arr_E(outer, n)`,
   `__pln_free_arr_E(pts, n)`, `__pln_fini_arr_E(pts, n)` and `__pln_copy_arr_E(dst, src, n)`,
   and with an element holding a type with its own `->`, `__pln_assign_arr_E(dst, src, n)`, which
-  writes into the existing elements as the struct entry's `assigns` says. An array of structs
-  laid out in place (`[n]$T`), copied as bytes, has only `__pln_assign_arr_E(@!T dst, @T src, n)`.
+  writes into the existing elements as the struct entry's `assigns` says. Both keep a source
+  element moved out (NULL) as NULL and build a NULL destination slot before copying into it whole.
+  An array of structs laid out in place (`[n]$T`), copied as bytes, has only
+  `__pln_assign_arr_E(@!T dst, @T src, n)`.
   `E` is the element's `key`, each function's arguments followed by the lengths below it
   (`[2][3][4]int32` is `__pln_alloc_arr_PPint32(2, 3, 4)`). Levels laid out in place in the
   array itself are one run of their elements: with `S` owning fields, `[2]$[3]S` is

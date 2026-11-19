@@ -1428,6 +1428,12 @@ TEST(build_mgr, variadic_struct_mtrace) {
 	expectMtraceRun("407_variadic_struct_mtrace", "10\n5 1 2\n8\n12\n", 29);
 }
 
+// An element moved out leaves NULL, which a copy keeps; one copied into a
+// NULL slot is built there first, and so copied whole.
+TEST(build_mgr, copy_null_elem_mtrace) {
+	expectMtraceRun("432_copy_null_elem_mtrace", "1 2 -1\n1 1\n1\n1 5\n1\n7\n1 2 1\n3\n", 69);
+}
+
 // Each converted literal is released where a struct the call returns would be.
 TEST(build_mgr, literal_conversion_mtrace) {
 	expectMtraceRun("408_literal_conversion_mtrace",
