@@ -165,7 +165,7 @@ TEST(sa, cinclude_struct_arg)
 	ASSERT_EQ(v["var-type"]["type-kind"], "pntr");
 	ASSERT_EQ(v["var-type"]["base-type"]["type-kind"], "struct");
 	ASSERT_EQ(v["var-type"]["base-type"]["type-name"], "Point");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 
 	// 10 -> p.x / 20 -> p.y resolve to the same field-assign shape as a
@@ -202,7 +202,7 @@ TEST(sa, cinclude_nested_struct)
 	const auto& decl = jout["statements"][0];
 	const auto& v = decl["vars"][0];
 	ASSERT_EQ(v["name"], "it");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "32");
 
 	// it.it_interval.tv_sec: it_interval@0, tv_sec@0 -> flattened offset 0
@@ -406,7 +406,7 @@ TEST(sa, cinclude_arr_field_prim)
 	// fix above, since "char name[16]" collapsed to a single int8 field).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "b");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 }
 
@@ -424,7 +424,7 @@ TEST(sa, cinclude_arr_field_struct)
 	// Poly p; -> malloc(24): confirms totalSize == 3 * Point.totalSize(8) == 24.
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "p");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "24");
 }
 
@@ -445,7 +445,7 @@ TEST(sa, cinclude_ptr_slot_arr_field)
 	// not 16 (two 8-byte pointers, the pre-fix misparse).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "s");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "56");
 }
 
@@ -463,7 +463,7 @@ TEST(sa, cinclude_struct_stat_size)
 
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "s");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "144");
 }
 
@@ -480,7 +480,7 @@ TEST(sa, cinclude_pthread_union_size)
 	ASSERT_EQ(st.size(), size(sizes));
 	for (size_t i = 0; i < size(sizes); i++) {
 		const auto& v = st[i]["vars"][0];
-		ASSERT_EQ(v["init"]["name"], "malloc") << v["name"];
+		ASSERT_EQ(v["init"]["name"], "__pln_malloc") << v["name"];
 		ASSERT_EQ(v["init"]["args"][0]["value"], sizes[i]) << v["name"];
 	}
 }
@@ -734,7 +734,7 @@ TEST(sa, struct_ret_c_call) {
 	ASSERT_EQ(decl["stmt-type"], "var-decl");
 	const auto& v = decl["vars"][0];
 	ASSERT_EQ(v["name"], "d");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 
 	const auto& call = stmts[1]["body"];
 	ASSERT_EQ(stmts[1]["stmt-type"], "expr");
@@ -1196,7 +1196,7 @@ TEST(sa, c_fd_set)
 	json jout = run_sa("../test/testdata/sa/264_c_fd_set.pa");
 	ASSERT_TRUE(jout.is_object());
 	const auto& init = jout["statements"][0]["vars"][0]["init"];
-	ASSERT_EQ(init["name"], "malloc");
+	ASSERT_EQ(init["name"], "__pln_malloc");
 	ASSERT_EQ(init["args"][0]["value"], "128");
 }
 

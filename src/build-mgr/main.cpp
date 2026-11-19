@@ -136,6 +136,7 @@ static int compileModule(const string& source, const string& mode, const string&
 	if (fs::exists(sa_file) && isUpToDate(obj_file, tools_time, deps))
 		return 0;
 	vector<string> sa_argv{exec_path + "/palan-sa", source + ".ast.json"};
+	if (mode == "release") sa_argv.push_back("--release");
 	sa_argv.insert(sa_argv.end(), library_args.begin(), library_args.end());
 	if (int ret = runToolTo(sa_argv, sa_file)) // LCOV_EXCL_BR_LINE
 		return ret;
@@ -589,9 +590,10 @@ int main(int argc, char* argv[])
 		obj_files.push_back(alloc_o);
 	}
 
-	// ld — link all object files into the final binary. -lc is unconditional:
-	// the allocators Palan synthesizes call libc malloc/free, a runtime
-	// dependency independent of any header. link_libs then adds one -l per
+	// ld — link all object files into the final binary. std's rt and -lc are
+	// unconditional: code palan-sa and the allocators generate allocates
+	// through rt and frees through libc, a runtime dependency independent of
+	// any header. link_libs then adds one -l per
 	// cinclude `link` clause; names are validated at SA ingest, not here.
 	// link_libs is a set, so declaration order from source is already lost --
 	// harmless for shared libraries (order doesn't gate symbol resolution).
@@ -604,6 +606,7 @@ int main(int argc, char* argv[])
 		ldArgv.insert(ldArgv.end(), archives.begin(), archives.end());
 		ldArgv.push_back("--end-group");
 	}
+	ldArgv.push_back(std_root + "/std/rt.a");
 	ldArgv.push_back("-lc");
 	for (auto& lib : link_libs) ldArgv.push_back("-l" + lib);
 	ldArgv.push_back("-dynamic-linker");

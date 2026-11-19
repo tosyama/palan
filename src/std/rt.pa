@@ -1,0 +1,44 @@
+library std;
+
+// What every program links: the allocations Palan code makes go through
+// here, and the run-time checks fail here. It holds no array or struct, which
+// would allocate through it.
+
+cinclude <stdlib.h>;
+cinclude <unistd.h>;
+
+// write, as stdio's buffers may be what ran out.
+func fail(@[]uint8 msg, uint64 n)
+{
+	write(2, msg, n);
+	abort();
+}
+
+// A size of 0 may give NULL.
+export "C" func __pln_malloc(uint64 n) -> @!void p
+{
+	malloc(n) -> p;
+	if p == NULL && n > 0 { fail("runtime error: out of memory\n", 29); }
+}
+
+export "C" func __pln_calloc(uint64 n, uint64 size) -> @!void p
+{
+	calloc(n, size) -> p;
+	if p == NULL && n * size > 0 { fail("runtime error: out of memory\n", 29); }
+}
+
+export "C" func __pln_realloc(@!void old, uint64 n) -> @!void p
+{
+	realloc(old, n) -> p;
+	if p == NULL && n > 0 { fail("runtime error: out of memory\n", 29); }
+}
+
+export "C" func __pln_pop_empty()
+{
+	fail("runtime error: pop of an empty array\n", 37);
+}
+
+export "C" func __pln_negative_size()
+{
+	fail("runtime error: negative array size\n", 35);
+}

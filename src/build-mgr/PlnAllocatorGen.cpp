@@ -35,12 +35,14 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	// system header could bring a C type of any of those names into this
 	// module, so it declares only what it calls.
 	hdr << "#define NULL ((void *)0)\n"
-	    << "void *malloc(unsigned long size);\n"
-	    << "void *calloc(unsigned long nmemb, unsigned long size);\n"
+	    << "void *__pln_malloc(unsigned long size);\n"
+	    << "void *__pln_calloc(unsigned long nmemb, unsigned long size);\n"
+	    << "void *__pln_realloc(void *ptr, unsigned long size);\n"
+	    << "void __pln_pop_empty(void);\n"
+	    << "void __pln_negative_size(void);\n"
 	    << "void free(void *ptr);\n"
 	    << "void *memcpy(void *dest, const void *src, unsigned long n);\n"
 	    << "void *memmove(void *dest, const void *src, unsigned long n);\n"
-	    << "void *realloc(void *ptr, unsigned long size);\n"
 	    << "void abort(void);\n";
 	// A type's '->' and the function storing its field initializers are
 	// Palan functions, called as C calls them.
@@ -93,7 +95,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	// Slots are filled with raw C allocations: a borrow slot never takes
 	// ownership, and the array's free function releases the elements.
 	auto structElemBuild = [&](const string& name, const string& slot, const string& indent) {
-		string s = indent + "malloc("
+		string s = indent + "__pln_malloc("
 			+ to_string(struct_by_name.at(name)->at("total-size").get<int64_t>())
 			+ ") -> " + slot + ";\n";
 		if (hasOwned(name))
@@ -244,11 +246,11 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	auto elemBuild = [&](const ElemOps& e, const string& slot, const string& indent, const vector<string>& names) {
 		if (e.kind == "embed-varr") return indent + "__pln_init_" + e.inner + "(@!" + slot + ", 0, 0" + lenArgs(names) + ");\n";
 		if (e.kind == "embed-row") return indent + "__pln_build_" + e.key + "(" + slot + " as " + e.data + ", 0, 1" + lenArgs(names) + ");\n";
-		if (e.kind == "varr") return indent + "calloc(1, 24) -> " + slot + ";\n";
+		if (e.kind == "varr") return indent + "__pln_calloc(1, 24) -> " + slot + ";\n";
 		if (e.kind == "opaque") return indent + "NULL -> " + slot + ";\n";
 		if (e.kind == "row") {
 			const ElemOps& l = *e.leaf;
-			string s = indent + "malloc(" + names[0] + " * " + sizeOf(l, rest(names, 1)) + ") -> " + slot + ";\n";
+			string s = indent + "__pln_malloc(" + names[0] + " * " + sizeOf(l, rest(names, 1)) + ") -> " + slot + ";\n";
 			if (l.built) s += indent + "__pln_build_" + l.key + "(" + slot + ", 0, " + names[0] + lenArgs(names, 1) + ");\n";
 			return s;
 		}
@@ -533,7 +535,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		// by this very function.
 		out << "\nexport func __pln_alloc_" << name
 		    << "() -> @!" << name << " p {\n"
-		    << "    malloc(" << shape["total-size"].get<int64_t>() << ") -> p;\n"
+		    << "    __pln_malloc(" << shape["total-size"].get<int64_t>() << ") -> p;\n"
 		    << "    __pln_init_" << name << "(p);\n"
 		    << "}\n";
 
@@ -647,14 +649,14 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "(@!" << hdr << " h, int64 len, int64 cap" << mp << ") {\n"
 		    << "    len -> h.len;\n"
 		    << "    cap -> h.cap;\n"
-		    << "    if cap > 0 { malloc(cap * " << size << ") -> h.data; }\n"
+		    << "    if cap > 0 { __pln_malloc(cap * " << size << ") -> h.data; }\n"
 		    << "    else { NULL -> h.data; }\n";
 		if (e.built) out << "    __pln_build_" << e.key << "(h.data, 0, len" << ma << ");\n";
 		out << "}\n"
 		// The header is returned as its block, as a struct allocator's is.
 		    << "export func __pln_alloc_" << key
 		    << "(int64 len, int64 cap" << mp << ") -> @!" << hdr << " h {\n"
-		    << "    malloc(24) -> h;\n"
+		    << "    __pln_malloc(24) -> h;\n"
 		    << "    __pln_init_" << key << "(h, len, cap" << ma << ");\n"
 		    << "}\n"
 		    << "export func __pln_fini_" << key << "(@!" << hdr << " h" << mp << ") {\n";
@@ -673,7 +675,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "    int64 c = h.cap * 2;\n"
 		    << "    if c < n { n -> c; }\n"
 		    << "    if c < 4 { 4 -> c; }\n"
-		    << "    realloc(h.data, c * " << size << ") -> h.data;\n"
+		    << "    __pln_realloc(h.data, c * " << size << ") -> h.data;\n"
 		    << "    c -> h.cap;\n"
 		    << "}\n";
 		// A struct or a row (an inner `[+]T`'s header too) comes as the
@@ -701,7 +703,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		out << "    h.len + 1 -> h.len;\n"
 		    << "}\n"
 		    << "export func __pln_resize_" << key << "(@!" << hdr << " h, int64 n" << mp << ") {\n"
-		    << (checks ? "    if n < 0 { abort(); }\n" : "")
+		    << (checks ? "    if n < 0 { __pln_negative_size(); }\n" : "")
 		    << "    if n > h.cap { __pln_reserve_" << key << "(h, n" << ma << "); }\n";
 		if (e.owned)
 			out << "    if n > h.len { __pln_build_" << e.key << "(h.data, h.len, n" << ma << "); }\n"
@@ -757,7 +759,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		// An owned struct moves out of its block, which return then frees.
 		if (e.kind == "struct") {
 			out << "export func __pln_pop_" << key << "(@!" << hdr << " h" << mp << ") -> " << e.type << " {\n"
-			    << (checks ? "    if h.len == 0 { abort(); }\n" : "")
+			    << (checks ? "    if h.len == 0 { __pln_pop_empty(); }\n" : "")
 			    << "    h.len - 1 -> h.len;\n"
 			    << "    " << e.type << " x <<= h.data[h.len] as " << e.type << ";\n"
 			    << "    return x;\n"
@@ -766,10 +768,10 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		}
 		// An owned element leaves its slot for the caller.
 		out << "export func __pln_pop_" << key << "(@!" << hdr << " h" << mp << ") -> " << e.popped << " x {\n"
-		    << (checks ? "    if h.len == 0 { abort(); }\n" : "")
+		    << (checks ? "    if h.len == 0 { __pln_pop_empty(); }\n" : "")
 		    << "    h.len - 1 -> h.len;\n";
 		if (e.kind == "embed-row")
-			out << "    malloc(" << size << ") -> x;\n";
+			out << "    __pln_malloc(" << size << ") -> x;\n";
 		// Owned elements' slots are pointers, which '@!' cannot address.
 		if (e.kind == "embed-row" && e.owned) {
 			string n = countOf(e, names);

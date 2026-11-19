@@ -173,6 +173,7 @@ class PlnSemanticAnalyzer {
 	string c2astPath;
 	string inputFilePath;
 	string moduleId_;  // the module's identity, a type's origin
+	bool checks_ = true;  // a debug build's run-time checks
 	json sa;
 	PlnTypeRegistry registry_;
 	map<string, string> strLiteralLabels;  // value -> label
@@ -895,4 +896,5 @@ public:
 	// The symbols of a .pai's public functions, as an importer of it resolves them.
 	json interfaceSymbols(const json& ast);
 	void setLibraries(map<string, string> libraries);  // import <pkg/mod> -> its AST file
+	void setChecks(bool checks) { checks_ = checks; }
 };

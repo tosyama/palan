@@ -889,8 +889,8 @@ TEST(build_mgr, mode_decides_checks) {
 		"printf(\"%d\\n\", v.pop());\n");
 	auto hasChecks = [](const string& mode) {
 		string text = fileText(reusePath("mode.pa") + "." + mode + ".d/" PALAN_ALLOCATORS_MODULE ".pa");
-		bool pop = text.find("if h.len == 0 { abort(); }") != string::npos;
-		bool resize = text.find("if n < 0 { abort(); }") != string::npos;
+		bool pop = text.find("if h.len == 0 { __pln_pop_empty(); }") != string::npos;
+		bool resize = text.find("if n < 0 { __pln_negative_size(); }") != string::npos;
 		EXPECT_EQ(pop, resize) << text;
 		return pop;
 	};
@@ -945,7 +945,7 @@ TEST(build_mgr, lib_archive_links_without_the_source) {
 	// A program's first use of the archive: only the stub is not from it.
 	ASSERT_EQ(execTestCommand("lib/palan/dev/tools/palan-codegen --entry demo.demo..init --entry demo.demo..main --target " PALAN_TARGET " -o out/entry.s"), "");
 	ASSERT_EQ(execTestCommand("as out/entry.s -o out/entry.o"), "");
-	ASSERT_EQ(execTestCommand("ld out/entry.o " + archive + " -lc -lm -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o out/demo"), "");
+	ASSERT_EQ(execTestCommand("ld out/entry.o " + archive + " lib/palan/dev/" PALAN_TARGET "/std/rt.a -lc -lm -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o out/demo"), "");
 	string output = execTestCommand(
 		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so MALLOC_TRACE=out/trace.log out/demo");
 	ASSERT_EQ(output, "len 2 1 q 7\n");

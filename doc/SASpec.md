@@ -460,12 +460,14 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   known only at run time is held in a temp var `__<name>_d<k>` (uint64, `k` counting levels from
   the outermost), declared before the variable, which its allocation, its free and a row index
   without a `stride` read. Each later variable of the statement declares its own, copied from the
-  first variable's.
+  first variable's. Unless palan-sa is given `--release`, the first variable's is followed by
+  `if <it as int64> < 0 { __pln_negative_size(); }` (a C call to `std/rt`).
 
   **`[n]T` (raw array):** A `var-decl` with `arr` type-kind (`specifier: "raw"`, non-null `size-expr`,
-  prim `base-type`) is rewritten as a `var-decl` with `pntr` type and a synthesized `malloc` call as init:
+  prim `base-type`) is rewritten as a `var-decl` with `pntr` type and a synthesized `__pln_malloc` call
+(`std/rt`'s `malloc`, which aborts when it fails) as init:
   - `var-type`: changed from `arr` to `pntr` (pointer to the element type)
-  - `init`: `{"expr-type":"call","name":"malloc","func-type":"c","args":[<size_bytes>],"value-type":<pntr_type>}`
+  - `init`: `{"expr-type":"call","name":"__pln_malloc","func-type":"c","args":[<size_bytes>],"value-type":<pntr_type>}`
     where `size_bytes` = the size (when elem_size == 1) or `mul(<size>, lit-uint(elem_size))` otherwise
   - The variable is registered in scope with `pntr` type
   - The `size-expr` must evaluate to an integer type; a float size is a compile error
@@ -476,7 +478,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     the element carries the slot's permission, so a slot is a borrow and `->` into it stores the
     pointer. A read-only slot to rows (`[n]@[]$[m]T`) has `"mutable": false` on each row level
     too, as a read-only `@[k][m]T` does
-  - `init`: `malloc(size-expr * 8)` (each slot is a pointer; elem-size is always 8)
+  - `init`: `__pln_malloc(size-expr * 8)` (each slot is a pointer; elem-size is always 8)
   - The outer array is freed at scope exit. What the slots point to is not freed; a slot cannot
     take ownership with `->>` (E_TransferToBorrowSlot).
 
@@ -499,9 +501,9 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     - `stride` and the row's `arr-size` are present when `m` is a compile-time constant; absent
       when `m` is a runtime variable
   - When `m` is a constant (e.g. `[n]$[4]int32`):
-    - `init`: C call `malloc(mul(<n-expr>, lit-uint(m * sizeof(T))))`
+    - `init`: C call `__pln_malloc(mul(<n-expr>, lit-uint(m * sizeof(T))))`
   - When `m` is a variable (e.g. `[n]$[cols]int32`):
-    - `init`: C call `malloc(mul(<n>, mul(__<name>_d1, lit-uint(sizeof(T)))))`
+    - `init`: C call `__pln_malloc(mul(<n>, mul(__<name>_d1, lit-uint(sizeof(T)))))`
   - Scope-exit free: C call `free(<name>)` (no custom allocator; no `alloc-shapes` entry needed).
   - `n` (row count) is not stored; only `m` (inner dimension) needs to be retained for row indexing.
 
@@ -1781,7 +1783,7 @@ E_EmbedOwningType, as for a variable.
 {"stmt-type":"var-decl","vars":[{
   "name":"p",
   "var-type":{"type-kind":"pntr","base-type":{"type-kind":"struct","type-name":"Point"}},
-  "init":{"expr-type":"call","name":"malloc","func-type":"c",
+  "init":{"expr-type":"call","name":"__pln_malloc","func-type":"c",
           "args":[{"expr-type":"lit-int","value":"16",
                    "value-type":{"type-kind":"prim","type-name":"uint64"}}],
           "value-type":{"type-kind":"pntr","base-type":{"type-kind":"struct","type-name":"Point"}}}
@@ -1792,7 +1794,7 @@ Struct variables are registered in `arrayScopeVars_` and a `free()` statement is
 at scope exit (same mechanism as heap-allocated arrays).
 
 When the initializer is a call returning the same struct (`Point p = makePoint();`,
-`div_t d = div(7, 2);`), the var-decl's `init` is a raw `malloc` of the struct's size even when
+`div_t d = div(7, 2);`), the var-decl's `init` is a raw `__pln_malloc` of the struct's size even when
 the struct owns fields, since the callee builds them, and the call follows the var-decl as an
 `expr` statement whose `ret-dest` is the variable. A struct variable with an initializer is
 always emitted as its own var-decl, so `Point a = b, c = f();` evaluates left to right.
@@ -1803,7 +1805,7 @@ A struct or array variable declared with `$` (`$Point p;`, `$[4]int32 a;`) gets 
 `var-type` as without `$`; its `init` is a `frame-alloc` instead of the allocation call, and
 what the heap version does through its allocator and free functions is derived from them:
 
-- `malloc` → nothing (left undefined).
+- `__pln_malloc` → nothing (left undefined).
 - `__pln_alloc_K(args)` → `__pln_init_K(v, args)` follows the var-decl.
   build-mgr generates `__pln_init_K` (fill an existing block) and `__pln_fini_K` (release what
   the block owns, not the block) for every alloc-shape alongside the alloc/free pair.

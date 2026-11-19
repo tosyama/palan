@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
 		{ "indent",  no_argument,       NULL, 'i' },
 		{ "interface", no_argument,     NULL, 'I' },
 		{ "library", required_argument, NULL, 'L' },
+		{ "release", no_argument,       NULL, 'R' },
 		{ 0 }
 	};
 
@@ -30,6 +31,7 @@ int main(int argc, char* argv[])
 	char *output_file = NULL;
 	bool do_indent = false;
 	bool is_interface = false;
+	bool release = false;
 	map<string, string> libraries;
 
 	while (0 < (opt = getopt_long(argc, argv, "hvo:i", long_options, NULL))) {
@@ -48,6 +50,9 @@ int main(int argc, char* argv[])
 				break;
 			case 'I':
 				is_interface = true;
+				break;
+			case 'R':
+				release = true;
 				break;
 			case 'L': {
 				string library = optarg;
@@ -85,6 +90,7 @@ int main(int argc, char* argv[])
 
 	PlnSemanticAnalyzer analyzer(c2ast_path);
 	analyzer.setLibraries(move(libraries));
+	analyzer.setChecks(!release);
 	json symbols;
 	if (is_interface) symbols = analyzer.interfaceSymbols(ast);
 	else analyzer.analysis(ast, ast_path.string());

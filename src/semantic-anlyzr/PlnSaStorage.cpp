@@ -1248,7 +1248,7 @@ json PlnSemanticAnalyzer::structAllocExpr(const string& name, bool build)
 	} else {
 		json uint64_type = {{"type-kind","prim"},{"type-name","uint64"}};
 		json size_arg = {{"expr-type","lit-int"},{"value",to_string(def.totalSize)},{"value-type",uint64_type}};
-		call = {{"expr-type","call"},{"name","malloc"},{"func-type","c"},{"args",json::array({size_arg})}};
+		call = {{"expr-type","call"},{"name","__pln_malloc"},{"func-type","c"},{"args",json::array({size_arg})}};
 	}
 	call["value-type"] = move(pntrType);
 	return call;
@@ -1362,7 +1362,7 @@ AggregatePlace PlnSemanticAnalyzer::arrPlace(const json& self, const vector<json
 		json elemSize = inPlaceSizeExpr(elem, 1, [&](size_t k) { return lens[k]; });
 		place.frameAlign = inPlaceAlign(elem);
 		json size = elemBytes == 1 ? lens[0] : mul(lens[0], move(elemSize));
-		place.heapInit = {{"expr-type","call"},{"name","malloc"},{"func-type","c"},{"args",json::array({move(size)})}};
+		place.heapInit = {{"expr-type","call"},{"name","__pln_malloc"},{"func-type","c"},{"args",json::array({move(size)})}};
 		place.frameBytes = n < 0 || elemBytes < 0 ? -1 : n * elemBytes;
 		const json* leaf = &vt;
 		json count;
@@ -1420,6 +1420,17 @@ json PlnSemanticAnalyzer::sa_arr_var_decl(const json& stmt, VarStorage storage, 
 			declareVar(lenName, uint64_type, &stmt);
 			result.push_back({{"stmt-type","var-decl"},
 				{"vars",json::array({{{"name",lenName},{"var-type",uint64_type},{"init",move(init)}}})}});
+			// Read as int64, a length is checked once however it was typed; one
+			// past int64's range could not be allocated anyway.
+			if (checks_ && first.empty()) {
+				json cond = {{"expr-type","cmp"},{"op","<"},
+					{"left",wrapConvert(id(lenName, uint64_type), lenLit(0)["value-type"])},{"right",lenLit(0)},
+					{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+				json fail = {{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name","__pln_negative_size"},
+					{"func-type","c"},{"args",json::array()}}}};
+				result.push_back({{"stmt-type","if"},{"cond",move(cond)},
+					{"then",{{"stmt-type","block"},{"body",json::array({move(fail)})}}}});
+			}
 			lens.push_back(id(lenName, uint64_type));
 		}
 		if (first.empty()) first = name;

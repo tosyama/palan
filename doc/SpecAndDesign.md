@@ -53,10 +53,17 @@ Design:
  Root) and every used library's `link` statements (3.7). Palan archives are linked in one
  `--start-group`/`--end-group`, since the union keeps no order.
  A build is in debug or release mode: run directly it is debug, written with `-o` (`--lib`
- too) release, and `--debug`/`--release` override either. Only the run-time checks (`pop` of an
- empty `[+]T`, a negative `resize`) depend on it, and are left out of a release build; debug
- information and optimization do not exist yet. A library keeps the checks of the mode it was built
- in, as its objects are in its archive.
+ too) release, and `--debug`/`--release` override either. Only the checks of the writer's errors
+ (`pop` of an empty `[+]T`, a negative size or `resize`) depend on it, and are left out of a
+ release build (`palan-sa --release`, and the generated allocators); debug information and
+ optimization do not exist yet. A library keeps the checks of the mode it was built in, as its
+ objects are in its archive. A failed allocation is checked in either mode, as no debug run
+ finds it.
+
+ Code palan-sa and the allocators generate allocates through `std/rt` (`__pln_malloc`, ...) and
+ fails a check through it, printing `runtime error: <what>` before `abort()`. It is a Palan library
+ built with std and given to every `ld`, so a program compiles nothing more for it, and it is
+ written in Palan, for any target, not emitted by palan-codegen as `_start` is.
 
 ### 3.2 AST Generator (palan-gen-ast)
 Responsibility:
@@ -690,6 +697,7 @@ All tools write error messages to **stderr** and exit with code **1** on error.
     tools/palan, palan-gen-ast, palan-c2ast, palan-sa, palan-codegen
     <target>/c2ast/predefined.h
     <target>/std/utf8.pai, utf8.a
+    <target>/std/rt.pai, rt.a         linked into every program (3.1)
     src/std/utf8.pa                  for reference; not read when compiling
     uninstall
   share/doc/palan/<version>/

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # The public mains; any other source is an internal module.
-set(PALAN_STD_MAINS utf8)
+set(PALAN_STD_MAINS utf8 rt)
 
 file(GLOB_RECURSE PALAN_STD_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.pa)
 set(std_dir ${PALAN_BUILD_LIB_DIR}/${PALAN_TARGET})

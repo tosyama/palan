@@ -259,7 +259,7 @@ TEST(sa, import_type)
 	// Laid out from the exporting module, where the non-exported Inner and
 	// the cinclude'd FILE are known.
 	const auto& p = stmts[0]["vars"][0]["init"];
-	ASSERT_EQ(p["name"], "malloc");
+	ASSERT_EQ(p["name"], "__pln_malloc");
 	ASSERT_EQ(p["args"][0]["value"], "24");
 	ASSERT_EQ(funcName(stmts[1]["vars"][0]["init"]["name"]), "__pln_alloc_arr_P9__pln_B24");
 	ASSERT_EQ(stmts[2]["vars"][0]["var-type"]["type-name"], "int64");

@@ -1,0 +1,5 @@
+cinclude <stdio.h>;
+// More than any machine can allocate, but not negative as int64.
+int64 n = 4611686018427387904;
+[n]int8 a;
+printf("%d\n", a[0]);

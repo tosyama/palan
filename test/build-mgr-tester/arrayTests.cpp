@@ -507,14 +507,26 @@ TEST(build_mgr, arrow_precedence) {
 	ASSERT_EQ(output, "7 8 9 1\n");
 }
 
-TEST(build_mgr, varr_builtins_abort) {
-	for (string file : {"329_varr_pop_empty", "330_varr_resize_negative"}) {
+// A release build leaves out the checks of the writer's errors, not that of
+// an allocation: a negative size then runs out of memory.
+TEST(build_mgr, runtime_errors) {
+	struct { const char* file; const char* mode; const char* error; } cases[] = {
+		{"329_varr_pop_empty", "--debug", "pop of an empty array"},
+		{"330_varr_resize_negative", "--debug", "negative array size"},
+		{"436_array_negative_size", "--debug", "negative array size"},
+		{"436_array_negative_size", "--release", "out of memory"},
+		{"437_array_out_of_memory", "--debug", "out of memory"},
+		{"437_array_out_of_memory", "--release", "out of memory"},
+	};
+	for (auto& c : cases) {
 		cleanTestEnv();
-		string bin = "/tmp/palan_" + file;
-		ASSERT_EQ(execTestCommand("bin/palan --debug -o " + bin + " ../test/testdata/build-mgr/" + file + ".pa"), "");
+		string bin = string("/tmp/palan_") + c.file;
+		ASSERT_EQ(execTestCommand(string("bin/palan ") + c.mode + " -o " + bin + " ../test/testdata/build-mgr/" + c.file + ".pa"), "");
 		// ulimit -c 0 keeps the program's core dump out of build/.
-		string out = execTestCommand("ulimit -c 0; " + bin + "; echo status $?");
-		EXPECT_NE(out.find("status 134"), string::npos) << file << ": " << out;
+		// The shell's own report of the abort follows what the program wrote.
+		string out = execTestCommand("ulimit -c 0; " + bin + " 2>out/stderr; echo status $?; cat out/stderr");
+		string expected = string("status 134\nruntime error: ") + c.error + "\n";
+		EXPECT_EQ(out.substr(0, expected.size()), expected) << c.file << " " << c.mode;
 	}
 }
 

@@ -70,8 +70,11 @@ Options go before the source file; everything after it is passed to the program 
 the intermediate files under `~/.palan/work/`, not in the current directory.
 
 A build is a debug build when the program is run directly and a release build with `-o` (`--lib`
-too). A release build leaves out the run-time checks (`pop` and `resize` of a variable-length array), so what they would stop is undefined. `--debug` and `--release` choose the
-mode either way. A library keeps the checks of the mode it was built in.
+too). A run-time check that fails prints `runtime error: <what>` and aborts the program. A
+release build leaves out the checks of the writer's errors (a negative array size, `pop` and
+`resize` of a variable-length array), so what they would stop is undefined; a failed allocation
+(`out of memory`) is checked in either. `--debug` and `--release` choose the mode either way. A
+library keeps the checks of the mode it was built in.
 
 The environment variable `PALAN_WORK` names another directory for the intermediate files, in place
 of `~/.palan/work/`. `--clean` removes only what `palan` put there.
@@ -1900,7 +1903,8 @@ printf("\n");                // 1 2 3
 - Growing past the room it has reallocates the elements, at least doubling the room, so adding
   one element at a time reallocates only now and then. Shrinking keeps the room.
 - `pop` on an empty array and `resize` to a negative length abort the program, in a debug build
-  (see [Command-Line Usage](#1-command-line-usage)).
+  (see [Command-Line Usage](#1-command-line-usage)), as a negative size known only at run time
+  does for any array.
 - `[+n]T v = [...]` takes `n` elements, the literal's first and the rest undefined; `n` must be
   a constant no less than the literal's length.
 - `$[+]T v` keeps the array's header in the stack frame; its elements are on the heap either way.
