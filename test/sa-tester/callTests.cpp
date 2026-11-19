@@ -446,6 +446,11 @@ TEST(sa, variadic)
 	ASSERT_EQ(none[2]["value"], "0");
 	// The copy of `p` is the callee's: the caller releases nothing.
 	ASSERT_TRUE(calls[2]["args"][0]["release"].empty());
+	// A borrow of a call's temp is laid out as it is: codegen releases the
+	// temps of the array's statements after the call.
+	const auto& borrowed = calls[3]["args"][0]["body"][1];
+	ASSERT_EQ(borrowed["stmt-type"], "arr-assign");
+	ASSERT_EQ(borrowed["value"]["args"][0]["expr-type"], "temp");
 }
 
 TEST(sa, spread_arg)

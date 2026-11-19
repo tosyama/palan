@@ -51,6 +51,7 @@ class PlnVCodeGen {
     string addFloatLiteral(const string& value, VRegType type);
     VReg lowerExpr(const Expr& expr, VFunc& func);
     void lowerStmt(const Stmt& stmt, VFunc& func);
+    void lowerStmtKeepingTemps(const Stmt& stmt, VFunc& func);
     void lowerExprStmt(const ExprStmt& stmt, VFunc& func);
     void lowerVarDeclStmt(const VarDeclStmt& stmt, VFunc& func);
     void lowerAssignStmt(const AssignStmt& stmt, VFunc& func);

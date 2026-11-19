@@ -1085,8 +1085,8 @@ SA-only expression kinds (not present in AST JSON):
 - temp - A call argument held in a temp variable (see Temp arguments above), or a chained call
   given return values (see Chained calls).
   - expr-type\*: "temp"
-  - body\*: statements that declare and initialize the temp; each releases the temps of its own
-    values at its end
+  - body\*: statements that declare and initialize the temp; the temps of their values are
+    released with `release`, after it
   - value\*: the temp as the argument (`id`), or the chained `call` taking the temps
   - release\*: statements that free the temp; codegen runs them once the enclosing full
     expression has been evaluated: at the end of the statement (before a `return`'s `ret`), or,
@@ -1423,8 +1423,7 @@ it, the registry's function type compares it (so a C callback type never matches
   the callee owns; a literal or a call's result is a `temp`), then laid out in the `temp` of a
   frame array `__va_<n>` (`frame-alloc` of the arguments' count times the element's slot, then
   one `arr-assign` each). An argument's own `temp` is opened into the array's, so what it
-  releases outlives the call; one still holding a call's temporary within a borrow is
-  E_VariadicArgTempBorrow. The call passes that array (`lit-int` 0 of type `@void` for none) and
+  releases outlives the call, as the temps an `arr-assign` holds do. The call passes that array (`lit-int` 0 of type `@void` for none) and
   the count as a `uint64` `lit-int`: a call has one argument more than the signature's parameters.
 - In `functions` the parameter is two: `xs`, typed as an array sized at run time
   (`{"type-kind":"pntr","run-size":true,"base-type":E}`), and `__xs_d0` (`uint64`), the length

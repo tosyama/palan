@@ -582,15 +582,19 @@ vector<VReg> PlnVCodeGen::lowerArgs(const vector<unique_ptr<Expr>>& args, VFunc&
 
 VReg PlnVCodeGen::lowerTempExpr(const TempExpr& e, VFunc& func)
 {
-    // Each body statement releases only the temps of its own values; the
-    // ones already pending belong to the enclosing full expression.
+    // A body statement's temps are released with the temp itself: a statement
+    // laying out a variadic argument may store a borrow of one for the call.
+    // The releases already pending stay apart, since a condition inside a body
+    // statement flushes what is pending.
     vector<const Stmt*> outer = move(pendingReleases_);
     pendingReleases_.clear();
     for (auto& s : e.body)
-        lowerStmt(*s, func);
+        lowerStmtKeepingTemps(*s, func);
+    vector<const Stmt*> bodyTemps = move(pendingReleases_);
     pendingReleases_ = move(outer);
     for (auto& s : e.release)
         pendingReleases_.push_back(s.get()); // LCOV_EXCL_BR_LINE
+    pendingReleases_.insert(pendingReleases_.end(), bodyTemps.begin(), bodyTemps.end());
     for (auto& s : e.reset)
         pendingResets_.push_back(s.get()); // LCOV_EXCL_BR_LINE
     return lowerExpr(*e.value, func);
@@ -1024,6 +1028,12 @@ void PlnVCodeGen::lowerContinueStmt(VFunc& func)
 
 void PlnVCodeGen::lowerStmt(const Stmt& stmt, VFunc& func)
 {
+    lowerStmtKeepingTemps(stmt, func);
+    flushReleases(func);
+}
+
+void PlnVCodeGen::lowerStmtKeepingTemps(const Stmt& stmt, VFunc& func)
+{
     switch (stmt.kind) {
         case StmtKind::Expr:
             lowerExprStmt(static_cast<const ExprStmt&>(stmt), func);
@@ -1068,7 +1078,6 @@ void PlnVCodeGen::lowerStmt(const Stmt& stmt, VFunc& func)
         default:
             BOOST_ASSERT(false);
     }
-    flushReleases(func);
 }
 
 // -------- Entry point --------

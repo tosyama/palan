@@ -535,8 +535,6 @@ with different defaults share a pointer type.
 - Defaults and a variadic parameter together are an error: in `f(1, 2)` for
   `f(int32 a, int32 b = 0, [...]int32 xs)`, `2` could be either. A candidate fitting through its
   variadic parameter is ambiguous with another, as for defaults.
-- An element borrowing a temporary held inside another call is an error, since the statements
-  laying out the array would release it before the call (doc/Issues.md #30).
 - It is unrelated to C's `...`, and a Palan variadic function cannot be a C callback.
 
 **Iteration with `for`.** `iter` gives an iterator and `next` advances it. An iterator type, rather

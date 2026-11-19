@@ -1,5 +1,0 @@
-type P { int32 x; };
-func mk(int32 x) -> P p { x -> p.x; }
-func id(@P p) -> @P { return p; }
-func f([...]@P ps) {}
-f(id(@mk(1)));

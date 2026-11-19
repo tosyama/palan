@@ -267,9 +267,10 @@ struct SysCallExpr : Expr {
 
 struct Stmt;
 
-// A temp declared and initialized by body, read as value. Its release runs
-// only once the enclosing full expression has been evaluated, since a call
-// it is given to may return a borrow of it. Its reset runs once all of the
+// A temp declared and initialized by body, read as value. Its release, and
+// that of the temps body's statements hold, runs only once the enclosing full
+// expression has been evaluated, since a call it is given to may return a
+// borrow of it. Its reset runs once all of the
 // arguments of the call it is given to have been evaluated, since a later
 // one may borrow from the owner it was taken from.
 struct TempExpr : Expr {

@@ -558,7 +558,7 @@ class PlnSemanticAnalyzer {
 	                                 size_t argIdx, bool isCFunc, const string& funcName);
 	json ownedBlockArg(const json& locNode, const json& arg, CallArg& ca, const json& param,
 	                   size_t argIdx, const string& funcName);
-	json variadicArrayArg(const json& locNode, const json& elemVT, json elems, const string& funcName);
+	json variadicArrayArg(const json& locNode, const json& elemVT, json elems);
 	CallArg spreadCallArg(const json& rawArg, bool last);
 	optional<SaDiag> spreadMismatch(const json& vt, const json& elemVT) const;
 	void checkSpreadPlace(const json& locNode, const json& args, const json& funcParams, const string& funcName);

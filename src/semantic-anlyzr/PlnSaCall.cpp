@@ -1333,7 +1333,7 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 			saArgs.erase(saArgs.size() - 1);
 		}
 		size_t count = elems.size();
-		saArgs.push_back(variadicArrayArg(locNode, elemParam["var-type"], move(elems), funcName));
+		saArgs.push_back(variadicArrayArg(locNode, elemParam["var-type"], move(elems)));
 		saArgs.push_back({{"expr-type","lit-int"},{"value",to_string(count)}, // LCOV_EXCL_BR_LINE
 		                  {"value-type",{{"type-kind","prim"},{"type-name","uint64"}}}}); // LCOV_EXCL_BR_LINE
 	}
@@ -1343,7 +1343,7 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 // The arguments for a `[...]E` parameter, laid out in an array in the caller's
 // frame: NULL when there are none. An argument's temporaries move to the
 // array's own, so that what they release outlives the call.
-json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elemVT, json elems, const string& funcName)
+json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elemVT, json elems)
 {
 	// LCOV_EXCL_BR_START
 	if (elems.empty())
@@ -1363,10 +1363,6 @@ json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elem
 			for (auto& s : value["release"]) release.push_back(move(s));
 			for (auto& s : value.value("reset", json::array())) reset.push_back(s);
 			value = json(value["value"]);
-		}
-		if (holdsCallTemps(value)) {
-			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_VariadicArgTempBorrow, funcName) << endl;
-			exit(1);
 		}
 		json target = sa_expression({{"expr-type","arr-index"},{"array",{{"expr-type","id"},{"name",name}}},
 		                             {"index",{{"expr-type","lit-int"},{"value",to_string(i)}}}});

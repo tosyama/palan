@@ -963,8 +963,6 @@ say(", ");                        //  (0)
   called the same way. It is a different type from one taking `@[]T`, and a variadic function
   cannot be given to a C function as a callback.
 - `...a` passes the array `a` as all of the arguments (see below).
-- An argument borrowing a temporary value held inside another call, such as `f(id(@mk()))` where
-  `id` returns the borrow it is given, is a compile error: keep the value in a variable first.
 
 `...a` passes an existing array as all of the arguments, as a `[n]T` parameter takes an array:
 

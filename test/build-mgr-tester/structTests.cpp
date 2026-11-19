@@ -1425,7 +1425,7 @@ TEST(build_mgr, compare_func_mtrace) {
 // Struct elements are copies the callee owns: those left are released at its
 // exit, one moved out is not, and the caller releases none of them.
 TEST(build_mgr, variadic_struct_mtrace) {
-	expectMtraceRun("407_variadic_struct_mtrace", "10\n5 1 2\n8\n12\n", 29);
+	expectMtraceRun("407_variadic_struct_mtrace", "10\n5 1 2\n8\n12\n14\n", 33);
 }
 
 // An element moved out leaves NULL, which a copy keeps; one copied into a

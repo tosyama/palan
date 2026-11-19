@@ -957,11 +957,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "syscall '" + arg1 + "' cannot take a variadic parameter.";
 
-		case E_VariadicArgTempBorrow:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "a variadic argument of '" + arg1 + "' borrows a temporary value a call holds, which would be "
-			       "released before '" + arg1 + "' is called; keep the value in a variable first.";
-
 		case E_AppendFuncFirstParam:
 			return "the first parameter of operator function '<<' must be a writable borrow '@!T' of a struct.";
 

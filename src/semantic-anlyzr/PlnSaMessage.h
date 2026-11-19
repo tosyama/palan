@@ -206,7 +206,6 @@ enum PlnSaMessageCode {
 	E_VariadicWithDefault,	// arg1: function name
 	E_OperatorFuncVariadic,	// arg1: operator
 	E_SyscallVariadic,	// arg1: syscall name
-	E_VariadicArgTempBorrow,	// arg1: function name
 	E_AppendFuncFirstParam,
 	E_AppendFuncRet,	// arg1: type of the first parameter
 	E_AppendNotStruct,	// arg1: left operand type

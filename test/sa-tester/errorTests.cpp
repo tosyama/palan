@@ -1581,7 +1581,6 @@ TEST(sa_error, give_and_take)
 		{"error_982_variadic_move_array.pa", ":3:2: error: '->>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 		{"error_983_variadic_func_ptr.pa", ":2:1: error: cannot convert '@func([...]int64)' to '@func(@int64)'."},
 		{"error_984_variadic_c_callback.pa", ":4:1: error: cannot convert '@func(@void, [...]@void) -> int32' to '@func(@void, @void) -> int32'."},
-		{"error_985_variadic_temp_borrow.pa", ":5:1: error: a variadic argument of 'f' borrows a temporary value a call holds, which would be released before 'f' is called; keep the value in a variable first."},
 		{"error_986_variadic_take_array.pa", ":2:2: error: '<<=' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 		{"error_924_keep_param_count_nested.pa",
 		 ":3:2: error: the cast's function type has 2 parameters, but '@func(int32)' has 1."},
