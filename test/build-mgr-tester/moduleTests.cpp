@@ -65,7 +65,7 @@ TEST(build_mgr, escaped_file_names_coexist) {
 TEST(build_mgr, library_module_same_for_any_entry) {
 	cleanTestEnv();
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	string obj = targetWorkDir() + dir + "/lib_module_id/entry_demo.pa.o";
+	string obj = targetWorkDir() + dir + "/lib_module_id/entry_demo.pa.debug.o";
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/397_library_entry_demo.pa"), "15\n");
 	fs::copy_file(obj, "out/entry_demo_imported.o");
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/lib_module_id/entry_demo.pa"), "demo 12\n");
@@ -79,8 +79,8 @@ TEST(build_mgr, module_same_at_any_location) {
 	fs::copy_file("../test/testdata/build-mgr/lib_module_id/local_type.pa", "out/local_type.pa");
 	ASSERT_EQ(execTestCommand("bin/palan out/local_type.pa"), "7\n");
 	string moved = fs::weakly_canonical("out").string();
-	ASSERT_EQ(execTestCommand("cmp " + targetWorkDir() + dir + "/local_type.pa.s "
-		+ targetWorkDir() + moved + "/local_type.pa.s"), "");
+	ASSERT_EQ(execTestCommand("cmp " + targetWorkDir() + dir + "/local_type.pa.debug.s "
+		+ targetWorkDir() + moved + "/local_type.pa.debug.s"), "");
 }
 
 TEST(build_mgr, import_basic) {
@@ -525,7 +525,7 @@ TEST(build_mgr, chain_method_mtrace) {
 TEST(build_mgr, entry_at_link) {
 	cleanTestEnv();
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	string libObj = targetWorkDir() + dir + "/lib_entry_demo.pa.o";
+	string libObj = targetWorkDir() + dir + "/lib_entry_demo.pa.debug.o";
 
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/358_entry_at_link.pa"), "15\n");
 	fs::copy_file(libObj, "out/lib_entry_demo_imported.o");
@@ -550,7 +550,7 @@ TEST(build_mgr, implicit_args) {
 TEST(build_mgr, run_args) {
 	cleanTestEnv();
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	string bin = targetWorkDir() + dir + "/359_args.pa.d/out";
+	string bin = targetWorkDir() + dir + "/359_args.pa.debug.d/out";
 	fs::remove(bin);
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/359_args.pa x -o 'y z'"),
 		"4\n1:x\n2:-o\n3:y z\nrebound\n");
@@ -671,7 +671,7 @@ static string reusePath(const string& name) {
 }
 
 static fs::file_time_type objTime(const string& source) {
-	return fs::last_write_time(reusePath(source) + ".o");
+	return fs::last_write_time(reusePath(source) + ".debug.o");
 }
 
 // writeOldSource's times go back, which a work file left by an earlier run would hide.
@@ -841,7 +841,7 @@ TEST(build_mgr, reuse_rebuilds_missing_sa) {
 	writeImportChain();
 	ASSERT_EQ(execTestCommand("bin/palan out/a.pa"), "1\n");
 	auto before = objTime("c.pa");
-	ASSERT_TRUE(fs::remove(reusePath("c.pa") + ".sa.json"));
+	ASSERT_TRUE(fs::remove(reusePath("c.pa") + ".debug.sa.json"));
 	ASSERT_EQ(execTestCommand("bin/palan out/a.pa"), "1\n");
 	EXPECT_NE(objTime("c.pa"), before);
 }
@@ -850,7 +850,7 @@ TEST(build_mgr, reuse_allocators) {
 	cleanReuseEnv();
 	writeOldSource("alloc.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nprintf(\"%d\\n\", int32(len(@v)));\n");
 	ASSERT_EQ(execTestCommand("bin/palan out/alloc.pa"), "2\n");
-	string allocators = reusePath("alloc.pa") + ".d/" PALAN_ALLOCATORS_MODULE ".pa.o";
+	string allocators = reusePath("alloc.pa") + ".debug.d/" PALAN_ALLOCATORS_MODULE ".pa.debug.o";
 	auto before = fs::last_write_time(allocators);
 
 	ofstream("out/alloc.pa") << "cinclude <stdio.h>;\n[+]int32 v = [1, 2, 3];\nprintf(\"%d\\n\", int32(len(@v)));\n";
@@ -862,18 +862,57 @@ TEST(build_mgr, reuse_allocators) {
 	EXPECT_NE(fs::last_write_time(allocators), before);
 }
 
-static string libBuild(const string& file) {
-	return "bin/palan --lib -o out/lib ../test/testdata/build-mgr/lib_build/" + file;
-}
-
-static const char libOut[] = "out/lib/";
-
 static string fileText(const string& path) {
 	ifstream f(path);
 	stringstream ss;
 	ss << f.rdbuf();
 	return ss.str();
 }
+
+TEST(build_mgr, modes_kept_apart) {
+	cleanReuseEnv();
+	writeOldSource("mode.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nv.resize(3);\n"
+		"printf(\"%d\\n\", v.pop());\n");
+	ASSERT_EQ(execTestCommand("bin/palan out/mode.pa"), "0\n");
+	auto debugObj = objTime("mode.pa");
+	auto astTime = fs::last_write_time(reusePath("mode.pa") + ".ast.json");
+	ASSERT_EQ(execTestCommand("bin/palan -o out/mode_bin out/mode.pa"), "");
+	ASSERT_EQ(execTestCommand("out/mode_bin"), "0\n");
+	EXPECT_TRUE(fs::exists(reusePath("mode.pa") + ".release.o"));
+	EXPECT_EQ(objTime("mode.pa"), debugObj);
+	EXPECT_EQ(fs::last_write_time(reusePath("mode.pa") + ".ast.json"), astTime);
+}
+
+TEST(build_mgr, mode_decides_checks) {
+	cleanReuseEnv();
+	writeOldSource("mode.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nv.resize(3);\n"
+		"printf(\"%d\\n\", v.pop());\n");
+	auto hasChecks = [](const string& mode) {
+		string text = fileText(reusePath("mode.pa") + "." + mode + ".d/" PALAN_ALLOCATORS_MODULE ".pa");
+		bool pop = text.find("if h.len == 0 { abort(); }") != string::npos;
+		bool resize = text.find("if n < 0 { abort(); }") != string::npos;
+		EXPECT_EQ(pop, resize) << text;
+		return pop;
+	};
+	ASSERT_EQ(execTestCommand("bin/palan out/mode.pa"), "0\n");
+	EXPECT_TRUE(hasChecks("debug"));
+	ASSERT_EQ(execTestCommand("bin/palan -o out/mode_bin out/mode.pa"), "");
+	EXPECT_FALSE(hasChecks("release"));
+
+	cleanReuseEnv();
+	writeOldSource("mode.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nv.resize(3);\n"
+		"printf(\"%d\\n\", v.pop());\n");
+	ASSERT_EQ(execTestCommand("bin/palan --release out/mode.pa"), "0\n");
+	EXPECT_FALSE(hasChecks("release"));
+	ASSERT_EQ(execTestCommand("bin/palan --debug -o out/mode_bin out/mode.pa"), "");
+	EXPECT_TRUE(hasChecks("debug"));
+}
+
+static string libBuild(const string& file) {
+	return "bin/palan --lib -o out/lib ../test/testdata/build-mgr/lib_build/" + file;
+}
+
+static const char libOut[] = "out/lib/";
 
 TEST(build_mgr, lib_interface_merges_what_the_main_publishes) {
 	cleanTestEnv();
@@ -972,8 +1011,8 @@ TEST(build_mgr, lib_parameter_defaults) {
 TEST(build_mgr, lib_library_module_has_its_own_allocators) {
 	expectMtraceRun("398_library_allocators", "1 3\n", 13);
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/lib_build/shapes.pa.alloc/" PALAN_ALLOCATORS_MODULE ".pa.o"));
-	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/398_library_allocators.pa.d/" PALAN_ALLOCATORS_MODULE ".pa.o"));
+	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/lib_build/shapes.pa.release.alloc/" PALAN_ALLOCATORS_MODULE ".pa.release.o"));
+	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/398_library_allocators.pa.release.d/" PALAN_ALLOCATORS_MODULE ".pa.release.o"));
 }
 
 TEST(build_mgr, lib_errors) {

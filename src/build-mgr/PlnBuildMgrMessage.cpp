@@ -21,6 +21,8 @@ string PlnBuildMgrMessage::getMessage(PlnBuildMgrMessageCode msg_code, string ar
 				" -o, --output=<file>   Write binary to file (do not auto-run).\n"
 				"                       With --lib, the output directory.\n"
 				" --lib                 Build the library the source file is the main source of.\n"
+				" --debug               Keep the run-time checks (the default without -o).\n"
+				" --release             Leave the run-time checks out (the default with -o).\n"
 				" --target=<name>       Specify the target. Only " PALAN_TARGET " is supported.\n"
 				" -c, --clean           Remove all cached work files.\n"
 				" -v, --version         Display version.\n"

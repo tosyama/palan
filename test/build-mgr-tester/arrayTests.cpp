@@ -511,7 +511,7 @@ TEST(build_mgr, varr_builtins_abort) {
 	for (string file : {"329_varr_pop_empty", "330_varr_resize_negative"}) {
 		cleanTestEnv();
 		string bin = "/tmp/palan_" + file;
-		ASSERT_EQ(execTestCommand("bin/palan -o " + bin + " ../test/testdata/build-mgr/" + file + ".pa"), "");
+		ASSERT_EQ(execTestCommand("bin/palan --debug -o " + bin + " ../test/testdata/build-mgr/" + file + ".pa"), "");
 		// ulimit -c 0 keeps the program's core dump out of build/.
 		string out = execTestCommand("ulimit -c 0; " + bin + "; echo status $?");
 		EXPECT_NE(out.find("status 134"), string::npos) << file << ": " << out;

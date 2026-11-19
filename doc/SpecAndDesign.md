@@ -52,6 +52,11 @@ Design:
  What `ld` is given beyond the objects is the union of every module's `libs` and `objs` (SASpec.md's
  Root) and every used library's `link` statements (3.7). Palan archives are linked in one
  `--start-group`/`--end-group`, since the union keeps no order.
+ A build is in debug or release mode: run directly it is debug, written with `-o` (`--lib`
+ too) release, and `--debug`/`--release` override either. Only the run-time checks (`pop` of an
+ empty `[+]T`, a negative `resize`) depend on it, and are left out of a release build; debug
+ information and optimization do not exist yet. A library keeps the checks of the mode it was built
+ in, as its objects are in its archive.
 
 ### 3.2 AST Generator (palan-gen-ast)
 Responsibility:
@@ -229,7 +234,7 @@ A module declaring `library` has allocators of its own, from its own shapes: `st
 program or archive holds it, and they are kept with its work files, or in its library's archive,
 which publishes nothing about the private types they serve. Allocators of two modules may hold
 functions of one key, under different symbols; they agree, since a key names a layout and all of
-them release through `free`. They are generated in `<source>.alloc/` under the working directory
+them release through `free`. They are generated in `<source>.<mode>.alloc/` under the working directory
 (5.1), declaring the identity through `library std.utf8;`. A library module compiled from source
 into a program uses them too, in place of the program's.
 
@@ -629,12 +634,17 @@ other files. Work files are of two kinds:
 
 ```
 ~/.palan/work/<target>/
-  home/user/proj/util.pa.{ast.json,sa.json,s,o}             a module's, reused by every entry
-  home/user/proj/main.pa.d/{__allocators.*,entry.*,out}     an entry's own
-  home/user/proj/utf8.pa.alloc/__allocators.*               a library module's allocators (3.6)
-  home/user/proj/utf8.pa.lib/{utf8.pai*,*.o}                what `--lib` builds from a main source
-  home/user/libs/foo/bar.pai.ast.json                       the AST of a library's interface
+  home/user/proj/util.pa.ast.json                            a module's AST, for both modes
+  home/user/proj/util.pa.<mode>.{sa.json,s,o}                a module's, reused by every entry
+  home/user/proj/main.pa.<mode>.d/{__allocators.*,entry.*,out}  an entry's own
+  home/user/proj/utf8.pa.<mode>.alloc/__allocators.*         a library module's allocators (3.6)
+  home/user/proj/utf8.pa.<mode>.lib/{utf8.pai*,*.o}          what `--lib` builds from a main source
+  home/user/libs/foo/bar.pai.ast.json                        the AST of a library's interface
 ```
+
+`<mode>` is `debug` or `release` (3.1), so running a source and writing it with `-o` keep their
+results apart. The AST does not depend on the mode, and is the slowest step for a source with
+`cinclude`s, so it is shared. Both modes are named, since which one is the default depends on `-o`.
 
 A module's files mirror the absolute path of its source and do not depend on the entry, so `palan
 util.pa` (its top-level tests) and `palan main.pa` (importing it) share them. As with `make`, a step

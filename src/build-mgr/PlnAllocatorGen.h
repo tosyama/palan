@@ -23,4 +23,5 @@ struct PlnAllocShapes {
 
 void writeAllocatorsHeader(std::ostream& hdr, const PlnAllocShapes& shapes);
 // library: the module's identity the allocators belong to, or empty for a program's.
-void writeAllocatorsSource(std::ostream& out, const PlnAllocShapes& shapes, const std::string& library);
+// checks: whether the run-time checks of a debug build are written.
+void writeAllocatorsSource(std::ostream& out, const PlnAllocShapes& shapes, const std::string& library, bool checks);

@@ -14,6 +14,7 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <getopt.h>
 #include <unistd.h>
 #include <filesystem>
@@ -124,16 +125,17 @@ static int generateAst(const string& source, const string& ast_path, const strin
 	return 0;
 } // LCOV_EXCL_BR_LINE -- closing brace of a function with local strings/paths; the branch coverpoints here are compiler-generated destructor dispatch, not source-level conditionals
 
-// `base` is the source's path in the working directory; deps are the ASTs the result comes from.
-static int compileModule(const string& base, const string& exec_path, fs::file_time_type tools_time,
+// `source` is the source's path in the working directory; deps are the ASTs the result comes from.
+static int compileModule(const string& source, const string& mode, const string& exec_path, fs::file_time_type tools_time,
                          const vector<string>& deps, const vector<string>& library_args = {})
 {
+	string base = source + "." + mode;
 	string sa_file = base + ".sa.json";
 	string asm_file = base + ".s";
 	string obj_file = base + ".o";
 	if (fs::exists(sa_file) && isUpToDate(obj_file, tools_time, deps))
 		return 0;
-	vector<string> sa_argv{exec_path + "/palan-sa", base + ".ast.json"};
+	vector<string> sa_argv{exec_path + "/palan-sa", source + ".ast.json"};
 	sa_argv.insert(sa_argv.end(), library_args.begin(), library_args.end());
 	if (int ret = runToolTo(sa_argv, sa_file)) // LCOV_EXCL_BR_LINE
 		return ret;
@@ -168,7 +170,7 @@ static bool claimModuleId(map<string, string>& module_ids, const string& id, con
 // `library`: the identity of the module they belong to, or empty for a program's.
 // With no `link` clause, their sa.json has nothing to add to the program's libraries.
 static int buildAllocators(const PlnAllocShapes& shapes, const string& dir, const string& library,
-                           const string& exec_path, const string& target, fs::file_time_type tools_time,
+                           const string& mode, const string& exec_path, const string& target, fs::file_time_type tools_time,
                            map<string, string>& module_ids, string& obj_file)
 {
 	fs::create_directories(dir);
@@ -181,7 +183,7 @@ static int buildAllocators(const PlnAllocShapes& shapes, const string& dir, cons
 		ofstream hdr(tempNameOf(alloc_h));
 		writeAllocatorsHeader(hdr, shapes);
 		ofstream out(tempNameOf(alloc_pa));
-		writeAllocatorsSource(out, shapes, library);
+		writeAllocatorsSource(out, shapes, library, mode == "debug");
 	}
 	renameIfChanged(tempNameOf(alloc_h), alloc_h);
 	renameIfChanged(tempNameOf(alloc_pa), alloc_pa);
@@ -189,9 +191,9 @@ static int buildAllocators(const PlnAllocShapes& shapes, const string& dir, cons
 	json alloc_ast_json;
 	if (int ret = generateAst(alloc_pa, alloc_ast, exec_path, target, tools_time, alloc_ast_json)) // LCOV_EXCL_BR_LINE
 		return ret;
-	if (int ret = compileModule(alloc_pa, exec_path, tools_time, {alloc_ast})) // LCOV_EXCL_BR_LINE
+	if (int ret = compileModule(alloc_pa, mode, exec_path, tools_time, {alloc_ast})) // LCOV_EXCL_BR_LINE
 		return ret;
-	obj_file = alloc_pa + ".o";
+	obj_file = alloc_pa + "." + mode + ".o";
 	return 0;
 } // LCOV_EXCL_BR_LINE -- closing brace of a function with local strings/paths/json; the branch coverpoints here are compiler-generated destructor dispatch, not source-level conditionals
 
@@ -247,7 +249,7 @@ static void installFile(const string& from, const string& to)
 	fs::rename(tempNameOf(to), to);
 }
 
-// base: the main source's path in the working directory.
+// base: the main source's path in the working directory, with the mode.
 static int buildLibrary(const vector<json>& asts, const string& base, const vector<string>& obj_files,
                         vector<pair<string, string>> members, const set<string>& link_objs,
                         const string& out_dir, const string& exec_path, const string& target,
@@ -330,6 +332,8 @@ int main(int argc, char* argv[])
 		{ "output",  required_argument, NULL, 'o' },
 		{ "target",  required_argument, NULL, 't' },
 		{ "lib",     no_argument,       NULL, 'l' },
+		{ "debug",   no_argument,       NULL, 'd' },
+		{ "release", no_argument,       NULL, 'r' },
 		{ 0 }
 	};
 
@@ -339,6 +343,7 @@ int main(int argc, char* argv[])
 	string binary_name;
 	bool output_specified = false;
 	string target = PALAN_TARGET;
+	optional<bool> release;
 
 	while (0 < (opt = getopt_long(argc, argv, "+hvco:", long_options, NULL))) {
 		switch (opt) {
@@ -360,6 +365,12 @@ int main(int argc, char* argv[])
 				break;
 			case 'l':
 				do_lib = true;
+				break;
+			case 'd':
+				release = false;
+				break;
+			case 'r':
+				release = true;
 				break;
 			default:
 				break;
@@ -396,6 +407,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	const string mode = release.value_or(output_specified) ? "release" : "debug";
+
 	fs::path exec_file_path = fs::canonical("/proc/self/exe");
 	string exec_path = exec_file_path.parent_path().string();
 
@@ -410,7 +423,7 @@ int main(int argc, char* argv[])
 	vector<pair<string, string>> library_imports; // importing file, module
 	fs::file_time_type tools_time = newestToolTime(exec_path, target);
 	target_files.push_back(fs::weakly_canonical(argv[optind]).string());
-	string entry_dir = palan_work_path + target_files[0] + ".d";
+	string entry_dir = palan_work_path + target_files[0] + "." + mode + ".d";
 	vector<string> run_argv;
 	if (!output_specified) {
 		binary_name = entry_dir + "/out";
@@ -517,17 +530,17 @@ int main(int argc, char* argv[])
 		};
 		reach(target_files[i]);
 
-		if (int ret = compileModule(base, exec_path, tools_time, deps, library_args))
+		if (int ret = compileModule(base, mode, exec_path, tools_time, deps, library_args))
 			return ret;
 
-		obj_files.push_back(base + ".o");
+		obj_files.push_back(base + "." + mode + ".o");
 	}
 
 	// Whole-program information, and the allocators: a library module's come from
 	// its own shapes, the others' from the shapes of all of them.
 	PlnAllocShapes program_shapes;
 	for (int i=0; i<ast_files.size(); i++) {
-		ifstream f(ast_files[i].substr(0, ast_files[i].size() - 9) + ".sa.json");
+		ifstream f(ast_files[i].substr(0, ast_files[i].size() - 9) + "." + mode + ".sa.json");
 		json sa = json::parse(f);
 		// SA always emits "libs" (possibly empty), so no contains() guard is needed.
 		for (auto& l : sa["libs"]) link_libs.insert(l.get<string>());
@@ -541,15 +554,15 @@ int main(int argc, char* argv[])
 		shapes.add(sa);
 		if (shapes.empty()) continue;
 		string alloc_o;
-		if (int ret = buildAllocators(shapes, palan_work_path + target_files[i] + ".alloc", id, // LCOV_EXCL_BR_LINE
-				exec_path, target, tools_time, module_ids, alloc_o))
+		if (int ret = buildAllocators(shapes, palan_work_path + target_files[i] + "." + mode + ".alloc", id, // LCOV_EXCL_BR_LINE
+				mode, exec_path, target, tools_time, module_ids, alloc_o))
 			return ret;
 		obj_files.push_back(alloc_o);
 		lib_members.push_back({allocatorsModuleOf(id), alloc_o});
 	} // LCOV_EXCL_BR_LINE -- closing brace of a loop body with local strings/json; the branch coverpoints here are compiler-generated destructor dispatch, not source-level conditionals
 
 	if (do_lib)
-		return buildLibrary(asts, palan_work_path + target_files[0], obj_files, lib_members, link_objs, binary_name, exec_path, target, library_args);
+		return buildLibrary(asts, palan_work_path + target_files[0] + "." + mode, obj_files, lib_members, link_objs, binary_name, exec_path, target, library_args);
 
 	// The entry is chosen here, at link time: every module compiles the same
 	// whichever role it plays, and only this stub names the first one's
@@ -557,7 +570,7 @@ int main(int argc, char* argv[])
 	fs::create_directories(entry_dir);
 	{
 		string base = ast_files[0].substr(0, ast_files[0].size() - 9);
-		ifstream f(base + ".sa.json");
+		ifstream f(base + "." + mode + ".sa.json");
 		json sa = json::parse(f);
 		string entry_s = entry_dir + "/entry.s";
 		string entry_o = entry_dir + "/entry.o";
@@ -571,7 +584,7 @@ int main(int argc, char* argv[])
 
 	if (!program_shapes.empty()) {
 		string alloc_o;
-		if (int ret = buildAllocators(program_shapes, entry_dir, "", exec_path, target, tools_time, module_ids, alloc_o))
+		if (int ret = buildAllocators(program_shapes, entry_dir, "", mode, exec_path, target, tools_time, module_ids, alloc_o))
 			return ret;
 		obj_files.push_back(alloc_o);
 	}

@@ -54,7 +54,7 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	}
 }
 
-void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const string& library)
+void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const string& library, bool checks)
 {
 	const vector<json>& struct_shapes = shapes.structs;
 	const vector<json>& elem_arr_shapes = shapes.arrays;
@@ -701,7 +701,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		out << "    h.len + 1 -> h.len;\n"
 		    << "}\n"
 		    << "export func __pln_resize_" << key << "(@!" << hdr << " h, int64 n" << mp << ") {\n"
-		    << "    if n < 0 { abort(); }\n"
+		    << (checks ? "    if n < 0 { abort(); }\n" : "")
 		    << "    if n > h.cap { __pln_reserve_" << key << "(h, n" << ma << "); }\n";
 		if (e.owned)
 			out << "    if n > h.len { __pln_build_" << e.key << "(h.data, h.len, n" << ma << "); }\n"
@@ -757,7 +757,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		// An owned struct moves out of its block, which return then frees.
 		if (e.kind == "struct") {
 			out << "export func __pln_pop_" << key << "(@!" << hdr << " h" << mp << ") -> " << e.type << " {\n"
-			    << "    if h.len == 0 { abort(); }\n"
+			    << (checks ? "    if h.len == 0 { abort(); }\n" : "")
 			    << "    h.len - 1 -> h.len;\n"
 			    << "    " << e.type << " x <<= h.data[h.len] as " << e.type << ";\n"
 			    << "    return x;\n"
@@ -766,7 +766,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		}
 		// An owned element leaves its slot for the caller.
 		out << "export func __pln_pop_" << key << "(@!" << hdr << " h" << mp << ") -> " << e.popped << " x {\n"
-		    << "    if h.len == 0 { abort(); }\n"
+		    << (checks ? "    if h.len == 0 { abort(); }\n" : "")
 		    << "    h.len - 1 -> h.len;\n";
 		if (e.kind == "embed-row")
 			out << "    malloc(" << size << ") -> x;\n";
