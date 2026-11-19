@@ -69,7 +69,7 @@ struct BitAnd   { VReg dst; VReg lhs; VReg rhs; VRegType type; }; // dst = lhs &
 struct BitOr    { VReg dst; VReg lhs; VReg rhs; VRegType type; }; // dst = lhs | rhs
 struct BitXor   { VReg dst; VReg lhs; VReg rhs; VRegType type; }; // dst = lhs ^ rhs
 struct BitNot   { VReg dst; VReg src; VRegType type; };            // dst = ~src
-enum class ShiftOp { Shl, Shr, Sar };  // Sar only lowers division; Palan has no arithmetic shift
+enum class ShiftOp { Shl, Shr, Sar };  // Sar only lowers division and signed bit-fields; Palan has no arithmetic shift
 struct Shift    { VReg dst; VReg lhs; VReg rhs; ShiftOp op; VRegType type; }; // count taken modulo the width
 struct ShiftImm { VReg dst; VReg src; int count; ShiftOp op; VRegType type; }; // 0 < count < width
 struct PackF32x2 { VReg dst; VReg lo; VReg hi; };                               // Float64 dst = lo, hi as its two halves

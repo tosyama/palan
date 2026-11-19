@@ -1550,3 +1550,24 @@ TEST(codegen, global_var)
 
     ASSERT_EQ(execTestCommand("as " + asmf + " -o out/078_global.o"), "");
 }
+
+TEST(codegen, bit_field)
+{
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/081_bit_field.sa.json";
+    string asmf = "out/081_bit_field.s";
+
+    string err = run_codegen(sa, asmf);
+    ASSERT_EQ(err, "");
+
+    string asm_text = readFile(asmf);
+    // A store keeps the unit's other bits; a signed read extends the sign, an unsigned one zeros.
+    ASSERT_NE(asm_text.find("shlq $59"), string::npos);
+    ASSERT_NE(asm_text.find("shrq $56"), string::npos);
+    ASSERT_NE(asm_text.find("andq"),     string::npos);
+    ASSERT_NE(asm_text.find("orq"),      string::npos);
+    ASSERT_NE(asm_text.find("sarq $59"), string::npos);
+    ASSERT_NE(asm_text.find("shrq $61"), string::npos);
+
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/081_bit_field.o"), "");
+}

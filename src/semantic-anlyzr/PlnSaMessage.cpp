@@ -749,6 +749,16 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "'...' cannot spread '" + arg2 + "' into '" + arg1
 			     + "': the elements must be of exactly its type, since they are not converted.";
 
+		case E_AddrOfBitField:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "cannot take the address of bit-field '" + arg1 + "'.";
+
+		case E_BitFieldLiteralOutOfRange:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			BOOST_ASSERT(arg3 != "\x01");
+			return "Integer literal '" + arg1 + "' does not fit the " + arg3 + "-bit bit-field '" + arg2 + "'.";
+
 		case E_TransferToSelf:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'->>' cannot give '" + arg1 + "' to itself.";

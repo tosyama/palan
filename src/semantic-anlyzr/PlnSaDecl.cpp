@@ -119,8 +119,9 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 		string fieldName = f.value("name", "");
 
 		if (f.contains("bits")) {
-			// Only C structs have bit-fields, always of an integer type. Laid out
-			// so the struct matches C, but nothing in Palan can read or write one.
+			// Only C structs have bit-fields, always of an integer type. One is
+			// read and written through the unit of its type holding it; one a
+			// packed struct lays across two units has none and stays unreadable.
 			string tname = vtype["type-name"].get<string>();
 			int64_t width = f["bits"].get<int64_t>();
 			int align = elemSizeBytes(tname);
@@ -134,10 +135,17 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 				offset = (at + width + 7) / 8;
 				tailBits = int64_t(offset) * 8 - (at + width);
 			}
-			if (!fieldName.empty())
+			if (fieldName.empty()) continue;
+			int64_t unitBits = int64_t(align) * 8, unit = at / unitBits;
+			if ((at + width - 1) / unitBits == unit) {
+				def.fields.push_back({.name=fieldName, .typeKind="prim", .typeName=tname, .isMutable=false,
+				                      .offset=int(unit * align), .size=align, .enumName=vtype.value("enum", ""),
+				                      .bitShift=int(at - unit * unitBits), .bitWidth=int(width)});
+			} else {
 				def.fields.push_back({.name=fieldName, .typeKind="prim", .typeName=tname, .isMutable=false,
 				                      .offset=int(at / 8), .size=int((at + width + 7) / 8 - at / 8),
-				                      .unsupported="bit-field"});
+				                      .unsupported="packed bit-field across two units"});
+			}
 			continue;
 		}
 		tailBits = 0;
@@ -250,6 +258,15 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 	def.totalSize  = alignUp(offset, maxAlign);
 	def.maxAlign   = maxAlign;
 	def.isComplete = true;
+	// A packed struct can end inside a bit-field's unit.
+	for (auto& f : def.fields) {
+		if (!f.bitWidth || f.offset + f.size <= def.totalSize) continue;
+		int64_t at = int64_t(f.offset) * 8 + f.bitShift;
+		f.offset = int(at / 8);
+		f.size = int((at + f.bitWidth + 7) / 8 - at / 8);
+		f.bitShift = f.bitWidth = 0;
+		f.unsupported = "packed bit-field across two units";
+	}
 	setFieldInits(def, fields);
 	return def;
 } // LCOV_EXCL_BR_LINE

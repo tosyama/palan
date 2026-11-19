@@ -49,6 +49,10 @@ struct FieldLayout {
 	// "private" or "readonly" toward code outside the module defining the
 	// struct; empty = public.
 	string  access;
+	// A C bit-field: `width` bits from bit `shift` of the unit of its type at
+	// `offset`; width 0 is not a bit-field.
+	int     bitShift = 0;
+	int     bitWidth = 0;
 };
 
 // Where an aggregate variable's outermost storage block lives: `$T v;` puts it
@@ -523,6 +527,7 @@ class PlnSemanticAnalyzer {
 	json sa_expr_cmp(const json& expr);
 	json sa_compare_call(const json& expr, json probes[2]);
 	void checkIntLiteralRange(const json& lit);
+	void checkBitFieldLiteral(const FieldLayout& field, const json& value);
 	void rejectWideCharLit(const json& lit, const json& type);
 	json sa_expr_call(const json& expr);
 	json sa_func_ref(const json& expr, const PlnType* expectedType);

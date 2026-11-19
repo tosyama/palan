@@ -243,6 +243,8 @@ enum PlnSaMessageCode {
 	E_SpreadBorrow,
 	E_SpreadUnsized,	// arg1: value type name
 	E_SpreadElemMismatch,	// arg1: parameter type, arg2: value type
+	E_AddrOfBitField,	// arg1: field name
+	E_BitFieldLiteralOutOfRange,	// arg1: the literal as written, arg2: field name, arg3: width
 };
 
 class PlnSaMessage

@@ -353,6 +353,10 @@ json PlnSemanticAnalyzer::sa_expr_addr_of(const json& expr)
 		FieldChain chain = resolveObjectChain(obj["object"], /*forWrite=*/isMutable);
 		string fn = obj["field"].get<string>();
 		const FieldLayout& fld = findFieldOrExit(chain.structName, fn, obj, isMutable);
+		if (fld.bitWidth) {
+			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_AddrOfBitField, fn) << endl;
+			exit(1);
+		}
 		bool isOwned = fld.typeKind == "owned";
 		bool isArrField = (isOwned && isArrLevel(fld.type)) || fld.typeKind == "embed-arr";
 		if (fld.typeKind != "prim" && fld.typeKind != "embed" && fld.typeKind != "embed-varr" && !isOwned && !isArrField) {
@@ -442,6 +446,18 @@ void PlnSemanticAnalyzer::checkIntLiteralRange(const json& lit)
 	if (intLiteralFits(value, static_cast<const PrimType*>(t)->name)) return;
 	cerr << locPrefix(lit) << PlnSaMessage::getMessage(E_IntLiteralOutOfRange,
 		value, typeDisplayName(lit["value-type"])) << endl;
+	exit(1);
+}
+
+// Below the bit-field's own range, C would keep only the low bits of a
+// constant, which a literal written for the field almost never means.
+void PlnSemanticAnalyzer::checkBitFieldLiteral(const FieldLayout& field, const json& value)
+{
+	if (value.value("expr-type", "") != "lit-int" && value.value("expr-type", "") != "lit-uint") return;
+	string v = value["value"];
+	if (intLiteralFitsBits(v, field.bitWidth, field.typeName.rfind("int", 0) == 0)) return;
+	cerr << locPrefix(value) << PlnSaMessage::getMessage(E_BitFieldLiteralOutOfRange,
+		v, field.name, to_string(field.bitWidth)) << endl;
 	exit(1);
 }
 
@@ -1676,10 +1692,11 @@ json PlnSemanticAnalyzer::makeFieldAccess(const FieldChain& chain, const FieldLa
 	// at this offset): the field's "value" is its own address, computed as
 	// ptr+offset, not a load of the memory there.
 	bool addrOnly = (fld.typeKind == "embed" || fld.typeKind == "embed-arr" || fld.typeKind == "embed-varr");
-	if (!chain.isPointerBased)
-		return {{"expr-type","field-access"},{"var",chain.varName},{"offset",off},{"value-type",vt},{"addr-only",addrOnly}};
-	else
-		return {{"expr-type","field-access"},{"ptr-expr",chain.ptrExpr},{"offset",off},{"value-type",vt},{"addr-only",addrOnly}};
+	json out = !chain.isPointerBased
+		? json{{"expr-type","field-access"},{"var",chain.varName},{"offset",off},{"value-type",vt},{"addr-only",addrOnly}}
+		: json{{"expr-type","field-access"},{"ptr-expr",chain.ptrExpr},{"offset",off},{"value-type",vt},{"addr-only",addrOnly}};
+	if (fld.bitWidth) out["bits"] = {{"shift", fld.bitShift}, {"width", fld.bitWidth}};
+	return out;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 

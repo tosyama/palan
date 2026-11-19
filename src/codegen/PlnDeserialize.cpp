@@ -315,6 +315,10 @@ static unique_ptr<Expr> deserializeExpr(const json& j)
         e->offset   = j["offset"];
         e->type     = toVRegType(j["value-type"]);
         e->addrOnly = j.value("addr-only", false);
+        if (j.contains("bits")) {
+            e->bitShift = j["bits"]["shift"];
+            e->bitWidth = j["bits"]["width"];
+        }
         return e;
     }
 
@@ -430,6 +434,10 @@ static unique_ptr<Stmt> deserializeStmt(const json& j)
         s->offset = j["offset"];
         s->type   = toVRegType(j["value-type"]);
         s->value  = deserializeExpr(j["value"]);
+        if (j.contains("bits")) {
+            s->bitShift = j["bits"]["shift"];
+            s->bitWidth = j["bits"]["width"];
+        }
         return s;
     }
     cerr << PlnCodegenMessage::getMessage(E_UnknownStmtType, stmt_type) << endl;

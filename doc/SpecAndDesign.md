@@ -128,6 +128,12 @@ Design:
  A static variable (SASpec.md's Static variables) follows the rule a parameter of its type follows.
  The storage of a `$T` or fixed-size array `global` is static rather than in the top level's frame,
  so a function C calls after the top level returns (an `atexit` handler) still finds it.
+ A C bit-field is a field of its declared type at the unit of that type holding it, with its
+ shift and width (SASpec.md), and codegen reads and writes the unit by shifts and masks. Turning
+ it into shift and mask expressions in palan-sa was not taken: a write reads, changes and writes
+ back the unit, so the unit's address must be evaluated once, and Palan has no arithmetic shift to
+ extend the sign. A bit-field a packed struct lays across two units is left unsupported, since
+ none in the C library or Linux headers is laid so.
 
 ### 3.5 Code Generator (palan-codegen)
 Responsibility:

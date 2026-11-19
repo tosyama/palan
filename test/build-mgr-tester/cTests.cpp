@@ -529,7 +529,6 @@ TEST(build_mgr, c_packed_aligned) {
 }
 
 TEST(build_mgr, c_bit_field) {
-	// Palan writes and reads the fields around C's bit-fields, which C sets;
 	// Bs's bit-field shares an eightbyte with a float, passed by value.
 	cleanTestEnv();
 	ASSERT_EQ(runWithCObj("356_c_bitfield"),
@@ -538,7 +537,13 @@ TEST(build_mgr, c_bit_field) {
 		"1 2 3 / 4 8\n"
 		"bp 4 0 0 5\n6\n"
 		"bl 0 0 6\n8\n"
-		"bs 1.50 0 2.50\n1.25 3.50\nbs 1.25 7 3.50\n");
+		"bs 1.50 0 2.50\n1.25 3.50\nbs 1.25 7 3.50\n"
+		"9 33 -2\n"
+		"bf 1 5 63 2 3 3\n"
+		"bf 1 4 63 2 -3 3\n4 -3\n"
+		"bp 4 -1000 0 5\n-1000\n"
+		"bl -5 1000 6\n-5 1000\n"
+		"bs 0.50 -100 0.75\n-100 7\n");
 }
 
 TEST(build_mgr, epoll_packed) {

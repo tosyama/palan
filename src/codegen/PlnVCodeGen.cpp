@@ -373,6 +373,7 @@ VReg PlnVCodeGen::lowerExpr(const Expr& expr, VFunc& func)
         case ExprKind::FieldAccess: {
             auto& e   = static_cast<const FieldAccessExpr&>(expr);
             VReg  ptr = e.ptrExpr ? lowerExpr(*e.ptrExpr, func) : findVar(e.varName, func);
+            if (e.bitWidth) return loadBitField(ptr, e, func);
             VReg  dst = allocVReg();
             if (e.addrOnly)
                 func.instrs.push_back(CalcAddr{dst, ptr, e.offset});
@@ -761,6 +762,56 @@ VReg PlnVCodeGen::shiftImm(VReg src, int count, ShiftOp op, VRegType type, VFunc
     return dst;
 }
 
+static VRegType unsignedOfWidth(int bytes)
+{
+    return bytes == 1 ? VRegType::Uint8 : bytes == 2 ? VRegType::Uint16
+         : bytes == 4 ? VRegType::Uint32 : VRegType::Uint64;
+}
+
+// Widens (or narrows) between `from` and `to`; nothing when both are 8 bytes.
+VReg PlnVCodeGen::convertWidth(VReg src, VRegType from, VRegType to, VFunc& func)
+{
+    if (intWidth(from) == 8 && intWidth(to) == 8) return src;
+    VReg dst = allocVReg();
+    func.instrs.push_back(Convert{dst, src, from, to});
+    return dst;
+}
+
+// The unit is moved to the top of 64 bits so that one more shift both
+// extends the sign (or zero) and drops the other fields' bits.
+VReg PlnVCodeGen::loadBitField(VReg ptr, const FieldAccessExpr& e, VFunc& func)
+{
+    VRegType unitType = unsignedOfWidth(intWidth(e.type));
+    VReg unit = allocVReg();
+    func.instrs.push_back(DerefLoad{unit, ptr, e.offset, unitType});
+    VReg v = convertWidth(unit, unitType, VRegType::Uint64, func);
+    bool isSigned = isSignedInt(e.type);
+    VRegType wide = isSigned ? VRegType::Int64 : VRegType::Uint64;
+    int up = 64 - e.bitShift - e.bitWidth, down = 64 - e.bitWidth;
+    if (up) v = shiftImm(v, up, ShiftOp::Shl, wide, func);
+    if (down) v = shiftImm(v, down, isSigned ? ShiftOp::Sar : ShiftOp::Shr, wide, func);
+    return convertWidth(v, wide, e.type, func);
+}
+
+void PlnVCodeGen::storeBitField(VReg ptr, const FieldAssignStmt& s, VReg src, VFunc& func)
+{
+    VRegType unitType = unsignedOfWidth(intWidth(s.type));
+    VReg bits = convertWidth(src, s.type, VRegType::Uint64, func);
+    int up = 64 - s.bitWidth, down = 64 - s.bitWidth - s.bitShift;
+    if (up) bits = shiftImm(bits, up, ShiftOp::Shl, VRegType::Uint64, func);
+    if (down) bits = shiftImm(bits, down, ShiftOp::Shr, VRegType::Uint64, func);
+    VReg unit = allocVReg();
+    func.instrs.push_back(DerefLoad{unit, ptr, s.offset, unitType});
+    VReg u = convertWidth(unit, unitType, VRegType::Uint64, func);
+    uint64_t mask = (s.bitWidth == 64 ? ~uint64_t(0) : (uint64_t(1) << s.bitWidth) - 1) << s.bitShift;
+    VReg keep = allocVReg(), kept = allocVReg(), merged = allocVReg();
+    func.instrs.push_back(MovImm{keep, VRegType::Uint64, (long long)~mask});
+    func.instrs.push_back(BitAnd{kept, u, keep, VRegType::Uint64});
+    func.instrs.push_back(BitOr{merged, kept, bits, VRegType::Uint64});
+    VReg out = convertWidth(merged, VRegType::Uint64, unitType, func);
+    func.instrs.push_back(DerefStore{ptr, s.offset, out, unitType});
+}
+
 // Division by 2^k truncates toward zero, while an arithmetic shift rounds
 // toward negative infinity: a negative dividend first gets 2^k - 1 added.
 // The remainder then follows from the quotient, keeping the dividend's sign.
@@ -1072,7 +1123,8 @@ void PlnVCodeGen::lowerStmtKeepingTemps(const Stmt& stmt, VFunc& func)
             auto& s   = static_cast<const FieldAssignStmt&>(stmt);
             VReg  src = lowerExpr(*s.value, func);
             VReg  ptr = s.ptrExpr ? lowerExpr(*s.ptrExpr, func) : findVar(s.varName, func);
-            func.instrs.push_back(DerefStore{ptr, s.offset, src, s.type});
+            if (s.bitWidth) storeBitField(ptr, s, src, func);
+            else func.instrs.push_back(DerefStore{ptr, s.offset, src, s.type});
             break;
         }
         default:

@@ -2279,11 +2279,14 @@ json PlnSemanticAnalyzer::makeFieldAssign(const FieldChain& chain, const FieldLa
 	// LCOV_EXCL_BR_START
 	int off = chain.offset + field.offset;
 	json fieldType = fieldValueType(field);
-	if (!chain.isPointerBased)
-		return {{"stmt-type","field-assign"},{"var",chain.varName},
-		        {"offset",off},{"value-type",fieldType},{"value",move(value)}};
-	else
-		return {{"stmt-type","field-assign"},{"ptr-expr",chain.ptrExpr},
-		        {"offset",off},{"value-type",fieldType},{"value",move(value)}};
+	if (field.bitWidth) checkBitFieldLiteral(field, value);
+	json out = !chain.isPointerBased
+		? json{{"stmt-type","field-assign"},{"var",chain.varName}}
+		: json{{"stmt-type","field-assign"},{"ptr-expr",chain.ptrExpr}};
+	out["offset"] = off;
+	out["value-type"] = move(fieldType);
+	out["value"] = move(value);
+	if (field.bitWidth) out["bits"] = {{"shift", field.bitShift}, {"width", field.bitWidth}};
+	return out;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE

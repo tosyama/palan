@@ -60,6 +60,9 @@ class PlnVCodeGen {
     VReg lowerPow2DivMod(VReg x, int k, bool isMod, VRegType type, VFunc& func);
     VReg lowerArrIndexExpr(const ArrIndexExpr& expr, VFunc& func);
     void lowerArrAssignStmt(const ArrAssignStmt& stmt, VFunc& func);
+    VReg convertWidth(VReg src, VRegType from, VRegType to, VFunc& func);
+    VReg loadBitField(VReg ptr, const FieldAccessExpr& e, VFunc& func);
+    void storeBitField(VReg ptr, const FieldAssignStmt& s, VReg src, VFunc& func);
     void lowerReturnStmt(const ReturnStmt& stmt, VFunc& func);
     void lowerCCCallExpr(const CCCallExpr& expr, VFunc& func);
     vector<VReg> lowerCCallArgs(const CCCallExpr& expr, vector<StructArgSpan>& spans, VFunc& func,

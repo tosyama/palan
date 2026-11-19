@@ -63,7 +63,7 @@ inline bool isIntegerPrim(const PlnType* t) {
 	    && pn != PrimType::Name::Void;
 }
 
-inline bool intLiteralFits(const string& value, PrimType::Name pn)
+inline bool intLiteralFitsBits(const string& value, int bits, bool isSigned)
 {
 	bool neg = value[0] == '-';
 	const char* first = value.data() + (neg ? 1 : 0);
@@ -71,7 +71,16 @@ inline bool intLiteralFits(const string& value, PrimType::Name pn)
 	uint64_t mag;
 	// The lexer only produces digit strings, so the only failure is overflow.
 	if (from_chars(first, last, mag).ec != errc()) return false;
+	if (isSigned) {
+		uint64_t posMax = (uint64_t(1) << (bits - 1)) - 1;
+		return mag <= (neg ? posMax + 1 : posMax);
+	}
+	if (neg) return mag == 0;
+	return bits == 64 || mag <= (uint64_t(1) << bits) - 1;
+}
 
+inline bool intLiteralFits(const string& value, PrimType::Name pn)
+{
 	int bits = 64;
 	bool isSigned = true;
 	switch (pn) {
@@ -85,12 +94,7 @@ inline bool intLiteralFits(const string& value, PrimType::Name pn)
 		case PrimType::Name::Bool:   bits = 1;  isSigned = false; break;
 		default:                     bits = 64; isSigned = false; break;
 	}
-	if (isSigned) {
-		uint64_t posMax = (uint64_t(1) << (bits - 1)) - 1;
-		return mag <= (neg ? posMax + 1 : posMax);
-	}
-	if (neg) return mag == 0;
-	return bits == 64 || mag <= (uint64_t(1) << bits) - 1;
+	return intLiteralFitsBits(value, bits, isSigned);
 }
 
 inline bool isBoolPrim(const PlnType* t) {

@@ -1,0 +1,86 @@
+{
+    "target": "x86_64-linux-gnu",
+    "functions": [],
+    "original": "081_bit_field.pa",
+    "main": {"name": "_081_bit_field..main", "parameters": [{"name": "__argc", "var-type": {"type-kind": "prim", "type-name": "int64"}}, {"name": "__argv", "var-type": {"type-kind": "pntr", "base-type": {"type-kind": "pntr", "base-type": {"type-kind": "prim", "type-name": "uint8"}}}}]},
+    "str-literals": [
+        { "label": ".Ls0", "value": "%d %u %lu\n" }
+    ],
+    "statements": [
+        {
+            "stmt-type": "var-decl",
+            "vars": [
+                {
+                    "name": "p",
+                    "var-type": { "type-kind": "pntr", "base-type": { "type-kind": "struct", "type-name": "Point" } },
+                    "init": {
+                        "expr-type": "call",
+                        "func-type": "c",
+                        "name": "calloc",
+                        "value-type": { "type-kind": "pntr", "base-type": { "type-kind": "struct", "type-name": "Point" } },
+                        "args": [
+                            { "expr-type": "lit-uint", "value": "1",  "value-type": { "type-kind": "prim", "type-name": "uint64" } },
+                            { "expr-type": "lit-uint", "value": "16", "value-type": { "type-kind": "prim", "type-name": "uint64" } }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "stmt-type": "field-assign",
+            "var": "p",
+            "offset": 0,
+            "value-type": { "type-kind": "prim", "type-name": "int32" },
+            "value": { "expr-type": "lit-int", "value": "-3", "value-type": { "type-kind": "prim", "type-name": "int32" } },
+            "bits": { "shift": 3, "width": 5 }
+        },
+        {
+            "stmt-type": "field-assign",
+            "var": "p",
+            "offset": 0,
+            "value-type": { "type-kind": "prim", "type-name": "uint32" },
+            "value": { "expr-type": "lit-uint", "value": "5", "value-type": { "type-kind": "prim", "type-name": "uint32" } },
+            "bits": { "shift": 0, "width": 3 }
+        },
+        {
+            "stmt-type": "field-assign",
+            "var": "p",
+            "offset": 8,
+            "value-type": { "type-kind": "prim", "type-name": "uint64" },
+            "value": { "expr-type": "lit-uint", "value": "7", "value-type": { "type-kind": "prim", "type-name": "uint64" } },
+            "bits": { "shift": 0, "width": 64 }
+        },
+        {
+            "stmt-type": "expr",
+            "body": {
+                "expr-type": "call",
+                "func-type": "c",
+                "name": "printf",
+                "value-type": { "type-kind": "prim", "type-name": "int32" },
+                "args": [
+                    { "expr-type": "lit-str", "label": ".Ls0", "value-type": { "type-kind": "pntr", "base-type": { "type-kind": "prim", "type-name": "uint8" } } },
+                    { "expr-type": "field-access", "var": "p", "offset": 0, "value-type": { "type-kind": "prim", "type-name": "int32" }, "bits": { "shift": 3, "width": 5 } },
+                    { "expr-type": "field-access", "var": "p", "offset": 0, "value-type": { "type-kind": "prim", "type-name": "uint32" }, "bits": { "shift": 0, "width": 3 } },
+                    { "expr-type": "field-access", "var": "p", "offset": 8, "value-type": { "type-kind": "prim", "type-name": "uint64" }, "bits": { "shift": 0, "width": 64 } }
+                ]
+            }
+        },
+        {
+            "stmt-type": "expr",
+            "body": {
+                "expr-type": "call",
+                "func-type": "c",
+                "name": "free",
+                "value-type": { "type-kind": "prim", "type-name": "int32" },
+                "args": [
+                    {
+                        "expr-type": "id",
+                        "name": "p",
+                        "var-type":   { "type-kind": "pntr", "base-type": { "type-kind": "struct", "type-name": "Point" } },
+                        "value-type": { "type-kind": "pntr", "base-type": { "type-kind": "struct", "type-name": "Point" } }
+                    }
+                ]
+            }
+        }
+    ]
+}

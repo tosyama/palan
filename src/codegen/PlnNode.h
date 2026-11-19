@@ -416,6 +416,8 @@ struct FieldAccessExpr : Expr {
     int              offset;
     VRegType         type;
     bool             addrOnly = false;  // true: field data is embedded inline; compute ptr+offset, do not load
+    int              bitShift = 0;      // a C bit-field within the unit of `type` at offset; width 0 if not
+    int              bitWidth = 0;
 };
 
 struct FieldAssignStmt : Stmt {
@@ -425,6 +427,8 @@ struct FieldAssignStmt : Stmt {
     int              offset;
     VRegType         type;
     unique_ptr<Expr> value;
+    int              bitShift = 0;  // as FieldAccessExpr
+    int              bitWidth = 0;
 };
 
 // -------- Module --------

@@ -916,12 +916,14 @@ TEST(sa_error, unsupported_c_field)
 
 TEST(sa_error, c_bit_field)
 {
-	const string msg = "cannot access field 'flag' of 'BF': its type uses 'bit-field', a C type this version cannot represent.";
 	const pair<string, string> cases[] = {
-		{"error_814_c_bitfield_read.pa", ":3:11: error: " + msg},
-		{"error_815_c_bitfield_write.pa", ":3:1: error: " + msg},
-		{"error_816_c_bitfield_addr.pa", ":3:14: error: " + msg},
-		{"error_817_c_bitfield_lit.pa", ":2:21: error: " + msg},
+		{"error_814_c_bitfield_cross.pa", ":3:11: error: cannot access field 'b' of 'BP': its type uses "
+		                                  "'packed bit-field across two units', a C type this version cannot represent."},
+		{"error_815_c_bitfield_lit_range.pa", ":4:1: error: Integer literal '2' does not fit the 1-bit bit-field 'flag'."},
+		{"error_1144_c_bitfield_past_end.pa", ":3:11: error: cannot access field 'a' of 'BQ': its type uses "
+		                                      "'packed bit-field across two units', a C type this version cannot represent."},
+		{"error_816_c_bitfield_addr.pa", ":3:13: error: cannot take the address of bit-field 'flag'."},
+		{"error_817_c_bitfield_struct_lit_range.pa", ":3:33: error: Integer literal '-5' does not fit the 3-bit bit-field 's'."},
 		{"error_818_c_bitfield_width.pa", ":2:1: error: struct 'BN' has no known layout"},
 	};
 	for (auto& [file, expected] : cases) {

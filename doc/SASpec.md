@@ -1745,9 +1745,12 @@ the failing one are discarded, and no partial layout is kept:
 - A field with `bits` (a C bit-field) must have a folded width (a `null` one is rejected).
   It is laid out as GCC does on x86-64: it moves to the next unit of its declared type only when
   it would straddle one (packed: never), a zero-width one moves to the next unit even when
-  packed, and only a named, unpacked one raises the struct's alignment. A named one is a field
-  covering the bytes its bits occupy, but reading, writing or taking its address, or giving it
-  in a struct literal, is E_UnsupportedCFieldType; an unnamed one only takes its place.
+  packed, and only a named, unpacked one raises the struct's alignment. A named one inside one
+  unit of its declared type, with the unit inside the struct, is a field of that type at the
+  unit's offset, read and written with `bits` (see field-access below); taking its address is
+  E_AddrOfBitField, and an integer literal outside its width E_BitFieldLiteralOutOfRange. One a
+  packed struct lays across two units, or past its end, covers the bytes its bits occupy and is
+  E_UnsupportedCFieldType on any use. An unnamed one only takes its place.
 
 ### C ABI layout
 
@@ -1935,6 +1938,11 @@ a `pntr`-typed `value-type` in place of the field's own type — see the addr-of
  "value-type":{"type-kind":"pntr","mutable":true,"base-type":{"type-kind":"prim","type-name":"int64"}},
  "addr-only":true}
 ```
+
+A C bit-field's `field-access` and `field-assign` add `"bits":{"shift":<int>,"width":<int>}`:
+the field is `width` bits from bit `shift` of the unit of its `value-type` at `offset`. A read
+extends the sign of a signed type; a write keeps the unit's other bits and the value's low
+`width` bits.
 
 `resolveObjectChain(object, forWrite)` is the single field-chain resolver used by field-access
 reads, field-assign writes, and the addr-of field-access shape alike — `field-assign`'s

@@ -1,2 +1,4 @@
 cinclude "error_814_c_bitfield.h";
-BF b = {c: 1, flag: 1, d: 2};
+BF b;
+1 -> b.flag;
+2 -> b.flag;

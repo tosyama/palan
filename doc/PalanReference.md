@@ -3588,8 +3588,22 @@ __attribute__((aligned(16))) T;`) is fine.
 
 A C struct with bit-fields (`unsigned th_off:4;`) has the same layout in Palan as in C, so a
 header such as `netinet/tcp.h` can be included and the struct passed to and from C. A bit-field
-member itself cannot be read, written, have its address taken or be given in a struct literal;
-each of these is a compile error. The struct's other fields work as usual.
+is read, written and given in a struct literal as a field of its declared type
+(`unsigned flags:4` is a `uint32`):
+
+```palan
+cinclude <stdio.h>;
+cinclude <netinet/tcp.h>;
+tcphdr h;
+5 -> h.th_off;
+printf("%u\n", h.th_off);   // 5
+```
+
+- A value written keeps only its low bits, as in C, but an integer literal or constant that does
+  not fit the width is a compile error (`16 -> h.th_off`).
+- As in C, a bit-field has no address: `@h.th_off` is a compile error.
+- A bit-field that a packed struct lays across two units of its type is not supported yet; using
+  it is a compile error. The bit-fields of the C library and Linux headers are all inside one.
 
 ### C Enum Types
 
