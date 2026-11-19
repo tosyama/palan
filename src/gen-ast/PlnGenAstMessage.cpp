@@ -131,10 +131,6 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 			return "Invalid code point escape '" + arg1 + "': '\\u{X}' takes 1 to 6 hex digits, "
 			       "up to 10FFFF and not a surrogate (D800 to DFFF).";
 
-		case E_UnknownLinkage:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "Unknown linkage \"" + arg1 + "\": only \"C\" can follow 'export'.";
-
 		case E_DerivedCompareFunc:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");

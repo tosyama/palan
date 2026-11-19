@@ -1346,7 +1346,7 @@ TEST(gen_ast, c_export) {
 	ASSERT_FALSE(exports[1].contains("c-export"));
 
 	ofstream("out/m.pai") << "built \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\n"
-	                         "export \"C\" func add(int32 a, int32 b) -> int32;\n";
+	                         "cexport func add(int32 a, int32 b) -> int32;\n";
 	jout = json::parse(execTestCommand("palan-gen-ast out/m.pai"));
 	ASSERT_EQ(jout["export"][0]["c-export"], true);
 }

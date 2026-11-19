@@ -32,6 +32,7 @@ enum {
 	INCLUDE_FILE =	PlnParser::token::INCLUDE_FILE,
 	KW_LIBRARY =	PlnParser::token::KW_LIBRARY,
 	KW_EXPORT =	PlnParser::token::KW_EXPORT,
+	KW_CEXPORT =	PlnParser::token::KW_CEXPORT,
 	KW_IMPORT =	PlnParser::token::KW_IMPORT,
 	KW_CINCLUDE =	PlnParser::token::KW_CINCLUDE,
 	KW_FROM =	PlnParser::token::KW_FROM,
@@ -132,6 +133,7 @@ COMMENT1	\/\/[^\n]*\n
 	}
 <*>"library" { return KW_LIBRARY; }
 <*>"export" { return KW_EXPORT; }
+<*>"cexport" { return KW_CEXPORT; }
 <*>"import" {
 		BEGIN(import);
 		return KW_IMPORT;

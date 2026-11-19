@@ -55,7 +55,7 @@ Function definition model
 
   1. **palan** - Palan user-defined function
      - export - Boolean, true if declared with `export` keyword (omitted when false)
-     - c-export - Boolean, true if declared with `export "C"`, linked by its name (SpecAndDesign.md
+     - c-export - Boolean, true if declared with `cexport`, linked by its name (SpecAndDesign.md
        3.7; omitted when false)
      - parameters\* - Parameter list (Palan parameter, see below; empty array when no parameters)
      - ret-type - Return variable type (unnamed single return only; omitted for void and named returns)
@@ -75,7 +75,7 @@ Function definition model
 
   3. **syscall** - Raw syscall declaration (a prototype with no block)
      - export - Boolean, true if declared with `export` keyword (omitted when false)
-     - c-export - Boolean, true if declared with `export "C"`, linked by its name (SpecAndDesign.md
+     - c-export - Boolean, true if declared with `cexport`, linked by its name (SpecAndDesign.md
        3.7; omitted when false)
      - parameters\* - Parameter list (Palan parameter, see below; empty array when no parameters;
        at most 6, checked by SA)

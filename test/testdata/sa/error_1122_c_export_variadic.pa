@@ -1,1 +1,1 @@
-export "C" func sum([...]int64 xs) -> int64 { return 0; }
+cexport func sum([...]int64 xs) -> int64 { return 0; }

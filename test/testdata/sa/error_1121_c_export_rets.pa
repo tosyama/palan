@@ -1,4 +1,4 @@
-export "C" func divmod(int32 a, int32 b) -> int32 q, int32 r {
+cexport func divmod(int32 a, int32 b) -> int32 q, int32 r {
 	a / b -> q;
 	a % b -> r;
 }

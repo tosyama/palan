@@ -432,9 +432,9 @@ symbol is its label, `<module>.<name>`.
   statement is entered, not in palan-gen-ast, since whether `M` is an alias depends on the scope (a
   variable `M` hides it).
 
-**C-named functions.** `export "C" func add(...)` gives the function the symbol `add`, so C code
+**C-named functions.** `cexport func add(...)` gives the function the symbol `add`, so C code
 linked in can call it by name. There is one symbol, not an alias beside the usual one: Palan calls
-it by `add` too, and a `.pai` writes `export "C"` so an importer gives it the same. The name is the
+it by `add` too, and a `.pai` writes `cexport` so an importer gives it the same. The name is the
 Palan name, so the function cannot be overloaded within its module, and its signature follows a
 callback's rules, since C calls it directly.
 

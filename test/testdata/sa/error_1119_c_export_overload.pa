@@ -1,2 +1,2 @@
-export "C" func add(int32 a, int32 b) -> int32 { return a + b; }
+cexport func add(int32 a, int32 b) -> int32 { return a + b; }
 func add(int64 a) -> int64 { return a; }

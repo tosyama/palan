@@ -153,7 +153,7 @@ string Writer::vars(const json& node, const json& list, bool isRets) const
 string Writer::funcDecl(const json& f, bool exported) const
 {
 	bool isSyscall = f["func-type"] == "syscall";
-	string s = string(exported ? "export " : "") + (f.value("c-export", false) ? "\"C\" " : "")
+	string s = string(!exported ? "" : f.value("c-export", false) ? "cexport " : "export ")
 		+ (isSyscall ? "syscall " : "func ") + f["name"].get<string>()
 		+ "(" + vars(f, f["parameters"], false) + ")";
 	if (f.contains("rets")) s += " -> " + vars(f, f["rets"], true);

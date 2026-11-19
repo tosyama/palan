@@ -340,6 +340,7 @@ struct BodyList {
 %token <string>	INCLUDE_FILE	"include file"
 %token KW_LIBRARY	"library"
 %token KW_EXPORT	"export"
+%token KW_CEXPORT	"cexport"
 %token KW_IMPORT	"import"
 %token KW_CINCLUDE	"cinclude"
 %token KW_FROM	"from"
@@ -1404,13 +1405,8 @@ func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 
 func_export: KW_EXPORT
 	{ $$ = false; }
-	| KW_EXPORT STRING
-	{
-		if ($2 != "C")
-			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @2.begin.line, @2.begin.column,
-				PlnGenAstMessage::getMessage(E_UnknownLinkage, $2)));
-		$$ = true;
-	}
+	| KW_CEXPORT
+	{ $$ = true; }
 	;
 
 release_mark: /* empty */
