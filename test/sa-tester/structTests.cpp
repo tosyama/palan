@@ -1361,8 +1361,9 @@ TEST(sa, field_embed_varr)
 	ASSERT_EQ(h["value-type"]["base-type"]["type-kind"], "varr");
 }
 
-// Initializers are evaluated into the struct's shape, as the generated module
-// stores integers, and a struct laid out in another brings its own along.
+// The module defining a struct stores its initializers by a function of its
+// own, which the generated __pln_init_T calls; a struct laid out in it brings
+// its own function along.
 TEST(sa, field_init)
 {
 	cleanTestEnv();
@@ -1371,18 +1372,22 @@ TEST(sa, field_init)
 	map<string, json> shapes;
 	for (auto& sh : jout["alloc-shapes"])
 		if (sh.value("shape-kind", "") == "struct") shapes[sh["shape-name"]] = sh;
-	const auto& p = shapes.at("P")["inits"];
-	ASSERT_EQ(p.size(), 2u);
-	ASSERT_EQ(p[0], json({{"kind","prim"},{"offset",4},{"type","int8"},{"values",{"-56"}}}));
-	ASSERT_EQ(p[1]["values"], json::array({"4"}));
-	const auto& si = shapes.at("S")["inits"];
-	ASSERT_EQ(si.size(), 5u);
-	ASSERT_EQ(si[0]["kind"], "embed-varr");
-	ASSERT_EQ(si[0]["values"], json::array({"104", "0"}));
-	ASSERT_EQ(si[1]["kind"], "row");
-	ASSERT_EQ(si[1]["values"], json::array({"-1", "2"}));
-	ASSERT_EQ(si[2]["offset"], 36);
-	ASSERT_EQ(si[4], json({{"count",2},{"kind","structs"},{"name","P"},{"offset",48}}));
+	string fiP = shapes.at("P")["init-func"], fiS = shapes.at("S")["init-func"];
+	ASSERT_FALSE(shapes.at("S").contains("inits"));
+	map<string, json> funcs;
+	for (auto& f : jout["functions"]) funcs[f["name"]] = f;
+	const auto& p = funcs.at(fiP);
+	ASSERT_TRUE(p["export"].get<bool>());
+	ASSERT_EQ(p["body"].size(), 2u);
+	ASSERT_EQ(p["body"][0]["stmt-type"], "field-assign");
+	ASSERT_EQ(p["body"][0]["offset"], 4);
+	ASSERT_EQ(p["body"][0]["value"]["value"], "200");
+	// $P p calls P's function; $[2]$P ps builds both as a run.
+	const auto& sb = funcs.at(fiS)["body"];
+	ASSERT_EQ(sb[0]["body"]["name"], fiP);
+	ASSERT_EQ(sb[0]["body"]["args"][0]["offset"], 32);
+	ASSERT_EQ(funcName(sb[1]["body"]["name"]), "__pln_initrun_P");
+	ASSERT_EQ(sb[1]["body"]["args"][2]["value"], "2");
 
 	// A named literal leaving a field out gives it the initializer.
 	const auto& stmts = jout["statements"];

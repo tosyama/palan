@@ -169,19 +169,10 @@ Root
     - lens\* - The lengths of the field's levels, outermost first and on through the elements
       of a `[+]U`, which its element's helpers take (`[3]`, `[3, 4]`; empty for `T`)
 
-  - inits - The struct's field initializers, constants palan-sa has evaluated, its own and
-    those of structs laid out in it at their offsets there (omitted when it has none). A struct
-    with initializers has a struct entry even when it owns nothing. Each is stored after the owned
-    fields are built:
-    - offset\* - Byte offset within the struct
-    - kind\* - `"prim"` (a primitive field), `"run"` (`$[n]T`), `"row"` (`[n]T`, the owned field
-      at the same offset), `"varr"` / `"embed-varr"` (`[+]T` / `$[+]T`, the owned field at the same
-      offset, resized to the count of `values` first), or `"structs"` (a `$[n]$P` field with `P`
-      a struct with initializers, built by `__pln_initrun_P`)
-    - type - The values' type as the generated module stores it: an integer as the signed integer
-      of its width (`uint8` and `bool` as `int8`), a float as itself (not for `"structs"`)
-    - values - The values, as literal text in that type (`200` of a `uint8` is `-56`; not for `"structs"`)
-    - name, count - For `"structs"`: the struct and how many of it the field lays out
+  - init-func - The symbol of the function storing the struct's field initializers (see Symbol
+    names), present when it or a struct laid out in it has one; `__allocators.h` declares it as
+    `void <symbol>(void *p);` and `__pln_init_T` calls it after the owned fields are built. A
+    struct with initializers has a struct entry even when it owns nothing.
     A struct with initializers that owns nothing also has `__pln_initrun_P(@!P run, int64 from,
     int64 to)`, which builds `run[from]` to `run[to - 1]`. palan-sa calls it after obtaining an
     array laid out in one block (`[n]$P`, `[m]$[n]$P`); the generated helpers call it wherever
@@ -265,6 +256,11 @@ among such blocks of the enclosing function or of the top level (`util..a.v..b1.
 A type's `->` (SpecAndDesign.md 3.8) is `__pln_cp_` and the struct as a `<param>` writes it
 (`__pln_cp_24__pln_L10std_2eutf8_utf8`): a type has one, so the type alone names it, and the generated allocators
 declare it in C, which takes no `.`.
+
+A struct's field initializer function (SpecAndDesign.md 3.6) is `__pln_fi_` and the struct as a
+`<param>` writes it, for the same reasons. SA defines it in the struct's module, taking `@!T p`:
+a struct laid out in it with initializers is stored by its own function first, then one
+`value -> p.field` stores each initializer.
 
 An opaque type's release function (SpecAndDesign.md 3.7) is `__pln_rl_` and the type as a
 `<param>` writes it. SA defines it in the type's module, as a function of that name taking the

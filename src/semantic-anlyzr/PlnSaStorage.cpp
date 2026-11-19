@@ -628,22 +628,15 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 	// struct holding owned elements is one such element, a row laid out in place.
 	// A struct laid out in the struct contributes its own owned fields at their
 	// place in it, so the allocators need not know it is nested.
-	// Its initializers are listed likewise, and a run of structs with
-	// initializers laid out in it as one entry their __pln_initrun builds.
 	// A struct laid out in it whose parts a type's '->' writes is kept whole
 	// instead, a run of them, so that its own functions build, free, copy and
 	// write it, and copying the bytes around it leaves it alone.
 	json owned = json::array();
-	json inits = json::array();
 	json runs = json::array();
 	auto assignsAsStruct = [&](const string& sub) {
 		return assignsByFunc(json{{"type-kind", "struct"}, {"type-name", sub}}); // LCOV_EXCL_BR_LINE
 	}; // LCOV_EXCL_BR_LINE
 	function<void(const StructDef&, int, const string&)> collect = [&](const StructDef& def, int base, const string& prefix) {
-		for (auto init : def.inits) {
-			init["offset"] = base + init["offset"].get<int>();
-			inits.push_back(move(init));
-		}
 		for (auto& f : def.fields) {
 			if (f.typeKind == "embed") {
 				const StructDef& sub = structDefs_.at(f.typeName);
@@ -663,10 +656,6 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 					string sub = (*leaf)["type-name"];
 					recordAllocShape(sub);
 					runs.push_back({{"offset", base + f.offset}, {"name", sub}, {"count", count}}); // LCOV_EXCL_BR_LINE
-				} else if (leaf->value("type-kind", "") == "struct" && structDefs_.at((*leaf)["type-name"].get<string>()).hasInits) { // LCOV_EXCL_BR_LINE
-					string sub = (*leaf)["type-name"];
-					recordAllocShape(sub);
-					inits.push_back({{"offset", base + f.offset}, {"kind", "structs"}, {"name", sub}, {"count", count}});
 				}
 				continue;
 			}
@@ -700,7 +689,7 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 		{"total-size",   def.totalSize},
 		{"owned-fields", move(owned)}
 	};
-	if (!inits.empty()) shape["inits"] = move(inits);
+	if (def.hasInits) shape["init-func"] = fieldInitSymbol(name);
 	if (!runs.empty()) shape["runs"] = move(runs);
 	if (!def.copyFunc.empty()) shape["copy-func"] = def.copyFunc;
 	if (assignsAsStruct(name)) shape["assigns"] = true;

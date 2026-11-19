@@ -42,10 +42,13 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	    << "void *memmove(void *dest, const void *src, unsigned long n);\n"
 	    << "void *realloc(void *ptr, unsigned long size);\n"
 	    << "void abort(void);\n";
-	// A type's '->' is a Palan function, called as C calls it.
+	// A type's '->' and the function storing its field initializers are
+	// Palan functions, called as C calls them.
 	for (auto& shape : shapes.structs) {
 		if (shape.contains("copy-func"))
 			hdr << "void " << shape["copy-func"].get<string>() << "(const void *src, void *dst);\n";
+		if (shape.contains("init-func"))
+			hdr << "void " << shape["init-func"].get<string>() << "(void *p);\n";
 		if (shape.contains("release-func"))
 			hdr << "void " << shape["release-func"].get<string>() << "(void *p);\n";
 	}
@@ -58,17 +61,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	if (!library.empty()) out << "library " << library << ";\n";
 	out << "cinclude \"" PALAN_ALLOCATORS_MODULE ".h\";\n";
 
-	auto primSize = [](const string& type) -> int64_t {
-		static const map<string, int64_t> sizes = {
-			{"int8",1}, {"int16",2}, {"int32",4}, {"int64",8}, {"flo32",4}, {"flo64",8}};
-		return sizes.at(type);
-	};
 	map<string, const json*> struct_by_name;
-	auto sizeOfInit = [&](const json& init) -> int64_t {
-		if (init["kind"] == "structs")
-			return init["count"].get<int64_t>() * struct_by_name.at(init["name"])->at("total-size").get<int64_t>();
-		return (int64_t)init["values"].size() * primSize(init["type"]);
-	};
 	for (auto& shape : struct_shapes)
 		struct_by_name[shape["shape-name"].get<string>()] = &shape;
 	// A struct owning nothing comes only as its layout, a bytes shape.
@@ -473,21 +466,6 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			string run = e.kind == "embed-row" ? "$[" + to_string(count) + "]" : "";
 			owned_decls.push_back({of["offset"].get<int64_t>(), run + e.buildElem + " " + slot, count * 8});
 		}
-		// What an initializer stores in place is declared as its type, so the
-		// stores and copies go through it.
-		int init_no = 0;
-		for (auto& init : shape.value("inits", json::array())) {
-			string kind = init["kind"], slot = "__pln_i" + to_string(init_no++);
-			int64_t offset = init["offset"];
-			if (kind == "prim")
-				owned_decls.push_back({offset, init["type"].get<string>() + " " + slot, primSize(init["type"])});
-			else if (kind == "run")
-				owned_decls.push_back({offset, "$[" + to_string(init["values"].size()) + "]" + init["type"].get<string>() + " " + slot,
-					(int64_t)init["values"].size() * primSize(init["type"])});
-			else if (kind == "structs")
-				owned_decls.push_back({offset, "$[" + to_string(init["count"].get<int64_t>()) + "]$" + init["name"].get<string>() + " " + slot,
-					init["count"].get<int64_t>() * struct_by_name.at(init["name"])->at("total-size").get<int64_t>()});
-		}
 		// A run of structs a type's '->' writes is declared as their type, so
 		// that their own functions take each.
 		int run_no = 0;
@@ -559,44 +537,14 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "    __pln_init_" << name << "(p);\n"
 		    << "}\n";
 
-		// The initializers are stored once the owned fields are built, since
-		// a `[+]T` one is resized first.
-		map<int64_t, string> slotAt;
-		for (size_t i = 0; i < owned.size(); i++)
-			slotAt[shape["owned-fields"][i]["offset"].get<int64_t>()] = owned[i].slot;
-		const json noInits = json::array();
-		const json& inits = shape.contains("inits") ? shape["inits"] : noInits;
 		// A struct in a stack frame releases only what it owns (fini);
 		// a heap one also frees its own block.
 		out << "export func __pln_init_" << name << "(@!" << name << " p) {\n";
 		for (auto& f : owned) out << elemBuild(f.e, "p." + f.slot, "    ", f.lens);
 		out << forRuns(shape, [](const string& sub, const string& slot) { return "__pln_init_" + sub + "(@!p." + slot + ");"; });
-		for (size_t i = 0; i < inits.size(); i++) {
-			const json& init = inits[i];
-			string kind = init["kind"], slot = "p.__pln_i" + to_string(i);
-			if (kind == "structs") {
-				out << "    __pln_initrun_" << init["name"].get<string>() << "(@!" << slot << "[0], 0, "
-				    << init["count"].get<int64_t>() << ");\n";
-				continue;
-			}
-			const json& values = init["values"];
-			if (kind == "prim") {
-				out << "    " << values[0].get<string>() << " -> " << slot << ";\n";
-				continue;
-			}
-			string data = slot;
-			if (kind != "run") {
-				string owner = "p." + slotAt.at(init["offset"].get<int64_t>());
-				data = owner;
-				if (kind == "varr" || kind == "embed-varr") {
-					out << "    __pln_resize_" << init["shape-key"].get<string>() << "("
-					    << (kind == "embed-varr" ? "@!" : "") << owner << ", " << values.size() << ");\n";
-					data = owner + ".data";
-				}
-			}
-			for (size_t j = 0; j < values.size(); j++)
-				out << "    " << values[j].get<string>() << " -> " << data << "[" << j << "];\n";
-		}
+		// After the owned fields are built: an initializer writes into them.
+		if (shape.contains("init-func"))
+			out << "    " << shape["init-func"].get<string>() << "(p);\n";
 		out << "}\n"
 		    << "export func __pln_fini_" << name << "(@!" << name << " p) {\n";
 		for (auto& f : owned) out << "    " << elemDrop(f.e, "p." + f.slot, "    ", f.lens) << "\n";
@@ -616,12 +564,6 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			out << "    memcpy(dst." << pad << ", src." << pad << ", " << size << ");\n";
 		for (auto& f : owned)
 			out << "    " << elemSet(f.e, "dst." + f.slot, "src." + f.slot, f.lens) << "\n";
-		for (size_t i = 0; i < inits.size(); i++) {
-			string slot = "__pln_i" + to_string(i);
-			if (inits[i]["kind"] == "prim") out << "    src." << slot << " -> dst." << slot << ";\n";
-			else if (inits[i]["kind"] == "run" || inits[i]["kind"] == "structs")
-				out << "    memcpy(dst." << slot << ", src." << slot << ", " << sizeOfInit(inits[i]) << ");\n";
-		}
 		out << forRuns(shape, [](const string& sub, const string& slot) {
 			return "__pln_copy_" + sub + "(@!dst." + slot + ", @src." + slot + ");";
 		});
@@ -633,12 +575,6 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 				out << "    memcpy(dst." << pad << ", src." << pad << ", " << size << ");\n";
 			for (auto& f : owned)
 				out << "    " << elemAssign(f.e, "dst." + f.slot, "src." + f.slot, f.lens) << "\n";
-			for (size_t i = 0; i < inits.size(); i++) {
-				string slot = "__pln_i" + to_string(i);
-				if (inits[i]["kind"] == "prim") out << "    src." << slot << " -> dst." << slot << ";\n";
-				else if (inits[i]["kind"] == "run" || inits[i]["kind"] == "structs")
-					out << "    memcpy(dst." << slot << ", src." << slot << ", " << sizeOfInit(inits[i]) << ");\n";
-			}
 			out << forRuns(shape, [&](const string& sub, const string& slot) {
 				return structAssign(sub, "@!dst." + slot, "@src." + slot);
 			});

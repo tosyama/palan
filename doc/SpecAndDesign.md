@@ -209,6 +209,14 @@ own type says; a float, passed in another register, has a key of its own. Length
 rather than part of the key for the same reason. The arrays of any element are generated from one
 description of the element (`ElemOps` in the build manager).
 
+Field initializers are stored by a function of the module defining the struct
+(`__pln_fi_<T>(@!T p)`, one `value -> p.field` each), which the generated `__pln_init_T` calls once
+the owned fields are built, declaring it in C as it does a type's `->` (3.8). The generated module knows only the
+owned fields, and the values go into them too (`[n]P`'s elements, `[m][n]T`'s rows): stores there
+would need their layout in the generated module and a second way of writing a literal. A struct
+laid out in another with initializers of its own is stored by its own function, which the outer one
+calls, unless the generated functions build it whole (`runs`).
+
 A struct with initializers is never reduced to `__pln_B<n>`, since structs of one size no longer
 build alike, nor is one holding a type with its own `->` (3.8), since writing into it is no longer
 copying bytes. A struct of the latter kind laid out in another is kept whole (`runs`) rather than

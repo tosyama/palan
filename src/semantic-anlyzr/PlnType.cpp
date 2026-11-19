@@ -441,6 +441,11 @@ std::string copyFuncSymbol(const std::string& typeName)
     return "__pln_cp_" + symbolType({{"type-kind", "struct"}, {"type-name", typeName}}); // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
+std::string fieldInitSymbol(const std::string& typeName)
+{
+    return "__pln_fi_" + symbolType({{"type-kind", "struct"}, {"type-name", typeName}}); // LCOV_EXCL_BR_LINE
+} // LCOV_EXCL_BR_LINE
+
 std::string releaseFuncSymbol(const std::string& typeName)
 {
     return "__pln_rl_" + symbolType({{"type-kind", "struct"}, {"type-name", typeName}}); // LCOV_EXCL_BR_LINE

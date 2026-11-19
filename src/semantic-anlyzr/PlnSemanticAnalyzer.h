@@ -45,7 +45,7 @@ struct FieldLayout {
 	// field (`$[n]...`) is the array laid out in the struct, typed as a
 	// variable whose array is laid out in a frame.
 	json    type;
-	json    initAst;   // the field's initializer as written; null when it has none
+	json    initAst;   // the field's initializer as a literal of typed constants; null when it has none
 	// "private" or "readonly" toward code outside the module defining the
 	// struct; empty = public.
 	string  access;
@@ -89,9 +89,8 @@ struct StructDef {
 	int  maxAlign  = 0;
 	bool ownsFields = false;  // has an owned field
 	// Has a field initializer, its own or one of a struct laid out in it, so it
-	// is built wherever it comes to exist. `inits` lists its own, as in alloc-shapes.
+	// is built wherever it comes to exist.
 	bool hasInits = false;
-	json inits = json::array();
 	bool built() const { return ownsFields || hasInits; }
 	// The symbol of its own '->', which it carries to every module it reaches.
 	string copyFunc;
@@ -616,6 +615,7 @@ class PlnSemanticAnalyzer {
 	                       int64_t frameBytes, int frameAlign, json& post,
 	                       optional<AllocShapeRef> shape = nullopt);
 	json sa_struct_lit(const json& item, const StructDef& def);
+	json sa_field_lit_value(const string& structName, const FieldLayout& f, const json& v);
 	void emitStructLitAssigns(const json& objAst, const StructDef& def, const json& values, json& out);
 	string arrLitDimSize(const json& stmt, const string& name, json& sizeExpr, size_t count);
 	string fillArrLitSizes(const json& stmt, const string& name, json& varType, const json& items);
@@ -739,6 +739,7 @@ class PlnSemanticAnalyzer {
 	void  registerCopyFunc(json& funcEntry, const string& scope);
 	void  registerReleaseFunc(const json& funcEntry, const string& scope);
 	void  emitReleaseFuncs();
+	void  emitFieldInitFuncs();
 	void  validateVariadicSig(const json& funcDef);
 	void  validateCExportSig(const json& funcDef);
 	json  normalizeArrBorrowType(const json& locNode, const json& type);

@@ -1,0 +1,3 @@
+type P { int32 x; };
+type Q { $P a = {x: n}; };
+int32 n = 1;

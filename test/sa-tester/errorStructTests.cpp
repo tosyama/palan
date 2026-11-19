@@ -747,7 +747,7 @@ TEST(sa_error, struct_arr_lit)
 		{"error_264_struct_lit_dup_field.pa", ":2:26: error: field 'x' is given more than once in a struct literal."},
 		{"error_265_struct_lit_missing_field.pa", ":2:15: error: the literal of struct 'Point' is missing field 'y'."},
 		{"error_266_struct_lit_unknown_field.pa", ":2:21: error: struct 'Point' has no field 'z'."},
-		{"error_267_struct_lit_ptr_field.pa", ":2:15: error: field 'p' of struct 'P' cannot be initialized by a literal: only numeric, struct and array fields are supported."},
+		{"error_267_struct_lit_ptr_field.pa", ":2:15: error: cannot convert 'int64' to '@!int32'."},
 		{"error_268_struct_lit_narrowing.pa", ":3:17: error: Implicit conversion from 'int64' to 'int32' is not allowed"},
 		{"error_693_dict_lit_prim_var.pa", ":1:11: error: a '{name: value}' literal can only be used as a struct value"},
 		{"error_269_dict_lit_prim_elem.pa", ":1:15: error: a '{name: value}' literal can only be used as a struct value: a struct variable's initializer, the source of '->' to a struct, an element of an array literal, or an argument for a struct parameter."},
@@ -807,10 +807,12 @@ TEST(sa_error, field_init)
 {
 	const pair<string, string> cases[] = {
 		{"error_947_field_init_not_const.pa", ":2:27: error: the initializer of field 'x' must be a compile-time constant."},
-		{"error_948_field_init_unsupported.pa", ":2:16: error: field 'p' cannot have an initializer in this version: only a primitive field or a one-dimensional array of primitives can."},
+		{"error_948_field_init_ptr_not_null.pa", ":2:17: error: the initializer of pointer field 'p' must be NULL."},
 		// Constants fold, but a comparison is not one.
 		{"error_949_field_init_compare.pa", ":1:19: error: the initializer of field 'b' must be a compile-time constant."},
 		{"error_950_field_arr_init_not_lit.pa", ":1:23: error: the array literal's dimensions do not match array 'x'."},
+		{"error_1142_field_init_nested_not_const.pa", ":2:21: error: the initializer of field 'a' must be a compile-time constant."},
+		{"error_1143_field_init_ptr_arr.pa", ":2:25: error: array 'ps' cannot be given an array literal: only numeric and struct element types are supported."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -860,7 +862,7 @@ TEST(sa_error, struct_lit_init_assign)
 		{"error_442_struct_lit_init_borrow.pa", ":3:1: error: a struct literal cannot be given to a borrow '@T'; write to its '[0]' to copy into the struct it points to."},
 		{"error_443_struct_lit_to_readonly_elem.pa", ":2:16: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
 		{"error_444_struct_lit_assign_count.pa", ":3:1: error: struct 'V' has 2 fields but its literal has 3 values."},
-		{"error_445_struct_lit_assign_ptr_field.pa", ":4:2: error: field 'p' of struct 'P' cannot be initialized by a literal: only numeric, struct and array fields are supported."},
+		{"error_445_struct_lit_ptr_permission.pa", ":5:2: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
 		{"error_446_struct_lit_transfer.pa", ":3:1: error: '->>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 	};
 	for (auto& [file, expected] : cases) {

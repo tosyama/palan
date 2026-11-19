@@ -108,7 +108,6 @@ enum PlnSaMessageCode {
 	E_StructLitDupField,	// arg1: field name
 	E_StructLitMissingField,	// arg1: struct name, arg2: field name
 	E_StructLitExpected,	// arg1: struct name
-	E_StructLitFieldType,	// arg1: struct name, arg2: field name
 	E_DictLitContext,
 	E_ArrLitArgType,	// arg1: parameter name, arg2: parameter type
 	E_DictLitArgType,	// arg1: parameter name, arg2: parameter type
@@ -198,7 +197,7 @@ enum PlnSaMessageCode {
 	E_NoOperatorFunc,	// arg1: operator, arg2: operand types
 	E_CompareFuncRet,	// arg1: operator
 	E_FieldInitNotConst,	// arg1: field name
-	E_FieldInitUnsupported,	// arg1: field name
+	E_FieldInitPtrNotNull,	// arg1: field name
 	E_ParamDefaultNotConst,	// arg1: parameter name
 	E_ParamDefaultNotLast,	// arg1: parameter name
 	E_OperatorFuncDefault,	// arg1: operator, arg2: parameter name

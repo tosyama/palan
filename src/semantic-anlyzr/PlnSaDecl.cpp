@@ -254,43 +254,12 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 	return def;
 } // LCOV_EXCL_BR_LINE
 
-// The generated module stores every integer as the signed integer of its
-// width (layoutElem), so a value is written as that integer's.
-static pair<string, string> layoutValue(const string& typeName, const json& lit)
-{
-	static const map<string, pair<string, int>> ints = {
-		{"int8",{"int8",8}}, {"uint8",{"int8",8}}, {"bool",{"int8",8}},
-		{"int16",{"int16",16}}, {"uint16",{"int16",16}},
-		{"int32",{"int32",32}}, {"uint32",{"int32",32}},
-		{"int64",{"int64",64}}, {"uint64",{"int64",64}},
-	};
-	string text = lit["value"];
-	auto it = ints.find(typeName);
-	if (it == ints.end()) return {typeName, text};
-	__int128 v = text[0] == '-' ? (__int128)stoll(text) : (__int128)stoull(text);
-	int bits = it->second.second;
-	__int128 span = (__int128)1 << bits;
-	v %= span;
-	if (v < 0) v += span;
-	if (v >= span / 2) v -= span;
-	return {it->second.first, to_string((int64_t)v)};
-}
-
-// Each initializer is a constant, which palan-sa writes into the struct's
-// shape for the generated allocators to store (SpecAndDesign.md 3.6).
+// Each initializer is a constant, analyzed here into a literal of typed
+// values, which a literal leaving the field out takes and the module defining
+// the struct stores (emitFieldInitFuncs): a module importing the struct needs
+// none of the names the values came from.
 void PlnSemanticAnalyzer::setFieldInits(StructDef& def, const json& fields)
 {
-	// A value reaches here typed and, from an integer to a float, converted.
-	auto constant = [&](const json& value, const string& fieldName, const json& locNode) -> json {
-		const json* v = &value;
-		if (v->value("expr-type", "") == "convert") v = &(*v)["src"];
-		string et = v->value("expr-type", "");
-		if (et != "lit-int" && et != "lit-uint" && et != "lit-flo") {
-			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_FieldInitNotConst, fieldName) << endl;
-			exit(1);
-		}
-		return *v;
-	};
 	// Variables and functions are not known yet when types are declared, so a
 	// value naming one is rejected before it is analyzed. An enum member is a
 	// field access on its type.
@@ -303,7 +272,14 @@ void PlnSemanticAnalyzer::setFieldInits(StructDef& def, const json& fields)
 				if (readsRuntime(child)) return true;
 		return false;
 	};
-	auto folded = [&](const json& e, const string& fieldName) {
+	function<json(const json&, const string&)> folded = [&](const json& e, const string& fieldName) -> json {
+		if (isAggregateLit(e)) {
+			json lit = e;
+			bool named = e["expr-type"] == "dict-lit";
+			for (auto& item : lit["items"])
+				(named ? item["value"] : item) = folded(named ? item["value"] : item, fieldName);
+			return lit;
+		}
 		json v = foldConstExpr(e);
 		if (readsRuntime(v)) {
 			cerr << locPrefix(e) << PlnSaMessage::getMessage(E_FieldInitNotConst, fieldName) << endl;
@@ -311,62 +287,52 @@ void PlnSemanticAnalyzer::setFieldInits(StructDef& def, const json& fields)
 		}
 		return v;
 	};
+	// The analyzed value back as a literal of the field's type: a struct by
+	// name, so that one with hidden fields is written as its own module can.
+	// A value reaches here typed and, from an integer to a float, converted.
+	function<json(const json&, const json&, const string&, const json&)> literal
+		= [&](const json& v, const json& type, const string& fieldName, const json& locNode) -> json {
+		if (v.is_array()) {
+			json lit;
+			if (isArrLevel(type) || isVarrStorage(type)) {
+				const json& elem = isVarrStorage(type) ? type["base-type"]["base-type"] : type["base-type"];
+				lit = {{"expr-type", "arr-lit"}, {"items", json::array()}};
+				for (auto& item : v) lit["items"].push_back(literal(item, elem, fieldName, locNode));
+			} else {
+				const StructDef& sub = structDefs_.at(type.value("type-kind", "") == "struct"
+					? type["type-name"].get<string>() : type["base-type"]["type-name"].get<string>());
+				lit = {{"expr-type", "dict-lit"}, {"items", json::array()}};
+				for (size_t k = 0; k < sub.fields.size(); k++)
+					lit["items"].push_back({{"name", sub.fields[k].name},
+						{"value", literal(v[k], fieldValueType(sub.fields[k]), fieldName, locNode)}});
+			}
+			if (locNode.contains("loc")) lit["loc"] = locNode["loc"];
+			return lit;
+		}
+		const json* c = &v;
+		if (c->value("expr-type", "") == "convert") c = &(*c)["src"];
+		string et = c->value("expr-type", "");
+		if (et != "lit-int" && et != "lit-uint" && et != "lit-flo") {
+			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_FieldInitNotConst, fieldName) << endl;
+			exit(1);
+		}
+		json lit = *c;
+		if (locNode.contains("loc")) lit["loc"] = locNode["loc"];
+		return lit;
+	};
 	for (auto& af : fields) {
 		if (!af.contains("init")) continue;
 		string fn = af["name"];
 		auto f = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& l) { return l.name == fn; });
 		const json& init = af["init"];
-		json type = fieldValueType(*f);
-		json entry = {{"offset", f->offset}};
-		json values = json::array();
-		string elemName;
-		if (f->typeKind == "prim" && f->unsupported.empty()) {
-			const PlnType* toType = registry_.fromJson(type);
-			json value = convertForBinding(init, sa_expression(folded(init, fn), toType), toType, type);
-			elemName = f->typeName;
-			values.push_back(constant(value, fn, init));
-			entry["kind"] = "prim";
-		} else if (isLitArrField(*f) && (isVarrStorage(type) ? type["base-type"]["base-type"] : type["base-type"])
-		                                    .value("type-kind", "") == "prim") {
-			if (init.value("expr-type", "") != "arr-lit") {
-				cerr << locPrefix(init) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, fn) << endl;
-				exit(1);
-			}
-			json lit = init;
-			for (auto& item : lit["items"]) item = folded(item, fn);
-			ArrLitShape shape = arrLitShape(init, fn, type, true);
-			checkArrLitCount(init, lit["items"], fn, shape);
-			for (auto& value : sa_arr_lit_values(lit, shape, fn))
-				values.push_back(constant(value, fn, init));
-			elemName = shape.leaf["type-name"];
-			entry["kind"] = f->typeKind == "embed-arr" ? "run" : f->typeKind == "embed-varr" ? "embed-varr"
-			              : isVarrStorage(type) ? "varr" : "row";
-			if (isVarrStorage(type)) entry["shape-key"] = allocShapeKey(varrShape(type));
-		} else {
-			cerr << locPrefix(init) << PlnSaMessage::getMessage(E_FieldInitUnsupported, fn) << endl;
+		json value = folded(init, fn);
+		if (f->typeKind == "raw-ptr" && !isNullPtrLit(value)) {
+			cerr << locPrefix(init) << PlnSaMessage::getMessage(E_FieldInitPtrNotNull, fn) << endl;
 			exit(1);
 		}
-		// A literal leaving the field out takes these values, already typed, so
-		// that a module importing the struct needs none of the names they came from.
-		json typed = values;
-		if (init.contains("loc"))
-			for (auto& v : typed) v["loc"] = init["loc"];
-		if (entry["kind"] == "prim") {
-			f->initAst = typed[0];
-		} else {
-			f->initAst = {{"expr-type", "arr-lit"}, {"items", move(typed)}};
-			if (init.contains("loc")) f->initAst["loc"] = init["loc"];
-		}
-		json texts = json::array();
-		for (auto& v : values) {
-			auto [layout, text] = layoutValue(elemName, v);
-			entry["type"] = layout;
-			texts.push_back(text);
-		}
-		entry["values"] = move(texts);
-		def.inits.push_back(move(entry));
+		f->initAst = literal(sa_field_lit_value(def.name, *f, value), fieldValueType(*f), fn, init);
+		def.hasInits = true;
 	}
-	if (!def.inits.empty()) def.hasInits = true;
 	for (auto& f : def.fields) {
 		const json* leaf = &f.type;
 		if (f.typeKind == "embed-arr")
@@ -914,50 +880,52 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 	}
 
 	json values = json::array();
-	for (size_t k = 0; k < def.fields.size(); k++) {
-		const FieldLayout& f = def.fields[k];
-		const json& v = *given[k];
-		if (!f.unsupported.empty()) {
-			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_UnsupportedCFieldType, structDisplayName(def.name), f.name, f.unsupported) << endl;
-			exit(1);
-		}
-		string structName = fieldStructName(f);
-		if (!structName.empty()) {
-			values.push_back(sa_struct_lit(v, requireCompleteStruct(structName, v)));
-			continue;
-		}
-		if (isLitArrField(f)) {
-			string vet = v.value("expr-type", "");
-			if (vet == "dict-lit") {
-				cerr << locPrefix(v) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
-				exit(1);
-			}
-			if (vet != "arr-lit") {
-				cerr << locPrefix(v) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, f.name) << endl;
-				exit(1);
-			}
-			ArrLitShape shape = arrLitShape(v, f.name, fieldValueType(f), true);
-			values.push_back(sa_arr_lit_values(v, shape, f.name));
-			checkArrLitCount(v, v["items"], f.name, shape);
-			continue;
-		}
-		if (f.typeKind != "prim") {
-			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_StructLitFieldType, structDisplayName(def.name), f.name) << endl;
-			exit(1);
-		}
-		json fieldType = fieldValueType(f);
-		const PlnType* toType = registry_.fromJson(fieldType);
-		json value = sa_expression(v, toType);
-		values.push_back(convertForBinding(v, value, toType, fieldType));
-	}
+	for (size_t k = 0; k < def.fields.size(); k++)
+		values.push_back(sa_field_lit_value(def.name, def.fields[k], *given[k]));
 	return values;
+} // LCOV_EXCL_BR_LINE
+
+// A field's entry in what sa_struct_lit gives.
+json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const FieldLayout& f, const json& v)
+{
+	if (!f.unsupported.empty()) {
+		cerr << locPrefix(v) << PlnSaMessage::getMessage(E_UnsupportedCFieldType, structDisplayName(structName), f.name, f.unsupported) << endl;
+		exit(1);
+	}
+	string sub = fieldStructName(f);
+	if (!sub.empty())
+		return sa_struct_lit(v, requireCompleteStruct(sub, v));
+	if (isLitArrField(f)) {
+		string vet = v.value("expr-type", "");
+		if (vet == "dict-lit") {
+			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
+			exit(1);
+		}
+		if (vet != "arr-lit") {
+			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, f.name) << endl;
+			exit(1);
+		}
+		ArrLitShape shape = arrLitShape(v, f.name, fieldValueType(f), true);
+		json values = sa_arr_lit_values(v, shape, f.name);
+		checkArrLitCount(v, v["items"], f.name, shape);
+		return values;
+	}
+	BOOST_ASSERT(f.typeKind == "prim" || f.typeKind == "raw-ptr");
+	json fieldType = fieldValueType(f);
+	const PlnType* toType = registry_.fromJson(fieldType);
+	json value = convertForBinding(v, sa_expression(v, toType), toType, fieldType);
+	if (f.typeKind == "raw-ptr") {
+		checkBorrowSource(v, value, fieldType);
+		checkPtrPermission(v, value["value-type"], fieldType);
+	}
+	return value;
 } // LCOV_EXCL_BR_LINE
 
 void PlnSemanticAnalyzer::emitStructLitAssigns(const json& objAst, const StructDef& def, const json& values, json& out)
 {
 	for (size_t k = 0; k < def.fields.size(); k++) {
 		const FieldLayout& f = def.fields[k];
-		if (f.typeKind == "prim") {
+		if (f.typeKind == "prim" || f.typeKind == "raw-ptr") {
 			out.push_back(makeFieldAssign(resolveObjectChain(objAst, /*forWrite=*/true), f, values[k]));
 			continue;
 		}

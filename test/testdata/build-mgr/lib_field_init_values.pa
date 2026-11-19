@@ -1,0 +1,2 @@
+export type V { int32 x; int32 y = 9; };
+export type W { $V a = {x: 1}; V o = {x: 2, y: 3}; [+]$V vs = [{x: 4}]; };

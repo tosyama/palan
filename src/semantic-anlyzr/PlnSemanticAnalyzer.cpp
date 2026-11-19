@@ -575,6 +575,59 @@ void PlnSemanticAnalyzer::emitReleaseFuncs()
 	// LCOV_EXCL_BR_STOP
 }
 
+// A struct's field initializers are stored by a function of the module
+// defining it, which knows its fields; the generated __pln_init_T calls it once
+// the owned fields are built. A struct laid out in it with initializers of its
+// own is stored by its own function, unless the field has an initializer or the
+// generated functions build that struct whole, as one a type's '->' writes.
+void PlnSemanticAnalyzer::emitFieldInitFuncs()
+{
+	// LCOV_EXCL_BR_START
+	for (auto& [name, def] : structDefs_) {
+		if (!def.hasInits) continue;
+		auto origin = typeOrigins_.find(name);
+		if (origin == typeOrigins_.end() || origin->second != moduleId_) continue;
+		auto ptrTo = [](const string& s) {
+			return json{{"type-kind","pntr"},{"mutable",true},{"base-type",{{"type-kind","struct"},{"type-name",s}}}};
+		};
+		json body = json::array();
+		for (auto& f : def.fields)
+			if (!f.initAst.is_null())
+				body.push_back({{"stmt-type","field-assign"},{"object",{{"expr-type","id"},{"name","p"}}},
+					{"field",f.name},{"value",f.initAst},{"loc",f.initAst["loc"]}});
+		json funcDef = {{"name",fieldInitSymbol(name)},{"func-type","palan"},{"symbol",fieldInitSymbol(name)},
+			{"parameters",json::array({{{"name","p"},{"var-type",{{"type-kind","pntr"},{"mutable",true},
+				{"base-type",{{"type-kind","prim"},{"type-name",name}}}}}}})},{"block",{{"body",move(body)}}}};
+		preregisterFunc(funcDef, moduleId_);
+		sa_function(funcDef);
+		json& func = sa["functions"].back();
+		func["export"] = true;
+		auto builtWhole = [&](const string& sub) {
+			return assignsByFunc(json{{"type-kind","struct"},{"type-name",sub}});
+		};
+		json nested = json::array();
+		for (auto& f : def.fields) {
+			if (!f.initAst.is_null()) continue;
+			const json* leaf = &f.type;
+			int64_t count = 1;
+			if (f.typeKind == "embed-arr")
+				for (; isArrLevel(*leaf); leaf = &(*leaf)["base-type"]) count *= (*leaf)["arr-size"].get<int64_t>();
+			string sub = f.typeKind == "embed" ? f.typeName
+			           : f.typeKind == "embed-arr" && leaf->value("type-kind", "") == "struct" ? (*leaf)["type-name"].get<string>() : "";
+			if (sub.empty() || !structDefs_.at(sub).hasInits || builtWhole(sub)) continue;
+			json at = {{"expr-type","field-access"},{"var","p"},{"offset",f.offset},{"addr-only",true},{"value-type",ptrTo(sub)}};
+			if (f.typeKind == "embed")
+				nested.push_back({{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name",fieldInitSymbol(sub)},
+					{"func-type","palan"},{"args",json::array({move(at)})}}}});
+			else
+				nested.push_back(initRunCall(sub, move(at), lenLit(count)));
+		}
+		json& fbody = func["body"];
+		fbody.insert(fbody.begin(), nested.begin(), nested.end());
+	}
+	// LCOV_EXCL_BR_STOP
+}
+
 // An operator function is called only where an operand is a struct, and an
 // operand is never written with '@!' (see sa_operator_call), but for the one
 // '<<' appends to.
@@ -876,7 +929,7 @@ json PlnSemanticAnalyzer::normalizeFuncSig(const json& f, const string& scope)
 	else if (funcEntry.value("c-export", false)) {
 		validateCExportSig(funcEntry);
 		funcEntry["symbol"] = funcEntry["name"];
-	} else
+	} else if (!f.contains("symbol"))  // a function palan-sa makes names its own
 		funcEntry["symbol"] = scope + ".."
 			+ funcSymbol(funcEntry["name"].get<string>(), funcEntry.value("parameters", json::array()));
 	if (funcEntry.value("release", false))
@@ -1322,6 +1375,7 @@ void PlnSemanticAnalyzer::analysis(const json &ast, const string& astPath)
 	if (ast["ast"].contains("functions"))
 		sa_functions(ast["ast"]["functions"]);
 	emitReleaseFuncs();
+	emitFieldInitFuncs();
 	emitInitFunc();
 	if (!staticBindings_.empty())
 		sa["main"]["globals"] = staticBindings_;

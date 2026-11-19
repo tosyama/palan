@@ -2248,7 +2248,8 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 		exit(1);
 	}
 	json fieldType = fieldValueType(*it);
-	if (isAggregateLit(stmt["value"]) && !transfer && assignsByFunc(withoutArrPermission(fieldType)))
+	if (isAggregateLit(stmt["value"]) && !transfer
+	    && (isVarrStorage(fieldType) || assignsByFunc(withoutArrPermission(fieldType))))
 		return sa_lit_assign_via_temp(stmt, fieldType, litAddr);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(fieldType) || isArrLevel(fieldType))) {
 		json fieldAst = {{"expr-type", "field-access"}, {"object", stmt["object"]}, {"field", fn}}; // LCOV_EXCL_BR_LINE

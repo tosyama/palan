@@ -575,11 +575,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "a value of struct '" + arg1 + "' must be written as '[...]' or '{name: value, ...}'.";
 
-		case E_StructLitFieldType:
-			BOOST_ASSERT(arg1 != "\x01");
-			BOOST_ASSERT(arg2 != "\x01");
-			return "field '" + arg2 + "' of struct '" + arg1 + "' cannot be initialized by a literal: only numeric, struct and array fields are supported.";
-
 		case E_DictLitContext:
 			return "a '{name: value}' literal can only be used as a struct value: a struct variable's "
 			       "initializer, the source of '->' to a struct, an element of an array literal, or an "
@@ -919,10 +914,9 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "the initializer of field '" + arg1 + "' must be a compile-time constant.";
 
-		case E_FieldInitUnsupported:
+		case E_FieldInitPtrNotNull:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "field '" + arg1 + "' cannot have an initializer in this version: only a primitive field "
-			       "or a one-dimensional array of primitives can.";
+			return "the initializer of pointer field '" + arg1 + "' must be NULL.";
 
 		case E_ParamDefaultNotConst:
 			BOOST_ASSERT(arg1 != "\x01");

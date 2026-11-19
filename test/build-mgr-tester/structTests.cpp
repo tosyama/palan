@@ -1476,3 +1476,10 @@ TEST(build_mgr, field_init_mtrace) {
 		+ p + p + p + p + "8 200 1 2.0 2\n" + p + "7 1 1 2.0 2\n3 4 0 0.5 1\n"
 		+ "9 200 1 2.0 2\n3 200 1 2.0 0\n", 38);
 }
+
+// An initializer gives a struct, an array of structs or of rows, or NULL; a
+// struct laid out in another stores its own, its type in another module too.
+TEST(build_mgr, field_init_values_mtrace) {
+	string r = "1 9 2 3 4 1 9\n5 9 7 8 9 9\n3 4 2 3 3 6 1\n";
+	expectMtraceRun("435_field_init_values_mtrace", r + r + r + "3 3 7 1 5\n2 9 3\n3 3 9 1 8\n", 103);
+}

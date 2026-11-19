@@ -2052,8 +2052,9 @@ when a literal is written over several lines.
 An array of structs (`[n]T`, `[n]$T`, `[m][n]T`, `[m][n]$T`) is initialized the same way, with each element
 written either as its field values in declaration order (`[1, 2]`) or by field name
 (`{y: 2, x: 1}`). Every field must be given exactly once. A struct field (`T` or `$T`) is written
-as a nested struct value; pointer and array fields cannot be initialized by a literal. Since a
-struct element is itself written in brackets, `[0,1][2,3]` is one row of two `Point`s.
+as a nested struct value, an array field as an array literal, and a pointer field as a pointer
+value, checked as `->` to the field checks it; an array of pointers cannot be given by a literal.
+Since a struct element is itself written in brackets, `[0,1][2,3]` is one row of two `Point`s.
 
 ```palan
 cinclude <stdio.h>;
@@ -2258,8 +2259,8 @@ reset(@![1, 2]);
   itself is an error, since `->` to a borrow rebinds it.
 - The field rules are those of an array literal's struct element: every field exactly once,
   except that `{name: value}` may leave out a field with an [initializer](#field-initializers),
-  which then takes it; struct fields as nested values, array fields as array literals (`[[1, 2, 3], 4]`), no pointer
-  fields or arrays of pointers.
+  which then takes it; struct fields as nested values, array fields as array literals (`[[1, 2, 3], 4]`),
+  pointer fields as pointer values; no arrays of pointers.
 - A struct field's value may also be a struct expression of that type — a struct variable, a
   `T` field, an array element, a `@T`/`@!T`, or a call result: `Q q = [p, mk(3)];` copies it. With `->`
   it is read before any write too, so `[q.b, @q.a] -> q` swaps.
@@ -2270,18 +2271,20 @@ A field can be given an initial value in the type, written as a variable's initi
 
 ```palan
 const N = 4;
-type Counter { int32 step = N / 2; bool on = true; $[+]uint8 name = [0]; int32 n; };
+type Point { int32 x; int32 y = 9; };
+type Counter { int32 step = N / 2; bool on = true; $[+]uint8 name = [0]; $Point at = {x: 1}; @Point p = NULL; int32 n; };
 
 Counter c;                    // c.step is 2, c.on is true, c.name holds one 0; c.n is undefined
 Counter d = {n: 5};           // the fields left out take their initializers
-printf("%d %d %ld\n", c.step, d.on, len(@c.name));   // 2 1 1
+printf("%d %d %ld %d\n", c.step, d.on, len(@c.name), c.at.y);   // 2 1 1 9
 ```
 
 - The value must be a compile-time constant: literals, [consts](#constant-declarations) and
-  operators on them, an enum member, or an array literal of such values.
-- A primitive field (an integer, a float, `bool` or an enum) and a one-dimensional array of
-  primitives (`[n]T`, `$[n]T`, `[+]T`, `$[+]T`) can have one. Others, such as a struct field given
-  a struct value, cannot in this version.
+  operators on them, an enum member, or a struct or array literal of such values. A pointer
+  field's is `NULL`.
+- Any field can have one but an array of pointers: a struct field (`T`, `$T`) takes a struct
+  value, whose fields left out take their own initializers, and an array of any dimensions an
+  array literal.
 - The initializers are in place wherever a struct comes to exist: a variable, heap or `$`; a
   struct field, whose own type's initializers apply; an element of an array, laid out in place
   (`[n]$T`, `[+]$T`) or not, including those `resize` adds. A struct taken over with `<<=` or
