@@ -1043,7 +1043,7 @@ json PlnSemanticAnalyzer::sa_struct_def(const json& stmt)
 {
 	string written = stmt["name"].get<string>();
 	string name = declaredTypeName(written);
-	declareTypeName(name, stmt);
+	claimTypeName(name, moduleId_);
 	// A local struct was bound to its program-wide name when declared.
 	typeAliases_.emplace(written, json{{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
 	json fields = stmt["fields"];
@@ -1201,7 +1201,7 @@ json PlnSemanticAnalyzer::sa_opaque_def(const json& stmt)
 {
 	string written = stmt["name"].get<string>();
 	string name = declaredTypeName(written);
-	declareTypeName(name, stmt);
+	claimTypeName(name, moduleId_);
 	typeAliases_.emplace(written, json{{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
 	StructDef def;
 	def.name = name;
@@ -1260,7 +1260,7 @@ json PlnSemanticAnalyzer::sa_enum_def(const json& stmt)
 {
 	string written = stmt["name"].get<string>();
 	string name = declaredTypeName(written);
-	declareTypeName(name, stmt);
+	claimTypeName(name, moduleId_);
 
 	map<string, int64_t> values;
 	int64_t next = 0;
@@ -1408,27 +1408,12 @@ json PlnSemanticAnalyzer::resolveKnownType(const json& locNode, const json& type
 	return resolved;
 }
 
-bool PlnSemanticAnalyzer::claimTypeName(const string& name, const string& origin, const json& locNode)
+// The name is the type's identity, which holds its module, so it comes again
+// only as the same type, reached by another import; a clash of written names
+// is reported where they are declared or imported.
+bool PlnSemanticAnalyzer::claimTypeName(const string& name, const string& origin)
 {
-	auto [it, isNew] = typeOrigins_.emplace(name, origin);
-	// Every Palan struct and enum is in typeOrigins_, so a new name already
-	// registered here is a C type or a primitive.
-	bool taken = isNew && (structDefs_.count(name) || enumDefs_.count(name) || elemSizeBytes(name) >= 0);
-	if (taken || (!isNew && it->second != origin)) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_DuplicateTypeName, name) << endl;
-		exit(1);
-	}
-	return isNew;
-}
-
-// Unlike an import, which may bring the same type in twice, a declaration
-// claims its name exactly once.
-void PlnSemanticAnalyzer::declareTypeName(const string& name, const json& stmt)
-{
-	if (!claimTypeName(name, moduleId_, stmt)) {
-		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_DuplicateTypeName, name) << endl;
-		exit(1);
-	}
+	return typeOrigins_.emplace(name, origin).second;
 }
 
 bool PlnSemanticAnalyzer::namesPalanType(const json& binding) const
@@ -1534,7 +1519,7 @@ void PlnSemanticAnalyzer::adoptStruct(PlnSemanticAnalyzer& sub, const string& na
 		adopted = it == structDefs_.end() || (!it->second.isComplete && def.isComplete);
 		if (adopted) structDefs_[name] = def;
 	} else {
-		adopted = claimTypeName(name, origin->second, locNode);
+		adopted = claimTypeName(name, origin->second);
 		if (adopted) structDefs_[name] = def;
 		if (!written.empty() && alias.empty())
 			bindImportedTypeName(locNode, written, {{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
@@ -1574,7 +1559,7 @@ void PlnSemanticAnalyzer::adoptEnum(const PlnSemanticAnalyzer& sub, const string
 		}
 		return;
 	}
-	bool adopted = claimTypeName(name, origin->second, locNode);
+	bool adopted = claimTypeName(name, origin->second);
 	if (adopted) enumDefs_[name] = sub.enumDefs_.at(name);
 	if (written.empty()) return;
 	if (alias.empty()) bindImportedTypeName(locNode, written, sub.typeAliases_.at(written));

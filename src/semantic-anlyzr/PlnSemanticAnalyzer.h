@@ -507,8 +507,7 @@ class PlnSemanticAnalyzer {
 	void setTypeNameable(const string& name, bool nameable, const string& alias);
 	// Records `name` as defined by `origin`; false if it already was, exits if
 	// another module or a cincluded header defined it.
-	bool claimTypeName(const string& name, const string& origin, const json& locNode);
-	void declareTypeName(const string& name, const json& stmt);
+	bool claimTypeName(const string& name, const string& origin);
 	void requireNotPalanType(const string& name, const json& locNode) const;
 	bool namesPalanType(const json& binding) const;  // a binding in typeAliases_
 	// Binds a type an import makes writable; exits if the name is bound to another type.
