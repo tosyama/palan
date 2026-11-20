@@ -169,11 +169,10 @@ TEST(build_mgr_error, dirent_incomplete_field) {
 }
 
 TEST(build_mgr_error, stat_func_macro) {
-	// S_ISDIR is a function-like macro; c2ast/gen-ast only export object-like
-	// macros, so this must be a clean diagnostic, not an abort.
+	// FD_SET's body assigns, which has no Palan expression.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_059_stat_func_macro.pa");
-	ASSERT_NE(out.find("C macro 'S_ISDIR' is function-like; Palan cannot use it."), string::npos);
+	ASSERT_NE(out.find(":4:1: error: C macro 'FD_SET' uses an assignment, which Palan cannot translate."), string::npos) << out;
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 

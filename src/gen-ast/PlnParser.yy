@@ -521,6 +521,11 @@ expr_stmt: import
 			if (c_ast["ast"].contains("typedefs")) {
 				$$["typedefs"] = move(c_ast["ast"]["typedefs"]);
 			}
+			if (c_ast["ast"].contains("expandables")) {
+				$$["expandables"] = move(c_ast["ast"]["expandables"]);
+			}
+			json ended = endedMacroNames(macros, c_ast["ast"]);
+			if (!ended.empty()) $$["ended-macros"] = move(ended);
 		}
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 		if (c_ast.is_object() && c_ast.contains("ast") && c_ast["ast"].contains("constants")) {
@@ -531,6 +536,9 @@ expr_stmt: import
 		}
 		if (c_ast.is_object() && c_ast.contains("ast") && c_ast["ast"].contains("undefined-macros")) {
 			registerUndefinedMacros(macros, c_ast["ast"]["undefined-macros"], $$["loc"]);
+		}
+		if ($$.contains("expandables")) {
+			registerExpandableMacros(macros, $$["expandables"], $$["loc"]);
 		}
 	}
 	| var_declarations

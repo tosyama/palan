@@ -858,7 +858,14 @@ TEST(sa_error, c_enum_name_conflict)
 TEST(sa_error, c_macro_unexported)
 {
 	const pair<string, string> cases[] = {
-		{"error_617_c_macro_func_like.pa", ":2:11: error: C macro 'FMAC' is function-like; Palan cannot use it."},
+		{"error_617_c_macro_func_like.pa", ":2:11: error: C macro 'FMAC' uses ?:, which Palan cannot translate."},
+		{"error_1145_c_macro_unresolved.pa", ":2:11: error: C macro 'UNRES' uses 'nowhere', which does not name a C function or C variable here."},
+		{"error_1146_c_macro_arg_count.pa", ":2:11: error: function 'ONE' takes 1 argument(s), but 2 given."},
+		{"error_1147_c_macro_unqualified.pa", ":2:11: error: Function 'ONE' requires a module alias qualifier."},
+		{"error_1148_c_macro_no_expr.pa", ":2:11: error: C macro 'NOBODY' has a body Palan cannot translate."},
+		// A Palan variable of the C global's name doesn't take its place.
+		{"error_1149_c_macro_hidden_global.pa", ":4:11: error: C macro 'GLOBAL' uses 'stdout', which does not name a C function or C variable here."},
+		{"error_1150_c_macro_bad_cast.pa", ":2:11: error: C macro 'BADCAST' uses a cast to float _Complex, which Palan cannot translate."},
 		{"error_618_c_macro_not_constant.pa", ":2:11: error: C macro 'NOFOLD' cannot be used: it does not expand to an integer constant."},
 		{"error_619_c_macro_arr_field.pa", ":2:1: error: C macro 'NOFOLD' cannot be used: it does not expand to an integer constant."},
 	};

@@ -51,6 +51,12 @@ public:
 	vector<CToken*> scan_macro(list<CToken*> &unprocessed_tokens, bool in_if_directive=false);
 	vector<CToken*> expand_macro_tokens(CMacro *m, vector<list<CToken*>> &args, vector<CMacro*> *hide_set);
 	vector<CToken*> expandObjectMacroBody(CMacro *m);
+	// `m`'s body with the macros in it expanded and each parameter left as a
+	// placeholder token (placeholderIndex). Empty with `unsupported` set to the
+	// form when the body stringizes, pastes or is variadic.
+	vector<CToken*> expandFunctionMacroBody(CMacro *m, string &unsupported);
+	// The parameter index a placeholder token stands for, or -1.
+	static int placeholderIndex(const CToken *t);
 
 	// Loads #define/#undef lines and the "#pragma palan_once_included" lines
 	// dumpMacroState writes; used for predefined.h and for a c-state's macros.

@@ -1,0 +1,6 @@
+func get(int32 n) -> int32 { return n; }
+cinclude "356_c_macro_expand.h" as M;
+box b;
+int32 a = M.SCALE(2);
+uint8 c = M.CAST(300);
+int32 d = M.BOX1(b);

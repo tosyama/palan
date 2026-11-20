@@ -334,7 +334,10 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   gen-ast (ASTSpec.md's Constant definition model and `lit-int` entries), so
   a `cinclude` statement never carries a `constants` field by the time SA
   sees it, and SA has no macro-name table of its own (a macro c2ast could not
-  export reaches SA only as the `c-macro` mark on a reference).
+  export reaches SA only as the `c-macro` mark on a reference). A function-like
+  macro reaches SA as the statement's `expandables` instead, scoped like its
+  `functions`; a call to one is analyzed as its expanded body, so sa.json
+  shows only the body's nodes.
   `functions`, `globals`, `structs` and `typedefs` are
   independent sections of the header's AST -- a header exporting only some of
   them (e.g. `stdint.h` with only `typedefs`) still has each present section

@@ -330,7 +330,14 @@ TEST(build_mgr, stat_file_types) {
 		"chr=1\n"
 		"reg=1 size=10 mtime_nonzero=1\n"
 		"lnk=1 target_reg=1\n"
-		"fifo=1\n");
+		"fifo=1\n"
+		"S_ISDIR=1 S_ISREG=0\n");
+}
+
+TEST(build_mgr, function_macro) {
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/440_function_macro.pa");
+	ASSERT_EQ(output, "7 7\nx 5\n3 2\n3 1 12\n42 5\n");
 }
 
 TEST(build_mgr, stat_mode_bits) {

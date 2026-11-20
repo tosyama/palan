@@ -111,13 +111,33 @@ conversions (LP64), with unsigned results wrapping to their width. An operation 
 overflow a signed type, divide/mod by zero, or shift by a negative or out-of-range count does not
 fold (same "not exported" outcome as an unsupported form). The body may also be a pointer-cast of
 any of these folded forms (e.g. `#define NULL ((void *)0)`). A form that doesn't fold this way (a
-function-like macro referenced without a call, a string or floating literal, a relational/
-equality/logical/ternary expression, unary `!`, or a reference to an unresolved identifier)
-is not exported here; it goes to the `ast.unexported-macros` list instead, as `{name}` or, for a
-function-like macro, `{name, "function-like": true}`. gen-ast registers these into the same macro
-table and, instead of folding, sets `c-macro`
-on a later `id` or `call` that names one (see Expression model's `id`), so SA reports the macro
-rather than an undefined name.
+string or floating literal, a relational/equality/logical/ternary expression, unary `!`, or a
+reference to an unresolved identifier) is not exported here; it goes to the
+`ast.unexported-macros` list instead, as `{name}`. A function-like macro is an expandable
+definition (below) instead, or, when its body can't be one, goes to the list as
+`{name, "function-like": true, form}`, `form` naming what in the body Palan has no expression for
+(`"?:"`, `"an assignment"`, `"#"`, ...), omitted when the body is no expression at all. gen-ast
+registers these into the same macro table and, instead of folding, sets `c-macro` (and
+`c-macro-form`) on a later `id` or `call` that names one (see Expression model's `id`), so SA
+reports the macro rather than an undefined name.
+
+Expandable definition model
+---------------------------
+A function-like macro whose body is an expression Palan has one for (SpecAndDesign.md §3.3), in
+c2ast's `ast.expandables` list, which gen-ast moves to the `cinclude` statement. palan-sa expands
+a call to it in place (SpecAndDesign.md §3.4); none reaches sa.json.
+
+- name\* - Macro name string
+- params\* - Parameter name string list
+- binding\* - How a parameter takes its argument: "substitute" (every place it appears takes the
+  argument expression)
+- body\* - Expression model, with the macros in it expanded, and without `loc`. Besides the
+  usual nodes it holds:
+  - `{"expr-type": "param", "name"}` - Where a parameter appears
+  - `c-name: true` on an `id` or `call` - A C global or C function, resolved only among the C
+    declarations visible at the call
+  - An enumerator is its `lit-int`; a `cast`'s `target-type` is a C variable type, as a C
+    function's parameter is. `p->f` is a `field-access` and `*p` an `arr-index` of `0`.
 
 Each c2ast run starts from the previous `cinclude`'s macros and types (SpecAndDesign.md §3.3),
 so these lists hold only the macros the header itself (re)defines, and `ast.undefined-macros`
@@ -446,6 +466,9 @@ Statement model
       when the header defines no capturable extern objects
     - typedefs - Typedef definition model list (see Typedef definition model above);
       omitted when the header defines no capturable typedef
+    - expandables - Expandable definition model list (see above); omitted when none
+    - ended-macros - Name string list of earlier expandable definitions this header `#undef`s or
+      redefines as anything else; omitted when none
     - export-types - C type name string list from the `export` clause (SpecAndDesign.md 3.7);
       omitted when the statement has no such clause
     - libs - Link library name string list, in source order (from the `link` clause);
@@ -606,6 +629,8 @@ Expression model
     - c-macro - Set by gen-ast when the name is a cinclude'd macro c2ast could not export (see
       Constant definition model): "function-like" or "not-constant". SA reads it only to word the
       error when the name resolves to nothing else. A `call` carries it the same way.
+    - c-macro-form - With `c-macro` "function-like": the `form` the macro's body has (see
+      Constant definition model)
   6. add - Binary addition
     - left\*  - Left operand expression model
     - right\* - Right operand expression model

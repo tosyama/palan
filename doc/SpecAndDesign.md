@@ -18,7 +18,9 @@ Libraries can be combined and can keep state (3.7):
 - An imported module's `global` variables are initialized, and can be exported (doc/Issues.md #24
   of 0.2.5).
 
-The other open issues are then each fixed, accepted as a stated limitation, or left.
+The other open issues are then each fixed, accepted as a stated limitation, or left. A
+function-like C macro is expanded where it is called, through a mechanism an inline function can
+share (3.4).
 
 Out of scope: lazily initialized globals; copying or creating an `opaque` value outside its module.
 
@@ -108,6 +110,13 @@ Design:
  header `#undef`s are listed in `ast.undefined-macros`.
  `__GNUC__` is not predefined, so headers take their non-GNU paths, but `__attribute__` is a
  keyword: `packed` and `aligned` reach the struct layout (ASTSpec.md, Struct definition model).
+ The C expression parser builds an expression tree in the AST's form, and a constant (a macro, an
+ enumerator, an array size) is folded by evaluating that tree, so one parser serves both. A
+ function-like macro becomes an expandable definition (3.4): the preprocessor expands the macros in
+ its body with each parameter's place marked, and the tree is its body. Type names and enumerators
+ are resolved here, where C's tables are; a function or global the body names is left to palan-sa,
+ marked as a C name. A body with a form Palan has no expression for (`?:`, an assignment, a comma,
+ a string, `sizeof` of an expression, `#`/`##`, `__VA_ARGS__`) is left unexported with that form.
 
 ### 3.4 Semantic Analyzer (palan-sa)
 Responsibility:
@@ -137,6 +146,21 @@ Design:
  A float constant expression is folded in the widest float, flo80, before its context gives it a
  type, so a flo80 constant keeps its precision; a flo32 or flo64 context rounds the folded value
  again, as a C compiler evaluating in x87 does.
+ An expandable definition (ASTSpec.md) is a name, parameters, a body expression and a binding,
+ and a call to it is analyzed as its body at the call: the body is copied, its parameters bound to
+ the arguments, and the copy analyzed in the caller's context, so the result is ordinary sa.json
+ and codegen knows nothing of it. A function-like C macro binds by substitution: each place a
+ parameter appears takes the argument expression, untyped and evaluated as often as it appears, as
+ the preprocessor does. An inline function would bind by evaluating each argument once into a
+ typed parameter; the copying, the binding by place and the name resolution are shared. Expanding
+ in palan-gen-ast, as macro constants are folded, was not taken: an inline function needs
+ overloads, types and temporaries, which only palan-sa has. Inlining in codegen was not taken
+ either, since an untyped macro body is no function. The body's C names resolve only among the C
+ declarations visible at the call, never a Palan name there, as an inline function's names would
+ resolve in its own module. A macro is chosen over a C function of its name, as in C, and needs an
+ aliased cinclude's qualifier as a function does; one that cannot be expanded (a form left
+ unexported, a C name not declared) calls that function, or is an error naming the macro when
+ there is none.
 
 ### 3.5 Code Generator (palan-codegen)
 Responsibility:

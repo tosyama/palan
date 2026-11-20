@@ -416,6 +416,40 @@ vector<CToken*> CPreprocessor::expandObjectMacroBody(CMacro *m)
 	return scan_macro(unprocessed);
 }
 
+// '#' and a digit can't spell one C identifier, so a placeholder never names a
+// macro and survives every rescan.
+int CPreprocessor::placeholderIndex(const CToken *t)
+{
+	if (t->type != TT_ID) return -1;
+	const string &s = *t->info.id;
+	if (s.size() < 2 || s[0] != '#') return -1;
+	int n = 0;
+	for (size_t i = 1; i < s.size(); i++) {
+		if (!isdigit((unsigned char)s[i])) return -1;
+		n = n * 10 + (s[i] - '0');
+	}
+	return n;
+}
+
+vector<CToken*> CPreprocessor::expandFunctionMacroBody(CMacro *m, string &unsupported)
+{
+	if (m->variadic) { unsupported = "__VA_ARGS__"; return {}; }
+	for (CToken* t : m->body) {
+		if (t->type != TT_PUNCTUATOR) continue;
+		if (t->info.punc == '#') { unsupported = "#"; return {}; }
+		if (t->info.punc == '##') { unsupported = "##"; return {}; }
+	}
+	vector<list<CToken*> > args;
+	for (size_t i = 0; i < m->params.size(); i++) {
+		CToken* p = new CToken(TT_ID, m->lexer_no, 0); // LCOV_EXCL_BR_LINE
+		p->info.id = new string("#" + to_string(i)); // LCOV_EXCL_BR_LINE
+		args.push_back({p});
+	}
+	vector<CToken*> body = expand_macro_tokens(m, args, NULL);
+	list<CToken*> unprocessed(body.begin(), body.end());
+	return scan_macro(unprocessed);
+}
+
 vector<CToken*> replace_parameter_tokens(CToken* t, const vector<string>& params, const vector<list<CToken*> >& args)
 {
 	// replace parameter tokens in t and return as vector<CToken*>

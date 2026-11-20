@@ -1,5 +1,5 @@
 int32 before = FM(1);
 cinclude "140_cinclude_unexported_macro_a.h";
-int32 mid = DUP;
+int32 mid = DUP + EX(1);
 cinclude "140_cinclude_unexported_macro_b.h";
 int32 after = DUP + FM(DUP);

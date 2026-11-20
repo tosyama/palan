@@ -1214,3 +1214,22 @@ TEST(sa, c_func_ptr_typedef)
 	ASSERT_EQ(vt["base-type"]["parameters"][0]["var-type"]["type-name"], "int32");
 	ASSERT_EQ(stmts[1]["vars"][0]["init"]["expr-type"], "call-ptr");
 }
+
+TEST(sa, c_macro_expand)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/356_c_macro_expand.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	size_t n = stmts.size();
+	// The body calls C's get, not the Palan function of its name.
+	const auto& scale = stmts[n - 3]["vars"][0]["init"];
+	ASSERT_EQ(scale["expr-type"], "mul");
+	ASSERT_EQ(scale["left"]["func-type"], "c");
+	ASSERT_EQ(scale["left"]["args"][0]["value"], "2");
+	ASSERT_EQ(stmts[n - 2]["vars"][0]["init"]["value-type"]["type-name"], "uint8");
+	const auto& box1 = stmts[n - 1]["vars"][0]["init"];
+	ASSERT_EQ(box1["expr-type"], "arr-index");
+	ASSERT_EQ(box1["array"]["var"], "b");
+	ASSERT_EQ(box1["index"]["value"], "1");
+}

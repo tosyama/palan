@@ -18,7 +18,7 @@ void registerUnexportedMacros(MacroTable& macros, const json& unexported, const 
 	for (auto& m : unexported) {
 		string name = m["name"].get<string>();
 		macros[name].push_back(MacroEntry{ json(), json(), cincludeLoc, // LCOV_EXCL_BR_LINE
-			m.value("function-like", false) ? "function-like" : "not-constant" });
+			m.value("function-like", false) ? "function-like" : "not-constant", m.value("form", "") });
 	}
 }
 
@@ -29,6 +29,32 @@ void registerUndefinedMacros(MacroTable& macros, const json& undefined, const js
 		e.undefined = true;
 		macros[n.get<string>()].push_back(e);
 	}
+}
+
+void registerExpandableMacros(MacroTable& macros, const json& expandables, const json& cincludeLoc)
+{
+	for (auto& d : expandables) {
+		MacroEntry e{ json(), json(), cincludeLoc, "" }; // LCOV_EXCL_BR_LINE
+		e.undefined = e.expandable = true;
+		macros[d["name"].get<string>()].push_back(e);
+	}
+}
+
+json endedMacroNames(const MacroTable& macros, const json& cAst)
+{
+	json names = json::array();
+	auto add = [&](const json& name) {
+		auto it = macros.find(name.get<string>());
+		if (it == macros.end()) return;
+		for (auto& e : it->second)
+			if (e.expandable) { names.push_back(name); return; }
+	};
+	for (const char* key : {"constants", "unexported-macros"})
+		if (cAst.contains(key))
+			for (auto& m : cAst[key]) add(m["name"]);
+	if (cAst.contains("undefined-macros"))
+		for (auto& n : cAst["undefined-macros"]) add(n);
+	return names;
 }
 
 // True if `loc` (this id reference) is textually at or after `macroLoc`
@@ -74,6 +100,7 @@ void foldMacroConstants(json& node, const MacroTable& macros)
 		if (e && !e->undefined) {
 			if (!e->unexported.empty()) {
 				node["c-macro"] = e->unexported;
+				if (!e->form.empty()) node["c-macro-form"] = e->form;
 			} else if (exprType == "id") {
 				json loc = node["loc"];
 				node = { {"expr-type", "lit-int"}, {"value", e->value}, {"loc", loc} }; // LCOV_EXCL_BR_LINE

@@ -194,6 +194,8 @@ class PlnSemanticAnalyzer {
 	vector<map<string, json>> varScopes;
 	vector<map<string, json>> cFuncScopes;
 	vector<map<string, json>> cGlobalScopes;
+	// Expandable definitions by name; a null entry ends an outer one's.
+	vector<map<string, json>> expandableScopes;
 	// A deque keeps every definition where it is while overloads are added.
 	vector<map<string, deque<json>>> plnFuncScopes;
 	// len/push/resize/pop for each `[+]T` element type, outside every scope:
@@ -429,6 +431,15 @@ class PlnSemanticAnalyzer {
 
 	void        registerCGlobal(const string& name, const json& def);
 	const json* findCGlobal(const string& name) const;
+	const json* lookupCGlobal(const string& name, const json& locNode);
+
+	string      normalizeExpandableBody(json& node) const;
+	void        registerExpandables(const json& stmt);
+	const json* findExpandable(const string& name) const;
+	vector<Callee> findCCallees(const string& name) const;
+	string      unreachableCName(const json& body) const;
+	json        expandCall(const json& expr, const json& def, const json& args, SaDiag& why);
+	json        expandedCall(const json& expr, const string& alias, const string& name);
 	[[noreturn]] void undefinedNameError(const json& at, const json& ref, PlnSaMessageCode undefinedCode) const;
 
 	void        registerPlnFunc(const string& name, const json& def, const json& locNode);

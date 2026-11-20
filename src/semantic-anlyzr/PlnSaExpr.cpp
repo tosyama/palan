@@ -879,7 +879,8 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		sa_expr["value-type"] = strLitType();
 
 	} else if (expr_type == "id") {
-		const json* varType = lookupVar(expr["name"].get<string>(), expr);
+		const string& name = expr["name"].get_ref<const string&>();
+		const json* varType = expr.contains("c-name") ? lookupCGlobal(name, expr) : lookupVar(name, expr);
 		if (varType != nullptr) {
 			sa_expr["var-type"]   = *varType;
 			sa_expr["value-type"] = *varType;
@@ -956,6 +957,16 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 
 	} else if (expr_type == "call") {
 		if (expr.contains("converts-to")) return sa_expr_call(expr);
+		const string& name = expr["name"].get_ref<const string&>();
+		if (expr.contains("c-name")) {
+			json call = expr;
+			call.erase("c-name");
+			return makeCall(call, usableCallees(call, findCCallees(name)), name);
+		}
+		if (!expr.contains("iterates")) {
+			json expanded = expandedCall(expr, "", name);
+			if (!expanded.is_null()) return sa_expr_maybe_void(expanded, expectedType);
+		}
 		json len = runtimeArrLen(expr);
 		if (!len.is_null()) return len;
 		const string& callName = expr["name"].get<string>();
@@ -974,6 +985,10 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		json field = funcPtrField(expr);
 		if (!field.is_null())
 			return sa_expr_call_ptr(expr, sa_expression(field), expr["method"].get<string>());
+		if (!isMethodForm(expr)) {
+			json expanded = expandedCall(expr, expr["object"]["name"].get<string>(), expr["method"].get<string>());
+			if (!expanded.is_null()) return sa_expr_maybe_void(expanded, expectedType);
+		}
 		json call = normalizeMethodCall(expr);
 		return call["expr-type"] == "call" ? sa_expr_call(call) : sa_expr_member_call(expr);
 

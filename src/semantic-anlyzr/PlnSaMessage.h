@@ -161,7 +161,8 @@ enum PlnSaMessageCode {
 	E_PtrInnerPermissionNarrowing,	// arg1: from type display name, arg2: to type display name
 	E_ConstExprOverflow,
 	E_ConstExprDivByZero,
-	E_CMacroFuncLike,	// arg1: macro name
+	E_CMacroFuncLike,	// arg1: macro name, arg2: form Palan cannot translate (optional)
+	E_CMacroUnresolvedName,	// arg1: macro name, arg2: name its body uses
 	E_CMacroNotConstant,	// arg1: macro name
 	E_FrameVarType,	// arg1: type display name
 	E_FrameArrSizeNotConst,	// arg1: variable name

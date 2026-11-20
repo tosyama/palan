@@ -53,6 +53,7 @@ void PlnSemanticAnalyzer::enterScope()
 	varScopes.push_back({});
 	cFuncScopes.push_back({});
 	cGlobalScopes.push_back({});
+	expandableScopes.push_back({});
 	plnFuncScopes.push_back({});
 	importScopes.push_back({});
 	arrayScopeVars_.push_back({});
@@ -65,6 +66,7 @@ void PlnSemanticAnalyzer::leaveScope()
 	varScopes.pop_back();
 	cFuncScopes.pop_back();
 	cGlobalScopes.pop_back();
+	expandableScopes.pop_back();
 	plnFuncScopes.pop_back();
 	importScopes.pop_back();
 	arrayScopeVars_.pop_back();
@@ -233,6 +235,10 @@ void PlnSemanticAnalyzer::undefinedNameError(const json& at, const json& ref, Pl
 	                      : macro == "not-constant" ? E_CMacroNotConstant
 	                      : undefinedCode;
 	string name = ref["name"].get<string>();
+	if (code == E_CMacroFuncLike && ref.contains("c-macro-form")) {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(code, name, ref["c-macro-form"].get<string>()) << endl;
+		exit(1);
+	}
 	if (code == E_UndefinedVariable && globalInitTopScope_ && globalInitTopScope_->count(name)) {
 		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_GlobalInitUsesTopVar, name, globalInitName_) << endl;
 		exit(1);
@@ -1525,6 +1531,7 @@ void PlnSemanticAnalyzer::sa_cinclude(const json &stmt)
 	// Must run before functions: PlnTypeRegistry::fromJson needs structDefs_
 	// entries to already exist for a struct-pointer parameter/return type.
 	registerCIncludeTypes(stmt);
+	registerExpandables(stmt);
 
 	if (stmt.contains("globals"))
 		for (auto& g : stmt["globals"]) {

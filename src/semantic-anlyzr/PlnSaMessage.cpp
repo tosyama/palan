@@ -595,7 +595,14 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_CMacroFuncLike:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "C macro '" + arg1 + "' is function-like; Palan cannot use it.";
+			if (arg2 == "\x01")
+				return "C macro '" + arg1 + "' has a body Palan cannot translate.";
+			return "C macro '" + arg1 + "' uses " + arg2 + ", which Palan cannot translate.";
+
+		case E_CMacroUnresolvedName:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "C macro '" + arg1 + "' uses '" + arg2 + "', which does not name a C function or C variable here.";
 
 		case E_CMacroNotConstant:
 			BOOST_ASSERT(arg1 != "\x01");

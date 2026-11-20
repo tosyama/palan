@@ -1724,6 +1724,11 @@ const json* PlnSemanticAnalyzer::lookupVar(const string& name, const json& locNo
 		if (use) checkNotGiven(name, locNode);
 		return vt;
 	}
+	return lookupCGlobal(name, locNode);
+}
+
+const json* PlnSemanticAnalyzer::lookupCGlobal(const string& name, const json& locNode)
+{
 	const json* g = findCGlobal(name);
 	if (!g) return nullptr;
 	requireSupportedCGlobal(*g, name, locNode);

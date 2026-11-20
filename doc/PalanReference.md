@@ -3270,24 +3270,10 @@ building it as a library (see [Building a Library](#building-a-library)).
   C's `sizeof(type)`, which folds to the type's size as `size_t` when its layout is known (e.g.
   `sys/select.h`'s `__NFDBITS`, `(8 * (int) sizeof (__fd_mask))`). The same folding sizes a C
   struct's array fields, so `fd_set` is a complete struct and `select` can be called with it.
-- A macro whose body doesn't fold this way — a function-like macro referenced without a call
-  (e.g. `S_ISDIR`, which takes an argument), a string literal, a relational/equality/logical/
+- A macro whose body doesn't fold this way — a string literal, a relational/equality/logical/
   ternary expression, or a reference to an identifier that never resolves — is left untouched.
-  Referencing such a name from Palan is a compile error naming the macro:
-
-  ```palan
-  cinclude <sys/stat.h>;
-  stat st;
-  stat("/etc", @!st);
-  if (S_ISDIR(st.st_mode)) { ... }   // error: C macro 'S_ISDIR' is function-like; Palan cannot use it.
-  ```
-
-  `S_IFMT`/`S_IFDIR` and similar bare constants *do* fold, so the same check can be written
-  directly with a bitwise AND (see [Expressions](#5-expressions)):
-
-  ```palan
-  if ((st.st_mode & S_IFMT) == S_IFDIR) { ... }   // works
-  ```
+  Referencing such a name from Palan is a compile error naming the macro. A function-like macro
+  is called instead (see [Function-Like Macros](#function-like-macros)).
 
   ```palan
   cinclude <string.h>;
@@ -3323,6 +3309,48 @@ building it as a library (see [Building a Library](#building-a-library)).
   see [Raw Syscalls](#13-raw-syscalls)) is already a plain literal by the time it could be
   exported, so the folded *value* does cross that boundary even though the macro *name* never
   does.
+
+### Function-Like Macros
+
+A function-like `#define` macro is called like a function, and the call is replaced by the
+macro's body with each parameter replaced by its argument, as the C preprocessor does:
+
+```palan
+cinclude <sys/stat.h>;
+cinclude <sys/wait.h>;
+stat st;
+stat("/etc", @!st);
+if (S_ISDIR(st.st_mode)) { ... }   // ((st.st_mode & S_IFMT) == S_IFDIR)
+if (WIFEXITED(status)) { code = WEXITSTATUS(status); }
+```
+
+- The result is typed by the expression the body becomes, so the macro takes an argument of any
+  type its body can use.
+- An argument is evaluated each time its parameter appears in the body: `TWICE(f())` for
+  `#define TWICE(x) ((x) + (x))` calls `f` twice.
+- The body may use integer and character literals, arithmetic, bitwise, shift, comparison and
+  logical operators, casts, member access (`.` and `->` are both `.`), subscripts, `*p` (as
+  `p[0]`), `sizeof` of a type, calls of C functions, C global variables, enumerators and other
+  macros. A body with any other form — `?:`, an assignment, a comma, a string, `sizeof` of an
+  expression, `&`, `#`/`##`, `__VA_ARGS__` — can't be called; the error names the form:
+
+  ```palan
+  cinclude <sys/select.h>;
+  FD_SET(0, @!fds);   // error: C macro 'FD_SET' uses an assignment, which Palan cannot translate.
+  ```
+
+- The names in the body mean the C functions and C global variables declared by the
+  `cinclude`s before the call, never a Palan variable or function of the same name. A name with
+  no such declaration makes the macro uncallable, as an untranslatable form does.
+- A macro is called rather than a C function of the same name, as in C (ncurses' `COLOR_PAIR`,
+  `timeout`). When the macro can't be called, the function is; with no function the call is an
+  error.
+- The arithmetic follows Palan's rules, not C's, so two results differ from C: `>>` is Palan's
+  `>>>`, which fills a negative signed value with zeros, and operands narrower than 32 bits are
+  not promoted to `int` first, so a result that overflows their type wraps there.
+- A macro is visible from its `cinclude` to the end of the enclosing block, and a later header
+  that redefines or `#undef`s it ends it there. Under an aliased cinclude
+  (`cinclude <x.h> as X;`) a macro is called as `X.NAME(...)`, like a C function.
 
 ### C Global Variables
 

@@ -65,7 +65,7 @@ while pix < width*height { // actual rendering loop
 
 // save framebuffer to JPEG file
 jpeg_compress_struct cinfo;
-cinfo.jpeg_CreateCompress(JPEG_LIB_VERSION, sizeof(jpeg_compress_struct));
+jpeg_create_compress(@!cinfo);
 
 jpeg_error_mgr jerr;
 jerr.jpeg_std_error() -> cinfo.err;

@@ -501,13 +501,20 @@ TEST(gen_ast, cinclude_unexported_macro) {
 	auto& stmts = jout["ast"]["statements"];
 
 	ASSERT_FALSE(stmts[0]["vars"][0]["init"].contains("c-macro"));
-	ASSERT_EQ(stmts[2]["vars"][0]["init"]["c-macro"], "not-constant");
+	ASSERT_EQ(stmts[2]["vars"][0]["init"]["left"]["c-macro"], "not-constant");
 
 	auto& after = stmts[4]["vars"][0]["init"];
 	ASSERT_EQ(after["left"]["expr-type"], "lit-int");
 	ASSERT_EQ(after["left"]["value"], "7");
 	ASSERT_EQ(after["right"]["c-macro"], "function-like");
+	ASSERT_EQ(after["right"]["c-macro-form"], "?:");
 	ASSERT_EQ(after["right"]["args"][0]["value"], "7");
+
+	// An expandable definition is palan-sa's: its call is not marked, and the
+	// cinclude redefining it as a constant ends it.
+	ASSERT_EQ(stmts[1]["expandables"][0]["name"], "EX");
+	ASSERT_FALSE(stmts[2]["vars"][0]["init"]["right"].contains("c-macro"));
+	ASSERT_EQ(stmts[3]["ended-macros"], json::array({"EX"}));
 }
 
 TEST(gen_ast, cinclude_macro_state) {
