@@ -24,9 +24,13 @@ inline const char* movInstrForType(VRegType type) {
         case VRegType::Uint32:  return "movl";
         case VRegType::Float32: return "movss";
         case VRegType::Float64: return "movsd";
+        case VRegType::Float80: return "movdqu";
         default:                return "movq";
     }
 }
+
+// A value moved through an XMM register: an SSE float, or a flo80's 16 bytes.
+inline bool movedViaXmm(VRegType t) { return isFloat(t) || isX87(t); }
 
 inline const char* widthSuffix(int width) {
     switch (width) {
@@ -49,13 +53,17 @@ inline string intMnemonic(const char* base, VRegType type) {
     return string(base) + widthSuffix(intWidth(type));
 }
 
+// The x87 forms pop %st (the right operand) into %st(1) (the left); AT&T's
+// fsubrp/fdivrp are what Intel calls fsubp/fdivp, so they compute left op right.
 inline string addInstrForType(VRegType type) {
+    if (type == VRegType::Float80) return "faddp";
     if (type == VRegType::Float32) return "addss";
     if (type == VRegType::Float64) return "addsd";
     return intMnemonic("add", type);
 }
 
 inline string subInstrForType(VRegType type) {
+    if (type == VRegType::Float80) return "fsubrp";
     if (type == VRegType::Float32) return "subss";
     if (type == VRegType::Float64) return "subsd";
     return intMnemonic("sub", type);
@@ -63,6 +71,7 @@ inline string subInstrForType(VRegType type) {
 
 // imulb has no 2-operand form; emitInstrMul handles the 1-byte case itself.
 inline string mulInstrForType(VRegType type) {
+    if (type == VRegType::Float80) return "fmulp";
     if (type == VRegType::Float32) return "mulss";
     if (type == VRegType::Float64) return "mulsd";
     BOOST_ASSERT(intWidth(type) != 1);

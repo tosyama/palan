@@ -134,6 +134,9 @@ Design:
  back the unit, so the unit's address must be evaluated once, and Palan has no arithmetic shift to
  extend the sign. A bit-field a packed struct lays across two units is left unsupported, since
  none in the C library or Linux headers is laid so.
+ A float constant expression is folded in the widest float, flo80, before its context gives it a
+ type, so a flo80 constant keeps its precision; a flo32 or flo64 context rounds the folded value
+ again, as a C compiler evaluating in x87 does.
 
 ### 3.5 Code Generator (palan-codegen)
 Responsibility:
@@ -156,6 +159,10 @@ Design:
  - A single return value is returned in rax, or xmm0 for a float (System V compatible).
  - Two or more return values take each class's argument register sequence in order
    (integers in rdi/rsi/rdx/..., floats in xmm0/xmm1/...; caller-saved, read immediately after call).
+ - A flo80 (C's `long double`) follows System V: an argument goes to the stack at a 16-byte
+   boundary, as a struct of that alignment does, and a single return value, or a returned struct
+   that is one flo80 alone, comes back in st(0). Among two or more return values it takes the next
+   float register whole instead, so a call whose values are dropped leaves the x87 stack empty.
  - A struct is returned as System V returns it, by Palan and C functions and through function
    pointers alike, into storage the caller provides: one of up to 16 bytes comes back in rax/rdx
    and xmm0/xmm1 by its eightbytes' classes and the caller stores it; a larger one is written
@@ -185,6 +192,9 @@ Design:
    (nothing if it crosses no call). Each count is weighted by 10 for every loop around it. When
    registers run short, the values saving the most keep them.
  - A local whose address is taken stays on the stack.
+ - A flo80 value always takes a 16-byte stack slot. The x87 unit computes it from memory and
+   leaves nothing on its own stack between instructions, and a copy moves its 16 bytes through an
+   XMM register.
 
  Static variables (SASpec.md) are local `.bss` slots and blocks, a C global the C library's own
  symbol. Every access goes to memory, since a call may change the variable.

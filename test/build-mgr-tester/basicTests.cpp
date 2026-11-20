@@ -232,6 +232,26 @@ TEST(build_mgr, float_int_mixed) {
 	ASSERT_EQ(output, "5.000000\n30.000000\n4.000000\n5.000000\n5.000000\n");
 }
 
+TEST(build_mgr, flo80) {
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/438_flo80.pa");
+	ASSERT_EQ(output,
+		"0.33333333333333333334 0.10000000000000000000 0.33333333333333333334 0.33333333333333331483\n"
+		"0.50 -0.50 0.12\n"
+		"1 1 0 0\n"
+		"1.414214\n"
+		"-3.0 250.0 -300.0 60000.0 -70000.0 4000000000.0 -5000000000.0 18446744073709551615.0 1.5 2.5\n"
+		"-7 0 -7 0 -7 4294967295 -7 18446744073709551615 -7.75 -7.75\n"
+		"2.00\n"
+		"11.0 5 9.0\n"
+		"16.875\n"
+		"-4.50\n"
+		"4.50\n"
+		"1 2 3 4 5 6 1.00 8 0.50 10\n"
+		"2.50 7 6.00\n"
+		"5.00 5.00 8.00\n");
+}
+
 TEST(build_mgr, float32_cmp) {
 	cleanTestEnv();
 	// flo32 comparison: !=, ==, <, > (exercises ucomiss and setne)

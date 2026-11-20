@@ -519,7 +519,7 @@ json PlnSemanticAnalyzer::foldConstExpr(const json& expr)
 			case ConstVal::Kind::Int:  lit = {{"expr-type", "lit-int"},  {"value", to_string(v->i)}}; break; // LCOV_EXCL_BR_LINE
 			case ConstVal::Kind::Uint: lit = {{"expr-type", "lit-uint"}, {"value", to_string(v->u)}}; break; // LCOV_EXCL_BR_LINE
 			case ConstVal::Kind::Flo: {
-				char buf[32];
+				char buf[64];
 				auto r = to_chars(buf, buf + sizeof(buf), v->f);
 				string s(buf, r.ptr);
 				if (s.find_first_of(".e") == string::npos) s += ".0";
@@ -726,9 +726,9 @@ optional<ConstVal> PlnSemanticAnalyzer::evalConst(const json& expr)
 			exit(1);
 		}
 		auto toF = [](const ConstVal& v) {
-			return v.kind == K::Flo ? v.f : v.kind == K::Uint ? (double)v.u : (double)v.i;
+			return v.kind == K::Flo ? v.f : v.kind == K::Uint ? (long double)v.u : (long double)v.i;
 		};
-		double a = toF(*l), b = toF(*r);
+		long double a = toF(*l), b = toF(*r);
 		ConstVal v{K::Flo};
 		v.f = et == "add" ? a + b : et == "sub" ? a - b : et == "mul" ? a * b : a / b;
 		if (!isfinite(v.f)) {
@@ -861,12 +861,8 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		checkIntLiteralRange(sa_expr);
 
 	} else if (expr_type == "lit-flo") {
-		if (expectedType && expectedType->kind == PlnType::Kind::Prim) {
-			auto pn = static_cast<const PrimType*>(expectedType)->name;
-			if (pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64)
-				sa_expr["value-type"] = registry_.toJson(expectedType);
-			else
-				sa_expr["value-type"] = registry_.toJson(registry_.prim(PrimType::Name::Float64));
+		if (isFloatPrim(expectedType)) {
+			sa_expr["value-type"] = registry_.toJson(expectedType);
 		} else {
 			sa_expr["value-type"] = registry_.toJson(registry_.prim(PrimType::Name::Float64));
 		}
@@ -1275,12 +1271,9 @@ json PlnSemanticAnalyzer::sa_expr_arith(const json& expr, const PlnType* expecte
 	}
 	if (leftType != promoted)  left  = wrapConvert(left,  registry_.toJson(promoted));
 	if (rightType != promoted) right = wrapConvert(right, registry_.toJson(promoted));
-	if (expr_type == "mod" && promoted->kind == PlnType::Kind::Prim) {
-		auto pn = static_cast<const PrimType*>(promoted)->name;
-		if (pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64) {
-			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_FloatModulo) << endl;
-			exit(1);
-		}
+	if (expr_type == "mod" && isFloatPrim(promoted)) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_FloatModulo) << endl;
+		exit(1);
 	}
 	sa_expr["left"]       = left;
 	sa_expr["right"]      = right;
@@ -1721,12 +1714,9 @@ json PlnSemanticAnalyzer::sa_expr_arr_index(const json& expr, bool forWrite)
 
 	json sa_index = sa_expression(expr["index"]);
 	const PlnType* idxType = registry_.fromJson(sa_index["value-type"]);
-	if (idxType->kind == PlnType::Kind::Prim) {
-		auto pn = static_cast<const PrimType*>(idxType)->name;
-		if (pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64) {
-			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ArrayIndexNotInteger) << endl;
-			exit(1);
-		}
+	if (isFloatPrim(idxType)) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ArrayIndexNotInteger) << endl;
+		exit(1);
 	}
 
 	json uint64_type = {{"type-kind","prim"},{"type-name","uint64"}}; // LCOV_EXCL_BR_LINE

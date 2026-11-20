@@ -112,19 +112,17 @@ int PlnX86CodeGen::emitCallArgs(const vector<VReg>& args, const RegMap& rm, int&
     for (auto vr : args) types.push_back(rm.at(vr).type);
     vector<int> slots = placeCallArgs(types, structArgs, (int)x86PhysRegs.intArgs.size(),
                                       (int)x86PhysRegs.floatArgs.size());
-    int n_stack = (int)std::count(slots.begin(), slots.end(), -1);
-    int stack_space = 0;
-    if (n_stack > 0) {
-        stack_space = ((n_stack * 8) + 15) & ~15;
+    int stack_space;
+    vector<int> offsets = placeStackArgs(types, structArgs, slots, stack_space);
+    if (stack_space > 0)
         out << "\tsubq $" << stack_space << ", %rsp\n";
-    }
     // Int register-destined args are queued (see emitSafeRegMoves below) rather
     // than emitted here in argument order, and stack-destined args are still
     // emitted immediately: since no register move has been emitted yet at that
     // point, a stack arg whose source happens to be a register is read safely
     // regardless of which position that register is also a destination for.
     vector<RegMove> intMoves;
-    int n_flt_regs_used = 0, stack_idx = 0;
+    int n_flt_regs_used = 0;
     for (size_t k = 0; k < args.size(); k++) {
         const PhysLoc& src_loc = rm.at(args[k]);
         bool is_flt = isFloat(src_loc.type);
@@ -137,9 +135,11 @@ int PlnX86CodeGen::emitCallArgs(const vector<VReg>& args, const RegMap& rm, int&
         } else if (!is_flt && slots[k] >= 0) {
             intMoves.push_back(makeIntArgMove(src_loc, x86PhysRegs.intArgs[slots[k]]));
         } else {
-            // Overflow to stack: both int and float use 8 bytes per slot.
-            int offset = stack_idx++ * 8;
-            if (is_flt) {
+            int offset = offsets[k];
+            if (isX87(src_loc.type)) {
+                out << "\tmovdqu " << srcOperand(src_loc) << ", %xmm8\n";
+                out << "\tmovdqu %xmm8, " << offset << "(%rsp)\n";
+            } else if (is_flt) {
                 const char* mov = movInstrForType(src_loc.type);
                 if (src_loc.isStack()) {
                     out << "\t" << mov << " " << srcOperand(src_loc) << ", %xmm8\n";
@@ -181,7 +181,11 @@ void PlnX86CodeGen::emitInstrCallC(const CallC& i, const RegMap& rm)
     // themselves -- copies below need no clobber-avoiding ordering.
     int intRetIdx = 0, sseRetIdx = 0;
     for (size_t k = 0; k < i.dsts.size(); k++) {
-        bool ret_is_float = (i.retTypes[k] == VRegType::Float32 || i.retTypes[k] == VRegType::Float64);
+        if (isX87(i.retTypes[k])) {
+            emitX87RetStore(i.dsts[k], rm);
+            continue;
+        }
+        bool ret_is_float = isFloat(i.retTypes[k]);
         string ret_reg = ret_is_float ? kSseRetRegs[sseRetIdx++] : sizedRegName(kIntRetRegs[intRetIdx++], i.retTypes[k]);
         if (!rm.count(i.dsts[k])) continue;  // dead: result never used
         const PhysLoc& dst_loc = rm.at(i.dsts[k]);
@@ -193,23 +197,34 @@ void PlnX86CodeGen::emitInstrCallC(const CallC& i, const RegMap& rm)
 }
 
 // Palan's own return convention: a single value uses the SysV return register
-// of its class (%rax/%xmm0); multiple values take each class's argument
-// register sequence in order (intArgs / floatArgs). A struct's eightbytes
-// (sysv) take SysV's return registers of their classes, as C's do.
+// of its class (%rax/%xmm0/%st); multiple values take each class's argument
+// register sequence in order (intArgs / floatArgs), a flo80 whole in an XMM
+// register, so a call whose values are dropped leaves nothing on the x87 stack.
+// A struct's eightbytes (sysv) take SysV's return registers of their classes,
+// as C's do.
 static vector<string> plnRetRegs(const vector<VRegType>& types, bool sysv)
 {
     if (types.size() == 1)
-        return { isFloat(types[0]) ? "%xmm0" : "%rax" };
+        return { isX87(types[0]) ? "%st" : isFloat(types[0]) ? "%xmm0" : "%rax" };
     vector<string> regs;
     int int_idx = 0, flt_idx = 0;
     for (VRegType t : types) {
         if (sysv)
             regs.push_back(isFloat(t) ? kSseRetRegs[flt_idx++] : kIntRetRegs[int_idx++]);
         else
-            regs.push_back(isFloat(t) ? PlnX86CodeGen::x86PhysRegs.floatArgs[flt_idx++] : PlnX86CodeGen::x86PhysRegs.intArgs[int_idx++]);
+            regs.push_back(movedViaXmm(t) ? PlnX86CodeGen::x86PhysRegs.floatArgs[flt_idx++] : PlnX86CodeGen::x86PhysRegs.intArgs[int_idx++]);
     }
     return regs;
 } // LCOV_EXCL_BR_LINE
+
+// A flo80 returned in %st is popped off the x87 stack even when nothing uses it.
+void PlnX86CodeGen::emitX87RetStore(VReg dst, const RegMap& rm)
+{
+    if (rm.count(dst))
+        out << "\tfstpt " << srcOperand(rm.at(dst)) << "\n";
+    else
+        out << "\tfstp %st(0)\n";
+}
 
 void PlnX86CodeGen::emitInstrCallPln(const CallPln& c, const RegMap& rm)
 {
@@ -224,6 +239,10 @@ void PlnX86CodeGen::emitInstrCallPln(const CallPln& c, const RegMap& rm)
     vector<string> regs = plnRetRegs(c.retTypes, c.sysvRet);
     vector<RegMove> retMoves;
     for (int j = 0; j < (int)c.dsts.size(); j++) {
+        if (regs[j] == "%st") {
+            emitX87RetStore(c.dsts[j], rm);
+            continue;
+        }
         if (!rm.count(c.dsts[j])) continue;
         const PhysLoc& dst = rm.at(c.dsts[j]);
         VRegType t = c.retTypes[j];
@@ -278,6 +297,10 @@ void PlnX86CodeGen::emitInstrRetPln(const RetPln& r, const RegMap& rm, const vec
     vector<string> regs = plnRetRegs(r.types, r.sysvRet);
     for (int j = 0; j < (int)r.rets.size(); j++) {
         string s = srcOperand(rm.at(r.rets[j]));
+        if (regs[j] == "%st") {
+            out << "\tfldt " << s << "\n";
+            continue;
+        }
         string dst_reg = sizedRegName(regs[j], r.types[j]);
         if (s != dst_reg)
             out << "\t" << movInstrForType(r.types[j]) << " " << s << ", " << dst_reg << "\n";

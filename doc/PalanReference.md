@@ -148,6 +148,7 @@ in the source is taken as it is. `\u{X}` (in a character literal too) must name 
 | `uint64`| 64-bit  | unsigned   |
 | `flo32` | 32-bit  | float      |
 | `flo64` | 64-bit  | float      |
+| `flo80` | 80-bit (16 bytes) | float |
 | `bool`  | 8-bit   | holds 0 or 1 |
 
 ### bool
@@ -299,12 +300,18 @@ When passing to variadic C functions (e.g., `printf`), small integer types are p
 
 ### Floating-Point Types
 
-Palan supports 32-bit and 64-bit IEEE 754 floating-point types:
+Palan supports 32-bit and 64-bit IEEE 754 floating-point types, and the x87 80-bit extended
+precision type:
 
-| Type    | Width  | C equivalent |
-|---------|--------|--------------|
-| `flo32` | 32-bit | `float`      |
-| `flo64` | 64-bit | `double`     |
+| Type    | Width  | C equivalent  |
+|---------|--------|---------------|
+| `flo32` | 32-bit | `float`       |
+| `flo64` | 64-bit | `double`      |
+| `flo80` | 80-bit | `long double` |
+
+A `flo80` takes 16 bytes in memory, 16-byte aligned, as C's `long double` does on x86-64, and
+works everywhere `flo32` and `flo64` do. It is computed on the x87 unit, so it is slower than the
+other two.
 
 #### Declaration and Initialization
 
@@ -328,7 +335,7 @@ flo64 n = 5;    // stored as 5.0
 
 #### Arithmetic Operators
 
-`+`, `-`, `*`, `/` work on `flo32` and `flo64` operands and produce a float result.
+`+`, `-`, `*`, `/` work on float operands and produce a float result.
 
 ```palan
 flo64 a = 3.0, b = 2.0;
@@ -377,7 +384,7 @@ printf("%ld\n", int64(pi));   // prints 3
 
 #### Float Parameters and Return Values
 
-Palan functions take and return `flo32`/`flo64` values like any other type, and may mix them with
+Palan functions take and return float values like any other type, and may mix them with
 integer parameters and return values:
 
 ```palan
@@ -452,7 +459,8 @@ printf("%ld\n", MaxLen);   // 256
   value outside that range, a negative value in `uint64`, or a division by zero is a compile
   error. Division truncates toward zero, and `%` takes the sign of the dividend. A shift is
   computed at 64 bits: bits shifted out are not an error, and the count is taken modulo 64.
-- A float operand makes the whole operation `flo64`; `%`, `&`, `|`, `^` and `~` on a float are errors.
+- A float operand makes the whole operation a float, computed at `flo80` precision; `%`, `&`, `|`,
+  `^` and `~` on a float are errors.
 - The result is untyped like a literal and must fit the type of the place it is used.
 - A `cinclude`d macro constant inside a constant expression drops its C type and is computed like
   any other literal.
@@ -2304,7 +2312,7 @@ printf("%d %d %ld %d\n", c.step, d.on, len(@c.name), c.at.y);   // 2 1 1 9
 
 ### Field Types
 
-Integer and float primitives (`int8`–`int64`, `uint8`–`uint64`, `flo32`, `flo64`) are declared without a prefix:
+Integer and float primitives (`int8`–`int64`, `uint8`–`uint64`, `flo32`–`flo80`) are declared without a prefix:
 
 ```palan
 type Point { int64 x; int64 y; };
@@ -3156,8 +3164,8 @@ cinclude <math.h> link "m";  // link against libm (-lm) when building
 ### Function Calls
 
 - `cinclude` makes C functions visible from the declaration point to the end of the enclosing scope.
-- A C function whose signature uses a C type Palan cannot represent (`long double`, `va_list`,
-  `__int128`, a `_Complex` type) can be cincluded, but calling it is a compile error. `tgmath.h`
+- A C function whose signature uses a C type Palan cannot represent (`va_list`, `__int128`, a
+  `_Complex` type) can be cincluded, but calling it is a compile error. `tgmath.h`
   cannot be cincluded: it requires a GNU compiler.
 - With an alias, functions are accessible only via the qualified form `alias.funcName(...)`.
 - The number of arguments must match the number of parameters; a variadic C function takes at least
@@ -3685,8 +3693,8 @@ syscall sys_write(int32 fd, @void buf, uint64 count) -> int64 = SYS_write;
   `func`.
 - At most 6 parameters. The return, if any, must be a single unnamed type (`-> type`); named or
   multiple return values are not allowed.
-- Parameter and return types must be representable as a full 8-byte register: `flo32`/`flo64`
-  and the 8-bit/16-bit integer types (including `bool`) are rejected.
+- Parameter and return types must be representable as a full 8-byte register: float types and
+  the 8-bit/16-bit integer types (including `bool`) are rejected.
 - The return value is the kernel's raw result in `rax`: a negative value conventionally means
   `-errno` (e.g. `-9` for `EBADF`), which the caller must interpret itself — libc's `errno`
   variable is never touched.

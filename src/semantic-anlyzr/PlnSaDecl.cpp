@@ -595,9 +595,7 @@ json PlnSemanticAnalyzer::sa_arr_size_expr(const json& stmt, const json& sizeExp
 	json sz = sa_expression(sizeExprAst, uint64Type);
 	if (!sz.contains("value-type")) return sz;
 	const PlnType* t = registry_.fromJson(sz["value-type"]);
-	bool is_int = t->kind == PlnType::Kind::Prim
-		&& static_cast<const PrimType*>(t)->name != PrimType::Name::Float32
-		&& static_cast<const PrimType*>(t)->name != PrimType::Name::Float64;
+	bool is_int = t->kind == PlnType::Kind::Prim && !isFloatPrim(t);
 	if (!is_int) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ArraySizeNotInteger) << endl;
 		exit(1);

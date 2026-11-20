@@ -241,7 +241,7 @@ struct CCCallExpr : Expr {
     // Parallel to args: set for an argument passed to a by-value struct
     // parameter, whose expression yields a pointer to the struct to copy.
     // Empty eightbytes means MEMORY class (copied to the stack).
-    struct StructArg { int size; vector<Eightbyte> eightbytes; };
+    struct StructArg { int size; int align; vector<Eightbyte> eightbytes; };
     vector<std::optional<StructArg>> structArgs;
 };
 

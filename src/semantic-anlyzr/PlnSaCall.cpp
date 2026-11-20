@@ -1317,7 +1317,7 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 			saArg = bindCallTemp(move(saArg));
 		if (byValStruct) {
 			const StructDef& def = requireCompleteStruct((*paramVT)["base-type"]["type-name"].get<string>(), locNode);
-			saArg["struct-arg"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_)}}; // LCOV_EXCL_BR_LINE
+			saArg["struct-arg"] = {{"size", def.totalSize}, {"align", def.maxAlign}, {"eightbytes", eightbytesJson(def, structDefs_, false)}}; // LCOV_EXCL_BR_LINE
 		} else {
 			noteEscape(saArg);
 		}

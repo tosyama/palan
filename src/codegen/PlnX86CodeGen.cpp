@@ -32,11 +32,16 @@ void PlnX86CodeGen::emit(const VProg& prog, const vector<RegAllocResult>& allocs
         for (auto& d : prog.data)
             emitStringLiteral(d.label, d.value);
         for (auto& f : prog.floatData) {
+            // A flo80 is read as 16 bytes like any other copy of it.
+            if (f.type == VRegType::Float80)
+                out << "\t.p2align 4\n";
             emitLabel(f.label);
             if (f.type == VRegType::Float32)
                 out << "\t.float " << f.value << "\n";
-            else
+            else if (f.type == VRegType::Float64)
                 out << "\t.double " << f.value << "\n";
+            else
+                out << "\t.tfloat " << f.value << "\n\t.zero 6\n";
         }
     }
 
@@ -211,7 +216,7 @@ void PlnX86CodeGen::emitInstrMov(const Mov& mv, const RegMap& rm)
         out << "\t" << movInstrForType(mv.type) << " " << s << ", " << d << "\n";
     } else {
         // Both on stack: route through scratch register.
-        string scratch = isFloat(mv.type) ? "%xmm8" : sizedRegName("%rax", mv.type);
+        string scratch = movedViaXmm(mv.type) ? "%xmm8" : sizedRegName("%rax", mv.type);
         out << "\t" << movInstrForType(mv.type) << " " << s << ", " << scratch << "\n";
         out << "\t" << movInstrForType(mv.type) << " " << scratch << ", " << d << "\n";
     }

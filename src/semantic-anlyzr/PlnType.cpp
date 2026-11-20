@@ -27,6 +27,7 @@ struct PrimTypeNames {
         toEnum["uint64"] = PrimType::Name::Uint64;
         toEnum["flo32"]  = PrimType::Name::Float32;
         toEnum["flo64"]  = PrimType::Name::Float64;
+        toEnum["flo80"]  = PrimType::Name::Float80;
         toEnum["bool"]   = PrimType::Name::Bool;
         toEnum["void"]   = PrimType::Name::Void;
         for (auto& [k, v] : toEnum) fromEnum[v] = k;
@@ -215,7 +216,7 @@ static int primGroup(PrimType::Name n)
     switch (n) {
         case N::Int8: case N::Int16: case N::Int32: case N::Int64:   return 0;
         case N::Uint8: case N::Uint16: case N::Uint32: case N::Uint64: return 1;
-        case N::Float32: case N::Float64:                              return 2;
+        case N::Float32: case N::Float64: case N::Float80:             return 2;
         case N::Bool:                                                  return 3;
     }
     return -1; // LCOV_EXCL_LINE
@@ -231,6 +232,7 @@ static int primRank(PrimType::Name n)
         case N::Int64:  case N::Uint64:  return 4;
         case N::Float32:                 return 1;
         case N::Float64:                 return 2;
+        case N::Float80:                 return 3;
     }
     return -1; // LCOV_EXCL_LINE
 }

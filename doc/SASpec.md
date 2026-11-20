@@ -877,7 +877,7 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     `uint8` `uint16` `bool`) is rejected with `E_WideCharLitNarrowType`, both where the literal
     takes the type and where it is compared with an operand of that type (a comparison types no
     literal by the other operand). `char` stays on the node in sa.json; codegen ignores it.
-  - lit-flo: adopts flo32 or flo64 when used in a float-typed context (e.g. `flo32 y = 1.5;` → flo32);
+  - lit-flo: adopts the float type of a float-typed context (e.g. `flo32 y = 1.5;` → flo32);
     defaults to flo64 when no expected float type is available
   - lit-str: {"type-kind": "pntr", "base-type": {"type-kind": "prim", "type-name": "uint8"}}
   - id: same object as var-type
@@ -888,7 +888,7 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
   - cmp: always `{"type-kind": "prim", "type-name": "bool"}`;
     left and right operands are promoted by the same rules as add
   - logical-and: always `{"type-kind": "prim", "type-name": "bool"}`;
-    both operands must be integer types (flo32/flo64 operands are a compile error)
+    both operands must be integer types (float operands are a compile error)
   - logical-or: same as logical-and
   - logical-not: always `{"type-kind": "prim", "type-name": "bool"}`; operand must be integer type
   - func-ref: a function name written where a value is expected (an `id` naming no variable or
@@ -1129,7 +1129,7 @@ SA-only expression kinds (added to AST nodes):
 
   Validation:
   - If the array operand's value-type is not `pntr` → compile error (E_NotArrayType)
-  - If the index expression resolves to flo32 or flo64 → compile error (E_ArrayIndexNotInteger)
+  - If the index expression resolves to a float type → compile error (E_ArrayIndexNotInteger)
   - If a non-struct element's byte size cannot be determined → compile error
     (E_UnknownType). Reachable because gen-ast has no symbol table: a name it doesn't
     recognize as a struct in native syntax (e.g. `@!Foo p;` where `Foo` was never declared)
@@ -1217,14 +1217,16 @@ Additional fields per expression kind:
   - ret-dest and struct-ret added instead of value-type when the function (Palan or C, or a
     function pointer) returns a struct: `ret-dest` is an expression of type `pntr(struct)`
     giving the storage the value is written to, and `struct-ret` is `{"size":<total struct size
-    in bytes>,"eightbytes":[{"class":"int"|"sse","size":1..8},...]}` (System V AMD64
+    in bytes>,"eightbytes":[{"class":"int"|"sse"|"x87","size":1..16},...]}` (System V AMD64
     classification). Each array entry is one eightbyte of the classified return value in order —
     its byte offset within the struct is implied by its index (`index * 8`), there is no
     explicit `offset` key; `size` on the last entry is the tail width when the struct isn't a
     multiple of 8 bytes (codegen writes a width other than 1/2/4/8 piecewise). An SSE eightbyte
     taken up by one `flo64` also has `"flo64":true`: codegen reads it from memory in one 8-byte
     load, and any other 8-byte SSE eightbyte as two 4-byte halves, since it is usually written as
-    two `flo32` stores an 8-byte load could not be forwarded from. A struct over 16
+    two `flo32` stores an 8-byte load could not be forwarded from. A struct holding a `flo80`
+    is MEMORY class, except one of 16 bytes, which is that `flo80` alone and is
+    `"eightbytes":[{"class":"x87","size":16}]`: it comes back in st(0). A struct over 16
     bytes (the System V AMD64 MEMORY class) is `"eightbytes":[]`: codegen passes `ret-dest` as
     the hidden first argument. Such a call has no value and is always the `body` of an `expr`
     statement; where its value is used, SA emits a `temp` whose `body` declares the storage and
@@ -1232,8 +1234,9 @@ Additional fields per expression kind:
     receiver provides storage of its own (see Struct variable declaration and SpecAndDesign.md
     §4), that storage is the `ret-dest`. A C function's by-value struct return type is normalized to `pntr(struct)` when it is registered, as a Palan `-> T` is.
   - struct-arg added on an argument (in `args`) given to a C function's by-value struct
-    parameter: `{"size":<total struct size in bytes>,"eightbytes":[...]}`, with `eightbytes` as
-    in `struct-ret` (`[]` for MEMORY class). The argument expression itself is a pointer to the
+    parameter: `{"size":<total struct size in bytes>,"align":<its alignment>,"eightbytes":[...]}`,
+    with `eightbytes` as in `struct-ret` (`[]` for MEMORY class, which a `flo80` always makes it
+    here). `align` places a struct copied to the stack, at a 16-byte boundary when it is 16. The argument expression itself is a pointer to the
     struct to copy — a variable, field, array element, or a `temp` holding a literal or a
     returned struct — and codegen reads the eightbytes through it: each goes to a register of
     its class when all of the struct's eightbytes fit in the remaining argument registers,
@@ -1295,6 +1298,7 @@ call returning one).
 Float promotion rules (subsumed by usual arithmetic conversions above, restated for clarity):
 
 - `flo32 op flo64` → flo32 is implicitly widened to flo64; result is flo64
+- `flo32 op flo80` / `flo64 op flo80` → the narrower float is implicitly widened to flo80; result is flo80
 - `int op flo32` → int is implicitly widened to flo32; result is flo32
 - `int op flo64` → int is implicitly widened to flo64; result is flo64
 - `flo32 op int` / `flo64 op int` → symmetric with the above
@@ -1581,8 +1585,7 @@ Before a `cinclude`d C function's parameters/return type (or a C global's single
 (`PlnSaInternal.h`) apply `normalizeCType` (folding `pntr`'s pointee `const` to `mutable`, and
 a named `strct`/`union`→`struct`) and then check every type against `unrepresentableTypeName`, which recognizes:
 
-- A `prim` type-name not resolved to a known Palan primitive (e.g. `flt128` for C's `long
-  double` when no typedef maps it to something usable, or the C spellings c2ast gives
+- A `prim` type-name not resolved to a known Palan primitive (the C spellings c2ast gives
   `__int128` and the `_Complex` types, such as `double _Complex`).
 - `arr` (a bare array type-kind — the `[n]@T`/`[n]@!T` pointer-slot-array shape has already
   normalized to `pntr` by this point), a `func` whose parameters or return are not all

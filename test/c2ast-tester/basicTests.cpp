@@ -728,6 +728,7 @@ TEST(c2ast, gnu_spellings) {
     ASSERT_EQ(param("f_complex", 2), prim("long double _Complex"));
     ASSERT_EQ(funcs["f_int128"]["ret-type"], prim("unsigned __int128"));
     ASSERT_EQ(param("f_int128", 1), prim("__int128"));
+    ASSERT_EQ(funcs["f_long_double"]["ret-type"], prim("flo80"));
     ASSERT_EQ(funcs.count("f_static_inline"), 0u);
     ASSERT_EQ(funcs["f_inline"]["ret-type"], prim("int32"));
     map<string, string> constants;

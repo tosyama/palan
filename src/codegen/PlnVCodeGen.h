@@ -68,7 +68,7 @@ class PlnVCodeGen {
     vector<VReg> lowerCCallArgs(const CCCallExpr& expr, vector<StructArgSpan>& spans, VFunc& func,
                                 vector<VReg> args = {});
     VReg lowerStructRetDest(const std::optional<StructRet>& sr, vector<VReg>& args, VFunc& func);
-    std::pair<vector<VReg>, vector<VRegType>> structRetDsts(const std::optional<StructRet>& sr);
+    std::pair<vector<VReg>, vector<VRegType>> structRetDsts(const std::optional<StructRet>& sr, bool hasRet, VRegType retType);
     void storeStructRet(VReg dest, const std::optional<StructRet>& sr, const vector<VReg>& dsts, VFunc& func);
     void lowerSlotReturn(VFunc& func);
     void lowerPtrCallStmt(const PtrCallExpr& expr, VFunc& func);

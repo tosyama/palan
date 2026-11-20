@@ -957,19 +957,21 @@ TEST(sa, c_struct_arg) {
 	vector<json> calls;
 	for (auto& s : jout["statements"])
 		if (s["stmt-type"] == "expr") calls.push_back(s["body"]);
-	ASSERT_EQ(calls.size(), 5u);
+	ASSERT_EQ(calls.size(), 6u);
 
-	json i8 = {{"size", 8}, {"eightbytes", json::array({{{"class", "int"}, {"size", 8}}})}};
+	json i8 = {{"size", 8}, {"align", 4}, {"eightbytes", json::array({{{"class", "int"}, {"size", 8}}})}};
 	ASSERT_EQ(calls[0]["args"][0]["expr-type"], "id");
 	ASSERT_EQ(calls[0]["args"][0]["struct-arg"], i8);
-	ASSERT_EQ(calls[1]["args"][0]["struct-arg"], json({{"size", 24}, {"eightbytes", json::array()}}));
+	ASSERT_EQ(calls[1]["args"][0]["struct-arg"], json({{"size", 24}, {"align", 8}, {"eightbytes", json::array()}}));
 	ASSERT_EQ(calls[2]["args"][0]["struct-arg"],
-		json({{"size", 3}, {"eightbytes", json::array({{{"class", "int"}, {"size", 3}}})}}));
+		json({{"size", 3}, {"align", 1}, {"eightbytes", json::array({{{"class", "int"}, {"size", 3}}})}}));
 	// A literal and a returned struct are held in a temp, which carries the mark.
 	ASSERT_EQ(calls[3]["args"][0]["expr-type"], "temp");
 	ASSERT_EQ(calls[3]["args"][0]["struct-arg"], i8);
 	ASSERT_EQ(calls[4]["args"][0]["expr-type"], "temp");
 	ASSERT_EQ(calls[4]["args"][0]["struct-arg"], i8);
+	// A flo80 makes it MEMORY class, laid on the stack at its 16-byte alignment.
+	ASSERT_EQ(calls[5]["args"][0]["struct-arg"], json({{"size", 32}, {"align", 16}, {"eightbytes", json::array()}}));
 }
 
 TEST(sa, c_struct_arg_read_only) {

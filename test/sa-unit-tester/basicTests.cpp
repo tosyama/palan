@@ -174,8 +174,8 @@ TEST(typecompat, unrepresentable_prim_known) {
 }
 
 TEST(typecompat, unrepresentable_prim_unknown) {
-    // e.g. c2ast's "flt128" for `long double`, not in PrimTypeNames
-    EXPECT_EQ(unrepresentableTypeName({{"type-kind","prim"},{"type-name","flt128"}}), "flt128");
+    // e.g. c2ast's C spelling "__int128", not in PrimTypeNames
+    EXPECT_EQ(unrepresentableTypeName({{"type-kind","prim"},{"type-name","__int128"}}), "__int128");
 }
 
 TEST(typecompat, unrepresentable_prim_missing_name) {
@@ -348,6 +348,10 @@ TEST(usual_arith_conv, wider_float_wins) {
     const PlnType* f64 = reg.prim(N::Float64);
     EXPECT_EQ(usualArithConv(f32, f64), f64);
     EXPECT_EQ(usualArithConv(f64, f32), f64);
+    const PlnType* f80 = reg.prim(N::Float80);
+    EXPECT_EQ(usualArithConv(f64, f80), f80);
+    EXPECT_EQ(typeCompat(f64, f80, reg), TypeCompat::ImplicitWiden);
+    EXPECT_EQ(typeCompat(f80, f64, reg), TypeCompat::ExplicitCast);
 }
 
 TEST(usual_arith_conv, non_prim_returns_null) {
@@ -435,7 +439,7 @@ TEST(sysv_struct, one_eightbyte_integer) {
         {"rem",  "prim", "int32", false, 4, 4},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls,  EightbyteClass::Integer);
     EXPECT_EQ(result[0].size, 8);
@@ -450,10 +454,27 @@ TEST(sysv_struct, two_eightbyte_integer) {
         {"rem",  "prim", "int64", false, 8, 8},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[1].cls, EightbyteClass::Integer);
+}
+
+TEST(sysv_struct, flo80_memory_or_x87) {
+    // A flo80 alone comes back in %st(0); passed, or beside another field, it is MEMORY.
+    StructDef one;
+    one.totalSize = 16;
+    one.fields = { {"v", "prim", "flo80", false, 0, 16} };
+    StructDef mix;
+    mix.totalSize = 32;
+    mix.fields = { {"n", "prim", "int32", false, 0, 4}, {"v", "prim", "flo80", false, 16, 16} };
+    map<string, StructDef> defs;
+    auto ret = classifySysVStruct(one, defs, true);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0].cls, EightbyteClass::X87);
+    EXPECT_EQ(ret[0].size, 16);
+    EXPECT_TRUE(classifySysVStruct(one, defs, false).empty());
+    EXPECT_TRUE(classifySysVStruct(mix, defs, true).empty());
 }
 
 TEST(sysv_struct, one_eightbyte_sse) {
@@ -461,7 +482,7 @@ TEST(sysv_struct, one_eightbyte_sse) {
     def.totalSize = 8;
     def.fields = { {"x", "prim", "flo64", false, 0, 8} };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Sse);
 }
@@ -474,7 +495,7 @@ TEST(sysv_struct, two_flo32_one_eightbyte) {
         {"b", "prim", "flo32", false, 4, 4},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Sse);
 }
@@ -489,7 +510,7 @@ TEST(sysv_struct, integer_wins_within_eightbyte) {
         {"b", "prim", "int32", false, 4, 4},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
 }
@@ -502,7 +523,7 @@ TEST(sysv_struct, mixed_integer_sse) {
         {"b", "prim", "flo64", false, 8, 8},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[1].cls, EightbyteClass::Sse);
@@ -518,7 +539,7 @@ TEST(sysv_struct, partial_tail_eightbyte) {
         {"c", "prim", "int32", false, 8, 4},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].size, 8);
     EXPECT_EQ(result[1].size, 4);
@@ -534,7 +555,7 @@ TEST(sysv_struct, memory_class) {
         {"c", "prim", "int64", false, 16, 8},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     EXPECT_TRUE(result.empty());
 }
 
@@ -546,7 +567,7 @@ TEST(sysv_struct, fractional_tail_width) {
          .type={{"type-kind","pntr"},{"arr-size",3},{"base-type",{{"type-kind","prim"},{"type-name","int8"}}}}},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[0].size, 3);
@@ -561,7 +582,7 @@ TEST(sysv_struct, union_float_and_int) {
         {"i", "prim", "int32", false, 0, 4},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[0].size, 4);
@@ -572,7 +593,7 @@ TEST(sysv_struct, raw_ptr_field) {
     def.totalSize = 8;
     def.fields = { {"p", "raw-ptr", "int32", false, 0, 8} };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
 }
@@ -582,7 +603,7 @@ TEST(sysv_struct, owned_field) {
     def.totalSize = 8;
     def.fields = { {"p", "owned", "", false, 0, 8} };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
 }
@@ -602,7 +623,7 @@ TEST(sysv_struct, embed_struct_recursion) {
     };
 
     map<string, StructDef> defs = { {"Inner", inner} };
-    auto result = classifySysVStruct(outer, defs);
+    auto result = classifySysVStruct(outer, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Sse);
     EXPECT_EQ(result[1].cls, EightbyteClass::Integer);
@@ -617,7 +638,7 @@ TEST(sysv_struct, embed_arr_prim_float) {
          .type={{"type-kind","pntr"},{"arr-size",4},{"base-type",{{"type-kind","prim"},{"type-name","flo32"}}}}},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Sse);
     EXPECT_EQ(result[1].cls, EightbyteClass::Sse);
@@ -642,7 +663,7 @@ TEST(sysv_struct, embed_arr_struct_leaf) {
     };
 
     map<string, StructDef> defs = { {"Elem", elem} };
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[1].cls, EightbyteClass::Integer);
@@ -660,7 +681,7 @@ TEST(sysv_struct, embed_arr_rows) {
         {.name="f", .typeKind="prim", .typeName="flo64", .isMutable=false, .offset=8, .size=8},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[1].cls, EightbyteClass::Sse);
@@ -676,7 +697,7 @@ TEST(sysv_struct, embed_arr_ptr_slots) {
                 {"base-type",{{"type-kind","prim"},{"type-name","int32"}}}}}}},
     };
     map<string, StructDef> defs;
-    auto result = classifySysVStruct(def, defs);
+    auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0].cls, EightbyteClass::Integer);
     EXPECT_EQ(result[1].cls, EightbyteClass::Integer);

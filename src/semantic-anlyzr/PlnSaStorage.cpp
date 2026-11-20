@@ -1260,7 +1260,7 @@ void PlnSemanticAnalyzer::markStructRet(json& call, const json& locNode)
 	if (!call.contains("value-type") || !isStructValue(call["value-type"]))
 		return;
 	const StructDef& def = requireCompleteStruct(call["value-type"]["base-type"]["type-name"].get<string>(), locNode);
-	call["struct-ret"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_)}}; // LCOV_EXCL_BR_LINE
+	call["struct-ret"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_, true)}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
 // The statements making `call` (or the temp holding it) write its struct into

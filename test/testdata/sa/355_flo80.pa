@@ -1,0 +1,6 @@
+cinclude <math.h>;
+
+flo80 a = acosl(1.0);
+flo80 b = 1.0 / 3;
+flo80 c = a + 1;
+flo64 d = flo64(c);

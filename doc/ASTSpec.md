@@ -289,7 +289,7 @@ Variable type
   1. prim - Primitive type
     - type-name\* - Type name string
       - Integer: "int8" "int16" "int32" "int64" "uint8" "uint16" "uint32" "uint64"
-      - Float: "flo32" "flo64"
+      - Float: "flo32" "flo64" "flo80" — also what c2ast emits for C's `long double`
       - Boolean: "bool" — also what c2ast emits for C's `_Bool`
       - Other: "void" — pointee-only (`prim(void)` appears only as a `pntr`'s `base-type`, never
         as a variable's own top-level type). Previously only reachable from a c2ast-derived

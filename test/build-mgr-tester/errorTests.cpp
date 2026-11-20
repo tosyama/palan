@@ -131,12 +131,12 @@ TEST(build_mgr_error, cinclude_arr_field_cast_size) {
 }
 
 TEST(build_mgr_error, c_unsupported_sig) {
-	// Regression: `long double` (c2ast's "flt128") on acosl's return type used
-	// to abort via an uncaught fromJson throw (rc=134); now diagnosed at the call.
+	// Regression: an unrepresentable C type on a signature used to abort via an
+	// uncaught fromJson throw (rc=134); now diagnosed at the call.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_055_c_unsupported_sig.pa");
-	ASSERT_NE(out.find("cannot call C function 'acosl'"), string::npos);
-	ASSERT_NE(out.find("'flt128'"), string::npos);
+	ASSERT_NE(out.find("cannot call C function 'cabs'"), string::npos) << out;
+	ASSERT_NE(out.find("'double _Complex'"), string::npos);
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 

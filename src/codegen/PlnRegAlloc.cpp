@@ -211,6 +211,7 @@ RegAllocResult allocateRegisters(const VFunc& func, const PhysRegs& phys)
             case VRegType::Int16:  return 2;
             case VRegType::Int32:  return 4;
             case VRegType::Float32: return 4;
+            case VRegType::Float80: return 16;
             default:               return 8;  // Int64, Ptr64, Float64
         }
     };
@@ -251,7 +252,7 @@ RegAllocResult allocateRegisters(const VFunc& func, const PhysRegs& phys)
 
     auto allocCalleeSavedOrStack = [&](VReg vreg, VRegType type) {
         // Float VRegs cannot use integer callee-saved registers; always spill to stack.
-        bool is_flt = (type == VRegType::Float32 || type == VRegType::Float64);
+        bool is_flt = isFloat(type) || isX87(type);
         if (!is_flt && callee_idx < (int)phys.calleeSaved.size()) {
             result[vreg] = PhysLoc{phys.calleeSaved[callee_idx++], type}; // LCOV_EXCL_BR_LINE
         } else {
@@ -270,22 +271,24 @@ RegAllocResult allocateRegisters(const VFunc& func, const PhysRegs& phys)
     // register so it survives the call (caller-saved arg regs are clobbered).
     vector<tuple<string, VReg, VRegType>> pendingParamCopies;
     map<VReg, string> floatParamRegs;  // float params arriving in XMM arg regs
-    int int_idx = 0, flt_idx = 0, stack_idx = 0;
-    for (auto& [vreg, type] : func.params) {
-        bool is_flt = (type == VRegType::Float32 || type == VRegType::Float64);
-        bool in_regs = is_flt ? flt_idx < (int)phys.floatArgs.size()
-                              : int_idx < (int)phys.intArgs.size();
-        if (!in_regs) {
-            // Stack parameter: passed by caller above %rbp → 16(%rbp), 24(%rbp), ...
+    vector<VRegType> paramTypes;
+    for (auto& [vreg, type] : func.params) paramTypes.push_back(type);
+    vector<int> paramSlots = placeCallArgs(paramTypes, {}, (int)phys.intArgs.size(), (int)phys.floatArgs.size());
+    int paramStackBytes;
+    vector<int> paramOffsets = placeStackArgs(paramTypes, {}, paramSlots, paramStackBytes);
+    for (size_t pi = 0; pi < func.params.size(); pi++) {
+        auto& [vreg, type] = func.params[pi];
+        if (paramSlots[pi] < 0) {
+            // Stack parameter: passed by caller above %rbp, from 16(%rbp).
             // The caller's stack is stable across all calls within this function.
-            result[vreg] = PhysLoc{"", type, (stack_idx++ + 2) * 8}; // LCOV_EXCL_BR_LINE
+            result[vreg] = PhysLoc{"", type, 16 + paramOffsets[pi]}; // LCOV_EXCL_BR_LINE
             continue;
         }
-        if (is_flt) {
-            floatParamRegs[vreg] = phys.floatArgs[flt_idx++];
+        if (isFloat(type)) {
+            floatParamRegs[vreg] = phys.floatArgs[paramSlots[pi]];
             continue;
         }
-        const string& argReg = phys.intArgs[int_idx++];
+        const string& argReg = phys.intArgs[paramSlots[pi]];
 
         const VRegMeta& m = meta[vreg];
         bool crosses_call = false;
@@ -394,7 +397,7 @@ RegAllocResult allocateRegisters(const VFunc& func, const PhysRegs& phys)
         if (m.isVar) continue;  // Pass B always allocates isVar to stack
 
         if (m.call_uses.empty()) {
-            bool is_flt = (m.type == VRegType::Float32 || m.type == VRegType::Float64);
+            bool is_flt = isFloat(m.type) || isX87(m.type);
             if (m.isRetValue && numRetValues == 1 && !is_flt) {
                 // Besides calls, most x86 emitters use %rax as scratch for stack
                 // operands, so %rax is safe only if nothing that emits code lies

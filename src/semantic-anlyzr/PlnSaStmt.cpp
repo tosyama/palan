@@ -958,7 +958,7 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	if (!retSlot_.empty()) {
 		const json& type = *findVar(retSlot_);
 		const StructDef& def = structDefs_.at(type["base-type"]["type-name"].get<string>());
-		json ebs = eightbytesJson(def, structDefs_);
+		json ebs = eightbytesJson(def, structDefs_, true);
 		// Returned in registers, the struct is built in the frame first.
 		if (!ebs.empty())
 			body.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",retSlot_},{"var-type",type}, // LCOV_EXCL_BR_LINE

@@ -392,6 +392,27 @@ TEST(sa, float_var_decl) {
 	ASSERT_FALSE(z.contains("init"));
 }
 
+TEST(sa, flo80) {
+	// C's long double is flo80; a constant is folded at its precision.
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/355_flo80.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	json f80 = {{"type-kind", "prim"}, {"type-name", "flo80"}};
+	const json& acosl = stmts[0]["vars"][0]["init"];
+	ASSERT_EQ(acosl["name"], "acosl");
+	ASSERT_EQ(acosl["value-type"], f80);
+	ASSERT_EQ(acosl["args"][0]["value-type"], f80);
+	const json& third = stmts[1]["vars"][0]["init"];
+	ASSERT_EQ(third["expr-type"], "lit-flo");
+	ASSERT_EQ(third["value"], "0.33333333333333333334");
+	ASSERT_EQ(third["value-type"], f80);
+	ASSERT_EQ(stmts[2]["vars"][0]["init"]["right"]["value-type"], f80);
+	const json& narrow = stmts[3]["vars"][0]["init"];
+	ASSERT_EQ(narrow["expr-type"], "convert");
+	ASSERT_EQ(narrow["from-type"], f80);
+}
+
 TEST(sa, int_to_float_implicit) {
 	cleanTestEnv();
 	json jout = run_sa("../test/testdata/sa/042_int_to_float_implicit.pa");

@@ -1,1 +1,1 @@
-extern long double ld;
+extern __int128 ld;

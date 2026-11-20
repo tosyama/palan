@@ -12,3 +12,5 @@ take_big(b);
 take_odd(o);
 take_i8({a: 1, b: 2});
 take_i8(makeI8());
+LD l;
+take_ld(l);

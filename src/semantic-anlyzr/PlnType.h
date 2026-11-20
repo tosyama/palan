@@ -34,7 +34,7 @@ struct PrimType : PlnType {
     enum class Name {
         Int8, Int16, Int32, Int64,
         Uint8, Uint16, Uint32, Uint64,
-        Float32, Float64,
+        Float32, Float64, Float80,
         Bool,       // 1 byte, value always 0 or 1
         Void        // pntr(void) base only — never used as a standalone value type
     } name;

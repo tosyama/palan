@@ -575,7 +575,7 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 	json &vt = ast["var-type"];
 	if (is_complex) {
 		static const map<string, string> complexNames = {
-			{"flo32", "float _Complex"}, {"flo64", "double _Complex"}, {"flt128", "long double _Complex"},
+			{"flo32", "float _Complex"}, {"flo64", "double _Complex"}, {"flo80", "long double _Complex"},
 		}; // LCOV_EXCL_BR_LINE
 		auto it = vt.value("type-kind", "") == "prim" ? complexNames.find(vt["type-name"].get<string>())
 			: complexNames.end();
@@ -625,7 +625,7 @@ bool CParser::type_specifier(json &ast, const vector<CToken*> &tokens, int &resu
 	if (signed_long_long(tokens, index))   { set_prim("int64");  result_index = index; return true; }
 
 	if (CONSUME_KW(TK_LONG)) {
-		if (CONSUME_KW(TK_DOUBLE)) { set_prim("flt128"); result_index = index; return true; }
+		if (CONSUME_KW(TK_DOUBLE)) { set_prim("flo80"); result_index = index; return true; }
 		index--; // backtrack
 	}
 
@@ -1452,7 +1452,7 @@ bool CParser::typeSizeAlign(const json &vt, long long &size, long long &align)
 		static const map<string, pair<int, int>> sizes = {
 			{"int8", {1, 1}}, {"uint8", {1, 1}}, {"bool", {1, 1}}, {"int16", {2, 2}}, {"uint16", {2, 2}},
 			{"int32", {4, 4}}, {"uint32", {4, 4}}, {"flo32", {4, 4}}, {"int64", {8, 8}}, {"uint64", {8, 8}},
-			{"flo64", {8, 8}}, {"flt128", {16, 16}},
+			{"flo64", {8, 8}}, {"flo80", {16, 16}},
 			{"__int128", {16, 16}}, {"unsigned __int128", {16, 16}},
 			{"float _Complex", {8, 4}}, {"double _Complex", {16, 8}}, {"long double _Complex", {32, 16}},
 		}; // LCOV_EXCL_BR_LINE

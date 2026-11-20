@@ -347,7 +347,7 @@ TEST(sa_error, c_unsupported_union_ret)
 
 TEST(sa_error, c_unsupported_func_param)
 {
-	// `void set_cb(int (*cb)(long double));` -- a function pointer whose own
+	// `void set_cb(int (*cb)(__int128));` -- a function pointer whose own
 	// parameter is unrepresentable makes the whole signature unsupported.
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
@@ -387,28 +387,6 @@ TEST(sa_error, c_unsupported_anon_strct_param)
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("cannot call C function 'f'"), string::npos);
 	ASSERT_NE(sa.find("'anonymous struct'"), string::npos);
-}
-
-TEST(sa_error, c_unsupported_long_double)
-{
-	// `acosl(1.0)` from <math.h> -- `long double` maps to c2ast's "flt128"
-	// prim type-name (CParser.cpp), which is not in PrimTypeNames -- the
-	// dominant real-world case: math.h alone has 309 such nodes across 150
-	// functions in the empirical audit for this ticket, far more than every
-	// other unsupported kind combined. Also proves unrepresentableTypeName's
-	// "prim" branch (a resolvable type-kind, unresolvable type-name), not
-	// just its type-kind branches, and that the diagnostic fires instead of
-	// the pre-2906 abort ("unknown prim type-name: flt128", rc=134).
-	// Covers: sa_expr_call -> requireSupportedCFuncSig, unresolved prim name
-	cleanTestEnv();
-	string ast_out = "out/test.ast.json";
-	ASSERT_EQ(execTestCommand(
-		"palan-gen-ast ../test/testdata/sa/error_141_c_unsupported_long_double.pa -o " + ast_out), "");
-	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
-	ASSERT_NE(sa, "");
-	ASSERT_NE(sa.find("cannot call C function 'acosl'"), string::npos);
-	ASSERT_NE(sa.find("'flt128'"), string::npos);
-	ASSERT_EQ(sa.find("unrepresentable type"), string::npos);  // diagnosed, not the raw fromJson throw text
 }
 
 TEST(sa_error, c_unsupported_aliased_call)
@@ -472,10 +450,10 @@ TEST(sa_error, c_global_out_of_block_scope)
 
 TEST(sa_error, c_global_unsupported_type)
 {
-	// `extern long double ld;` -- cinclude succeeds (deferred, same policy as
+	// `extern __int128 ld;` -- cinclude succeeds (deferred, same policy as
 	// _unsupported-sig), but referencing `ld` diagnoses its unrepresentable
-	// "flt128" type instead of the pre-2908 abort a raw "user"/unresolved
-	// prim type-name would otherwise cause downstream.
+	// type instead of the abort an unresolved prim type-name would otherwise
+	// cause downstream.
 	// Covers: sa_expression "id" branch -> requireSupportedCGlobal, E_UnsupportedCGlobalType
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
@@ -484,7 +462,7 @@ TEST(sa_error, c_global_unsupported_type)
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("cannot reference C global variable 'ld'"), string::npos);
-	ASSERT_NE(sa.find("'flt128'"), string::npos);
+	ASSERT_NE(sa.find("'__int128'"), string::npos);
 }
 
 TEST(sa_error, call_arg_ptr_mismatch_c)
@@ -553,7 +531,7 @@ TEST(sa_error, callback_sig_width_mismatch)
 
 TEST(sa_error, c_unsupported_func_ret)
 {
-	// `void set_cb(long double (*cb)(int));` -- the function pointer's return
+	// `void set_cb(__int128 (*cb)(int));` -- the function pointer's return
 	// type, not a parameter, is unrepresentable.
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";

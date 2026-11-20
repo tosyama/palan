@@ -122,9 +122,9 @@ VReg PlnVCodeGen::lowerExpr(const Expr& expr, VFunc& func)
         case ExprKind::Convert: {
             auto& e = static_cast<const ConvertExpr&>(expr);
             VReg src = lowerExpr(*e.src, func);
-            bool fromF = e.from == VRegType::Float32 || e.from == VRegType::Float64;
-            bool toF   = e.to   == VRegType::Float32 || e.to   == VRegType::Float64;
-            if ((e.from == VRegType::Uint64 && toF) || (fromF && e.to == VRegType::Uint64))
+            // The x87 unit reads a uint64 exactly itself (PlnX86CodeGen).
+            bool fromF = isFloat(e.from) || isX87(e.from);
+            if ((e.from == VRegType::Uint64 && isFloat(e.to)) || (fromF && e.to == VRegType::Uint64))
                 return lowerU64FloatConvert(src, e.from, e.to, func);
             VReg dst = allocVReg();
             func.instrs.push_back(Convert{dst, src, e.from, e.to});
@@ -402,7 +402,7 @@ static vector<pair<int, VRegType>> eightbytePieces(int size)
 
 static bool isWholeEightbyte(const Eightbyte& eb)
 {
-    return isFloat(eb.type) || eb.size == intWidth(eb.type);
+    return isFloat(eb.type) || isX87(eb.type) || eb.size == intWidth(eb.type);
 }
 
 VReg PlnVCodeGen::loadEightbyte(VReg ptr, int offset, const Eightbyte& eb, VFunc& func)
@@ -476,7 +476,7 @@ vector<VReg> PlnVCodeGen::lowerCCallArgs(const CCCallExpr& expr, vector<StructAr
                 ebs.push_back({w == 1 ? VRegType::Int8 : w == 2 ? VRegType::Int16
                                : w <= 4 ? VRegType::Int32 : VRegType::Int64, w});
             }
-        spans.push_back({args.size(), ebs.size(), inMemory});
+        spans.push_back({args.size(), ebs.size(), inMemory, sa.align});
         for (size_t k = 0; k < ebs.size(); k++)
             args.push_back(loadEightbyte(v, 8 * (int)k, ebs[k], func));
     }
@@ -494,10 +494,15 @@ VReg PlnVCodeGen::lowerStructRetDest(const std::optional<StructRet>& sr, vector<
 }
 
 // A struct of up to 16 bytes comes back as its eightbytes in fresh vregs...
-std::pair<vector<VReg>, vector<VRegType>> PlnVCodeGen::structRetDsts(const std::optional<StructRet>& sr)
+// A flo80 a statement drops still gets one: it must be popped off the x87 stack.
+std::pair<vector<VReg>, vector<VRegType>> PlnVCodeGen::structRetDsts(const std::optional<StructRet>& sr,
+                                                                     bool hasRet, VRegType retType)
 {
     std::pair<vector<VReg>, vector<VRegType>> out;
-    if (!sr) return out;
+    if (!sr) {
+        if (hasRet && isX87(retType)) out = {{allocVReg()}, {retType}};
+        return out;
+    }
     for (const Eightbyte& eb : sr->eightbytes) {
         out.first.push_back(allocVReg());
         out.second.push_back(eb.type);
@@ -508,6 +513,7 @@ std::pair<vector<VReg>, vector<VRegType>> PlnVCodeGen::structRetDsts(const std::
 // ...which are stored through the destination right after the call.
 void PlnVCodeGen::storeStructRet(VReg dest, const std::optional<StructRet>& sr, const vector<VReg>& dsts, VFunc& func)
 {
+    if (!sr) return;
     for (size_t i = 0; i < dsts.size(); i++)
         storeEightbyte(dest, 8 * (int)i, dsts[i], sr->eightbytes[i], func);
 }
@@ -518,7 +524,7 @@ void PlnVCodeGen::lowerCCCallExpr(const CCCallExpr& expr, VFunc& func)
     VReg dest = lowerStructRetDest(expr.structRet, prefix, func);
     vector<StructArgSpan> spans;
     vector<VReg> args = lowerCCallArgs(expr, spans, func, move(prefix));
-    auto [dsts, types] = structRetDsts(expr.structRet);
+    auto [dsts, types] = structRetDsts(expr.structRet, expr.hasRet, expr.retType);
     func.instrs.push_back(CallC{expr.name, args, dsts, types, std::nullopt, spans}); // LCOV_EXCL_BR_LINE
     storeStructRet(dest, expr.structRet, dsts, func);
 }
@@ -528,7 +534,7 @@ void PlnVCodeGen::lowerPlnCallExpr(const PlnCallExpr& expr, VFunc& func)
     vector<VReg> args;
     VReg dest = lowerStructRetDest(expr.structRet, args, func);
     for (VReg a : lowerArgs(expr.args, func)) args.push_back(a);
-    auto [dsts, types] = structRetDsts(expr.structRet);
+    auto [dsts, types] = structRetDsts(expr.structRet, expr.hasRet, expr.retType);
     func.instrs.push_back(CallPln{expr.name, args, dsts, types, true}); // LCOV_EXCL_BR_LINE
     storeStructRet(dest, expr.structRet, dsts, func);
 }
@@ -539,7 +545,7 @@ void PlnVCodeGen::lowerPtrCallStmt(const PtrCallExpr& expr, VFunc& func)
     VReg dest = lowerStructRetDest(expr.structRet, args, func);
     VReg callee = lowerExpr(*expr.callee, func);
     for (VReg a : lowerArgs(expr.args, func)) args.push_back(a);
-    auto [dsts, types] = structRetDsts(expr.structRet);
+    auto [dsts, types] = structRetDsts(expr.structRet, expr.hasRet, expr.retType);
     func.instrs.push_back(CallC{"", args, dsts, types, callee}); // LCOV_EXCL_BR_LINE
     storeStructRet(dest, expr.structRet, dsts, func);
 }
@@ -1159,7 +1165,7 @@ VProg PlnVCodeGen::generate(const Module& module)
             bindStatic(g.name, g.label, g.type);
         // Pre-declare single named return variable
         auto zeroInit = [&](VReg r, VRegType t) {
-            if (t == VRegType::Float32 || t == VRegType::Float64)
+            if (isFloat(t) || isX87(t))
                 vf.instrs.push_back(InitVarF{r, t, addFloatLiteral("0.0", t)});
             else
                 vf.instrs.push_back(InitVar{r, t, 0});

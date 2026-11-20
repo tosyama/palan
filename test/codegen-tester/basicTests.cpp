@@ -1571,3 +1571,25 @@ TEST(codegen, bit_field)
 
     ASSERT_EQ(execTestCommand("as " + asmf + " -o out/081_bit_field.o"), "");
 }
+
+// A flo80 stays in memory: the x87 unit loads and stores it around each
+// operation, and it is copied 16 bytes at a time.
+TEST(codegen, flo80)
+{
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/082_flo80.sa.json";
+    string asmf = "out/082_flo80.s";
+    ASSERT_EQ(run_codegen(sa, asmf), "");
+    string asm_text = readFile(asmf);
+    ASSERT_NE(asm_text.find("\t.tfloat 2.5\n"), string::npos);
+    // The parameter after seven integers is at the next 16-byte boundary.
+    ASSERT_NE(asm_text.find("\tfldt 32(%rbp)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tmovdqu %xmm8, 16(%rsp)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfdivrp %st, %st(1)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfucomip %st(1), %st\n\tfstp %st(0)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfchs\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfstpl -16(%rsp)\n"), string::npos);
+    // The returned value is taken off the x87 stack.
+    ASSERT_NE(asm_text.find("flo80\n\taddq $32, %rsp\n\tfstpt "), string::npos);
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/082_flo80.o"), "");
+}

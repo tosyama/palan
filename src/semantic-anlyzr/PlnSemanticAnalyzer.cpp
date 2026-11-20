@@ -785,7 +785,7 @@ void PlnSemanticAnalyzer::validateSyscallDecl(json& funcDef)
 	auto isAbiUnrepresentable = [](const json& vt) {
 		if (vt.value("type-kind", "") != "prim") return false;
 		string tn = vt.value("type-name", "");
-		return tn == "flo32" || tn == "flo64"
+		return tn == "flo32" || tn == "flo64" || tn == "flo80"
 		       || tn == "int8" || tn == "int16" || tn == "uint8" || tn == "uint16"
 		       || tn == "bool";
 	};

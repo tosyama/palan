@@ -170,7 +170,7 @@ struct ConstVal {
 	enum class Kind { Int, Uint, Flo } kind;
 	int64_t  i = 0;
 	uint64_t u = 0;
-	double   f = 0;
+	long double f = 0;  // the widest float, flo80, so a flo80 constant keeps its precision
 };
 
 class PlnSemanticAnalyzer {

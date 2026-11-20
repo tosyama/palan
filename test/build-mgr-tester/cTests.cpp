@@ -515,6 +515,17 @@ TEST(build_mgr, c_struct_byval) {
 		"variadic_after 0.5 7 2.25 9\n");
 }
 
+TEST(build_mgr, c_flo80) {
+	// long double on the stack after the registers, in a struct by value, and
+	// alone in a returned struct, against gcc's code; C calls a cexport back.
+	cleanTestEnv();
+	ASSERT_EQ(runWithCObj("439_c_flo80"),
+		"late 1 7 0.50 9 0.25\n17.750\n"
+		"mix 3 1.50\n4 1.75 / 3 1.50\n"
+		"1.2500\n"
+		"0.66666666666666666668\n");
+}
+
 TEST(build_mgr, c_packed_aligned) {
 	// gcc's side prints its own layout and what it received through each path.
 	cleanTestEnv();

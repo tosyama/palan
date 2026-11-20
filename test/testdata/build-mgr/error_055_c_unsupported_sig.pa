@@ -1,7 +1,5 @@
-cinclude <math.h>;
+cinclude <complex.h>;
 
-// `long double` maps to c2ast's "flt128" prim type-name, which is not in
-// Palan's PrimTypeNames -- this used to abort (rc=134) at
-// PlnTypeRegistry::fromJson ("unknown prim type-name: flt128") the moment
-// acosl's result was consumed. Now it is diagnosed at the call.
-flo64 y = acosl(1.0);
+// An unrepresentable C type in a signature used to abort (rc=134) the moment
+// the call's result was consumed; it is diagnosed at the call.
+flo64 y = cabs(0);

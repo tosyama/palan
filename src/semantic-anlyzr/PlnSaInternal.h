@@ -56,11 +56,15 @@ inline json strLitType() {
 // True if `t` is a non-float primitive type (int8..uint64). Shared by every
 // operator that requires integer operands (logical &&/||/!, bitwise &/|/^/~)
 // so the "not a float, and not a pointer/struct" check has one definition.
-inline bool isIntegerPrim(const PlnType* t) {
-	if (t->kind != PlnType::Kind::Prim) return false;
+inline bool isFloatPrim(const PlnType* t) {
+	if (t == nullptr || t->kind != PlnType::Kind::Prim) return false;
 	auto pn = static_cast<const PrimType*>(t)->name;
-	return pn != PrimType::Name::Float32 && pn != PrimType::Name::Float64
-	    && pn != PrimType::Name::Void;
+	return pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64 || pn == PrimType::Name::Float80;
+}
+
+inline bool isIntegerPrim(const PlnType* t) {
+	if (t->kind != PlnType::Kind::Prim || isFloatPrim(t)) return false;
+	return static_cast<const PrimType*>(t)->name != PrimType::Name::Void;
 }
 
 inline bool intLiteralFitsBits(const string& value, int bits, bool isSigned)
@@ -100,12 +104,6 @@ inline bool intLiteralFits(const string& value, PrimType::Name pn)
 inline bool isBoolPrim(const PlnType* t) {
 	return t != nullptr && t->kind == PlnType::Kind::Prim
 	    && static_cast<const PrimType*>(t)->name == PrimType::Name::Bool;
-}
-
-inline bool isFloatPrim(const PlnType* t) {
-	if (t == nullptr || t->kind != PlnType::Kind::Prim) return false;
-	auto pn = static_cast<const PrimType*>(t)->name;
-	return pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64;
 }
 
 // True if a value may be written through this pointer-typed value-type
@@ -481,6 +479,7 @@ inline int elemSizeBytes(const string& typeName)
 	if (typeName == "int16" || typeName == "uint16") return 2;
 	if (typeName == "int32" || typeName == "uint32" || typeName == "flo32") return 4;
 	if (typeName == "int64" || typeName == "uint64" || typeName == "flo64") return 8;
+	if (typeName == "flo80") return 16;
 	return -1;
 }
 
@@ -507,11 +506,12 @@ inline int64_t inPlaceBytes(const json& elem, const map<string, StructDef>& defs
 }
 
 // SysV AMD64 ABI (§3.2.3) eightbyte classes for a struct passed or returned by value.
-enum class EightbyteClass { Integer, Sse };
+enum class EightbyteClass { Integer, Sse, X87 };
 struct Eightbyte {
 	EightbyteClass cls;
 	int size;            // only the last eightbyte may be <8
 	bool flo64 = false;  // taken up by one flo64 (codegen loads it whole)
+	bool flo80 = false;  // starts a flo80
 };
 
 // Recursively marks the eightbytes covered by one field as INTEGER; SSE is
@@ -534,6 +534,7 @@ inline void classifySysVWalk(const StructDef& d, int base, int nEightbytes,
 	};
 	auto markPrim = [&](int offset, const string& name, int size) {
 		if (name == "flo64") ebs[offset / 8].flo64 = true;
+		else if (name == "flo80") ebs[offset / 8].flo80 = true;
 		else if (name != "flo32") markInt(offset, size);  // Sse is the default
 	};
 	for (auto& f : d.fields) {
@@ -569,7 +570,10 @@ inline void classifySysVWalk(const StructDef& d, int base, int nEightbytes,
 // Classifies a struct passed or returned by value per the System V AMD64 ABI
 // (§3.2.3): over 16 bytes or with an unaligned field is MEMORY class (an empty
 // vector here); otherwise it travels in up to two eightbytes, each INTEGER or SSE.
-inline vector<Eightbyte> classifySysVStruct(const StructDef& def, const map<string, StructDef>& defs)
+// A flo80 makes it MEMORY class too, except a returned struct of 16 bytes,
+// which is then that one flo80 alone and comes back in %st(0).
+inline vector<Eightbyte> classifySysVStruct(const StructDef& def, const map<string, StructDef>& defs,
+                                            bool forReturn)
 {
 	if (def.totalSize > 16 || def.hasUnalignedField) return {};  // MEMORY class
 
@@ -580,16 +584,20 @@ inline vector<Eightbyte> classifySysVStruct(const StructDef& def, const map<stri
 	for (int i = 0; i < nEightbytes; i++)
 		result.push_back({EightbyteClass::Sse, (i == nEightbytes - 1) ? tailWidth : 8});
 	classifySysVWalk(def, 0, nEightbytes, defs, result);
+	for (auto& eb : result)
+		if (eb.flo80)
+			return forReturn && def.totalSize == 16 ? vector<Eightbyte>{{EightbyteClass::X87, 16}} : vector<Eightbyte>{};
 	return result;
 }
 
 // The "eightbytes" list of a "struct-ret" or "struct-arg" descriptor; empty
 // for MEMORY class.
-inline json eightbytesJson(const StructDef& def, const map<string, StructDef>& defs)
+inline json eightbytesJson(const StructDef& def, const map<string, StructDef>& defs, bool forReturn)
 {
 	json ebs = json::array();
-	for (auto& eb : classifySysVStruct(def, defs)) {
-		json j = {{"class", eb.cls == EightbyteClass::Integer ? "int" : "sse"}, {"size", eb.size}}; // LCOV_EXCL_BR_LINE
+	for (auto& eb : classifySysVStruct(def, defs, forReturn)) {
+		const char* cls = eb.cls == EightbyteClass::Integer ? "int" : eb.cls == EightbyteClass::Sse ? "sse" : "x87";
+		json j = {{"class", cls}, {"size", eb.size}}; // LCOV_EXCL_BR_LINE
 		if (eb.flo64) j["flo64"] = true; // LCOV_EXCL_BR_LINE
 		ebs.push_back(move(j));
 	}
