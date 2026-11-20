@@ -1,0 +1,4 @@
+type big { int64 v; };
+func big(int32 n) -> big b { }
+func big(int16 n) -> big b { }
+big a = 12;

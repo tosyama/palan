@@ -18,7 +18,7 @@ TEST(sa, raw_ptr_field)
 	// Node { int64 val; @Node next; } — int64(8) + ptr(8) = 16
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "n");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 }
 

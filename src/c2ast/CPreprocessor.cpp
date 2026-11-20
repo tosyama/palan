@@ -29,6 +29,7 @@ public:
 };
 
 static int process_include(CPreprocessor& cpp, CLexer& lexer, int n, vector<CToken*>* tokens);
+static string headerName(const vector<CToken*>& toks);
 static int process_define(CPreprocessor& cpp, CLexer& lexer, int n);
 static int process_undef(CPreprocessor& cpp, CLexer& lexer, int n);
 static int process_if(vector<IfInfo> &ifstack, CPreprocessor& cpp, CLexer& lexer, int n);
@@ -302,12 +303,47 @@ CToken* get_defined_id_token(list<CToken*> &unprocessed_tokens)
 	return id_token;
 }
 
+// `__has_include ( header )` after its name `t`, as the number 1 or 0.
+CToken* CPreprocessor::hasInclude(const CToken* t, list<CToken*> &unprocessed_tokens)
+{
+	auto isPunc = [](const CToken* p, int c) { return p->type == TT_PUNCTUATOR && p->info.punc == c; };
+	vector<CToken*> operand;
+	bool closed = false;
+	if (!unprocessed_tokens.empty() && isPunc(unprocessed_tokens.front(), '(')) {
+		delete unprocessed_tokens.front(); // LCOV_EXCL_BR_LINE
+		unprocessed_tokens.pop_front();
+		while (!unprocessed_tokens.empty()) {
+			CToken* p = unprocessed_tokens.front();
+			unprocessed_tokens.pop_front();
+			if (isPunc(p, ')')) { delete p; closed = true; break; }
+			operand.push_back(p);
+		}
+	}
+	string name = closed ? headerName(operand) : "";
+	for (CToken* p : operand) delete p;
+	if (name.empty())
+		throw CPreprocessError(PlnC2AstMessage::getMessage(E_InvalidHasIncludeSyntax),
+			t->lexer_no, t->token0_no);
+	bool found = CFileInfo::getFilePath(name, lexers[t->lexer_no]->infile.fname, include_paths) != "";
+	CToken* number = new CToken(TT_PP_NUMBER, t->lexer_no, t->token0_no); // LCOV_EXCL_BR_LINE
+	number->info.str = new string(found ? "1" : "0"); // LCOV_EXCL_BR_LINE
+	return number;
+} // LCOV_EXCL_BR_LINE
+
 vector<CToken*> CPreprocessor::scan_macro(list<CToken*> &unprocessed_tokens, bool in_if_directive)
 {
 	vector<CToken*> result_tokens;
 	while (!unprocessed_tokens.empty()) {
 		CToken* t = unprocessed_tokens.front();
 
+		// Ahead of macro expansion, which would replace `linux` in <linux/a.h>.
+		// predefined.h still defines __has_include, for "#ifdef __has_include".
+		if (in_if_directive && t->type == TT_ID && *t->info.id == "__has_include") {
+			unprocessed_tokens.pop_front();
+			result_tokens.push_back(hasInclude(t, unprocessed_tokens));
+			delete t; // LCOV_EXCL_BR_LINE
+			continue;
+		}
 		if (t->type == TT_ID) {
 			CMacro* m = macro_exists(*t->info.id);
 			// A function-like macro's name not followed by '(' stays a plain name.
@@ -377,6 +413,40 @@ vector<CToken*> CPreprocessor::expandObjectMacroBody(CMacro *m)
 		copy->add_to_hide_set(m);
 		unprocessed.push_back(copy);
 	}
+	return scan_macro(unprocessed);
+}
+
+// '#' and a digit can't spell one C identifier, so a placeholder never names a
+// macro and survives every rescan.
+int CPreprocessor::placeholderIndex(const CToken *t)
+{
+	if (t->type != TT_ID) return -1;
+	const string &s = *t->info.id;
+	if (s.size() < 2 || s[0] != '#') return -1;
+	int n = 0;
+	for (size_t i = 1; i < s.size(); i++) {
+		if (!isdigit((unsigned char)s[i])) return -1;
+		n = n * 10 + (s[i] - '0');
+	}
+	return n;
+}
+
+vector<CToken*> CPreprocessor::expandFunctionMacroBody(CMacro *m, string &unsupported)
+{
+	if (m->variadic) { unsupported = "__VA_ARGS__"; return {}; }
+	for (CToken* t : m->body) {
+		if (t->type != TT_PUNCTUATOR) continue;
+		if (t->info.punc == '#') { unsupported = "#"; return {}; }
+		if (t->info.punc == '##') { unsupported = "##"; return {}; }
+	}
+	vector<list<CToken*> > args;
+	for (size_t i = 0; i < m->params.size(); i++) {
+		CToken* p = new CToken(TT_ID, m->lexer_no, 0); // LCOV_EXCL_BR_LINE
+		p->info.id = new string("#" + to_string(i)); // LCOV_EXCL_BR_LINE
+		args.push_back({p});
+	}
+	vector<CToken*> body = expand_macro_tokens(m, args, NULL);
+	list<CToken*> unprocessed(body.begin(), body.end());
 	return scan_macro(unprocessed);
 }
 
@@ -615,12 +685,31 @@ void is_not_eol(CToken0& t)
 	}
 }
 
+// The header named by tokens `"a.h"` or `<a.h>`, as getFilePath takes it; empty
+// for anything else.
+static string headerName(const vector<CToken*>& toks)
+{
+	if (toks.size() == 1 && toks[0]->type == TT_STR) return *toks[0]->info.str;
+	if (toks.empty() || toks.front()->type != TT_PUNCTUATOR || toks.front()->info.punc != '<'
+			|| toks.back()->type != TT_PUNCTUATOR || toks.back()->info.punc != '>')
+		return "";
+	string name;
+	for (CToken* t : toks) {
+		switch (t->type) {
+			case TT_ID:      name += *t->info.id; break;
+			case TT_PUNCTUATOR: name += (char)t->info.punc; break;
+			case TT_PP_NUMBER:  name += *t->info.str; break;
+			default: break;
+		}
+	}
+	return name;
+}
+
 int process_include(CPreprocessor& cpp, CLexer& lexer, int n, vector<CToken*>* tokens)
 {
 	vector<CToken0> &token0s = lexer.tokens;
 	is_not_eol(token0s[n]);
 
-	int start = n;
 	n = next_pos(token0s, n);
 	CToken0 &fname_t = token0s[n];
 
@@ -640,21 +729,8 @@ int process_include(CPreprocessor& cpp, CLexer& lexer, int n, vector<CToken*>* t
 		n = m;
 
 		vector<CToken*> expanded = cpp.scan_macro(unprocessed);
-
-		if (expanded.size() == 1 && expanded[0]->type == TT_STR) {
-			inc_path = *expanded[0]->info.str;
-		} else if (!expanded.empty()
-				&& expanded.front()->type == TT_PUNCTUATOR && expanded.front()->info.punc == '<'
-				&& expanded.back()->type  == TT_PUNCTUATOR && expanded.back()->info.punc == '>') {
-			for (CToken* t : expanded) {
-				switch (t->type) {
-					case TT_ID:      inc_path += *t->info.id; break;
-					case TT_PUNCTUATOR: inc_path += (char)t->info.punc; break;
-					case TT_PP_NUMBER:  inc_path += *t->info.str; break;
-					default: break;
-				}
-			}
-		} else {
+		inc_path = headerName(expanded);
+		if (inc_path.empty()) {
 			for (CToken* t : expanded) delete t;
 			throw CPreprocessError(PlnC2AstMessage::getMessage(E_IncludeExpectsFilename),
 				lexer.no, (int)(&fname_t - &token0s[0]));
@@ -666,9 +742,8 @@ int process_include(CPreprocessor& cpp, CLexer& lexer, int n, vector<CToken*>* t
 			throw CPreprocessError(PlnC2AstMessage::getMessage(E_IncludeNotFound, inc_path),
 				lexer.no, (int)(&fname_t - &token0s[0]));
 		}
-		tokens->push_back(new CToken(TT_INCLUDE, lexer.no, start)); // LCOV_EXCL_BR_LINE
 		if (cpp.once_included.count(foundpath) == 0) {
-			cpp.preprocess(foundpath, tokens->back()->info.tokens);
+			cpp.preprocess(foundpath, tokens);
 		}
 		return n;
 	}
@@ -680,9 +755,8 @@ int process_include(CPreprocessor& cpp, CLexer& lexer, int n, vector<CToken*>* t
 			lexer.no, (int)(&fname_t - &token0s[0]));
 	}
 
-	tokens->push_back(new CToken(TT_INCLUDE, lexer.no, start)); // LCOV_EXCL_BR_LINE
 	if (cpp.once_included.count(foundpath) == 0) {
-		cpp.preprocess(foundpath, tokens->back()->info.tokens);
+		cpp.preprocess(foundpath, tokens);
 	}
 
 	if (!fname_t.is_eol) {
@@ -1430,16 +1504,10 @@ void CPreprocessor::dumpMacroState(ostream& os)
 		os << "#pragma palan_once_included \"" << path << "\"\n";
 }
 
-void CPreprocessor::dumpPreprocessed(ostream& os, vector<CToken*> *tokens)
+void CPreprocessor::dumpPreprocessed(ostream& os)
 {
-	if (!tokens) {
-		tokens = &top_tokens;
-	}
-
-	for (CToken* t: *tokens) {
-		if (t->type == TT_INCLUDE) {
-			dumpPreprocessed(os, t->info.tokens);
-		} else if (t->type == TT_ID) {
+	for (CToken* t: top_tokens) {
+		if (t->type == TT_ID) {
 			os << *t->info.id;
 		} else if (t->type == TT_PP_NUMBER || t->type == TT_CHAR) {
 			os << *t->info.str;

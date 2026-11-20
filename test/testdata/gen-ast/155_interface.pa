@@ -7,6 +7,7 @@ type Hidden { int32 a; };
 export type Shown { Hidden h; @FILE fp; };
 export type Color enum { Red, Green = 5 };
 export type Size = int64;
+export type Handle = opaque Hidden;
 const N = 3 * (BUFSIZ + 1);
 []int32 lit = [1, 2, 3];
 []$[]int32 rows = [[1, 2], [3, 4]];
@@ -32,4 +33,5 @@ export func h() { }
 export func k(int32 a, int32 b = N + 1, Color c = Color.Green, @[]uint8 s = "a\tb", bool on = true, flo64 d = -1.5) -> int32 { return a; }
 export func va(int32 a, [...]@Shown xs) { }
 export syscall sys(int64 x) -> int64 = 39;
+export func close(Handle h) release { }
 func hidden() -> int32 { return 1; }

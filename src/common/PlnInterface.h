@@ -15,7 +15,7 @@ std::string writeInterface(const nlohmann::json& ast);
 
 // The interface of the library whose main source is `main`, with `internals` the
 // other modules it reaches. Also throws std::runtime_error on a public declaration
-// needing a local header.
+// needing a local header or an internal module's type.
 std::string writeLibraryInterface(const nlohmann::json& main, const std::vector<nlohmann::json>& internals);
 
 // An AST type as Palan source writes it (`@[]uint8`, `[...]@utf8`).

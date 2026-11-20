@@ -1501,6 +1501,30 @@ TEST(gen_ast, global_decl) {
 	ASSERT_EQ(stmts[5]["stmt-type"], "not-impl");
 }
 
+// An exported global is marked as an exported type is; a permit names an
+// imported one with its alias as one name.
+TEST(gen_ast, export_global) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/165_export_global.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const auto& stmts = jout["ast"]["statements"];
+	ASSERT_EQ(stmts.size(), 6);
+	ASSERT_EQ(stmts[0]["global"], true);
+	ASSERT_EQ(stmts[0]["export"], true);
+	ASSERT_EQ(stmts[1]["stmt-type"], "global-permit");
+	ASSERT_EQ(stmts[1]["name"], "count");
+	ASSERT_EQ(stmts[2]["export"], true);
+	ASSERT_EQ(stmts[2]["vars"][0]["name"], "arr");
+	ASSERT_EQ(stmts[3]["stmt-type"], "global-permit");
+	ASSERT_EQ(stmts[3]["name"], "M.count");
+	ASSERT_EQ(stmts[3]["funcs"][1]["writable"], true);
+	ASSERT_EQ(stmts[4]["name"], "M.count");
+	ASSERT_TRUE(stmts[4]["funcs"].empty());
+	ASSERT_EQ(stmts[5]["stmt-type"], "not-impl");
+	ASSERT_FALSE(stmts[5].contains("export"));
+}
+
 TEST(gen_ast, str_lit_bytes) {
 	cleanTestEnv();
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/158_str_lit_bytes.pa");

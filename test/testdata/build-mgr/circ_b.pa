@@ -1,0 +1,5 @@
+cinclude <stdio.h>;
+import "circ_a.pa";
+func mk() -> int32 { printf("b sees %d\n", geta()); return 2; }
+global int32 bv = mk() for getb;
+export func getb() -> int32 { return bv; }

@@ -14,6 +14,7 @@ func keep([...]P ps) -> P {
 func bsum([...]@P ps) -> int32 t {
 	for @p in ps { t + p.x -> t; }
 }
+func id(@P p) -> @P { return p; }
 func scale(int32 k, [...]int32 xs) -> int32 t {
 	for @!x in xs { x * k -> x; }
 	for copy x in xs { t + x -> t; }
@@ -27,4 +28,5 @@ mtrace();
 	printf("%d %d %d\n", k.x, a.x, b.x);
 	printf("%d\n", bsum(@a, @b, @k));
 	printf("%d\n", scale(2, 1, 2, 3));
+	printf("%d\n", bsum(id(@mk(6)), @a, id(@mk(7))));
 }

@@ -18,6 +18,8 @@ using namespace std;
 // regardless of the source field's actual signedness.
 static Eightbyte toEightbyte(const json& eb) {
     int size = eb["size"].get<int>();
+    if (eb["class"] == "x87")
+        return {VRegType::Float80, size};
     if (eb["class"] == "sse")
         return {size == 4 ? VRegType::Float32 : VRegType::Float64, size, eb.value("flo64", false)};
     VRegType t = size == 1 ? VRegType::Int8 : size == 2 ? VRegType::Int16
@@ -38,6 +40,7 @@ static VRegType toVRegType(const json& vt) {
     if (name == "uint64") return VRegType::Uint64;
     if (name == "flo32")  return VRegType::Float32;
     if (name == "flo64")  return VRegType::Float64;
+    if (name == "flo80")  return VRegType::Float80;
     // SA guarantees a bool holds 0/1, so it needs nothing beyond a uint8.
     if (name == "bool")   return VRegType::Uint8;
     cerr << PlnCodegenMessage::getMessage(E_UnknownType, name) << endl;
@@ -240,7 +243,7 @@ static unique_ptr<Expr> deserializeExpr(const json& j)
                     continue;
                 }
                 const json& sa = arg["struct-arg"];
-                CCCallExpr::StructArg info{sa["size"].get<int>(), {}};
+                CCCallExpr::StructArg info{sa["size"].get<int>(), sa["align"].get<int>(), {}};
                 for (auto& eb : sa["eightbytes"])
                     info.eightbytes.push_back(toEightbyte(eb));
                 e->structArgs.push_back(move(info));
@@ -315,6 +318,10 @@ static unique_ptr<Expr> deserializeExpr(const json& j)
         e->offset   = j["offset"];
         e->type     = toVRegType(j["value-type"]);
         e->addrOnly = j.value("addr-only", false);
+        if (j.contains("bits")) {
+            e->bitShift = j["bits"]["shift"];
+            e->bitWidth = j["bits"]["width"];
+        }
         return e;
     }
 
@@ -430,6 +437,10 @@ static unique_ptr<Stmt> deserializeStmt(const json& j)
         s->offset = j["offset"];
         s->type   = toVRegType(j["value-type"]);
         s->value  = deserializeExpr(j["value"]);
+        if (j.contains("bits")) {
+            s->bitShift = j["bits"]["shift"];
+            s->bitWidth = j["bits"]["width"];
+        }
         return s;
     }
     cerr << PlnCodegenMessage::getMessage(E_UnknownStmtType, stmt_type) << endl;
@@ -478,7 +489,7 @@ Module deserialize(const json& sa)
     }
 
     for (auto& g : sa.value("globals", json::array()))
-        mod.globalLabels.push_back(g["label"]);
+        mod.globals.push_back({g["label"], g.value("export", false)});
 
     if (sa.contains("functions")) {
         for (auto& jf : sa["functions"]) {

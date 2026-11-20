@@ -21,6 +21,8 @@ string PlnBuildMgrMessage::getMessage(PlnBuildMgrMessageCode msg_code, string ar
 				" -o, --output=<file>   Write binary to file (do not auto-run).\n"
 				"                       With --lib, the output directory.\n"
 				" --lib                 Build the library the source file is the main source of.\n"
+				" --debug               Keep the run-time checks (the default without -o).\n"
+				" --release             Leave the run-time checks out (the default with -o).\n"
 				" --target=<name>       Specify the target. Only " PALAN_TARGET " is supported.\n"
 				" -c, --clean           Remove all cached work files.\n"
 				" -v, --version         Display version.\n"
@@ -36,9 +38,12 @@ string PlnBuildMgrMessage::getMessage(PlnBuildMgrMessageCode msg_code, string ar
 			BOOST_ASSERT(arg1 != "\x01");
 			return "palan: could not open file '" + arg1 + "'";
 
-		case E_PalanDirNotDirectory:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "palan: '" + arg1 + "' exists but is not a directory";
+		case E_CouldNotCreateDir:
+			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
+			return "palan: could not create directory '" + arg1 + "': " + arg2;
+
+		case E_NoWorkDir:
+			return "palan: neither PALAN_WORK nor HOME is set";
 
 		case E_FailedToExecute:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
@@ -63,16 +68,10 @@ string PlnBuildMgrMessage::getMessage(PlnBuildMgrMessageCode msg_code, string ar
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01" && arg3 != "\x01");
 			return "palan: '" + arg1 + "' belongs to library '" + arg2 + "', not '" + arg3 + "'";
 
-		case E_LibModuleWithGlobals:
-			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
-			return "palan: '" + arg1 + "' permits a function to use its global '" + arg2
-				+ "', but a library's top level never runs";
-
 		case E_LibSymbolMismatch:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
 			return "palan: the interface of '" + arg1 + "' declares '" + arg2
-				+ "', which its object does not define; a public declaration may use a private type of an internal module, through an alias "
-				"or as a type with its own '->'";
+				+ "', which its object does not define";
 
 		case E_LibraryNotFound:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");

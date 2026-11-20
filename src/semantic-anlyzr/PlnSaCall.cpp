@@ -16,6 +16,7 @@ static json makeTempExpr(json body, json value, json release)
 	json out = {{"expr-type","temp"},{"body",move(body)},{"release",move(release)}};
 	if (value.contains("value-type")) out["value-type"] = value["value-type"];
 	if (value.contains("category")) out["category"] = value["category"];
+	if (value.value("resized", false)) out["resized"] = true;
 	out["value"] = move(value);
 	return out;
 }
@@ -70,10 +71,11 @@ const json* PlnSemanticAnalyzer::findPlnFuncDef(const json& funcDef) const
 }
 
 // One function brought in more than once (a header included again, a module
-// imported again) has one key.
+// imported again, a C-named function and its C declaration) has one key.
 string PlnSemanticAnalyzer::calleeKey(const json& def, bool isC) const
 {
 	if (isC) return "c:" + cLinkName(def).get<string>();
+	if (def.value("c-export", false)) return "c:" + def["name"].get<string>();
 	string key = def.value("_module", moduleId_) + ":" + def["name"].get<string>();
 	for (auto& p : def.value("parameters", json::array()))
 		key += "|" + p["var-type"].dump();
@@ -104,9 +106,12 @@ vector<Callee> PlnSemanticAnalyzer::findCalleesByAlias(const string& alias, cons
 vector<Callee> PlnSemanticAnalyzer::findCallees(const string& name) const
 {
 	vector<Callee> cands;
-	set<string> seen;
+	map<string, size_t> seen;
+	// A C-named function takes the place of its C declaration, keeping its own types.
 	auto add = [&](const json& def, bool isC) {
-		if (seen.insert(calleeKey(def, isC)).second) cands.push_back({&def, isC});
+		auto [it, added] = seen.emplace(calleeKey(def, isC), cands.size());
+		if (added) cands.push_back({&def, isC});
+		else if (!isC && cands[it->second].isC) cands[it->second] = {&def, false};
 	};
 	for (auto it = cFuncScopes.rbegin(); it != cFuncScopes.rend(); ++it) {
 		auto f = it->find(name);
@@ -199,9 +204,8 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
                                    bool isCFunc, const string& funcName)
 {
 	const json& paramVT = param["var-type"];
-	// A string literal never fits a struct parameter as it is.
-	if (arg.ast.value("expr-type", "") == "lit-str" && literalConversion(arg.ast, paramVT) != arg.ast) // LCOV_EXCL_BR_LINE
-		return ArgFit::Converted;
+	// A literal never fits a struct parameter as it is.
+	if (literalConversion(arg.ast, paramVT) != arg.ast) return ArgFit::Converted;
 	auto fitOf = [&](const json& ast, const json& sa0) {
 		json sa = takesVarrData(sa0["value-type"], &paramVT, isCFunc) ? varrData(sa0) : sa0;
 		if (callArgMismatch(ast, sa, param, argIdx, isCFunc, funcName)) return ArgFit::None;
@@ -253,6 +257,7 @@ string PlnSemanticAnalyzer::argTypesText(const vector<CallArg>& args)
 		const json& vt = !a.pending ? a.sa["value-type"]
 		               : a.chained && a.probe.contains("value-type") ? a.probe["value-type"]
 		               : a.probe;
+		if (a.spread) text += "...";
 		text += vt.is_object() ? typeDisplayName(vt) // LCOV_EXCL_BR_LINE
 		      : namesOverloadedFunc(a.ast) ? string("function")
 		      : string("literal");
@@ -298,15 +303,16 @@ string PlnSemanticAnalyzer::calleesText(const string& name, const vector<Callee>
 // Among several functions of one name, the one every argument fits; when more
 // than one fits, the one every argument matches exactly, or else the one every
 // argument matches but for a writable borrow given as read-only. Those needing
-// a string literal converted are only looked at when no other fits, and are
+// a literal converted are only looked at when no other fits, and are
 // ranked the same way among themselves, a converted argument as exact.
-Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name,
-                                         const vector<Callee>& cands, const vector<CallArg>& args)
+CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<Callee>& cands,
+                                               const vector<CallArg>& args)
 {
 	struct Fitting {
 		vector<Callee> viable, exact, narrowed;
 		bool unranked = false;
 	} plain, converting;
+	bool spread = !args.empty() && args.back().spread;
 	for (auto& c : cands) {
 		const json& params = (*c.def)["parameters"];
 		const json* palanVariadic = palanVariadicParam(params);
@@ -314,8 +320,9 @@ Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name
 		size_t fixedCount = params.size() - (variadic ? 1 : 0);
 		size_t required = requiredArgCount(params, fixedCount);
 		if (args.size() < required || (!variadic && args.size() > fixedCount)) continue;
+		if (spread && (!palanVariadic || args.size() != fixedCount + 1)) continue;
 		json elemParam = palanVariadic ? variadicElemParam(*palanVariadic) : json();
-		size_t checked = palanVariadic ? args.size() : min(fixedCount, args.size());
+		size_t checked = spread ? fixedCount : palanVariadic ? args.size() : min(fixedCount, args.size());
 		bool fits = true, converts = false;
 		ArgFit worst = args.size() == fixedCount ? ArgFit::Exact : ArgFit::Viable;
 		for (size_t i = 0; i < checked && fits; i++) {
@@ -324,6 +331,8 @@ Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name
 			converts = converts || f == ArgFit::Converted;
 			worst = min(worst, f == ArgFit::Converted ? ArgFit::Exact : f);
 		}
+		if (fits && spread)
+			fits = !spreadMismatch(args.back().sa["value-type"], elemParam["var-type"]);
 		if (!fits) continue;
 		Fitting& to = converts ? converting : plain;
 		to.unranked = to.unranked || args.size() < fixedCount || palanVariadic;
@@ -334,21 +343,29 @@ Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name
 	// Converting is the last resort, so that adding a conversion function
 	// changes no call that resolves without one.
 	const Fitting& fit = plain.viable.empty() ? converting : plain;
-	if (fit.viable.size() == 1) return fit.viable[0];
-	if (fit.viable.empty()) {
+	if (fit.viable.size() == 1) return {fit.viable[0], {}};
+	if (fit.viable.empty()) return {};
+	// A candidate fitting through its defaults or its variadic parameter is not
+	// ranked against the others, so that a reader follows no further rule to
+	// tell which one is called.
+	if (!fit.unranked && fit.exact.size() == 1) return {fit.exact[0], {}};
+	if (!fit.unranked && fit.exact.empty() && fit.narrowed.size() == 1) return {fit.narrowed[0], {}};
+	return {nullopt, fit.unranked ? fit.viable : !fit.exact.empty() ? fit.exact
+	                 : !fit.narrowed.empty() ? fit.narrowed : fit.viable};
+}
+
+Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name,
+                                         const vector<Callee>& cands, const vector<CallArg>& args)
+{
+	CalleeChoice choice = chooseCallee(name, cands, args);
+	if (choice.chosen) return *choice.chosen;
+	if (choice.tied.empty()) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_NoMatchingFunc,
 			name, argTypesText(args), calleesText(name, cands)) << endl;
 		exit(1);
 	}
-	// A candidate fitting through its defaults or its variadic parameter is not
-	// ranked against the others, so that a reader follows no further rule to
-	// tell which one is called.
-	if (!fit.unranked && fit.exact.size() == 1) return fit.exact[0];
-	if (!fit.unranked && fit.exact.empty() && fit.narrowed.size() == 1) return fit.narrowed[0];
-	const vector<Callee>& best = fit.unranked ? fit.viable : !fit.exact.empty() ? fit.exact
-	                           : !fit.narrowed.empty() ? fit.narrowed : fit.viable;
 	cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_AmbiguousCall,
-		name, calleesText(name, best)) << endl;
+		name, calleesText(name, choice.tied)) << endl;
 	exit(1);
 }
 
@@ -812,18 +829,32 @@ vector<Callee> PlnSemanticAnalyzer::forProtocolCallees(const string& name, const
 	return fit;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
-// The functions converting a string literal to the struct `structVT` points
+// What a literal conversion converts `ast` to: the literal it folds to, unless
+// that literal has a type of its own (a bool, a character, a C constant), or
+// null when it folds to none.
+json PlnSemanticAnalyzer::convertibleLiteral(const json& ast)
+{
+	json lit = foldConstExpr(ast);
+	string et = lit.value("expr-type", "");
+	if (et == "lit-str" || et == "lit-uint" || et == "lit-flo") return lit;
+	if (et == "lit-int" && !lit.contains("value-type") && !lit.contains("char")) return lit;
+	return json();
+}
+
+// The functions converting the literal `lit` to the struct `structVT` points
 // to: those visible by the type's name, under any alias since a conversion is
 // never written qualified, returning the struct and callable with the literal
 // alone.
-vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT)
+vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT, const json& lit)
 {
 	const json& structType = structVT["base-type"];
 	string name = PlnSaMessage::writtenTypeName(structType["type-name"].get<string>());
 	vector<Callee> found = findCalleesUnderAnyAlias(name);
 
-	json lit = {{"expr-type", "lit-str"}}; // LCOV_EXCL_BR_LINE
-	vector<CallArg> litArgs{{lit, false, {{"expr-type", "lit-str"}, {"value-type", strLitType()}}}}; // LCOV_EXCL_BR_LINE
+	// As analyzeCallArgs gives the literal: a number waits for the parameter's type.
+	bool isStr = lit["expr-type"] == "lit-str";
+	vector<CallArg> litArgs{isStr ? CallArg{lit, false, {{"expr-type", "lit-str"}, {"value-type", strLitType()}}} // LCOV_EXCL_BR_LINE
+	                              : CallArg{lit, true, json(), false, literalDefaultType(lit)}}; // LCOV_EXCL_BR_LINE
 	vector<Callee> convs;
 	set<string> seen;
 	for (auto& c : found) {
@@ -843,20 +874,22 @@ vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT)
 	return convs;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
-// A string literal where a struct `T` or a borrow `@T` is expected, as the
-// call converting it would be written: `T(lit)` or `@T(lit)`. Anything else
-// is returned as it is.
+// A literal where a struct `T` or a borrow `@T` is expected, as the call
+// converting it would be written: `T(lit)` or `@T(lit)`. Anything else is
+// returned as it is.
 json PlnSemanticAnalyzer::literalConversion(const json& ast, const json& toVT)
 {
-	if (ast.value("expr-type", "") != "lit-str" || !isStructPntr(toVT) || toVT.value("mutable", false)) // LCOV_EXCL_BR_LINE
-		return ast;
+	if (!isStructPntr(toVT) || toVT.value("mutable", false)) return ast; // LCOV_EXCL_BR_LINE
+	json lit = convertibleLiteral(ast);
+	if (lit.is_null()) return ast;
 	json storage = toVT;
 	storage.erase("mutable");
-	if (literalConversions(storage).empty()) return ast;
+	if (literalConversions(storage, lit).empty()) return ast;
 	// LCOV_EXCL_BR_START
+	if (ast.contains("loc")) lit["loc"] = ast["loc"];
 	json call = {{"expr-type", "call"},
 	             {"name", PlnSaMessage::writtenTypeName(storage["base-type"]["type-name"].get<string>())},
-	             {"args", json::array({ast})}, {"converts-to", storage}};
+	             {"args", json::array({lit})}, {"converts-to", storage}};
 	if (ast.contains("loc")) call["loc"] = ast["loc"];
 	if (isStructStorage(toVT)) return call;
 	json borrow = {{"expr-type", "addr-of"}, {"mutable", false}, {"object", move(call)}};
@@ -871,7 +904,7 @@ json PlnSemanticAnalyzer::sa_expr_call(const json& expr)
 	if (expr.contains("converts-to")) {
 		json call = expr;
 		call.erase("converts-to");
-		return makeCall(call, literalConversions(expr["converts-to"]), callName);
+		return makeCall(call, literalConversions(expr["converts-to"], expr["args"][0]), callName);
 	}
 	if (expr.contains("iterates")) {
 		json call = expr;
@@ -903,6 +936,7 @@ json PlnSemanticAnalyzer::sa_expr_call(const json& expr)
 json PlnSemanticAnalyzer::saCallArgs(const json& locNode, const json& args, const json& funcParams,
                                       bool isCFunc, const string& funcName)
 {
+	checkSpreadPlace(locNode, args, funcParams, funcName);
 	bool isVariadic = palanVariadicParam(funcParams) || isCVariadicSig(funcParams);
 	size_t fixedCount = funcParams.size() - (isVariadic ? 1 : 0);
 	// C's `()` arrives as an empty list just like `(void)` and is checked as
@@ -925,7 +959,12 @@ json PlnSemanticAnalyzer::saCallArgs(const json& locNode, const json& args, cons
 vector<CallArg> PlnSemanticAnalyzer::analyzeCallArgs(const json& args)
 {
 	vector<CallArg> callArgs;
-	for (auto& rawArg : args) {
+	for (size_t i = 0; i < args.size(); i++) {
+		const json& rawArg = args[i];
+		if (rawArg.value("expr-type", "") == "spread") {
+			callArgs.push_back(spreadCallArg(rawArg, i + 1 == args.size()));
+			continue;
+		}
 		CallArg a;
 		a.chained = rawArg.value("expr-type", "") == "chained-value";
 		a.ast = a.chained ? rawArg["value"] : rawArg;
@@ -941,6 +980,57 @@ vector<CallArg> PlnSemanticAnalyzer::analyzeCallArgs(const json& args)
 	return callArgs;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
+// `...a`, analyzed as an array that keeps its length.
+CallArg PlnSemanticAnalyzer::spreadCallArg(const json& rawArg, bool last)
+{
+	auto fail = [&](PlnSaMessageCode code, string arg1 = "\x01") {
+		cerr << locPrefix(rawArg) << PlnSaMessage::getMessage(code, arg1) << endl;
+		exit(1);
+	};
+	if (!last) fail(E_SpreadPlace);
+	CallArg a;
+	a.spread = true;
+	a.pending = false;
+	a.ast = rawArg["value"];
+	if (a.ast.value("expr-type", "") == "addr-of") fail(E_SpreadBorrow);
+	if (isAggregateLitArg(a.ast)) fail(E_SpreadNotArray, "an array literal");
+	if (namesOverloadedFunc(a.ast)) fail(E_SpreadNotArray, "a function");
+	a.sa = sa_arg_expression(a.ast);
+	const json& vt = a.sa["value-type"];
+	if (!isVarrPntr(vt) && !isArrLevel(vt)) fail(E_SpreadNotArray, "'" + typeDisplayName(vt) + "'");
+	if (isArrLevel(vt) && !vt.contains("arr-size") && !vt.value("run-size", false))
+		fail(E_SpreadUnsized, typeDisplayName(vt)); // LCOV_EXCL_BR_LINE
+	return a;
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// The spread array takes the place of every argument for the `[...]E` parameter.
+void PlnSemanticAnalyzer::checkSpreadPlace(const json& locNode, const json& args, const json& funcParams,
+                                           const string& funcName)
+{
+	if (args.empty() || args.back().value("expr-type", "") != "spread") return;
+	const json* variadic = palanVariadicParam(funcParams);
+	const json& at = args.back().contains("loc") ? args.back() : locNode;
+	if (!variadic) {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_SpreadNotVariadic, funcName) << endl;
+		exit(1);
+	}
+	if (args.size() != funcParams.size()) {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_SpreadPosition, variadic->value("name", ""), funcName) << endl;
+		exit(1);
+	}
+}
+
+// The elements are not converted, so they must be the callee's array's own.
+optional<SaDiag> PlnSemanticAnalyzer::spreadMismatch(const json& vt, const json& elemVT) const
+{
+	// LCOV_EXCL_BR_START
+	json xs = {{"type-kind","pntr"},{"run-size",true},{"base-type",elemVT}};
+	if (copySourceMatch(vt, xs)) return nullopt;
+	json param = {{"type-kind","pntr"},{"variadic",true},{"base-type",elemVT}};
+	return SaDiag{E_SpreadElemMismatch, typeDisplayName(param), typeDisplayName(vt)};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // Whether an analyzed argument fits a parameter, and if not, why.
 optional<SaDiag> PlnSemanticAnalyzer::callArgMismatch(const json& argAst, const json& saArg,
 		const json& param, size_t argIdx, bool isCFunc, const string& funcName)
@@ -948,6 +1038,12 @@ optional<SaDiag> PlnSemanticAnalyzer::callArgMismatch(const json& argAst, const 
 	const json& paramVT = param["var-type"];
 	// What an owned parameter takes is copied into it.
 	if (!isCFunc && isOwnedBlock(paramVT)) {
+		if (givenIn(argAst) && isArrLevel(paramVT)) {
+			MoveFit fit = moveShapeFit(saArg["value-type"], paramVT, /*inherits=*/false, saArg.value("resized", false));
+			if (fit == MoveFit::Match) return nullopt;
+			return SaDiag{fit == MoveFit::RunSize ? E_MoveRunSize : E_TransferShapeMismatch, // LCOV_EXCL_BR_LINE
+			              typeDisplayName(paramVT), typeDisplayName(saArg["value-type"])};
+		}
 		if (copySourceMatch(saArg["value-type"], paramVT)) return nullopt;
 		return SaDiag{E_IncompatibleTypes, typeDisplayName(saArg["value-type"]), typeDisplayName(paramVT)}; // LCOV_EXCL_BR_LINE
 	}
@@ -1156,8 +1252,14 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 	}
 	json saArgs = json::array();
 	vector<json> argAsts;
+	json spreadCount;
 	for (size_t argIdx = 0; argIdx < args.size(); argIdx++) {
 		CallArg& ca = args[argIdx];
+		if (ca.spread) {
+			argAsts.push_back(ca.ast);
+			saArgs.push_back(spreadArrayArg(locNode, ca, elemParam["var-type"], spreadCount));
+			continue;
+		}
 		const json* param = argIdx < fixedCount ? &funcParams[argIdx] : palanVariadic ? &elemParam : nullptr;
 		const json* paramVT = param ? &(*param)["var-type"] : nullptr;
 		if (paramVT) {
@@ -1215,21 +1317,23 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 			saArg = bindCallTemp(move(saArg));
 		if (byValStruct) {
 			const StructDef& def = requireCompleteStruct((*paramVT)["base-type"]["type-name"].get<string>(), locNode);
-			saArg["struct-arg"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_)}}; // LCOV_EXCL_BR_LINE
+			saArg["struct-arg"] = {{"size", def.totalSize}, {"align", def.maxAlign}, {"eightbytes", eightbytesJson(def, structDefs_, false)}}; // LCOV_EXCL_BR_LINE
 		} else {
 			noteEscape(saArg);
 		}
 		saArgs.push_back(saArg);
 	}
 	checkGivenOwners(locNode, argAsts, saArgs);
-	if (palanVariadic) {
+	if (!spreadCount.is_null()) {
+		saArgs.push_back(move(spreadCount));
+	} else if (palanVariadic) {
 		json elems = json::array();
 		while (saArgs.size() > fixedCount) {
 			elems.insert(elems.begin(), move(saArgs.back()));
 			saArgs.erase(saArgs.size() - 1);
 		}
 		size_t count = elems.size();
-		saArgs.push_back(variadicArrayArg(locNode, elemParam["var-type"], move(elems), funcName));
+		saArgs.push_back(variadicArrayArg(locNode, elemParam["var-type"], move(elems)));
 		saArgs.push_back({{"expr-type","lit-int"},{"value",to_string(count)}, // LCOV_EXCL_BR_LINE
 		                  {"value-type",{{"type-kind","prim"},{"type-name","uint64"}}}}); // LCOV_EXCL_BR_LINE
 	}
@@ -1239,7 +1343,7 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 // The arguments for a `[...]E` parameter, laid out in an array in the caller's
 // frame: NULL when there are none. An argument's temporaries move to the
 // array's own, so that what they release outlives the call.
-json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elemVT, json elems, const string& funcName)
+json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elemVT, json elems)
 {
 	// LCOV_EXCL_BR_START
 	if (elems.empty())
@@ -1260,16 +1364,73 @@ json PlnSemanticAnalyzer::variadicArrayArg(const json& locNode, const json& elem
 			for (auto& s : value.value("reset", json::array())) reset.push_back(s);
 			value = json(value["value"]);
 		}
-		if (holdsCallTemps(value)) {
-			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_VariadicArgTempBorrow, funcName) << endl;
-			exit(1);
-		}
 		json target = sa_expression({{"expr-type","arr-index"},{"array",{{"expr-type","id"},{"name",name}}},
 		                             {"index",{{"expr-type","lit-int"},{"value",to_string(i)}}}});
 		body.push_back({{"stmt-type","arr-assign"},{"target",move(target)},{"value",move(value)}});
 	}
 	json array = {{"expr-type","id"},{"name",name},{"var-type",arrType},{"value-type",arrType}};
 	json temp = makeTempExpr(move(body), move(array), move(release));
+	if (!reset.empty()) temp["reset"] = move(reset);
+	return temp;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The array `...a` gives a `[...]E` parameter: a copy, or the array itself
+// when it is given away. The callee releases the elements either way, so only
+// the block is freed after the call.
+json PlnSemanticAnalyzer::spreadArrayArg(const json& locNode, CallArg& ca, const json& elemVT, json& count)
+{
+	json src = move(ca.sa);
+	if (auto d = spreadMismatch(src["value-type"], elemVT)) reportDiag(locNode, *d);
+	// LCOV_EXCL_BR_START
+	json body = json::array(), release = json::array(), reset = json::array();
+	if (src.value("expr-type", "") == "temp") {
+		for (auto& s : src["body"]) body.push_back(move(s));
+		for (auto& s : src["release"]) release.push_back(move(s));
+		for (auto& s : src.value("reset", json::array())) reset.push_back(s);
+		src = json(src["value"]);
+	}
+	const json vt = src["value-type"];
+	const json u64 = {{"type-kind","prim"},{"type-name","uint64"}};
+	auto idOf = [](const string& name, const json& type) {
+		return json{{"expr-type","id"},{"name",name},{"var-type",type},{"value-type",type}};
+	};
+	auto countOf = [&](const json& len) {
+		int64_t n = constArrSize(len);
+		return n >= 0 ? json{{"expr-type","lit-int"},{"value",to_string(n)},{"value-type",u64}} : wrapConvert(len, u64);
+	};
+	json value;
+	if (givenIn(ca.ast) || isExpiringOwned(src)) {
+		if (src.value("expr-type", "") != "id") src = idOf(pinTemp(move(src), locNode, body), vt);
+		count = countOf(valueLens(src)[0]);
+		if (isVarrPntr(vt)) {
+			json data = varrData(src);
+			json dataType = data["value-type"];
+			string dataName = pinTemp(move(data), locNode, body);
+			value = idOf(dataName, dataType);
+			release.push_back(makeFreeStmt(dataName, dataType));
+		} else {
+			value = src;
+		}
+		release.push_back(makeFreeStmt(src["name"].get<string>(), vt));
+	} else {
+		if (hasCall(src)) src = pinValue(move(src), ca.ast, body)["sa"];
+		json len = countOf(valueLens(src)[0]);
+		string name = "__va_" + to_string(tempVarCounter_++);
+		json arrType = {{"type-kind","pntr"},{"base-type",elemVT}};
+		setArrSize(arrType, len);
+		json decl = {{"stmt-type","var-decl"},{"loc",locNode.value("loc", json::array())},
+		             {"vars",json::array({{{"name",name}}})}};
+		enterScope();
+		for (auto& s : sa_arr_var_decl(decl, VarStorage::Heap, Storage{arrType, {len}}, false)) body.push_back(move(s));
+		value = idOf(name, arrType);
+		body.push_back(makeCopyStmt(locNode, value, src, CopyInto::New));
+		takeScopeRelease(name);
+		leaveScope();
+		count = arrType.contains("arr-size") ? len : idOf("__" + name + "_d0", u64);
+		release.push_back(makeFreeStmt(name, arrType));
+	}
+	json temp = makeTempExpr(move(body), move(value), move(release));
 	if (!reset.empty()) temp["reset"] = move(reset);
 	return temp;
 	// LCOV_EXCL_BR_STOP

@@ -241,7 +241,7 @@ struct CCCallExpr : Expr {
     // Parallel to args: set for an argument passed to a by-value struct
     // parameter, whose expression yields a pointer to the struct to copy.
     // Empty eightbytes means MEMORY class (copied to the stack).
-    struct StructArg { int size; vector<Eightbyte> eightbytes; };
+    struct StructArg { int size; int align; vector<Eightbyte> eightbytes; };
     vector<std::optional<StructArg>> structArgs;
 };
 
@@ -267,9 +267,10 @@ struct SysCallExpr : Expr {
 
 struct Stmt;
 
-// A temp declared and initialized by body, read as value. Its release runs
-// only once the enclosing full expression has been evaluated, since a call
-// it is given to may return a borrow of it. Its reset runs once all of the
+// A temp declared and initialized by body, read as value. Its release, and
+// that of the temps body's statements hold, runs only once the enclosing full
+// expression has been evaluated, since a call it is given to may return a
+// borrow of it. Its reset runs once all of the
 // arguments of the call it is given to have been evaluated, since a later
 // one may borrow from the owner it was taken from.
 struct TempExpr : Expr {
@@ -415,6 +416,8 @@ struct FieldAccessExpr : Expr {
     int              offset;
     VRegType         type;
     bool             addrOnly = false;  // true: field data is embedded inline; compute ptr+offset, do not load
+    int              bitShift = 0;      // a C bit-field within the unit of `type` at offset; width 0 if not
+    int              bitWidth = 0;
 };
 
 struct FieldAssignStmt : Stmt {
@@ -424,6 +427,8 @@ struct FieldAssignStmt : Stmt {
     int              offset;
     VRegType         type;
     unique_ptr<Expr> value;
+    int              bitShift = 0;  // as FieldAccessExpr
+    int              bitWidth = 0;
 };
 
 // -------- Module --------
@@ -456,6 +461,7 @@ struct PlnFunc {
 struct Module {
     string original;
     vector<StrLiteralDef>    strLiterals;
-    vector<string>           globalLabels;  // this module's global slots
+    struct GlobalSlot { string label; bool isExport; };
+    vector<GlobalSlot>       globals;  // this module's global slots
     vector<PlnFunc>          functions;
 };

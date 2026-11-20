@@ -1,0 +1,4 @@
+cinclude "error_1087_c_struct_typedef.h";
+func f(@!cs_a_t p) {
+	take_b(p);
+}

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#define PALAN_VERSION "0.2.5"
+#define PALAN_VERSION "0.2.6"
 #define PALAN_TARGET "x86_64-linux-gnu"
 
 inline bool isSupportedTarget(const std::string& target)
@@ -29,4 +29,12 @@ inline bool isLibraryModule(const std::string& moduleId)
 inline std::string allocatorsModuleOf(const std::string& moduleId)
 {
 	return isLibraryModule(moduleId) ? moduleId + "." PALAN_ALLOCATORS_MODULE : PALAN_ALLOCATORS_MODULE;
+}
+
+// build-mgr claims these identities, so no source module has one.
+inline bool isAllocatorsModule(const std::string& moduleId)
+{
+	static const std::string suffix = "." PALAN_ALLOCATORS_MODULE; // LCOV_EXCL_BR_LINE
+	return moduleId == PALAN_ALLOCATORS_MODULE
+		|| (moduleId.size() > suffix.size() && moduleId.compare(moduleId.size() - suffix.size(), suffix.size(), suffix) == 0);
 }

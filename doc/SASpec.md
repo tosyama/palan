@@ -1,7 +1,7 @@
 Palan Semantic Analyzer JSON Specification
 ==========================================
 
-ver. 0.2.5
+ver. 0.2.6
 
 Output of palan-sa. Extends the AST JSON format (see ASTSpec.md) with resolved
 type information and pre-collected literal tables.
@@ -16,10 +16,15 @@ Root
 - main\* - The module's top-level function, whose body is `statements`: `name` (its symbol,
   `<module>..main`; see Symbol names) and `parameters` (`__argc` int64 and `__argv`
   `pntr(pntr(uint8))`, in the Function definition model's form), and `globals` as a Palan
-  function has (the C globals the top level uses). It is exported, and the program's `_start`,
-  built at link time for the entry module, calls it.
-- globals - The module's `global` variables, each a static slot codegen emits in `.bss`:
-  `label` (`<module>.<name>`) and `var-type`. Omitted when there are none.
+  function has (the module's `global` variables and the C globals the top level uses). It is
+  exported, and the program's `_start`, built at link time for the entry module, calls it after
+  `init`.
+- init\* - The symbol of the module's initialization function, `<module>..init`, which `functions`
+  defines (see Module initialization below).
+- globals - The module's static slots, each emitted by codegen in `.bss`: its `global` variables
+  (`label` `<module>.<name>`) and `init`'s flag (`<module>..init.done`), with `var-type`, and
+  `export: true` for an `export global`, whose label codegen makes global. Omitted when there are
+  none. An imported global's slot is its own module's.
 - str-literals\* - String literal table (collected by SA, used by codegen for .rodata)
 - functions\* - Processed Palan function list (empty array when no functions defined)
 - statements\* - Top-level statement list. When a top-level statement names the implicit
@@ -39,7 +44,7 @@ Root
   manager unions it across modules and passes each path to `ld` after the program's own objects.
 - alloc-shapes\* - List of shape descriptors for arrays and structs requiring custom allocators.
   Empty array when no qualifying var-decls are present.
-  Four entry kinds: struct, bytes, arr and varr.
+  Five entry kinds: struct, bytes, opaque, arr and varr.
 
   The arr and varr entries describe their element by its layout: the element as `data` (or the
   array) holds it, with each integer type replaced by the signed one of its width (`uint32` and
@@ -48,7 +53,9 @@ Root
   alike thus share their functions; whoever reads an integer from one extends it as its own
   type says. The element:
   - elem\* - `{"kind", "key", "size"}` and the type: `"prim"` with `"type"` (a primitive),
-    `"struct"` with `"name"` (an owned slot holding a struct `T`, 8 bytes), `"embed-struct"`
+    `"struct"` with `"name"` (an owned slot holding a struct `T`, 8 bytes), `"opaque"` with
+    `"name"` and `"release-func"` (an owned slot holding an opaque type, 8 bytes; see the opaque
+    entry), `"embed-struct"`
     with `"name"` (the struct itself, `total-size` bytes), or `"varr"` with `"name"` (an owned
     slot holding a `[+]U`, 8 bytes; the name is its header type, `__pln_varr_U`) and `"shape-key"`
     (the `[+]U`'s own entry), or, for a row `[n]U`, `"row"` (an owned slot holding the row's
@@ -71,8 +78,10 @@ Root
   an element): build-mgr generates `__pln_alloc_arr_E(n)`, `__pln_init_arr_E(outer, n)`,
   `__pln_free_arr_E(pts, n)`, `__pln_fini_arr_E(pts, n)` and `__pln_copy_arr_E(dst, src, n)`,
   and with an element holding a type with its own `->`, `__pln_assign_arr_E(dst, src, n)`, which
-  writes into the existing elements as the struct entry's `assigns` says. An array of structs
-  laid out in place (`[n]$T`), copied as bytes, has only `__pln_assign_arr_E(@!T dst, @T src, n)`.
+  writes into the existing elements as the struct entry's `assigns` says. Both keep a source
+  element moved out (NULL) as NULL and build a NULL destination slot before copying into it whole.
+  An array of structs laid out in place (`[n]$T`), copied as bytes, has only
+  `__pln_assign_arr_E(@!T dst, @T src, n)`.
   `E` is the element's `key`, each function's arguments followed by the lengths below it
   (`[2][3][4]int32` is `__pln_alloc_arr_PPint32(2, 3, 4)`). Levels laid out in place in the
   array itself are one run of their elements: with `S` owning fields, `[2]$[3]S` is
@@ -103,19 +112,19 @@ Root
   `"embed-struct"`, shape key `evarr_T`, functions `__pln_*_evarr_T`) keeps the elements in
   `data` like a primitive's, `T` taking its `total-size` bytes and owning nothing; `push` copies
   the struct it is given in and frees it, and `pop` returns a newly allocated copy. `push`'s
-  struct (a `[+]U` element's header too) is the caller's to give, as a struct parameter's
-  argument is: the built-in's parameter is the owned `T`, and the generated function takes it
-  as `@!T` (`W` in its symbol), since it keeps or frees the struct itself. With a `[+]U`
+  struct (a `[+]U` element's header too, and a row) is the caller's to give, as a struct
+  parameter's argument is: the built-in's parameter is the owned `T` (`[n]U`), and the generated
+  function takes it as `@!T` (`@![]U`; `W` in its symbol), since it keeps or frees it itself. With a `[+]U`
   element (elem kind `"varr"`) the slots hold the elements' headers the same way: a new element is
   an empty header (`calloc(1, 24)`), a dropped one is freed with `__pln_free_varr_U`, and a copy
   into one is `__pln_copy_varr_U`; `push` stores the header it is given, which the caller hands
   over. With a row `[n]U` (elem kind `"row"`) a slot holds the row's own block: a new one is
   `malloc(n * …)`, its data left undefined and its owned elements built, a dropped one has them dropped (unless the slot
-  is NULL, after `->>`) and is freed, and `push` and `copy` copy the elements from the row they
-  are given (`[]U x`; `copy`'s source is `[][n]U`). `pop` returns the slot's block. Rows laid
+  is NULL, after `->>`) and is freed, `push` stores the row it is given as the slot, and `copy` copies
+  the elements from its source (`[][n]U`). `pop` returns the slot's block. Rows laid
   out in place (`[+]$[n]U`, `[+]$[n]$[m]U`, elem kind `"embed-row"`, shape key `evarr_…`) are
   consecutive slots of their element, built, dropped and copied through the element's own helpers; `push`
-  takes `[]U`, `copy` takes the run of elements (`[]U` for owned ones, `@U` otherwise), and
+  moves the row's slots in and frees its block, `copy` takes the run of elements (`[]U` for owned ones, `@U` otherwise), and
   `pop` moves the row into a newly allocated block:
   - shape-kind\* - "varr"
   - shape-key\* - Shape key string (e.g. "varr\_int32", "varr\_P9\_\_pln\_B16", "evarr\_9\_\_pln\_B16")
@@ -127,6 +136,16 @@ Root
   - shape-kind\* - "bytes"
   - shape-name\* - `__pln_B<n>`
   - total-size\* - `n`
+
+  **Opaque entry** (an opaque type an owned field or element holds): build-mgr declares it as
+  a type of `total-size` bytes only to name the slots, and declares its release function in
+  `__allocators.h` as `void <symbol>(void *p);`. A slot starts NULL and is dropped by calling
+  the release function; nothing holding one is copied (palan-sa rejects it), so its copy
+  helpers call `abort()`, and `push` stores the value it is given as the slot:
+  - shape-kind\* - "opaque"
+  - shape-name\* - The type's identity
+  - total-size\* - 8
+  - release-func\* - The type's release function (see Symbol names)
 
   **Struct entry** (a struct owning fields, or holding a type with its own `->`):
   - shape-kind\* - "struct"
@@ -150,19 +169,10 @@ Root
     - lens\* - The lengths of the field's levels, outermost first and on through the elements
       of a `[+]U`, which its element's helpers take (`[3]`, `[3, 4]`; empty for `T`)
 
-  - inits - The struct's field initializers, constants palan-sa has evaluated, its own and
-    those of structs laid out in it at their offsets there (omitted when it has none). A struct
-    with initializers has a struct entry even when it owns nothing. Each is stored after the owned
-    fields are built:
-    - offset\* - Byte offset within the struct
-    - kind\* - `"prim"` (a primitive field), `"run"` (`$[n]T`), `"row"` (`[n]T`, the owned field
-      at the same offset), `"varr"` / `"embed-varr"` (`[+]T` / `$[+]T`, the owned field at the same
-      offset, resized to the count of `values` first), or `"structs"` (a `$[n]$P` field with `P`
-      a struct with initializers, built by `__pln_initrun_P`)
-    - type - The values' type as the generated module stores it: an integer as the signed integer
-      of its width (`uint8` and `bool` as `int8`), a float as itself (not for `"structs"`)
-    - values - The values, as literal text in that type (`200` of a `uint8` is `-56`; not for `"structs"`)
-    - name, count - For `"structs"`: the struct and how many of it the field lays out
+  - init-func - The symbol of the function storing the struct's field initializers (see Symbol
+    names), present when it or a struct laid out in it has one; `__allocators.h` declares it as
+    `void <symbol>(void *p);` and `__pln_init_T` calls it after the owned fields are built. A
+    struct with initializers has a struct entry even when it owns nothing.
     A struct with initializers that owns nothing also has `__pln_initrun_P(@!P run, int64 from,
     int64 to)`, which builds `run[from]` to `run[to - 1]`. palan-sa calls it after obtaining an
     array laid out in one block (`[n]$P`, `[m]$[n]$P`); the generated helpers call it wherever
@@ -203,11 +213,13 @@ SA-annotated statements.
 
 - name\* - Symbol name of the function (see "Symbol names" below), not the written name
 - func-type\* - "palan"
-- export - `true` for an exported function and for a type's `->`, which codegen makes global
+- export - `true` for an exported function, for a type's `->`, for an opaque type's release
+  function and for the module's `..init`, which codegen makes global
 - parameters\* - Parameter list (Palan parameter: name, var-type; empty array when no parameters)
 - ret-type - Return variable type (single-return functions only)
 - rets - Return value list (multi-return functions only)
-- ret-slot - Present when the single return value is a struct: `{"name":<variable>,"size":<bytes>,
+- ret-slot - Present when the single return value is a struct (not an opaque type, which is
+  returned as its owner, a pointer): `{"name":<variable>,"size":<bytes>,
   "eightbytes":[...]}` (`eightbytes` as in a call's `struct-ret`). The body writes the value into
   the struct variable `name` (the named return, or `__ret` for an unnamed one) and returns with a
   bare `return`. With `"eightbytes":[]` (MEMORY class) `name` is bound at entry to the hidden
@@ -230,8 +242,9 @@ Note: cinclude statements are not present in function bodies (they are top-level
 Every Palan function links by a symbol SA builds from its module and its parameter types, so
 functions of one name (overloads, or the same function exported by two modules) have distinct
 symbols. It is the `name` of the function, of a `call` resolved to it and of a `func-ref` to it.
-C functions and syscalls are not renamed. A module's top-level function is `<module>..main`, which
-no other function's symbol can be: theirs always end in a parameter list or `.v`.
+C functions, syscalls and `cexport` functions are not renamed. A module's top-level function is `<module>..main` and its
+initialization function `<module>..init`, which no other function's symbol can be: theirs always
+end in a parameter list or `.v`.
 
 `<module>..<name>.<param>.<param>...` — `<name>.v` when there are no parameters.
 
@@ -241,8 +254,19 @@ among such blocks of the enclosing function or of the top level (`util..a.v..b1.
 `util..b1..f.v`).
 
 A type's `->` (SpecAndDesign.md 3.8) is `__pln_cp_` and the struct as a `<param>` writes it
-(`__pln_cp_4utf8`): a type has one, so the type alone names it, and the generated allocators
+(`__pln_cp_24__pln_L10std_2eutf8_utf8`): a type has one, so the type alone names it, and the generated allocators
 declare it in C, which takes no `.`.
+
+A struct's field initializer function (SpecAndDesign.md 3.6) is `__pln_fi_` and the struct as a
+`<param>` writes it, for the same reasons. SA defines it in the struct's module, taking `@!T p`:
+a struct laid out in it with initializers is stored by its own function first, then one
+`value -> p.field` stores each initializer.
+
+An opaque type's release function (SpecAndDesign.md 3.7) is `__pln_rl_` and the type as a
+`<param>` writes it. SA defines it in the type's module, as a function of that name taking the
+owned type (`h`): it does nothing when `h` is NULL, and otherwise calls the function marked
+`release`, or without one releases the contents. Everything releasing such a value calls it, and
+the function marked `release` releases its own parameter as the contents.
 
 - `<name>`: the function's name; an operator function's is a word that starts with a digit, so that
   no written name can be it: `0add` `0sub` `0mul` `0div` `0mod` `0eq` `0lt` `0app` for
@@ -255,7 +279,7 @@ declare it in C, which takes no `.`.
   with a `library` declaration (`std.utf8.__allocators`), which SA names in the calls it makes to them.
 - `<param>`: the parameter's normalized `var-type`, each type self-delimiting:
   - prim: its name (`int32`, `flo64`, `bool`, `void`); an enum: `N<len><enum name><base prim>`
-  - struct: `<len><type-name>`
+  - struct: `<len><type-name>`, the type's identity (the examples here write the name alone)
   - pntr: `E` if `embedded`, `S<stride>_` if `stride`, `A<arr-size>_` if `arr-size`, then `P`
     (no `mutable`: owned or by value), `R` (`mutable: false`) or `W` (`mutable: true`), then the
     base type
@@ -310,7 +334,10 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   gen-ast (ASTSpec.md's Constant definition model and `lit-int` entries), so
   a `cinclude` statement never carries a `constants` field by the time SA
   sees it, and SA has no macro-name table of its own (a macro c2ast could not
-  export reaches SA only as the `c-macro` mark on a reference).
+  export reaches SA only as the `c-macro` mark on a reference). A function-like
+  macro reaches SA as the statement's `expandables` instead, scoped like its
+  `functions`; a call to one is analyzed as its expanded body, so sa.json
+  shows only the body's nodes.
   `functions`, `globals`, `structs` and `typedefs` are
   independent sections of the header's AST -- a header exporting only some of
   them (e.g. `stdint.h` with only `typedefs`) still has each present section
@@ -359,13 +386,13 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     unbound. Writing an unbound Palan type name is `E_UnqualifiedAliasType` (imported
     under an alias) or `E_UnknownType`. C types are copied without binding; they are
     global as in C and written by their own name.
-  - Struct and enum names are program-wide identities (build-mgr keys struct allocators
-    by them). Each records its defining module, so the same name from a second module,
-    or one a C type has, is `E_DuplicateTypeName`. An alias has no program-wide name.
-    An exported struct/enum keeps its written name. One that is not exported is named
-    `__pln_L<module hash>_<Name>` in sa.json, and one declared in a block
-    `__pln_L<module hash>_<seq>_<Name>`, so modules and blocks may each declare their own;
-    a message shows the written name.
+  - A struct or enum is named by its identity in sa.json (build-mgr keys struct
+    allocators by it): `__pln_L<len><module>_<Name>`, with the module's `.` written `_2e`
+    and `<len>` that string's length (`std.utf8`'s `utf8` is `__pln_L10std_2eutf8_utf8`),
+    exported or not, and `__pln_L<len><module>_<seq>_<Name>` for one declared in a block.
+    Modules and blocks may each declare their own; a message shows the written name. A
+    type of a generated allocators module (`__allocators`, `<module>.__allocators`) keeps
+    its written name, already an identity. An alias has no identity.
   - A type declaration clashes only with names written in its scope: a type an import
     makes writable, a C type, a const, or another declaration. An imported type that is
     not writable does not clash.
@@ -374,9 +401,11 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   named there, and inlined at each reference site (see Type Aliases in
   PalanReference.md)
 - global-permit statements are consumed by SA and not emitted. A `var-decl` with `global` is
-  emitted as a top-level variable's is, its variable given `label` (see Static variables below);
+  emitted into the module's `..init` as a top-level variable's would be, its variable given
+  `label` (see Static variables below);
   it is `E_GlobalNotTopLevel` anywhere but the top level, as a `global-permit` is. A permit names
-  a `global` variable of the module or a C global visible there (`E_GlobalPermitUnknownVar`) and
+  a `global` variable of the module, one imported at the top level (`M.count` under an alias, the
+  alias checked by `E_UnknownAlias`) or a C global visible there (`E_GlobalPermitUnknownVar`) and
   top-level Palan functions of the module (`E_GlobalPermitNotFunc`), each once
   (`E_GlobalPermitDuplicate`).
 - const-decl statements are consumed by SA and not emitted; the value is
@@ -387,11 +416,12 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   before it is typed, in every expression position; `E_ConstExprOverflow`/`E_ConstExprDivByZero`
   reject an invalid one
 - `len(@a)` / `len(@!a)` / `a -> len()` of an array level with `arr-size` (a variable, row, field or
-  borrowed array, whose expression has no call) folds to that `arr-size`, so it is no call and
-  no candidate. Of a `run-size` level it is the length kept for it (`__<name>_d<k>` of the
-  location's root variable, converted to int64), which is not folded; of a level with neither
-  (`[]T` parameter) it is E_ArrLenNotConst; without `@`, E_ArrLenNeedsAddrOf unless a user
-  function named `len` exists
+  borrowed array) folds to that `arr-size`, so it is no call and no candidate; like `sizeof`, the
+  location's indexes are not evaluated. Of a `run-size` level it is the length kept for it
+  (`__<name>_d<k>` of the location's root variable, converted to int64), which is not folded; of
+  a level with neither (`[]T` parameter) it is E_ArrLenNotConst; without `@`, E_ArrLenNeedsAddrOf
+  unless a user function named `len` exists. A value that is neither an array nor a `[+]T` is
+  E_LenNotArray unless a user function named `len` exists
 - not-impl statements (ASTSpec.md) are rejected, never emitted: `E_VarTypeInferenceNotImpl` when
   the statement carries `untyped-var`, `E_StmtNotImplemented` otherwise; a not-impl expression in
   value position is rejected as `E_ExprNotImplemented`
@@ -417,7 +447,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   - Struct, enum, type-alias, and const declarations inside a block (a function body
     included) are resolved on entry, before its functions are pre-registered, and are
     not visible outside it; nor are the type names a block's import makes writable.
-    A block's struct or enum is named `__pln_L<module hash>_<n>_<Name>` wherever the
+    A block's struct or enum is named `__pln_L<len><module>_<n>_<Name>` wherever the
     type appears in sa.json (`type-name`, `alloc-shapes`), so blocks may reuse a name.
 
 - **if** - if / if-else statement
@@ -433,12 +463,14 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   known only at run time is held in a temp var `__<name>_d<k>` (uint64, `k` counting levels from
   the outermost), declared before the variable, which its allocation, its free and a row index
   without a `stride` read. Each later variable of the statement declares its own, copied from the
-  first variable's.
+  first variable's. Unless palan-sa is given `--release`, the first variable's is followed by
+  `if <it as int64> < 0 { __pln_negative_size(); }` (a C call to `std/rt`).
 
   **`[n]T` (raw array):** A `var-decl` with `arr` type-kind (`specifier: "raw"`, non-null `size-expr`,
-  prim `base-type`) is rewritten as a `var-decl` with `pntr` type and a synthesized `malloc` call as init:
+  prim `base-type`) is rewritten as a `var-decl` with `pntr` type and a synthesized `__pln_malloc` call
+(`std/rt`'s `malloc`, which aborts when it fails) as init:
   - `var-type`: changed from `arr` to `pntr` (pointer to the element type)
-  - `init`: `{"expr-type":"call","name":"malloc","func-type":"c","args":[<size_bytes>],"value-type":<pntr_type>}`
+  - `init`: `{"expr-type":"call","name":"__pln_malloc","func-type":"c","args":[<size_bytes>],"value-type":<pntr_type>}`
     where `size_bytes` = the size (when elem_size == 1) or `mul(<size>, lit-uint(elem_size))` otherwise
   - The variable is registered in scope with `pntr` type
   - The `size-expr` must evaluate to an integer type; a float size is a compile error
@@ -449,7 +481,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     the element carries the slot's permission, so a slot is a borrow and `->` into it stores the
     pointer. A read-only slot to rows (`[n]@[]$[m]T`) has `"mutable": false` on each row level
     too, as a read-only `@[k][m]T` does
-  - `init`: `malloc(size-expr * 8)` (each slot is a pointer; elem-size is always 8)
+  - `init`: `__pln_malloc(size-expr * 8)` (each slot is a pointer; elem-size is always 8)
   - The outer array is freed at scope exit. What the slots point to is not freed; a slot cannot
     take ownership with `->>` (E_TransferToBorrowSlot).
 
@@ -472,9 +504,9 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     - `stride` and the row's `arr-size` are present when `m` is a compile-time constant; absent
       when `m` is a runtime variable
   - When `m` is a constant (e.g. `[n]$[4]int32`):
-    - `init`: C call `malloc(mul(<n-expr>, lit-uint(m * sizeof(T))))`
+    - `init`: C call `__pln_malloc(mul(<n-expr>, lit-uint(m * sizeof(T))))`
   - When `m` is a variable (e.g. `[n]$[cols]int32`):
-    - `init`: C call `malloc(mul(<n>, mul(__<name>_d1, lit-uint(sizeof(T)))))`
+    - `init`: C call `__pln_malloc(mul(<n>, mul(__<name>_d1, lit-uint(sizeof(T)))))`
   - Scope-exit free: C call `free(<name>)` (no custom allocator; no `alloc-shapes` entry needed).
   - `n` (row count) is not stored; only `m` (inner dimension) needs to be retained for row indexing.
 
@@ -493,8 +525,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     row size must be a constant (E_UnsizedArrRowSizeNotConst). Further levels follow the same
     rules at any depth (`[+][m][n]U`, `[+][m]$[n]U`). For a pointer element (`[+]@T`, `[+]@!T`,
     `[+]@[]T`), `pntr(T, mutable)`, the slot a `[n]@T` element is; it borrows and is laid out as
-    an `int64`, so its shape key is `varr_int64`. A row of pointers (`[+][n]@T`) is not supported
-    (E_StmtNotImplemented). Below, `T` stands for `E` and `varr_T` for the shape key, made from
+    an `int64`, so its shape key is `varr_int64`. A row of pointer slots (`[+][n]@T`) is laid out as
+    a row of `int64` the same way (`varr_Pint64`). Below, `T` stands for `E` and `varr_T` for the shape key, made from
     `E`'s layout.
   - `init`: `__pln_alloc_varr_T(len, cap)` (see the varr `alloc-shapes` entry): `(0, 0)` for
     `[+]T`, `(0, n)` for `[+n]T` (`n` is converted to uint64 like `[n]T`'s size), and `(n, n)`
@@ -816,6 +848,13 @@ Expression model
 ----------------
 Same structure as AST expressions (see ASTSpec.md) with the following additions:
 
+- category - Present on an expression whose value has, or needs, an owner (absent on anything else):
+  - `owned` - an `id` naming a variable that owns its storage and releases it at scope exit (a heap
+    struct or array, not a `$` variable)
+  - `expiring` - a call returning an owned value that has no owner yet: an array as a heap block, a
+    struct as contents written to storage the receiver provides
+  - `owner-view` - a pointer cast to an owned type (`p as T`): what it points to, viewed as an owner
+    that is no Palan variable
 - value-type - Resolved Variable type object (same structure as var-type in ASTSpec.md).
   Present on all expression kinds except bare call with no return type.
   - lit-int: the expected type when used in a typed context (e.g. `int32 x = 10;` → int32);
@@ -841,7 +880,7 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     `uint8` `uint16` `bool`) is rejected with `E_WideCharLitNarrowType`, both where the literal
     takes the type and where it is compared with an operand of that type (a comparison types no
     literal by the other operand). `char` stays on the node in sa.json; codegen ignores it.
-  - lit-flo: adopts flo32 or flo64 when used in a float-typed context (e.g. `flo32 y = 1.5;` → flo32);
+  - lit-flo: adopts the float type of a float-typed context (e.g. `flo32 y = 1.5;` → flo32);
     defaults to flo64 when no expected float type is available
   - lit-str: {"type-kind": "pntr", "base-type": {"type-kind": "prim", "type-name": "uint8"}}
   - id: same object as var-type
@@ -852,7 +891,7 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
   - cmp: always `{"type-kind": "prim", "type-name": "bool"}`;
     left and right operands are promoted by the same rules as add
   - logical-and: always `{"type-kind": "prim", "type-name": "bool"}`;
-    both operands must be integer types (flo32/flo64 operands are a compile error)
+    both operands must be integer types (float operands are a compile error)
   - logical-or: same as logical-and
   - logical-not: always `{"type-kind": "prim", "type-name": "bool"}`; operand must be integer type
   - func-ref: a function name written where a value is expected (an `id` naming no variable or
@@ -1047,8 +1086,8 @@ SA-only expression kinds (not present in AST JSON):
 - temp - A call argument held in a temp variable (see Temp arguments above), or a chained call
   given return values (see Chained calls).
   - expr-type\*: "temp"
-  - body\*: statements that declare and initialize the temp; each releases the temps of its own
-    values at its end
+  - body\*: statements that declare and initialize the temp; the temps of their values are
+    released with `release`, after it
   - value\*: the temp as the argument (`id`), or the chained `call` taking the temps
   - release\*: statements that free the temp; codegen runs them once the enclosing full
     expression has been evaluated: at the end of the statement (before a `return`'s `ret`), or,
@@ -1093,7 +1132,7 @@ SA-only expression kinds (added to AST nodes):
 
   Validation:
   - If the array operand's value-type is not `pntr` → compile error (E_NotArrayType)
-  - If the index expression resolves to flo32 or flo64 → compile error (E_ArrayIndexNotInteger)
+  - If the index expression resolves to a float type → compile error (E_ArrayIndexNotInteger)
   - If a non-struct element's byte size cannot be determined → compile error
     (E_UnknownType). Reachable because gen-ast has no symbol table: a name it doesn't
     recognize as a struct in native syntax (e.g. `@!Foo p;` where `Foo` was never declared)
@@ -1181,24 +1220,26 @@ Additional fields per expression kind:
   - ret-dest and struct-ret added instead of value-type when the function (Palan or C, or a
     function pointer) returns a struct: `ret-dest` is an expression of type `pntr(struct)`
     giving the storage the value is written to, and `struct-ret` is `{"size":<total struct size
-    in bytes>,"eightbytes":[{"class":"int"|"sse","size":1..8},...]}` (System V AMD64
+    in bytes>,"eightbytes":[{"class":"int"|"sse"|"x87","size":1..16},...]}` (System V AMD64
     classification). Each array entry is one eightbyte of the classified return value in order —
     its byte offset within the struct is implied by its index (`index * 8`), there is no
     explicit `offset` key; `size` on the last entry is the tail width when the struct isn't a
     multiple of 8 bytes (codegen writes a width other than 1/2/4/8 piecewise). An SSE eightbyte
     taken up by one `flo64` also has `"flo64":true`: codegen reads it from memory in one 8-byte
     load, and any other 8-byte SSE eightbyte as two 4-byte halves, since it is usually written as
-    two `flo32` stores an 8-byte load could not be forwarded from. A struct over 16
+    two `flo32` stores an 8-byte load could not be forwarded from. A struct holding a `flo80`
+    is MEMORY class, except one of 16 bytes, which is that `flo80` alone and is
+    `"eightbytes":[{"class":"x87","size":16}]`: it comes back in st(0). A struct over 16
     bytes (the System V AMD64 MEMORY class) is `"eightbytes":[]`: codegen passes `ret-dest` as
     the hidden first argument. Such a call has no value and is always the `body` of an `expr`
     statement; where its value is used, SA emits a `temp` whose `body` declares the storage and
     makes the call, and whose `value` names the storage with `"category":"expiring"`. Where the
-    receiver provides storage of its own (see Struct variable declaration and Value categories
-    in SpecAndDesign.md §4), that storage is the `ret-dest`. A C function's by-value struct
-    return type is normalized to `pntr(struct)` when it is registered, as a Palan `-> T` is.
+    receiver provides storage of its own (see Struct variable declaration and SpecAndDesign.md
+    §4), that storage is the `ret-dest`. A C function's by-value struct return type is normalized to `pntr(struct)` when it is registered, as a Palan `-> T` is.
   - struct-arg added on an argument (in `args`) given to a C function's by-value struct
-    parameter: `{"size":<total struct size in bytes>,"eightbytes":[...]}`, with `eightbytes` as
-    in `struct-ret` (`[]` for MEMORY class). The argument expression itself is a pointer to the
+    parameter: `{"size":<total struct size in bytes>,"align":<its alignment>,"eightbytes":[...]}`,
+    with `eightbytes` as in `struct-ret` (`[]` for MEMORY class, which a `flo80` always makes it
+    here). `align` places a struct copied to the stack, at a 16-byte boundary when it is 16. The argument expression itself is a pointer to the
     struct to copy — a variable, field, array element, or a `temp` holding a literal or a
     returned struct — and codegen reads the eightbytes through it: each goes to a register of
     its class when all of the struct's eightbytes fit in the remaining argument registers,
@@ -1260,6 +1301,7 @@ call returning one).
 Float promotion rules (subsumed by usual arithmetic conversions above, restated for clarity):
 
 - `flo32 op flo64` → flo32 is implicitly widened to flo64; result is flo64
+- `flo32 op flo80` / `flo64 op flo80` → the narrower float is implicitly widened to flo80; result is flo80
 - `int op flo32` → int is implicitly widened to flo32; result is flo32
 - `int op flo64` → int is implicitly widened to flo64; result is flo64
 - `flo32 op int` / `flo64 op int` → symmetric with the above
@@ -1386,14 +1428,24 @@ it, the registry's function type compares it (so a C callback type never matches
   the callee owns; a literal or a call's result is a `temp`), then laid out in the `temp` of a
   frame array `__va_<n>` (`frame-alloc` of the arguments' count times the element's slot, then
   one `arr-assign` each). An argument's own `temp` is opened into the array's, so what it
-  releases outlives the call; one still holding a call's temporary within a borrow is
-  E_VariadicArgTempBorrow. The call passes that array (`lit-int` 0 of type `@void` for none) and
+  releases outlives the call, as the temps an `arr-assign` holds do. The call passes that array (`lit-int` 0 of type `@void` for none) and
   the count as a `uint64` `lit-int`: a call has one argument more than the signature's parameters.
 - In `functions` the parameter is two: `xs`, typed as an array sized at run time
   (`{"type-kind":"pntr","run-size":true,"base-type":E}`), and `__xs_d0` (`uint64`), the length
   `len`, `for` and copies read as for a local `[n]E`. `xs` is no owner: its elements owning blocks
   are released at exit by the array helper's `fini`, as a frame array's are, and the array itself
   cannot be moved or taken (E_TransferFromNonOwner).
+- A `spread` (AST) is the last argument (E_SpreadPlace, also anywhere outside a call's arguments)
+  and the only one past the other parameters (E_SpreadPosition) of a Palan variadic parameter
+  (E_SpreadNotVariadic, also for C's `...` and `len`). Its value is analyzed as any argument: an
+  array keeping a length (E_SpreadNotArray; a `[]T`, E_SpreadUnsized), not written `@a`
+  (E_SpreadBorrow), whose type `copySourceMatch`es `xs`'s (E_SpreadElemMismatch). Among overloads
+  only such candidates fit, unranked.
+- A given spread (`transfer`, or a call returning an owned array) passes the block it pins, a
+  `[+]T`'s data pinned too; any other is copied (`CopyInto::New`) into a heap array `__va_<n>`
+  (`____va_<n>_d0` holding a length known at run time). The `temp` frees only the block (and a
+  `[+]T`'s header) after the call, since the callee releases the elements; the count is the
+  source's length, or the copy's own.
 
 ### String literal conversion
 
@@ -1465,6 +1517,11 @@ E_MoveFromReadOnlyView).
   `expiring`, which `b` takes over as it does a call result, declared as an array variable is
   (its run-time sizes kept). Another type is E_TransferShapeMismatch, a `$` variable E_TakeIntoFrameVar, and a variable owning no block
   E_TransferToNonOwnedVar.
+- A local variable that has given its whole value away is NULL until `->>` fills it, and any
+  other use of it is E_UseAfterGiven, at the use (PalanReference.md states which are uses). It
+  becomes given when its statement (or `<<=` initializer) ends. Paths merge as given if given on
+  any; a use a loop's head reaches before a fill is checked when the loop ends against the end of
+  its body and each `continue`.
 - A cast whose target is an owned struct or array (`ownedTypeOf`) from a `@!X`/`@X` pointer is a
   `convert` to the owned type with category `owner-view` (and `read-only: true` from `@X`);
   from anything else it is E_OwnerViewNeedsPtr. An `owner-view` is copied where an owned
@@ -1531,8 +1588,8 @@ Before a `cinclude`d C function's parameters/return type (or a C global's single
 (`PlnSaInternal.h`) apply `normalizeCType` (folding `pntr`'s pointee `const` to `mutable`, and
 a named `strct`/`union`→`struct`) and then check every type against `unrepresentableTypeName`, which recognizes:
 
-- A `prim` type-name not resolved to a known Palan primitive (e.g. `flt128` for C's `long
-  double` when no typedef maps it to something usable).
+- A `prim` type-name not resolved to a known Palan primitive (the C spellings c2ast gives
+  `__int128` and the `_Complex` types, such as `double _Complex`).
 - `arr` (a bare array type-kind — the `[n]@T`/`[n]@!T` pointer-slot-array shape has already
   normalized to `pntr` by this point), a `func` whose parameters or return are not all
   primitives or pointers representable by these same rules (a variadic one, or one taking a
@@ -1694,9 +1751,12 @@ the failing one are discarded, and no partial layout is kept:
 - A field with `bits` (a C bit-field) must have a folded width (a `null` one is rejected).
   It is laid out as GCC does on x86-64: it moves to the next unit of its declared type only when
   it would straddle one (packed: never), a zero-width one moves to the next unit even when
-  packed, and only a named, unpacked one raises the struct's alignment. A named one is a field
-  covering the bytes its bits occupy, but reading, writing or taking its address, or giving it
-  in a struct literal, is E_UnsupportedCFieldType; an unnamed one only takes its place.
+  packed, and only a named, unpacked one raises the struct's alignment. A named one inside one
+  unit of its declared type, with the unit inside the struct, is a field of that type at the
+  unit's offset, read and written with `bits` (see field-access below); taking its address is
+  E_AddrOfBitField, and an integer literal outside its width E_BitFieldLiteralOutOfRange. One a
+  packed struct lays across two units, or past its end, covers the bytes its bits occupy and is
+  E_UnsupportedCFieldType on any use. An unnamed one only takes its place.
 
 ### C ABI layout
 
@@ -1732,7 +1792,7 @@ E_EmbedOwningType, as for a variable.
 {"stmt-type":"var-decl","vars":[{
   "name":"p",
   "var-type":{"type-kind":"pntr","base-type":{"type-kind":"struct","type-name":"Point"}},
-  "init":{"expr-type":"call","name":"malloc","func-type":"c",
+  "init":{"expr-type":"call","name":"__pln_malloc","func-type":"c",
           "args":[{"expr-type":"lit-int","value":"16",
                    "value-type":{"type-kind":"prim","type-name":"uint64"}}],
           "value-type":{"type-kind":"pntr","base-type":{"type-kind":"struct","type-name":"Point"}}}
@@ -1743,7 +1803,7 @@ Struct variables are registered in `arrayScopeVars_` and a `free()` statement is
 at scope exit (same mechanism as heap-allocated arrays).
 
 When the initializer is a call returning the same struct (`Point p = makePoint();`,
-`div_t d = div(7, 2);`), the var-decl's `init` is a raw `malloc` of the struct's size even when
+`div_t d = div(7, 2);`), the var-decl's `init` is a raw `__pln_malloc` of the struct's size even when
 the struct owns fields, since the callee builds them, and the call follows the var-decl as an
 `expr` statement whose `ret-dest` is the variable. A struct variable with an initializer is
 always emitted as its own var-decl, so `Point a = b, c = f();` evaluates left to right.
@@ -1754,7 +1814,7 @@ A struct or array variable declared with `$` (`$Point p;`, `$[4]int32 a;`) gets 
 `var-type` as without `$`; its `init` is a `frame-alloc` instead of the allocation call, and
 what the heap version does through its allocator and free functions is derived from them:
 
-- `malloc` → nothing (left undefined).
+- `__pln_malloc` → nothing (left undefined).
 - `__pln_alloc_K(args)` → `__pln_init_K(v, args)` follows the var-decl.
   build-mgr generates `__pln_init_K` (fill an existing block) and `__pln_fini_K` (release what
   the block owns, not the block) for every alloc-shape alongside the alloc/free pair.
@@ -1775,24 +1835,42 @@ and `return` of a stack struct or `$[+]T` returns a copy. `return` of a stack ar
 
 A `global` variable of the module and a C global are static variables: a name bound to a slot at
 an assembly label. Expressions and statements refer to one by `name`, as to any variable; what
-binds the name is a function's (or `main`'s) `globals` entry, made at its entry, or, for a
-`global` variable at the top level, its `var-decl`, whose variable carries `label`. The slot holds
-what a frame variable's value would be, a pointer for an array or struct.
+binds the name is a function's (`main`'s, `..init`'s) `globals` entry, made at its entry, or, in
+`..init`, a `global` variable's `var-decl`, whose variable carries `label`. The slot holds what a
+frame variable's value would be, a pointer for an array or struct.
 
 - A Palan global's `label` is `<module>.<name>`; its `var-decl` lowers as a top-level variable's
   does, except that a `frame-alloc` becomes a `static-alloc` and what it owns is never freed (a
-  value it is reassigned away from still is).
+  value it is reassigned away from still is). `main` binds every Palan global with its own type.
 - A function sees a Palan global its permit lists as it would a parameter: an array or struct as
   `storageBorrowType` gives (`@` without `!`, `@!` with it), and the function cannot assign the
   variable itself (`E_GlobalNotReplaceable`); anything else with the variable's type, assignable
   only with `!` (`E_GlobalNotWritable`).
 - A C global's `label` is its C name. It is readable anywhere it is visible, and writable at the
   top level after a `global` statement names it, or in a function a permit lists with `!`.
-- A top-level statement before a Palan global's `var-decl`, the declaration's own initializer
-  included, whose calls or function addresses reach a function permitted to use it is
-  `E_GlobalUsedBeforeDecl`; reaching is followed through every function's calls and function
-  addresses. Importing a module whose AST permits a function to use one of its Palan globals is
-  `E_ImportModuleWithGlobals`.
+- An imported `export global` keeps its module's label and is bound by `name` as written: `count`,
+  or `M.count` under an alias, which SA reads from a field access or a field assignment on the
+  alias where no variable hides it. It is visible from the import to the end of the enclosing
+  scope. An import at the top level binds it in `main` and `..init` with its own type, and lets
+  permits name it; one in a function binds it there with its own type, readable and writable. Its
+  type comes from its declaration alone, the sizes an array literal gives filled in, so a source and
+  its interface give one type; a size known only at run time is `E_ExportedGlobalSizeNotConst`. A
+  name already declared in the scope, by the module or by another import, is `E_DuplicateVarDecl`.
+
+### Module initialization
+
+`<module>..init` (in `functions`, exported, no parameters) is generated for every module, since
+each importer calls it. Its body, when the module imports something or declares a `global`:
+
+1. `if` its flag `__init_done` (bound in its `globals` to `<module>..init.done`, `uint8`) is not
+   0, `return`; then `1 -> __init_done`, so a circle of imports reaching it again returns at once.
+2. An `expr` `call` with no arguments of the `..init` of each module the source imports, anywhere
+   in it, in order of first import, the module itself excepted.
+3. The `global` variables' declarations, in source order.
+
+An initializer is analyzed in a scope of its own holding the globals declared before it, so it
+cannot use an ordinary top-level variable (`E_GlobalInitUsesTopVar`); temporaries and C globals it
+uses belong to `..init`.
 
 ### field-assign statement → sa.json
 
@@ -1866,6 +1944,11 @@ a `pntr`-typed `value-type` in place of the field's own type — see the addr-of
  "value-type":{"type-kind":"pntr","mutable":true,"base-type":{"type-kind":"prim","type-name":"int64"}},
  "addr-only":true}
 ```
+
+A C bit-field's `field-access` and `field-assign` add `"bits":{"shift":<int>,"width":<int>}`:
+the field is `width` bits from bit `shift` of the unit of its `value-type` at `offset`. A read
+extends the sign of a signed type; a write keeps the unit's other bits and the value's low
+`width` bits.
 
 `resolveObjectChain(object, forWrite)` is the single field-chain resolver used by field-access
 reads, field-assign writes, and the addr-of field-access shape alike — `field-assign`'s

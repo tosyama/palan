@@ -1,0 +1,2 @@
+cinclude "error_617_c_macro_unexported.h" as M;
+int32 a = ONE(1);

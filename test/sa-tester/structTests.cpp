@@ -76,7 +76,7 @@ TEST(sa, struct_def)
 	ASSERT_EQ(v["var-type"]["base-type"]["type-name"], "Point");
 	// init: malloc(16)
 	ASSERT_EQ(v["init"]["expr-type"], "call");
-	ASSERT_EQ(v["init"]["name"],      "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["func-type"], "c");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 }
@@ -162,7 +162,7 @@ TEST(sa, embed_struct_field)
 	// Line { $Point a; $Point b; } — totalSize = 16+16 = 32
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "l");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "32");
 }
 
@@ -216,7 +216,7 @@ TEST(sa, malloc_no_owned)
 	// Point p; — no owned struct fields → malloc
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "p");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 
 	// No struct entries added to alloc-shapes
@@ -328,7 +328,7 @@ TEST(sa, embed_struct_arr_decl)
 	ASSERT_EQ(vt["base-type"]["type-name"], "Point");
 
 	const auto& init = body[0]["vars"][0]["init"];
-	ASSERT_EQ(init["name"],      "malloc");
+	ASSERT_EQ(init["name"], "__pln_malloc");
 	ASSERT_EQ(init["expr-type"], "call");
 	ASSERT_EQ(init["args"][0]["expr-type"],          "mul");
 	ASSERT_EQ(init["args"][0]["right"]["expr-type"], "lit-uint");
@@ -437,7 +437,7 @@ TEST(sa, at_struct_arr_decl)
 	ASSERT_EQ(elem_vt["base-type"]["type-name"], "Point");
 
 	const auto& init = body[0]["vars"][0]["init"];
-	ASSERT_EQ(init["name"],      "malloc");
+	ASSERT_EQ(init["name"], "__pln_malloc");
 	ASSERT_EQ(init["expr-type"], "call");
 	ASSERT_EQ(init["args"][0]["expr-type"],          "mul");
 	ASSERT_EQ(init["args"][0]["right"]["expr-type"], "lit-uint");
@@ -627,7 +627,7 @@ TEST(sa, embed_prim_arr_field)
 	// (ownsFields stays false for embed-arr-only structs).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "buf");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "32");
 }
 
@@ -643,7 +643,7 @@ TEST(sa, embed_struct_arr_field)
 	// and the plain malloc path (ownsFields stays false for embed-arr-only structs).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "poly");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "64");
 }
 
@@ -660,7 +660,7 @@ TEST(sa, embed_ptr_arr_field)
 	// and the plain malloc path (ownsFields stays false for embed-ptr-arr-only structs).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "r");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "32");
 }
 
@@ -675,7 +675,7 @@ TEST(sa, embed_ptr_arr_field_readonly)
 	// Watch w; -> malloc(24): confirms totalSize == 3*8 == 24 (3 pointer slots)
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "w");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "24");
 }
 
@@ -690,7 +690,7 @@ TEST(sa, embed_ptr_arr_field_prim_leaf)
 	// Counter c; -> malloc(16): confirms totalSize == 2*8 == 16 (2 pointer slots)
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "c");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 }
 
@@ -989,7 +989,7 @@ TEST(sa, struct_type_alias)
 	// init: malloc(16) -- proof storage is actually allocated, not just a
 	// bare pointer-typed variable with no backing memory.
 	ASSERT_EQ(v["init"]["expr-type"], "call");
-	ASSERT_EQ(v["init"]["name"],      "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 }
 
@@ -1191,7 +1191,7 @@ TEST(sa, tapple_struct)
 	while (jout["statements"][b]["stmt-type"] != "block") b++;
 	const json& stmts = jout["statements"][b]["body"];
 	ASSERT_EQ(stmts[0]["vars"][0]["name"], "s");
-	ASSERT_EQ(stmts[0]["vars"][0]["init"]["name"], "malloc");
+	ASSERT_EQ(stmts[0]["vars"][0]["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(stmts[1]["stmt-type"], "tapple-decl");
 	ASSERT_EQ(stmts[1]["vars"][0]["ret-dest"]["name"], "s");
 	ASSERT_EQ(stmts[1]["vars"][1]["var-name"], "c");
@@ -1361,8 +1361,9 @@ TEST(sa, field_embed_varr)
 	ASSERT_EQ(h["value-type"]["base-type"]["type-kind"], "varr");
 }
 
-// Initializers are evaluated into the struct's shape, as the generated module
-// stores integers, and a struct laid out in another brings its own along.
+// The module defining a struct stores its initializers by a function of its
+// own, which the generated __pln_init_T calls; a struct laid out in it brings
+// its own function along.
 TEST(sa, field_init)
 {
 	cleanTestEnv();
@@ -1371,18 +1372,22 @@ TEST(sa, field_init)
 	map<string, json> shapes;
 	for (auto& sh : jout["alloc-shapes"])
 		if (sh.value("shape-kind", "") == "struct") shapes[sh["shape-name"]] = sh;
-	const auto& p = shapes.at("P")["inits"];
-	ASSERT_EQ(p.size(), 2u);
-	ASSERT_EQ(p[0], json({{"kind","prim"},{"offset",4},{"type","int8"},{"values",{"-56"}}}));
-	ASSERT_EQ(p[1]["values"], json::array({"4"}));
-	const auto& si = shapes.at("S")["inits"];
-	ASSERT_EQ(si.size(), 5u);
-	ASSERT_EQ(si[0]["kind"], "embed-varr");
-	ASSERT_EQ(si[0]["values"], json::array({"104", "0"}));
-	ASSERT_EQ(si[1]["kind"], "row");
-	ASSERT_EQ(si[1]["values"], json::array({"-1", "2"}));
-	ASSERT_EQ(si[2]["offset"], 36);
-	ASSERT_EQ(si[4], json({{"count",2},{"kind","structs"},{"name","P"},{"offset",48}}));
+	string fiP = shapes.at("P")["init-func"], fiS = shapes.at("S")["init-func"];
+	ASSERT_FALSE(shapes.at("S").contains("inits"));
+	map<string, json> funcs;
+	for (auto& f : jout["functions"]) funcs[f["name"]] = f;
+	const auto& p = funcs.at(fiP);
+	ASSERT_TRUE(p["export"].get<bool>());
+	ASSERT_EQ(p["body"].size(), 2u);
+	ASSERT_EQ(p["body"][0]["stmt-type"], "field-assign");
+	ASSERT_EQ(p["body"][0]["offset"], 4);
+	ASSERT_EQ(p["body"][0]["value"]["value"], "200");
+	// $P p calls P's function; $[2]$P ps builds both as a run.
+	const auto& sb = funcs.at(fiS)["body"];
+	ASSERT_EQ(sb[0]["body"]["name"], fiP);
+	ASSERT_EQ(sb[0]["body"]["args"][0]["offset"], 32);
+	ASSERT_EQ(funcName(sb[1]["body"]["name"]), "__pln_initrun_P");
+	ASSERT_EQ(sb[1]["body"]["args"][2]["value"], "2");
 
 	// A named literal leaving a field out gives it the initializer.
 	const auto& stmts = jout["statements"];
@@ -1510,7 +1515,7 @@ TEST(sa, struct_lit_init_assign)
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	ASSERT_EQ(stmts[0]["stmt-type"], "var-decl");
-	ASSERT_EQ(stmts[0]["vars"][0]["init"]["name"], "malloc");
+	ASSERT_EQ(stmts[0]["vars"][0]["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(stmts[1]["stmt-type"], "field-assign");
 	ASSERT_EQ(stmts[1]["var"], "a");
 	ASSERT_EQ(stmts[3]["offset"], 8);
@@ -1575,7 +1580,7 @@ TEST(sa, struct_init_from_call)
 		ASSERT_EQ(decl["stmt-type"], "var-decl");
 		ASSERT_EQ(decl["vars"].size(), 1);
 		ASSERT_EQ(decl["vars"][0]["name"], expected[i][0]);
-		ASSERT_EQ(decl["vars"][0]["init"]["name"], "malloc");
+		ASSERT_EQ(decl["vars"][0]["init"]["name"], "__pln_malloc");
 		const auto& call = stmts[2 * i + 1]["body"];
 		ASSERT_EQ(funcName(call["name"]), expected[i][1]);
 		ASSERT_EQ(call["ret-dest"]["name"], expected[i][0]);
@@ -1890,4 +1895,38 @@ TEST(sa, literal_conversion)
 	const auto& words = stmts[12]["body"];
 	ASSERT_EQ(funcName(words["name"]), "words");
 	ASSERT_EQ(words["ret-dest"]["name"], "w");
+}
+
+TEST(sa, numeric_literal_conversion)
+{
+	cleanTestEnv();
+	json jout = written(run_sa("../test/testdata/sa/353_numeric_literal_conversion.pa"));
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	// The overload taking the literal's default type converts it; a constant
+	// expression or const is folded first.
+	auto paramType = [](const json& call) {
+		string name = call["name"];
+		return name.substr(name.rfind('.') + 1);
+	};
+	auto isConversion = [&](const json& call, const string& from, const string& value) {
+		return call["expr-type"] == "call" && funcName(call["name"]) == "big"
+		    && paramType(call) == from && call["args"][0]["value"] == value;
+	};
+	ASSERT_TRUE(isConversion(stmts[1]["body"], "int64", "12"));
+	ASSERT_TRUE(isConversion(stmts[2]["body"][1]["body"], "flo64", "1.5"));
+	ASSERT_TRUE(isConversion(stmts[3]["body"]["args"][0]["body"][1]["body"], "int64", "-12"));
+	// An overload taking the literal as it is wins over a conversion.
+	ASSERT_EQ(paramType(stmts[4]["vars"][0]["init"]), "int64");
+	// Operator operands.
+	ASSERT_TRUE(isConversion(stmts[6]["body"]["args"][1]["body"][1]["body"], "int64", "2"));
+	ASSERT_TRUE(isConversion(stmts[7]["vars"][0]["init"]["args"][1]["body"][1]["body"], "int64", "36"));
+	// A struct literal's field, array literal elements, and return.
+	ASSERT_TRUE(isConversion(stmts[9]["body"][1]["body"], "int64", "10"));
+	ASSERT_TRUE(isConversion(stmts[12]["body"][1]["body"], "int64", "1"));
+	ASSERT_TRUE(isConversion(stmts[13]["body"][1]["body"], "int64", "2"));
+	ASSERT_TRUE(isConversion(jout["functions"][7]["body"][1]["body"], "int64", "7"));
+	// A string const converts as the literal does.
+	ASSERT_EQ(funcName(stmts[15]["body"]["name"]), "name");
+	ASSERT_EQ(stmts[15]["body"]["ret-dest"]["name"], "n");
 }

@@ -802,16 +802,15 @@ TEST(codegen, logical_ops) {
     ASSERT_EQ(err, "");
 
     string asm_text = readFile(asmf);
-    // logical-and: short-circuit label and conditional jump
-    ASSERT_NE(asm_text.find(".Lland0_end:"),    string::npos);
-    ASSERT_NE(asm_text.find("je .Lland0_end"),  string::npos);
-    // logical-or: short-circuit labels and jumps
-    ASSERT_NE(asm_text.find(".Llor1_true:"),    string::npos);
-    ASSERT_NE(asm_text.find(".Llor1_end:"),     string::npos);
-    ASSERT_NE(asm_text.find("jne .Llor1_true"), string::npos);
-    // logical-not: short-circuit label and conditional jump
-    ASSERT_NE(asm_text.find(".Lnot2_end:"),     string::npos);
-    ASSERT_NE(asm_text.find("je .Lnot2_end"),   string::npos);
+    // A value is 0 unless the condition, short-circuited, reaches the store of 1.
+    // logical-and: either operand false jumps past it
+    ASSERT_NE(asm_text.find(".Lbool0_end:"),     string::npos);
+    ASSERT_NE(asm_text.find("je .Lbool0_end"),   string::npos);
+    // logical-or: a true left operand skips the right one
+    ASSERT_NE(asm_text.find("jne .Llor2_skip"),  string::npos);
+    ASSERT_NE(asm_text.find("je .Lbool1_end"),   string::npos);
+    // logical-not: a true operand jumps past it
+    ASSERT_NE(asm_text.find("jne .Lbool3_end"),  string::npos);
 }
 
 TEST(codegen, if_not) {
@@ -1331,6 +1330,19 @@ TEST(codegen, struct_ret_flo64) {
     ASSERT_EQ(execTestCommand("as " + asmf + " -o out/079_struct_ret_flo64.o"), "");
 }
 
+// Another module links to an exported global's slot, never to a private one.
+TEST(codegen, export_global) {
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/080_export_global.sa.json";
+    string asmf = "out/080_export_global.s";
+    ASSERT_EQ(run_codegen(sa, asmf), "");
+    string asm_text = readFile(asmf);
+    ASSERT_NE(asm_text.find("\t.globl _080_export_global.n\n_080_export_global.n:"), string::npos);
+    ASSERT_NE(asm_text.find("\t.globl _080_export_global.a\n_080_export_global.a:"), string::npos);
+    ASSERT_EQ(asm_text.find(".globl _080_export_global.m"), string::npos);
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/080_export_global.o"), "");
+}
+
 TEST(codegen, struct_ret_memory) {
     // >16 bytes: MEMORY class -- the ret-dest pointer is passed as the hidden
     // first argument; no register-based eightbyte store follows the call.
@@ -1427,13 +1439,15 @@ TEST(codegen, entry) {
     cleanTestEnv();
     string asmf = "out/entry.s";
 
-    string err = execTestCommand("palan-codegen --entry app..main -o " + asmf);
+    string err = execTestCommand("palan-codegen --entry app..init --entry app..main -o " + asmf);
     ASSERT_EQ(err, "");
 
+    // Each call reloads argc and argv, which the one before may clobber.
     string asm_text = readFile(asmf);
     ASSERT_NE(asm_text.find("\t.globl _start\n_start:\n"
-                            "\tmovq (%rsp), %rdi\n\tleaq 8(%rsp), %rsi\n"
-                            "\tcall app..main\n\tmovl $0, %edi\n\tcall exit\n"), string::npos);
+                            "\tmovq (%rsp), %rdi\n\tleaq 8(%rsp), %rsi\n\tcall app..init\n"
+                            "\tmovq (%rsp), %rdi\n\tleaq 8(%rsp), %rsi\n\tcall app..main\n"
+                            "\tmovl $0, %edi\n\tcall exit\n"), string::npos);
     ASSERT_NE(asm_text.find("\t.section .data\n"),         string::npos);
     ASSERT_NE(asm_text.find("\t.globl __dso_handle\n"),    string::npos);
     ASSERT_NE(asm_text.find("\t.hidden __dso_handle\n"),   string::npos);
@@ -1534,4 +1548,47 @@ TEST(codegen, global_var)
     ASSERT_NE(asm_text.find("leaq optind(%rip)"), string::npos);
 
     ASSERT_EQ(execTestCommand("as " + asmf + " -o out/078_global.o"), "");
+}
+
+TEST(codegen, bit_field)
+{
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/081_bit_field.sa.json";
+    string asmf = "out/081_bit_field.s";
+
+    string err = run_codegen(sa, asmf);
+    ASSERT_EQ(err, "");
+
+    string asm_text = readFile(asmf);
+    // A store keeps the unit's other bits; a signed read extends the sign, an unsigned one zeros.
+    ASSERT_NE(asm_text.find("shlq $59"), string::npos);
+    ASSERT_NE(asm_text.find("shrq $56"), string::npos);
+    ASSERT_NE(asm_text.find("andq"),     string::npos);
+    ASSERT_NE(asm_text.find("orq"),      string::npos);
+    ASSERT_NE(asm_text.find("sarq $59"), string::npos);
+    ASSERT_NE(asm_text.find("shrq $61"), string::npos);
+
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/081_bit_field.o"), "");
+}
+
+// A flo80 stays in memory: the x87 unit loads and stores it around each
+// operation, and it is copied 16 bytes at a time.
+TEST(codegen, flo80)
+{
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/082_flo80.sa.json";
+    string asmf = "out/082_flo80.s";
+    ASSERT_EQ(run_codegen(sa, asmf), "");
+    string asm_text = readFile(asmf);
+    ASSERT_NE(asm_text.find("\t.tfloat 2.5\n"), string::npos);
+    // The parameter after seven integers is at the next 16-byte boundary.
+    ASSERT_NE(asm_text.find("\tfldt 32(%rbp)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tmovdqu %xmm8, 16(%rsp)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfdivrp %st, %st(1)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfucomip %st(1), %st\n\tfstp %st(0)\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfchs\n"), string::npos);
+    ASSERT_NE(asm_text.find("\tfstpl -16(%rsp)\n"), string::npos);
+    // The returned value is taken off the x87 stack.
+    ASSERT_NE(asm_text.find("flo80\n\taddq $32, %rsp\n\tfstpt "), string::npos);
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/082_flo80.o"), "");
 }

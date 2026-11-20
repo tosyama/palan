@@ -1,0 +1,23 @@
+type big { int64 v; };
+func big(int64 n) -> big b { n -> b.v; }
+func big(flo64 f) -> big b { int64(f) -> b.v; }
+func show(@big b) { }
+func pick(int64 n) -> int32 { return 1; }
+func pick(@big b) -> int32 { return 2; }
+func *(@big x, @big y) -> big r { x.v * y.v -> r.v; }
+func ==(@big x, @big y) -> bool { return x.v == y.v; }
+func ret() -> big { return 7; }
+type pair { big a; int32 n; };
+type name { [+]uint8 b; };
+func name(@[]uint8 cs) -> name n { }
+const K = 10;
+const S = "Ann";
+big a = 12;
+1.5 -> a;
+show(-12);
+int32 k = pick(3);
+big m = a * 2;
+bool e = a == 12 * 3;
+pair p = [K, 1];
+[2]big bs = [1, 2];
+name n = S;

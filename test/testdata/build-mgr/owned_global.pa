@@ -1,0 +1,5 @@
+global [3]int32 a = [1, 2, 3] for total;
+export func total() -> int32 s {
+	0 -> s;
+	for copy e in a { s + e -> s; }
+}

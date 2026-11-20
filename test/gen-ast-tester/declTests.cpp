@@ -63,6 +63,21 @@ TEST(gen_ast, type_alias) {
 	ASSERT_EQ(s["type"]["type-name"], "int64");
 }
 
+TEST(gen_ast, opaque_type) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/164_opaque.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const auto& stmts = jout["ast"]["statements"];
+	ASSERT_EQ(stmts[1]["stmt-type"], "opaque-def");
+	ASSERT_EQ(stmts[1]["name"], "Handle");
+	ASSERT_EQ(stmts[1]["contents"]["type-name"], "Inner");
+	ASSERT_TRUE(stmts[1]["export"].get<bool>());
+	ASSERT_EQ(stmts[2]["contents"]["specifier"], "variable");
+	ASSERT_FALSE(stmts[2].contains("export"));
+	ASSERT_TRUE(jout["ast"]["functions"][0]["release"].get<bool>());
+}
+
 TEST(gen_ast, const_decl) {
 	cleanTestEnv();
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/102_const_decl.pa");
@@ -317,6 +332,24 @@ TEST(gen_ast, variadic_param) {
 	ASSERT_EQ(fp["parameters"][1]["var-type"]["base-type"]["type-name"], "int64");
 }
 
+TEST(gen_ast, spread_arg) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/168_spread_arg.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const auto& sts = jout["ast"]["statements"];
+	const auto& copy = sts[0]["body"]["args"][1];
+	ASSERT_EQ(copy["expr-type"], "spread");
+	ASSERT_EQ(copy["value"]["name"], "a");
+	ASSERT_EQ(copy["loc"], json({1, 8, 1, 12}));
+	const auto& given = sts[1]["body"]["args"][0];
+	ASSERT_EQ(given["expr-type"], "spread");
+	ASSERT_EQ(given["value"]["expr-type"], "transfer");
+	ASSERT_EQ(sts[2]["body"]["args"][0]["expr-type"], "spread");
+	ASSERT_EQ(sts[3]["body"]["args"][1]["expr-type"], "spread");
+	ASSERT_EQ(sts[4]["body"]["call"]["args"][0]["expr-type"], "spread");
+}
+
 TEST(gen_ast, func_arr_at_struct_param) {
 	cleanTestEnv();
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/030_func_arr_at_struct_param.pa");
@@ -468,13 +501,20 @@ TEST(gen_ast, cinclude_unexported_macro) {
 	auto& stmts = jout["ast"]["statements"];
 
 	ASSERT_FALSE(stmts[0]["vars"][0]["init"].contains("c-macro"));
-	ASSERT_EQ(stmts[2]["vars"][0]["init"]["c-macro"], "not-constant");
+	ASSERT_EQ(stmts[2]["vars"][0]["init"]["left"]["c-macro"], "not-constant");
 
 	auto& after = stmts[4]["vars"][0]["init"];
 	ASSERT_EQ(after["left"]["expr-type"], "lit-int");
 	ASSERT_EQ(after["left"]["value"], "7");
 	ASSERT_EQ(after["right"]["c-macro"], "function-like");
+	ASSERT_EQ(after["right"]["c-macro-form"], "?:");
 	ASSERT_EQ(after["right"]["args"][0]["value"], "7");
+
+	// An expandable definition is palan-sa's: its call is not marked, and the
+	// cinclude redefining it as a constant ends it.
+	ASSERT_EQ(stmts[1]["expandables"][0]["name"], "EX");
+	ASSERT_FALSE(stmts[2]["vars"][0]["init"]["right"].contains("c-macro"));
+	ASSERT_EQ(stmts[3]["ended-macros"], json::array({"EX"}));
 }
 
 TEST(gen_ast, cinclude_macro_state) {
@@ -489,6 +529,23 @@ TEST(gen_ast, cinclude_macro_state) {
 	ASSERT_EQ(stmts[3]["vars"][0]["init"]["value"], "5");
 	ASSERT_EQ(stmts[4]["vars"][0]["init"]["value"], "1");
 	ASSERT_EQ(stmts[5]["vars"][0]["init"]["expr-type"], "id");
+}
+
+TEST(gen_ast, cinclude_block_state) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/166_cinclude_block_state.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	auto& stmts = jout["ast"]["statements"];
+	auto& outer = stmts[1]["body"];
+
+	ASSERT_EQ(stmts[0]["vars"][0]["init"]["expr-type"], "id");
+	ASSERT_EQ(outer[1]["body"][1]["vars"][0]["init"]["value"], "7");
+	ASSERT_EQ(outer[2]["vars"][0]["init"]["value"], "3");
+	ASSERT_EQ(outer[3]["vars"][0]["init"]["expr-type"], "id");
+	ASSERT_EQ(stmts[2]["vars"][0]["init"]["expr-type"], "id");
+	ASSERT_EQ(stmts[3]["functions"][0]["name"], "block_state_f");
+	ASSERT_EQ(stmts[4]["vars"][0]["init"]["value"], "7");
 }
 
 TEST(gen_ast, cinclude_global) {
@@ -1156,6 +1213,7 @@ TEST(gen_ast, interface_text) {
 		"export type Shown {\n\tHidden h;\n\t@FILE fp;\n};\n"
 		"export type Color enum {\n\tRed,\n\tGreen = 5,\n};\n"
 		"export type Size = int64;\n"
+		"export type Handle = opaque Hidden;\n"
 		"const N = 3 * (8192 + 1);\n"
 		"[3]int32 lit;\n"
 		"[2]$[2]int32 rows;\n"
@@ -1167,7 +1225,8 @@ TEST(gen_ast, interface_text) {
 		"export func h();\n"
 		"export func k(int32 a, int32 b = N + 1, Color c = Color.Green, @[]uint8 s = \"a\\tb\", bool on = true, flo64 d = -1.5) -> int32;\n"
 		"export func va(int32 a, [...]@Shown xs);\n"
-		"export syscall sys(int64 x) -> int64 = 39;\n");
+		"export syscall sys(int64 x) -> int64 = 39;\n"
+		"export func close(Handle h) release;\n");
 }
 
 static json withoutLoc(json j) {
@@ -1199,13 +1258,13 @@ TEST(gen_ast, interface_reads_back_as_the_source) {
 		vector<json> kept;
 		for (auto& s : source["ast"]["statements"]) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
+			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
 				kept.push_back(withoutLoc(s));
 		}
 		vector<json> read;
 		for (auto& s : pai["ast"]["statements"]) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
+			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import")
 				read.push_back(withoutLoc(s));
 		}
 		ASSERT_EQ(json(read), json(kept)) << file;
@@ -1247,6 +1306,29 @@ TEST(gen_ast, interface_ignores_what_only_runs) {
 		"export func f() -> int64 { return 1; }\nexport func g() -> int32 { return 1; }\n"));
 }
 
+// An exported global is published without its initializer, but with the
+// sizes its array literal gives, and reads back as one.
+TEST(gen_ast, interface_export_global) {
+	cleanTestEnv();
+	auto paiOf = [](const string& source) {
+		ofstream("out/m.pa") << source;
+		EXPECT_EQ(execTestCommand("palan-gen-ast out/m.pa -o out/m.json --interface out/m.pai"), "");
+		return readText("out/m.pai");
+	};
+	string pai = paiOf("export global int64 count = 3 for f!;\nexport global []int32 arr = [1, 2];\n"
+		"global int64 hidden = 1;\nfunc f() { }\n");
+	ASSERT_NE(pai.find("export global int64 count;\nexport global [2]int32 arr;\n"), string::npos) << pai;
+	ASSERT_EQ(pai.find("hidden"), string::npos) << pai;
+	ASSERT_EQ(pai, paiOf("export global int64 count = 4;\nexport global []int32 arr = [5, 6];\n"));
+
+	json jout = json::parse(execTestCommand("palan-gen-ast out/m.pai"));
+	const auto& stmts = jout["ast"]["statements"];
+	ASSERT_EQ(stmts[0]["stmt-type"], "var-decl");
+	ASSERT_EQ(stmts[0]["global"], true);
+	ASSERT_EQ(stmts[0]["export"], true);
+	ASSERT_FALSE(stmts[0]["vars"][0].contains("init"));
+}
+
 TEST(gen_ast, c_headers) {
 	cleanTestEnv();
 	json jout = json::parse(execTestCommand("palan-gen-ast ../test/testdata/gen-ast/035_cinclude_local_header.pa"));
@@ -1258,4 +1340,20 @@ TEST(gen_ast, c_headers) {
 	ofstream("out/none.pa") << "int32 x;\n";
 	jout = json::parse(execTestCommand("palan-gen-ast out/none.pa"));
 	ASSERT_FALSE(jout.contains("c-headers"));
+}
+
+TEST(gen_ast, c_export) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/167_c_export.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const auto& exports = jout["export"];
+	ASSERT_EQ(exports[0]["name"], "add");
+	ASSERT_EQ(exports[0]["c-export"], true);
+	ASSERT_FALSE(exports[1].contains("c-export"));
+
+	ofstream("out/m.pai") << "built \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\n"
+	                         "cexport func add(int32 a, int32 b) -> int32;\n";
+	jout = json::parse(execTestCommand("palan-gen-ast out/m.pai"));
+	ASSERT_EQ(jout["export"][0]["c-export"], true);
 }

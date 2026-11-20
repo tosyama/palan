@@ -41,18 +41,23 @@ json run_sa(const string& pa_file)
 	return json::parse(f);
 }
 
-// sa.json with each unexported type named as written: the program-wide name
-// hashes the module's absolute path.
+// sa.json with each Palan type named as written: its identity holds its
+// module, which a test's file name decides.
 json written(const json& sa)
 {
 	// A name inside a symbol carries its length in front, which shrinks with it.
-	static const regex internal("([0-9]*)__pln_L[0-9a-f]{16}_([0-9]+_)?");
+	static const regex prefix("([0-9]*)__pln_L([0-9]+)");
 	string in = sa.dump(), out;
 	auto pos = in.cbegin();
-	for (smatch m; regex_search(pos, in.cend(), m, internal); pos = m[0].second) {
+	for (smatch m; regex_search(pos, in.cend(), m, prefix); ) {
 		out.append(pos, m[0].first);
+		auto end = m[0].second + stoul(m[2]) + 1;  // the module and the '_' after it
+		auto seq = end;
+		while (seq != in.cend() && isdigit((unsigned char)*seq)) seq++;
+		if (seq != end && seq != in.cend() && *seq == '_') end = seq + 1;
 		if (m[1].length() > 0)
-			out += to_string(stoul(m[1]) - (m[0].length() - m[1].length()));
+			out += to_string(stoul(m[1]) - (end - m[0].first - m[1].length()));
+		pos = end;
 	}
 	out.append(pos, in.cend());
 	return json::parse(out);

@@ -1,0 +1,3 @@
+func sum(int32 base, [...]int64 xs) -> int64 { return 0; }
+[3]int32 a;
+sum(0, ...a);

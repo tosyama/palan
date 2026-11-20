@@ -1,0 +1,10 @@
+type vec2 { flo32 x; flo32 y; };
+func *(@vec2 a, flo32 f) -> vec2 { return [a.x * f, a.y * f]; }
+func h(int32 n) -> vec2 { return [n, n]; }
+func h(flo64 f) -> flo64 { return f; }
+func g(vec2 v) {}
+func g(flo64 f) {}
+
+int32 n = 1;
+g(h(n) * 2.0);
+g(h(2.5) * 2.0);

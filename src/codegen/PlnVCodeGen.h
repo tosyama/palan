@@ -48,9 +48,11 @@ class PlnVCodeGen {
     struct LoopLabels { string start; string end; };
     vector<LoopLabels> loopStack_;  // push/pop in lowerWhileStmt
 
+    static long long intLitImm(const string& value, VRegType type);
     string addFloatLiteral(const string& value, VRegType type);
     VReg lowerExpr(const Expr& expr, VFunc& func);
     void lowerStmt(const Stmt& stmt, VFunc& func);
+    void lowerStmtKeepingTemps(const Stmt& stmt, VFunc& func);
     void lowerExprStmt(const ExprStmt& stmt, VFunc& func);
     void lowerVarDeclStmt(const VarDeclStmt& stmt, VFunc& func);
     void lowerAssignStmt(const AssignStmt& stmt, VFunc& func);
@@ -59,19 +61,24 @@ class PlnVCodeGen {
     VReg lowerPow2DivMod(VReg x, int k, bool isMod, VRegType type, VFunc& func);
     VReg lowerArrIndexExpr(const ArrIndexExpr& expr, VFunc& func);
     void lowerArrAssignStmt(const ArrAssignStmt& stmt, VFunc& func);
+    VReg convertWidth(VReg src, VRegType from, VRegType to, VFunc& func);
+    VReg loadBitField(VReg ptr, const FieldAccessExpr& e, VFunc& func);
+    void storeBitField(VReg ptr, const FieldAssignStmt& s, VReg src, VFunc& func);
     void lowerReturnStmt(const ReturnStmt& stmt, VFunc& func);
-    void lowerCCCallExpr(const CCCallExpr& expr, VFunc& func);
+    void lowerBareReturn(VFunc& func);
+    VReg lowerCCCall(const CCCallExpr& expr, bool valueUsed, VFunc& func);
     vector<VReg> lowerCCallArgs(const CCCallExpr& expr, vector<StructArgSpan>& spans, VFunc& func,
                                 vector<VReg> args = {});
     VReg lowerStructRetDest(const std::optional<StructRet>& sr, vector<VReg>& args, VFunc& func);
-    std::pair<vector<VReg>, vector<VRegType>> structRetDsts(const std::optional<StructRet>& sr);
+    std::pair<vector<VReg>, vector<VRegType>> callDsts(const std::optional<StructRet>& sr, bool hasRet,
+                                                       VRegType retType, bool valueUsed);
     void storeStructRet(VReg dest, const std::optional<StructRet>& sr, const vector<VReg>& dsts, VFunc& func);
     void lowerSlotReturn(VFunc& func);
-    void lowerPtrCallStmt(const PtrCallExpr& expr, VFunc& func);
+    VReg lowerPtrCall(const PtrCallExpr& expr, bool valueUsed, VFunc& func);
     VReg loadEightbyte(VReg ptr, int offset, const Eightbyte& eb, VFunc& func);
     void storeEightbyte(VReg ptr, int offset, VReg src, const Eightbyte& eb, VFunc& func);
-    void lowerPlnCallExpr(const PlnCallExpr& expr, VFunc& func);
-    void lowerSysCallExpr(const SysCallExpr& expr, VFunc& func);
+    VReg lowerPlnCall(const PlnCallExpr& expr, bool valueUsed, VFunc& func);
+    VReg lowerSysCall(const SysCallExpr& expr, bool valueUsed, VFunc& func);
     vector<VReg> lowerArgs(const vector<unique_ptr<Expr>>& args, VFunc& func);
     VReg lowerTempExpr(const TempExpr& expr, VFunc& func);
     void flushReleases(VFunc& func);

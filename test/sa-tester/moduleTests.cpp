@@ -253,13 +253,13 @@ TEST(sa, import_type)
 {
 	cleanTestEnv();
 	genLibSaTypes();
-	json jout = run_sa("../test/testdata/sa/228_import_type.pa");
+	json jout = written(run_sa("../test/testdata/sa/228_import_type.pa"));
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	// Laid out from the exporting module, where the non-exported Inner and
 	// the cinclude'd FILE are known.
 	const auto& p = stmts[0]["vars"][0]["init"];
-	ASSERT_EQ(p["name"], "malloc");
+	ASSERT_EQ(p["name"], "__pln_malloc");
 	ASSERT_EQ(p["args"][0]["value"], "24");
 	ASSERT_EQ(funcName(stmts[1]["vars"][0]["init"]["name"]), "__pln_alloc_arr_P9__pln_B24");
 	ASSERT_EQ(stmts[2]["vars"][0]["var-type"]["type-name"], "int64");
@@ -272,11 +272,33 @@ TEST(sa, import_type)
 	ASSERT_EQ(x["args"][0]["value-type"]["base-type"]["type-name"], "Vec");
 }
 
+// The alias's size is K as its module declares it, not the importer's K.
+TEST(sa, import_alias_size)
+{
+	cleanTestEnv();
+	genModuleAst("../test/testdata/sa/lib_sa_alias_size.pa");
+	json jout = run_sa("../test/testdata/sa/347_import_alias_size.pa");
+	ASSERT_TRUE(jout.is_object());
+	ASSERT_EQ(jout["statements"][1]["vars"][0]["init"]["value"], "3");
+}
+
+// Two modules exporting Vec: each is identified by its module.
+TEST(sa, import_same_type_name)
+{
+	cleanTestEnv();
+	genLibSaTypes();
+	json jout = run_sa("../test/testdata/sa/346_import_same_type_name.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	ASSERT_EQ(stmts[0]["vars"][0]["var-type"]["base-type"]["type-name"], "__pln_L12lib_sa_types_Vec");
+	ASSERT_EQ(stmts[1]["vars"][0]["var-type"]["base-type"]["type-name"], "__pln_L13lib_sa_types2_Vec");
+}
+
 TEST(sa, import_type_alias)
 {
 	cleanTestEnv();
 	genLibSaTypes();
-	json jout = run_sa("../test/testdata/sa/229_import_type_alias.pa");
+	json jout = written(run_sa("../test/testdata/sa/229_import_type_alias.pa"));
 	ASSERT_TRUE(jout.is_object());
 	const auto& stmts = jout["statements"];
 	ASSERT_EQ(stmts[0]["vars"][0]["init"]["args"][0]["value"], "24");
@@ -591,11 +613,10 @@ TEST(sa, unexported_type_name)
 	cleanTestEnv();
 	json jout = run_sa("../test/testdata/sa/277_unexported_type_name.pa");
 	ASSERT_TRUE(jout.is_object());
-	// Another module may declare its own A; an importer writes B as is.
 	const json& st = jout["statements"];
 	string a = st[0]["vars"][0]["var-type"]["base-type"]["type-name"];
-	ASSERT_TRUE(regex_match(a, regex("__pln_L[0-9a-f]{16}_A"))) << a;
-	ASSERT_EQ(st[1]["vars"][0]["var-type"]["base-type"]["type-name"], "B");
+	ASSERT_EQ(a, "__pln_L25_277_unexported_type_name_A");
+	ASSERT_EQ(st[1]["vars"][0]["var-type"]["base-type"]["type-name"], "__pln_L25_277_unexported_type_name_B");
 	ASSERT_EQ(jout["alloc-shapes"][1]["owned-fields"][0]["elem"]["name"], a);
 }
 
@@ -607,7 +628,7 @@ TEST(sa, block_type_scope)
 	// The two block-local P's get distinct program-wide names; the written
 	// name reaches no type.
 	string out = jout.dump();
-	regex internal("__pln_L[0-9a-f]{16}_[0-9]+_P\\b");
+	regex internal("__pln_L[0-9]+_258_block_type_scope_[0-9]+_P\\b");
 	set<string> ps;
 	for (sregex_iterator it(out.begin(), out.end(), internal), end; it != end; ++it)
 		ps.insert(it->str());
@@ -775,7 +796,7 @@ TEST(sa, nested_func_symbols)
 	for (auto& f : jout["functions"]) names.insert(f["name"].get<string>());
 	const string m = "_291_nested_2dfunc_2dsymbols..";
 	ASSERT_EQ(names, (set<string>{m + "a.v", m + "a.v..f.v", m + "a.v..f.v..g.v",
-		m + "a.v..b1..k.v", m + "a.v..b2..k.v", m + "b1..k.v"}));
+		m + "a.v..b1..k.v", m + "a.v..b2..k.v", m + "b1..k.v", m + "init"}));
 }
 
 // The .pai is what a library's users compile against, so a program must come out
@@ -796,6 +817,87 @@ TEST(sa, import_through_interface) {
 	ASSERT_EQ(execTestCommand("palan-sa " + entryAst + " -o out/from_pai.sa.json"), "");
 	ifstream f("out/from_pai.sa.json");
 	ASSERT_EQ(json::parse(f), fromSource);
+}
+
+// An imported global is bound to its module's label wherever it is used, and
+// is not one of the importer's own; `G.count` is its id under an alias.
+TEST(sa, import_global) {
+	cleanTestEnv();
+	genModuleAst("../test/testdata/sa/lib_sa_global.pa");
+	json jout = run_sa("../test/testdata/sa/349_import_global.pa");
+	ASSERT_TRUE(jout.is_object());
+	ASSERT_EQ(jout["globals"].size(), 2);
+	ASSERT_EQ(jout["globals"][0]["label"], "_349_import_global.twice");
+	ASSERT_FALSE(jout["globals"][0].contains("export"));
+	auto bindings = [&](const string& suffix) {
+		map<string, json> out;
+		for (auto& f : jout["functions"])
+			if (f["name"].get<string>().ends_with(suffix))
+				for (auto& g : f.value("globals", json::array())) out[g["name"]] = g;
+		return out;
+	};
+	auto bump = bindings("..bump.v");
+	ASSERT_EQ(bump["count"]["label"], "lib_sa_global.count");
+	auto sum = bindings("..sum.v");
+	ASSERT_EQ(sum["G.arr"]["label"], "lib_sa_global.arr");
+	ASSERT_EQ(sum["G.arr"]["var-type"]["mutable"], false);
+	ASSERT_EQ(sum["G.arr"]["var-type"]["arr-size"], 3);
+	auto init = bindings("..init");
+	ASSERT_EQ(init["count"]["label"], "lib_sa_global.count");
+	const json& stmt = jout["statements"][1];
+	ASSERT_EQ(stmt["stmt-type"], "assign");
+	ASSERT_EQ(stmt["name"], "G.count");
+
+	json lib = run_sa("../test/testdata/sa/lib_sa_global.pa");
+	ASSERT_TRUE(lib.is_object());
+	for (auto& g : lib["globals"]) {
+		string label = g["label"];
+		bool exported = !label.ends_with(".hidden") && !label.ends_with(".done");
+		ASSERT_EQ(g.value("export", false), exported) << label;
+	}
+}
+
+// Its interface gives an imported global the type its source does.
+TEST(sa, import_global_through_interface) {
+	cleanTestEnv();
+	const string lib = "../test/testdata/sa/lib_sa_global.pa";
+	const string entry = "../test/testdata/sa/349_import_global.pa";
+	string libAst = moduleAstPath(lib);
+	ASSERT_EQ(execTestCommand("palan-gen-ast " + lib + " -o " + libAst + " --interface out/lib_sa_global.pai"), "");
+	json fromSource = run_sa(entry);
+	ASSERT_TRUE(fromSource.is_object());
+
+	ASSERT_EQ(execTestCommand("palan-gen-ast out/lib_sa_global.pai -o " + libAst), "");
+	string entryAst = moduleAstPath(entry);
+	ASSERT_EQ(execTestCommand("palan-sa " + entryAst + " -o out/from_pai.sa.json"), "");
+	ifstream f("out/from_pai.sa.json");
+	ASSERT_EQ(json::parse(f), fromSource);
+}
+
+// Every owner of an opaque type releases it through the function its module
+// defines, which calls the one marked `release` or releases the contents.
+TEST(sa, opaque_type) {
+	cleanTestEnv();
+	const string id = "__pln_L13lib_sa_opaque_Handle";
+	const string release = "__pln_rl_" + to_string(id.size()) + id;
+	json lib = run_sa("../test/testdata/sa/lib_sa_opaque.pa");
+	ASSERT_TRUE(lib.is_object());
+	const json* rl = nullptr;
+	for (auto& f : lib["functions"])
+		if (f["name"] == release) rl = &f;
+	ASSERT_NE(rl, nullptr);
+	ASSERT_TRUE((*rl)["export"].get<bool>());
+	const json& call = (*rl)["body"][0]["then"]["body"][0]["body"];
+	ASSERT_EQ(call["name"], "lib_sa_opaque..close.P" + to_string(id.size()) + id);
+
+	json jout = run_sa("../test/testdata/sa/348_opaque.pa");
+	ASSERT_TRUE(jout.is_object());
+	string text = jout.dump();
+	ASSERT_NE(text.find("\"name\":\"" + release + "\""), string::npos);
+	bool shape = false;
+	for (auto& s : jout["alloc-shapes"])
+		shape = shape || (s["shape-kind"] == "opaque" && s["release-func"] == release);
+	ASSERT_TRUE(shape);
 }
 
 TEST(sa_error, library_import_without_its_location) {

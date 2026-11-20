@@ -1,0 +1,56 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type S { [2]int64 f; };
+func sum(int32 base, [...]int64 xs) -> int64 {
+	int64 t = base;
+	for copy x in xs { t + x -> t; }
+	if len(@xs) > 0 { 99 -> xs[0]; }
+	printf("n=%ld ", len(@xs));
+	return t;
+}
+func fwd([...]int64 xs) -> int64 { return sum(0, ...xs); }
+func fwd2([...]int64 xs) -> int64 { return fwd(...xs); }
+func viaBorrow(@[3]int64 p) -> int64 { return sum(0, ...p); }
+func viaVarr(@[+]int64 p) -> int64 { return sum(0, ...p); }
+func mk() -> [2]int64 r { 20 -> r[0]; 22 -> r[1]; }
+func add(@!S s, [...]int64 xs) { for copy x in xs { s.f[0] + x -> s.f[0]; } }
+func say(@[]uint8 sep, [...]@[]uint8 words) {
+	for copy w, i in words { if i > 0 { printf("%s", sep); } printf("%s", w); }
+	printf("\n");
+}
+
+mtrace();
+{
+	[3]int64 a = [1, 2, 3];
+	printf("%ld\n", sum(1, ...a));
+	printf("%ld\n", a[0]);
+	printf("%ld\n", fwd2(...a));
+	printf("%ld\n", viaBorrow(@a));
+	int64 n = 4;
+	[n]int64 r;
+	for copy x, i in r { i -> r[i]; }
+	printf("%ld\n", sum(0, ...r));
+	[+]int64 v = [5, 6];
+	printf("%ld\n", sum(0, ...v));
+	printf("%ld\n", viaVarr(@v));
+	[2][3]int64 m = [[1, 1, 1], [2, 2, 2]];
+	printf("%ld\n", sum(0, ...m[1]));
+	S s;
+	[1, 2] -> s.f;
+	printf("%ld\n", sum(0, ...s.f));
+	s.add(...a);
+	printf("%ld\n", s.f[0]);
+	printf("%ld\n", 5 -> sum(...a));
+	@func(int32, [...]int64) -> int64 fp = sum;
+	printf("%ld\n", fp(0, ...a));
+	printf("%ld\n", sum(0, ...mk()));
+	[2]@[]uint8 ws;
+	"x" -> ws[0];
+	"y" -> ws[1];
+	say(", ", ...ws);
+	printf("%ld\n", sum(0, ...a>>));
+	printf("%d\n", a == NULL);
+	printf("%ld\n", sum(0, ...v>>));
+	printf("%ld\n", sum(0, ...r>>));
+	printf("%d %d\n", v == NULL, r == NULL);
+}

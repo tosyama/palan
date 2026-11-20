@@ -329,7 +329,7 @@ TEST(build_mgr, varr_builtins) {
 TEST(build_mgr, arr_len) {
 	cleanTestEnv();
 	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/331_arr_len.pa");
-	ASSERT_EQ(output, "10 20 30 10 20 30 \n5 6 2\n");
+	ASSERT_EQ(output, "10 20 30 10 20 30 \n5 6 2\n3 4\n");
 }
 
 TEST(build_mgr, len_borrow) {
@@ -507,14 +507,26 @@ TEST(build_mgr, arrow_precedence) {
 	ASSERT_EQ(output, "7 8 9 1\n");
 }
 
-TEST(build_mgr, varr_builtins_abort) {
-	for (string file : {"329_varr_pop_empty", "330_varr_resize_negative"}) {
+// A release build leaves out the checks of the writer's errors, not that of
+// an allocation: a negative size then runs out of memory.
+TEST(build_mgr, runtime_errors) {
+	struct { const char* file; const char* mode; const char* error; } cases[] = {
+		{"329_varr_pop_empty", "--debug", "pop of an empty array"},
+		{"330_varr_resize_negative", "--debug", "negative array size"},
+		{"436_array_negative_size", "--debug", "negative array size"},
+		{"436_array_negative_size", "--release", "out of memory"},
+		{"437_array_out_of_memory", "--debug", "out of memory"},
+		{"437_array_out_of_memory", "--release", "out of memory"},
+	};
+	for (auto& c : cases) {
 		cleanTestEnv();
-		string bin = "/tmp/palan_" + file;
-		ASSERT_EQ(execTestCommand("bin/palan -o " + bin + " ../test/testdata/build-mgr/" + file + ".pa"), "");
+		string bin = string("/tmp/palan_") + c.file;
+		ASSERT_EQ(execTestCommand(string("bin/palan ") + c.mode + " -o " + bin + " ../test/testdata/build-mgr/" + c.file + ".pa"), "");
 		// ulimit -c 0 keeps the program's core dump out of build/.
-		string out = execTestCommand("ulimit -c 0; " + bin + "; echo status $?");
-		EXPECT_NE(out.find("status 134"), string::npos) << file << ": " << out;
+		// The shell's own report of the abort follows what the program wrote.
+		string out = execTestCommand("ulimit -c 0; " + bin + " 2>out/stderr; echo status $?; cat out/stderr");
+		string expected = string("status 134\nruntime error: ") + c.error + "\n";
+		EXPECT_EQ(out.substr(0, expected.size()), expected) << c.file << " " << c.mode;
 	}
 }
 
@@ -565,7 +577,7 @@ TEST(build_mgr, varr_row_mtrace) {
 	ASSERT_EQ(output, 
 		"[1 2 3 4][5 6 7 8][9 10 11 12]\n12 1 0\n42\n\n[1 2 3 9][1 2 3 4][5 6 7 8]\n"
 		"[1 2 3 4]\n9 5\n3 7 3\n3\n7 4 1\n");
-	expectBalancedMtrace(traceFile, 42);
+	expectBalancedMtrace(traceFile, 40);
 }
 
 // Rows laid out in place: owned elements in them are built, dropped and
@@ -582,7 +594,7 @@ TEST(build_mgr, evarr_row_mtrace) {
 		"MALLOC_TRACE=" + traceFile + " "
 		"/tmp/palan_evarr_row_mtrace_bin");
 	ASSERT_EQ(output, "7 3\n12 9 0 4\n77 10\n2 2 3\n5 7 0 3 1\n5 1 2\n4 3\n");
-	expectBalancedMtrace(traceFile, 77);
+	expectBalancedMtrace(traceFile, 80);
 }
 
 TEST(build_mgr, varr_row_owned_mtrace) {
@@ -597,7 +609,7 @@ TEST(build_mgr, varr_row_owned_mtrace) {
 		"MALLOC_TRACE=" + traceFile + " "
 		"/tmp/palan_varr_row_owned_mtrace_bin");
 	ASSERT_EQ(output, "5 7 3 7\n4 5 1\n2 1 0\n6 1 1\n");
-	expectBalancedMtrace(traceFile, 82);
+	expectBalancedMtrace(traceFile, 76);
 }
 
 // A fixed array of rows of a run-time length and `[+][n]T` share the row
@@ -623,7 +635,7 @@ TEST(build_mgr, nested_fixed_mtrace) {
 
 // `[+][3]int32` and `[+][4]int32` share their functions, which take the length.
 TEST(build_mgr, varr_nested_rows_mtrace) {
-	expectMtraceRun("346_varr_nested_rows_mtrace", "2 9 1 3 4\n4 6 6\n6 5 7\n8\n", 98);
+	expectMtraceRun("346_varr_nested_rows_mtrace", "2 9 1 3 4\n4 6 7\n6 5 7\n8\n", 94);
 }
 
 TEST(build_mgr, embed_rows_mtrace) {
@@ -642,6 +654,12 @@ TEST(build_mgr, arr_return_param_mtrace) {
 TEST(build_mgr, varr_ptr_slot_mtrace) {
 	expectMtraceRun("357_varr_ptr_slot_mtrace",
 		"3 6\n101 102 103\n102 2\n5 103 101\n5 7\n102 2 7\nHi 1\n", 21);
+}
+
+// Rows of pointer slots are rows of int64 to their helpers.
+TEST(build_mgr, ptr_slot_rows_mtrace) {
+	expectMtraceRun("427_ptr_slot_rows_mtrace",
+		"2 3 12\n3 1 3 2 3\n1 3\n2 13 13\n2\n5 6\n2 6 5\n", 35);
 }
 
 TEST(build_mgr, for_loop) {
@@ -665,6 +683,13 @@ TEST(build_mgr, for_loop_index_type) {
 		"(0,0)1(4,0)3(0,1)4(4,1)6\n254:254 255:255 0:256 1:257 \n");
 }
 
+// The body may change an element at another constant index of the range's array.
+TEST(build_mgr, for_loop_const_index) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan -o out/for_cidx_bin ../test/testdata/build-mgr/424_for_const_index.pa"), "");
+	ASSERT_EQ(execTestCommand("out/for_cidx_bin"), "10 20 \n4\n");
+}
+
 // '@!e' writes the element 'next' returns a borrow of; a range a call returns
 // lives until the loop ends; 'iter' and 'next' are found under an alias.
 TEST(build_mgr, for_struct) {
@@ -678,6 +703,12 @@ TEST(build_mgr, for_struct) {
 // also by 'continue', 'break' and the last call returning false.
 TEST(build_mgr, for_struct_mtrace) {
 	expectMtraceRun("413_for_struct_mtrace", "1 2 3 2 \n", 34);
+}
+
+// Opaque values held in fields, rows and `[+]`, returned among several values,
+// and copied and converted where their contents are visible.
+TEST(build_mgr, opaque_mtrace) {
+	expectMtraceRun("415_opaque_mtrace", "5 5\nclose 5\n5\n3\nclose 9\nclose 8\nclose 7\nclose 6\nclose 5\n", 27);
 }
 
 TEST(build_mgr, top_var_const_in_sig) {

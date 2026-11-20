@@ -1,0 +1,9 @@
+export type Pt { int32 x; int32 y; };
+export global [+]int32 log for add!, total;
+export global Pt origin;
+export func add(int32 v) { log.push(v); }
+export func total() -> int32 {
+	int32 s = 0;
+	for copy v in log { s + v -> s; }
+	return s;
+}

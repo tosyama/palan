@@ -1,3 +1,0 @@
-cinclude "error_814_c_bitfield.h";
-BF b;
-int32 x = b.flag;

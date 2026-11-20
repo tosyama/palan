@@ -6,27 +6,31 @@ This document specifies the goals, scope, architecture, and requirements for the
 ## 2. Goals
 - Palan aims to be a simpler, safer, and more enjoyable programming language alternative to C.
 
-### 2.1 Iteration Goal (2026-11-10)
-version: 0.2.5 — a library type written as naturally as a built-in one
+### 2.1 Iteration Goal (2026-11-14)
+version: 0.2.6 — modules that libraries can be combined from
 
-`std/utf8`'s `utf8` should read like a string type of the language, while staying an ordinary
-library type the compiler knows nothing about. What it lacks is added to the language as general
-features any library type can use, not as special cases for `utf8` (3.8):
+Libraries can be combined and can keep state (3.7):
 
-- A string literal converts to a struct through the function named like the type.
-- A type defines comparison (`==`, `<`), appending (`<<`) and copying into an existing value (`->`).
-- Functions take default arguments and variadic arguments; `len` and `for` read the length of an
-  array sized at run time.
-- A type defines how `for` iterates over it.
-- A character literal may be any Unicode code point, written as is or as `\u{...}`.
-- A type's fields can be hidden or read-only outside its module.
+- A type is identified by its module, so two modules may export types of one name (doc/Issues.md
+  #31 of 0.2.5).
+- A library's interface holds only its main source's own declarations; a type is published with
+  its contents hidden as an `opaque` type, owned and released like a struct.
+- An imported module's `global` variables are initialized, and can be exported (doc/Issues.md #24
+  of 0.2.5).
 
-`std/utf8` is then reworked on these features (3.9), and the standard library gets a reference of
-its own, moved out of PalanReference.md.
+The other open issues are then each fixed, accepted as a stated limitation, or left; four are
+left. Fixed among them:
 
-Out of scope: method-form calls (`x.f()`) of functions not taking `@!` first; grapheme clusters
-and other Unicode data (case mapping, normalization); conversion between numbers and text;
-compile-time evaluation of functions.
+- C: a function-like macro is expanded where it is called, through a mechanism an inline function
+  can share (3.4); `long double` (`flo80`), bit-fields, the glibc headers c2ast could not read, a
+  block's `cinclude` state ending with the block, and functions C calls by name (`cexport`, 3.7).
+- Arrays: the moves and copies of arrays sized at run time (4), an array spread into variadic
+  arguments (3.8), rows of pointer slots, and field initializers of any shape (3.6).
+- Checks: using a variable after it gives its value away (4), and run-time checks of array sizes
+  and allocations, left out of a release build (3.1).
+- Numeric literals convert to a struct (3.8); `PALAN_WORK` names the work directory (5.1).
+
+Out of scope: lazily initialized globals; copying or creating an `opaque` value outside its module.
 
 
 ## 3. Command-line Tools' Responsibilities and Design
@@ -36,19 +40,6 @@ compile-time evaluation of functions.
 Responsibility:
   The tool is responsible for orchestrating the compilation process.
 
-```
-Usage: palan [options] <source file> [program arguments...]
- options:
-   -o, --output <path>      Specify the executable, or with --lib the output directory. If not
-                            specified, the binary is linked in the working directory and run
-                            with the program arguments.
-   --lib                    Build the library the source file is the main source of (see 3.7).
-   --target <name>          Specify the target (see 6.1). The default is the one the tools were built for.
-   -c, --clean              Remove all cached work files (the whole working directory)
-   -h, --help               Display help information
-   -v, --version            Display version information
-```
-
 Design:
  The build manager generates the AST of the given source file by invoking palan-gen-ast, then
  follows its `import`s of other Palan source files and generates their ASTs in turn. It then unions
@@ -57,7 +48,7 @@ Design:
  skipping every step whose result is still valid (5.1). A module compiles the same whichever module
  is the entry. The allocators the modules need are generated as one more module (see 3.6). The entry
  is chosen only at link time: `palan-codegen --entry` emits a `_start` calling the given module's
- top-level function, and all object files and the archives of the libraries used are linked with
+ initialization function and then its top-level function, and all object files and the archives of the libraries used are linked with
  `ld` to create the final executable. Two modules with one identity are reported here, before `ld`.
  The target is decided once, here. It is passed to palan-gen-ast, which records it in ast.json for
  the rest of the pipeline, and to `palan-codegen --entry`, which has no such file to read.
@@ -68,48 +59,45 @@ Design:
  files, which `--clean` removes. Only `-o` writes into the current directory, so palan can be used
  as a script runner without leaving build artifacts, without touching an `a.out` already there,
  and with several sources in one directory run at the same time.
- Before linking, the build manager unions the `libs` and `objs` arrays (see SASpec.md's Root)
- across every source module's sa.json, in the same pass it makes to collect `alloc-shapes`, and adds
- every used library's `link` statements (3.7). It appends `-l<name>` to the `ld` invocation for each library named by a
- `link` clause on a `cinclude` statement (e.g. `cinclude <math.h> link "m";`) anywhere in the
- program, and passes each `.o` file named by one after the program's own objects. Palan archives
- are linked in one `--start-group`/`--end-group`, since the union keeps no order.
+ What `ld` is given beyond the objects is the union of every module's `libs` and `objs` (SASpec.md's
+ Root) and every used library's `link` statements (3.7). Palan archives are linked in one
+ `--start-group`/`--end-group`, since the union keeps no order.
+ A build is in debug or release mode (PalanReference.md's Command-Line Usage), the default following
+ `-o` since a program run directly is being tried and one written out is being delivered. The
+ checks of the writer's errors are left out of a release build by `palan-sa --release` and by the
+ generated allocators; debug information and optimization do not exist yet. A failed allocation
+ is checked in either mode, as no debug run finds it.
+
+ Code palan-sa and the allocators generate allocates through `std/rt` (`__pln_malloc`, ...) and
+ fails a check through it. It is a Palan library built with std and given to every `ld`, so a
+ program compiles nothing more for it, and it is written in Palan, for any target, not emitted by
+ palan-codegen as `_start` is.
 
 ### 3.2 AST Generator (palan-gen-ast)
 Responsibility:
   The tool generates the Abstract Syntax Tree (AST) from Palan source code.
 
-```
-Usage: palan-gen-ast [options] <source file>
- options:
-   -o, --output <file path> Specify output AST file path. If not specified, standard output is used.
-   -i, --indent             Generate indented (pretty-printed) JSON output
-   --interface <file path>  Also write the module's own declarations as an interface (see 3.7)
-   --target <name>          Specify the target (see 6.1), recorded in the AST and passed to palan-c2ast
-   -h, --help               Display help information
-   -v, --version            Display version information
-```
-
 Design:
- The AST generator reads the Palan source file, parses it according to the language grammar,
- and constructs the corresponding AST representation.
- The generated AST is then serialized into a JSON format and saved to the specified output file path.
- When a `cinclude` statement is encountered, the AST generator invokes palan-c2ast internally via popen()
- to translate the C header into AST nodes, and embeds the resulting function declarations directly
- into the cinclude statement node of the ast.json output.
- It passes each run the `c-state` the previous run output (`--state`, through a temporary file),
+ For each `cinclude` the AST generator runs palan-c2ast and embeds its output in the cinclude
+ statement node. It passes each run the `c-state` the previous run output (`--state`, through a temporary file),
  so every header is preprocessed and parsed with the macros, typedefs, struct/union tags and
- enums in effect at its `cinclude`, in source order, as if all of a file's cincluded headers were
- included into one C translation unit.
+ enums in effect at its `cinclude`, as if the headers cincluded so far in the enclosing scopes were
+ included into one C translation unit. The state follows block scope: at a block's `}` it returns to
+ what it was at the `{`, so a header read inside the block is read again by a later `cinclude`
+ outside it, whose scope would otherwise get none of its functions. The macro constants a `cinclude`
+ registers likewise fold only up to the end of its scope. The state is restored from a history of
+ (location, state) at the block's reduction, not saved at the `{`: a mid-rule action there would add
+ GLR conflicts.
  To parse the Palan source code, the AST generator uses a parser generated by Flex and Bison.
  The parser is a GLR parser (Bison's `glr2.cc`), which passes `$N` to grammar actions as `const`
  references because split stacks may share a value, so actions never move from or modify `$N`.
  A growing list is therefore a persistent list (`PList`) that shares its prefix, and statements
  hold nested blocks by handle (`LazyNode`) and are converted to JSON once at the end; appending or
  nesting never copies what is already built.
- The `for` list of a `global` declaration is emitted as a `global-permit` statement right after
- its `var-decl`, the statement a later `global hits for log!;` also produces, so a permission has
- one AST form.
+ The grammar is kept GLR rather than converted to LALR(1): its conflicts (`.` after a term, a
+ declaration list's `ID = expr`, `[expr]` as a type or a literal) are resolved by reading further,
+ which keeps the syntax free of rules made for the parser. The cost is a nesting depth limit
+ (`YYMAXDEPTH`), since Bison's `glr2.cc` frees a value twice when it grows its stack.
  A file named `.pai` is read as an interface (3.7): it may declare a function without a body and
  hold `link` statements, and must hold `built` and `target` statements of the tools' version and the target. `--interface`
  writes the module's own declarations in that form; merging a library's modules is `--lib`'s.
@@ -119,28 +107,7 @@ Design:
 Responsibility:
   The tool translates C header files into AST nodes compatible with Palan.
 
-```
-Usage: palan-c2ast [options] <C header file>
- options:
-   -o, --output <file path> Specify output AST file path. If not specified, standard output is used.
-   -h, --help               Display help information
-   -p, --path               Specify search paths for C headers
-   -c, --curdir             Specify current directory for relative includes
-   -s, --sysheader          Specify when input C header file is a system header
-   -i, --indent             Generate indented (pretty-printed) JSON output
-   -S, --state <file>       Start from a previous run's `c-state` instead of predefined.h
-   --target <name>          Specify the target (see 6.1), which selects predefined.h and the system
-                            header directories
-   -v, --version            Display version information
-```
-
 Design:
- The C-to-AST translator reads the specified C header file, parses it using a C parser,
- and constructs AST nodes that represent the declarations and definitions found in the header.
- The generated AST nodes are then serialized into a JSON format written to stdout (or to a file via -o).
- In the normal pipeline, palan-gen-ast invokes palan-c2ast and reads its stdout output directly;
- no intermediate file is produced.
- The predefined macros will be read from `../<target>/c2ast/predefined.h`, relative to the execution directory of palan-c2ast (6.1).
  The output's top-level `c-state` is where the header leaves off, for the next run to start from:
  `macros`, the macro table written as `#define` lines (each body re-spelled token by token) plus a
  `#pragma palan_once_included "<path>"` line per file read under `#pragma once`; and `typedefs`,
@@ -151,26 +118,19 @@ Design:
  Nothing loaded this way is exported to the AST again unless the header changes it: a redefined
  macro, or a struct the earlier header only referenced and this one defines. The macros the
  header `#undef`s are listed in `ast.undefined-macros`.
- The included C header files will be expanded recursively, searching for headers in the specified search paths and current directory.
  `__GNUC__` is not predefined, so headers take their non-GNU paths, but `__attribute__` is a
  keyword: `packed` and `aligned` reach the struct layout (ASTSpec.md, Struct definition model).
+ The C expression parser builds an expression tree in the AST's form, and a constant (a macro, an
+ enumerator, an array size) is folded by evaluating that tree, so one parser serves both. A
+ function-like macro becomes an expandable definition (3.4): the preprocessor expands the macros in
+ its body with each parameter's place marked, and the tree is its body. Type names and enumerators
+ are resolved here, where C's tables are; a function or global the body names is left to palan-sa,
+ marked as a C name. A body with a form Palan has no expression for (`?:`, an assignment, a comma,
+ a string, `sizeof` of an expression, `#`/`##`, `__VA_ARGS__`) is left unexported with that form.
 
 ### 3.4 Semantic Analyzer (palan-sa)
 Responsibility:
   The tool performs semantic analysis on the generated AST and checks type correctness and scope rules.
-
-```
-Usage: palan-sa [options] <AST file>
- options:
-   -o, --output <file path> Specify output analyzed AST file path. If not specified, defaults to <source>.sa.json.
-   -i, --indent             Generate indented (pretty-printed) JSON output
-   --interface              Read the AST of a .pai as an importer would, and output its public
-                            functions' symbols as a JSON array instead of an analyzed AST (see 3.7)
-   --library <pkg/mod>=<AST file>
-                            Where the AST of an `import <pkg/mod>` is (see 3.7); may be repeated
-   -h, --help               Display help information
-   -v, --version            Display version information
-```
 
 Design:
  The semantic analyzer reads the ast.json file and builds a new sa.json independently, carrying
@@ -179,76 +139,50 @@ Design:
  absolute paths (5.1). An AST outside that layout can import no Palan module. An `import <...>` is
  looked up in the `--library` table instead, for the importing module and for the `.pai`s it reaches;
  one that is not there is an error, since finding it is the build manager's.
- It processes statements in order, maintaining a scope stack for C function declarations
- registered via cinclude statements (scope-aware: functions are visible from the cinclude
- point until the end of the enclosing scope).
- cinclude and import statements are consumed for scope resolution and are not emitted to sa.json.
- A cinclude's `typedefs` (ASTSpec.md) are registered into the type-alias table unconditionally,
- independent of whether the header declares any functions, and a cinclude's `link` clause libraries
- are validated, deduplicated, and emitted as sa.json's top-level `libs` array (SASpec.md's Root) --
- the one piece of a cinclude statement that survives past this consume-and-drop step.
- Expression statements are annotated with resolution results (e.g., func-type: "c" for calls
- resolved to C functions) and emitted to sa.json.
- Type checking is performed during expression processing. When an implicit widening conversion is required
- (e.g., int32 value used in an int64 context), palan-sa inserts a `convert` expression node into sa.json.
- Explicit casts (`expr as type`, or `type-name(expr)` for a named type) allow narrowing, signed↔unsigned,
- and pointer conversions; palan-sa resolves
- the `cast` AST node to a `convert` node (or removes it for identical types) and emits `convert` to sa.json.
- Top-level types and consts are resolved when first needed, before function signatures are
- registered, so source order does not decide whether a signature can use them. A const whose value
- names a top-level variable is evaluated from that variable's type alone, taken from the shape of
- its declaration (the written type and an array literal's element count); its initializer is still
- analyzed in statement order. A const sees only the variables declared before it in the source.
- A static variable is a name bound to an assembly label: a top-level variable declared `global`
- (label `<module>.<name>`, which no function symbol can be, since those continue `<module>..`) or a
- C global variable a cinclude captures (label: its C name). Both are checked by one rule, the one
- a parameter of the same type follows. A function sees a Palan global only when a
- `global-permit` lists it; the global joins the function's parameter scope, as a `@T` borrow
- (`@!T` with `!`) when it holds an array or struct, else with its own type, assignable only with
- `!`. A C global stays visible from its cinclude on and readable anywhere, and is writable only
- where a permit allows: in a function listed with `!`, or at the top level after a `global`
- statement names it. palan-sa records which functions each top-level statement and each function
- calls or takes the address of; after the module is analyzed, a top-level statement before a
- Palan global's declaration that reaches a function permitted to use it is an error, since the
- global is not initialized yet. A Palan global lives as long as the process: what it owns is not
- freed at the end of the top level (only a value it is reassigned away from is), and the storage
- of a `$T` or fixed-size array global is a `static-alloc` instead of a `frame-alloc`, so a
- function C calls after the top level returns (an `atexit` handler) still finds it. Importing a module that permits a function to use one of its
- Palan globals is an error, since an imported module's top level never runs.
  An AST made from a `.pai` can only be imported, not analyzed itself: it has functions without bodies
  and so no code to compile.
- An arithmetic operator (`+ - * / %`, unary `-`) with a struct operand (its storage or a borrow)
- is a call of the functions named by its symbol, resolved as values chained into a call are: each
- operand is analyzed once, and the function chosen decides whether it is borrowed or copied.
- sa.json has no operator form; the call is an ordinary Palan call, and an operator function's
- symbol spells the operator as a name starting with a digit (`0sub`), a valid label that no
- written function name can be. Version 0.2.5 resolves comparisons, `<<` and `->` the same way,
- and adds literal conversion, default and variadic arguments and `for` over a struct (3.8).
+ A const whose value names a top-level variable is evaluated from that variable's declared shape
+ alone (the written type and an array literal's element count), so it is known before the
+ variable's initializer is analyzed in statement order.
+ A static variable (SASpec.md's Static variables) follows the rule a parameter of its type follows.
+ The storage of a `$T` or fixed-size array `global` is static rather than in the top level's frame,
+ so a function C calls after the top level returns (an `atexit` handler) still finds it.
+ A C bit-field is a field of its declared type at the unit of that type holding it, with its
+ shift and width (SASpec.md), and codegen reads and writes the unit by shifts and masks. Turning
+ it into shift and mask expressions in palan-sa was not taken: a write reads, changes and writes
+ back the unit, so the unit's address must be evaluated once, and Palan has no arithmetic shift to
+ extend the sign. A bit-field a packed struct lays across two units is left unsupported, since
+ none in the C library or Linux headers is laid so.
+ A float constant expression is folded in the widest float, flo80, before its context gives it a
+ type, so a flo80 constant keeps its precision; a flo32 or flo64 context rounds the folded value
+ again, as a C compiler evaluating in x87 does.
+ An expandable definition (ASTSpec.md) is a name, parameters, a body expression and a binding,
+ and a call to it is analyzed as its body at the call: the body is copied, its parameters bound to
+ the arguments, and the copy analyzed in the caller's context, so the result is ordinary sa.json
+ and codegen knows nothing of it. A function-like C macro binds by substitution: each place a
+ parameter appears takes the argument expression, untyped and evaluated as often as it appears, as
+ the preprocessor does. An inline function would bind by evaluating each argument once into a
+ typed parameter; the copying, the binding by place and the name resolution are shared. Expanding
+ in palan-gen-ast, as macro constants are folded, was not taken: an inline function needs
+ overloads, types and temporaries, which only palan-sa has. Inlining in codegen was not taken
+ either, since an untyped macro body is no function. The body's C names resolve only among the C
+ declarations visible at the call, never a Palan name there, as an inline function's names would
+ resolve in its own module. A macro is chosen over a C function of its name, as in C, and needs an
+ aliased cinclude's qualifier as a function does; one that cannot be expanded (a form left
+ unexported, a C name not declared) calls that function, or is an error naming the macro when
+ there is none.
 
 ### 3.5 Code Generator (palan-codegen)
 Responsibility:
   The tool generates x86-64 assembly from the analyzed AST (sa.json).
 
-```
-Usage: palan-codegen [options] <SA file>
-       palan-codegen -e <symbol> -o <file path>
- options:
-   -o, --output <file path> Specify output assembly file path. If not specified, defaults to <source>.s.
-   -e, --entry <symbol>     Emit the program entry instead: a _start calling <symbol>, a module's
-                            top-level function, and __dso_handle
-   --target <name>          With -e, specify the target (see 6.1). An SA file records its own.
-   -h, --help               Display help information
-   -v, --version            Display version information
-```
-
 Design:
  The code generator reads sa.json and emits x86-64 AT&T syntax assembly for use with `as`. An sa.json
  whose target is missing or unsupported is an error.
  A module's top-level statements are its exported function `<module>..main`, which takes argc and
- argv. The entry point `_start` (from `--entry`) calls it with argc and argv from the initial
- stack, then `exit(0)`. The final executable is produced by the build manager,
- which assembles the `.s` file with `as` and links with `ld` (specifying the dynamic linker
- and required libraries).
+ argv. The entry point `_start` calls each symbol `--entry` names, in the order given (the
+ module's `..init` (3.7), then its `..main`), each with argc and argv from the initial stack,
+ then `exit(0)`.
 
  Calling convention:
  - C and Palan function calls share the x86-64 System V argument assignment: integer/pointer
@@ -259,6 +193,10 @@ Design:
  - A single return value is returned in rax, or xmm0 for a float (System V compatible).
  - Two or more return values take each class's argument register sequence in order
    (integers in rdi/rsi/rdx/..., floats in xmm0/xmm1/...; caller-saved, read immediately after call).
+ - A flo80 (C's `long double`) follows System V: an argument goes to the stack at a 16-byte
+   boundary, as a struct of that alignment does, and a single return value, or a returned struct
+   that is one flo80 alone, comes back in st(0). Among two or more return values it takes the next
+   float register whole instead, so a call whose values are dropped leaves the x87 stack empty.
  - A struct is returned as System V returns it, by Palan and C functions and through function
    pointers alike, into storage the caller provides: one of up to 16 bytes comes back in rax/rdx
    and xmm0/xmm1 by its eightbytes' classes and the caller stores it; a larger one is written
@@ -274,9 +212,6 @@ Design:
  - Symbol visibility: `_start`, each module's top-level function and `export func` functions are
    emitted with `.globl`. All other Palan
    functions are local symbols (no `.globl`), equivalent to `static` in C.
- - Symbol names: a Palan function's symbol is the `name` palan-sa gives it, built from its module,
-   its name and its parameter types (`util..show.int32`; SASpec.md "Symbol names"), so overloads
-   and same-named functions of different modules link side by side. codegen emits it as given.
 
  Register allocation (PlnRegAlloc, per function, on live ranges in instruction order; a value
  defined before a loop and used in it lives until the loop's backward jump):
@@ -291,18 +226,13 @@ Design:
    (nothing if it crosses no call). Each count is weighted by 10 for every loop around it. When
    registers run short, the values saving the most keep them.
  - A local whose address is taken stays on the stack.
+ - A flo80 value always takes a 16-byte stack slot. The x87 unit computes it from memory and
+   leaves nothing on its own stack between instructions, and a copy moves its 16 bytes through an
+   XMM register.
 
- Static variables: each function, the top-level one included, lists in sa.json the names it binds
- to labels at entry (`globals`), and a top-level `global` declaration binds its name where it is
- declared. A name bound to a label is read by loading from the label and assigned by storing to
- it; the slot holds what a local's virtual register would (a scalar or a pointer). Every access
- goes to memory, since a call may change the variable. Palan globals are emitted as local `.bss`
- slots, and a `static-alloc` (the storage of a `$T` or fixed-size array global) as a local `.bss`
- block; a C global is the C library's own symbol.
+ Static variables (SASpec.md) are local `.bss` slots and blocks, a C global the C library's own
+ symbol. Every access goes to memory, since a call may change the variable.
 
- String literals are collected by palan-sa into the `str-literals` table in sa.json,
- placed in the `.rodata` section with generated labels (`.str0`, `.str1`, ...),
- and referenced via `leaq label(%rip), %rdi` (RIP-relative addressing).
  A string literal may hold any bytes, but JSON holds only valid UTF-8 text, so the literal's
  value travels through ast.json, sa.json and a module's interface as one escaped text
  (`src/common/PlnStrLit.h`): printable ASCII and valid UTF-8 characters as they are, `\"`, `\\`,
@@ -316,6 +246,9 @@ Design:
  glibc's `atexit`/`at_quick_exit`/`pthread_atfork`, which forward to `__cxa_atexit`-family
  calls taking it), and every object emits `.note.GNU-stack` (otherwise `ld` marks the
  whole binary's stack executable as soon as any note-carrying libc object joins the link).
+ Linking with `ld` rather than through `cc` is the design, so the toolchain needs no C compiler: what
+ the CRT objects would initialize is supplied here when a program first needs it. Only a
+ position-independent executable is open (doc/Issues.md #2).
 
 
 ### 3.6 Allocator Generation
@@ -326,110 +259,46 @@ inline loops. So is a struct with field initializers, which must be built wherev
 exist. A struct that owns nothing and has no initializers, and a `[n]T` array of primitives, use
 `malloc` and `free` directly.
 
-palan-sa emits only calls to these functions; it records each shape it needs in sa.json's
-`alloc-shapes` (SASpec.md's Root), as it collects `str-literals`. The build manager collects the
-shapes of all modules, deduplicates them by key (each module defining its own copy would collide
-at link time), and writes the functions as Palan source `__allocators.pa` in the entry's directory
-under the working directory (5.1), with `__allocators.h` declaring the C functions it calls. It is compiled
-as one more module. Each struct appears there as an exported type declaring only
-its owned fields, at their offsets, with the rest of its bytes as padding, so a C struct or a type
-of another module needs no Palan declaration of its other fields. A struct owning nothing is
-only bytes to allocate, copy and free, so an element or owned field of one is declared as
-`__pln_B<n>`, a type of its `n` bytes (`$[n]uint8`), whatever struct it is.
+palan-sa emits only calls to these functions and records each shape it needs in sa.json's
+`alloc-shapes` (SASpec.md's Root, which lists the functions of each shape). The build manager
+collects the shapes of all modules, deduplicates them by key (each module defining its own copy
+would collide at link time), and writes the functions as Palan source `__allocators.pa` in the
+entry's directory under the working directory (5.1), compiled as one more module. A struct is
+declared there with only its owned fields, so a C struct or a type of another module needs no
+Palan declaration of its other fields, and a struct owning nothing is only bytes to allocate,
+copy and free (`__pln_B<n>`), whatever struct it is.
 
-For a shape key `K`, the functions are:
+A key names how elements are stored, moved and passed, not their type, so elements laid out alike
+share their functions: a narrow integer passes as its width and whoever reads it extends it as its
+own type says; a float, passed in another register, has a key of its own. Lengths are arguments
+rather than part of the key for the same reason. The arrays of any element are generated from one
+description of the element (`ElemOps` in the build manager).
 
-| Function | Does |
-|----------|------|
-| `__pln_alloc_K(sizes...)` | allocates and builds the value |
-| `__pln_free_K(p, sizes...)` | releases what `p` owns, then `p`; `p` may be NULL |
-| `__pln_init_K(p, sizes...)` | builds the value in an existing block (a `$` variable) |
-| `__pln_fini_K(p, sizes...)` | releases what `p` owns, but not `p` (a `$` variable) |
-| `__pln_copy_K(dst, src, sizes...)` | copies `src` into `dst`, owned parts included: `dst` becomes a new value |
-| `__pln_assign_K(dst, src, sizes...)` | copies `src` into the existing `dst`, the parts of a type with its own `->` (3.8) by it (only a `K` holding one) |
-| `__pln_initrun_T(p, from, to)` | builds `p[from]` to `p[to - 1]`, structs `T` laid out in place (only a `T` owning nothing) |
+Field initializers are stored by a function of the module defining the struct
+(`__pln_fi_<T>(@!T p)`, one `value -> p.field` each), which the generated `__pln_init_T` calls once
+the owned fields are built, declaring it in C as it does a type's `->` (3.8). The generated module knows only the
+owned fields, and the values go into them too (`[n]P`'s elements, `[m][n]T`'s rows): stores there
+would need their layout in the generated module and a second way of writing a literal. A struct
+laid out in another with initializers of its own is stored by its own function, which the outer one
+calls, unless the generated functions build it whole (`runs`).
 
-| Shape | `K` | Functions |
-|-------|-----|-----------|
-| struct `T` owning fields | `T` | all |
-| struct owning nothing, as an element or a field (`bytes`) | `__pln_B<n>` | none; only declared |
-| `[n]T` whose element owns storage (a struct, a `[+]U`, a row) | `arr_E` | all |
-| `[+]T` (`T` a primitive, a struct, a `[+]U` or a row `[n]U`) | `varr_E` | all, and `push`/`resize`/`pop`; `copy(h, src, n)` copies a run of elements |
-| `[+]$T` with `T` a struct or rows `[n]U`, `[n]$[m]U`, … | `evarr_E` | as `varr_E` |
-
-`E` is the layout of the element as the array's storage holds it, written as a parameter type
-is in a symbol (SASpec.md's Symbol names). The layout replaces each integer type by the signed one
-of its width and each struct owning nothing by its `__pln_B<n>`: with `Point` 16 bytes owning
-nothing, `[n]Point` is `arr_P9__pln_B16` (an owned slot), `[+]$Point` is `evarr_9__pln_B16`,
-`[+]int32` and `[+]uint32` are both `varr_int32`, `[+][4]int32` is `varr_Pint32`. A key thus
-names how its elements are stored, moved and passed, and elements laid out alike share their
-functions: a narrow integer passes as its width and whoever reads it extends it as its own type
-says, so only the types the built-ins take and return differ, not the functions they call; a
-float, passed in another register, has a key of its own. The build manager generates the arrays
-of any element from one description of the element (`elem` in the shape, `ElemOps` in the build
-manager): an owned element is built when its slot comes into use and dropped when it leaves, by
-helpers `__pln_build/drop/set/copyrun_E` shared by `arr_E` and `varr_E`; any other element is
-plain bytes, copied in bulk. A row element is described by its own element: a row in a
-block of its own is an owned element built and dropped through its elements' helpers, and a row
-laid out in place (`[+]$[n]U`) is `n` slots of its element, so it is owned exactly when that
-element is; rows laid out in place in turn are one run of slots (with `S` owning fields,
-`[2]$[3]S` is `arr_P1S` of 6).
-A struct's owned field is a slot of the same kind, described the same way: `__pln_init/fini/copy_T`
-build, drop and copy each field through its element's helpers, and the generated module declares
-the field as the slot its build fills (`@!int32` for `[3]int32`), so it copies and frees nothing
-on its own. Palan sets only what it reads to release a value: owned slots and `[+]U` headers
-(an inner `[+]U` starts as an empty header, `calloc(1, 24)`), and what field initializers give.
-Everything else starts undefined, as with C's `malloc`: a struct's other fields, pointers
-included, an array's elements, the elements `resize` adds and those past a `[+n]T` literal's.
-
-A field initializer is a compile-time constant (which fields take one is in
-PalanReference.md), so palan-sa evaluates it and lists the values in the struct's shape
-(`inits`); `__pln_init_T` stores them after building the owned fields, and so does every
-`__pln_alloc_T`. A struct laid out in another brings its initializers along at their place in
-it, as it does its owned fields. A struct with initializers is never reduced to `__pln_B<n>`,
-since structs of one size no longer build alike. Its elements laid out in place (`[n]$T`,
-`[+]$T`, a `$[n]$T` field) are built but own nothing: they are built through `__pln_initrun_T`
-(`__pln_init_T` on each element of a run) when their slots come into use, as an owned element is,
-and copied and freed as bytes. A value taken over (`<<=`, `->>`) or written by a C function is
-not built again.
-A struct holding a type with its own `->` (3.8), itself or in a field or element at any depth,
-has `assigns` in its shape, and the type's shape has the function's symbol (`copy-func`), which
-`__allocators.h` declares. Such a struct is never reduced to `__pln_B<n>` either, even owning
-nothing, since writing into it is no longer copying bytes. A struct of that kind laid out in
-another (a `$T` or `$[n]$T` field) is not merged into it as other structs laid out in place are:
-it is kept whole, a run of them (`runs`), declared as its type and built, freed, copied and
-written by its own functions, so that copying the bytes around it leaves the parts its `->`
-keeps alone. `__pln_assign_K` writes the existing elements through helpers
-`__pln_assignrun/aset_E` beside the copy's; into a `[+]T` it writes the elements it has and
-copies those it gains whole, as `__pln_set_E` does.
-A length may be known only at run time (`[m][k]int32`), so keys leave every length out and every
-`arr_E`/`varr_E` function and helper takes, after its own arguments, one length per array level
-below it, outermost first, through rows and `[+]U` elements alike: `[m][3]int32` and `[+][3]int32`
-pass 3, `[+][4]int32` passes 4, and all share `__pln_build_Pint32` and the rest. palan-sa appends
-a type's lengths to its `push`/`resize`/`pop` calls itself.
-
-Like any Palan function, each links by a symbol made from its module and parameter types, so
-palan-sa names the module `__allocators` (`PALAN_ALLOCATORS_MODULE` in `src/common/PlnDefs.h`,
-which the build manager also uses for the file name) and the parameter types of each signature
-above when it calls one (`allocHelperCall`).
+A struct with initializers is never reduced to `__pln_B<n>`, since structs of one size no longer
+build alike, nor is one holding a type with its own `->` (3.8), since writing into it is no longer
+copying bytes. A struct of the latter kind laid out in another is kept whole (`runs`) rather than
+merged into it as other structs laid out in place are, so that copying the bytes around it leaves
+the parts its `->` keeps alone. A value taken over (`<<=`, `->>`) or written by a C function is not
+built again.
 
 A module declaring `library` has allocators of its own, from its own shapes: `std.utf8` calls
 `std.utf8.__allocators`. They come from its source alone, so its object is the same whichever
 program or archive holds it, and they are kept with its work files, or in its library's archive,
 which publishes nothing about the private types they serve. Allocators of two modules may hold
 functions of one key, under different symbols; they agree, since a key names a layout and all of
-them release through `free`. They are generated in `<source>.alloc/` under the working directory
+them release through `free`. They are generated in `<source>.<mode>.alloc/` under the working directory
 (5.1), declaring the identity through `library std.utf8;`. A library module compiled from source
 into a program uses them too, in place of the program's.
 
 ### 3.7 Modules and Libraries
-
-**Status.** This section and 5.1 describe the structure version 0.2.4 is being built toward.
-Implemented: module identity, `import "..."` resolution, the `.pai` form and reading it,
-`palan-gen-ast --interface` for one module, skipping steps whose result is still valid (5.1), `palan
---lib` and archives, merging and narrowing a library's modules, and a library module's own allocators
-(3.6), `import <...>` and `libpath`, building `std` in the build tree (6.2), and `std/utf8`. Not yet:
-the release archive (6.2).
 
 **Module identity.** A module's identity is the module part of its symbols (SASpec.md's Symbol
 names). It comes from its source alone, never from the entry or the source's location:
@@ -441,27 +310,39 @@ names). It comes from its source alone, never from the entry or the source's loc
 | `util.pa` declaring nothing | `util` |
 
 A declaration comes first in the file, at most one. palan-gen-ast reads it and records the identity
-in ast.json; later tools only receive it. A byte of the file name outside `[A-Za-z0-9_]` is written
-`_` and two lowercase hex digits, as is a `_` followed by two of them, so `my-lib.pa` and
-`my_2dlib.pa` do not meet. A leading digit gets a `_` in front (`001_hello.pa` is `_001_hello`),
-which `as` needs and which reads better than escaping it; so `1x.pa` and `_1x.pa`, or `-x.pa` and
-`2dx.pa`, do meet. `a/util.pa` and `b/util.pa` declaring nothing also have one identity. One identity
-in a program is an error; declaring `library proj.a;` and `library proj.b;` lets them coexist. A
-program's allocators have the identity `__allocators`, given by the build manager through their file
-name, and a library module's have its own identity with `.__allocators` added (3.6).
+in ast.json; later tools only receive it. The file name is escaped as SASpec.md's Symbol names
+says; a leading digit gets a `_` in front rather than being escaped, which `as` needs and which
+reads better; so a few names meet (`1x.pa` and `_1x.pa`), as do `a/util.pa` and `b/util.pa` declaring
+nothing. One identity in a program is an error; declaring `library proj.a;` and `library proj.b;`
+lets them coexist.
 
-**Finding a library.** `import <std/io/file>` reads `<dir>/std/io/file.pai`, and links
-`file.a` beside it. The path has a package and at least one more part, none empty, and no `.`, since a
-module is named and not a file; palan-gen-ast reports anything else at its line. `<dir>` is
-each `libpath "dir";`, relative to the file writing it, used as written. Like `link`, a `libpath` may be written in
-any module and only adds a place to look, for the whole program. `std` is not looked for there: it
-always comes from the tools' own version and the target being built for (6.1), which `libpath` cannot replace. One package name
-found in two places is an error rather than decided by order, since the union has none. A library
-needing another imports it in its interface; the program's `libpath`s must find it. A `.pai` holds no
-`libpath`. Only the build manager sees every module, so only it looks a library up; it generates the
-`.pai`'s AST and tells palan-sa where that is with `--library`. An `import "..."` is made absolute by palan-gen-ast, relative to the
-importing file and with symbolic links resolved, so the build manager and palan-sa do not each
-resolve it, and one file reached by two spellings is one module.
+**Type identity.** A Palan struct or enum is identified by its module and its name, exported or not:
+`__pln_L<len><module>_<Name>`, with the identity's `.` written `_2e` (`std.utf8`'s `Point` is
+`__pln_L10std_2eutf8_Point`) and a block's type adding its order (`__pln_L4util_2_Point`). This name
+is what sa.json, symbols (a type's `->` is `__pln_cp_<len><that name>`) and the allocators' keys
+use; a message shows the written name. A C type keeps its C name, global as in C. So does a type
+declared in a generated allocators module, whose names are already the types' identities.
+
+- Before 0.2.6 an exported type was identified by its written name alone, so two modules exporting
+  `Point` were `E_DuplicateTypeName` and library types took a prefix (`utf8mode`); a private type
+  had a hash of its module in place of `<len><module>`. Both now take one form.
+- The identity itself rather than a hash: it reads in assembly and symbol tables, and two modules
+  never meet. Escaping `.` as `_2e` cannot meet an identity's own `_2e`, which is already `_5f2e`;
+  the length marks where the identity ends. The written name cannot be used, since the generated
+  allocators are C and take no `.`.
+- Not taken: identifying a type by its package (`library std;`), which would leave two modules of
+  one package colliding.
+- `utf8mode` and `utf8iter` keep their names: imported without an alias, a type's name is written
+  bare in the importer, where `mode` would collide more often.
+
+**Finding a library.** PalanReference.md's Using a Library states the rules. A library path has no
+`.`, since a module is named and not a file. A package found under two `libpath`s is an error rather
+than decided by order, since the union of `libpath`s has none. `std` always comes from the tools'
+own version and target (6.1). A `.pai` holds no `libpath`: the program's must find the libraries it
+imports. Only the build manager sees every module, so only it looks a library up; it generates the
+`.pai`'s AST and tells palan-sa where that is with `--library`. An `import "..."` is made absolute by
+palan-gen-ast, relative to the importing file and with symbolic links resolved, so the build manager
+and palan-sa do not each resolve it, and one file reached by two spellings is one module.
 
 **Interface (`.pai`).** What a library publishes for one main source, in Palan source, which a
 person reads to learn how to use it and palan-gen-ast reads like any source:
@@ -478,23 +359,31 @@ export func open([]uint8 path) -> @!Writer;
 
 A library's is written by `--lib`, and `palan-gen-ast --interface` writes one module's own
 declarations in the same form (3.2), keeping every private one and each `import "..."` as an absolute
-path, since merging is `--lib`'s. An ordinary `import "..."` needs none: palan-sa reads the imported
-module's AST, and a library's AST comes from its `.pai`, so palan-sa has one kind of input. An error
-in an imported source module is reported at its own line, and one in a library at its `.pai`'s.
+path. An ordinary `import "..."` needs none: palan-sa reads the imported module's AST, and a
+library's AST comes from its `.pai`, so palan-sa has one kind of input. An error in an imported
+source module is reported at its own line, and one in a library at its `.pai`'s.
 
-The modules a main source reaches are merged into its one `.pai`, so how the library's source is
-divided is not published:
+A library's `.pai` declares types only of its main source, so how the library's source is divided is
+never published:
 
-- Public: the main's exports, and the exported types of other modules that they use, directly or
-  through other public types or any type alias, since a function's symbol holds what an alias stands
-  for. Any other export of an internal module is visible only inside the library; one needed only by
-  a private struct or a const is written as private.
-- Private: the types and consts the public declarations need, the main's before those of internal
-  modules, and renamed if two share a name. A top-level private type's symbol holds its name and not
-  its position, so leaving others out does not change it.
-- `import <...>` of another library stays as written, whether public declarations need it or not,
-  since its archive is linked. An `import "..."` of an internal module disappears.
-- `link "m";` lists the libraries of every merged module's `link` clauses. The statement is accepted
+- Public: the main's exports. Private: the main's types and consts the public declarations need.
+- The consts and aliases of internal modules the public declarations need are written as the main's,
+  renamed (`__m<n>_<Name>`) when two share a name: they identify nothing, since a symbol holds what
+  they stand for.
+- A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
+  declarations need it or not, since its archive is linked). A C type comes through
+  `cinclude ... export`. An `import "..."` of an internal module disappears.
+- A public declaration naming a type of an internal module — directly, through an alias or through
+  a field of a type it names — is an error of `--lib`. A type a library publishes is declared in
+  its main, which internal modules import to use it (imports may be circular), or published with
+  its contents hidden as an `opaque` type.
+- Before 0.2.6, the exported types of internal modules that public declarations used were written
+  into the main's `.pai` as the main's own, and private ones renamed (`__m<n>_<Name>`) when two
+  shared a name; the reader then identified them by the main's module, unlike their objects. Not
+  taken: stating each such type's module in the `.pai` (`export type Kept from std.kept {...}`, or a
+  statement switching the module of the declarations after it), which would publish the library's
+  internal modules.
+- `link "m";` lists the libraries of every module's `link` clauses. The statement is accepted
   only in a `.pai`. An object file named by a `link` clause goes into the archive instead.
 - `built "<version>";` records the tools' version, and `target "<name>";` the target. Reading a `.pai`
   of another version or target is an error, so a path holds one target's libraries, and libraries for
@@ -507,19 +396,85 @@ statements, and a macro constant is written as its value. A function without a b
 in a `.pai`. A top-level variable appears only if a const uses it, as its type with the sizes filled
 in (`[]int32 a = [1, 2, 3];` is `[3]int32 a;`), so changing a value leaves the interface as it was. A
 const naming anything else that cannot be written, such as a variable whose value only running gives,
-is left out with it: no declaration could use it either (`E_ConstUsedBeforeKnown`). `--lib` rejects a module permitting a function to
-use its global, since a library's top level never runs.
+is left out with it: no declaration could use it either (`E_ConstUsedBeforeKnown`). An exported
+`global` is written without its initializer (`export global int64 count;`).
 
 `cinclude <stdio.h> export FILE, fpos_t;` names the C types the module's public declarations use.
-It limits nothing in the module, which uses the whole header as without it; it only puts the
-`cinclude` in the `.pai`, whose reader then needs the header, as any user of a C type needs its SDK.
-A `cinclude` used only in bodies does not reach the user. The importer still cannot write `FILE`
-without its own `cinclude`. An ordinary import reads the whole AST, so the clause matters only to
-`--lib`. The clause is accepted only on a top-level `cinclude`, since a block's is not part of what
-the module publishes; palan-gen-ast rejects it elsewhere rather than leave a type silently unpublished.
-A local header (`cinclude "x.h" export T;`) that the public declarations need is not supported yet:
-its path would not exist for the reader, so `--lib` reports an error rather than write such a `.pai`.
-A local header used only in bodies does not reach the interface.
+It limits nothing in the module; it only puts the `cinclude` in the `.pai`, whose reader then needs
+the header, as any user of a C type needs its SDK. An ordinary import reads the whole AST, so the
+clause matters only to `--lib`. palan-gen-ast rejects it on a block's `cinclude` rather than leave a
+type silently unpublished. The public declarations use C types of system headers only: a local
+header's path would not exist for the reader, and installing it beside the `.pai` would need rules
+for where it and the headers it includes go. Its types are published wrapped in an `opaque` type,
+which needs no header.
+
+**Opaque types.** `export type Handle = opaque K.Inner;` declares a type of its module whose
+contents are `K.Inner`'s, which only modules able to write `K.Inner` see; a `.pai` writes it
+`export type Handle = opaque;`. It lets a library publish a type defined in an internal module, or
+hide a type of its main, without the reader learning its layout or its module.
+
+- It is a type of its own, not an alias: an alias stands for its type in a function's symbol, which
+  would name the internal module (`get(Handle)` would link as `get` of `K.Inner`).
+- The contents must be owned through one pointer, so a user holds the value as a struct without
+  knowing its size; only what needs the layout (a declaration without an initializer, a copy) is
+  an error, and only where the contents' type cannot be written.
+- An owned field or element of an opaque type starts empty (NULL, as after a move) wherever it is
+  created, so a type holding one is allocated the same in every module. Copying a value holding
+  one is left out until wanted: the allocators that would copy it know the opaque type by its
+  name only.
+- The release function, or without one the contents' release, is reached through a function
+  generated in the type's module, whose symbol is made of the type's identity alone
+  (`__pln_rl_<len><identity>`), carried with the type as a type's `->` is (3.8), so the `.pai`
+  needs nothing more and the user's allocators can call it. It does nothing for an empty value, so
+  neither the release function nor the user checks for one.
+- Not taken: rejecting a value not explicitly closed (a linear type), which the flow analysis of
+  given-away variables (4) could find for a variable but not for fields and elements (doc/Issues.md
+  #3); a borrowed handle only, released explicitly as C's `DIR`, which leaves the user to free.
+
+**Module initialization.** Every module has a hidden function `<module>..init`, which no written
+function's symbol can be (theirs end in a parameter list or `.v`), not written in a `.pai`. It calls
+the `..init` of each module it imports, then initializes its `global` variables in declaration
+order, once (a flag in the module). The entry's `_start` calls the entry's `..init`, then its
+`..main` (the top-level statements, which still run only for the entry). A library's internal
+modules are initialized through its main's, so a program needs to know only what it imports.
+
+- Before 0.2.6 a `global` was initialized where its top-level statement stood, so a module whose
+  functions used one could not be imported (`E_ImportModuleWithGlobals`) or built into a library
+  (`E_LibModuleWithGlobals`), and a top-level statement before the declaration could not reach a
+  function using it (`E_GlobalUsedBeforeDecl`). All three go.
+- An initializer cannot name an ordinary top-level variable, since it does not exist for an imported
+  module; the entry follows the same rule, so a module compiles the same whichever is the entry.
+- In a circle of imports, modules are initialized in import order, and a function reached from one
+  may see another's globals not initialized yet (zero, an owner NULL), as in Go's or C++'s static
+  initialization.
+- A module wanting its state built at a time of its user's choosing declares the variable without
+  an initializer and exports a function setting it. Not taken: initializing on first use (a check at
+  every access), or an import deferring a module's initialization, which another import of the same
+  module would defeat and a library's internal modules would not receive.
+
+**Exported globals.** An exported `global` is used in an importer as in its own module, through
+the importer's own `global` statements, so a function's access to module state is stated where the
+function is. Its symbol is its label, `<module>.<name>`.
+
+- An `import` in a function lets that function use the module's globals without a `global`
+  statement: the scope is the function's, so nothing else reaches them.
+- An importer's type comes from the declaration alone, with the sizes an array literal gives, so
+  a source and its `.pai` give one type. A size only running gives is an error: the lengths live in
+  the module's `..init`, which no importer reads.
+- `M.count` reaches palan-sa as a field access on `M`; it becomes the id `M.count` as each
+  statement is entered, not in palan-gen-ast, since whether `M` is an alias depends on the scope (a
+  variable `M` hides it).
+
+**C-named functions.** `cexport func add(...)` gives the function the symbol `add`. There is one
+symbol, not an alias beside the usual one: Palan calls it by `add` too, and a `.pai` writes
+`cexport` so an importer gives it the same. It is written like `cinclude` rather than as C++'s
+`extern "C"`, since there is no other linkage to name.
+
+- A C declaration of the same name is not checked against it: a library reading its own C header,
+  which declares the function for its C code, is the expected use. Two definitions fail at link
+  time; one replacing a libc function does not, and is the writer's to avoid.
+- A call that sees both the C declaration and the Palan function is to one function, and takes the
+  Palan one's types, which carry ownership the C declaration cannot.
 
 **Building a library.** `palan --lib -o <dir> main.pa` compiles the modules `main.pa` reaches, which
 must all declare the same first name, and writes under `<dir>`, as given, the main's identity as a
@@ -530,8 +485,8 @@ detect an older copy left in another's archive.
 The source tree's layout does not matter to the result. `--lib` then reads the interface back
 through palan-gen-ast and `palan-sa --interface`, and compares the symbols it gives the public
 functions with those the main source compiled to. So an interface that lacks something, such as a C
-type no `export` clause names, or that names a function differently from its object, such as through
-an alias of an internal module's private type, fails here and not at the library's first user. Nothing
+type no `export` clause names, or that names a function differently from its object, fails here and
+not at the library's first user. Nothing
 is written to `<dir>` until this passes. Every module's top level remains in its object (a test
 written there is linked when the object is), but runs only for an entry.
 
@@ -553,12 +508,16 @@ Two rules run through all of it:
 - An operand is evaluated in the order it is written, also when the function takes it in another
   position (a derived comparison).
 
-**String literal conversion.** The function named like the type is the conversion, so no syntax is
+**Literal conversion.** The function named like the type is the conversion, so no syntax is
 added.
 
-- Only a string literal converts implicitly, so an allocation and a copy are never hidden behind a
-  byte array that was not meant to become text. Integer and floating-point literals are left for
-  later (doc/Issues.md #33).
+- Only a value that folds to a literal converts implicitly (a literal, a const, a constant
+  expression), so an allocation and a copy are never hidden behind a byte array that was not meant
+  to become text. A constant expression is a literal wherever it is written, so it is folded in its
+  default type first (`big n = 12 * 3;` is `big(36)`). A literal with a type of its own (`true`, an
+  enum value, a character, `NULL`) does not convert.
+- The conversion is chosen among the functions callable with the literal alone as any overloaded
+  call is: one taking the literal's default type exactly wins.
 - The function is chosen by visibility, as an operator function is: a module may add one for a type
   it imports, and an alias does not hide it, since a conversion is never written qualified.
 - A candidate needing a conversion is considered only when none fits without one, so adding a
@@ -570,8 +529,9 @@ by construction. A three-way comparison was not taken: for text, `==` is answere
 alone when they differ, which a three-way comparison cannot use.
 
 - Before 0.2.5 two structs compared by address, silently. Now a struct operand always calls a
-  function, a C struct included, and with none it is an error; a default field-by-field `==` would
-  have to decide how deep owned fields compare and what `NaN` is (doc/Issues.md #35).
+  function, a C struct included, and with none it is an error. No field-by-field `==` is given by
+  default: how deep owned fields compare, whether a borrow compares the pointer, and what `NaN` is
+  differ by type, so the type states them.
 - A comparison with `NULL` stays a pointer comparison, since the generated allocators (3.6) and C
   interop code test borrows against it. Whether two borrows point to the same value is
   `int64(a) == int64(b)`; no operator is added for it.
@@ -579,9 +539,8 @@ alone when they differ, which a three-way comparison cannot use.
 **Append operator `<<`.** The function must return `@!T` of its own `T`, so `s << a << b` always
 chains; that it returns `s` itself is a contract the compiler cannot check (doc/Issues.md #1). The
 left operand is what a method-form receiver may be, or a call returning `@!T`: appending to a
-temporary would be lost. `[+]T` gets none (doc/Issues.md #17): `push` passes elements in several ways
-a second spelling would have to repeat, and `[+]uint8 << "abc"` would not say whether it adds one
-element or the bytes.
+temporary would be lost. `[+]T` gets none for now: `[+]uint8 << "abc"` would not say whether it
+adds one element or the bytes.
 
 **Copy function `->`.** It is part of the type, not an operator function. An operator function is
 found among the functions visible where it is written, but `->` is also called where nothing is
@@ -594,13 +553,13 @@ paths.
 
 - So it is defined only in `T`'s module, not exported, and the StructDef carries its symbol
   (`copyFunc`) to every module `T` reaches. The symbol is named by the type's identity alone
-  (`__pln_cp_4utf8`, SASpec.md's Symbol names) and is a global C identifier, since the generated
+  (`__pln_cp_24__pln_L10std_2eutf8_utf8`, SASpec.md's Symbol names) and is a global C identifier, since the generated
   allocators call it.
 - The source is the same type only: a `->` from another type would be an implicit conversion under
   another name.
 - palan-sa tells each copy as into a new value or an existing one (the rule above). Into an
   existing value of a type holding one, nested or as elements, it calls the generated
-  `__pln_assign_K` (3.6), so `p -> q` and `p.name -> q.name` agree.
+  `__pln_assign_K` (SASpec.md's alloc-shapes), so `p -> q` and `p.name -> q.name` agree.
 
 **Default arguments.** A default is a constant, not an expression evaluated per call, which in a
 library's interface could name what the library does not publish. palan-sa fills it in at the call,
@@ -613,16 +572,21 @@ with different defaults share a pointer type.
 **Variadic arguments.** `[...]E` is written as an array because the body sees one.
 
 - The caller lays the arguments out in a temporary array in its frame and passes its address and
-  its count (NULL and 0 for none). A header like a `[+]T`'s was not taken: nothing needs it until
-  arrays can be spread into a call (doc/Issues.md #29), and the address and count serve that too.
+  its count (NULL and 0 for none). A header like a `[+]T`'s was not taken: the address and count
+  serve an array spread into the call (`...a`) as well.
+- A spread array follows a by-value array parameter: `...a` passes a copy, so the callee writing
+  an element does not reach `a`, and `...a>>` passes `a` itself. Passing primitives without a copy
+  was not taken, since the callee may write them. The callee owns the elements either way, so the
+  caller frees only the array's block after the call. A spread is the only argument for the
+  parameter: mixed with single ones it would need a new array even when given. Its elements must
+  match exactly, as for `->`; converting them is left out while the copy could. A `[]T` has no
+  count to pass.
 - In the body it has the representation of a local array sized at run time (4), the count being
   its length, rather than one of its own. Struct elements are the callee's, as a `T` parameter is; the array stays the
   caller's.
 - Defaults and a variadic parameter together are an error: in `f(1, 2)` for
   `f(int32 a, int32 b = 0, [...]int32 xs)`, `2` could be either. A candidate fitting through its
   variadic parameter is ambiguous with another, as for defaults.
-- An element borrowing a temporary held inside another call is an error, since the statements
-  laying out the array would release it before the call (doc/Issues.md #30).
 - It is unrelated to C's `...`, and a Palan variadic function cannot be a C callback.
 
 **Iteration with `for`.** `iter` gives an iterator and `next` advances it. An iterator type, rather
@@ -636,7 +600,7 @@ are, an alias not hiding them, since `for` never writes their names.
 of 32 bits or more: UTF-8 text never holds it as a byte, so `buf[i] == 'é'` on a `[]uint8` would be
 silently false. A character of several code points is an error suggesting a string literal; the
 characters of `std/utf8` are code points, grapheme clusters being left for later (doc/Issues.md
-#36).
+#4).
 
 **Hidden and read-only fields.** The boundary is the module, as for `export`. Unmarked fields stay
 public, since most exported structs are plain data (`samples/raytracer/vecmath.pa`'s `vec3`).
@@ -670,88 +634,58 @@ text type means by a position, rather than bytes.
 - The functions changing `s` return `@!utf8` because each was decided to chain; it is not a rule of
   the library. A character is not appended with `<<`, since `s << n` for an integer would do it.
 - Left out: functions doing what a shorter form does (`isEmpty`, `clear`), `trimStart`/`trimEnd`, a
-  copying or counted `replace`, case mapping and normalization (Unicode data, doc/Issues.md #36),
-  conversion with numbers (doc/Issues.md #34), compound assignment, `[]` indexing.
+  copying or counted `replace`, case mapping and normalization (Unicode data, doc/Issues.md #4),
+  conversion with numbers (a formatting module's, such as `std/fmt`), compound assignment, `[]`
+  indexing.
 
 ## 4. Expression Value Categories
 
-palan-sa marks an expression whose value has, or needs, an owner with a `category`:
+palan-sa marks an expression whose value has, or needs, an owner with a `category` (SASpec.md's
+Expression model); PalanReference.md and SASpec.md state the ownership rules. Why some are as they
+are:
 
-| Category | Expression |
-|----------|------------|
-| `owned`    | an `id` naming a variable that owns its storage and releases it at scope exit (a heap struct or array, not a `$` variable) |
-| `expiring` | a call returning an owned value that has no owner yet: an array as a heap block, a struct as contents written to storage the receiver provides |
-| `owner-view` | a pointer cast to an owned type (`p as T`): what it points to, viewed as an owner that is no Palan variable |
-| (absent)   | anything else |
-
-- A returned struct is written into storage its receiver provides, and what the struct owns
-  goes with it. A variable it initializes (`T v = f();`, `$T v = f();`, `T v <<= f();`) and an
-  owning parameter it is given to provide their own storage (a raw heap block, or the frame for
-  `$T`), so it is not copied. `return f();` passes the function's own return storage on.
-  Anywhere else it goes to a frame temp: assigned with `->` it is copied from there, and the
-  parts it owns are released once the statement has been evaluated.
-- A Palan parameter of an owned type (a struct `T`, `[n]T`, `[+]T`) owns its argument: the caller
-  passes a copy, or hands a returned value over without one, and the callee frees it at exit.
-- A returned struct given to a borrowing parameter (`@T`/`@!T`, a C function's), or not used, is
-  released once the statement has been evaluated. Binding it to a `@T`/`@!T` borrow is an error.
-- `return v` of an owned `v` drops it from scope-exit release; the caller owns the value. A
-  returned struct is moved into the return storage: its bytes are copied and, for a heap `v`,
-  only `v`'s block is freed. A named struct return is the return storage itself. Returning a
-  struct the function doesn't own returns a copy.
-- `v ->> target` needs an owned `v` and sets `v` to NULL after the transfer, so its scope-exit
-  free is a no-op; an `expiring` source has nothing to reset.
-- `v>>` gives a call argument away the same way, to a parameter owning its type, without a copy;
-  anywhere else it is an error. `v ->> f()` is `f(v>>)`. Arguments are still evaluated left to
-  right and `v` is read where `v>>` is written, but `v` is set to NULL only once all of the
-  call's arguments have been evaluated, just before the call, so a later argument can still
-  borrow from it (`uv_write(req>>, s, @req.buf, ...)`, as C passes a request and a part of it).
-  A later argument that may change `v` in between is an error: giving away `v` (or a path it
-  shares a prefix with) again, borrowing with `@!` (or as a method-form receiver) what contains
-  `v` or what its indices read (a borrow of `v` itself reaches only what it owns), or, when its
-  path reads a global, any call.
-- A function pointer type can have owned parameters and an owned return, with a Palan function's
-  convention (the callee owns an argument, the caller the returned value; a struct is returned
-  by value, so a pointer C returns is taken over by viewing it as an owner:
-  `(f as @func() -> @!T)() as T`). Ownership is part of
-  the signature: a pointer to a function owning a parameter does not bind where one borrowing it
-  is expected, or the reverse. A C function hands ownership across only when called through a
-  cast to such a type, so ownership leaves or enters Palan only where the call says so. Only a C
-  function named in the cast may change ownership this way, as C's types say nothing about it;
-  any other cast to a function pointer type (a Palan function, a function pointer variable or
-  field) keeps it, as binding does, since the function frees what its own signature says.
-- `p as T` for a `@!X` pointer `p` and an owned type `T` is an `owner-view`: `=` or an owning
-  parameter copies it as from an owned variable, and `<<=`, `->>` or `>>` move it. A move leaves
-  `p` as it is, since `p` is not an owner; a `@X` pointer cannot be moved from.
-- `v ->> loc as T` for a writable location `loc` of a `@!X` pointer type stores what `v` owns
-  there, as the pointer C is to hold; what `loc` held is not freed, since it is no Palan owner.
-  Without `as T`, `->>` into a location that does not own its value is an error.
-- An array level whose size is known only at run time has no `arr-size` in its type. Its owner
-  is a variable keeping that size from its declaration (`__<name>_d<k>`), or a row of one, so a
-  free or a copy uses the lengths of the owner receiving or releasing the value, and a size
-  known only at run time on either side matches any size; that the sizes agree is the
-  programmer's responsibility. A borrowed `[]T` has no lengths to copy by, and a signature's
-  sizes stay constant. Until 0.2.4 `len` and `for` rejected such an array; from 0.2.5 they read
-  the same lengths (`len(@a)` of a local `[n]int32 a`, `for copy x in m[i]`), which a variadic
-  parameter (3.8) also keeps.
-- `T b <<= v;` initializes `b` with what `v` owns: an owned `v` (set to NULL) or an
-  `owner-view` moves into it, and a call result is taken over as with `=`.
-- `v -> target` with an owned array or struct `target` and a non-expiring `v` copies the contents
-  (owned parts included); neither side's ownership changes. From 0.2.5, a type with a `->`
-  function has its parts copied by that function (3.8).
+- A returned struct is written into storage its receiver provides (a variable it initializes, an
+  owning parameter it is given, or the function's own return storage for `return f();`), so it is
+  not copied; anywhere else it goes to a frame temp.
+- `v>>` sets `v` to NULL only once all of the call's arguments have been evaluated, so a later
+  argument can still borrow from it (`uv_write(req>>, s, @req.buf, ...)`, as C passes a request
+  and a part of it).
+- A use after a give is found in the one pass that analyzes the code, so a loop is not analyzed
+  twice: a use is recorded for each loop it reaches from the head without a fill, and checked when
+  the loop ends against what its iterations leave. A give takes effect when its statement ends,
+  since a store may be analyzed twice (`pending-alias`) and the arguments after `v>>` may borrow
+  `v`; a use later in the same statement is not found. Only variables are followed, not a field
+  or element given away (doc/Issues.md #3).
+- Ownership is part of a function pointer type, and only a C function named in a cast may change it,
+  as C's types say nothing about it: ownership leaves or enters Palan only where the call says so.
+- An array does not carry its lengths: a variable keeps those its type leaves to run time, and a
+  row shares its parent's. A variable given an array takes its lengths over. A row, a field, a
+  parameter or a constant size cannot, so a move there needs sizes known at compile time on both
+  sides, or a cast (`a as [m]T`) saying they agree, which is not checked. The cast is allowed only
+  on what is given away: read through, it would read past a shorter array.
+- A copy goes as far as the shorter of the two at each level, which needs no agreement. Rows laid
+  out in place whose lengths may differ have different strides, so they are copied one by one.
 
 ## 5. Working Directory and Output Files
 ### 5.1 Working Directory
-The working directory for all command-line tools is `~/.palan/work/<target>/` by default. Work files
-are of two kinds:
+The working directory for all command-line tools is `<work>/<target>/`, where `<work>` is
+`$PALAN_WORK` if set and not empty, else `~/.palan/work` (an error if `HOME` is not set either).
+`palan --clean` removes only `<work>/<target>/`, as `PALAN_WORK` may name a directory holding
+other files. Work files are of two kinds:
 
 ```
 ~/.palan/work/<target>/
-  home/user/proj/util.pa.{ast.json,sa.json,s,o}             a module's, reused by every entry
-  home/user/proj/main.pa.d/{__allocators.*,entry.*,out}     an entry's own
-  home/user/proj/utf8.pa.alloc/__allocators.*               a library module's allocators (3.6)
-  home/user/proj/utf8.pa.lib/{utf8.pai*,*.o}                what `--lib` builds from a main source
-  home/user/libs/foo/bar.pai.ast.json                       the AST of a library's interface
+  home/user/proj/util.pa.ast.json                            a module's AST, for both modes
+  home/user/proj/util.pa.<mode>.{sa.json,s,o}                a module's, reused by every entry
+  home/user/proj/main.pa.<mode>.d/{__allocators.*,entry.*,out}  an entry's own
+  home/user/proj/utf8.pa.<mode>.alloc/__allocators.*         a library module's allocators (3.6)
+  home/user/proj/utf8.pa.<mode>.lib/{utf8.pai*,*.o}          what `--lib` builds from a main source
+  home/user/libs/foo/bar.pai.ast.json                        the AST of a library's interface
 ```
+
+`<mode>` is `debug` or `release` (3.1), so running a source and writing it with `-o` keep their
+results apart. The AST does not depend on the mode, and is the slowest step for a source with
+`cinclude`s, so it is shared. Both modes are named, since which one is the default depends on `-o`.
 
 A module's files mirror the absolute path of its source and do not depend on the entry, so `palan
 util.pa` (its top-level tests) and `palan main.pa` (importing it) share them. As with `make`, a step
@@ -775,23 +709,7 @@ Files are written under a temporary name and renamed: two builds racing produce 
 content, at worst compiled twice. What differs per program, the generated allocators and the
 executable, is kept per entry, so programs in one directory can run at the same time.
 
-### 5.2 Output Files
-- palan-gen-ast:
-  - Output AST file: `<source file path>.ast.json`
-    e.g., for source file `main.pa`, the output AST file will be `main.pa.ast.json`
-  - Output interface file of one module, with `--interface` (3.7)
-  - C header declarations from `cinclude` are embedded within the ast.json; no separate file is produced by palan-c2ast in the normal pipeline.
-- palan-sa:
-  - Output analyzed AST file: `<source file path>.sa.json`
-    e.g., for source file `main.pa`, the output analyzed AST file will be `main.pa.sa.json`
-- palan-codegen:
-  - Output assembly file: `<source file path>.s`
-    e.g., for source file `main.pa`, the output assembly file will be `main.pa.s`
-- palan (build manager):
-  - Assembles `.s` files with `as` and links with `ld` to produce the final executable: the `-o`
-    path, or without `-o` `out` in the entry's directory (e.g. `main.pa.d/out`).
-
-### 5.3 Error Output Format
+### 5.2 Error Output Format
 
 All tools write error messages to **stderr** and exit with code **1** on error.
 
@@ -813,6 +731,7 @@ All tools write error messages to **stderr** and exit with code **1** on error.
     tools/palan, palan-gen-ast, palan-c2ast, palan-sa, palan-codegen
     <target>/c2ast/predefined.h
     <target>/std/utf8.pai, utf8.a
+    <target>/std/rt.pai, rt.a         linked into every program (3.1)
     src/std/utf8.pa                  for reference; not read when compiling
     uninstall
   share/doc/palan/<version>/
@@ -833,8 +752,8 @@ it is per target.
   layout holds only what is installed. CMake builds the tools, then builds `std` from `src/std/`
   with them, then the testers. `std-tester` runs it. CMake lists the public mains and runs `--lib`
   for each in one step, again when a tool or any source in `src/std/` changes, since `--lib` does not
-  detect an older copy of a shared module (3.7). That step keeps its work files in the build tree,
-  not in the user's `~/.palan/work/`.
+  detect an older copy of a shared module (3.7). That step keeps its work files in the build tree
+  through `PALAN_WORK`, not in the user's `~/.palan/work/`.
 - Installation: `cmake --install` writes the layout to the prefix, or under `DESTDIR` as a package
   build does. Every destination is relative to the prefix, and `uninstall` and the documents are
   separate components, so that a package can leave them out. A test installs to a temporary

@@ -1,0 +1,4 @@
+func take([3]int32 x) { }
+[3]int32 a;
+take(a>>);
+take(@a);

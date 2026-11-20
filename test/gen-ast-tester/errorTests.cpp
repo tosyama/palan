@@ -58,6 +58,8 @@ TEST(gen_ast_error, interface_only_forms_in_source) {
 		 "m.pa:2:1: error: a function without a body is accepted only in an interface file (.pai)."},
 		{"type T { int32 a; };\nfunc ->(@T src, @!T dst);\n",
 		 "m.pa:2:1: error: a function without a body is accepted only in an interface file (.pai)."},
+		{"export type H = opaque;\n",
+		 "m.pa:1:1: error: an opaque type without its contents is accepted only in an interface file (.pai)."},
 		{"link \"m\";\n", "m.pa:1:1: error: 'link' is accepted only in an interface file (.pai)."},
 		{"built \"0\";\n", "m.pa:1:1: error: 'built' is accepted only in an interface file (.pai)."},
 		{"foo \"m\";\n", "m.pa:1:1: error: syntax error, unexpected string after 'foo'."},

@@ -1,0 +1,65 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; [+]int32 tags; };
+type Q { int32 x; };
+type Text { [+]uint8 bytes; int32 mode; };
+func ->(@Text src, @!Text dst) { src.bytes -> dst.bytes; }
+func mk(int32 x) -> P p { x -> p.x; p.tags.push(x); }
+func first([2]P ps) -> int32 { if ps[0] == NULL { return -1; } return ps[0].x; }
+mtrace();
+{
+	[2]P a;
+	mk(1) ->> a[0];
+	mk(2) ->> a[1];
+	P k;
+	a[0] ->> k;
+	[2]P b;
+	a -> b;
+	printf("%d %d %d\n", b[0] == NULL, b[1].x, first(a));
+	k ->> a[0];
+	a -> b;
+	printf("%d %d\n", b[0].x, b[0].tags[0]);
+
+	[2]Q qa;
+	Q q;
+	qa[1] ->> q;
+	[2]Q qb;
+	qa -> qb;
+	qb -> qa;
+	printf("%d\n", qb[1] == NULL);
+
+	[2][+]int32 va;
+	va[0].push(5);
+	[+]int32 vk;
+	va[0] ->> vk;
+	[2][+]int32 vb;
+	va -> vb;
+	vk ->> va[0];
+	va -> vb;
+	printf("%ld %d\n", len(@vb[0]), vb[0][0]);
+
+	int64 n = 2;
+	[2][n]int32 ra;
+	7 -> ra[1][1];
+	[n]int32 rk;
+	ra[1] ->> rk;
+	[2][n]int32 rb;
+	ra -> rb;
+	printf("%d\n", rb[1] == NULL);
+	rk as [n]int32 ->> ra[1];
+	ra -> rb;
+	printf("%d\n", rb[1][1]);
+
+	[2]Text ta;
+	[2]Text tb;
+	Text tk;
+	2 -> tb[1].mode;
+	ta[1].bytes.push(65);
+	ta[0] ->> tk;
+	ta -> tb;
+	printf("%d %d %ld\n", tb[0] == NULL, tb[1].mode, len(@tb[1].bytes));
+	tk ->> ta[0];
+	3 -> ta[0].mode;
+	ta -> tb;
+	printf("%d\n", tb[0].mode);
+}

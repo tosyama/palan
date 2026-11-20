@@ -62,10 +62,6 @@ json PlnSemanticAnalyzer::unsizedArrToPntr(const json& locNode, const json& type
 	}
 	json bt = type["base-type"];
 	bool sizedRow = bt.value("type-kind","") == "arr" && !bt["size-expr"].is_null();
-	if (sizedRow && astLeaf(bt).value("type-kind","") == "pntr") {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnsizedArrRowUnsupported) << endl;
-		exit(1);
-	}
 	if (type.value("embedded", false)) {
 		json pntr = {{"type-kind","pntr"},{"embedded",true}}; // LCOV_EXCL_BR_LINE
 		if (isStructType(bt)) {
@@ -197,8 +193,9 @@ json PlnSemanticAnalyzer::sizedArrLevel(const json& locNode, const json& arr, op
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ArrBorrowUnsupportedElem) << endl;
 		exit(1);
 	}
-	// An owned struct element is built by its allocator, which needs its layout.
-	if (!isMutable && isStruct) requireCompleteStruct(tname, locNode);
+	// An owned struct element is built by its allocator, which needs its
+	// layout; an opaque one starts empty.
+	if (!isMutable && isStruct && !structDefs_.at(tname).isOpaque) requireCompleteStruct(tname, locNode);
 	out["base-type"] = isStruct ? toStructPntrType(leaf) : leaf;
 	return out;
 } // LCOV_EXCL_BR_LINE
@@ -233,13 +230,10 @@ json PlnSemanticAnalyzer::ownedFieldType(const json& locNode, const json& vtype)
 	requireKnownTypeNames(locNode, vtype);
 	if (isVarrAstType(vtype)) return varrElemType(locNode, vtype);
 	const json* t = &vtype;
-	int levels = 0;
-	for (; t->value("type-kind","") == "arr" && !isVarrAstType(*t); t = &(*t)["base-type"], levels++) {
+	for (; t->value("type-kind","") == "arr" && !isVarrAstType(*t); t = &(*t)["base-type"]) {
 		if ((*t)["size-expr"].is_null()) unsupported();
 		fieldArrSize(locNode, (*t)["size-expr"]);
 	}
-	// Rows of pointer slots, which no array variable can declare either.
-	if (t->value("type-kind","") == "pntr" && levels > 1) unsupported();
 	return sizedArrLevel(locNode, vtype, nullopt);
 }
 
@@ -271,17 +265,14 @@ json PlnSemanticAnalyzer::varrStorageType(const json& locNode, const json& arr)
 			exit(1);
 		}
 	} else if (base.value("type-kind","") == "arr") {
-		if (astLeaf(base).value("type-kind","") == "pntr") {
-			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_StmtNotImplemented) << endl;
-			exit(1);
-		}
 		elem = sizedArrLevel(locNode, base, nullopt);
 	} else if (!embedded && base.value("type-kind","") == "pntr") {
 		elem = ptrSlotElemType(locNode, base);
 	} else if (!embedded && elemSizeBytes(name) >= 0) {
 		elem = base;
 	} else if (structDefs_.count(name)) {
-		const StructDef& def = requireCompleteStruct(name, locNode);
+		const StructDef& def = !embedded && structDefs_.at(name).isOpaque ? structDefs_.at(name)
+		                     : requireCompleteStruct(name, locNode); // LCOV_EXCL_BR_LINE
 		if (embedded && def.ownsFields) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedOwningType, name) << endl;
 			exit(1);
@@ -516,7 +507,8 @@ GenElem genElem(const json& e, bool inPlace, int64_t stride)
 		while (cur->value("embedded", false) && isArrLevel((*cur)["base-type"])) cur = &(*cur)["base-type"];
 		GenElem l = genElem((*cur)["base-type"], cur->value("embedded", false), cur->value("stride", (int64_t)0));
 		g = l;
-		g.value = l.slots;
+		// push moves owned elements in as the pointers their slots hold.
+		g.value = l.owned ? permPtrTo(l.build, true) : l.slots;
 		g.run = l.owned ? ptrTo(l.own) : permPtrTo(l.type, false);
 		return g;
 	}
@@ -552,11 +544,12 @@ GenElem genElem(const json& e, bool inPlace, int64_t stride)
 } // LCOV_EXCL_BR_LINE
 } // namespace
 
-// push owns the struct it is given, as a struct parameter does; the generated
-// one takes it as a pointer and keeps it in the slot instead of freeing it.
-static json pushedValue(json value)
+// push owns the struct or row it is given, as such a parameter does; the
+// generated one takes it as a pointer and keeps it in the slot, or moves what
+// it holds into the slots and frees it.
+static json pushedValue(const json& elem, json value)
 {
-	if (isStructStorage(value)) value["mutable"] = true;
+	if (isArrLevel(elem) || isStructStorage(value)) value["mutable"] = true;
 	return value;
 }
 
@@ -587,7 +580,7 @@ static string allocSymbolIn(const string& allocators, const AllocShapeRef& shape
 			json header = {{"type-kind","struct"},{"type-name","__pln_" + allocShapeKey(shape)}};
 			if (op != "alloc") params.push_back(permPtrTo(header, true));
 			if (op == "alloc" || op == "init") params.insert(params.end(), {i64, i64});   // len, cap
-			else if (op == "push") params.push_back(pushedValue(g.value));
+			else if (op == "push") params.push_back(pushedValue(shapeElem(shape.elem), g.value));
 			else if (op == "resize") params.push_back(i64);
 			else if (op == "copy" || op == "assign") params.insert(params.end(), {g.run, i64});
 		}
@@ -635,22 +628,15 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 	// struct holding owned elements is one such element, a row laid out in place.
 	// A struct laid out in the struct contributes its own owned fields at their
 	// place in it, so the allocators need not know it is nested.
-	// Its initializers are listed likewise, and a run of structs with
-	// initializers laid out in it as one entry their __pln_initrun builds.
 	// A struct laid out in it whose parts a type's '->' writes is kept whole
 	// instead, a run of them, so that its own functions build, free, copy and
 	// write it, and copying the bytes around it leaves it alone.
 	json owned = json::array();
-	json inits = json::array();
 	json runs = json::array();
 	auto assignsAsStruct = [&](const string& sub) {
 		return assignsByFunc(json{{"type-kind", "struct"}, {"type-name", sub}}); // LCOV_EXCL_BR_LINE
 	}; // LCOV_EXCL_BR_LINE
 	function<void(const StructDef&, int, const string&)> collect = [&](const StructDef& def, int base, const string& prefix) {
-		for (auto init : def.inits) {
-			init["offset"] = base + init["offset"].get<int>();
-			inits.push_back(move(init));
-		}
 		for (auto& f : def.fields) {
 			if (f.typeKind == "embed") {
 				const StructDef& sub = structDefs_.at(f.typeName);
@@ -670,10 +656,6 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 					string sub = (*leaf)["type-name"];
 					recordAllocShape(sub);
 					runs.push_back({{"offset", base + f.offset}, {"name", sub}, {"count", count}}); // LCOV_EXCL_BR_LINE
-				} else if (leaf->value("type-kind", "") == "struct" && structDefs_.at((*leaf)["type-name"].get<string>()).hasInits) { // LCOV_EXCL_BR_LINE
-					string sub = (*leaf)["type-name"];
-					recordAllocShape(sub);
-					inits.push_back({{"offset", base + f.offset}, {"kind", "structs"}, {"name", sub}, {"count", count}});
 				}
 				continue;
 			}
@@ -707,7 +689,7 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 		{"total-size",   def.totalSize},
 		{"owned-fields", move(owned)}
 	};
-	if (!inits.empty()) shape["inits"] = move(inits);
+	if (def.hasInits) shape["init-func"] = fieldInitSymbol(name);
 	if (!runs.empty()) shape["runs"] = move(runs);
 	if (!def.copyFunc.empty()) shape["copy-func"] = def.copyFunc;
 	if (assignsAsStruct(name)) shape["assigns"] = true;
@@ -740,6 +722,16 @@ json PlnSemanticAnalyzer::allocElemDesc(const json& elem, bool inPlace)
 		for (; cur->value("embedded", false) && isArrLevel((*cur)["base-type"]); depth++) cur = &(*cur)["base-type"];
 		json leaf = allocElemDesc((*cur)["base-type"], cur->value("embedded", false));
 		return {{"kind","embed-row"},{"key","C" + symbolType(shapeElem(elem))},{"depth",depth},{"elem",move(leaf)}};
+	}
+	// The allocators know an opaque type only by name, as a slot that starts
+	// NULL and is released through its type's release function. Its size is
+	// any a declaration may have: nothing allocates it there.
+	if (const StructDef* opaque = isStructStorage(elem) ? opaqueDefOf(elem) : nullptr) {
+		if (allocShapeNames_.insert(opaque->name).second)
+			sa["alloc-shapes"].push_back({{"shape-kind","opaque"},{"shape-name",opaque->name},{"total-size",8},
+			                              {"release-func",opaque->releaseFunc}});
+		return {{"kind","opaque"},{"key",symbolType(elem)},{"name",opaque->name},
+		        {"release-func",opaque->releaseFunc},{"size",8}};
 	}
 	if (isStructStorage(elem)) {
 		string name = elem["base-type"]["type-name"];
@@ -784,7 +776,7 @@ json PlnSemanticAnalyzer::layoutElem(const json& elem)
 	}
 	if (kind == "struct") {
 		const StructDef& def = structDefs_.at(out["type-name"].get<string>());
-		if (def.built() || assignsByFunc(out)) return out;
+		if (def.isOpaque || def.built() || assignsByFunc(out)) return out;
 		string bytes = "__pln_B" + to_string(def.totalSize);
 		byteTypes_[bytes] = def.totalSize;
 		out["type-name"] = bytes;
@@ -829,18 +821,15 @@ void PlnSemanticAnalyzer::recordVarrShape(const json& vt)
 	recordElemShape(shape);
 }
 
-// push takes an element by value and pop returns one; a struct goes as its
-// storage, which push takes over and pop's caller owns.
+// push takes an element by value and pop returns one; a struct or a row goes
+// as its storage, which push takes over and pop's caller owns.
 json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl, const string& allocators)
 {
 	// LCOV_EXCL_BR_START
 	json i64 = {{"type-kind","prim"},{"type-name","int64"}};
 	const json& elem = varr["base-type"];
 	bool embedded = varr.value("embedded", false);
-	// A row is pushed from a borrow of one and popped as an owned array.
-	json value = elem.value("type-kind","") == "struct" ? json{{"type-kind","pntr"},{"base-type",elem}}
-	           : isArrLevel(elem) ? withArrPermission(elem, false) : elem;
-	const json& popped = isArrLevel(elem) ? elem : value;
+	json value = elem.value("type-kind","") == "struct" ? json{{"type-kind","pntr"},{"base-type",elem}} : elem;
 	auto self = [&](bool isMutable) {
 		json vt = varrPntrType(elem, embedded);
 		vt["mutable"] = isMutable;
@@ -861,7 +850,7 @@ json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl, const string& 
 	add("len", json::array({self(false)}), &i64);
 	add("push", json::array({self(true), {{"name","x"},{"var-type",value}}}), nullptr);
 	add("resize", json::array({self(true), {{"name","n"},{"var-type",i64}}}), nullptr);
-	add("pop", json::array({self(true)}), &popped);
+	add("pop", json::array({self(true)}), &value);
 	return defs;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
@@ -957,6 +946,9 @@ json PlnSemanticAnalyzer::makeOwnedValueFreeStmt(json value, json lens)
 		return json{{"stmt-type","expr"},{"body",{
 			{"expr-type","call"},{"name","free"},{"func-type","c"},{"args",move(args)}}}};
 	};
+	if (const StructDef* opaque = opaqueDefOf(vt))
+		return {{"stmt-type","expr"},{"body",{
+			{"expr-type","call"},{"name",opaque->releaseFunc},{"func-type","palan"},{"args",move(args)}}}};
 	if (isStructStorage(vt)) {
 		string name = vt["base-type"]["type-name"];
 		if (!structDefs_.at(name).ownsFields) return freeCall();
@@ -1016,6 +1008,14 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 {
 	const json& t = dst["value-type"];
 	const json& st = src["value-type"];
+	if (src.value("category", "") == "opaque-convert") {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueConvertMove) << endl;
+		exit(1);
+	}
+	if (src.value("category", "") == "resized") {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ResizeNotMoved, typeDisplayName(st)) << endl;
+		exit(1);
+	}
 	// A lone struct may be copied from a '@T' as well as from another struct's
 	// storage; a `[+]T` takes any run of its elements and their count.
 	bool match = isStructStorage(t) ? isStructPntr(st) && st["base-type"] == t["base-type"]
@@ -1052,6 +1052,16 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 		// LCOV_EXCL_BR_STOP
 	}
 
+	if (const StructDef* opaque = opaqueDefOf(t)) {
+		if (!opaqueContentsVisible(*opaque)) requireCompleteStruct(opaque->name, locNode, "a copy");
+		return makeCopyStmt(locNode, asOpaqueContents(dst, *opaque), asOpaqueContents(src, *opaque), into);
+	}
+	// The allocators copy what a value holds, and know an opaque type's name only.
+	if (holdsOpaque(isOwnedBlock(t) ? t : withoutArrPermission(t))) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueHeldCopy, typeDisplayName(t)) << endl;
+		exit(1);
+	}
+
 	// LCOV_EXCL_BR_START
 	json uint64_type = {{"type-kind","prim"},{"type-name","uint64"}};
 	auto lit = [&](int64_t v) -> json {
@@ -1062,9 +1072,9 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 	auto copyStmt = [&](const AllocShapeRef& shape, json args) -> json {
 		return {{"stmt-type","expr"},{"body",allocHelperCall(shape, op, move(args))}};
 	};
-	auto memcpyStmt = [&](json bytes) {
+	auto memcpyStmt = [&](json bytes, const json& from) {
 		return json{{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name","memcpy"},{"func-type","c"},
-			{"args",json::array({dst, src, move(bytes)})}}}};
+			{"args",json::array({dst, from, move(bytes)})}}}};
 	};
 	auto structHasOwned = [&](const string& name) {
 		const StructDef& def = requireCompleteStruct(name, locNode);
@@ -1074,7 +1084,8 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 
 	if (isVarrStorage(t)) {
 		json args = isVarrPntr(st) ? json::array({dst, varrData(src), varrLen(src)})
-		                           : json::array({dst, src, lit(st["arr-size"].get<int64_t>())}); // LCOV_EXCL_BR_LINE
+		                           : json::array({dst, src, st.contains("arr-size") ? lit(st["arr-size"].get<int64_t>())
+		                                                   : wrapConvert(valueLens(src)[0], uint64_type)}); // LCOV_EXCL_BR_LINE
 		return copyStmt(varrShape(t), move(args));
 	}
 	if (isStructStorage(t)) {
@@ -1084,28 +1095,103 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 			return {{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name",copyFunc},{"func-type","palan"},
 				{"args",json::array({src, dst})}}}}; // LCOV_EXCL_BR_LINE
 		if (op == "copy" && !structHasOwned(name))
-			return memcpyStmt(lit(structDefs_[name].totalSize));
+			return memcpyStmt(lit(structDefs_[name].totalSize), src);
 		recordAllocShape(name);
 		return copyStmt(structShape(name), json::array({dst, src})); // LCOV_EXCL_BR_LINE
 	}
 
-	// An array is copied as its owner holds it, whatever permission a borrow gives it.
-	// The lengths are the receiving owner's.
-	auto [root, depth] = arrRoot(dst);
-	if (op == "copy" && !ownsElems(owned))
-		return memcpyStmt(inPlaceSizeExpr(owned, depth, [&](size_t k) { return runtimeLen(*root, k); }));
+	// An array is copied as its owner holds it, whatever permission a borrow
+	// gives it, each level as far as the shorter of the two goes; the receiver
+	// keeps its own lengths.
 	// LCOV_EXCL_BR_START
-	auto [elem, lens] = ownedRun(owned, locationLens(dst));
-	const json* leaf = &elem;
-	while (isArrLevel(*leaf)) leaf = &(*leaf)["base-type"];
-	if (isPtrBorrow(*leaf)) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_CopyUnsupportedShape, typeDisplayName(t)) << endl;
-		exit(1);
+	json dstLens = valueLens(dst), srcLens = valueLens(src);
+	json srcElems = isVarrPntr(st) ? varrData(src) : src;
+	json body = json::array();
+	vector<json> n;
+	for (size_t k = 0; k < dstLens.size(); k++) n.push_back(minLen(dstLens[k], srcLens[k], body));
+	auto withBody = [&](json copy) {
+		if (body.empty()) return copy;
+		body.push_back(move(copy));
+		return json{{"stmt-type","block"},{"body",move(body)}};
+	};
+	// Rows laid out in place whose lengths may differ are not one run: they
+	// are copied one by one.
+	size_t k = 1;
+	for (const json* lv = &owned; lv->value("embedded", false) && isArrLevel((*lv)["base-type"]); lv = &(*lv)["base-type"], k++)
+		if (constArrSize(dstLens[k]) < 0 || constArrSize(srcLens[k]) < 0)
+			return withBody(copyRows(locNode, dst, dstLens, srcElems, srcLens, n[0], into));
+	if (op == "copy" && !ownsElems(owned)) {
+		const json& child = owned["base-type"];
+		json childSize = !owned.value("embedded", false) && isArrLevel(child) ? byteLit(8)
+		               : inPlaceSizeExpr(child, 0, [](size_t) -> json { BOOST_ASSERT(false); return json(); });
+		return withBody(memcpyStmt(mulLen(n[0], move(childSize)), srcElems));
 	}
+	auto [elem, lens] = ownedRun(owned, arrLens(owned, n));
 	recordArrShape(elem);
-	json args = json::array({dst, src});
+	json args = json::array({dst, srcElems});
 	for (auto& len : lens) args.push_back(len);
-	return copyStmt(arrShape(elem), move(args));
+	return withBody(copyStmt(arrShape(elem), move(args)));
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The shorter of two lengths: a constant when both are, else a temp declared in body.
+json PlnSemanticAnalyzer::minLen(const json& a, const json& b, json& body)
+{
+	// LCOV_EXCL_BR_START
+	int64_t ca = constArrSize(a), cb = constArrSize(b);
+	if (ca >= 0 && cb >= 0) return lenLit(min(ca, cb));
+	const json u64 = {{"type-kind","prim"},{"type-name","uint64"}};
+	string name = "__min_" + to_string(tempVarCounter_++);
+	declareVar(name, u64);
+	json id = {{"expr-type","id"},{"name",name},{"var-type",u64},{"value-type",u64}};
+	body.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",name},{"var-type",u64},{"init",wrapConvert(a, u64)}}})}});
+	json cond = {{"expr-type","cmp"},{"op","<"},{"left",wrapConvert(b, u64)},{"right",id},
+		{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+	body.push_back({{"stmt-type","if"},{"cond",move(cond)},
+		{"then",{{"stmt-type","block"},{"body",json::array({{{"stmt-type","assign"},{"name",name},{"value",wrapConvert(b, u64)}}})}}}});
+	return id;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The first `count` rows of src copied into dst's one by one, through names
+// that keep each side's lengths, as a 'for' over them would.
+json PlnSemanticAnalyzer::copyRows(const json& locNode, const json& dst, const json& dstLens,
+                                   const json& src, const json& srcLens, const json& count, CopyInto into)
+{
+	// LCOV_EXCL_BR_START
+	const json u64 = {{"type-kind","prim"},{"type-name","uint64"}};
+	json body = json::array();
+	auto bind = [&](const string& prefix, json type, const json& value, const json& lens) {
+		string name = prefix + to_string(tempVarCounter_++);
+		declareVar(name, type);
+		body.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",name},{"var-type",type},{"init",value}}})}});
+		size_t k = 0;
+		for (const json* t = &type; isArrLevel(*t); t = &(*t)["base-type"], k++) {
+			if (!t->value("run-size", false)) continue;
+			string lenName = "__" + name + "_d" + to_string(k);
+			declareVar(lenName, u64);
+			body.push_back({{"stmt-type","var-decl"},
+			                {"vars",json::array({{{"name",lenName},{"var-type",u64},{"init",wrapConvert(lens[k], u64)}}})}});
+		}
+		return name;
+	};
+	string d = bind("__cpd_", withArrPermission(withoutArrPermission(dst["value-type"]), true), dst, dstLens);
+	string s = bind("__cps_", withArrPermission(withoutArrPermission(src["value-type"]), false), src, srcLens);
+	string i = "__cpi_" + to_string(tempVarCounter_++);
+	declareVar(i, u64);
+	json iId = {{"expr-type","id"},{"name",i},{"var-type",u64},{"value-type",u64}};
+	body.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",i},{"var-type",u64},{"init",wrapConvert(lenLit(0), u64)}}})}});
+	auto row = [&](const string& arr) {
+		return sa_expr_arr_index({{"expr-type","arr-index"},{"array",{{"expr-type","id"},{"name",arr}}},
+		                          {"index",{{"expr-type","id"},{"name",i}}}}, arr == d);
+	};
+	json cond = {{"expr-type","cmp"},{"op","<"},{"left",iId},{"right",wrapConvert(count, u64)},
+		{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+	json step = {{"stmt-type","assign"},{"name",i},{"value",{{"expr-type","add"},{"left",iId},
+		{"right",wrapConvert(lenLit(1), u64)},{"value-type",u64}}}};
+	json loop = json::array({makeCopyStmt(locNode, row(d), row(s), into), move(step)});
+	body.push_back({{"stmt-type","while"},{"cond",move(cond)},{"body",move(loop)}});
+	return {{"stmt-type","block"},{"body",move(body)}};
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
@@ -1162,7 +1248,7 @@ json PlnSemanticAnalyzer::structAllocExpr(const string& name, bool build)
 	} else {
 		json uint64_type = {{"type-kind","prim"},{"type-name","uint64"}};
 		json size_arg = {{"expr-type","lit-int"},{"value",to_string(def.totalSize)},{"value-type",uint64_type}};
-		call = {{"expr-type","call"},{"name","malloc"},{"func-type","c"},{"args",json::array({size_arg})}};
+		call = {{"expr-type","call"},{"name","__pln_malloc"},{"func-type","c"},{"args",json::array({size_arg})}};
 	}
 	call["value-type"] = move(pntrType);
 	return call;
@@ -1171,10 +1257,10 @@ json PlnSemanticAnalyzer::structAllocExpr(const string& name, bool build)
 
 void PlnSemanticAnalyzer::markStructRet(json& call, const json& locNode)
 {
-	if (!call.contains("value-type") || !isStructStorage(call["value-type"]))
+	if (!call.contains("value-type") || !isStructValue(call["value-type"]))
 		return;
 	const StructDef& def = requireCompleteStruct(call["value-type"]["base-type"]["type-name"].get<string>(), locNode);
-	call["struct-ret"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_)}}; // LCOV_EXCL_BR_LINE
+	call["struct-ret"] = {{"size", def.totalSize}, {"eightbytes", eightbytesJson(def, structDefs_, true)}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
 // The statements making `call` (or the temp holding it) write its struct into
@@ -1276,7 +1362,7 @@ AggregatePlace PlnSemanticAnalyzer::arrPlace(const json& self, const vector<json
 		json elemSize = inPlaceSizeExpr(elem, 1, [&](size_t k) { return lens[k]; });
 		place.frameAlign = inPlaceAlign(elem);
 		json size = elemBytes == 1 ? lens[0] : mul(lens[0], move(elemSize));
-		place.heapInit = {{"expr-type","call"},{"name","malloc"},{"func-type","c"},{"args",json::array({move(size)})}};
+		place.heapInit = {{"expr-type","call"},{"name","__pln_malloc"},{"func-type","c"},{"args",json::array({move(size)})}};
 		place.frameBytes = n < 0 || elemBytes < 0 ? -1 : n * elemBytes;
 		const json* leaf = &vt;
 		json count;
@@ -1334,6 +1420,17 @@ json PlnSemanticAnalyzer::sa_arr_var_decl(const json& stmt, VarStorage storage, 
 			declareVar(lenName, uint64_type, &stmt);
 			result.push_back({{"stmt-type","var-decl"},
 				{"vars",json::array({{{"name",lenName},{"var-type",uint64_type},{"init",move(init)}}})}});
+			// Read as int64, a length is checked once however it was typed; one
+			// past int64's range could not be allocated anyway.
+			if (checks_ && first.empty()) {
+				json cond = {{"expr-type","cmp"},{"op","<"},
+					{"left",wrapConvert(id(lenName, uint64_type), lenLit(0)["value-type"])},{"right",lenLit(0)},
+					{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+				json fail = {{"stmt-type","expr"},{"body",{{"expr-type","call"},{"name","__pln_negative_size"},
+					{"func-type","c"},{"args",json::array()}}}};
+				result.push_back({{"stmt-type","if"},{"cond",move(cond)},
+					{"then",{{"stmt-type","block"},{"body",json::array({move(fail)})}}}});
+			}
 			lens.push_back(id(lenName, uint64_type));
 		}
 		if (first.empty()) first = name;

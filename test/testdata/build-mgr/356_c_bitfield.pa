@@ -26,3 +26,25 @@ show_bs(s);
 Bs r = make_bs();
 printf("%.2f %.2f\n", r.x, r.y);
 show_bs(r);
+
+// Palan reads what C set, and writes beside the other fields of each unit.
+printf("%u %u %d\n", f.a, f.b, f.e);
+5 -> f.a; 63 -> f.b; 3 -> f.e;
+show_bf(@f);
+uint32 big = 100;
+int16 three = 5;
+big -> f.a; three -> f.e;
+show_bf(@f);
+printf("%u %d\n", f.a, f.e);
+
+-1000 -> p.a;
+show_bp(p);
+printf("%d\n", p.a);
+
+-5 -> l.a; 1000 -> l.b;
+show_bl(@l);
+printf("%ld %d\n", l.a, l.b);
+
+Bs t = [0.5, -100, 0.75];
+show_bs(t);
+printf("%d %d\n", t.a, r.a);

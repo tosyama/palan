@@ -1,0 +1,20 @@
+cinclude "440_function_macro.h";
+cinclude <stdio.h>;
+
+global int32 count = 0 for tick!;
+func tick() -> int32 { count + 1 -> count; return count; }
+
+box b;
+7 -> b.v[1];
+@!box pb = @!b;
+printf("%d %d\n", SECOND(b), SECOND(pb));
+printf("%c %lu\n", FIRST_CHAR("xyz"), LEN_PLUS("abc", 2));
+// The argument is evaluated where the parameter appears, twice here.
+printf("%d %d\n", TWICE(tick()), count);
+printf("%d %d %d\n", MASKED(499), BOTH(1, 0), NESTED(3));
+// A macro is called over a C function of its name, but one whose body Palan
+// can't translate leaves the function to be called.
+printf("%d %d\n", atoi("7"), abs(-5));
+// A later header redefining a macro ends the earlier definition.
+cinclude "440_function_macro_redef.h";
+printf("%d\n", TWICE);

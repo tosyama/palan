@@ -1,0 +1,66 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; };
+type F { [2][3]@int32 g; };
+
+func total([][2]@P rows, int64 n) -> int32 {
+	int32 s = 0;
+	int64 i = 0;
+	while i < n { s + rows[i][0].x + rows[i][1].x -> s; i + 1 -> i; }
+	return s;
+}
+
+mtrace();
+{
+	P a; P b; P c;
+	1 -> a.x; 2 -> b.x; 3 -> c.x;
+
+	[3][2]@P m;
+	@a -> m[0][0]; @b -> m[0][1];
+	@c -> m[1][0]; @a -> m[1][1];
+	@b -> m[2][0]; @c -> m[2][1];
+	printf("%d %d %d\n", m[0][1].x, m[1][0].x, total(m, 3));
+
+	[+][2]@P v;
+	[2]@P r;
+	@a -> r[0]; @c -> r[1];
+	v.push(r);
+	v.push(m[2]);
+	v.resize(3);
+	@b -> v[2][0]; @b -> v[2][1];
+	[+][2]@P w = v;
+	@c -> w[0][0];
+	[2]@P p = v.pop();
+	v.push(p>>);
+	printf("%ld %d %d %d %d\n", v->len(), v[0][0].x, w[0][0].x, v[2][1].x, w->len());
+	v -> w;
+	printf("%d %d\n", w[0][0].x, w[1][1].x);
+
+	[+]$[2]@!P e;
+	e.resize(2);
+	@!a -> e[0][0]; @!b -> e[0][1];
+	@!c -> e[1][0]; @!c -> e[1][1];
+	e[1][1].x + 10 -> e[1][1].x;
+	[2]@!P er = e.pop();
+	e.push(er);
+	printf("%ld %d %d\n", e->len(), c.x, e[1][0].x);
+
+	[2]$[2]@P em;
+	@b -> em[1][1];
+	printf("%d\n", em[1][1].x);
+
+	int32 i = 5; int32 j = 6;
+	F f;
+	@i -> f.g[1][2]; @j -> f.g[0][0];
+	F f2 = f;
+	printf("%d %d\n", f2.g[1][2][0], f2.g[0][0][0]);
+
+	// Pointer slots copied between a sized array and a variable-length one, both ways.
+	[2]@int32 sa;
+	@i -> sa[0]; @j -> sa[1];
+	[+]@int32 sv;
+	sa -> sv;
+	[2]@int32 sb;
+	sv -> sb;
+	printf("%ld %d %d\n", sv->len(), sv[1][0], sb[0][0]);
+}

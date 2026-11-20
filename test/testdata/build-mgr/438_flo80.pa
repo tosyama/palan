@@ -1,0 +1,78 @@
+cinclude <stdio.h>;
+cinclude <stdlib.h>;
+cinclude <math.h> link "m";
+
+func add3(flo80 a, int32 i, flo80 b) -> flo80 { return a + b * i; }
+func two(flo80 x) -> flo80 a, int32 n, flo80 b { x + 1 -> a; 5 -> n; x - 1 -> b; }
+func many(int64 a, int64 b, int64 c, int64 d, int64 e, int64 f, int64 g, flo80 h, int64 i, flo80 j, flo64 k) -> flo80 {
+	return g + h + i + j + k;
+}
+func neg(flo80 x) -> flo80 { return -x; }
+func half(flo64 x) -> flo64 { return x / 2; }
+func widen(int64 v) -> flo80 { return v + 1; }
+type one { flo80 v; };
+type mix { int32 n; flo80 v; };
+func mkone(flo80 x) -> one { return [x * 2]; }
+global flo80 G = 2.25 for useG;
+func useG() -> flo80 { return G * 2; }
+
+// Precision beyond flo64, from C, a literal, a folded constant and run-time arithmetic.
+flo80 x = strtold("1", NULL) / 3;
+const THIRD = 1.0 / 3;
+flo80 t = 0.1;
+flo80 c = THIRD;
+printf("%.20Lf %.20Lf %.20Lf %.20f\n", x, t, c, flo64(x));
+
+flo80 y = x * 3 - 0.5;
+printf("%.2Lf %.2Lf %.2Lf\n", y, -y, y / 4);
+printf("%d %d %d %d\n", x < y, x == x, y <= x, y != y);
+printf("%.6Lf\n", powl(2.0, 0.5));
+
+// Conversions both ways with every integer and float width.
+int8 i8 = -3;
+uint8 u8 = 250;
+int16 i16 = -300;
+uint16 u16 = 60000;
+int32 i32 = -70000;
+uint32 u32 = 4000000000;
+int64 i64 = -5000000000;
+uint64 u64 = 18446744073709551615u;
+flo32 f32 = 1.5;
+flo64 f64 = 2.5;
+printf("%.1Lf %.1Lf %.1Lf %.1Lf %.1Lf %.1Lf %.1Lf %.1Lf %.1Lf %.1Lf\n",
+	flo80(i8), flo80(u8), flo80(i16), flo80(u16), flo80(i32), flo80(u32), flo80(i64), flo80(u64), flo80(f32), flo80(f64));
+flo80 big = u64;
+flo80 m = -7.75;
+printf("%d %u %d %u %d %u %ld %lu %.2f %.2f\n",
+	int8(m), uint8(y), int16(m), uint16(y), int32(m), uint32(big / 2), int64(m), uint64(big), flo32(m), flo64(m));
+
+// Calls: Palan, a function pointer, multiple values, stack arguments, a dropped result.
+printf("%.2Lf\n", add3(1.5, 2, 0.25));
+(flo80 p, int32 n, flo80 q) = two(10);
+printf("%.1Lf %d %.1Lf\n", p, n, q);
+printf("%.3Lf\n", many(1, 2, 3, 4, 5, 6, 7, 0.5, 9, 0.25, 0.125));
+@func(flo80) -> flo80 fp = neg;
+printf("%.2Lf\n", fp(4.5));
+strtold("3", NULL);
+two(1);
+printf("%.2Lf\n", useG());
+printf("%d %d %d %d %d %d %.2Lf %d %.2Lf %d\n", 1, 2, 3, 4, 5, 6, x * 3, 8, y, 10);
+
+// Structs, arrays and loops.
+one o = mkone(1.25);
+mix mx = [7, 3.5];
+mx.v + o.v -> mx.v;
+printf("%.2Lf %d %.2Lf\n", o.v, mx.n, mx.v);
+[3]flo80 arr = [1.5, 2.5, 3.5];
+arr[1] * 2 -> arr[2];
+[+]flo80 va = [1.0, 2.0];
+va.push(arr[2]);
+flo80 acc = 0;
+for @e in va { acc + e -> acc; }
+printf("%.2Lf %.2Lf %.2Lf\n", arr[2], va[2], acc);
+
+// A converted value in a register, and converted values kept across a call.
+printf("%.1Lf\n", widen(i64));
+flo64 r = flo64(m) + half(3.0);
+flo32 h = flo32(m) * flo32(half(4.0));
+printf("%.2f %.2f\n", r, h);

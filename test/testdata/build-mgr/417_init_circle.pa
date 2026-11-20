@@ -1,0 +1,4 @@
+cinclude <stdio.h>;
+import "circ_a.pa";
+import "circ_b.pa";
+printf("%d %d\n", geta(), getb());

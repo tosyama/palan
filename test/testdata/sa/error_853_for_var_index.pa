@@ -1,0 +1,1 @@
+[+][+]int64 vv; int64 i = 1; for copy a in vv[0] { vv[i].push(1); }

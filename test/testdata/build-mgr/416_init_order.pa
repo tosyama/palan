@@ -1,0 +1,4 @@
+cinclude <stdio.h>;
+import "init_a.pa";
+import "init_b.pa";
+printf("%d %d\n", geta(), getb());

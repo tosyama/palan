@@ -5,7 +5,9 @@
 
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <fstream>
 #include "../test-base/testBase.h"
+#include "../../src/common/PlnDefs.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -35,6 +37,21 @@ TEST(build_mgr_error, could_not_open_file) {
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan no_such_file.pa");
 	ASSERT_NE(out.find("could not open file"), string::npos);
+}
+
+TEST(build_mgr_error, no_work_dir) {
+	cleanTestEnv();
+	string out = execTestCommand("env -u HOME -u PALAN_WORK bin/palan ../test/testdata/build-mgr/001_helloworld.pa");
+	ASSERT_NE(out.find("palan: neither PALAN_WORK nor HOME is set"), string::npos);
+	out = execTestCommand("env -u HOME PALAN_WORK= bin/palan --clean");
+	ASSERT_NE(out.find("palan: neither PALAN_WORK nor HOME is set"), string::npos);
+}
+
+TEST(build_mgr_error, could_not_create_work_dir) {
+	cleanTestEnv();
+	ofstream("out/file").close();
+	string out = execTestCommand("PALAN_WORK=out/file bin/palan ../test/testdata/build-mgr/001_helloworld.pa");
+	ASSERT_NE(out.find("palan: could not create directory 'out/file/" PALAN_TARGET "'"), string::npos);
 }
 
 TEST(build_mgr_error, unsupported_target) {
@@ -114,21 +131,21 @@ TEST(build_mgr_error, cinclude_arr_field_cast_size) {
 }
 
 TEST(build_mgr_error, c_unsupported_sig) {
-	// Regression: `long double` (c2ast's "flt128") on acosl's return type used
-	// to abort via an uncaught fromJson throw (rc=134); now diagnosed at the call.
+	// Regression: an unrepresentable C type on a signature used to abort via an
+	// uncaught fromJson throw (rc=134); now diagnosed at the call.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_055_c_unsupported_sig.pa");
-	ASSERT_NE(out.find("cannot call C function 'acosl'"), string::npos);
-	ASSERT_NE(out.find("'flt128'"), string::npos);
+	ASSERT_NE(out.find("cannot call C function 'cabs'"), string::npos) << out;
+	ASSERT_NE(out.find("'double _Complex'"), string::npos);
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 
 TEST(build_mgr_error, dirent_owned_dir) {
 	// DIR resolves to `struct __dirstream`, which dirent.h only
-	// forward-declares; the diagnostic names the underlying tag, not the alias.
+	// forward-declares; the diagnostic names it by its typedef.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_056_dirent_owned_dir.pa");
-	ASSERT_NE(out.find("struct '__dirstream' is only forward-declared"), string::npos);
+	ASSERT_NE(out.find("struct 'DIR' is only forward-declared"), string::npos);
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 
@@ -147,16 +164,15 @@ TEST(build_mgr_error, dirent_incomplete_field) {
 	// reached via field access (`d.fd`) through a `@!DIR` handle.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_058_dirent_incomplete_field.pa");
-	ASSERT_NE(out.find("struct '__dirstream' is only forward-declared"), string::npos);
+	ASSERT_NE(out.find("struct 'DIR' is only forward-declared"), string::npos);
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 
 TEST(build_mgr_error, stat_func_macro) {
-	// S_ISDIR is a function-like macro; c2ast/gen-ast only export object-like
-	// macros, so this must be a clean diagnostic, not an abort.
+	// FD_SET's body assigns, which has no Palan expression.
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_059_stat_func_macro.pa");
-	ASSERT_NE(out.find("C macro 'S_ISDIR' is function-like; Palan cannot use it."), string::npos);
+	ASSERT_NE(out.find(":4:1: error: C macro 'FD_SET' uses an assignment, which Palan cannot translate."), string::npos) << out;
 	ASSERT_EQ(out.find("return0:"), string::npos);  // not killed by a signal (no abort)
 }
 

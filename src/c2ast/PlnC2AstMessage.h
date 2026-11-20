@@ -15,6 +15,7 @@ enum PlnC2AstMessageCode {
 	E_UnsupportedTarget,	// arg1: target name
 	E_ErrorDirective,		// arg1: message text from #error directive
 	E_InvalidDefinedSyntax,
+	E_InvalidHasIncludeSyntax,
 	E_MalformedMacroArgList,
 	E_UnhandledToken,
 	E_UnsupportedAttribute,	// arg1: attribute name

@@ -1,0 +1,2 @@
+const K = 3;
+export type Arr = [K]int32;

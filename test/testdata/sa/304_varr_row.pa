@@ -1,7 +1,7 @@
 type P { int32 x; };
 [+][4]int32 v;
 [4]int32 a;
-v.push(@a);
+v.push(a);
 [4]int32 r = v.pop();
 v.pop();
 [+]$[4]int32 e;

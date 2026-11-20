@@ -20,54 +20,55 @@ printf("%d\n", q);          // 6
 ## Features
 
 **Ownership without a garbage collector.** Arrays and structs are freed automatically at the end
-of their scope. `->` copies, `->>` moves ownership, and a function borrows with `@` (read-only)
-or `@!` (writable), which the caller writes too:
+of their scope. Initializing from a value copies it, `->>` moves ownership, and a function
+borrows with `@` (read-only) or `@!` (writable). Using a variable after it gave its value away is
+a compile error:
 
 ```palan
 cinclude <stdio.h>;
-const N = 4;
 
-func sum(@[N]int32 a) -> int32 s {
-    int32 i = 0;
-    while i < N { s + a[i] -> s; i + 1 -> i; }
-}
-func fill(@![N]int32 a, int32 v) {
-    int32 i = 0;
-    while i < N { v -> a[i]; i + 1 -> i; }
+type Team { [+]int32 scores; };
+
+func total(@Team t) -> int32 s {
+    for copy x in t.scores { s + x -> s }
 }
 
-[N]int32 a = [1, 2, 3, 4];  // allocated on the heap, freed at the end of its scope
-[N]int32 b;
-a -> b;                     // copies the elements
-fill(@!b, 7);               // lends b writable (@ lends read-only)
-printf("%d %d\n", sum(@a), sum(@b));   // 10 28
+Team a;
+a.scores.push(70);          // method form of push(@!a.scores, 70)
+a.scores.push(85);
+Team b = a;                 // copies, the scores too
+b.scores.push(90);
+printf("%d %d\n", total(@a), total(@b));   // 155 245
 
-[N]int32 c;
-a ->> c;                    // moves a's array into c; a is left NULL
-printf("%d\n", c[3]);       // 4
+Team c;
+a ->> c;                    // moves: nothing is copied, and a is left empty
+printf("%d\n", total(@c));  // 155
+total(@a);                  // error: 'a' was given away and is NULL here
 ```
 
 **C libraries as they are.** `cinclude` reads a C header and makes its functions, types, structs,
-enums and macro constants usable from Palan; `link` names the library to link. `$` places a
-struct or array in the stack frame instead of the heap:
+enums, macro constants and function-like macros usable from Palan; `link "m"` names a library to
+link. `$` places a struct or array in the stack frame instead of the heap:
 
 ```palan
 cinclude <stdio.h>;
-cinclude <math.h> link "m";
+cinclude <sys/stat.h>;
 
-type Vec { flo64 x; flo64 y; };
-
-func len(@Vec v) -> flo64 { return sqrt(v.x * v.x + v.y * v.y); }
-
-$Vec v = {x: 3.0, y: 4.0};
-printf("%.1f\n", len(@v));  // 5.0
+$stat st;                   // a C struct, in the stack frame
+for copy path, i in args {
+    if i == 0 { continue }
+    if stat(path, @!st) != 0 { printf("%s: not found\n", path); continue }
+    if S_ISDIR(st.st_mode) { printf("%s: directory\n", path) }    // a C macro
+    else { printf("%s: %ld bytes\n", path, st.st_size) }
+}
 ```
 
 Other features include variable-length arrays (`[+]T` with `len`/`push`/`resize`/`pop`),
-`for copy a, i in arr` loops, command-line arguments as `args`, function overloading, default and
-variadic arguments, multiple named return values, method-form calls (`c.add(1)` for `add(@!c, 1)`),
-function pointers, enums, field initializers, Unicode character literals, modules
-(`import`/`export`), libraries (`palan --lib`, `import <...>`), and raw Linux syscalls. A library
+function overloading, default and variadic arguments, multiple named return values, function
+pointers, enums, field initializers, Unicode character literals, modules (`import`/`export`, with
+module state in `global` variables), libraries (`palan --lib`, `import <...>`) publishing `opaque`
+types, functions C calls by name (`cexport`), run-time checks left out of a release build, and raw
+Linux syscalls. A library
 type can be used like a built-in one: it defines operators (`+`, `==`, `<`, `<<`), its own copy
 `->`, iteration with `for`, conversion from a string literal, and fields hidden or read only outside
 its module, as the standard library's `std/utf8` does:
@@ -78,8 +79,8 @@ import <std/utf8>;
 
 utf8 s = "h\u{E9}llo";
 s << ", " << "w\u{F6}rld";
-for copy c in s { printf("U+%04X ", c); }
-if s -> startsWith("h\u{E9}", "H\u{E9}") { printf("\n%s\n", s -> cstr()); }
+for copy c in s { printf("U+%04X ", c) }
+if s -> startsWith("h\u{E9}", "H\u{E9}") { printf("\n%s\n", s -> cstr()) }
 ```
 See the [Palan Language Reference](doc/PalanReference.md) for the whole language, and the
 [Palan Standard Library Reference](doc/PalanStdLibReference.md) for `std`.
@@ -153,7 +154,7 @@ of the `release` workflow's run (and attached to the GitHub Release when one is 
 level is the installed layout, so it unpacks into a prefix as `cmake --install` would:
 
 ```bash
-tar -xzf palan-0.2.5-x86_64-linux-gnu.tar.gz -C ~/.local
+tar -xzf palan-0.2.6-x86_64-linux-gnu.tar.gz -C ~/.local
 ~/.local/bin/palan hello.pa
 ```
 

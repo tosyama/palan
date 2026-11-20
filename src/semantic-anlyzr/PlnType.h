@@ -34,7 +34,7 @@ struct PrimType : PlnType {
     enum class Name {
         Int8, Int16, Int32, Int64,
         Uint8, Uint16, Uint32, Uint64,
-        Float32, Float64,
+        Float32, Float64, Float80,
         Bool,       // 1 byte, value always 0 or 1
         Void        // pntr(void) base only — never used as a standalone value type
     } name;
@@ -139,5 +139,8 @@ const std::map<std::string, std::string>& operatorFuncNames();
 // allocators declare it in C to call it. A type has one '->', so its name,
 // the type's identity in the program, is enough, wherever an interface puts it.
 std::string copyFuncSymbol(const std::string& typeName);
+// The symbol of the function storing struct typeName's field initializers, likewise.
+std::string fieldInitSymbol(const std::string& typeName);
+std::string releaseFuncSymbol(const std::string& typeName);
 // A type as one identifier-safe word, distinct for distinct types.
 std::string symbolType(const json& t);

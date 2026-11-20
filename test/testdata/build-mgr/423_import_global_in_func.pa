@@ -1,0 +1,7 @@
+cinclude <stdio.h>;
+func f() -> int64 {
+	import "lib_counter.pa";
+	count + 5 -> count;
+	return count;
+}
+printf("%ld\n", f());

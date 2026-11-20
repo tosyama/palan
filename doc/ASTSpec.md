@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Json Specification
 ============================================
 
-ver. 0.2.5
+ver. 0.2.6
 
 \* - Required
 
@@ -55,9 +55,13 @@ Function definition model
 
   1. **palan** - Palan user-defined function
      - export - Boolean, true if declared with `export` keyword (omitted when false)
+     - c-export - Boolean, true if declared with `cexport`, linked by its name (SpecAndDesign.md
+       3.7; omitted when false)
      - parameters\* - Parameter list (Palan parameter, see below; empty array when no parameters)
      - ret-type - Return variable type (unnamed single return only; omitted for void and named returns)
      - rets - Named return list (Palan parameter, see below; omitted for an unnamed return and void)
+     - release - Boolean, true when marked `release`, as the function releasing an opaque type
+       (SpecAndDesign.md 3.7; omitted when false)
      - block\* - Block object (function body; see Block object below). Absent for a function a
        `.pai` declares (SpecAndDesign.md 3.7): an exported one, or a type's `->`, which a `.pai`
        writes unexported
@@ -71,6 +75,8 @@ Function definition model
 
   3. **syscall** - Raw syscall declaration (a prototype with no block)
      - export - Boolean, true if declared with `export` keyword (omitted when false)
+     - c-export - Boolean, true if declared with `cexport`, linked by its name (SpecAndDesign.md
+       3.7; omitted when false)
      - parameters\* - Parameter list (Palan parameter, see below; empty array when no parameters;
        at most 6, checked by SA)
      - ret-type - Return variable type (omitted for void; never `rets` — gen-ast rejects named and
@@ -105,13 +111,33 @@ conversions (LP64), with unsigned results wrapping to their width. An operation 
 overflow a signed type, divide/mod by zero, or shift by a negative or out-of-range count does not
 fold (same "not exported" outcome as an unsupported form). The body may also be a pointer-cast of
 any of these folded forms (e.g. `#define NULL ((void *)0)`). A form that doesn't fold this way (a
-function-like macro referenced without a call, a string or floating literal, a relational/
-equality/logical/ternary expression, unary `!`, or a reference to an unresolved identifier)
-is not exported here; it goes to the `ast.unexported-macros` list instead, as `{name}` or, for a
-function-like macro, `{name, "function-like": true}`. gen-ast registers these into the same macro
-table and, instead of folding, sets `c-macro`
-on a later `id` or `call` that names one (see Expression model's `id`), so SA reports the macro
-rather than an undefined name.
+string or floating literal, a relational/equality/logical/ternary expression, unary `!`, or a
+reference to an unresolved identifier) is not exported here; it goes to the
+`ast.unexported-macros` list instead, as `{name}`. A function-like macro is an expandable
+definition (below) instead, or, when its body can't be one, goes to the list as
+`{name, "function-like": true, form}`, `form` naming what in the body Palan has no expression for
+(`"?:"`, `"an assignment"`, `"#"`, ...), omitted when the body is no expression at all. gen-ast
+registers these into the same macro table and, instead of folding, sets `c-macro` (and
+`c-macro-form`) on a later `id` or `call` that names one (see Expression model's `id`), so SA
+reports the macro rather than an undefined name.
+
+Expandable definition model
+---------------------------
+A function-like macro whose body is an expression Palan has one for (SpecAndDesign.md §3.3), in
+c2ast's `ast.expandables` list, which gen-ast moves to the `cinclude` statement. palan-sa expands
+a call to it in place (SpecAndDesign.md §3.4); none reaches sa.json.
+
+- name\* - Macro name string
+- params\* - Parameter name string list
+- binding\* - How a parameter takes its argument: "substitute" (every place it appears takes the
+  argument expression)
+- body\* - Expression model, with the macros in it expanded, and without `loc`. Besides the
+  usual nodes it holds:
+  - `{"expr-type": "param", "name"}` - Where a parameter appears
+  - `c-name: true` on an `id` or `call` - A C global or C function, resolved only among the C
+    declarations visible at the call
+  - An enumerator is its `lit-int`; a `cast`'s `target-type` is a C variable type, as a C
+    function's parameter is. `p->f` is a `field-access` and `*p` an `arr-index` of `0`.
 
 Each c2ast run starts from the previous `cinclude`'s macros and types (SpecAndDesign.md §3.3),
 so these lists hold only the macros the header itself (re)defines, and `ast.undefined-macros`
@@ -175,6 +201,10 @@ AST in. Same field-list shape as the native `struct-def` statement.
   is aligned to 1. Omitted otherwise.
 - aligned - Integer from `__attribute__((aligned(N)))` on the struct/union itself (16 for a bare
   `aligned`): its alignment is at least N. Omitted otherwise.
+- typedef-name - The first typedef declared directly over the tag (`typedef struct a_s a_t;`,
+  not `typedef a_t b_t;` or a pointer typedef), which SA's messages name the struct by. A C
+  reserved name (`__FILE`) gives way to a later one that is not (`FILE`). Omitted when there is
+  none, or when the typedef name is the tag itself.
 - fields - Field list; omitted when this header never gives the tag a body (forward
   declaration or bare reference only). SA registers such a tag as an incomplete struct
   (usable only through a pointer) rather than leaving the name unresolved — see SASpec.md.
@@ -279,7 +309,7 @@ Variable type
   1. prim - Primitive type
     - type-name\* - Type name string
       - Integer: "int8" "int16" "int32" "int64" "uint8" "uint16" "uint32" "uint64"
-      - Float: "flo32" "flo64"
+      - Float: "flo32" "flo64" "flo80" — also what c2ast emits for C's `long double`
       - Boolean: "bool" — also what c2ast emits for C's `_Bool`
       - Other: "void" — pointee-only (`prim(void)` appears only as a `pntr`'s `base-type`, never
         as a variable's own top-level type). Previously only reachable from a c2ast-derived
@@ -417,7 +447,7 @@ Used in `func-def` bodies and standalone block statements.
 
 Statement model
 ---------------
-- stmt-type\* - Statement type: "import" "cinclude" "expr" "var-decl" "assign" "arr-assign" "struct-def" "type-alias" "const-decl" "field-assign" "return" "tapple-decl" "tapple-assign" "block" "if" "while" "for" "break" "continue" "not-impl" "enum-def" "global-permit"
+- stmt-type\* - Statement type: "import" "cinclude" "expr" "var-decl" "assign" "arr-assign" "struct-def" "type-alias" "const-decl" "field-assign" "return" "tapple-decl" "tapple-assign" "block" "if" "while" "for" "break" "continue" "not-impl" "enum-def" "global-permit" "opaque-def"
 - loc\* - Location Array
   1. import - import module statement
     - path-type\* - Path type string: "src" "inc"
@@ -436,6 +466,9 @@ Statement model
       when the header defines no capturable extern objects
     - typedefs - Typedef definition model list (see Typedef definition model above);
       omitted when the header defines no capturable typedef
+    - expandables - Expandable definition model list (see above); omitted when none
+    - ended-macros - Name string list of earlier expandable definitions this header `#undef`s or
+      redefines as anything else; omitted when none
     - export-types - C type name string list from the `export` clause (SpecAndDesign.md 3.7);
       omitted when the statement has no such clause
     - libs - Link library name string list, in source order (from the `link` clause);
@@ -451,6 +484,7 @@ Statement model
     - global - Boolean, true for a `global` declaration (omitted when false); `vars` then holds
       exactly one typed variable; any other `global` declaration (a type-omitted or tuple one) is
       a `not-impl` statement instead.
+    - export - Boolean, true for an `export global` declaration (omitted when false)
     - vars\* - Variable declaration list
       - name\* - Variable name string
       - var-type\* - Variable type
@@ -547,15 +581,21 @@ Statement model
   22. global-permit - the functions allowed to use a global variable: the `for` list of a
       `global` declaration (emitted right after its `var-decl`) or a later `global name for ...;`,
       or, with no list, `global name;`
-    - name\* - Variable name string
+    - name\* - Variable name string; an imported global under an alias is one name `M.count`
     - funcs\* - Permitted function list, in source order (empty for `global name;`)
       - name\* - Function name string (an operator for an operator function)
       - writable\* - Boolean, true when written with a trailing `!`
       - loc\* - Location Array
+  23. opaque-def - opaque type definition (`type Name = opaque type_expr;`; consumed by SA, not
+      emitted to sa.json)
+    - name\* - Type name string
+    - export - Boolean, true if declared with `export` (omitted when false)
+    - contents - The type it holds (same Variable type object format); omitted in a `.pai`, which
+      writes `type Name = opaque;`
 
 Expression model
 ----------------
-- expr-type\* - Expression type string: "lit-str" "lit-int" "lit-uint" "lit-flo" "id" "add" "sub" "mul" "div" "mod" "neg" "cmp" "call" "cast" "arr-index" "field-access" "member-call" "logical-and" "logical-or" "logical-not" "addr-of" "not-impl" "bitand" "bitor" "bitxor" "shl" "shr" "append" "bitnot" "arr-lit" "dict-lit" "sizeof" "chain-call" "transfer" "call-ptr"
+- expr-type\* - Expression type string: "lit-str" "lit-int" "lit-uint" "lit-flo" "id" "add" "sub" "mul" "div" "mod" "neg" "cmp" "call" "cast" "arr-index" "field-access" "member-call" "logical-and" "logical-or" "logical-not" "addr-of" "not-impl" "bitand" "bitor" "bitxor" "shl" "shr" "append" "bitnot" "arr-lit" "dict-lit" "sizeof" "chain-call" "transfer" "call-ptr" "spread"
 - loc\* - Location Array
   1. lit-str - String literal
     - value\* - The bytes as escaped text: printable ASCII and valid UTF-8 characters as they
@@ -589,6 +629,8 @@ Expression model
     - c-macro - Set by gen-ast when the name is a cinclude'd macro c2ast could not export (see
       Constant definition model): "function-like" or "not-constant". SA reads it only to word the
       error when the name resolves to nothing else. A `call` carries it the same way.
+    - c-macro-form - With `c-macro` "function-like": the `form` the macro's body has (see
+      Constant definition model)
   6. add - Binary addition
     - left\*  - Left operand expression model
     - right\* - Right operand expression model
@@ -715,6 +757,9 @@ Expression model
       consumed by SA, which makes it a `call` (see SASpec.md "Usual arithmetic conversions")
     - left\*  - Expression model appended to
     - right\* - Expression model appended
+  36. spread - `...a`, an array passed as all of a variadic parameter's arguments; only as a call
+      argument, which SA checks (see SASpec.md "Variadic arguments")
+    - value\* - Expression model of the array; a `transfer` for `...a>>`
 
 Note: Unary minus on a `lit-int` without `value-type` is folded into a single `lit-int` with a negative
 `value` (`-42` → `"value":"-42"`), so SA range-checks it as one value. Any other operand (including a

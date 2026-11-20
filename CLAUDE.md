@@ -127,7 +127,9 @@ src/
 ├── codegen/         palan-codegen — x86-64 code generator
 │   ├── PlnNode.h        AST node types (Module, Stmt, Expr variants)
 │   ├── PlnVProg.h       VReg / VInstr / VProg IR definitions
-│   ├── PlnVCodeGen.*    AST → VProg
+│   ├── PlnVCodeGen.*    AST → VProg (functions, statements, control flow)
+│   ├── PlnVCodeGenExpr.cpp  Expressions, array elements, bit-fields
+│   ├── PlnVCodeGenCall.cpp  Calls, arguments, struct values by value, returns
 │   ├── PlnRegAlloc.*    VProg → RegMap (register allocator plug-in point)
 │   ├── PlnX86CodeGen.*  VProg + RegMap → AT&T assembly (dispatch)
 │   ├── PlnX86Arith.cpp  Arithmetic instruction emission

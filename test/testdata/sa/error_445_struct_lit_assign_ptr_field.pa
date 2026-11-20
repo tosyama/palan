@@ -1,4 +1,0 @@
-type V { int64 x; int64 y; };
-type P { @V p; int64 n; };
-P a;
-[a.p, 0] -> a;

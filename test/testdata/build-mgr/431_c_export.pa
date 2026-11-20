@@ -1,0 +1,15 @@
+cinclude <stdio.h>;
+cinclude "431_c_export.h" link "431_c_export.o";
+
+cexport func scaled(int32 v) -> int32 { return v * 10; }
+cexport func total(@[]int64 xs, int64 n) -> int64 {
+	int64 s = 0;
+	int64 i = 0;
+	while i < n { s + xs[i] -> s; i + 1 -> i; }
+	return s;
+}
+
+printf("%d %ld\n", twice_scaled(4), total_of_three());
+// The header's declarations and the definitions are one function each.
+[2]int64 a = [5, 6];
+printf("%d %ld\n", scaled(3), total(@a, 2));

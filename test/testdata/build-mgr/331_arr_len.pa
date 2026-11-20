@@ -24,3 +24,9 @@ while i < len(@v) {
 	i + 1 -> i;
 }
 printf("%ld\n", v -> len());
+
+func f() -> int64 { printf("f "); return 1; }
+[2]$[3]int32 c;
+int32 k = 4;
+[2][k]int32 d;
+printf("%ld %ld\n", len(@c[f()]), len(@d[f()]));

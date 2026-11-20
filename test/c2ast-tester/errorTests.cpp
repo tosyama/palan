@@ -147,21 +147,38 @@ TEST(c2ast_error, malformed_attribute) {
 	cleanTestEnv();
 	string out = execTestCommand(
 		"palan-c2ast ../test/testdata/c2ast/error_019_malformed_attribute.h");
-	ASSERT_NE(out.find("error_019_malformed_attribute.h:1:1: error: unexpected token"), string::npos);
+	ASSERT_NE(out.find("error_019_malformed_attribute.h:1:28: error: unexpected token"), string::npos);
 }
 
 TEST(c2ast_error, malformed_attribute_positions) {
-	const char* files[] = {
-		"error_023_attr_struct_head.h", "error_024_attr_struct_tail.h", "error_025_attr_decl_spec.h",
-		"error_026_attr_enum_tail.h", "error_027_attr_declarator.h", "error_028_attr_after_ptr.h",
-		"error_029_attr_decl_head.h", "error_030_attr_list_sep.h", "error_031_attr_unclosed.h",
-		"error_032_attr_one_paren.h", "error_033_attr_args_unclosed.h", "error_034_attr_eof.h",
+	const pair<string, string> cases[] = {
+		{"error_023_attr_struct_head.h", ":1:22:"}, {"error_024_attr_struct_tail.h", ":1:35:"},
+		{"error_025_attr_decl_spec.h", ":1:21:"}, {"error_026_attr_enum_tail.h", ":1:28:"},
+		{"error_027_attr_declarator.h", ":1:19:"}, {"error_028_attr_after_ptr.h", ":1:21:"},
+		{"error_029_attr_decl_head.h", ":1:15:"}, {"error_030_attr_list_sep.h", ":1:29:"},
+		{"error_031_attr_unclosed.h", ":1:29:"}, {"error_032_attr_one_paren.h", ":1:21:"},
+		// The file ends inside the attribute: the last token is reported.
+		{"error_033_attr_args_unclosed.h", ":1:31:"}, {"error_034_attr_eof.h", ":1:21:"},
 	};
-	for (const char* file : files) {
+	for (auto& [file, pos] : cases) {
 		cleanTestEnv();
-		string out = execTestCommand(string("palan-c2ast ../test/testdata/c2ast/") + file);
-		ASSERT_NE(out.find(string(file) + ":1:1: error: unexpected token"), string::npos) << file << ": " << out;
+		string out = execTestCommand("palan-c2ast ../test/testdata/c2ast/" + file);
+		ASSERT_NE(out.find(file + pos + " error: unexpected token"), string::npos) << file << ": " << out;
 	}
+}
+
+TEST(c2ast_error, error_in_middle_of_declaration) {
+	cleanTestEnv();
+	string out = execTestCommand(
+		"palan-c2ast ../test/testdata/c2ast/error_040_mid_declaration.h");
+	ASSERT_NE(out.find("error_040_mid_declaration.h:1:40: error: unexpected token"), string::npos);
+}
+
+TEST(c2ast_error, has_include_syntax) {
+	cleanTestEnv();
+	string out = execTestCommand("palan-c2ast ../test/testdata/c2ast/error_041_has_include_syntax.h");
+	ASSERT_NE(out.find("error_041_has_include_syntax.h:1:5: error: '__has_include' expects (\"FILENAME\") or (<FILENAME>)"),
+		string::npos) << out;
 }
 
 TEST(c2ast_error, unsupported_attribute_args) {
@@ -225,7 +242,7 @@ TEST(c2ast_error, enum_value_missing) {
 	cleanTestEnv();
 	string out = execTestCommand(
 		"palan-c2ast ../test/testdata/c2ast/error_015_enum_value_missing.h");
-	ASSERT_NE(out.find("unexpected token"), string::npos);
+	ASSERT_NE(out.find("error_015_enum_value_missing.h:1:14: error: unexpected token"), string::npos);
 }
 
 // --- Input file errors ---

@@ -30,8 +30,7 @@ utf8 s = utf8("h\xC3\xA9\xFF", utf8mode.KEEP_INVALID);
 printf("%ld %ld %d\n", s -> byteLen(), s -> charCount(), s.hadInvalid);
 EOF
 expected="4 3 1"
-# palan keeps its work files under $HOME.
-export HOME="$tmp/home"
+export PALAN_WORK="$tmp/work"
 palan="$tmp/prefix/bin/palan"
 check() {
 	if [ "$2" != "$expected" ]; then

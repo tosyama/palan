@@ -1,0 +1,4 @@
+func f([4]int32 p) { }
+int64 n = 2;
+[n]int32 a;
+f(a>>);

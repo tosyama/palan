@@ -1,0 +1,3 @@
+type Inner { int32 x; };
+type H = opaque Inner;
+func close(@H h) release { }

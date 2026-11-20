@@ -1,0 +1,43 @@
+cinclude <stdio.h>;
+cinclude <stddef.h>;
+cinclude <mcheck.h>;
+import "lib_field_init_values.pa";
+
+type R {
+	$W w;
+	[2]V vs = [{x: 5}, {x: 6, y: 7}];
+	$[2]$V es = [{x: 8}, {x: 9}];
+	[2][3]int32 m = [[1, 2, 3], [4, 5, 6]];
+	$[2][2]int8 e = [[1, 2], [3, 4]];
+	[+][2]int16 rows = [[1, 2], [3, 4], [5, 6]];
+	@V p = NULL;
+	@!int32 q = NULL;
+};
+
+func show(@R r) {
+	printf("%d %d %d %d %d %ld %d\n", r.w.a.x, r.w.a.y, r.w.o.x, r.w.o.y, r.w.vs[0].x, len(@r.w.vs), r.w.vs[0].y);
+	printf("%d %d %d %d %d %d\n", r.vs[0].x, r.vs[0].y, r.vs[1].y, r.es[0].x, r.es[1].x, r.es[1].y);
+	printf("%d %d %d %d %ld %d %d\n", r.m[0][2], r.m[1][0], r.e[0][1], r.e[1][0], len(@r.rows), r.rows[2][1], r.p == NULL && r.q == NULL);
+}
+
+func run() {
+	R r;
+	show(@r);
+	$R fr;
+	show(@fr);
+	[+]R rs;
+	rs.resize(1);
+	show(@rs[0]);
+	int32 n = 5;
+	V v = {x: 1};
+	R lit = {w: {a: {x: 2, y: 3}}, p: @v, q: @!n};
+	printf("%d %d %d %d %d\n", lit.w.a.y, lit.w.o.y, lit.vs[1].y, lit.p.x, lit.q[0]);
+	R c = lit;
+	printf("%d %d %d\n", c.w.a.x, c.es[1].y, c.rows[1][0]);
+	[{x: 1}, {x: 2}, {x: 3}] -> c.w.vs;
+	[[7, 8]] -> c.rows;
+	printf("%ld %d %d %ld %d\n", len(@c.w.vs), c.w.vs[2].x, c.w.vs[2].y, len(@c.rows), c.rows[0][1]);
+}
+mtrace();
+run();
+muntrace();

@@ -1,0 +1,5 @@
+int64 n = 2;
+int64 m = 4;
+[3][m]int32 mm;
+[n]int32 a;
+a ->> mm[1];

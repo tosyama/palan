@@ -120,6 +120,41 @@ TEST(sa_error, export_in_function) {
 	ASSERT_NE(sa.find("not allowed inside a function"), string::npos);
 }
 
+TEST(sa_error, c_export) {
+	const pair<string, string> cases[] = {
+		{"error_1119_c_export_overload.pa", ":2:1: error: function 'add' cannot be exported to C: it is overloaded."},
+		{"error_1120_c_export_overload_after.pa", ":2:1: error: function 'add' cannot be exported to C: it is overloaded."},
+		{"error_1121_c_export_rets.pa", ":1:1: error: function 'divmod' cannot be exported to C: it returns several values."},
+		{"error_1122_c_export_variadic.pa", ":1:1: error: function 'sum' cannot be exported to C: it is variadic."},
+		{"error_1123_c_export_default.pa", ":1:1: error: function 'scale' cannot be exported to C: it has default arguments."},
+		{"error_1124_c_export_operator.pa", ":2:1: error: function '+' cannot be exported to C: it is an operator."},
+		{"error_1125_spread_not_last.pa", ":3:8: error: '...' spreads an array only as the last argument of a call."},
+		{"error_1126_spread_outside_call.pa", ":2:17: error: '...' spreads an array only as the last argument of a call."},
+		{"error_1127_spread_mixed.pa", ":3:11: error: the spread array gives all of 'xs' of 'sum': it must be the only argument after the other parameters'."},
+		{"error_1128_spread_no_fixed.pa", ":3:5: error: the spread array gives all of 'xs' of 'sum': it must be the only argument after the other parameters'."},
+		{"error_1129_spread_not_variadic.pa", ":3:3: error: '...' spreads an array only into a variadic parameter '[...]T', which 'f' does not have."},
+		{"error_1130_spread_c_variadic.pa", ":3:15: error: '...' spreads an array only into a variadic parameter '[...]T', which 'printf' does not have."},
+		{"error_1131_spread_unsized.pa", ":2:44: error: '[?]int64' keeps no length, so it cannot be spread with '...'."},
+		{"error_1132_spread_not_array.pa", ":3:8: error: '...' spreads an array, but this is 'int64'."},
+		{"error_1133_spread_literal.pa", ":2:8: error: '...' spreads an array, but this is an array literal."},
+		{"error_1134_spread_elem_mismatch.pa", ":3:1: error: '...' cannot spread '[3]int32' into '[...]int64': the elements must be of exactly its type, since they are not converted."},
+		{"error_1135_spread_embedded.pa", ":4:1: error: '...' cannot spread '[2]$P' into '[...]P': the elements must be of exactly its type, since they are not converted."},
+		{"error_1136_spread_borrow.pa", ":3:8: error: '...' takes the array as a by-value parameter does: write '...a' for a copy or '...a>>' to give it, not '@a'."},
+		{"error_1137_spread_give_borrowed.pa", ":2:49: error: '>>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
+		{"error_1138_spread_give_variadic.pa", ":2:51: error: '>>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
+		{"error_1139_spread_use_after_given.pa", ":4:11: error: 'a' was given away and is NULL here; fill it with '->>' before using it."},
+		{"error_1140_spread_overload_no_match.pa", ":4:1: error: No function 'pick' takes (...[3]int64); there are pick([3]int64), pick([...]int32)."},
+		{"error_1141_spread_len.pa", ":2:15: error: '...' spreads an array only into a variadic parameter '[...]T', which 'len' does not have."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand("palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		EXPECT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
 TEST(sa_error, multi_ret_bare_return) {
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
@@ -568,7 +603,6 @@ TEST(sa_error, unknown_type_name)
 		{"error_364_unsized_rows_ret_mismatch.pa", ":2:2: error: array shape '[?][4]int32' does not match '[?][3]int32'"},
 		{"error_365_unsized_rows_slot_mismatch.pa", ":3:1: error: array shape '[2][4]int32' does not match '[?][3]int32'"},
 		{"error_366_unsized_rows_size_not_const.pa", ":2:1: error: the row size in '[][m]T' or '[+][m]T' must be a compile-time constant."},
-		{"error_368_unsized_rows_ptr_elem.pa", ":2:1: error: '[][m]T' does not support rows of '@T'/'@!T' pointers in this version."},
 		{"error_369_unsized_rows_1d_borrow.pa", ":3:1: error: array shape '@[3]int32' does not match '[?][3]int32'"},
 		{"error_370_slot_arr_ret_as_owned_rows.pa", ":3:2: error: array shape '[?]@!int32' does not match '[?][?]int32'"},
 		{"error_371_borrow_elems_arg_as_owned.pa", ":6:1: error: array shape '[1]@!P' does not match '[?]P'"},
@@ -812,7 +846,7 @@ TEST(sa_error, sizeof)
 {
 	const pair<string, string> cases[] = {
 		{"error_406_sizeof_unknown_type.pa", ":1:12: error: unknown type 'Foo'."},
-		{"error_407_sizeof_incomplete_struct.pa", ":2:12: error: struct '__dirstream' is only forward-declared"},
+		{"error_407_sizeof_incomplete_struct.pa", ":2:12: error: struct 'DIR' is only forward-declared"},
 		{"error_408_sizeof_unsized_arr.pa", ":1:12: error: every array size in the type of 'sizeof' must be a compile-time constant."},
 		{"error_409_sizeof_arr_size_not_const.pa", ":2:12: error: every array size in the type of 'sizeof' must be a compile-time constant."},
 		{"error_410_sizeof_embed_prim.pa", ":1:12: error: '$' applies only to a struct element or a '$[m]' row, not 'int32'."},
@@ -907,13 +941,12 @@ TEST(sa_error, import_type)
 		{"error_426_import_type_not_selected.pa", ":2:1: error: unknown type 'Vec'."},
 		{"error_427_import_type_private_dep.pa", ":2:1: error: unknown type 'Inner'."},
 		{"error_428_import_type_local_conflict.pa", ":2:1: error: type 'Vec' is already defined."},
-		{"error_429_import_type_module_conflict.pa", ":2:1: error: type 'Vec' is already defined."},
 		// The imported module's own path and line, not the importer's.
 		{"error_430_import_bad_struct_def.pa", "lib_sa_bad_struct.pa:2:1: error: unsupported struct field type."},
 		// A block's import makes its types writable only in that block.
 		{"error_568_block_import_type_outside.pa", ":4:1: error: unknown type 'Vec'."},
 		{"error_569_block_import_alias_outside.pa", ":4:1: error: unknown type 'MyInt'."},
-		{"error_570_block_import_enum_outside.pa", ":4:11: error: unknown type 'Color'."},
+		{"error_570_block_import_enum_outside.pa", ":4:11: error: Undefined variable 'Color'."},
 		{"error_571_block_import_qualified_outside.pa", ":4:1: error: unknown type 'V.Vec'."},
 		// PP is lib's P, a different type from main's P of the same name.
 		{"error_641_import_alias_private_type.pa", ":4:1: error: cannot convert '@!P' to '@!P'."},
@@ -1067,7 +1100,7 @@ TEST(sa_error, named_ret_single_return_value)
 TEST(sa_error, lit_arg)
 {
 	const pair<string, string> cases[] = {
-		{"error_495_lit_arg_needs_at.pa", ":3:1: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@[..]' or '@![..]' for a literal)."},
+		{"error_495_lit_arg_needs_at.pa", ":3:1: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@{..}', '@!{..}', '@[..]' or '@![..]' for a literal)."},
 		{"error_496_arr_lit_arg_needs_at.pa", ":2:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@[..]' or '@![..]' for a literal)."},
 		{"error_497_lit_arg_count.pa", ":2:5: error: array 'a' has size 3 but its array literal has 2 elements."},
 		{"error_498_lit_arg_field_count.pa", ":3:5: error: struct 'P' has 2 fields but its literal has 1 values."},
@@ -1281,9 +1314,10 @@ TEST(sa_error, for_loop)
 		{"error_850_for_container_borrow.pa", ":3:30: error: cannot change what a 'for' loop iterates over ('s.arr')."},
 		{"error_851_for_borrow_arg.pa", ":2:42: error: cannot change what a 'for' loop iterates over ('p')."},
 		{"error_852_for_borrow_decl.pa", ":1:42: error: cannot change what a 'for' loop iterates over ('p')."},
-		{"error_853_for_any_index.pa", ":1:39: error: cannot change what a 'for' loop iterates over ('vv[]')."},
+		{"error_853_for_var_index.pa", ":1:52: error: cannot change what a 'for' loop iterates over ('vv[0]')."},
+		{"error_1086_for_same_const_index.pa", ":2:39: error: cannot change what a 'for' loop iterates over ('vv[0]')."},
 		{"error_854_for_field_transfer.pa", ":2:33: error: cannot change what a 'for' loop iterates over ('s.arr')."},
-		{"error_855_for_elem_copy.pa", ":1:51: error: cannot change what a 'for' loop iterates over ('vv[]')."},
+		{"error_855_for_elem_copy.pa", ":1:51: error: cannot change what a 'for' loop iterates over ('vv[0]')."},
 		// '@a' is the element itself, written through a read-only view of the range.
 		{"error_869_for_ro_elem_write.pa", ":1:33: error: cannot write through read-only pointer '@T'"},
 		{"error_870_for_ro_elem_write_owned.pa", ":2:18: error: cannot write through read-only pointer '@T'"},
@@ -1398,24 +1432,52 @@ TEST(sa_error, global_var)
 		{"error_881_global_in_func.pa", ":2:2: error: 'global' is allowed only at the top level of a module."},
 		{"error_882_global_in_block.pa", ":2:2: error: 'global' is allowed only at the top level of a module."},
 		{"error_937_permit_in_block.pa", ":2:3: error: 'global' is allowed only at the top level of a module."},
-		{"error_883_permit_not_global.pa", ":2:1: error: 'x' is not a global variable: declare it with 'global', or cinclude the C global first."},
+		{"error_883_permit_not_global.pa", ":2:1: error: 'x' is not a global variable: declare it with 'global', import it, or cinclude the C global first."},
 		{"error_884_permit_not_func.pa", ":1:24: error: 'y' is not a function at the top level of this module."},
 		{"error_885_permit_duplicate.pa", ":2:14: error: 'f' is already permitted to use 'x'."},
-		{"error_886_global_before_decl.pa", ":1:1: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
-		{"error_887_global_before_decl_indirect.pa", ":1:1: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
-		{"error_888_global_before_decl_ref.pa", ":2:8: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
 		{"error_889_global_read_only.pa", ":3:2: error: cannot write to 'x': " + notWritable},
 		{"error_890_global_replace.pa", ":3:2: error: cannot assign to 'a': a function writes the elements or fields of an array or struct global variable, but does not replace it."},
 		{"error_891_global_read_only_elem.pa", ":3:2: error: cannot write through read-only pointer"},
 		{"error_892_c_global_read_only_func.pa", ":4:2: error: cannot write to 'stderr': " + notWritable},
-		{"error_893_import_global.pa", ":1:1: error: cannot import a module whose functions use its global variable 'x'"},
 		{"error_894_global_param_clash.pa", ":2:1: error: Variable 'x' is already declared."},
-		{"error_895_global_init_uses_self.pa", ":1:18: error: this reaches 'f', which uses global variable 'x', before 'x' is declared."},
 		{"error_896_global_addr_read_only.pa", ":3:14: error: cannot write to 'x': " + notWritable},
+		{"error_1069_global_init_top_var.pa", ":2:18: error: the initializer of global 'x' cannot use top-level variable 'n': globals are initialized before the top level runs."},
+		{"error_1070_global_init_args.pa", ":1:18: error: the initializer of global 'n' cannot use top-level variable 'args': globals are initialized before the top level runs."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, import_global)
+{
+	const string notWritable = "a global variable is written only where a 'global' statement permits it";
+	const pair<string, string> cases[] = {
+		{"error_1071_import_global_not_permitted.pa", ":2:28: error: Undefined variable 'count'."},
+		{"error_1072_import_global_read_only.pa", ":3:12: error: cannot write to 'count': " + notWritable},
+		{"error_1073_import_global_alias_read_only.pa", ":3:12: error: cannot write to 'G.count': " + notWritable},
+		{"error_1074_permit_unknown_alias.pa", ":1:1: error: Undefined variable or module alias 'X'."},
+		{"error_1075_permit_unknown_qualified.pa", ":2:1: error: 'G.nothing' is not a global variable"},
+		{"error_1076_import_global_clash.pa", ":2:1: error: Variable 'count' is already declared."},
+		{"error_1077_import_global_twice_name.pa", ":2:1: error: Variable 'count' is already declared."},
+		{"error_1078_import_global_unqualified_under_alias.pa", ":2:1: error: Undefined variable 'count'."},
+		{"error_1079_block_import_global_outside.pa", ":2:1: error: Undefined variable 'count'."},
+		{"error_1080_func_import_global_outside.pa", ":2:28: error: Undefined variable 'count'."},
+		{"error_1081_import_global_replace.pa", ":3:12: error: cannot assign to 'G.arr': a function writes the "
+		 "elements or fields of an array or struct global variable, but does not replace it."},
+		{"error_1082_export_global_run_size.pa", ":2:1: error: the sizes of exported global 'a' must be constants "
+		 "or its array literal's: an importer cannot know them otherwise."},
+		{"error_1083_import_hidden_global.pa", ":2:1: error: Undefined variable 'hidden'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
 		genModuleAst("../test/testdata/sa/lib_sa_global.pa");
+		genModuleAst("../test/testdata/sa/lib_sa_global2.pa");
 		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
 		ASSERT_EQ(execTestCommand(
 			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
@@ -1462,7 +1524,6 @@ TEST(sa_error, give_and_take)
 		{"error_915_owner_view_target_shape.pa", ":3:1: error: cannot transfer '[4]int8' into '[4]int32'"},
 		// A `[]T` parameter keeps no length, nor does a `[+]T` take one from the array it copies.
 		{"error_916_copy_from_unsized_borrow.pa", ":4:2: error: cannot copy '[?]int32' into '[4]int32'"},
-		{"error_917_varr_copy_from_run_size.pa", ":4:1: error: cannot copy '[?]int32' into '[+]int32'"},
 		{"error_918_operator_func_arity.pa", ":2:1: error: operator function '%' must take two parameters."},
 		{"error_919_operator_func_no_struct.pa",
 		 ":1:1: error: operator function '*' must take a struct ('T' or '@T') parameter."},
@@ -1473,6 +1534,9 @@ TEST(sa_error, give_and_take)
 		{"error_922_operator_func_ambiguous.pa", ":5:10: error: Ambiguous function call '-': it can mean -(@vec2), -(vec2)."},
 		{"error_923_operator_func_no_match.pa",
 		 ":4:10: error: No function '+' takes (vec2, flo64); there are +(@vec2, @vec2)."},
+		// A call left unchosen while its operator's function is chosen reports as itself.
+		{"error_1090_overload_inner_call_ambiguous.pa",
+		 ":9:3: error: Ambiguous function call 'h': it can mean h(int32), h(flo64)."},
 		{"error_951_compare_func_ret.pa", ":2:1: error: operator function '==' must return 'bool'."},
 		{"error_952_compare_func_arity.pa", ":2:1: error: operator function '<' must take two parameters."},
 		{"error_953_compare_func_writable_param.pa",
@@ -1484,7 +1548,7 @@ TEST(sa_error, give_and_take)
 		// A derived '>' looks for '<' with the operands swapped.
 		{"error_956_derived_compare_no_func.pa", ":4:14: error: No operator function '<' takes (ver, int64)."},
 		{"error_957_c_struct_ptr_compare.pa",
-		 ":2:13: error: No operator function '==' takes (@!_IO_FILE, @!_IO_FILE)."},
+		 ":2:13: error: No operator function '==' takes (@!FILE, @!FILE)."},
 		{"error_958_wide_char_uint8.pa", ":1:11: error: character literal U+00E9 needs an integer type of 32 bits or more, not 'uint8': no byte of UTF-8 text holds it."},
 		// A comparison types no literal by the other operand, so it is checked there.
 		{"error_959_wide_char_compare_byte.pa", ":1:48: error: character literal U+00E9 needs an integer type of 32 bits or more, not 'uint8': no byte of UTF-8 text holds it."},
@@ -1517,7 +1581,6 @@ TEST(sa_error, give_and_take)
 		{"error_982_variadic_move_array.pa", ":3:2: error: '->>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 		{"error_983_variadic_func_ptr.pa", ":2:1: error: cannot convert '@func([...]int64)' to '@func(@int64)'."},
 		{"error_984_variadic_c_callback.pa", ":4:1: error: cannot convert '@func(@void, [...]@void) -> int32' to '@func(@void, @void) -> int32'."},
-		{"error_985_variadic_temp_borrow.pa", ":5:1: error: a variadic argument of 'f' borrows a temporary value a call holds, which would be released before 'f' is called; keep the value in a variable first."},
 		{"error_986_variadic_take_array.pa", ":2:2: error: '<<=' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 		{"error_924_keep_param_count_nested.pa",
 		 ":3:2: error: the cast's function type has 2 parameters, but '@func(int32)' has 1."},

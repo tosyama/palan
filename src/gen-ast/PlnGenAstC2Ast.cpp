@@ -32,6 +32,26 @@ struct TempFile {
 };
 }
 
+const string& CStateHistory::current() const
+{
+	static const string none; // LCOV_EXCL_BR_LINE
+	return entries_.empty() ? none : entries_.back().second;
+}
+
+void CStateHistory::push(Pos at, string state)
+{
+	entries_.emplace_back(at, std::move(state));
+}
+
+bool CStateHistory::closeScope(Pos open, Pos close)
+{
+	if (entries_.empty() || entries_.back().first < open) return false;
+	auto e = entries_.rbegin();
+	while (e != entries_.rend() && !(e->first < open)) ++e;
+	push(close, e == entries_.rend() ? string() : e->second);
+	return true;
+}
+
 static void writeTempFile(TempFile& tf, const string& content, const string& path)
 {
 	const char* tmpdir = getenv("TMPDIR");

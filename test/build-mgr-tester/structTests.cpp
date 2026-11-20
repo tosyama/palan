@@ -1254,6 +1254,18 @@ TEST(build_mgr, runtime_size_ownership_mtrace) {
 	expectMtraceRun("376_runtime_size_ownership_mtrace", "1 4 3 10\n3:1 1:1 \n7 9\n5 5\n", 43);
 }
 
+TEST(build_mgr, runtime_size_move_copy_mtrace) {
+	// A variable given an array takes its size; a row, a field, a constant-size
+	// variable or a parameter keeps its own, given an array through a cast. A
+	// copy goes as far as the shorter at each level, rows in place one by one.
+	expectMtraceRun("429_runtime_size_move_copy_mtrace", "2 7 4 5\n6 8 9 3\n4 2 2\n11 7 6 2\n", 42);
+}
+
+TEST(build_mgr, given_flow_mtrace) {
+	// Filled again before each use, or given only on a path that leaves.
+	expectMtraceRun("430_given_flow_mtrace", "6 3 3 8\n11 1 1\n", 10);
+}
+
 TEST(build_mgr, owner_view_target_mtrace) {
 	// A block given to a C pointer viewed as its owner is held there until it is
 	// taken back over, sized at run time on both sides.
@@ -1386,6 +1398,12 @@ TEST(build_mgr, operator_func_mtrace) {
 		"1.5 2.5 3.5\n0.5 1.5 2.5\n-1 -2 -3\n-1.5 -2.5 -3.5\n1.5 3 4.5\n0 -1 -2\n3\n2.5 4.5 6.5\n", 4);
 }
 
+// A call whose functions return a struct or a number is told by its argument,
+// so the operator over it is a struct the overloaded 'g' takes.
+TEST(build_mgr, overload_inner_call_mtrace) {
+	expectMtraceRun("425_overload_inner_call_mtrace", "vec2 2 4\nflo64 5\n", 0);
+}
+
 // '<<' chains through the borrow each call returns; a returned or converted
 // right operand is released after the statement.
 TEST(build_mgr, append_mtrace) {
@@ -1407,13 +1425,35 @@ TEST(build_mgr, compare_func_mtrace) {
 // Struct elements are copies the callee owns: those left are released at its
 // exit, one moved out is not, and the caller releases none of them.
 TEST(build_mgr, variadic_struct_mtrace) {
-	expectMtraceRun("407_variadic_struct_mtrace", "10\n5 1 2\n8\n12\n", 29);
+	expectMtraceRun("407_variadic_struct_mtrace", "10\n5 1 2\n8\n12\n14\n", 33);
+}
+
+// An element moved out leaves NULL, which a copy keeps; one copied into a
+// NULL slot is built there first, and so copied whole.
+TEST(build_mgr, copy_null_elem_mtrace) {
+	expectMtraceRun("432_copy_null_elem_mtrace", "1 2 -1\n1 1\n1\n1 5\n1\n7\n1 2 1\n3\n", 69);
+}
+
+// '...a' passes a copy the callee may write, '...a>>' the array itself, whose
+// block alone the caller frees after the call.
+TEST(build_mgr, spread_arg_mtrace) {
+	expectMtraceRun("433_spread_arg_mtrace", "n=3 7\n1\nn=3 6\nn=3 6\nn=4 6\nn=2 11\nn=2 11\nn=3 6\nn=2 3\n7\nn=3 11\nn=3 6\nn=2 42\nx, y\nn=3 6\n1\nn=2 11\nn=4 6\n1 1\n", 25);
+}
+
+// Struct elements are the callee's whether copied or given; a NULL one is
+// passed on as NULL.
+TEST(build_mgr, spread_struct_mtrace) {
+	expectMtraceRun("434_spread_struct_mtrace", "3\n2 1 2\n3\n3\n1\n7\n4 1\n15\n4\n111\n", 99);
 }
 
 // Each converted literal is released where a struct the call returns would be.
 TEST(build_mgr, literal_conversion_mtrace) {
 	expectMtraceRun("408_literal_conversion_mtrace",
 		"init copy borrow owned v1 v2 ret cmp gt chained opret field field2 e2 e1 \n", 64);
+}
+
+TEST(build_mgr, numeric_literal_conversion_mtrace) {
+	expectMtraceRun("428_numeric_literal_conversion_mtrace", "12 15 -12 i3 30 eq 7 10 2 \n", 33);
 }
 
 TEST(build_mgr, chain_ahead_of_receiver_mtrace) {
@@ -1435,4 +1475,11 @@ TEST(build_mgr, field_init_mtrace) {
 		p + p + "hi 3 1\n1 -2 3 5 6 2 8\n" + p + p + p + p + "hi 0\n" + p + p
 		+ p + p + p + p + "8 200 1 2.0 2\n" + p + "7 1 1 2.0 2\n3 4 0 0.5 1\n"
 		+ "9 200 1 2.0 2\n3 200 1 2.0 0\n", 38);
+}
+
+// An initializer gives a struct, an array of structs or of rows, or NULL; a
+// struct laid out in another stores its own, its type in another module too.
+TEST(build_mgr, field_init_values_mtrace) {
+	string r = "1 9 2 3 4 1 9\n5 9 7 8 9 9\n3 4 2 3 3 6 1\n";
+	expectMtraceRun("435_field_init_values_mtrace", r + r + r + "3 3 7 1 5\n2 9 3\n3 3 9 1 8\n", 103);
 }

@@ -1,0 +1,2 @@
+cinclude <stddef.h>;
+type Q { [2]@int32 ps = [NULL, NULL]; };

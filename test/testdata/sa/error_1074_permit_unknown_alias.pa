@@ -1,0 +1,2 @@
+global X.count for f;
+func f() {}

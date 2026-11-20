@@ -1,0 +1,10 @@
+import "lib_sa_global.pa";
+import "lib_sa_global.pa" as G;
+global int64 twice = count * 2;
+global count for bump!;
+global G.arr for sum;
+func bump() { count + 1 -> count; }
+func sum() -> int32 { return G.arr[0] + G.arr[2]; }
+5 -> count;
+G.count + 1 -> G.count;
+G.log.push(1);

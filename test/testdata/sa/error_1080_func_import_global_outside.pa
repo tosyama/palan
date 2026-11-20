@@ -1,0 +1,2 @@
+func f() { import "lib_sa_global.pa"; 1 -> count; }
+func g() -> int64 { return count; }

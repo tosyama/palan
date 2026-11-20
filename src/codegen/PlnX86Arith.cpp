@@ -15,6 +15,13 @@ void PlnX86CodeGen::emitBinArith(const string& op, VReg dst, VReg lhs, VReg rhs,
     if (!rm.count(dst)) return;  // dead: result never used
     const PhysLoc& dst_loc = rm.at(dst);
     const PhysLoc& lhs_loc = rm.at(lhs);
+    if (isX87(type)) {
+        out << "\tfldt " << srcOperand(lhs_loc) << "\n";
+        out << "\tfldt " << srcOperand(rm.at(rhs)) << "\n";
+        out << "\t" << op << " %st, %st(1)\n";
+        out << "\tfstpt " << srcOperand(dst_loc) << "\n";
+        return;
+    }
     const char* mov = movInstrForType(type);
     if (!dst_loc.isStack()) {
         string dst_reg = sizedRegName(dst_loc.base, type);
@@ -31,7 +38,7 @@ void PlnX86CodeGen::emitBinArith(const string& op, VReg dst, VReg lhs, VReg rhs,
 
 void PlnX86CodeGen::emitInstrMul(const Mul& ml, const RegMap& rm)
 {
-    if (isFloat(ml.type) || intWidth(ml.type) != 1) {
+    if (isFloat(ml.type) || isX87(ml.type) || intWidth(ml.type) != 1) {
         emitBinArith(mulInstrForType(ml.type), ml.dst, ml.lhs, ml.rhs, ml.type, rm);
         return;
     }
@@ -86,6 +93,10 @@ void PlnX86CodeGen::emitIntDivMod(VReg dst, VReg lhs, VReg rhs, VRegType type, c
 
 void PlnX86CodeGen::emitInstrDiv(const Div& dv, const RegMap& rm)
 {
+    if (isX87(dv.type)) {
+        emitBinArith("fdivrp", dv.dst, dv.lhs, dv.rhs, dv.type, rm);
+        return;
+    }
     if (!isFloat(dv.type)) {
         emitIntDivMod(dv.dst, dv.lhs, dv.rhs, dv.type, "%rax", rm);
         return;
@@ -120,6 +131,12 @@ void PlnX86CodeGen::emitUnArith(const string& op, VReg dst, VReg src, VRegType t
 void PlnX86CodeGen::emitInstrNeg(const Neg& n, const RegMap& rm)
 {
     if (!rm.count(n.dst)) return;  // dead: result never used
+    if (isX87(n.type)) {
+        out << "\tfldt " << srcOperand(rm.at(n.src)) << "\n";
+        out << "\tfchs\n";
+        out << "\tfstpt " << srcOperand(rm.at(n.dst)) << "\n";
+        return;
+    }
     if (isFloat(n.type)) {
         // float neg: flip sign bit via xorps/xorpd with mask in .rodata
         const PhysLoc& src_loc = rm.at(n.src);
@@ -188,6 +205,16 @@ void PlnX86CodeGen::emitInstrCmp(const Cmp& cm, const RegMap& rm)
     if (!rm.count(cm.dst)) return;  // dead
     const PhysLoc& dst_loc = rm.at(cm.dst);
     const PhysLoc& lhs_loc = rm.at(cm.lhs);
+    string dst = dst_loc.isStack() ? srcOperand(dst_loc) : sizedRegName(dst_loc.base, VRegType::Uint8);
+    if (isX87(cm.type)) {
+        // fucomip sets CF/ZF as ucomis* does, comparing %st (lhs) with %st(1) (rhs).
+        out << "\tfldt " << srcOperand(rm.at(cm.rhs)) << "\n";
+        out << "\tfldt " << srcOperand(lhs_loc) << "\n";
+        out << "\tfucomip %st(1), %st\n";
+        out << "\tfstp %st(0)\n";
+        out << "\t" << setCCForOp(cm.op, cm.type) << " " << dst << "\n";
+        return;
+    }
     // cmpX %rhs, lhs  →  flags = lhs - rhs
     // x86 disallows two memory operands: load lhs into scratch if spilled
     string lhs_operand;
@@ -199,15 +226,18 @@ void PlnX86CodeGen::emitInstrCmp(const Cmp& cm, const RegMap& rm)
         lhs_operand = srcOperand(lhs_loc);
     }
     out << "\t" << cmpInstrForType(cm.type) << " " << srcOperand(rm.at(cm.rhs)) << ", " << lhs_operand << "\n";
-    string dst = dst_loc.isStack() ? srcOperand(dst_loc) : sizedRegName(dst_loc.base, VRegType::Uint8);
     out << "\t" << setCCForOp(cm.op, cm.type) << " " << dst << "\n";
 }
 
 void PlnX86CodeGen::emitInstrConvert(const Convert& c, const RegMap& rm)
 {
     if (!rm.count(c.dst)) return;  // dead
+    if (isX87(c.from) || isX87(c.to)) {
+        emitX87Convert(c, rm);
+        return;
+    }
     const PhysLoc& dst_loc = rm.at(c.dst);
-    bool dst_is_float = (c.to == VRegType::Float32 || c.to == VRegType::Float64);
+    bool dst_is_float = isFloat(c.to);
     if (dst_loc.isStack()) {
         // Spilled dst: convert into scratch register, then store to stack slot.
         // Float results use %xmm8 as scratch; integer results use %rax.
@@ -325,4 +355,65 @@ void PlnX86CodeGen::emitConvert(const string& dstBase, const PhysLoc& src, VRegT
     // VRegType pair is handled by the branches above.
     std::cerr << "PlnX86CodeGen: unsupported conversion\n"; // LCOV_EXCL_LINE
     std::abort(); // LCOV_EXCL_LINE
+}
+
+// The x87 unit reads and writes only memory to exchange values with the other
+// registers, so a register operand passes through the red zone below %rsp.
+void PlnX86CodeGen::emitX87Convert(const Convert& c, const RegMap& rm)
+{
+    const PhysLoc& src = rm.at(c.src);
+    const PhysLoc& dst = rm.at(c.dst);
+    const string tmp = "-16(%rsp)";
+    if (isX87(c.to)) {
+        string s = srcOperand(src);
+        if (isFloat(c.from)) {
+            if (!src.isStack()) {
+                out << "\t" << movInstrForType(c.from) << " " << s << ", " << tmp << "\n";
+                s = tmp;
+            }
+            out << "\t" << (c.from == VRegType::Float32 ? "flds " : "fldl ") << s << "\n";
+        } else {
+            // fild reads a signed integer: narrower integers are first extended
+            // to 64 bits, and a uint64 with its top bit set gets 2^64 added
+            // (0x5f800000 as a flo32), exactly, as a flo80 holds 64 bits.
+            int w = intWidth(c.from);
+            if (w < 8) {
+                if (w == 4 && !isSignedInt(c.from))
+                    out << "\tmovl " << s << ", %eax\n";
+                else
+                    out << "\t" << extendMnemonic(isSignedInt(c.from), w, 8) << " " << s << ", %rax\n";
+                out << "\tmovq %rax, " << tmp << "\n";
+                s = tmp;
+            } else if (!src.isStack()) {
+                out << "\tmovq " << s << ", " << tmp << "\n";
+                s = tmp;
+            }
+            out << "\tfildq " << s << "\n";
+            if (c.from == VRegType::Uint64) {
+                out << "\tcmpq $0, " << s << "\n";
+                out << "\tjns 1f\n";
+                out << "\tmovl $0x5f800000, -20(%rsp)\n";
+                out << "\tfadds -20(%rsp)\n";
+                out << "1:\n";
+            }
+        }
+        out << "\tfstpt " << srcOperand(dst) << "\n";
+        return;
+    }
+    out << "\tfldt " << srcOperand(src) << "\n";
+    if (isFloat(c.to)) {
+        const char* mov = movInstrForType(c.to);
+        out << "\t" << (c.to == VRegType::Float32 ? "fstps " : "fstpl ") << tmp << "\n";
+        string reg = dst.isStack() ? "%xmm8" : dst.base;
+        out << "\t" << mov << " " << tmp << ", " << reg << "\n";
+        if (dst.isStack())
+            out << "\t" << mov << " %xmm8, " << srcOperand(dst) << "\n";
+        return;
+    }
+    // Truncation toward zero; a narrower integer takes the low bits, as cvtt*2si does.
+    out << "\tfisttpq " << tmp << "\n";
+    string reg = dst.isStack() ? "%rax" : dst.base;
+    out << "\tmovq " << tmp << ", " << reg << "\n";
+    if (dst.isStack())
+        out << "\t" << movInstrForType(c.to) << " " << sizedRegName("%rax", c.to) << ", " << srcOperand(dst) << "\n";
 }

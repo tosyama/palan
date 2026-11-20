@@ -1,0 +1,3 @@
+cinclude <stdio.h>;
+[3]int64 a;
+printf("%ld", ...a);

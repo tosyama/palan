@@ -108,13 +108,11 @@ enum PlnSaMessageCode {
 	E_StructLitDupField,	// arg1: field name
 	E_StructLitMissingField,	// arg1: struct name, arg2: field name
 	E_StructLitExpected,	// arg1: struct name
-	E_StructLitFieldType,	// arg1: struct name, arg2: field name
 	E_DictLitContext,
 	E_ArrLitArgType,	// arg1: parameter name, arg2: parameter type
 	E_DictLitArgType,	// arg1: parameter name, arg2: parameter type
 	E_LitArgCFunc,	// arg1: C function name
 	E_CopyShapeMismatch,	// arg1: destination shape, arg2: source shape
-	E_CopyUnsupportedShape,	// arg1: shape
 	E_AddrOfBorrowed,	// arg1: variable name
 	E_EmbedElemNotStruct,	// arg1: element type
 	E_NamedRetInitOnStruct,	// arg1: return name
@@ -133,7 +131,6 @@ enum PlnSaMessageCode {
 	E_TransferToSelf,	// arg1: variable name
 	E_GivenChangedByLaterArg,	// arg1: variable name
 	E_UnsizedArrRowSizeNotConst,
-	E_UnsizedArrRowUnsupported,
 	E_ArrElemShapeMismatch,	// arg1: expected shape, arg2: actual shape
 	E_ArgCountMismatch,	// arg1: function name, arg2: expected count, arg3: actual count
 	E_UnknownEnumerator,	// arg1: enumerator name, arg2: enum type name
@@ -164,7 +161,8 @@ enum PlnSaMessageCode {
 	E_PtrInnerPermissionNarrowing,	// arg1: from type display name, arg2: to type display name
 	E_ConstExprOverflow,
 	E_ConstExprDivByZero,
-	E_CMacroFuncLike,	// arg1: macro name
+	E_CMacroFuncLike,	// arg1: macro name, arg2: form Palan cannot translate (optional)
+	E_CMacroUnresolvedName,	// arg1: macro name, arg2: name its body uses
 	E_CMacroNotConstant,	// arg1: macro name
 	E_FrameVarType,	// arg1: type display name
 	E_FrameArrSizeNotConst,	// arg1: variable name
@@ -174,6 +172,7 @@ enum PlnSaMessageCode {
 	E_VarrBorrowNeedsAddrOf,
 	E_ArrLenNotConst,
 	E_ArrLenNeedsAddrOf,
+	E_LenNotArray,	// arg1: the value's type display name
 	E_VarrBorrowSized,
 	E_ArrowBindsTighter,	// arg1: operator
 	E_VarrElemSized,
@@ -190,8 +189,8 @@ enum PlnSaMessageCode {
 	E_GlobalPermitUnknownVar,	// arg1: variable name
 	E_GlobalPermitNotFunc,	// arg1: function name
 	E_GlobalPermitDuplicate,	// arg1: variable name, arg2: function name
-	E_GlobalUsedBeforeDecl,	// arg1: variable name, arg2: function name
-	E_ImportModuleWithGlobals,	// arg1: variable name
+	E_GlobalInitUsesTopVar,	// arg1: variable name, arg2: global name
+	E_ExportedGlobalSizeNotConst,	// arg1: variable name
 	E_InterfaceAsProgram,	// arg1: file path
 	E_OperatorFuncArity,	// arg1: operator, arg2: parameter counts it takes
 	E_OperatorFuncNoStruct,	// arg1: operator
@@ -199,7 +198,7 @@ enum PlnSaMessageCode {
 	E_NoOperatorFunc,	// arg1: operator, arg2: operand types
 	E_CompareFuncRet,	// arg1: operator
 	E_FieldInitNotConst,	// arg1: field name
-	E_FieldInitUnsupported,	// arg1: field name
+	E_FieldInitPtrNotNull,	// arg1: field name
 	E_ParamDefaultNotConst,	// arg1: parameter name
 	E_ParamDefaultNotLast,	// arg1: parameter name
 	E_OperatorFuncDefault,	// arg1: operator, arg2: parameter name
@@ -207,7 +206,6 @@ enum PlnSaMessageCode {
 	E_VariadicWithDefault,	// arg1: function name
 	E_OperatorFuncVariadic,	// arg1: operator
 	E_SyscallVariadic,	// arg1: syscall name
-	E_VariadicArgTempBorrow,	// arg1: function name
 	E_AppendFuncFirstParam,
 	E_AppendFuncRet,	// arg1: type of the first parameter
 	E_AppendNotStruct,	// arg1: left operand type
@@ -226,6 +224,28 @@ enum PlnSaMessageCode {
 	E_StructLitHiddenField,	// arg1: struct type display name, arg2: field name, arg3: "private" or "readonly"
 	E_StructLitPositionalHidden,	// arg1: struct type display name
 	E_StructLitHiddenNoInit,	// arg1: struct type display name, arg2: field name, arg3: "private" or "readonly"
+	E_OpaqueContents,	// arg1: contents type display name
+	E_OpaqueNeedsLayout,	// arg1: opaque type display name, arg2: what needs the layout
+	E_OpaqueField,		// arg1: opaque type display name
+	E_OpaqueConvert,	// arg1: opaque type display name
+	E_OpaqueConvertMove,
+	E_OpaqueHeldCopy,	// arg1: the copied type's display name
+	E_ReleaseFuncSig,
+	E_ReleaseFuncPlace,
+	E_ReleaseFuncDup,	// arg1: opaque type display name
+	E_MoveRunSize,		// arg1: destination shape, arg2: source shape
+	E_ResizeNotMoved,	// arg1: target type name
+	E_UseAfterGiven,	// arg1: variable name
+	E_CExportFunc,		// arg1: function name, arg2: what it has
+	E_SpreadPlace,
+	E_SpreadNotVariadic,	// arg1: function name
+	E_SpreadPosition,	// arg1: parameter name, arg2: function name
+	E_SpreadNotArray,	// arg1: what the value is, a quoted type name or a phrase
+	E_SpreadBorrow,
+	E_SpreadUnsized,	// arg1: value type name
+	E_SpreadElemMismatch,	// arg1: parameter type, arg2: value type
+	E_AddrOfBitField,	// arg1: field name
+	E_BitFieldLiteralOutOfRange,	// arg1: the literal as written, arg2: field name, arg3: width
 };
 
 class PlnSaMessage
@@ -234,9 +254,9 @@ public:
 	static string getMessage(PlnSaMessageCode msg_code,
 	                         string arg1="\x01", string arg2="\x01",
 	                         string arg3="\x01");
-	// The program-wide name of an unexported struct/enum, or one declared in
-	// a block. A message shows it as written.
-	static string localTypeName(const string& moduleId, int seq, const string& name);
+	// The program-wide name of a Palan struct/enum; seq is a block's order, 0
+	// at the top level. A message shows it as written.
+	static string typeIdentity(const string& moduleId, int seq, const string& name);
 	static string writtenTypeName(const string& typeName);
 private:
 	static string format(PlnSaMessageCode msg_code, string arg1, string arg2, string arg3);

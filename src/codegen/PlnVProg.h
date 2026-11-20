@@ -28,11 +28,15 @@ enum class VRegType {
     Uint64,
     Float32,
     Float64,
+    Float80,  // x87 extended precision in a 16-byte stack slot, never in a register
 };
 
+// An SSE float, which travels in an XMM register.
 inline bool isFloat(VRegType t) {
     return t == VRegType::Float32 || t == VRegType::Float64;
 }
+
+inline bool isX87(VRegType t) { return t == VRegType::Float80; }
 
 inline int intWidth(VRegType t) {
     switch (t) {
@@ -69,7 +73,7 @@ struct BitAnd   { VReg dst; VReg lhs; VReg rhs; VRegType type; }; // dst = lhs &
 struct BitOr    { VReg dst; VReg lhs; VReg rhs; VRegType type; }; // dst = lhs | rhs
 struct BitXor   { VReg dst; VReg lhs; VReg rhs; VRegType type; }; // dst = lhs ^ rhs
 struct BitNot   { VReg dst; VReg src; VRegType type; };            // dst = ~src
-enum class ShiftOp { Shl, Shr, Sar };  // Sar only lowers division; Palan has no arithmetic shift
+enum class ShiftOp { Shl, Shr, Sar };  // Sar only lowers division and signed bit-fields; Palan has no arithmetic shift
 struct Shift    { VReg dst; VReg lhs; VReg rhs; ShiftOp op; VRegType type; }; // count taken modulo the width
 struct ShiftImm { VReg dst; VReg src; int count; ShiftOp op; VRegType type; }; // 0 < count < width
 struct PackF32x2 { VReg dst; VReg lo; VReg hi; };                               // Float64 dst = lo, hi as its two halves
@@ -85,7 +89,7 @@ struct Convert  { VReg dst; VReg src; VRegType from; VRegType to; }; // dst = (t
 // name: a call through a pointer always uses the C convention.
 // structArgs marks the runs of args that are the eightbytes of one struct
 // passed by value (in argument order).
-struct StructArgSpan { size_t first; size_t count; bool inMemory; };
+struct StructArgSpan { size_t first; size_t count; bool inMemory; int align = 8; };
 struct CallC    { string name; vector<VReg> args; vector<VReg> dsts; vector<VRegType> retTypes;
                   std::optional<VReg> callee = std::nullopt; vector<StructArgSpan> structArgs = {}; };
 // sysvRet: the dsts are a returned struct's eightbytes, in the System V
@@ -142,11 +146,42 @@ inline vector<int> placeCallArgs(const vector<VRegType>& types, const vector<Str
             i += s.count;
             continue;
         }
-        if (isFloat(types[i])) { if (nextFlt < nFltRegs) slots[i] = nextFlt++; }
-        else                   { if (nextInt < nIntRegs) slots[i] = nextInt++; }
+        if (isFloat(types[i]))     { if (nextFlt < nFltRegs) slots[i] = nextFlt++; }
+        else if (!isX87(types[i])) { if (nextInt < nIntRegs) slots[i] = nextInt++; }
         i++;
     }
     return slots;
+}
+
+// Each stack argument's offset from the bottom of the argument area (-1 for
+// one in a register), and the area's size. A flo80 takes 16 bytes and, like a
+// struct of that alignment, starts at a 16-byte boundary.
+inline vector<int> placeStackArgs(const vector<VRegType>& types, const vector<StructArgSpan>& spans,
+                                  const vector<int>& slots, int& bytes)
+{
+    vector<int> offsets(types.size(), -1);
+    int at = 0;
+    size_t span = 0;
+    for (size_t i = 0; i < types.size(); ) {
+        if (span < spans.size() && spans[span].first == i) {
+            const StructArgSpan& s = spans[span++];
+            if (slots[i] < 0) {
+                at = (at + s.align - 1) / s.align * s.align;
+                for (size_t k = i; k < i + s.count; k++, at += 8) offsets[k] = at;
+            }
+            i += s.count;
+            continue;
+        }
+        if (slots[i] < 0) {
+            int size = isX87(types[i]) ? 16 : 8;
+            at = (at + size - 1) / size * size;
+            offsets[i] = at;
+            at += size;
+        }
+        i++;
+    }
+    bytes = (at + 15) & ~15;
+    return offsets;
 }
 
 // -------- Program structure --------
@@ -159,11 +194,11 @@ struct VStringLiteral {
 struct VFloatLiteral {
     string   label;
     string   value;   // decimal string e.g. "3.14"
-    VRegType type;    // Float32 or Float64
+    VRegType type;
 };
 
 struct FrameBlock { int size; int align; };
-struct StaticBlock { string label; int size; int align; };
+struct StaticBlock { string label; int size; int align; bool isExport = false; };
 
 struct VFunc {
     string         name;
@@ -178,6 +213,4 @@ struct VProg {
     vector<VFloatLiteral>  floatData;  // .rodata float literals
     vector<StaticBlock>    bss;        // .bss global slots and storage
     vector<VFunc>          funcs;      // .text
-    bool needsF32Neg = false;          // true if any Neg{Float32} instruction exists
-    bool needsF64Neg = false;          // true if any Neg{Float64} instruction exists
 };

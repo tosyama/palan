@@ -65,7 +65,7 @@ TEST(build_mgr, escaped_file_names_coexist) {
 TEST(build_mgr, library_module_same_for_any_entry) {
 	cleanTestEnv();
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	string obj = targetWorkDir() + dir + "/lib_module_id/entry_demo.pa.o";
+	string obj = targetWorkDir() + dir + "/lib_module_id/entry_demo.pa.debug.o";
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/397_library_entry_demo.pa"), "15\n");
 	fs::copy_file(obj, "out/entry_demo_imported.o");
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/lib_module_id/entry_demo.pa"), "demo 12\n");
@@ -79,8 +79,8 @@ TEST(build_mgr, module_same_at_any_location) {
 	fs::copy_file("../test/testdata/build-mgr/lib_module_id/local_type.pa", "out/local_type.pa");
 	ASSERT_EQ(execTestCommand("bin/palan out/local_type.pa"), "7\n");
 	string moved = fs::weakly_canonical("out").string();
-	ASSERT_EQ(execTestCommand("cmp " + targetWorkDir() + dir + "/local_type.pa.s "
-		+ targetWorkDir() + moved + "/local_type.pa.s"), "");
+	ASSERT_EQ(execTestCommand("cmp " + targetWorkDir() + dir + "/local_type.pa.debug.s "
+		+ targetWorkDir() + moved + "/local_type.pa.debug.s"), "");
 }
 
 TEST(build_mgr, import_basic) {
@@ -95,6 +95,12 @@ TEST(build_mgr, import_mutual) {
 	string output = execTestCommand(
 		"bin/palan ../test/testdata/build-mgr/024_import_mutual.pa");
 	ASSERT_EQ(output, "10\n13\n");
+}
+
+// The importer's own K does not size the imported alias.
+TEST(build_mgr, import_alias_size) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/414_import_alias_size.pa"), "3 6 6\n");
 }
 
 TEST(build_mgr, block_import) {
@@ -281,10 +287,23 @@ TEST(build_mgr, import_float)
 
 TEST(build_mgr, clean) {
 	cleanTestEnv();
-	// Its own HOME, so the work files the other tests reuse stay.
+	// Its own work directories, so the work files the other tests reuse stay.
 	fs::create_directories("out/home/.palan/work/" PALAN_TARGET);
 	ASSERT_EQ(execTestCommand("HOME=out/home bin/palan --clean"), "");
-	ASSERT_FALSE(fs::exists("out/home/.palan/work"));
+	ASSERT_FALSE(fs::exists("out/home/.palan/work/" PALAN_TARGET));
+
+	fs::create_directories("out/work/" PALAN_TARGET);
+	fs::create_directories("out/work/mine");
+	ASSERT_EQ(execTestCommand("PALAN_WORK=out/work bin/palan --clean"), "");
+	ASSERT_FALSE(fs::exists("out/work/" PALAN_TARGET));
+	ASSERT_TRUE(fs::exists("out/work/mine"));
+}
+
+TEST(build_mgr, palan_work) {
+	cleanTestEnv();
+	string out = execTestCommand("PALAN_WORK=out/work bin/palan ../test/testdata/build-mgr/001_helloworld.pa");
+	ASSERT_EQ(out, "Hello World!\n");
+	ASSERT_TRUE(fs::exists("out/work/" PALAN_TARGET + fs::absolute("../test/testdata/build-mgr/001_helloworld.pa").lexically_normal().string() + ".ast.json"));
 }
 
 TEST(build_mgr, method_call) {
@@ -506,7 +525,7 @@ TEST(build_mgr, chain_method_mtrace) {
 TEST(build_mgr, entry_at_link) {
 	cleanTestEnv();
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	string libObj = targetWorkDir() + dir + "/lib_entry_demo.pa.o";
+	string libObj = targetWorkDir() + dir + "/lib_entry_demo.pa.debug.o";
 
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/358_entry_at_link.pa"), "15\n");
 	fs::copy_file(libObj, "out/lib_entry_demo_imported.o");
@@ -531,7 +550,7 @@ TEST(build_mgr, implicit_args) {
 TEST(build_mgr, run_args) {
 	cleanTestEnv();
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	string bin = targetWorkDir() + dir + "/359_args.pa.d/out";
+	string bin = targetWorkDir() + dir + "/359_args.pa.debug.d/out";
 	fs::remove(bin);
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/359_args.pa x -o 'y z'"),
 		"4\n1:x\n2:-o\n3:y z\nrebound\n");
@@ -568,11 +587,78 @@ TEST(build_mgr, global_var_mtrace) {
 	EXPECT_EQ(frees, 1);
 }
 
+// An imported module's globals are initialized before the entry's top level runs.
 TEST(build_mgr, import_global_var) {
 	cleanTestEnv();
-	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/372_import_global.pa");
-	ASSERT_NE(out.find("372_import_global.pa:1:1: error: cannot import a module whose functions use its global variable 'x'"),
-		string::npos) << out;
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/372_import_global.pa"),
+		"lib_global init\nmain\n11\n12\n");
+}
+
+// A module imported twice is initialized once, after the modules it imports.
+TEST(build_mgr, init_order) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/416_init_order.pa"),
+		"init b\ninit a\n8 7\n");
+}
+
+// In a circle, the module reached second sees the first's globals still zero.
+TEST(build_mgr, init_circle) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/417_init_circle.pa"),
+		"b sees 0\na sees 2\n1 2\n");
+}
+
+TEST(build_mgr, global_before_decl) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/418_global_before_decl.pa"), "5\n1\n");
+}
+
+// The first import's initializer starts tracing, so the owned global of a
+// module imported twice shows its one allocation, never freed.
+TEST(build_mgr, import_global_var_mtrace) {
+	cleanTestEnv();
+	string bin = "/tmp/palan_import_global_mtrace_bin";
+	ASSERT_EQ(execTestCommand("bin/palan -o " + bin + " ../test/testdata/build-mgr/419_import_global_mtrace.pa"), "");
+	string traceFile = "/tmp/palan_import_global_mtrace.log";
+	ASSERT_EQ(execTestCommand(
+		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
+		"MALLOC_TRACE=" + traceFile + " " + bin), "6 12\n");
+	auto [allocs, frees] = parseMtraceLog(traceFile);
+	EXPECT_EQ(allocs, 1);
+	EXPECT_EQ(frees, 0);
+}
+
+// Both modules read and write one counter: the importer's top level freely,
+// the functions a `global` statement permits, and its own global's initializer.
+TEST(build_mgr, export_global) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/420_export_global.pa"),
+		"lib 1111\nmain 1111 1111 20\n");
+}
+
+TEST(build_mgr, export_global_alias) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/421_export_global_alias.pa"), "23 23\n");
+}
+
+// Replacing an imported owned global frees what it held, once; what it
+// owns afterwards lives on.
+TEST(build_mgr, export_global_mtrace) {
+	cleanTestEnv();
+	string bin = "/tmp/palan_export_global_mtrace_bin";
+	ASSERT_EQ(execTestCommand("bin/palan -o " + bin + " ../test/testdata/build-mgr/422_export_global_mtrace.pa"), "");
+	string traceFile = "/tmp/palan_export_global_mtrace.log";
+	ASSERT_EQ(execTestCommand(
+		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
+		"MALLOC_TRACE=" + traceFile + " " + bin), "18 3 5\n");
+	auto [allocs, frees] = parseMtraceLog(traceFile);
+	EXPECT_EQ(allocs, 5);
+	EXPECT_EQ(frees, 2);
+}
+
+TEST(build_mgr, import_global_in_func) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/423_import_global_in_func.pa"), "15\n");
 }
 
 TEST(build_mgr, global_after_unrelated_call) {
@@ -585,7 +671,7 @@ static string reusePath(const string& name) {
 }
 
 static fs::file_time_type objTime(const string& source) {
-	return fs::last_write_time(reusePath(source) + ".o");
+	return fs::last_write_time(reusePath(source) + ".debug.o");
 }
 
 // writeOldSource's times go back, which a work file left by an earlier run would hide.
@@ -755,7 +841,7 @@ TEST(build_mgr, reuse_rebuilds_missing_sa) {
 	writeImportChain();
 	ASSERT_EQ(execTestCommand("bin/palan out/a.pa"), "1\n");
 	auto before = objTime("c.pa");
-	ASSERT_TRUE(fs::remove(reusePath("c.pa") + ".sa.json"));
+	ASSERT_TRUE(fs::remove(reusePath("c.pa") + ".debug.sa.json"));
 	ASSERT_EQ(execTestCommand("bin/palan out/a.pa"), "1\n");
 	EXPECT_NE(objTime("c.pa"), before);
 }
@@ -764,7 +850,7 @@ TEST(build_mgr, reuse_allocators) {
 	cleanReuseEnv();
 	writeOldSource("alloc.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nprintf(\"%d\\n\", int32(len(@v)));\n");
 	ASSERT_EQ(execTestCommand("bin/palan out/alloc.pa"), "2\n");
-	string allocators = reusePath("alloc.pa") + ".d/" PALAN_ALLOCATORS_MODULE ".pa.o";
+	string allocators = reusePath("alloc.pa") + ".debug.d/" PALAN_ALLOCATORS_MODULE ".pa.debug.o";
 	auto before = fs::last_write_time(allocators);
 
 	ofstream("out/alloc.pa") << "cinclude <stdio.h>;\n[+]int32 v = [1, 2, 3];\nprintf(\"%d\\n\", int32(len(@v)));\n";
@@ -776,18 +862,57 @@ TEST(build_mgr, reuse_allocators) {
 	EXPECT_NE(fs::last_write_time(allocators), before);
 }
 
-static string libBuild(const string& file) {
-	return "bin/palan --lib -o out/lib ../test/testdata/build-mgr/lib_build/" + file;
-}
-
-static const char libOut[] = "out/lib/";
-
 static string fileText(const string& path) {
 	ifstream f(path);
 	stringstream ss;
 	ss << f.rdbuf();
 	return ss.str();
 }
+
+TEST(build_mgr, modes_kept_apart) {
+	cleanReuseEnv();
+	writeOldSource("mode.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nv.resize(3);\n"
+		"printf(\"%d\\n\", v.pop());\n");
+	ASSERT_EQ(execTestCommand("bin/palan out/mode.pa"), "0\n");
+	auto debugObj = objTime("mode.pa");
+	auto astTime = fs::last_write_time(reusePath("mode.pa") + ".ast.json");
+	ASSERT_EQ(execTestCommand("bin/palan -o out/mode_bin out/mode.pa"), "");
+	ASSERT_EQ(execTestCommand("out/mode_bin"), "0\n");
+	EXPECT_TRUE(fs::exists(reusePath("mode.pa") + ".release.o"));
+	EXPECT_EQ(objTime("mode.pa"), debugObj);
+	EXPECT_EQ(fs::last_write_time(reusePath("mode.pa") + ".ast.json"), astTime);
+}
+
+TEST(build_mgr, mode_decides_checks) {
+	cleanReuseEnv();
+	writeOldSource("mode.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nv.resize(3);\n"
+		"printf(\"%d\\n\", v.pop());\n");
+	auto hasChecks = [](const string& mode) {
+		string text = fileText(reusePath("mode.pa") + "." + mode + ".d/" PALAN_ALLOCATORS_MODULE ".pa");
+		bool pop = text.find("if h.len == 0 { __pln_pop_empty(); }") != string::npos;
+		bool resize = text.find("if n < 0 { __pln_negative_size(); }") != string::npos;
+		EXPECT_EQ(pop, resize) << text;
+		return pop;
+	};
+	ASSERT_EQ(execTestCommand("bin/palan out/mode.pa"), "0\n");
+	EXPECT_TRUE(hasChecks("debug"));
+	ASSERT_EQ(execTestCommand("bin/palan -o out/mode_bin out/mode.pa"), "");
+	EXPECT_FALSE(hasChecks("release"));
+
+	cleanReuseEnv();
+	writeOldSource("mode.pa", "cinclude <stdio.h>;\n[+]int32 v = [1, 2];\nv.resize(3);\n"
+		"printf(\"%d\\n\", v.pop());\n");
+	ASSERT_EQ(execTestCommand("bin/palan --release out/mode.pa"), "0\n");
+	EXPECT_FALSE(hasChecks("release"));
+	ASSERT_EQ(execTestCommand("bin/palan --debug -o out/mode_bin out/mode.pa"), "");
+	EXPECT_TRUE(hasChecks("debug"));
+}
+
+static string libBuild(const string& file) {
+	return "bin/palan --lib -o out/lib ../test/testdata/build-mgr/lib_build/" + file;
+}
+
+static const char libOut[] = "out/lib/";
 
 TEST(build_mgr, lib_interface_merges_what_the_main_publishes) {
 	cleanTestEnv();
@@ -800,13 +925,13 @@ TEST(build_mgr, lib_interface_merges_what_the_main_publishes) {
 		"type Dup {\n\tint16 keep;\n};\n"
 		"type Used {\n\tint32 q;\n\t[2]int32 owned;\n};\n"
 		"const C = 2;\n"
-		"export type W {\n\t@T t;\n\t[C]int32 c;\n\t@Dup d;\n};\n"
-		"const N = 3;\n"
 		"type OnlyInPrivate {\n\tint32 i;\n};\n"
 		"type Priv {\n\tint32 x;\n\t@OnlyInPrivate i;\n};\n"
-		"type __m1_Dup {\n\tint8 a;\n};\n"
 		"export type Color enum {\n\tRed,\n\tBlue,\n};\n"
-		"export type T {\n\t[N]int32 a;\n\t@Priv p;\n\t@FILE f;\n\t@__m1_Dup d;\n};\n"
+		"export type T {\n\t[C]int32 a;\n\tBytes b;\n\t@Priv p;\n\t@FILE f;\n\t@Dup d;\n};\n"
+		"export type W {\n\t@T t;\n\t[C]int32 c;\n\t@Dup d;\n};\n"
+		"const __m1_C = 4;\n"
+		"export type Bytes = [__m1_C]int8;\n"
 		"export func value(@Used u, Color c) -> int32;\n"
 		"export func many() -> [+]T;\n");
 }
@@ -818,13 +943,13 @@ TEST(build_mgr, lib_archive_links_without_the_source) {
 	EXPECT_EQ(execTestCommand("ar t " + archive + " | sort"),
 		"demo.demo.__allocators.o\ndemo.demo.o\ndemo.shapes.__allocators.o\ndemo.shapes.o\n");
 	// A program's first use of the archive: only the stub is not from it.
-	ASSERT_EQ(execTestCommand("lib/palan/dev/tools/palan-codegen --entry demo.demo..main --target " PALAN_TARGET " -o out/entry.s"), "");
+	ASSERT_EQ(execTestCommand("lib/palan/dev/tools/palan-codegen --entry demo.demo..init --entry demo.demo..main --target " PALAN_TARGET " -o out/entry.s"), "");
 	ASSERT_EQ(execTestCommand("as out/entry.s -o out/entry.o"), "");
-	ASSERT_EQ(execTestCommand("ld out/entry.o " + archive + " -lc -lm -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o out/demo"), "");
+	ASSERT_EQ(execTestCommand("ld out/entry.o " + archive + " lib/palan/dev/" PALAN_TARGET "/std/rt.a -lc -lm -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o out/demo"), "");
 	string output = execTestCommand(
 		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so MALLOC_TRACE=out/trace.log out/demo");
 	ASSERT_EQ(output, "len 2 1 q 7\n");
-	expectBalancedMtrace("out/trace.log", 12);
+	expectBalancedMtrace("out/trace.log", 15);
 }
 
 // Same object file names in one archive: every module's allocators, and a file name of two directories.
@@ -842,15 +967,6 @@ TEST(build_mgr, lib_leaving_out_a_private_type_keeps_the_symbols) {
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\ntype B {\n\tint32 b;\n};\nexport func get(@B b) -> int32;\n");
 }
 
-// The symbol of `get` holds the type the private alias stands for.
-TEST(build_mgr, lib_type_behind_a_private_alias_stays_public) {
-	cleanTestEnv();
-	ASSERT_EQ(execTestCommand(libBuild("private_alias_public.pa")), "");
-	EXPECT_EQ(fileText(string(libOut) + "demo/private_alias_public.pai"),
-		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\ntype A = Kept;\n"
-		"export type Kept {\n\tint32 k;\n};\nexport func get(@A a) -> int32;\n");
-}
-
 TEST(build_mgr, lib_local_header_used_only_in_bodies) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand(libBuild("body_header.pa")), "");
@@ -866,16 +982,16 @@ TEST(build_mgr, lib_named_return_initial_value) {
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\nexport func count() -> int32 n;\n");
 }
 
-// The other module's array stays for the const its public type is sized by; the unused one does not.
+// The other module's array stays for the const its public alias is sized by; the unused one does not.
 TEST(build_mgr, lib_const_from_an_array_through_a_selective_import) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand(libBuild("sized.pa")), "");
 	EXPECT_EQ(fileText(string(libOut) + "demo/sized.pai"),
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\n"
-		"export type Color enum {\n\tRed,\n\tBlue,\n};\n"
+		"export type Rows {\n\tRow a;\n};\n"
 		"[3]int32 table;\nconst K = len(@table);\n"
-		"export type Rows {\n\t[K]int32 a;\n};\n"
-		"export func first(@Rows r, Color c) -> int32;\n");
+		"export type Row = [K]int32;\n"
+		"export func first(@Rows r) -> int32;\n");
 }
 
 // Another module's const of the same name gives way, as it does for a type's size.
@@ -885,17 +1001,18 @@ TEST(build_mgr, lib_parameter_defaults) {
 	EXPECT_EQ(fileText(string(libOut) + "demo/defaults.pai"),
 		"library demo;\nbuilt \"" PALAN_VERSION "\";\ntarget \"" PALAN_TARGET "\";\n"
 		"const K = 2;\n"
-		"const __m1_K = 3;\n"
 		"export type Mode enum {\n\tFast,\n\tSlow,\n};\n"
-		"export type Box {\n\t[__m1_K]int32 a;\n};\n"
+		"export type Box {\n\tArr a;\n};\n"
+		"const __m1_K = 3;\n"
+		"export type Arr = [__m1_K]int32;\n"
 		"export func put(@!Box b, int32 v = K * 10, Mode m = Mode.Slow, @[]uint8 tag = \"none\");\n");
 }
 
 TEST(build_mgr, lib_library_module_has_its_own_allocators) {
-	expectMtraceRun("398_library_allocators", "1 3\n", 12);
+	expectMtraceRun("398_library_allocators", "1 3\n", 13);
 	string dir = fs::weakly_canonical("../test/testdata/build-mgr").string();
-	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/lib_build/shapes.pa.alloc/" PALAN_ALLOCATORS_MODULE ".pa.o"));
-	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/398_library_allocators.pa.d/" PALAN_ALLOCATORS_MODULE ".pa.o"));
+	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/lib_build/shapes.pa.release.alloc/" PALAN_ALLOCATORS_MODULE ".pa.release.o"));
+	EXPECT_TRUE(fs::exists(targetWorkDir() + dir + "/398_library_allocators.pa.release.d/" PALAN_ALLOCATORS_MODULE ".pa.release.o"));
 }
 
 TEST(build_mgr, lib_errors) {
@@ -909,11 +1026,15 @@ TEST(build_mgr, lib_errors) {
 		"return1::palan: '" + lib_build + "plain.pa' has no library declaration, which every module of a library needs\n");
 	EXPECT_EQ(execTestCommand(libBuild("err_package.pa")),
 		"return1::palan: '" + lib_build + "other_package.pa' belongs to library 'other', not 'demo'\n");
-	EXPECT_EQ(execTestCommand(libBuild("err_global.pa")),
-		"return1::palan: '" + lib_build + "err_global.pa' permits a function to use its global 'hits', but a library's top level never runs\n");
 	EXPECT_EQ(execTestCommand(libBuild("err_local_header.pa")),
-		"return1::" + lib_build + "err_local_header.pa:2:1: error: a library's public declaration cannot yet use a C type of the local header 'local_type.h': its reader would not find the header.\n");
+		"return1::" + lib_build + "err_local_header.pa:2:1: error: a library's public declaration cannot use a C type of the local header 'local_type.h': its reader would not find the header; wrap the type in an opaque type to publish it.\n");
 	EXPECT_NE(execTestCommand(libBuild("err_no_export_clause.pa")).find("FILE"), string::npos);
-	EXPECT_NE(execTestCommand(libBuild("err_private_alias.pa")).find("which its object does not define"), string::npos);
+	string internal = "': declare it in the main source.\n";
+	EXPECT_EQ(execTestCommand(libBuild("err_internal_type.pa")),
+		"return1::" + lib_build + "err_internal_type.pa:3:1: error: a library's public declaration cannot use the type 'K.Kept' of the internal module '" + lib_build + "kept.pa" + internal);
+	EXPECT_EQ(execTestCommand(libBuild("err_internal_field.pa")),
+		"return1::" + lib_build + "err_internal_field.pa:3:1: error: a library's public declaration cannot use the type 'K.Kept' of the internal module '" + lib_build + "kept.pa" + internal);
+	EXPECT_EQ(execTestCommand(libBuild("err_private_alias.pa")),
+		"return1::" + lib_build + "private_alias.pa:3:1: error: a library's public declaration cannot use the type 'Hidden' of the internal module '" + lib_build + "private_alias.pa" + internal);
 	EXPECT_FALSE(fs::exists("out/lib"));
 }

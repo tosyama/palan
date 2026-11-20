@@ -747,7 +747,7 @@ TEST(sa_error, struct_arr_lit)
 		{"error_264_struct_lit_dup_field.pa", ":2:26: error: field 'x' is given more than once in a struct literal."},
 		{"error_265_struct_lit_missing_field.pa", ":2:15: error: the literal of struct 'Point' is missing field 'y'."},
 		{"error_266_struct_lit_unknown_field.pa", ":2:21: error: struct 'Point' has no field 'z'."},
-		{"error_267_struct_lit_ptr_field.pa", ":2:15: error: field 'p' of struct 'P' cannot be initialized by a literal: only numeric, struct and array fields are supported."},
+		{"error_267_struct_lit_ptr_field.pa", ":2:15: error: cannot convert 'int64' to '@!int32'."},
 		{"error_268_struct_lit_narrowing.pa", ":3:17: error: Implicit conversion from 'int64' to 'int32' is not allowed"},
 		{"error_693_dict_lit_prim_var.pa", ":1:11: error: a '{name: value}' literal can only be used as a struct value"},
 		{"error_269_dict_lit_prim_elem.pa", ":1:15: error: a '{name: value}' literal can only be used as a struct value: a struct variable's initializer, the source of '->' to a struct, an element of an array literal, or an argument for a struct parameter."},
@@ -807,10 +807,12 @@ TEST(sa_error, field_init)
 {
 	const pair<string, string> cases[] = {
 		{"error_947_field_init_not_const.pa", ":2:27: error: the initializer of field 'x' must be a compile-time constant."},
-		{"error_948_field_init_unsupported.pa", ":2:16: error: field 'p' cannot have an initializer in this version: only a primitive field or a one-dimensional array of primitives can."},
+		{"error_948_field_init_ptr_not_null.pa", ":2:17: error: the initializer of pointer field 'p' must be NULL."},
 		// Constants fold, but a comparison is not one.
 		{"error_949_field_init_compare.pa", ":1:19: error: the initializer of field 'b' must be a compile-time constant."},
 		{"error_950_field_arr_init_not_lit.pa", ":1:23: error: the array literal's dimensions do not match array 'x'."},
+		{"error_1142_field_init_nested_not_const.pa", ":2:21: error: the initializer of field 'a' must be a compile-time constant."},
+		{"error_1143_field_init_ptr_arr.pa", ":2:25: error: array 'ps' cannot be given an array literal: only numeric and struct element types are supported."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -860,7 +862,7 @@ TEST(sa_error, struct_lit_init_assign)
 		{"error_442_struct_lit_init_borrow.pa", ":3:1: error: a struct literal cannot be given to a borrow '@T'; write to its '[0]' to copy into the struct it points to."},
 		{"error_443_struct_lit_to_readonly_elem.pa", ":2:16: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
 		{"error_444_struct_lit_assign_count.pa", ":3:1: error: struct 'V' has 2 fields but its literal has 3 values."},
-		{"error_445_struct_lit_assign_ptr_field.pa", ":4:2: error: field 'p' of struct 'P' cannot be initialized by a literal: only numeric, struct and array fields are supported."},
+		{"error_445_struct_lit_ptr_permission.pa", ":5:2: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
 		{"error_446_struct_lit_transfer.pa", ":3:1: error: '->>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 	};
 	for (auto& [file, expected] : cases) {
@@ -1059,7 +1061,7 @@ TEST(sa_error, expr_rooted_access)
 TEST(sa_error, literal_conversion)
 {
 	const string noCopy = "error: cannot copy '[?]uint8' into 'text'";
-	const string borrowed = "error: a string literal converted to 'text' is a temporary value with no owner to borrow from";
+	const string borrowed = "error: a literal converted to 'text' is a temporary value with no owner to borrow from";
 	const pair<string, string> cases[] = {
 		{"error_987_literal_no_conversion.pa", ":2:1: " + noCopy},
 		{"error_988_literal_conversion_needs_args.pa", ":3:1: " + noCopy},
@@ -1071,6 +1073,10 @@ TEST(sa_error, literal_conversion)
 		{"error_996_literal_borrowed_assign.pa", ":5:1: " + borrowed},
 		{"error_993_literal_conversion_overloads.pa", ":7:1: error: Ambiguous function call 'f': it can mean f(@other), f(@text)."},
 		{"error_994_literal_no_conversion_arg.pa", ":8:1: error: cannot convert '[?]uint8' to '@text'."},
+		{"error_1092_numeric_no_conversion.pa", ":2:1: error: cannot copy 'int64' into 'big'"},
+		{"error_1093_numeric_conversion_ambiguous.pa", ":4:9: error: Ambiguous function call 'big': it can mean big(int32), big(int16)."},
+		{"error_1094_numeric_borrowed_var.pa", ":3:10: error: a literal converted to 'big' is a temporary value"},
+		{"error_1095_numeric_var_expr.pa", ":4:1: error: cannot copy 'int64' into 'big'"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -1177,6 +1183,46 @@ TEST(sa_error, hidden_fields)
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
 		genModuleAst("../test/testdata/sa/lib_sa_hidden.pa");
+		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, opaque_type)
+{
+	auto layout = [](const string& use) {
+		return "error: " + use + " needs the contents of the opaque type 'Handle', which only a module able "
+		       "to write their type knows.";
+	};
+	const pair<string, string> cases[] = {
+		{"error_1057_opaque_contents.pa", ":1:1: error: an opaque type holds what a variable owns through one "
+		 "pointer (a struct, an array of constant sizes or a '[+]T'), not 'int32'."},
+		{"error_1058_opaque_no_init.pa", ":2:1: " + layout("a declaration without an initializer")},
+		{"error_1059_opaque_copy.pa", ":3:1: " + layout("a copy")},
+		{"error_1060_opaque_field.pa", ":3:11: error: 'Handle' is opaque and has no fields: its module reaches "
+		 "the contents through 'as'."},
+		{"error_1061_opaque_frame.pa", ":2:1: " + layout("'$'")},
+		{"error_1062_opaque_sizeof.pa", ":2:11: " + layout("'sizeof'")},
+		{"error_1063_opaque_convert.pa", ":3:14: error: an owned 'Handle' is converted only to or from its contents' "
+		 "type, in a module able to write that type."},
+		{"error_1064_opaque_convert_copy.pa", ":4:1: error: an owned value converted between an opaque type and "
+		 "its contents is given by a move: '<<=', '->>', '>>' or 'return'."},
+		{"error_1152_opaque_convert_assign.pa", ":6:1: error: an owned value converted between an opaque type and "
+		 "its contents is given by a move: '<<=', '->>', '>>' or 'return'."},
+		{"error_1065_opaque_held_copy.pa", ":4:1: error: 'W' holds an opaque value, and copying one held in "
+		 "another value is not supported in this version."},
+		{"error_1066_release_sig.pa", ":3:1: error: a 'release' function takes one owned opaque type of its "
+		 "module and returns nothing."},
+		{"error_1067_release_place.pa", ":2:1: error: a 'release' function is defined at the top level of the "
+		 "module defining its opaque type."},
+		{"error_1068_release_dup.pa", ":4:1: error: 'H' has another 'release' function; a type has one."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		genModuleAst("../test/testdata/sa/lib_sa_opaque.pa");
 		string ast_out = moduleAstPath("../test/testdata/sa/" + file);
 		ASSERT_EQ(execTestCommand(
 			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");

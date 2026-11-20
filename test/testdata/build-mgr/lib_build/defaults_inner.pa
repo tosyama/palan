@@ -1,4 +1,3 @@
 library demo;
 const K = 3;
-export type Mode enum { Fast, Slow };
-export type Box { [K]int32 a; };
+export type Arr = [K]int32;

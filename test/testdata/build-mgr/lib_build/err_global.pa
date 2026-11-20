@@ -1,3 +1,0 @@
-library demo;
-global int32 hits = 0 for f!;
-export func f() { 1 -> hits; }

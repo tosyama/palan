@@ -1,0 +1,4 @@
+cinclude <stdio.h>;
+cinclude "error_617_c_macro_unexported.h";
+int32 stdout = 0;
+@FILE f = GLOBAL();

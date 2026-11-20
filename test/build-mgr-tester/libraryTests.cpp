@@ -103,6 +103,65 @@ printf("%.1f %.1f\n", norm(@a), G.norm(@b));
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "5.0 10.0\n");
 }
 
+// The library's main initializes its internal module first, through the
+// import, so the program needs only what it imports.
+TEST(build_mgr, library_module_globals) {
+	cleanTestEnv();
+	writeFile("out/src/count.pa", R"(library kit;
+import "inner.pa";
+global int32 base = innerStart() + 1 for next!;
+export func next() -> int32 { base + 1 -> base; return base; }
+)");
+	writeFile("out/src/inner.pa", R"(library kit;
+cinclude <stdio.h>;
+func start() -> int32 { puts("inner"); return 10; }
+global int32 seed = start() for innerStart;
+export func innerStart() -> int32 { return seed; }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/count.pa"), "");
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/count>;
+cinclude <stdio.h>;
+printf("%d\n", next());
+printf("%d\n", next());
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "inner\n12\n13\n");
+}
+
+// Only the main's exported globals are published; the program uses them
+// from the interface and the archive alone.
+TEST(build_mgr, library_export_global) {
+	cleanTestEnv();
+	writeFile("out/src/m.pa", R"(library kit;
+import "inner.pa";
+export global int64 hits = 0 for hit!;
+export global []int32 primes = [2, 3, 5];
+global secret for peek;
+export func hit() { hits + 1 -> hits; }
+export func peek() -> int64 { return secret; }
+)");
+	writeFile("out/src/inner.pa", R"(library kit;
+export global int64 secret = 7;
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/m.pa"), "");
+	string pai = fileText("out/libs/kit/m.pai");
+	ASSERT_NE(pai.find("export global int64 hits;\nexport global [3]int32 primes;\n"), string::npos) << pai;
+	ASSERT_EQ(pai.find("secret"), string::npos) << pai;
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/m>;
+import <kit/m> as K;
+cinclude <stdio.h>;
+global hits for f;
+func f() -> int64 { return hits; }
+hit();
+K.hits + 10 -> K.hits;
+printf("%ld %ld %d %d %ld\n", hits, f(), primes[2], K.primes[0], peek());
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "11 11 5 2 7\n");
+}
+
 // The program reads the defaults from the interface alone, through an alias too.
 TEST(build_mgr, library_parameter_defaults) {
 	cleanTestEnv();
@@ -186,15 +245,101 @@ printf("%d %d %ld\n", b.mode, ws[0].in.keep, len(@ws));
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "I2 T2 I4 T4 2 4 1\n");
 }
 
-// The reader would identify a private type of an internal module by the main's
-// module, so its '->' could not be linked.
-TEST(build_mgr, library_copy_func_of_an_internal_private_type) {
+// A library hides an internal module's type behind an opaque one: users own,
+// move and hold it, and release it through the library, with or without a
+// function marked `release`.
+TEST(build_mgr, library_opaque_type) {
 	cleanTestEnv();
-	writeFile("out/src/inner.pa", "library kit;\ntype In { [+]int32 v; };\n"
-		"func ->(@In src, @!In dst) { src.v -> dst.v; }\nexport type Box { In in; };\n");
-	writeFile("out/src/box.pa", "library kit;\nimport \"inner.pa\";\nexport func mk() -> Box b { }\n");
-	EXPECT_NE(execTestCommand("bin/palan --lib -o out/libs out/src/box.pa").find("as a type with its own '->'"),
-		string::npos);
+	writeFile("out/src/conn.pa", R"(library net;
+export type Conn { int32 fd; [+]int32 log; };
+export func touch(@!Conn c, int32 fd) { fd -> c.fd; c.log.push(fd); }
+)");
+	writeFile("out/src/sock.pa", R"(library net;
+cinclude <stdio.h>;
+import "conn.pa" as C;
+export type Sock = opaque C.Conn;
+export type Buf = opaque [+]int32;
+export func open(int32 fd) -> Sock {
+	C.Conn c;
+	C.touch(@!c, fd);
+	return c as Sock;
+}
+export func fd(@Sock s) -> int32 { return (s as @C.Conn).fd; }
+export func close(Sock s) release { printf("close %d\n", fd(@s)); }
+export func buf(int32 n) -> Buf {
+	[+]int32 v;
+	v.resize(n);
+	return v as Buf;
+}
+export func size(@Buf b) -> int64 { return len(b as @[+]int32); }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/sock.pa"), "");
+	fs::remove_all("out/src");
+	string pai = fileText("out/libs/net/sock.pai");
+	EXPECT_EQ(pai.find("Conn"), string::npos) << pai;
+	EXPECT_NE(pai.find("export type Sock = opaque;\nexport type Buf = opaque;\n"), string::npos) << pai;
+	EXPECT_NE(pai.find("export func close(Sock s) release;\n"), string::npos) << pai;
+
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <net/sock>;
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type Peer { Sock s; int32 id; };
+{
+	mtrace();
+	Sock a = open(1);
+	Sock b <<= a;
+	close(b>>);
+	Peer p;
+	open(2) ->> p.s;
+	[3]Sock ss;
+	open(3) ->> ss[1];
+	[+]Sock vs;
+	vs.push(open(4));
+	Buf f = buf(5);
+	printf("%d %ld
+", fd(@p.s), size(@f));
+}
+)");
+	ASSERT_EQ(execTestCommand("bin/palan -o out/p out/app/main.pa"), "");
+	string output = execTestCommand(
+		"env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so MALLOC_TRACE=out/t.log out/p");
+	ASSERT_EQ(output, "close 1\n2 5\nclose 4\nclose 3\nclose 2\n");
+	expectBalancedMtrace("out/t.log", 18);
+
+	writeFile("out/app/copy.pa", "libpath \"../libs\";\nimport <net/sock>;\nSock a = open(1);\nSock b = a;\n");
+	ASSERT_NE(execTestCommand("bin/palan -o out/c out/app/copy.pa").find(
+		"copy.pa:4:1: error: a copy needs the contents of the opaque type 'Sock'"), string::npos);
+}
+
+// Two libraries each export a Point, with its own layout, allocators and '->'.
+TEST(build_mgr, libraries_exporting_one_type_name) {
+	cleanTestEnv();
+	writeFile("out/src/a/pt.pa", R"(library ka;
+export type Point { int32 x; [+]int32 tags; };
+func ->(@Point src, @!Point dst) { src.x + 100 -> dst.x; src.tags -> dst.tags; }
+export func mk(int32 x) -> Point p { x -> p.x; p.tags.push(x); }
+export func show(@Point p) -> int32 { return p.x + p.tags[0]; }
+)");
+	writeFile("out/src/b/pt.pa", R"(library kb;
+export type Point { flo64 y; int64 n; };
+export func mk(flo64 y) -> Point p { y -> p.y; 2 -> p.n; }
+export func show(@Point p) -> int64 { return p.n; }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/a/pt.pa"), "");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/b/pt.pa"), "");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+cinclude <stdio.h>;
+import <ka/pt>;
+import <kb/pt> as B;
+Point a = mk(1);
+Point c = mk(5);
+a -> c;
+[+]B.Point bs;
+bs.push(B.mk(1.5));
+printf("%d %ld %.1f\n", show(@c), B.show(@bs[0]), bs[0].y);
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "102 2 1.5\n");
 }
 
 // The interface keeps hidden fields, which the user's allocators lay out and copy.
@@ -260,6 +405,27 @@ cinclude <stdio.h>;
 printf("%d\n", sum3());
 )");
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "6\n");
+}
+
+TEST(build_mgr, library_c_export) {
+	cleanTestEnv();
+	writeFile("out/src/cb.h", "#include <stdint.h>\nint32_t quad(int32_t v);\n");
+	writeFile("out/src/cb.c", "#include \"cb.h\"\nint32_t twice(int32_t v);\nint32_t quad(int32_t v) { return twice(twice(v)); }\n");
+	ASSERT_EQ(execTestCommand("gcc -c -O1 out/src/cb.c -o out/src/cb.o"), "");
+	writeFile("out/src/twice.pa", R"(library calc;
+cinclude "cb.h" link "cb.o";
+cexport func twice(int32 v) -> int32 { return v * 2; }
+export func quad4() -> int32 { return quad(4); }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/twice.pa"), "");
+	string pai = fileText("out/libs/calc/twice.pai");
+	EXPECT_NE(pai.find("cexport func twice(int32 v) -> int32;\n"), string::npos) << pai;
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <calc/twice>;
+cinclude <stdio.h>;
+printf("%d %d\n", twice(5), quad4());
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "10 16\n");
 }
 
 TEST(build_mgr, library_using_a_library) {

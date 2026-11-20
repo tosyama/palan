@@ -330,7 +330,14 @@ TEST(build_mgr, stat_file_types) {
 		"chr=1\n"
 		"reg=1 size=10 mtime_nonzero=1\n"
 		"lnk=1 target_reg=1\n"
-		"fifo=1\n");
+		"fifo=1\n"
+		"S_ISDIR=1 S_ISREG=0\n");
+}
+
+TEST(build_mgr, function_macro) {
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/440_function_macro.pa");
+	ASSERT_EQ(output, "7 7\nx 5\n3 2\n3 1 12\n42 5\n9\n");
 }
 
 TEST(build_mgr, stat_mode_bits) {
@@ -473,6 +480,12 @@ TEST(build_mgr, link_obj) {
 	ASSERT_EQ(runWithCObj("295_link_obj"), "6\n");
 }
 
+// C calls the functions by name, and Palan calls them past the header's declarations.
+TEST(build_mgr, c_export) {
+	cleanTestEnv();
+	ASSERT_EQ(runWithCObj("431_c_export"), "80 6\n30 11\n");
+}
+
 TEST(build_mgr, link_failure) {
 	for (string opt : {"", "-o out/u "}) {
 		cleanTestEnv();
@@ -509,6 +522,17 @@ TEST(build_mgr, c_struct_byval) {
 		"variadic_after 0.5 7 2.25 9\n");
 }
 
+TEST(build_mgr, c_flo80) {
+	// long double on the stack after the registers, in a struct by value, and
+	// alone in a returned struct, against gcc's code; C calls a cexport back.
+	cleanTestEnv();
+	ASSERT_EQ(runWithCObj("439_c_flo80"),
+		"late 1 7 0.50 9 0.25\n17.750\n"
+		"mix 3 1.50\n4 1.75 / 3 1.50\n"
+		"1.2500\n"
+		"0.66666666666666666668\n");
+}
+
 TEST(build_mgr, c_packed_aligned) {
 	// gcc's side prints its own layout and what it received through each path.
 	cleanTestEnv();
@@ -523,7 +547,6 @@ TEST(build_mgr, c_packed_aligned) {
 }
 
 TEST(build_mgr, c_bit_field) {
-	// Palan writes and reads the fields around C's bit-fields, which C sets;
 	// Bs's bit-field shares an eightbyte with a float, passed by value.
 	cleanTestEnv();
 	ASSERT_EQ(runWithCObj("356_c_bitfield"),
@@ -532,7 +555,13 @@ TEST(build_mgr, c_bit_field) {
 		"1 2 3 / 4 8\n"
 		"bp 4 0 0 5\n6\n"
 		"bl 0 0 6\n8\n"
-		"bs 1.50 0 2.50\n1.25 3.50\nbs 1.25 7 3.50\n");
+		"bs 1.50 0 2.50\n1.25 3.50\nbs 1.25 7 3.50\n"
+		"9 33 -2\n"
+		"bf 1 5 63 2 3 3\n"
+		"bf 1 4 63 2 -3 3\n4 -3\n"
+		"bp 4 -1000 0 5\n-1000\n"
+		"bl -5 1000 6\n-5 1000\n"
+		"bs 0.50 -100 0.75\n-100 7\n");
 }
 
 TEST(build_mgr, epoll_packed) {
@@ -777,6 +806,12 @@ TEST(build_mgr, inet_ntoa) {
 	// The socket headers reach a GNU named variadic macro (`MEMBERS...`).
 	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/314_inet_ntoa.pa");
 	ASSERT_EQ(output, "127.0.0.1 2130706433\n2\n");
+}
+
+TEST(build_mgr, cinclude_after_block) {
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/426_cinclude_after_block.pa");
+	ASSERT_EQ(output, "in f\nin g -1\ntop\n");
 }
 
 TEST(build_mgr, c_func_alias_macro) {

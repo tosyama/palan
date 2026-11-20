@@ -45,10 +45,14 @@ struct FieldLayout {
 	// field (`$[n]...`) is the array laid out in the struct, typed as a
 	// variable whose array is laid out in a frame.
 	json    type;
-	json    initAst;   // the field's initializer as written; null when it has none
+	json    initAst;   // the field's initializer as a literal of typed constants; null when it has none
 	// "private" or "readonly" toward code outside the module defining the
 	// struct; empty = public.
 	string  access;
+	// A C bit-field: `width` bits from bit `shift` of the unit of its type at
+	// `offset`; width 0 is not a bit-field.
+	int     bitShift = 0;
+	int     bitWidth = 0;
 };
 
 // Where an aggregate variable's outermost storage block lives: `$T v;` puts it
@@ -89,12 +93,18 @@ struct StructDef {
 	int  maxAlign  = 0;
 	bool ownsFields = false;  // has an owned field
 	// Has a field initializer, its own or one of a struct laid out in it, so it
-	// is built wherever it comes to exist. `inits` lists its own, as in alloc-shapes.
+	// is built wherever it comes to exist.
 	bool hasInits = false;
-	json inits = json::array();
 	bool built() const { return ownsFields || hasInits; }
 	// The symbol of its own '->', which it carries to every module it reaches.
 	string copyFunc;
+	// An opaque type: owned through one pointer like a struct, laid out as its
+	// contents, which are null where they are not known (a `.pai`). It is
+	// released through releaseFunc, which its module defines.
+	bool   isOpaque = false;
+	json   contents;       // as a declaration's resolved var-type
+	json   contentsOwned;  // as its owner holds it
+	string releaseFunc;
 	// false = tag is known but its layout isn't (C incomplete-type equivalent, e.g. FILE).
 	// Only usable through a pointer (@T/@!T); buildStructDef sets this true on success.
 	bool   isComplete = false;
@@ -134,10 +144,18 @@ struct CallArg {
 	json sa;
 	bool chained = false;
 	json probe;
+	bool spread = false;  // `...a`: ast is a
+};
+
+// The outcome of choosing among overloads: the function chosen, or else the
+// ones tied for it (none when no function fits).
+struct CalleeChoice {
+	optional<Callee> chosen;
+	vector<Callee>   tied;
 };
 
 // Narrowed: exact but for a writable outermost pointer given as read-only.
-// Converted: fits only once a string literal is converted to the parameter's struct.
+// Converted: fits only once a literal is converted to the parameter's struct.
 enum class ArgFit { None, Converted, Viable, Narrowed, Exact };
 
 // A diagnostic decided without exiting, so a check can also just test a fit.
@@ -152,13 +170,14 @@ struct ConstVal {
 	enum class Kind { Int, Uint, Flo } kind;
 	int64_t  i = 0;
 	uint64_t u = 0;
-	double   f = 0;
+	long double f = 0;  // the widest float, flo80, so a flo80 constant keeps its precision
 };
 
 class PlnSemanticAnalyzer {
 	string c2astPath;
 	string inputFilePath;
 	string moduleId_;  // the module's identity, a type's origin
+	bool checks_ = true;  // a debug build's run-time checks
 	json sa;
 	PlnTypeRegistry registry_;
 	map<string, string> strLiteralLabels;  // value -> label
@@ -175,6 +194,8 @@ class PlnSemanticAnalyzer {
 	vector<map<string, json>> varScopes;
 	vector<map<string, json>> cFuncScopes;
 	vector<map<string, json>> cGlobalScopes;
+	// Expandable definitions by name; a null entry ends an outer one's.
+	vector<map<string, json>> expandableScopes;
 	// A deque keeps every definition where it is while overloads are added.
 	vector<map<string, deque<json>>> plnFuncScopes;
 	// len/push/resize/pop for each `[+]T` element type, outside every scope:
@@ -205,6 +226,8 @@ class PlnSemanticAnalyzer {
 		map<string, bool> funcs;    // permitted top-level function name -> writable
 	};
 	map<string, GlobalVar> globals_;
+	// Set once an alias import brings a global, so `M.count` may appear.
+	bool qualifiedGlobals_ = false;
 	// The C globals a `global` statement has named, with the functions it permits.
 	map<string, map<string, bool>> cGlobalPermits_;
 	// This module's top-level Palan functions: written name -> their symbols.
@@ -216,6 +239,17 @@ class PlnSemanticAnalyzer {
 	// only read.
 	json staticBindings_ = json::array();
 	map<string, bool> readOnlyGlobals_;  // -> true for an array or struct, never replaced
+	// The module's `..init`, whose scope holds the globals declared so far:
+	// their initializers run there, before any top-level statement.
+	vector<map<string, json>> initVarScopes_ = {{}};
+	vector<vector<ScopeVar>>  initScopeVars_ = {{}};
+	json                      initBindings_ = json::array();
+	json                      initBody_ = json::array();
+	vector<string>            initImports_;  // module identities, in import order
+	// While a global's initializer is analyzed: the top-level scope it cannot
+	// use, and the global's name.
+	const map<string, json>*  globalInitTopScope_ = nullptr;
+	string                    globalInitName_;
 	// The location each enclosing 'for' iterates over, as a path from its
 	// variable: "." + field, or "[]" for any index. Its storage and length are
 	// held for the whole loop.
@@ -234,8 +268,32 @@ class PlnSemanticAnalyzer {
 	// `pending-alias` statements waiting for that to be known.
 	set<string> escapedVars_;
 	int pendingAliases_ = 0;
+	// Which local variables have given their whole value away (`->>`, `>>`,
+	// `<<=`), along the statements' flow. `since` is the loop entry count when
+	// the variable was last declared or filled; a use in a loop entered after
+	// it reaches that loop's previous iteration. Names are unique among the
+	// scopes in effect (declareVar), so a name identifies its variable.
+	struct GivenState { bool given = false; int since = 0; };
+	struct GivenFlow { map<string, GivenState> vars; bool reachable = true; };
+	struct GivenLoop {
+		int entry;
+		map<string, json> exposed;  // first use reaching the loop's head, by name
+		GivenFlow entry_flow, back{{}, false}, exit{{}, false};
+	};
+	struct GivenTracking {
+		GivenFlow flow;
+		vector<GivenLoop> loops;
+		// Applied when the statement ends: the same statement may be analyzed
+		// twice (pending-alias), and the arguments after `x>>` may borrow x.
+		vector<pair<string, bool>> pending;  // name, given (else filled)
+		int seq = 0;
+	};
+	GivenTracking given_;
+	bool nullCompare_ = false;  // the variable being analyzed is compared with NULL
 	// Registered struct type definitions
 	map<string, StructDef> structDefs_;
+	// C struct tag -> the typedef name messages call it by (from c2ast).
+	map<string, string>    cStructDisplayNames_;
 	set<string>            allocShapeNames_;  // dedup guard for struct alloc-shapes
 	// __pln_B<n> -> n: the struct an element struct owning nothing is laid out as.
 	map<string, int>       byteTypes_;
@@ -250,12 +308,12 @@ class PlnSemanticAnalyzer {
 	// null for a cinclude'd C enum (whose first definition wins).
 	struct EnumDef { map<string, int64_t> values; json loc; };
 	map<string, EnumDef>   enumDefs_;
-	// Defining module of each Palan struct and enum name. These names are
-	// program-wide identities (build-mgr keys struct allocators by them), so a
-	// name may come from one module only. A C type or an alias has no entry.
+	// Defining module of each Palan struct and enum identity. Build-mgr keys
+	// struct allocators by these names, so one comes from one module only. A C
+	// type or an alias has no entry.
 	map<string, string>    typeOrigins_;
-	// Imported type names source may not write unqualified -> the module
-	// alias to write them with.
+	// Imported type names (as written in their module) source may not write
+	// unqualified -> the module alias to write them with.
 	map<string, string>    hiddenTypeNames_;
 	// A top-level struct/enum/alias/const declaration, resolved when first
 	// needed, so neither source order nor which of two files importing each
@@ -271,6 +329,8 @@ class PlnSemanticAnalyzer {
 	// Whether a type has a '->' decides how it is laid out and copied, which a
 	// type declaration may ask before any function is registered.
 	set<const json*>       copyFuncStructs_;
+	// Opaque types of this module -> the symbol of their `release` function.
+	map<string, string>    releaseFuncs_;
 	// A top-level variable, whose type a const's value may need before the
 	// statements are analyzed.
 	struct TopVar {
@@ -299,11 +359,11 @@ class PlnSemanticAnalyzer {
 	// under their written names while the block is analyzed. Shadowing is an
 	// error, so leaving the block erases them without hiding an outer entry.
 	vector<vector<string>> blockDeclNames_;
-	// Written name -> program-wide name of each unexported top-level
-	// struct/enum and each one of the enclosing blocks. Modules and blocks may
-	// reuse a name, the allocators and sa.json may not.
-	map<string, string>    localTypeNames_;
-	int                    localTypeSeq_ = 0;
+	// Written name -> identity of each top-level struct/enum and each one of
+	// the enclosing blocks. Modules and blocks may reuse a name, the allocators
+	// and sa.json may not.
+	map<string, string>    typeIdentities_;
+	int                    blockTypeSeq_ = 0;
 	// Type names (`T` or `V.T`) each enclosing block's imports made writable.
 	vector<vector<string>> blockImportedTypes_;
 	// Program-wide type resolution state, shared by every module's analyzer.
@@ -330,16 +390,34 @@ class PlnSemanticAnalyzer {
 	void        declareVar(const string& name, const json& type, const json* loc_node = nullptr);
 	const json* findVar(const string& name) const;
 	// findVar, or else a C global, which the current function then binds.
-	const json* lookupVar(const string& name, const json& locNode);
+	// `use` is false only for the variable `->>` fills.
+	const json* lookupVar(const string& name, const json& locNode, bool use = true);
+	void        checkNotGiven(const string& name, const json& locNode);
+	void        checkRootNotGiven(const json& location);
+	void        applyPendingGiven();
+	static void mergeGivenFlow(GivenFlow& into, const GivenFlow& from);
+	void        enterGivenLoop();
+	void        leaveGivenLoop();
 	void        bindStatic(const string& name, const string& label, const json& type);
 	void        requireAssignable(const string& name, const json& locNode) const;
 	bool        isStaticBound(const string& name) const;
 	json        storageBorrowType(const string& name, const json& varType, bool isMutable) const;
-	void        sa_global_decl(const json& stmt, json& out);
+	void        sa_global_decl(const json& stmt);
+	// The type an exported global has wherever it is imported, from its declaration
+	// alone: the initializer gives only an array literal's sizes.
+	json        exportedGlobalType(const json& stmt);
+	// Declares a global in the current scope and binds it to its label.
+	void        bindGlobal(const string& name, const string& label, const json& type,
+	                       const optional<ScopeVar>& scopeVar, const json* locNode);
+	// Lets `global` statements name a global bound at the top level.
+	void        registerGlobal(const string& name, const string& label, const json& type, const json* decl);
+	void        importGlobals(const json& stmt, PlnSemanticAnalyzer& sub);
+	// `M.count` of an imported global, written as a field access, becomes its
+	// id, so later passes meet one shape whatever reads the statement raw.
+	json        resolveQualifiedGlobals(const json& node) const;
 	void        sa_global_permit(const json& stmt);
 	void        declarePermittedGlobals(const string& funcName, const json& funcDef);
-	void        checkGlobalsReachedBeforeDecl() const;
-	void        rejectImportedGlobals(const json& importStmt, const json& impAst) const;
+	void        emitInitFunc();
 	bool        isLocalVar(const string& name) const;
 	bool        isOwnedVar(const string& name) const;
 	bool        isFrameVar(const string& name) const;
@@ -353,6 +431,15 @@ class PlnSemanticAnalyzer {
 
 	void        registerCGlobal(const string& name, const json& def);
 	const json* findCGlobal(const string& name) const;
+	const json* lookupCGlobal(const string& name, const json& locNode);
+
+	string      normalizeExpandableBody(json& node) const;
+	void        registerExpandables(const json& stmt);
+	const json* findExpandable(const string& name) const;
+	vector<Callee> findCCallees(const string& name) const;
+	string      unreachableCName(const json& body) const;
+	json        expandCall(const json& expr, const json& def, const json& args, SaDiag& why);
+	json        expandedCall(const json& expr, const string& alias, const string& name);
 	[[noreturn]] void undefinedNameError(const json& at, const json& ref, PlnSaMessageCode undefinedCode) const;
 
 	void        registerPlnFunc(const string& name, const json& def, const json& locNode);
@@ -362,6 +449,7 @@ class PlnSemanticAnalyzer {
 	vector<Callee> findCalleesByAlias(const string& alias, const string& name) const;
 	size_t countCallees(const json& call) const;
 	void   requireAlias(const json& locNode, const string& alias) const;
+	CalleeChoice chooseCallee(const string& name, const vector<Callee>& cands, const vector<CallArg>& args);
 	Callee selectCallee(const json& locNode, const string& name, const vector<Callee>& cands,
 	                    const vector<CallArg>& args);
 	ArgFit argFit(const CallArg& arg, const json& param, size_t argIdx, bool isCFunc, const string& funcName);
@@ -372,7 +460,8 @@ class PlnSemanticAnalyzer {
 	json   makeCall(const json& expr, const vector<Callee>& cands, const string& writtenName);
 	vector<Callee> findCalleesUnderAnyAlias(const string& name) const;
 	vector<Callee> forProtocolCallees(const string& name, const json& structVT) const;
-	vector<Callee> literalConversions(const json& structVT);
+	json   convertibleLiteral(const json& ast);
+	vector<Callee> literalConversions(const json& structVT, const json& lit);
 	json   literalConversion(const json& ast, const json& toVT);
 	vector<Callee> usableCallees(const json& expr, const vector<Callee>& cands) const;
 
@@ -398,24 +487,29 @@ class PlnSemanticAnalyzer {
 	// The type the declaration of the top-level variable `name` gives it,
 	// taken from the declaration's shape alone, or null.
 	const json* topVarType(const string& name);
+	// Resolves an array variable's declared type, filling the sizes its array
+	// literal gives; false if a size is known only at run time.
+	bool fixArrDeclSizes(const json& stmt, const json& var, json& vt);
 	void rejectDeferredConstRefs(const json& locNode, const json& node) const;
-	void adoptImportedType(ImportedType& t, const string& alias);
+	void adoptImportedType(ImportedType& t);
 	// Runs `f` once no declaration is being resolved: resolving a pointee
 	// earlier could report a cycle a pointer breaks.
 	void whenSettled(function<void()> f);
 	void adoptExportedTypes(const json& stmt, const json& impAst, PlnSemanticAnalyzer& sub);
 	void adoptExportedType(const json& stmt, const json& decl, PlnSemanticAnalyzer& sub);
-	void adoptStruct(PlnSemanticAnalyzer& sub, const string& name, bool nameable, const string& alias,
+	void adoptStruct(PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
 	                 const json& locNode);
-	void adoptEnum(const PlnSemanticAnalyzer& sub, const string& name, bool nameable, const string& alias,
+	void adoptEnum(const PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
 	               const json& locNode);
 	void adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
+	// adoptTypeDeps for the type of a variable or an owned field.
+	void adoptVarTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
 	void setTypeNameable(const string& name, bool nameable, const string& alias);
 	// Records `name` as defined by `origin`; false if it already was, exits if
 	// another module or a cincluded header defined it.
-	bool claimTypeName(const string& name, const string& origin, const json& locNode);
-	void declareTypeName(const string& name, const json& stmt);
-	void requireNotPalanType(const string& name, const json& locNode, bool isStruct) const;
+	bool claimTypeName(const string& name, const string& origin);
+	void requireNotPalanType(const string& name, const json& locNode) const;
+	bool namesPalanType(const json& binding) const;  // a binding in typeAliases_
 	// Binds a type an import makes writable; exits if the name is bound to another type.
 	void bindImportedTypeName(const json& locNode, const string& name, const json& type);
 	// Exits if `written` names a Palan type this scope cannot write.
@@ -443,6 +537,7 @@ class PlnSemanticAnalyzer {
 	json sa_expr_cmp(const json& expr);
 	json sa_compare_call(const json& expr, json probes[2]);
 	void checkIntLiteralRange(const json& lit);
+	void checkBitFieldLiteral(const FieldLayout& field, const json& value);
 	void rejectWideCharLit(const json& lit, const json& type);
 	json sa_expr_call(const json& expr);
 	json sa_func_ref(const json& expr, const PlnType* expectedType);
@@ -472,13 +567,17 @@ class PlnSemanticAnalyzer {
 	json saCallArgs(const json& locNode, const json& args, const json& funcParams,
 	                bool isCFunc, const string& funcName);
 	bool takesExpectedType(const json& expr);
-	json knownValueType(const json& expr) const;
+	json knownValueType(const json& expr);
 	vector<CallArg> analyzeCallArgs(const json& args);
 	optional<SaDiag> callArgMismatch(const json& argAst, const json& saArg, const json& param,
 	                                 size_t argIdx, bool isCFunc, const string& funcName);
 	json ownedBlockArg(const json& locNode, const json& arg, CallArg& ca, const json& param,
 	                   size_t argIdx, const string& funcName);
-	json variadicArrayArg(const json& locNode, const json& elemVT, json elems, const string& funcName);
+	json variadicArrayArg(const json& locNode, const json& elemVT, json elems);
+	CallArg spreadCallArg(const json& rawArg, bool last);
+	optional<SaDiag> spreadMismatch(const json& vt, const json& elemVT) const;
+	void checkSpreadPlace(const json& locNode, const json& args, const json& funcParams, const string& funcName);
+	json spreadArrayArg(const json& locNode, CallArg& ca, const json& elemVT, json& count);
 	json bindCallArgs(const json& locNode, vector<CallArg>& args, const json& funcParams,
 	                  bool isCFunc, const string& funcName);
 	[[noreturn]] void reportDiag(const json& locNode, const SaDiag& diag) const;
@@ -532,6 +631,7 @@ class PlnSemanticAnalyzer {
 	                       int64_t frameBytes, int frameAlign, json& post,
 	                       optional<AllocShapeRef> shape = nullopt);
 	json sa_struct_lit(const json& item, const StructDef& def);
+	json sa_field_lit_value(const string& structName, const FieldLayout& f, const json& v);
 	void emitStructLitAssigns(const json& objAst, const StructDef& def, const json& values, json& out);
 	string arrLitDimSize(const json& stmt, const string& name, json& sizeExpr, size_t count);
 	string fillArrLitSizes(const json& stmt, const string& name, json& varType, const json& items);
@@ -563,7 +663,8 @@ class PlnSemanticAnalyzer {
 	void recordElemShape(const AllocShapeRef& shape);
 	json varrData(json varr);
 	void enterBlockDecls(const json& stmts);
-	void declareLocalTypeName(const json& stmt, int seq);
+	void declareTypeIdentity(const json& stmt, int seq);
+	string topTypeIdentity(const string& written) const;
 	void leaveBlockDecls();
 	string declaredTypeName(const string& written) const;
 	bool isDeclNameTaken(const string& name) const;
@@ -580,6 +681,8 @@ class PlnSemanticAnalyzer {
 	void registerCStruct(const json& cincludeStmt, const json& s);  // consume c2ast "structs" entry, register in structDefs_
 	json sa_struct_var_decl(const json& stmt, VarStorage storage); // returns array of statements
 	json sa_type_alias(const json& stmt);         // consume type-alias, register in typeAliases_
+	json sa_opaque_def(const json& stmt);
+	void foldTypeSizes(json& type);
 	json sa_const_decl(const json& stmt);         // consume const-decl, register in constDecls_
 	json sa_enum_def(const json& stmt);           // consume enum-def, register in enumDefs_/typeAliases_
 	// `written` is how source names it, `name` its program-wide name.
@@ -589,7 +692,17 @@ class PlnSemanticAnalyzer {
 	json enumTypeNamed(const string& name) const; // enum value-type for a type name, or null
 	string typeNameWritten(const json& obj) const;
 	json aliasCast(const json& expr, const string& typeName);
-	json sa_expr_cast(const json& expr);
+	json sa_expr_cast(const json& expr, bool moving);
+	json castLens(const json& expr, const json& written, json view);
+	// The source of a move, which alone may be an array cast to other sizes.
+	json sa_move_source(const json& ast, const PlnType* expectedType = nullptr);
+	// The lengths of the levels of the array `value` has, outermost first.
+	json valueLens(const json& value);
+	void checkMoveShape(const json& locNode, const json& value, const json& to, bool inherits);
+	json inheritRunLens(const string& name, const json& varType, const json& value);
+	json minLen(const json& a, const json& b, json& body);
+	json copyRows(const json& locNode, const json& dst, const json& dstLens,
+	              const json& src, const json& srcLens, const json& count, CopyInto into);
 	json resolveEnumerator(const json& expr);     // `Name.X` as a lit-int, or null for a field access
 	vector<string> enumeratorSpellings(const string& name) const;
 	int64_t typeByteSize(const json& locNode, json type);  // `sizeof(type)`, type resolved
@@ -640,7 +753,11 @@ class PlnSemanticAnalyzer {
 	void  validateNativeSig(const json& funcDef);
 	void  validateOperatorSig(const json& funcDef);
 	void  registerCopyFunc(json& funcEntry, const string& scope);
+	void  registerReleaseFunc(const json& funcEntry, const string& scope);
+	void  emitReleaseFuncs();
+	void  emitFieldInitFuncs();
 	void  validateVariadicSig(const json& funcDef);
+	void  validateCExportSig(const json& funcDef);
 	json  normalizeArrBorrowType(const json& locNode, const json& type);
 	json  varrBorrowType(const json& locNode, const json& arr, bool isMutable);
 	json  varrStorageType(const json& locNode, const json& arr);
@@ -670,6 +787,7 @@ class PlnSemanticAnalyzer {
 	                 const string& funcName, json& argAst, json& body, json& release);
 	json  bindCallTemp(json saArg);
 	void  checkBorrowSource(const json& locNode, const json& saValue, const json& dstType);
+	bool  locationPath(const json& e, vector<string>& path);
 	void  checkRangeChange(const json& locNode, const json& locAst, RangeChange change);
 	void  checkRangeBorrowBinding(const json& locNode, const json& srcAst, const json& dstType);
 	void  registerTypeAliasChecked(const json& locNode, const string& aliasName, const json& resolved);
@@ -695,9 +813,23 @@ class PlnSemanticAnalyzer {
 	const FieldLayout& findFieldOrExit(const string& structName, const string& fieldName, const json& locNode,
 	                                   bool forWrite);
 	bool outsideTypeModule(const string& structName) const;
+	string structDisplayName(const string& structName) const;
+	string typeDisplayName(const json& t) const;
 	// Look up a struct already known to be registered (name presence must be checked
 	// by the caller beforehand) and reject it if its layout isn't known yet.
-	const StructDef& requireCompleteStruct(const string& structName, const json& locNode);
+	const StructDef& requireCompleteStruct(const string& structName, const json& locNode, const string& use = "this");
+	// The opaque type a pointer (an owner or a borrow) points to, or null.
+	const StructDef* opaqueDefOf(const json& vt) const;
+	// A struct's own storage, which is passed and returned by value; an opaque
+	// type's is only ever its owner, a pointer.
+	bool isStructValue(const json& vt) const;
+	// Whether this module can write the type of an opaque type's contents,
+	// which lets it allocate, copy and convert them.
+	bool opaqueContentsVisible(const StructDef& def) const;
+	json asOpaqueContents(json value, const StructDef& def) const;
+	bool holdsOpaque(const json& vt) const;
+	json opaqueConversion(const json& expr, const json& src, const json& written);
+	json sa_opaque_var_decl(const json& stmt, VarStorage storage);
 	// `entry` must be a cinclude'd C function entry already processed by
 	// normalizeCFuncSig -- the only producer of "_unsupported-sig". No-op if
 	// the signature is fully representable.
@@ -749,7 +881,7 @@ class PlnSemanticAnalyzer {
 	void checkGivenOwners(const json& locNode, const vector<json>& argAsts, const json& saArgs);
 	bool isGlobalName(const string& name) const;
 	// `T b <<= v`: the initializer as a pinned value b takes over; its evaluation goes to pre.
-	json takeOverInit(const json& stmt, const json& var, VarStorage storage, json& pre);
+	json takeOverInit(const json& stmt, json& var, VarStorage storage, json& pre);
 	// `value ->> target`: releases what target holds, stores, and resets the source.
 	json transferStmts(const json& stmt, json targetRelease, json store, const json& value);
 	json sa_return_stmt(const json& stmt);
@@ -779,4 +911,5 @@ public:
 	// The symbols of a .pai's public functions, as an importer of it resolves them.
 	json interfaceSymbols(const json& ast);
 	void setLibraries(map<string, string> libraries);  // import <pkg/mod> -> its AST file
+	void setChecks(bool checks) { checks_ = checks; }
 };

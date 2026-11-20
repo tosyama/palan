@@ -165,7 +165,7 @@ TEST(sa, cinclude_struct_arg)
 	ASSERT_EQ(v["var-type"]["type-kind"], "pntr");
 	ASSERT_EQ(v["var-type"]["base-type"]["type-kind"], "struct");
 	ASSERT_EQ(v["var-type"]["base-type"]["type-name"], "Point");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 
 	// 10 -> p.x / 20 -> p.y resolve to the same field-assign shape as a
@@ -202,7 +202,7 @@ TEST(sa, cinclude_nested_struct)
 	const auto& decl = jout["statements"][0];
 	const auto& v = decl["vars"][0];
 	ASSERT_EQ(v["name"], "it");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "32");
 
 	// it.it_interval.tv_sec: it_interval@0, tv_sec@0 -> flattened offset 0
@@ -406,7 +406,7 @@ TEST(sa, cinclude_arr_field_prim)
 	// fix above, since "char name[16]" collapsed to a single int8 field).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "b");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "16");
 }
 
@@ -424,7 +424,7 @@ TEST(sa, cinclude_arr_field_struct)
 	// Poly p; -> malloc(24): confirms totalSize == 3 * Point.totalSize(8) == 24.
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "p");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "24");
 }
 
@@ -445,7 +445,7 @@ TEST(sa, cinclude_ptr_slot_arr_field)
 	// not 16 (two 8-byte pointers, the pre-fix misparse).
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "s");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "56");
 }
 
@@ -463,7 +463,7 @@ TEST(sa, cinclude_struct_stat_size)
 
 	const auto& v = jout["statements"][0]["vars"][0];
 	ASSERT_EQ(v["name"], "s");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 	ASSERT_EQ(v["init"]["args"][0]["value"], "144");
 }
 
@@ -480,7 +480,7 @@ TEST(sa, cinclude_pthread_union_size)
 	ASSERT_EQ(st.size(), size(sizes));
 	for (size_t i = 0; i < size(sizes); i++) {
 		const auto& v = st[i]["vars"][0];
-		ASSERT_EQ(v["init"]["name"], "malloc") << v["name"];
+		ASSERT_EQ(v["init"]["name"], "__pln_malloc") << v["name"];
 		ASSERT_EQ(v["init"]["args"][0]["value"], sizes[i]) << v["name"];
 	}
 }
@@ -734,7 +734,7 @@ TEST(sa, struct_ret_c_call) {
 	ASSERT_EQ(decl["stmt-type"], "var-decl");
 	const auto& v = decl["vars"][0];
 	ASSERT_EQ(v["name"], "d");
-	ASSERT_EQ(v["init"]["name"], "malloc");
+	ASSERT_EQ(v["init"]["name"], "__pln_malloc");
 
 	const auto& call = stmts[1]["body"];
 	ASSERT_EQ(stmts[1]["stmt-type"], "expr");
@@ -957,19 +957,21 @@ TEST(sa, c_struct_arg) {
 	vector<json> calls;
 	for (auto& s : jout["statements"])
 		if (s["stmt-type"] == "expr") calls.push_back(s["body"]);
-	ASSERT_EQ(calls.size(), 5u);
+	ASSERT_EQ(calls.size(), 6u);
 
-	json i8 = {{"size", 8}, {"eightbytes", json::array({{{"class", "int"}, {"size", 8}}})}};
+	json i8 = {{"size", 8}, {"align", 4}, {"eightbytes", json::array({{{"class", "int"}, {"size", 8}}})}};
 	ASSERT_EQ(calls[0]["args"][0]["expr-type"], "id");
 	ASSERT_EQ(calls[0]["args"][0]["struct-arg"], i8);
-	ASSERT_EQ(calls[1]["args"][0]["struct-arg"], json({{"size", 24}, {"eightbytes", json::array()}}));
+	ASSERT_EQ(calls[1]["args"][0]["struct-arg"], json({{"size", 24}, {"align", 8}, {"eightbytes", json::array()}}));
 	ASSERT_EQ(calls[2]["args"][0]["struct-arg"],
-		json({{"size", 3}, {"eightbytes", json::array({{{"class", "int"}, {"size", 3}}})}}));
+		json({{"size", 3}, {"align", 1}, {"eightbytes", json::array({{{"class", "int"}, {"size", 3}}})}}));
 	// A literal and a returned struct are held in a temp, which carries the mark.
 	ASSERT_EQ(calls[3]["args"][0]["expr-type"], "temp");
 	ASSERT_EQ(calls[3]["args"][0]["struct-arg"], i8);
 	ASSERT_EQ(calls[4]["args"][0]["expr-type"], "temp");
 	ASSERT_EQ(calls[4]["args"][0]["struct-arg"], i8);
+	// A flo80 makes it MEMORY class, laid on the stack at its 16-byte alignment.
+	ASSERT_EQ(calls[5]["args"][0]["struct-arg"], json({{"size", 32}, {"align", 16}, {"eightbytes", json::array()}}));
 }
 
 TEST(sa, c_struct_arg_read_only) {
@@ -1036,7 +1038,7 @@ TEST(sa, syscall_decl) {
 	json jout = run_sa("../test/testdata/sa/188_syscall_decl.pa");
 	ASSERT_TRUE(jout.is_object());
 
-	ASSERT_EQ(jout["functions"].size(), 1u);
+	ASSERT_EQ(jout["functions"].size(), 2u);
 	ASSERT_EQ(funcName(jout["functions"][0]["name"]), "main");
 }
 
@@ -1196,7 +1198,7 @@ TEST(sa, c_fd_set)
 	json jout = run_sa("../test/testdata/sa/264_c_fd_set.pa");
 	ASSERT_TRUE(jout.is_object());
 	const auto& init = jout["statements"][0]["vars"][0]["init"];
-	ASSERT_EQ(init["name"], "malloc");
+	ASSERT_EQ(init["name"], "__pln_malloc");
 	ASSERT_EQ(init["args"][0]["value"], "128");
 }
 
@@ -1211,4 +1213,23 @@ TEST(sa, c_func_ptr_typedef)
 	ASSERT_EQ(vt["base-type"]["type-kind"], "func");
 	ASSERT_EQ(vt["base-type"]["parameters"][0]["var-type"]["type-name"], "int32");
 	ASSERT_EQ(stmts[1]["vars"][0]["init"]["expr-type"], "call-ptr");
+}
+
+TEST(sa, c_macro_expand)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/356_c_macro_expand.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& stmts = jout["statements"];
+	size_t n = stmts.size();
+	// The body calls C's get, not the Palan function of its name.
+	const auto& scale = stmts[n - 3]["vars"][0]["init"];
+	ASSERT_EQ(scale["expr-type"], "mul");
+	ASSERT_EQ(scale["left"]["func-type"], "c");
+	ASSERT_EQ(scale["left"]["args"][0]["value"], "2");
+	ASSERT_EQ(stmts[n - 2]["vars"][0]["init"]["value-type"]["type-name"], "uint8");
+	const auto& box1 = stmts[n - 1]["vars"][0]["init"];
+	ASSERT_EQ(box1["expr-type"], "arr-index");
+	ASSERT_EQ(box1["array"]["var"], "b");
+	ASSERT_EQ(box1["index"]["value"], "1");
 }

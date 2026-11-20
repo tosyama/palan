@@ -1,0 +1,31 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type big { [+]int64 d; };
+func big(int64 n) -> big b { n -> b.d.push(); }
+func big(flo64 f) -> big b { int64(f * 10.0) -> b.d.push(); }
+func show(@big b) { printf("%ld ", b.d[0]); }
+func pick(int64 n) { printf("i%ld ", n); }
+func pick(@big b) { printf("b"); show(b); }
+func *(@big x, @big y) -> big r { x.d[0] * y.d[0] -> r.d.push(); }
+func ==(@big x, @big y) -> bool { return x.d[0] == y.d[0]; }
+func mk() -> big { return 7; }
+type pair { big a; int32 n; };
+const K = 10;
+mtrace();
+{
+	big a = 12;
+	show(@a);
+	1.5 -> a;
+	show(@a);
+	show(-12);
+	pick(3);
+	big m = a * 2;
+	show(@m);
+	if m == 6 * 5 { printf("eq "); }
+	show(@mk());
+	pair p = [K, 1];
+	show(@p.a);
+	[2]big bs = [1, 2];
+	show(@bs[1]);
+}
+printf("\n");

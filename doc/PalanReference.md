@@ -1,6 +1,6 @@
 # Palan Language Reference
 
-**Version:** v0.2.5
+**Version:** v0.2.6
 
 Palan is a compiled systems programming language designed as a simpler, safer, and more enjoyable alternative to C. It targets developers who want low-level control and direct access to C libraries, without the sharp edges of C syntax. Palan code compiles to native x86-64 binaries via AT&T assembly, with no runtime overhead.
 
@@ -60,6 +60,7 @@ palan source.pa                  # compile, link and run
 palan source.pa a -b             # run with the arguments "a" and "-b"
 palan -o myapp source.pa         # compile & link -> ./myapp
 palan --lib -o dir main.pa        # build the library main.pa is the main source of
+palan --debug -o myapp source.pa # keep the run-time checks in myapp
 palan --clean                    # clean intermediate files
 ```
 
@@ -67,6 +68,16 @@ The build manager (`palan`) orchestrates the full pipeline: parse → semantic a
 Options go before the source file; everything after it is passed to the program (see
 [Program Structure](#program-structure) for `args`). Without `-o`, the executable is built among
 the intermediate files under `~/.palan/work/`, not in the current directory.
+
+A build is a debug build when the program is run directly and a release build with `-o` (`--lib`
+too). A run-time check that fails prints `runtime error: <what>` and aborts the program. A
+release build leaves out the checks of the writer's errors (a negative array size, `pop` and
+`resize` of a variable-length array), so what they would stop is undefined; a failed allocation
+(`out of memory`) is checked in either. `--debug` and `--release` choose the mode either way. A
+library keeps the checks of the mode it was built in.
+
+The environment variable `PALAN_WORK` names another directory for the intermediate files, in place
+of `~/.palan/work/`. `--clean` removes only what `palan` put there.
 
 ---
 
@@ -137,6 +148,7 @@ in the source is taken as it is. `\u{X}` (in a character literal too) must name 
 | `uint64`| 64-bit  | unsigned   |
 | `flo32` | 32-bit  | float      |
 | `flo64` | 64-bit  | float      |
+| `flo80` | 80-bit (16 bytes) | float |
 | `bool`  | 8-bit   | holds 0 or 1 |
 
 ### bool
@@ -230,6 +242,8 @@ cinclude <stdlib.h>;
   as it is. A `@X` pointer can be viewed this way only to copy from it. A `@!X` location is
   viewed this way to be given a value: `v ->> loc as T` (see
   [Ownership Across C Functions](#ownership-across-c-functions)).
+- From an owned array to the same array of other sizes (`a as [m]T`), only where it is given
+  away (see [Sizes Known Only at Run Time](#sizes-known-only-at-run-time)).
 
 A value is never cast into an owned type — a cast never creates ownership — and a struct value
 can't be cast into a pointer: take its address first (`@!s as @!uint8`).
@@ -286,12 +300,18 @@ When passing to variadic C functions (e.g., `printf`), small integer types are p
 
 ### Floating-Point Types
 
-Palan supports 32-bit and 64-bit IEEE 754 floating-point types:
+Palan supports 32-bit and 64-bit IEEE 754 floating-point types, and the x87 80-bit extended
+precision type:
 
-| Type    | Width  | C equivalent |
-|---------|--------|--------------|
-| `flo32` | 32-bit | `float`      |
-| `flo64` | 64-bit | `double`     |
+| Type    | Width  | C equivalent  |
+|---------|--------|---------------|
+| `flo32` | 32-bit | `float`       |
+| `flo64` | 64-bit | `double`      |
+| `flo80` | 80-bit | `long double` |
+
+A `flo80` takes 16 bytes in memory, 16-byte aligned, as C's `long double` does on x86-64, and
+works everywhere `flo32` and `flo64` do. It is computed on the x87 unit, so it is slower than the
+other two.
 
 #### Declaration and Initialization
 
@@ -315,7 +335,7 @@ flo64 n = 5;    // stored as 5.0
 
 #### Arithmetic Operators
 
-`+`, `-`, `*`, `/` work on `flo32` and `flo64` operands and produce a float result.
+`+`, `-`, `*`, `/` work on float operands and produce a float result.
 
 ```palan
 flo64 a = 3.0, b = 2.0;
@@ -364,7 +384,7 @@ printf("%ld\n", int64(pi));   // prints 3
 
 #### Float Parameters and Return Values
 
-Palan functions take and return `flo32`/`flo64` values like any other type, and may mix them with
+Palan functions take and return float values like any other type, and may mix them with
 integer parameters and return values:
 
 ```palan
@@ -439,7 +459,8 @@ printf("%ld\n", MaxLen);   // 256
   value outside that range, a negative value in `uint64`, or a division by zero is a compile
   error. Division truncates toward zero, and `%` takes the sign of the dividend. A shift is
   computed at 64 bits: bits shifted out are not an error, and the count is taken modulo 64.
-- A float operand makes the whole operation `flo64`; `%`, `&`, `|`, `^` and `~` on a float are errors.
+- A float operand makes the whole operation a float, computed at `flo80` precision; `%`, `&`, `|`,
+  `^` and `~` on a float are errors.
 - The result is untyped like a literal and must fit the type of the place it is used.
 - A `cinclude`d macro constant inside a constant expression drops its C type and is computed like
   any other literal.
@@ -702,8 +723,9 @@ printf("\n");                          // 0:20 1:40 2:60
 - The body cannot change `arr`'s length or replace it, directly or through what contains it:
   `push`, `pop`, `resize`, `->>` into or out of it, `->` into a variable-length one, and passing
   `@!arr` are compile errors. Writing elements, changing an inner array (`m[0].push(1)` in
-  `for copy r in m`) and `@arr` are fine. A change made through another borrow of `arr` is not
-  detected.
+  `for copy r in m`) and `@arr` are fine. So is changing an element at another constant index
+  (`vv[1].push(1)` in `for copy a in vv[0]`); one at a variable index may be the same element and
+  is rejected. A change made through another borrow of `arr` is not detected.
 
 A struct can be iterated over when its type defines two functions, `iter` and `next`:
 
@@ -803,6 +825,9 @@ Palan function definitions inside a block are block-scoped and support forward r
 Types and consts declared inside a block follow the same rules (see [Declaration order](#declaration-order)).
 
 `cinclude` inside a block makes the imported C functions available only within that block. A C function brought in again is the same function.
+
+Blocks and the statements holding them (`if`, `while`, `for`) nest up to about 3000 levels; a
+deeper source fails to parse with "memory exhausted".
 
 ### Optional Semicolons
 
@@ -956,10 +981,30 @@ say(", ");                        //  (0)
 - A function pointer type can end with `[...]T` (`@func(int32, [...]int64) -> int64`) and is
   called the same way. It is a different type from one taking `@[]T`, and a variadic function
   cannot be given to a C function as a callback.
-- An existing array cannot be passed as the arguments: `sum(1, a)` for an array `a` is an
-  error.
-- An argument borrowing a temporary value held inside another call, such as `f(id(@mk()))` where
-  `id` returns the borrow it is given, is a compile error: keep the value in a variable first.
+- `...a` passes the array `a` as all of the arguments (see below).
+
+`...a` passes an existing array as all of the arguments, as a `[n]T` parameter takes an array:
+
+```palan
+func avg([...]int64 xs) -> int64 { return sum(0, ...xs) / len(@xs); }
+
+[3]int64 a = [1, 2, 3];
+printf("%ld\n", sum(1, ...a));     // 7: the callee gets a copy
+printf("%ld\n", avg(...a));        // 2
+printf("%ld\n", sum(0, ...a>>));   // 6: a itself is passed, and a is now NULL
+```
+
+- It is the last argument and the only one for the variadic parameter: `sum(1, 2, ...a)` is an
+  error. It is written only to a Palan variadic parameter, not to C's `...`.
+- `...a` passes a copy: what the function writes into its elements does not reach `a`.
+  `...a>>` passes `a` itself without a copy, and `a` becomes NULL (see
+  [Giving Values Away](#giving-values-away--and-taking-them-over-)). A call returning an array is
+  passed without a copy too (`...mk()`). Either way the struct elements are the function's.
+- `a` is any array with a length: a `[n]T` (also sized at run time), a `[+]T`, a row, a field,
+  a borrowed `@[n]T` or `@[+]T`, or the function's own variadic parameter. A `[]T` keeps no
+  length and cannot be spread.
+- The elements must be exactly `T`, as for [copying](#copying--); they are not converted:
+  `[3]int32` cannot be spread into `[...]int64`, nor `[n]$T` into `[...]T`.
 
 ### Method-Form Calls
 
@@ -1121,6 +1166,13 @@ show(2.5);          // float 2.5
   ambiguous: write `f(int32(x))`.
 - A literal matches exactly only its default type: `int64` for an integer, `uint64` with `u`,
   `flo64` for a decimal. With `f(int32)` and `f(int64)`, `f(1)` calls `f(int64)`.
+- An arithmetic expression with a literal in it is taken as a literal is, unless an operand is
+  known to be a struct, which makes the expression an [operator function](#operator-functions)
+  call. Known to be a struct are a variable, a field reached from one, and a call whose functions
+  all return one struct type or whose arguments, all of these kinds, choose a function returning
+  one. Given `h(int32) -> vec2` and `h(flo64) -> flo64`, `g(h(n) * 2.0)` with an `int32 n` passes
+  a `vec2`, while `g(h(2.5) * 2.0)` is taken as a number: a literal argument is typed only once
+  `g` is chosen.
 - A method-form call `x.f()` considers only the functions whose first parameter is `@!`. In a
   chained call `v -> f()`, `v` fits a `@T` parameter as `@v`.
 - A function name used as a value takes the function of the pointer type it is given to:
@@ -1133,8 +1185,9 @@ show(2.5);          // float 2.5
   ambiguous: with `f(int32)` and
   `f(int32, int32 = 0)`, `f(1)` is a compile error, and `f(1, 0)` calls the second. A function
   using defaults or a variadic parameter is called when it is the only one that fits.
-- A string literal [converts](#conversion-from-a-string-literal) to a struct parameter only when no
-  function fits without the conversion, so `f(@[]uint8)` is chosen over `f(@name)` for `f("Ann")`.
+- A literal [converts](#conversion-from-a-literal) to a struct parameter only when no function
+  fits without the conversion, so `f(@[]uint8)` is chosen over `f(@name)` for `f("Ann")`, and
+  `f(int64)` over `f(big)` for `f(12)`.
   Among those needing it, the rules above apply, a converted argument counting as exact.
 
 ### Operator Functions
@@ -1236,7 +1289,8 @@ printf("%ld %d\n", t.sum, t.count);   // 12 2
   a temporary would be lost.
 - The right operand is passed as an operand of `+` is, and chooses among overloads the same way.
 - `<<` binds as the shifts do: `s << a + b` appends `a + b`, and `s << x -> f()` is `f(s << x)`.
-- `[+]T` has no `<<`; it uses `push`.
+- `[+]T` has no `<<`; it uses `push`. For a `[+]uint8`, `v << "abc"` would not say whether it
+  adds the bytes or one element.
 
 ---
 
@@ -1265,24 +1319,34 @@ cinclude <stdio.h>;
 ### Sizes Known Only at Run Time
 
 An array variable whose size is known only at run time (`[n]int32 a;` for a variable `n`) keeps
-that size from its declaration. It is moved, given, taken over and copied like any other
-array, by the sizes of the variable or row receiving the value or releasing it; that the two
-sizes agree is the program's responsibility, as it is not checked:
+that size from its declaration, and the rows of `[3][m]int32 mm;` share the one `mm` keeps. An
+array does not carry its size with it:
 
 ```palan
-int64 n = 100;
+int64 n = 2;
+int64 m = 4;
 [n]int32 a;
-[n]int32 b <<= a;        // a is now NULL
-[n]int32 c;
-b -> c;                  // copies n elements
-int64 len_a = len(@a);   // n
-for copy x in c { }      // n times
+[m]int32 b;
+a ->> b;                    // b takes a's size: len(@b) is 2, and a is now NULL
+[m]int32 c;
+b -> c;                     // copies 2 elements, the shorter of the two
+[3][m]int32 mm;
+[n]int32 d;
+d as [m]int32 ->> mm[1];    // a row's size cannot change: the cast says d has it
 ```
 
+- A variable given an array (`->>`, `<<=`) takes over its size: `[m]int32 e <<= a;` has `a`'s.
+- A row, a field, a parameter, a return value and a variable of constant size keep theirs. An
+  array is given to one only if both sizes are known at compile time and are equal, or through
+  a cast to the receiver's size, which is not checked.
+- `a as [m]T` gives the array `a` owns other sizes, with the same element type and layout. It is
+  written only where the array is given away (`->>`, `<<=`, `>>`, `return`), and `a` becomes
+  NULL as usual.
+- `->` copies each level as far as the shorter of the two goes; the receiving array keeps its
+  size. Sizes known at compile time on both sides must still be equal.
 - `len` and `for` read the size kept, as for a row of the variable (`len(@m[0])`,
   `for copy x in m[0]`).
-- A `[]T` parameter keeps no size, so it cannot be copied from into an array, and a `[+]T`
-  cannot copy from an array whose size is known only at run time.
+- A `[]T` parameter keeps no size, so it cannot be copied from into an array.
 - A parameter's or return value's sizes are known at compile time.
 
 ### Stack Arrays (`$[n]T`)
@@ -1504,7 +1568,8 @@ exit. A slot borrows what it points to and never owns it: store into it with `->
 memory from C `malloc`, or an array as `@!arr`) and free that memory yourself. `->>` into a slot is a compile error.
 `[n]@![]$[m]T` and `[n]@![]$T` are slots the same way, pointing at contiguous rows or structs.
 `[n]@[]T` declares read-only slots the same way: they take `@arr` as well as `@!arr`, and
-nothing can be written through them.
+nothing can be written through them. Slots can be the elements of rows as other elements can
+(`[n][m]@T`, `[n]$[m]@T`, `[+][m]@T`, a `[n][m]@T` field, a `[][m]@T` parameter).
 
 ```palan
 int64 rows = 4;
@@ -1531,9 +1596,12 @@ minos[0][3] -> mino[0];      // copy one struct element
 
 - The source must have the same element type and layout as the destination, and the same sizes
   where both are known at compile time; otherwise it is a compile error. A source may be borrowed
-  (`@[n]T`, `@T`). A size known only at run time is [the owner's](#sizes-known-only-at-run-time).
+  (`@[n]T`, `@T`). A size known only at run time is copied
+  [up to the shorter one](#sizes-known-only-at-run-time).
 - What the destination owns is copied too: owned struct fields and arrays, and the structs of a
   `[n]T` array, get copies of the source's. A `@T`/`@!T` pointer is copied as a pointer.
+- An element taken out with `->>` is NULL, and stays NULL in the copy. An element copied into
+  a slot that is NULL is made there first, as a new value.
 - A struct returned by a function is copied the same way, and then freed. A `[]T` return has
   no size known at compile time, so it cannot be copied into an array.
 
@@ -1639,7 +1707,8 @@ big ->> total();             // the same, chained
   or element, a value a call returns, or a pointer viewed as an owner (`p as T`).
 - `v>>` is written only as a call argument to a parameter that owns it, and cannot be cast.
   Given to a `@T`/`@!T` parameter, a C function's pointer parameter, or a variadic argument, it
-  is a compile error, since nothing would own it.
+  is a compile error, since nothing would own it. A whole array is given to a variadic parameter
+  as `...a>>` (see [Variadic Arguments](#variadic-arguments)).
 - The call's arguments are evaluated left to right, and `v>>` reads `v` where it is written, but
   `v` becomes NULL only after all of them, just before the call. Another argument can still
   borrow from it, as a C function taking a request and a part of it expects
@@ -1658,7 +1727,33 @@ NULL) or a call result:
 ```
 
 - `b` must own its array or struct: not a `$` variable, a borrow or a primitive. `v` must have
-  `b`'s type (for an array, the same sizes where both are known at compile time).
+  `b`'s type (for an array, the same sizes where both are known at compile time; a size `b`
+  leaves to run time is [`v`'s](#sizes-known-only-at-run-time)).
+
+#### Using a Variable After It Is Given Away
+
+A local variable or parameter that has given its whole value away (`->>`, `>>`, `<<=`) holds
+NULL, and using it is a compile error until `->>` fills it again. Any appearance counts as a use
+(`len(@a)` too, `@a`, `-> a`, giving it away again, `return a`), except comparing the variable
+itself with `NULL` (`a == NULL`, `a != NULL`) and the release at scope exit.
+
+```palan
+[3]int32 a;
+[3]int32 b;
+a ->> b;
+len(@a);                     // error: 'a' was given away
+[3]int32 t;
+t ->> a;                     // a holds t's array
+len(@a);                     // 3
+```
+
+- A use is judged along each path to it: given on any path that reaches it (one branch of an
+  `if`, a `break` reaching past the loop) is an error, and a path ending in `return` reaches
+  nothing. In a loop, a use reached from the loop's start before `->>` fills the variable is an
+  error if the end of an iteration (or a `continue`) leaves it given.
+- A variable becomes given when its statement ends (for `<<=`, when its initializer does): the
+  rest of the same statement is not checked, as the arguments after `v>>` may still borrow it.
+- A field or element given away, and a global, are not checked.
 
 #### Ownership Across C Functions
 
@@ -1784,7 +1879,7 @@ element as in other arrays, without bounds checking. Four built-in functions wor
 | Function | Meaning |
 |----------|---------|
 | `len(@v)` | the number of elements, an `int64` |
-| `push(@!v, x)` | appends a copy of `x` |
+| `push(@!v, x)` | appends `x`, a copy of it unless it is moved (`x>>`) |
 | `resize(@!v, n)` | sets the length to `n` (an `int64`); new elements are undefined, as an array variable's are |
 | `pop(@!v)` | removes the last element and returns it |
 
@@ -1818,7 +1913,9 @@ printf("\n");                // 1 2 3
 
 - Growing past the room it has reallocates the elements, at least doubling the room, so adding
   one element at a time reallocates only now and then. Shrinking keeps the room.
-- `pop` on an empty array and `resize` to a negative length abort the program.
+- `pop` on an empty array and `resize` to a negative length abort the program, in a debug build
+  (see [Command-Line Usage](#1-command-line-usage)), as a negative size known only at run time
+  does for any array.
 - `[+n]T v = [...]` takes `n` elements, the literal's first and the rest undefined; `n` must be
   a constant no less than the literal's length.
 - `$[+]T v` keeps the array's header in the stack frame; its elements are on the heap either way.
@@ -1872,8 +1969,8 @@ printf("%ld\n", len(@m));    // 5
 
 - A `[+]T` parameter receives a copy of the argument. Returning a borrow (`return v;` for a
   `@[+]T v`) returns a copy, as for a struct.
-- Copying into a `[+]T` takes any number of elements and sets the length to it; a `[+]T` cannot
-  be copied into a `[n]T`.
+- Copying into a `[+]T` takes any number of elements and sets the length to it. Copying a `[+]T`
+  into a `[n]T` copies as many as both have; the `[n]T` keeps its size.
 - Changing the length can move the elements, so a borrow of an element (`@!v[i]`) or the
   elements given to a `[]T` must not be kept across a `push` or `resize`. This is not checked.
 
@@ -1906,16 +2003,18 @@ printf("%ld %ld\n", len(@m[0]), len(@m[1]));      // 0 1
 
 [+][3]int32 rows;            // rows of 3
 [3]int32 r = [1, 2, 3];
-rows.push(@r);               // copies r in
-rows.resize(2);
-printf("%ld %d\n", len(@rows), rows[0][2]);       // 2 3
+rows.push(r);                // copies r in
+rows.push([4, 5, 6]);
+rows.resize(3);
+printf("%ld %d\n", len(@rows), rows[1][2]);       // 3 6
 
 [2][+]int32 two;             // two variable-length arrays
 4 -> two[1].push();
 printf("%d\n", two[1][0]);   // 4
 ```
 
-- `push` copies a struct or a row in; `pop` returns an element the caller then owns.
+- `push` takes a struct or a row as a parameter of its type does: a copy, or the value itself
+  when it is moved (`rows.push(r>>)`); `pop` returns an element the caller then owns.
 - `$` cannot lay out something that owns storage: `[+]$[+]T` and `$[+]T` as an element are
   compile errors.
 - A `[+]T` struct field is described in [Array Fields](#array-fields).
@@ -1974,8 +2073,9 @@ when a literal is written over several lines.
 An array of structs (`[n]T`, `[n]$T`, `[m][n]T`, `[m][n]$T`) is initialized the same way, with each element
 written either as its field values in declaration order (`[1, 2]`) or by field name
 (`{y: 2, x: 1}`). Every field must be given exactly once. A struct field (`T` or `$T`) is written
-as a nested struct value; pointer and array fields cannot be initialized by a literal. Since a
-struct element is itself written in brackets, `[0,1][2,3]` is one row of two `Point`s.
+as a nested struct value, an array field as an array literal, and a pointer field as a pointer
+value, checked as `->` to the field checks it; an array of pointers cannot be given by a literal.
+Since a struct element is itself written in brackets, `[0,1][2,3]` is one row of two `Point`s.
 
 ```palan
 cinclude <stdio.h>;
@@ -2093,8 +2193,7 @@ Array **variables** (this section) allow non-constant `n`, except a stack array 
 - An array declared at the top level (outside any block) is not freed when the top-level statements end; the OS reclaims the memory at process exit.
 - Boundary checking is not performed.
 - `[n]$T` is not supported when `T` owns fields.
-- `[+][n]@T` (a variable-length array of rows of pointer slots) and a `[][+]T` parameter are not
-  supported.
+- A `[][+]T` parameter is not supported; borrow the array as `@[n][+]T` or `@[+][+]T` instead.
 
 ---
 
@@ -2181,8 +2280,8 @@ reset(@![1, 2]);
   itself is an error, since `->` to a borrow rebinds it.
 - The field rules are those of an array literal's struct element: every field exactly once,
   except that `{name: value}` may leave out a field with an [initializer](#field-initializers),
-  which then takes it; struct fields as nested values, array fields as array literals (`[[1, 2, 3], 4]`), no pointer
-  fields or arrays of pointers.
+  which then takes it; struct fields as nested values, array fields as array literals (`[[1, 2, 3], 4]`),
+  pointer fields as pointer values; no arrays of pointers.
 - A struct field's value may also be a struct expression of that type — a struct variable, a
   `T` field, an array element, a `@T`/`@!T`, or a call result: `Q q = [p, mk(3)];` copies it. With `->`
   it is read before any write too, so `[q.b, @q.a] -> q` swaps.
@@ -2193,18 +2292,20 @@ A field can be given an initial value in the type, written as a variable's initi
 
 ```palan
 const N = 4;
-type Counter { int32 step = N / 2; bool on = true; $[+]uint8 name = [0]; int32 n; };
+type Point { int32 x; int32 y = 9; };
+type Counter { int32 step = N / 2; bool on = true; $[+]uint8 name = [0]; $Point at = {x: 1}; @Point p = NULL; int32 n; };
 
 Counter c;                    // c.step is 2, c.on is true, c.name holds one 0; c.n is undefined
 Counter d = {n: 5};           // the fields left out take their initializers
-printf("%d %d %ld\n", c.step, d.on, len(@c.name));   // 2 1 1
+printf("%d %d %ld %d\n", c.step, d.on, len(@c.name), c.at.y);   // 2 1 1 9
 ```
 
 - The value must be a compile-time constant: literals, [consts](#constant-declarations) and
-  operators on them, an enum member, or an array literal of such values.
-- A primitive field (an integer, a float, `bool` or an enum) and a one-dimensional array of
-  primitives (`[n]T`, `$[n]T`, `[+]T`, `$[+]T`) can have one. Others, such as a struct field given
-  a struct value, cannot in this version.
+  operators on them, an enum member, or a struct or array literal of such values. A pointer
+  field's is `NULL`.
+- Any field can have one but an array of pointers: a struct field (`T`, `$T`) takes a struct
+  value, whose fields left out take their own initializers, and an array of any dimensions an
+  array literal.
 - The initializers are in place wherever a struct comes to exist: a variable, heap or `$`; a
   struct field, whose own type's initializers apply; an element of an array, laid out in place
   (`[n]$T`, `[+]$T`) or not, including those `resize` adds. A struct taken over with `<<=` or
@@ -2214,7 +2315,7 @@ printf("%d %d %ld\n", c.step, d.on, len(@c.name));   // 2 1 1
 
 ### Field Types
 
-Integer and float primitives (`int8`–`int64`, `uint8`–`uint64`, `flo32`, `flo64`) are declared without a prefix:
+Integer and float primitives (`int8`–`int64`, `uint8`–`uint64`, `flo32`–`flo80`) are declared without a prefix:
 
 ```palan
 type Point { int64 x; int64 y; };
@@ -2407,11 +2508,12 @@ own it. So is binding a pointer returned by a call that was given such a struct
 Returning a struct the function doesn't own — a parameter, a field, or an array element — returns
 a copy of it (including what it owns), which the caller owns.
 
-### Conversion from a String Literal
+### Conversion from a Literal
 
-A function named like a struct type, returning it and callable with a string literal alone (its
-other parameters have [defaults](#default-arguments) or are [variadic](#variadic-arguments)),
-converts a string literal to that type wherever a value of the type, or a `@T` of it, is expected:
+A function named like a struct type, returning it and callable with a literal alone (its other
+parameters have [defaults](#default-arguments) or are [variadic](#variadic-arguments)), converts a
+string, integer or floating-point literal to that type wherever a value of the type, or a `@T` of
+it, is expected:
 
 ```palan
 type name { [+]uint8 bytes; };
@@ -2421,6 +2523,13 @@ func greet(@name who) { ... }
 name a = "Ann";          // name a = name("Ann");
 "Bob" -> a;              // name("Bob") -> a;
 greet("Cy");             // greet(@name("Cy"));
+
+type big { [+]uint32 digits; };
+func big(int64 n) -> big b { ... }
+func big(flo64 f) -> big b { ... }
+
+big x = 12;              // big x = big(12);
+big y = 1.5;             // big y = big(1.5);
 ```
 
 - It happens in a variable's initializer, the source of `->`, an argument (a variadic one too),
@@ -2430,11 +2539,15 @@ greet("Cy");             // greet(@name("Cy"));
   the statement has been evaluated. Binding it to a `@T` variable, field or return is a compile
   error, since nothing would own it: declare a `T` variable initialized with the literal and
   borrow that.
-- Only a string literal converts. Another value is converted by calling the function
-  (`name(getenv("HOME"))`). Nothing converts for a `@!T`, and `"Ann" as name` is a compile error.
+- A [const](#constant-declarations) or a constant expression converts as the literal it folds to,
+  computed in the literal's default type (`int64`, `uint64` or `flo64`): `big x = 12 * 3;` is
+  `big(36)`. Any other value is converted by calling the function (`name(getenv("HOME"))`,
+  `big(n * 3)`), and so is `true`, an enum value or a character literal, which have types of their
+  own. Nothing converts for a `@!T`, and `"Ann" as name` is a compile error.
 - The functions are those of the name visible at the literal, including those of a module
-  imported with an alias (`import "names.pa" as N;` converts for `N.name`). If several can be
-  called with the literal alone, it is a compile error.
+  imported with an alias (`import "names.pa" as N;` converts for `N.name`). Among those callable
+  with the literal alone, one is chosen as for an [overloaded](#overloading) call: `big(int64)` for
+  `12` and `big(flo64)` for `1.5` above. If none ranks first, it is a compile error.
 - In an [overloaded](#overloading) call, a candidate needing a conversion is considered only when
   no other fits.
 
@@ -2638,6 +2751,34 @@ export func add(int32 a, int32 b) -> int32 {
 
 Functions without `export` are file-private and not accessible from other files.
 
+### Exporting a Function to C
+
+`cexport` exports a function as `export` does, and also lets C code linked into the program (see
+[Link Libraries](#link-libraries)) call it by its name:
+
+```palan
+// scale.pa
+cinclude "scale.h" link "scale.o";   // scale.h: int32_t scaled(int32_t v); int32_t twice_scaled(int32_t v);
+cexport func scaled(int32 v) -> int32 { return v * 10; }
+```
+
+```c
+// scale.c
+#include "scale.h"
+int32_t twice_scaled(int32_t v) { return 2 * scaled(v); }
+```
+
+- The C name is the function's name, so it cannot be overloaded in its file. Its signature follows
+  the rules of a [callback](#passing-a-palan-function-as-a-callback): no several return values,
+  no variadic parameter, no default arguments, and it cannot be an operator function.
+- Other Palan files import it as any exported function, and a library's interface writes it as
+  `cexport func scaled(int32 v) -> int32;`.
+- A C declaration of the same name, such as one in the header the C code includes, is the same
+  function: a call takes the Palan function's types. It is not checked against them.
+- A name a C library already defines, such as `puts`, is not reported, and may replace that
+  function for the whole program.
+- `cexport` is a reserved word.
+
 ### Importing a File
 
 ```palan
@@ -2723,8 +2864,8 @@ flo32 l = len2(@p);
 - A selective import lists types alongside functions: `import vec3, len2 from "vec3.pa";`.
 - An exported type may use the declaring file's non-exported types, consts, and cincluded
   headers; those are not made nameable in the importing file.
-- An exported struct or enum name is shared by the whole program: two files exporting the
-  same name is a compile error once one file reaches both.
+- Two files may export types of the same name; a file importing both writes at least one of
+  them with its alias (`import "b.pa" as B;` and `B.Point`).
 - A file may declare a type with the name of an imported type it cannot write unqualified
   (one imported as `V.T`, or only brought along by another imported type). Declaring a type
   with a name an import makes writable is a compile error.
@@ -2768,6 +2909,60 @@ int64 x = c.log[0];    // compile error: private
   struct that is not exported, they are a compile error.
 - A library's interface lists hidden fields with their marks, since the struct's layout needs them.
 
+### Opaque Types
+
+`type Name = opaque T;` declares a type of its own holding a value of `T`, without letting other
+files see what `T` is. Only a file that can write `T` reaches the contents:
+
+```palan
+// file.pa
+cinclude <stdio.h>;
+type Conn { int32 fd; [+]uint8 buf; };
+export type Handle = opaque Conn;
+
+export func open(int32 fd) -> Handle {
+    Conn c;
+    fd -> c.fd;
+    return c as Handle;           // the owned value moves into the Handle
+}
+export func fd(@Handle h) -> int32 { return (h as @Conn).fd; }
+export func close(Handle h) release { printf("closing %d\n", fd(@h)); }
+```
+
+```palan
+// main.pa
+import "file.pa";
+Handle h = open(3);
+int32 n = fd(@h);
+Handle g <<= h;                   // moved, not copied
+close(g>>);                       // released now, and not again
+// h is released when its scope ends; close prints for it
+```
+
+- `T` is anything a variable owns: a struct (Palan's or C's), an array of constant sizes or a
+  `[+]T`. A pointer, a `$T`, a primitive or an [incomplete C struct](#incomplete-struct-types-opaque-handles) is a compile error.
+- A value is owned, borrowed and moved as a struct is (`Handle`, `@Handle`, `@!Handle`, `<<=`,
+  `->>`, `>>`), passed and returned, and released when its owner is.
+- Where `T` cannot be written, what needs its layout is a compile error: a declaration without an
+  initializer, a copy (`Handle b = a;`, `a -> b`, passing `a` to a `Handle` parameter), `sizeof`.
+  Where it can, a declaration without an initializer allocates the contents and a copy copies
+  them. A field access and `$Handle` are compile errors everywhere.
+- `x as Handle` and `h as T` convert an owned value between the type and its contents, in a file
+  that can write `T`, and only as a move: `<<=`, `->>`, `>>` or `return` (`T c <<= h as T;`). A
+  borrow is cast as any pointer is (`@h as @T`).
+- A field or an element of an opaque type (`type W { Handle h; };`, `[4]Handle`, `[+]Handle`)
+  starts empty, as a variable is after `>>`, and is filled by `->>` (`open(3) ->> w.h;`).
+  Releasing an empty one does nothing. Copying a value holding one is not supported in this
+  version, nor is `push` of one that is not moved (`v.push(h>>)`, `v.push(open(3))`).
+- A function marked `release`, in the file declaring the type, taking the owned type alone and
+  returning nothing, is called whenever a value of the type is released. Called as an ordinary
+  function, it takes the value over (`close(g>>)`), so it is not released twice. Its own
+  parameter is released as the contents when it ends. A type has at most one; without one, the
+  contents are released as they would be by themselves.
+- A [library](#building-a-library) may publish an opaque type whose contents are a type of another
+  of its files. Its interface writes `export type Handle = opaque;`.
+- `opaque` and `release` are reserved words.
+
 ### Module Names (`library`)
 
 A module's name comes from its file alone, not from where it is or what imports it. It is the file
@@ -2799,12 +2994,19 @@ export func length([]uint8 s) -> int64 { ... }
 This writes `<dir>/std/utf8.pai`, the interface a person reads to learn the library, and
 `<dir>/std/utf8.a`, the code, for the target being built for.
 
-- The interface holds the main file's `export`s, the exported types of other files they use, and
-  whatever private types and constants those need. Any other `export` of an imported file is
-  visible only inside the library, including a type only a private type uses.
-- A file permitting a function to use its `global` is a compile error, since a library's top level never runs.
-- The interface may rename a private type to a name starting with `__` (see [Lexical Rules](#2-lexical-rules)).
-- Publishing a function with a type alias of another file's private type is a compile error.
+- The interface holds the main file's `export`s and whatever private types and constants those
+  need, including the constants and type aliases of other files. Any `export` of an imported file
+  is visible only inside the library.
+- A type the library publishes is declared in the main file, which the other files may import. A
+  public declaration using a struct or enum of another file, directly, through a type alias or
+  through a field, is a compile error; an [opaque type](#opaque-types) of the main file may hold
+  one.
+- The global variables of every file are initialized when a program using the library starts,
+  as an imported file's are (see [Global Variables](#global-variables)). The main file's
+  [exported global variables](#exporting-global-variables) are published, without their
+  initializers (`export global [3]int32 primes;`).
+- The interface may rename a constant or type alias of another file to a name starting with `__`
+  (see [Lexical Rules](#2-lexical-rules)).
 
 ### Using a Library
 
@@ -2835,9 +3037,9 @@ int64 x = 10;
 printf("%lld\n", x);
 ```
 
-- Top-level statements run when the program starts, only in the file being built. The
-  top-level statements of an imported file are not executed, so a module can hold its own tests
-  or usage examples.
+- Top-level statements run when the program starts, only in the file being built, after the
+  [global variables](#global-variables) of every file are initialized. The top-level statements
+  of an imported file are not executed, so a module can hold its own tests or usage examples.
 - The top-level statements see the program's command-line arguments as `args`, a read-only
   borrowed variable-length array of C strings (`@[+]@[]uint8`). `args[0]` is the program's
   path, and `len(args)` counts it. `args` is a borrow, so it is used by name: `len(args)`,
@@ -2889,13 +3091,63 @@ func cmp(@int32 a, @int32 b) -> int32 r {
   it reads (or writes) the elements and fields, but cannot replace the variable itself. A
   number or pointer variable it can assign only with `!`; what a pointer points to keeps the
   pointer's own type (`@!T` stays writable through).
-- The variable is initialized where it is declared, so a top-level statement before the
-  declaration may not call a listed function, directly or through other functions, nor take its
-  address (a compile error).
+- Global variables are initialized when the program starts, before any top-level statement
+  runs, in every file of the program: each file once, the files it imports first, then its own
+  in declaration order. So a listed function works wherever it is called, even from a top-level
+  statement before the declaration.
+- An initializer cannot use an ordinary top-level variable or `args`, which do not exist yet
+  (a compile error). It can use constants, functions and the global variables declared before it.
+- When files import each other in a circle, they are initialized in import order, and a function
+  reached from one may see another's global variables not yet initialized (zero, or an empty owner).
+- To build the state when the user chooses, declare the variable without an initializer and
+  export a function that sets it:
+
+  ```palan
+  type Config { int32 level; };
+  global Config config for configure!;
+  export func configure(int32 level) { level -> config.level; }
+  ```
+
 - What a global variable owns lives until the program ends; it is not freed at the end of the
   top level. A value it is reassigned away from at the top level is freed as usual.
-- A file whose global variables are used by its functions cannot be imported, since an imported
-  file's top-level statements, which would initialize them, do not run.
+
+### Exporting Global Variables
+
+`export global` lets the files importing this one use the variable as their own global
+variable:
+
+```palan
+// counter.pa
+export global int64 count = 0 for inc!;
+export func inc() { count + 1 -> count; }
+```
+
+```palan
+// main.pa
+cinclude <stdio.h>;
+import "counter.pa";
+global count for report;
+
+func report() { printf("%ld\n", count); }
+
+inc();
+count + 10 -> count;   // the top-level statements read and write it freely
+report();              // 11
+```
+
+- In the importing file, the top-level statements use it freely, and a `global` statement there
+  lets its functions read it, or with `!` write it, as for its own global variables.
+- Under an alias import, write it with the alias: `C.count`, and `global C.count for report;`.
+  A variable named `C` hides the alias.
+- A selective import names it like a function: `import count from "counter.pa";`.
+- An `import` inside a function lets that function read and write it, without a `global`
+  statement. Inside a block, it is visible only in the block.
+- An imported variable whose name the file already declares, or which two unaliased imports both
+  export, is a compile error; import one of them with an alias.
+- The sizes of an exported array must be constants or come from its array literal
+  (`export global []int32 primes = [2, 3, 5];`); a size known only at run time is a compile error.
+- To keep a variable from being written by other files, do not export it; export functions that
+  read or change it.
 
 ---
 
@@ -2915,6 +3167,10 @@ cinclude <math.h> link "m";  // link against libm (-lm) when building
 ### Function Calls
 
 - `cinclude` makes C functions visible from the declaration point to the end of the enclosing scope.
+- A C function whose signature uses a C type Palan cannot represent (`va_list`, `__int128`, a
+  `_Complex` type) can be cincluded, but calling it is a compile error. For a `v` function taking
+  a `va_list` (`vprintf`), call the one without the `v` (`printf`). `tgmath.h` cannot be
+  cincluded: it requires a GNU compiler.
 - With an alias, functions are accessible only via the qualified form `alias.funcName(...)`.
 - The number of arguments must match the number of parameters; a variadic C function takes at least
   its fixed parameters. A C function declared with empty parentheses `f()` takes no arguments, the
@@ -2965,8 +3221,9 @@ building it as a library (see [Building a Library](#building-a-library)).
 - The clause comes before `link`: `cinclude <uv.h> export uv_loop_t link "uv";`.
 - It is accepted only on a top-level `cinclude`; in a block or a function it is a compile error.
 - An ordinary `import` of a source file does not read the clause.
-- A local header (`cinclude "x.h" export T;`) is not supported yet when the library's public
-  declarations use the type: its reader would not find the header, so `--lib` reports an error.
+- The public declarations of a library can use C types of system headers only: a local header
+  (`cinclude "x.h" export T;`) would not be found by the library's reader, so `--lib` reports an
+  error. Wrap such a type in an [opaque type](#opaque-types) to publish it.
 
 ### Typedefs
 
@@ -2995,15 +3252,18 @@ building it as a library (see [Building a Library](#building-a-library)).
   declarations use `size_t` and `FILE`. Typedefs that bottom out in a pointer type are not carried
   over this way.
 - Macros carry over the same way: a header sees every macro the headers cincluded before it in the
-  file defined or `#undef`ed, so its `#ifdef`s and macro uses work as in C. A header that an
-  earlier cinclude already read is skipped by its include guard, as in C, and its declarations
-  come from that earlier cinclude. So if the earlier cinclude is inside a block, the skipped
-  functions can't be called outside that block (see `doc/Issues.md`).
+  same or an enclosing scope defined or `#undef`ed, so its `#ifdef`s and macro uses work as in C.
+  A header that such a cinclude already read is skipped by its include guard, as in C, and its
+  declarations come from that earlier cinclude. What a block's cincludes carry over ends with the
+  block: a later `cinclude` of the same header outside it reads the header again.
 - If multiple cincluded headers introduce the same typedef name resolving to the *same* underlying
   type, the first registration silently wins. If they resolve to *different* underlying types, this
   is a compile error.
 - Aliased cinclude (`cinclude <x.h> as X;`) does not namespace imported typedefs — they are
   always registered globally. Only C function calls require the `X.` qualifier.
+- Headers are read as by a C compiler that is not GNU's, which keeps the C library's ABI except
+  for `sys/types.h`'s `register_t`: it is an `int32` rather than 64 bits. No C library function
+  uses it.
 
 ### Macro Constants
 
@@ -3018,24 +3278,10 @@ building it as a library (see [Building a Library](#building-a-library)).
   C's `sizeof(type)`, which folds to the type's size as `size_t` when its layout is known (e.g.
   `sys/select.h`'s `__NFDBITS`, `(8 * (int) sizeof (__fd_mask))`). The same folding sizes a C
   struct's array fields, so `fd_set` is a complete struct and `select` can be called with it.
-- A macro whose body doesn't fold this way — a function-like macro referenced without a call
-  (e.g. `S_ISDIR`, which takes an argument), a string literal, a relational/equality/logical/
+- A macro whose body doesn't fold this way — a string literal, a relational/equality/logical/
   ternary expression, or a reference to an identifier that never resolves — is left untouched.
-  Referencing such a name from Palan is a compile error naming the macro:
-
-  ```palan
-  cinclude <sys/stat.h>;
-  stat st;
-  stat("/etc", @!st);
-  if (S_ISDIR(st.st_mode)) { ... }   // error: C macro 'S_ISDIR' is function-like; Palan cannot use it.
-  ```
-
-  `S_IFMT`/`S_IFDIR` and similar bare constants *do* fold, so the same check can be written
-  directly with a bitwise AND (see [Expressions](#5-expressions)):
-
-  ```palan
-  if ((st.st_mode & S_IFMT) == S_IFDIR) { ... }   // works
-  ```
+  Referencing such a name from Palan is a compile error naming the macro. A function-like macro
+  is called instead (see [Function-Like Macros](#function-like-macros)).
 
   ```palan
   cinclude <string.h>;
@@ -3056,12 +3302,10 @@ building it as a library (see [Building a Library](#building-a-library)).
 - A macro constant whose type C fixes — an unsigned or long suffix (`1U`, `5L`), `sizeof`, or an
   integer cast, as in ncurses' `A_REVERSE` (`unsigned int`) — keeps that type, and meets other operands
   through the [usual arithmetic conversions](#3-type-system) like any typed value.
-- Substitution is text-order only, not lexically scoped like a cincluded C function or `const`:
-  a reference resolves against the last cincluded header that defines the name, textually
-  before that reference, anywhere in the rest of the file — including past the end of the block
-  the `cinclude` itself appears in. A reference that textually precedes every cincluding
-  `cinclude` is left unresolved (`Undefined function`/`Undefined variable`), even if a later
-  `cinclude` in the same file would otherwise define it.
+- A reference resolves against the last cincluded header that defines the name, textually
+  before that reference, up to the end of the block the `cinclude` appears in. A reference that
+  textually precedes every cincluding `cinclude` is left unresolved (`Undefined function`/`Undefined
+  variable`), even if a later `cinclude` in the same file would otherwise define it.
 - A later cincluded header may redefine or `#undef` a macro, as in C. References after that
   `cinclude` see the new value, or no macro at all.
 - A macro constant silently takes priority over any same-named variable, parameter, or `const` in
@@ -3073,6 +3317,48 @@ building it as a library (see [Building a Library](#building-a-library)).
   see [Raw Syscalls](#13-raw-syscalls)) is already a plain literal by the time it could be
   exported, so the folded *value* does cross that boundary even though the macro *name* never
   does.
+
+### Function-Like Macros
+
+A function-like `#define` macro is called like a function, and the call is replaced by the
+macro's body with each parameter replaced by its argument, as the C preprocessor does:
+
+```palan
+cinclude <sys/stat.h>;
+cinclude <sys/wait.h>;
+stat st;
+stat("/etc", @!st);
+if (S_ISDIR(st.st_mode)) { ... }   // ((st.st_mode & S_IFMT) == S_IFDIR)
+if (WIFEXITED(status)) { code = WEXITSTATUS(status); }
+```
+
+- The result is typed by the expression the body becomes, so the macro takes an argument of any
+  type its body can use.
+- An argument is evaluated each time its parameter appears in the body: `TWICE(f())` for
+  `#define TWICE(x) ((x) + (x))` calls `f` twice.
+- The body may use integer and character literals, arithmetic, bitwise, shift, comparison and
+  logical operators, casts, member access (`.` and `->` are both `.`), subscripts, `*p` (as
+  `p[0]`), `sizeof` of a type, calls of C functions, C global variables, enumerators and other
+  macros. A body with any other form — `?:`, an assignment, a comma, a string, `sizeof` of an
+  expression, `&`, `#`/`##`, `__VA_ARGS__` — can't be called; the error names the form:
+
+  ```palan
+  cinclude <sys/select.h>;
+  FD_SET(0, @!fds);   // error: C macro 'FD_SET' uses an assignment, which Palan cannot translate.
+  ```
+
+- The names in the body mean the C functions and C global variables declared by the
+  `cinclude`s before the call, never a Palan variable or function of the same name. A name with
+  no such declaration makes the macro uncallable, as an untranslatable form does.
+- A macro is called rather than a C function of the same name, as in C (ncurses' `COLOR_PAIR`,
+  `timeout`). When the macro can't be called, the function is; with no function the call is an
+  error.
+- The arithmetic follows Palan's rules, not C's, so two results differ from C: `>>` is Palan's
+  `>>>`, which fills a negative signed value with zeros, and operands narrower than 32 bits are
+  not promoted to `int` first, so a result that overflows their type wraps there.
+- A macro is visible from its `cinclude` to the end of the enclosing block, and a later header
+  that redefines or `#undef`s it ends it there. Under an aliased cinclude
+  (`cinclude <x.h> as X;`) a macro is called as `X.NAME(...)`, like a C function.
 
 ### C Global Variables
 
@@ -3346,8 +3632,22 @@ __attribute__((aligned(16))) T;`) is fine.
 
 A C struct with bit-fields (`unsigned th_off:4;`) has the same layout in Palan as in C, so a
 header such as `netinet/tcp.h` can be included and the struct passed to and from C. A bit-field
-member itself cannot be read, written, have its address taken or be given in a struct literal;
-each of these is a compile error. The struct's other fields work as usual.
+is read, written and given in a struct literal as a field of its declared type
+(`unsigned flags:4` is a `uint32`):
+
+```palan
+cinclude <stdio.h>;
+cinclude <netinet/tcp.h>;
+tcphdr h;
+5 -> h.th_off;
+printf("%u\n", h.th_off);   // 5
+```
+
+- A value written keeps only its low bits, as in C, but an integer literal or constant that does
+  not fit the width is a compile error (`16 -> h.th_off`).
+- As in C, a bit-field has no address: `@h.th_off` is a compile error.
+- A bit-field that a packed struct lays across two units of its type is not supported yet; using
+  it is a compile error. The bit-fields of the C library and Linux headers are all inside one.
 
 ### C Enum Types
 
@@ -3429,8 +3729,8 @@ syscall sys_write(int32 fd, @void buf, uint64 count) -> int64 = SYS_write;
   `func`.
 - At most 6 parameters. The return, if any, must be a single unnamed type (`-> type`); named or
   multiple return values are not allowed.
-- Parameter and return types must be representable as a full 8-byte register: `flo32`/`flo64`
-  and the 8-bit/16-bit integer types (including `bool`) are rejected.
+- Parameter and return types must be representable as a full 8-byte register: float types and
+  the 8-bit/16-bit integer types (including `bool`) are rejected.
 - The return value is the kernel's raw result in `rax`: a negative value conventionally means
   `-errno` (e.g. `-9` for `EBADF`), which the caller must interpret itself — libc's `errno`
   variable is never touched.

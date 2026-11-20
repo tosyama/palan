@@ -1,0 +1,4 @@
+type P { int32 x; };
+func f([...]P ps) {}
+[2]$P a;
+f(...a);

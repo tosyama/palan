@@ -1,0 +1,21 @@
+type Inner { int32 x; [+]int32 log; };
+export type Handle = opaque Inner;
+export type Plain = opaque [4]int32;
+export func make(int32 v) -> Handle {
+	Inner i;
+	v -> i.x;
+	return i as Handle;
+}
+export func two(int32 v) -> Handle h, int32 n {
+	v -> n;
+	@!Inner i = @!h as @!Inner;
+	v -> i.x;
+}
+export func dup(@Handle a) -> Handle {
+	Handle b = a;
+	return b;
+}
+export func close(Handle h) release {
+	@!Inner i = @!h as @!Inner;
+	i.x + 1 -> i.x;
+}

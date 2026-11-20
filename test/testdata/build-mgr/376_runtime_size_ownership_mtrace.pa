@@ -21,7 +21,10 @@ mtrace();
 	[n]int32 c <<= b;
 	[n]int32 d;
 	c -> d;
-	printf("%d %d %d %d\n", b == NULL, c[3], d[2], sum4(c>>));
+	int32 c3 = c[3];
+	int32 total = 0;
+	c as [4]int32 ->> sum4() -> total;
+	printf("%d %d %d %d\n", b == NULL, c3, d[2], total);
 
 	[n]S s;
 	0 -> i;
@@ -39,7 +42,7 @@ mtrace();
 	g -> h;
 	[m]int32 row;
 	9 -> row[0];
-	row ->> h[1];
+	row as [m]int32 ->> h[1];
 	printf("%d %d\n", h[3][2], h[1][0]);
 
 	[n]$[m]int32 e;

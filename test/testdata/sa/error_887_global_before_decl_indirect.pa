@@ -1,4 +1,0 @@
-g();
-global int32 x = 0 for f;
-func g() { f(); }
-func f() { }

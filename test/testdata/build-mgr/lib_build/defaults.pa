@@ -1,4 +1,6 @@
 library demo;
 import "defaults_inner.pa";
 const K = 2;
+export type Mode enum { Fast, Slow };
+export type Box { Arr a; };
 export func put(@!Box b, int32 v = K * 10, Mode m = Mode.Slow, @[]uint8 tag = "none") { v -> b.a[0]; }

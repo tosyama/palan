@@ -1,21 +1,25 @@
 library demo;
 import "shapes.pa" as S;
-cinclude <stdio.h>;
+cinclude <stdio.h> export FILE;
 cinclude <mcheck.h>;
 cinclude <math.h> link "m";
 type Before { int32 b; };
 type Dup { int16 keep; };
 type Used { int32 q; [2]int32 owned; };
 const C = 2;
-export type W { @S.T t; [C]int32 c; @Dup d; };
-export func value(@Used u, S.Color c) -> int32 { return u.q; }
-export func many() -> [+]S.T { return S.make(); }
+type OnlyInPrivate { int32 i; };
+type Priv { int32 x; @OnlyInPrivate i; };
+export type Color enum { Red, Blue };
+export type T { [C]int32 a; S.Bytes b; @Priv p; @FILE f; @Dup d; };
+export type W { @T t; [C]int32 c; @Dup d; };
+export func value(@Used u, Color c) -> int32 { return u.q; }
+export func many() -> [+]T { return S.make(); }
 {
 	mtrace();
-	[+]S.T v;
+	[+]T v;
 	v.resize(2);
-	[+]S.T w = many();
+	[+]T w = many();
 	Used x;
 	7 -> x.q;
-	printf("len %ld %ld q %d\n", len(@v), len(@w), value(@x, S.Color.Red));
+	printf("len %ld %ld q %d\n", len(@v), len(@w), value(@x, Color.Red));
 }

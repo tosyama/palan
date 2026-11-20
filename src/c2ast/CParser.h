@@ -10,6 +10,7 @@
 using json = nlohmann::json;
 
 class CPreprocessor;
+class CMacro;
 
 class CParser {
 	const vector<CToken*> &top_tokens;
@@ -69,6 +70,7 @@ class CParser {
 	void emitDeclarator(json &ast, json &decl,
 			bool is_typedef, bool is_static, bool is_extern, bool is_top_level);
 	bool declaration_specifiers(json &ast, const vector<CToken*> &tokens, int &result_index);
+	bool type_specifier(json &ast, const vector<CToken*> &tokens, int &result_index);
 	bool declarator(json &ast, const vector<CToken*> &tokens, int &result_index, bool is_typeonly);
 	bool declarator_tail(json &ast, const vector<CToken*> &tokens, int &result_index);
 	bool parameter_list(vector<json> &params, const vector<CToken*> &tokens, int &result_index);
@@ -76,12 +78,9 @@ class CParser {
 	bool enum_definition(string &name, const vector<CToken*> &tokens, int &result_index);
 	bool attribute_specifiers(json &attrs, const vector<CToken*> &tokens, int &result_index);
 
-	bool statement(json &ast, const vector<CToken*> &tokens, int &result_index);
-	bool jump_statement(json &ast, const vector<CToken*> &tokens, int &result_index);
 
-	// This subtree (primary_expression .. expression) builds a value-AST node into
-	// `value` for the small set of forms we can compute (literal, +/-, cast, sizeof);
-	// otherwise `value` is left null. See CParser.cpp for the "expr-type" node shapes used.
+	// This subtree (primary_expression .. expression) builds an expression tree into
+	// `value`; see CParser.cpp.
 	bool primary_expression(json &value, const vector<CToken*> &tokens, int &index);
 	bool postfix_expression(json &value, const vector<CToken*> &tokens, int &result_index);
 	bool unary_expression(json &value, const vector<CToken*> &tokens, int &result_index);
@@ -101,9 +100,19 @@ class CParser {
 	bool assignment_expression(json &value, const vector<CToken*> &tokens, int &result_index);
 	bool expression(json &value, const vector<CToken*> &tokens, int &result_index);
 
+	bool binaryLevel(json &value, const vector<CToken*> &tokens, int &result_index,
+			std::initializer_list<int> ops,
+			bool (CParser::*next)(json &, const vector<CToken*> &, int &));
+	bool adjacentPuncs(const vector<CToken*> &tokens, int index, int first, int second) const;
+	json foldConst(const json &tree);
+	bool startsTypeName(const vector<CToken*> &tokens, int index) const;
+	// The parameters of the function-like macro whose body is being parsed.
+	const vector<string> *macroParams_ = nullptr;
+
 	bool resolveConstValue(const json &node, json &value, json &type);
 	bool typeSizeAlign(const json &vt, long long &size, long long &align);
 	bool exportFuncAlias(json &ast, const string &name, const string &target);
+	json expandableDefinition(CMacro *m, CPreprocessor &cpp);
 
 	// void debug_token(const CToken* token);
 

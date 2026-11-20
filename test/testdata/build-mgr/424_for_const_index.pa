@@ -1,0 +1,15 @@
+cinclude <stdio.h>;
+
+[+][+]int64 vv;
+vv.resize(2);
+vv[0].push(1); vv[0].push(2);
+for copy a in vv[0] { vv[1].push(a * 10); }
+for copy a in vv[1] { printf("%ld ", a); }
+printf("\n");
+
+type S { [+][+]int64 rows; };
+S s;
+s.rows.resize(2);
+s.rows[1].push(3);
+for @a in s.rows[1u] { s.rows[0u].push(a + 1); }
+printf("%ld\n", s.rows[0][0]);

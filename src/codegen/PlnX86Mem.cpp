@@ -11,6 +11,17 @@
 
 using namespace std;
 
+// The memory operand of base[idx*scale]. SIB scales stop at 8, so a wider
+// stride (a flo80's 16) is computed into %r11 first.
+static string indexedAddr(ostream& out, const string& base_reg, const string& idx_reg, int scale)
+{
+    if (scale <= 8)
+        return "(" + base_reg + ", " + idx_reg + ", " + std::to_string(scale) + ")";
+    out << "\timulq $" << scale << ", " << idx_reg << ", %r11\n";
+    out << "\taddq " << base_reg << ", %r11\n";
+    return "(%r11)";
+}
+
 // Emits sign/zero-extend instruction to load index into %r11.
 // For Int64/Uint64/Ptr64/Uint32 in a physical register, returns the register directly (no instruction).
 static string loadIdxR11(ostream& out, VRegType idx_type, const PhysLoc& loc)
@@ -59,12 +70,12 @@ void PlnX86CodeGen::emitInstrDerefLoadIdx(const DerefLoadIdx& dl, const RegMap& 
 
     string idx_reg = loadIdxR11(out, dl.idx_type, idx_loc);
 
-    string addr = "(" + base_reg + ", " + idx_reg + ", " + std::to_string(dl.scale) + ")";
+    string addr = indexedAddr(out, base_reg, idx_reg, dl.scale);
     if (!dst_loc.isStack()) {
         out << "\t" << mov << " " << addr << ", "
             << sizedRegName(dst_loc.base, dl.type) << "\n";
     } else {
-        string scratch = isFloat(dl.type) ? "%xmm8" : sizedRegName("%rax", dl.type);
+        string scratch = movedViaXmm(dl.type) ? "%xmm8" : sizedRegName("%rax", dl.type);
         out << "\t" << mov << " " << addr << ", " << scratch << "\n";
         out << "\t" << mov << " " << scratch << ", "
             << dst_loc.stackOffset << "(%rbp)\n";
@@ -89,12 +100,12 @@ void PlnX86CodeGen::emitInstrDerefStoreIdx(const DerefStoreIdx& ds, const RegMap
 
     string idx_reg = loadIdxR11(out, ds.idx_type, idx_loc);
 
-    string addr = "(" + base_reg + ", " + idx_reg + ", " + std::to_string(ds.scale) + ")";
+    string addr = indexedAddr(out, base_reg, idx_reg, ds.scale);
     if (!src_loc.isStack()) {
         out << "\t" << mov << " " << sizedRegName(src_loc.base, ds.type)
             << ", " << addr << "\n";
     } else {
-        string scratch = isFloat(ds.type) ? "%xmm8" : sizedRegName("%rax", ds.type);
+        string scratch = movedViaXmm(ds.type) ? "%xmm8" : sizedRegName("%rax", ds.type);
         out << "\t" << mov << " " << src_loc.stackOffset << "(%rbp), " << scratch << "\n";
         out << "\t" << mov << " " << scratch << ", " << addr << "\n";
     }
@@ -149,8 +160,7 @@ void PlnX86CodeGen::emitInstrDerefLoad(const DerefLoad& dl, const RegMap& rm)
         out << "\t" << mov << " " << addr << ", "
             << sizedRegName(dst_loc.base, dl.type) << "\n";
     } else {
-        bool isFloat = (dl.type == VRegType::Float32 || dl.type == VRegType::Float64);
-        string scratch = isFloat ? "%xmm8" : sizedRegName("%rax", dl.type);
+        string scratch = movedViaXmm(dl.type) ? "%xmm8" : sizedRegName("%rax", dl.type);
         out << "\t" << mov << " " << addr << ", " << scratch << "\n";
         out << "\t" << mov << " " << scratch << ", "
             << dst_loc.stackOffset << "(%rbp)\n";
@@ -236,8 +246,7 @@ void PlnX86CodeGen::emitInstrDerefStore(const DerefStore& ds, const RegMap& rm)
         out << "\t" << mov << " " << sizedRegName(src_loc.base, ds.type)
             << ", " << addr << "\n";
     } else {
-        bool isFloat = (ds.type == VRegType::Float32 || ds.type == VRegType::Float64);
-        string scratch = isFloat ? "%xmm8" : sizedRegName("%rax", ds.type);
+        string scratch = movedViaXmm(ds.type) ? "%xmm8" : sizedRegName("%rax", ds.type);
         out << "\t" << mov << " " << src_loc.stackOffset << "(%rbp), " << scratch << "\n";
         out << "\t" << mov << " " << scratch << ", " << addr << "\n";
     }

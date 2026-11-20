@@ -1,6 +1,6 @@
 # Palan Standard Library Reference
 
-**Version:** v0.2.5
+**Version:** v0.2.6
 
 The standard library is the library `std`, found with the compiler: `import <std/utf8>;` needs no
 `libpath` (see [Using a Library](PalanReference.md#using-a-library) in the

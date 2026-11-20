@@ -1,0 +1,4 @@
+int64 n = 2;
+[n]int32 a;
+[4]int64 c;
+a as [4]int64 ->> c;

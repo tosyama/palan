@@ -15,6 +15,7 @@ namespace fs = std::filesystem;
 #include "../common/PlnDefs.h"
 #include "PlnGenAstMessage.h"
 #include "PlnGenAstMacroFold.h"
+#include "PlnGenAstC2Ast.h"
 #include "../common/PlnInterface.h"
 #include "PlnParser.h"
 #include "PlnLexer.h"
@@ -82,7 +83,7 @@ int main(int argc, char* argv[])
 		PlnLexer lexer(input_file.string());
 		json ast;
 		MacroTable macros;
-		string cState;
+		CStateHistory cState;
 		PlnParser parser(lexer, ast, macros, cState, target);
 
 		int ret;

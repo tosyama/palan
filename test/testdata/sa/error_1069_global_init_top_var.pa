@@ -1,0 +1,2 @@
+int32 n = 1;
+global int32 x = n + 1;

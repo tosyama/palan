@@ -5,3 +5,7 @@ sum(1, 2, 3);
 sum(1);
 P p;
 total(p);
+func mk() -> P q { }
+func id(@P p) -> @P { return p; }
+func borrows([...]@P ps) { }
+borrows(id(@mk()));

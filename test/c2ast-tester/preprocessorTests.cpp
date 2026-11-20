@@ -33,7 +33,7 @@ TEST(c2ast, func_macro_no_paren) {
     cleanTestEnv();
     string output;
     output = execTestCommand("palan-c2ast -d ../test/testdata/c2ast/048_func_macro_no_paren.h");
-    ASSERT_EQ(output, "int testproc(){return F;return F+1;return F;return (2+1);return (3+1);}");
+    ASSERT_EQ(output, "int testproc(){returnF;returnF+1;returnF;return(2+1);return(3+1);}");
     output = execTestCommand("palan-c2ast ../test/testdata/c2ast/048_func_macro_no_paren.h");
     ASSERT_NE(output.find("{\"name\":\"K\"}"), string::npos);
 }
@@ -42,7 +42,7 @@ TEST(c2ast, token_paste_nonid) {
     cleanTestEnv();
     string output;
     output = execTestCommand("palan-c2ast -d ../test/testdata/c2ast/002_token_paste.h");
-    ASSERT_EQ(output, "int testproc(){return val1;return 1val;return 12;return int_t;}");
+    ASSERT_EQ(output, "int testproc(){returnval1;return1val;return12;returnint_t;}");
 }
 
 TEST(c2ast, pragma_once) {
@@ -302,8 +302,9 @@ TEST(c2ast, macro_const_suffix) {
         ASSERT_NE(find(ast["ast"]["unexported-macros"].begin(), ast["ast"]["unexported-macros"].end(),
                        json{{"name", name}}), ast["ast"]["unexported-macros"].end()) << name;
     }
-    ASSERT_NE(find(ast["ast"]["unexported-macros"].begin(), ast["ast"]["unexported-macros"].end(),
-                   json{{"name", "FMAC"}, {"function-like", true}}), ast["ast"]["unexported-macros"].end());
+    ASSERT_NE(find(ast["ast"]["expandables"].begin(), ast["ast"]["expandables"].end(),
+                   json{{"name", "FMAC"}, {"params", {"x"}}, {"binding", "substitute"},
+                        {"body", {{"expr-type", "param"}, {"name", "x"}}}}), ast["ast"]["expandables"].end());
     for (auto& m : ast["ast"]["unexported-macros"]) ASSERT_NE(m["name"], "SELF");
 }
 
@@ -476,6 +477,22 @@ TEST(c2ast, func_alias_macro) {
     ASSERT_EQ(funcs("sscanf")[0]["symbol"], "__isoc99_sscanf");
 }
 
+// `linux` in <linux/types.h> is not expanded, and "#ifdef __has_include" holds.
+TEST(c2ast, has_include) {
+    cleanTestEnv();
+    json ast = json::parse(execTestCommand("palan-c2ast ../test/testdata/c2ast/057_has_include.h"));
+    vector<string> names;
+    for (auto& f : ast["ast"]["functions"]) names.push_back(f["name"]);
+    ASSERT_EQ(names, vector<string>({"hi_found", "hi_defined"}));
+}
+
+TEST(c2ast, include_in_enum) {
+    cleanTestEnv();
+    json ast = json::parse(execTestCommand("palan-c2ast ../test/testdata/c2ast/058_enum_include.h"));
+    ASSERT_EQ(ast["ast"]["enums"][0]["enumerators"], json::parse(
+        R"([{"name":"ei_a","value":"1"},{"name":"ei_b","value":"4"},{"name":"ei_last","value":"5"}])"));
+}
+
 // The state file and predefined.h are the tool's input, not the source's headers.
 TEST(c2ast, headers_read) {
     cleanTestEnv();
@@ -488,4 +505,83 @@ TEST(c2ast, headers_read) {
     json b = json::parse(execTestCommand("palan-c2ast -S " + state_file + " " + dir + "045_macro_state_b.h"));
     // a.h is skipped by its #pragma once: the run before this one read it.
     ASSERT_EQ(b["headers"], json::array({dir + "045_macro_state_b.h"}));
+}
+
+TEST(c2ast, function_macro) {
+    cleanTestEnv();
+    string output = execTestCommand("palan-c2ast ../test/testdata/c2ast/059_function_macro.h");
+    json ast = json::parse(output)["ast"];
+
+    auto body = [&](const string& name) -> json {
+        for (auto& e : ast["expandables"])
+            if (e["name"] == name) {
+                EXPECT_EQ(e["binding"], "substitute");
+                return e["body"];
+            }
+        ADD_FAILURE() << name << " is not expandable";
+        return json();
+    };
+    auto param = [](const string& name) { return json{{"expr-type", "param"}, {"name", name}}; };
+    auto lit = [](const string& value) { return json{{"expr-type", "lit-int"}, {"value", value}}; };
+
+    // The macros in a body are expanded, the parameter kept.
+    ASSERT_EQ(body("OUTER"), (json{{"expr-type", "cmp"}, {"op", "=="},
+        {"left", {{"expr-type", "bitand"}, {"left", param("s")}, {"right", lit("127")}}},
+        {"right", lit("0")}}));
+    for (auto& e : ast["expandables"])
+        if (e["name"] == "FIELDS") ASSERT_EQ(e["params"], (json{"p", "i"}));
+
+    json typed = body("TYPED");
+    ASSERT_EQ(typed["expr-type"], "shl");
+    ASSERT_EQ(typed["left"]["expr-type"], "cast");
+    ASSERT_EQ(typed["left"]["target-type"]["typedef-name"], "ushort_t");
+    ASSERT_EQ(typed["left"]["src"], param("c"));
+
+    // `->` and `.` are both a field, `*p` is element 0.
+    json fields = body("FIELDS");
+    json next = {{"expr-type", "field-access"}, {"object", param("p")}, {"field", "next"}};
+    ASSERT_EQ(fields["left"], (json{{"expr-type", "arr-index"},
+        {"array", {{"expr-type", "field-access"}, {"object", next}, {"field", "v"}}}, {"index", param("i")}}));
+    ASSERT_EQ(fields["right"]["array"]["object"], (json{{"expr-type", "arr-index"},
+        {"array", param("p")}, {"index", lit("0")}}));
+
+    // A C name is marked as one; an enumerator is its value.
+    json calls = body("CALLS");
+    ASSERT_EQ(calls["expr-type"], "logical-and");
+    ASSERT_EQ(calls["left"], (json{{"expr-type", "call"}, {"name", "get"}, {"args", {param("n")}}, {"c-name", true}}));
+    ASSERT_EQ(calls["right"]["expr-type"], "logical-not");
+    ASSERT_EQ(calls["right"]["operand"]["args"][0], lit("3"));
+
+    json chars = body("CHARS");
+    ASSERT_EQ(chars["left"]["left"]["right"], lit("97"));
+    ASSERT_EQ(chars["left"]["right"]["right"], lit("10"));
+    ASSERT_EQ(chars["right"]["right"], lit("65"));
+    ASSERT_EQ(body("NEGATE")["left"], lit("-1"));
+    ASSERT_EQ(body("NOPARAM")["args"][0], lit("0"));
+
+    auto unexported = [&](const string& name) -> json {
+        for (auto& u : ast["unexported-macros"])
+            if (u["name"] == name) return u;
+        ADD_FAILURE() << name << " is not unexported";
+        return json();
+    };
+    for (auto [name, form] : {pair{"TERNARY", "?:"}, pair{"ASSIGN", "an assignment"},
+            pair{"COMMA", "a comma operator"}, pair{"STRING", "a comma operator"},
+            pair{"STRINGIZE", "#"}, pair{"PASTE", "##"}, pair{"VARIADIC", "__VA_ARGS__"},
+            pair{"ADDRESS", "&"}, pair{"SIZEOF_EXPR", "sizeof of an expression"},
+            pair{"INCREMENT", "++/--"}, pair{"PRE_DECREMENT", "++/--"},
+            pair{"CALL_PTR", "a call through an expression"},
+            pair{"FLOATING", "a floating constant"}})
+        ASSERT_EQ(unexported(name), (json{{"name", name}, {"form", form}, {"function-like", true}})) << name;
+    ASSERT_EQ(unexported("NOT_EXPR"), (json{{"name", "NOT_EXPR"}, {"function-like", true}}));
+
+    auto find_const = [&](const string& name) -> json* {
+        for (auto& c : ast["constants"])
+            if (c["name"] == name) return &c;
+        return nullptr;
+    };
+    ASSERT_NE(find_const("CHAR_CONST"), nullptr);
+    ASSERT_EQ((*find_const("CHAR_CONST"))["value"], "122");
+    // `x` is no typedef, so this is a subtraction, not a cast of -1.
+    ASSERT_EQ(find_const("NOT_A_CAST"), nullptr);
 }

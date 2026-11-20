@@ -1,2 +1,0 @@
-global int32 x = f() for f;
-func f() -> int32 { return 1; }

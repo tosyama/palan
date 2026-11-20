@@ -153,11 +153,13 @@ string Writer::vars(const json& node, const json& list, bool isRets) const
 string Writer::funcDecl(const json& f, bool exported) const
 {
 	bool isSyscall = f["func-type"] == "syscall";
-	string s = string(exported ? "export " : "") + (isSyscall ? "syscall " : "func ") + f["name"].get<string>()
+	string s = string(!exported ? "" : f.value("c-export", false) ? "cexport " : "export ")
+		+ (isSyscall ? "syscall " : "func ") + f["name"].get<string>()
 		+ "(" + vars(f, f["parameters"], false) + ")";
 	if (f.contains("rets")) s += " -> " + vars(f, f["rets"], true);
 	else if (f.contains("ret-type")) s += " -> " + type(f["ret-type"]);
 	if (isSyscall) s += " = " + expr(f["syscall-number"]);
+	if (f.value("release", false)) s += " release";
 	return s + ";\n";
 }
 
@@ -168,6 +170,8 @@ string Writer::statement(const json& s) const
 	string name = s.value("name", "");
 	if (kind == "const-decl") return "const " + name + " = " + expr(s["value"]) + ";\n";
 	if (kind == "type-alias") return exported + "type " + name + " = " + type(s["type"]) + ";\n";
+	if (kind == "opaque-def")
+		return exported + "type " + name + " = opaque" + (s.contains("contents") ? " " + type(s["contents"]) : "") + ";\n";
 	if (kind == "enum-def") {
 		string out = exported + "type " + name + " enum {\n";
 		for (auto& e : s["enumerators"]) {
@@ -315,14 +319,19 @@ string Writer::write()
 	for (auto& lib : libs_) out += "link \"" + lib + "\";\n";
 	for (auto& s : stmts) {
 		string kind = s.value("stmt-type", "");
-		if (kind == "var-decl") {
+		if (kind == "var-decl" && s.value("global", false) && s.value("export", false)) {
+			// The initializer is left in the module; the sizes it gives are not.
+			const json& v = s["vars"][0];
+			auto sized = sizedArrayType(v, consts);
+			out += "export global " + type(sized ? *sized : v["var-type"]) + " " + v["name"].get<string>() + ";\n";
+		} else if (kind == "var-decl") {
 			for (auto& v : s["vars"]) {
 				auto used = usedVars.find(&v);
 				if (used != usedVars.end()) out += type(used->second) + " " + v["name"].get<string>() + ";\n";
 			}
 		} else if (kind == "const-decl") {
 			if (consts.count(s["name"])) out += statement(s);
-		} else if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
+		} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
 				|| (kind == "cinclude" && s.contains("export-types"))) {
 			out += statement(s);
 		}
@@ -357,6 +366,8 @@ private:
 	map<pair<string, string>, const json*> cIncludes_;
 	vector<pair<string, string>> cOrder_;
 	map<Key, string> finals_;
+	const json* from_ = nullptr;  // the declaration being walked
+	int fromModule_ = 0;
 
 	const json& stmts(int m) const { return (*modules_[m])["ast"]["statements"]; }
 	optional<Key> find(int m, const string& written) const;
@@ -380,7 +391,8 @@ Merger::Merger(const json& main, const vector<json>& internals)
 		const json& list = (*modules_[m])["ast"].contains("statements") ? stmts(m) : noStmts;
 		for (auto& s : list) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "const-decl")
+			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			    || kind == "const-decl")
 				decls_[m][s["name"]] = {&s, nullptr};
 			else if (kind == "var-decl")
 				for (auto& v : s["vars"]) decls_[m][v["name"]] = {&s, &v};
@@ -429,8 +441,21 @@ void Merger::ref(json& nameNode, int m, bool rename)
 	string written = nameNode;
 	auto key = find(m, written);
 	if (key) {
-		if (rename) nameNode = finals_.at(*key);
-		else mark(*key);
+		if (rename) {
+			nameNode = finals_.at(*key);
+			return;
+		}
+		string kind = (*decls_[key->first].at(key->second).stmt)["stmt-type"];
+		// A type is identified by its module, which the .pai, read as the main's, would change.
+		if (key->first != 0 && (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def")) {
+			string at = (*modules_[fromModule_])["original"].get<string>();
+			if (from_ && from_->contains("loc"))
+				at += ":" + to_string((*from_)["loc"][0].get<int>()) + ":" + to_string((*from_)["loc"][1].get<int>());
+			throw runtime_error(at + ": error: a library's public declaration cannot use the type '" + written
+				+ "' of the internal module '" + (*modules_[key->first])["original"].get<string>()
+				+ "': declare it in the main source.");
+		}
+		mark(*key);
 		return;
 	}
 	auto c = cTypes_[m].find(written);
@@ -439,8 +464,8 @@ void Merger::ref(json& nameNode, int m, bool rename)
 	if (inc["path-type"] == "src") {
 		string at = (*modules_[m])["original"].get<string>() + ":" + to_string(inc["loc"][0].get<int>()) + ":"
 			+ to_string(inc["loc"][1].get<int>());
-		throw runtime_error(at + ": error: a library's public declaration cannot yet use a C type of the local header '"
-			+ inc["path"].get<string>() + "': its reader would not find the header.");
+		throw runtime_error(at + ": error: a library's public declaration cannot use a C type of the local header '"
+			+ inc["path"].get<string>() + "': its reader would not find the header; wrap the type in an opaque type to publish it.");
 	}
 	pair<string, string> id{inc["path"], inc.value("alias", "")};
 	if (!cIncludes_.count(id)) {
@@ -471,24 +496,29 @@ void Merger::walk(json& node, int m, bool rename)
 json Merger::declBody(const Key& key) const
 {
 	const Decl& d = decls_[key.first].at(key.second);
-	if (!d.var) return *d.stmt;
+	// An opaque type's contents are what the library keeps to itself.
+	if (!d.var) {
+		json body = *d.stmt;
+		if (body["stmt-type"] == "opaque-def") body.erase("contents");
+		return body;
+	}
 	json body = *d.var;
 	body.erase("init");
 	return body;
 }
 
-// An exported type's name is its identity in the program, and the main's other
-// names are in its symbols, so another module's private ones give way.
+// The main's names are in its types' identities and its symbols, so an
+// internal module's const or alias gives way.
 void Merger::assignFinalNames()
 {
 	set<string> taken;
 	for (auto& [id, names] : cNames_) taken.insert(names.begin(), names.end());
 	for (auto& key : reached_)
-		if (isPublic(key)) {
+		if (key.first == 0) {
 			taken.insert(key.second);
 			finals_[key] = key.second;
 		}
-	for (int m = 0; m < modules_.size(); m++)
+	for (int m = 1; m < modules_.size(); m++)
 		for (auto& [name, decl] : decls_[m]) {
 			Key key{m, name};
 			if (!reached_.count(key) || finals_.count(key)) continue;
@@ -504,14 +534,21 @@ json Merger::merged()
 	const json& mainStmts = main["ast"].contains("statements") ? stmts(0) : noStmts;
 	for (auto& s : mainStmts) {
 		string kind = s.value("stmt-type", "");
-		bool isDecl = kind == "struct-def" || kind == "enum-def" || kind == "type-alias";
+		bool isDecl = kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
+		if (kind == "var-decl" && s.value("global", false) && s.value("export", false))
+			mark({0, s["vars"][0]["name"]});
 	}
 	json funcs = main.value("export", json::array());
-	walk(funcs, 0, false);
+	for (auto& f : funcs) {
+		from_ = &f;
+		walk(f, 0, false);
+	}
 	while (!queue_.empty()) {
 		Key key = queue_.back();
 		queue_.pop_back();
+		from_ = decls_[key.first].at(key.second).stmt;
+		fromModule_ = key.first;
 		// A signature's symbol holds what an alias stands for, so an alias, even a
 		// private one, hides nothing. Only a layout depends on a private struct's fields.
 		const json& stmt = *decls_[key.first].at(key.second).stmt;
@@ -554,11 +591,17 @@ json Merger::merged()
 					var["name"] = finals_.at(key);
 					decl["vars"].push_back(move(var));
 				}
+				// An internal module's global, reached through a const, is published as no global.
+				if (m != 0 || !isPublic({m, s["vars"][0]["name"]})) {
+					decl.erase("global");
+					decl.erase("export");
+				}
 				if (!decl["vars"].empty()) out.push_back(move(decl));
-			} else if (kind == "struct-def" || kind == "enum-def" || kind == "type-alias" || kind == "const-decl") {
+			} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			           || kind == "const-decl") {
 				Key key{m, s["name"]};
 				if (!reached_.count(key)) continue;
-				json decl = s;
+				json decl = declBody(key);
 				walk(decl, m, true);
 				decl["name"] = finals_.at(key);
 				if (!isPublic(key)) decl.erase("export");

@@ -19,6 +19,17 @@
 using json = nlohmann::json;
 using namespace std;
 
+// A type owned through a pointer and named by its identity: a struct, or an
+// opaque type, which is one whose layout is its contents'.
+inline bool declaresStructType(const string& stmtType)
+{
+	return stmtType == "struct-def" || stmtType == "opaque-def";
+}
+inline bool isTypeDecl(const string& stmtType)
+{
+	return declaresStructType(stmtType) || stmtType == "enum-def" || stmtType == "type-alias";
+}
+
 // LCOV_EXCL_BR_START
 inline json wrapConvert(const json& expr, const json& to_type) {
 	// Adding or dropping an enum label changes no bits, so no convert node.
@@ -45,14 +56,18 @@ inline json strLitType() {
 // True if `t` is a non-float primitive type (int8..uint64). Shared by every
 // operator that requires integer operands (logical &&/||/!, bitwise &/|/^/~)
 // so the "not a float, and not a pointer/struct" check has one definition.
-inline bool isIntegerPrim(const PlnType* t) {
-	if (t->kind != PlnType::Kind::Prim) return false;
+inline bool isFloatPrim(const PlnType* t) {
+	if (t == nullptr || t->kind != PlnType::Kind::Prim) return false;
 	auto pn = static_cast<const PrimType*>(t)->name;
-	return pn != PrimType::Name::Float32 && pn != PrimType::Name::Float64
-	    && pn != PrimType::Name::Void;
+	return pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64 || pn == PrimType::Name::Float80;
 }
 
-inline bool intLiteralFits(const string& value, PrimType::Name pn)
+inline bool isIntegerPrim(const PlnType* t) {
+	if (t->kind != PlnType::Kind::Prim || isFloatPrim(t)) return false;
+	return static_cast<const PrimType*>(t)->name != PrimType::Name::Void;
+}
+
+inline bool intLiteralFitsBits(const string& value, int bits, bool isSigned)
 {
 	bool neg = value[0] == '-';
 	const char* first = value.data() + (neg ? 1 : 0);
@@ -60,7 +75,16 @@ inline bool intLiteralFits(const string& value, PrimType::Name pn)
 	uint64_t mag;
 	// The lexer only produces digit strings, so the only failure is overflow.
 	if (from_chars(first, last, mag).ec != errc()) return false;
+	if (isSigned) {
+		uint64_t posMax = (uint64_t(1) << (bits - 1)) - 1;
+		return mag <= (neg ? posMax + 1 : posMax);
+	}
+	if (neg) return mag == 0;
+	return bits == 64 || mag <= (uint64_t(1) << bits) - 1;
+}
 
+inline bool intLiteralFits(const string& value, PrimType::Name pn)
+{
 	int bits = 64;
 	bool isSigned = true;
 	switch (pn) {
@@ -74,23 +98,12 @@ inline bool intLiteralFits(const string& value, PrimType::Name pn)
 		case PrimType::Name::Bool:   bits = 1;  isSigned = false; break;
 		default:                     bits = 64; isSigned = false; break;
 	}
-	if (isSigned) {
-		uint64_t posMax = (uint64_t(1) << (bits - 1)) - 1;
-		return mag <= (neg ? posMax + 1 : posMax);
-	}
-	if (neg) return mag == 0;
-	return bits == 64 || mag <= (uint64_t(1) << bits) - 1;
+	return intLiteralFitsBits(value, bits, isSigned);
 }
 
 inline bool isBoolPrim(const PlnType* t) {
 	return t != nullptr && t->kind == PlnType::Kind::Prim
 	    && static_cast<const PrimType*>(t)->name == PrimType::Name::Bool;
-}
-
-inline bool isFloatPrim(const PlnType* t) {
-	if (t == nullptr || t->kind != PlnType::Kind::Prim) return false;
-	auto pn = static_cast<const PrimType*>(t)->name;
-	return pn == PrimType::Name::Float32 || pn == PrimType::Name::Float64;
 }
 
 // True if a value may be written through this pointer-typed value-type
@@ -466,6 +479,7 @@ inline int elemSizeBytes(const string& typeName)
 	if (typeName == "int16" || typeName == "uint16") return 2;
 	if (typeName == "int32" || typeName == "uint32" || typeName == "flo32") return 4;
 	if (typeName == "int64" || typeName == "uint64" || typeName == "flo64") return 8;
+	if (typeName == "flo80") return 16;
 	return -1;
 }
 
@@ -492,11 +506,12 @@ inline int64_t inPlaceBytes(const json& elem, const map<string, StructDef>& defs
 }
 
 // SysV AMD64 ABI (§3.2.3) eightbyte classes for a struct passed or returned by value.
-enum class EightbyteClass { Integer, Sse };
+enum class EightbyteClass { Integer, Sse, X87 };
 struct Eightbyte {
 	EightbyteClass cls;
 	int size;            // only the last eightbyte may be <8
 	bool flo64 = false;  // taken up by one flo64 (codegen loads it whole)
+	bool flo80 = false;  // starts a flo80
 };
 
 // Recursively marks the eightbytes covered by one field as INTEGER; SSE is
@@ -519,6 +534,7 @@ inline void classifySysVWalk(const StructDef& d, int base, int nEightbytes,
 	};
 	auto markPrim = [&](int offset, const string& name, int size) {
 		if (name == "flo64") ebs[offset / 8].flo64 = true;
+		else if (name == "flo80") ebs[offset / 8].flo80 = true;
 		else if (name != "flo32") markInt(offset, size);  // Sse is the default
 	};
 	for (auto& f : d.fields) {
@@ -554,7 +570,10 @@ inline void classifySysVWalk(const StructDef& d, int base, int nEightbytes,
 // Classifies a struct passed or returned by value per the System V AMD64 ABI
 // (§3.2.3): over 16 bytes or with an unaligned field is MEMORY class (an empty
 // vector here); otherwise it travels in up to two eightbytes, each INTEGER or SSE.
-inline vector<Eightbyte> classifySysVStruct(const StructDef& def, const map<string, StructDef>& defs)
+// A flo80 makes it MEMORY class too, except a returned struct of 16 bytes,
+// which is then that one flo80 alone and comes back in %st(0).
+inline vector<Eightbyte> classifySysVStruct(const StructDef& def, const map<string, StructDef>& defs,
+                                            bool forReturn)
 {
 	if (def.totalSize > 16 || def.hasUnalignedField) return {};  // MEMORY class
 
@@ -565,16 +584,20 @@ inline vector<Eightbyte> classifySysVStruct(const StructDef& def, const map<stri
 	for (int i = 0; i < nEightbytes; i++)
 		result.push_back({EightbyteClass::Sse, (i == nEightbytes - 1) ? tailWidth : 8});
 	classifySysVWalk(def, 0, nEightbytes, defs, result);
+	for (auto& eb : result)
+		if (eb.flo80)
+			return forReturn && def.totalSize == 16 ? vector<Eightbyte>{{EightbyteClass::X87, 16}} : vector<Eightbyte>{};
 	return result;
 }
 
 // The "eightbytes" list of a "struct-ret" or "struct-arg" descriptor; empty
 // for MEMORY class.
-inline json eightbytesJson(const StructDef& def, const map<string, StructDef>& defs)
+inline json eightbytesJson(const StructDef& def, const map<string, StructDef>& defs, bool forReturn)
 {
 	json ebs = json::array();
-	for (auto& eb : classifySysVStruct(def, defs)) {
-		json j = {{"class", eb.cls == EightbyteClass::Integer ? "int" : "sse"}, {"size", eb.size}}; // LCOV_EXCL_BR_LINE
+	for (auto& eb : classifySysVStruct(def, defs, forReturn)) {
+		const char* cls = eb.cls == EightbyteClass::Integer ? "int" : eb.cls == EightbyteClass::Sse ? "sse" : "x87";
+		json j = {{"class", cls}, {"size", eb.size}}; // LCOV_EXCL_BR_LINE
 		if (eb.flo64) j["flo64"] = true; // LCOV_EXCL_BR_LINE
 		ebs.push_back(move(j));
 	}
@@ -650,20 +673,25 @@ inline bool ownsElems(const json& arrType)
 	    && (isOwnedBlock(elem) || (isArrLevel(elem) && !elem.contains("mutable")));
 }
 
+inline string PlnSemanticAnalyzer::structDisplayName(const string& structName) const {
+	auto it = cStructDisplayNames_.find(structName);
+	return it != cStructDisplayNames_.end() ? it->second : structName;
+}
+
 // Renders an SA type as source-like text for diagnostics: a struct's own
 // storage as "T", a borrow as "@T"/"@!T", an array as "[20][10]int32" or
 // "[3]$[?]int32" (an unknown size shows as "?"), with a borrowed array's
 // "@"/"@!" once in front although each of its levels carries "mutable".
-inline string typeDisplayName(const json& t) {
+inline string PlnSemanticAnalyzer::typeDisplayName(const json& t) const {
 	if (!t.is_object() || !t.contains("type-kind")) // LCOV_EXCL_BR_LINE -- no real producer emits this
 		return "malformed type"; // LCOV_EXCL_LINE
 	const string kind = t["type-kind"].get<string>();
 	if (kind == "prim") {
 		if (t.contains("enum")) return t["enum"].get<string>();
-		return t.value("type-name", "malformed type"); // LCOV_EXCL_BR_LINE -- no real producer emits this
+		return structDisplayName(t.value("type-name", "malformed type")); // LCOV_EXCL_BR_LINE -- no real producer emits this
 	}
 	if (kind == "struct")
-		return t.value("type-name", "anonymous struct");
+		return structDisplayName(t.value("type-name", "anonymous struct"));
 	if (kind == "func") {
 		string out = "func(";
 		for (auto& p : t["parameters"]) {
@@ -817,6 +845,32 @@ inline bool copyShapeMatch(const json& from, const json& to) {
 	    && from.value("type-name","") == to.value("type-name","");
 }
 
+// Whether a level of the array vt has a length known only at run time.
+inline bool hasRunSize(const json& vt)
+{
+	for (const json* t = &vt; isArrLevel(*t); t = &(*t)["base-type"])
+		if (t->value("run-size", false)) return true;
+	return false;
+}
+
+// A move hands a block over with the lengths it has. A level the receiving
+// variable keeps a length for at run time (`inherits`) takes them over; any
+// other level's length is fixed, so a length known only at run time on either
+// side cannot be shown to agree with it, unless a cast (`resized`) sets it.
+enum class MoveFit { Match, Mismatch, RunSize };
+inline MoveFit moveShapeFit(const json& from, const json& to, bool inherits, bool resized)
+{
+	if (!isArrLevel(to) || !isArrLevel(from))
+		return copyShapeMatch(from, to) ? MoveFit::Match : MoveFit::Mismatch;
+	if (!copyShapeMatch(from, to))
+		return MoveFit::Mismatch;
+	MoveFit fit = moveShapeFit(from["base-type"], to["base-type"], inherits, resized);
+	bool fixed = !(inherits && to.value("run-size", false));
+	if (fit == MoveFit::Match && fixed && !resized && (!from.contains("arr-size") || !to.contains("arr-size")))
+		return MoveFit::RunSize;
+	return fit;
+}
+
 // An array type as its owner holds it, without a borrow's permissions.
 inline json withoutArrPermission(json t)
 {
@@ -834,9 +888,10 @@ inline bool varrCopySourceMatch(const json& from, const json& vt)
 {
 	const json& elem = vt["base-type"]["base-type"];
 	// A writable pointer slot may be copied into a read-only one, as between sized arrays.
+	bool sized = from.contains("arr-size") || from.value("run-size", false);
 	if (isPtrBorrow(elem)) {
 		const json* fe = isVarrPntr(from) ? &from["base-type"]["base-type"]
-		               : isArrLevel(from) && from.contains("arr-size") && !from.value("embedded", false)
+		               : isArrLevel(from) && sized && !from.value("embedded", false)
 		               ? &from["base-type"] : nullptr;
 		return fe && copyShapeMatch(*fe, elem);
 	}
@@ -846,15 +901,27 @@ inline bool varrCopySourceMatch(const json& from, const json& vt)
 	// A contiguous struct array's type has the same shape as a lone struct's
 	// storage, so only its stride tells it from one.
 	if (isVarrEmbedded(vt))
-		return from.contains("stride") && from.contains("arr-size") && withoutArrPermission(from["base-type"]) == elem;
-	return isArrLevel(from) && from.contains("arr-size") && !from.value("embedded", false)
+		return from.contains("stride") && sized && withoutArrPermission(from["base-type"]) == elem;
+	return isArrLevel(from) && sized && !from.value("embedded", false)
 	    && withoutArrPermission(from["base-type"]) == elem;
 }
 // What a copy into vt, other than a lone struct, can take: a `[+]T` any run
-// of its elements, anything else the same shape.
+// of its elements, a sized array the elements of a `[+]T` laid out the same
+// way, anything else the same shape.
 inline bool copySourceMatch(const json& from, const json& vt)
 {
-	return isVarrStorage(vt) ? varrCopySourceMatch(from, vt) : copyShapeMatch(from, vt);
+	if (isVarrStorage(vt)) return varrCopySourceMatch(from, vt);
+	if (isVarrPntr(from) && isArrLevel(vt) && (vt.contains("arr-size") || vt.value("run-size", false))) {
+		const json& fe = from["base-type"]["base-type"];
+		if (isPtrBorrow(fe) || isPtrBorrow(vt["base-type"]))
+			return isPtrBorrow(fe) && !vt.value("embedded", false) && copyShapeMatch(fe, vt["base-type"]);
+		json asVarr = {{"type-kind","pntr"},{"base-type",from["base-type"]}}; // LCOV_EXCL_BR_LINE
+		json run = withoutArrPermission(vt);
+		run.erase("arr-size");
+		run["run-size"] = true;
+		return varrCopySourceMatch(run, asVarr);
+	}
+	return copyShapeMatch(from, vt);
 }
 
 // An array is borrowed with one permission for every level down to its

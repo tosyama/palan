@@ -347,7 +347,7 @@ TEST(sa_error, c_unsupported_union_ret)
 
 TEST(sa_error, c_unsupported_func_param)
 {
-	// `void set_cb(int (*cb)(long double));` -- a function pointer whose own
+	// `void set_cb(int (*cb)(__int128));` -- a function pointer whose own
 	// parameter is unrepresentable makes the whole signature unsupported.
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
@@ -357,6 +357,18 @@ TEST(sa_error, c_unsupported_func_param)
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("cannot call C function 'set_cb'"), string::npos);
 	ASSERT_NE(sa.find("'function pointer'"), string::npos);
+}
+
+// A complex number has no Palan type, though complex.h is read.
+TEST(sa_error, c_complex)
+{
+	cleanTestEnv();
+	string ast_out = "out/test.ast.json";
+	ASSERT_EQ(execTestCommand(
+		"palan-gen-ast ../test/testdata/sa/error_1091_c_complex.pa -o " + ast_out), "");
+	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+	ASSERT_NE(sa.find(":3:1: error: cannot call C function 'cabs': its signature uses 'double _Complex'"),
+		string::npos) << sa;
 }
 
 TEST(sa_error, c_unsupported_anon_strct_param)
@@ -375,28 +387,6 @@ TEST(sa_error, c_unsupported_anon_strct_param)
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("cannot call C function 'f'"), string::npos);
 	ASSERT_NE(sa.find("'anonymous struct'"), string::npos);
-}
-
-TEST(sa_error, c_unsupported_long_double)
-{
-	// `acosl(1.0)` from <math.h> -- `long double` maps to c2ast's "flt128"
-	// prim type-name (CParser.cpp), which is not in PrimTypeNames -- the
-	// dominant real-world case: math.h alone has 309 such nodes across 150
-	// functions in the empirical audit for this ticket, far more than every
-	// other unsupported kind combined. Also proves unrepresentableTypeName's
-	// "prim" branch (a resolvable type-kind, unresolvable type-name), not
-	// just its type-kind branches, and that the diagnostic fires instead of
-	// the pre-2906 abort ("unknown prim type-name: flt128", rc=134).
-	// Covers: sa_expr_call -> requireSupportedCFuncSig, unresolved prim name
-	cleanTestEnv();
-	string ast_out = "out/test.ast.json";
-	ASSERT_EQ(execTestCommand(
-		"palan-gen-ast ../test/testdata/sa/error_141_c_unsupported_long_double.pa -o " + ast_out), "");
-	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
-	ASSERT_NE(sa, "");
-	ASSERT_NE(sa.find("cannot call C function 'acosl'"), string::npos);
-	ASSERT_NE(sa.find("'flt128'"), string::npos);
-	ASSERT_EQ(sa.find("unrepresentable type"), string::npos);  // diagnosed, not the raw fromJson throw text
 }
 
 TEST(sa_error, c_unsupported_aliased_call)
@@ -460,10 +450,10 @@ TEST(sa_error, c_global_out_of_block_scope)
 
 TEST(sa_error, c_global_unsupported_type)
 {
-	// `extern long double ld;` -- cinclude succeeds (deferred, same policy as
+	// `extern __int128 ld;` -- cinclude succeeds (deferred, same policy as
 	// _unsupported-sig), but referencing `ld` diagnoses its unrepresentable
-	// "flt128" type instead of the pre-2908 abort a raw "user"/unresolved
-	// prim type-name would otherwise cause downstream.
+	// type instead of the abort an unresolved prim type-name would otherwise
+	// cause downstream.
 	// Covers: sa_expression "id" branch -> requireSupportedCGlobal, E_UnsupportedCGlobalType
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
@@ -472,7 +462,7 @@ TEST(sa_error, c_global_unsupported_type)
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("cannot reference C global variable 'ld'"), string::npos);
-	ASSERT_NE(sa.find("'flt128'"), string::npos);
+	ASSERT_NE(sa.find("'__int128'"), string::npos);
 }
 
 TEST(sa_error, call_arg_ptr_mismatch_c)
@@ -541,7 +531,7 @@ TEST(sa_error, callback_sig_width_mismatch)
 
 TEST(sa_error, c_unsupported_func_ret)
 {
-	// `void set_cb(long double (*cb)(int));` -- the function pointer's return
+	// `void set_cb(__int128 (*cb)(int));` -- the function pointer's return
 	// type, not a parameter, is unrepresentable.
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
@@ -868,7 +858,14 @@ TEST(sa_error, c_enum_name_conflict)
 TEST(sa_error, c_macro_unexported)
 {
 	const pair<string, string> cases[] = {
-		{"error_617_c_macro_func_like.pa", ":2:11: error: C macro 'FMAC' is function-like; Palan cannot use it."},
+		{"error_617_c_macro_func_like.pa", ":2:11: error: C macro 'FMAC' uses ?:, which Palan cannot translate."},
+		{"error_1145_c_macro_unresolved.pa", ":2:11: error: C macro 'UNRES' uses 'nowhere', which does not name a C function or C variable here."},
+		{"error_1146_c_macro_arg_count.pa", ":2:11: error: function 'ONE' takes 1 argument(s), but 2 given."},
+		{"error_1147_c_macro_unqualified.pa", ":2:11: error: Function 'ONE' requires a module alias qualifier."},
+		{"error_1148_c_macro_no_expr.pa", ":2:11: error: C macro 'NOBODY' has a body Palan cannot translate."},
+		// A Palan variable of the C global's name doesn't take its place.
+		{"error_1149_c_macro_hidden_global.pa", ":4:11: error: C macro 'GLOBAL' uses 'stdout', which does not name a C function or C variable here."},
+		{"error_1150_c_macro_bad_cast.pa", ":2:11: error: C macro 'BADCAST' uses a cast to float _Complex, which Palan cannot translate."},
 		{"error_618_c_macro_not_constant.pa", ":2:11: error: C macro 'NOFOLD' cannot be used: it does not expand to an integer constant."},
 		{"error_619_c_macro_arr_field.pa", ":2:1: error: C macro 'NOFOLD' cannot be used: it does not expand to an integer constant."},
 	};
@@ -904,13 +901,17 @@ TEST(sa_error, unsupported_c_field)
 
 TEST(sa_error, c_bit_field)
 {
-	const string msg = "cannot access field 'flag' of 'BF': its type uses 'bit-field', a C type this version cannot represent.";
 	const pair<string, string> cases[] = {
-		{"error_814_c_bitfield_read.pa", ":3:11: error: " + msg},
-		{"error_815_c_bitfield_write.pa", ":3:1: error: " + msg},
-		{"error_816_c_bitfield_addr.pa", ":3:14: error: " + msg},
-		{"error_817_c_bitfield_lit.pa", ":2:21: error: " + msg},
+		{"error_814_c_bitfield_cross.pa", ":3:11: error: cannot access field 'b' of 'BP': its type uses "
+		                                  "'packed bit-field across two units', a C type this version cannot represent."},
+		{"error_815_c_bitfield_lit_range.pa", ":4:1: error: Integer literal '2' does not fit the 1-bit bit-field 'flag'."},
+		{"error_1144_c_bitfield_past_end.pa", ":3:11: error: cannot access field 'a' of 'BQ': its type uses "
+		                                      "'packed bit-field across two units', a C type this version cannot represent."},
+		{"error_816_c_bitfield_addr.pa", ":3:13: error: cannot take the address of bit-field 'flag'."},
+		{"error_817_c_bitfield_struct_lit_range.pa", ":3:33: error: Integer literal '-5' does not fit the 3-bit bit-field 's'."},
 		{"error_818_c_bitfield_width.pa", ":2:1: error: struct 'BN' has no known layout"},
+		{"error_1151_c_bitfield_cross_lit.pa", ":2:15: error: cannot access field 'b' of 'BP': its type uses "
+		                                       "'packed bit-field across two units', a C type this version cannot represent."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -948,6 +949,23 @@ TEST(sa_error, c_struct_arg)
 		 ":3:25: error: function 'take_i8' cannot be used as a function pointer: its parameter type 'I8' cannot be passed through one."},
 		// Only a by-value struct parameter takes a literal; a pointer parameter still doesn't.
 		{"error_613_c_ptr_param_lit.pa", ":4:13: error: a literal cannot be passed to C function 'take_i8_ptr': only a by-value struct parameter takes one."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, c_struct_typedef_name)
+{
+	const pair<string, string> cases[] = {
+		{"error_1087_c_struct_typedef_field.pa", ":3:2: error: struct 'cs_a_t' has no field 'w'."},
+		{"error_1088_c_struct_typedef_arg.pa", ":3:2: error: cannot convert '@!cs_a_t' to '@!cs_b_t'."},
+		{"error_1089_c_struct_tag_field.pa", ":3:2: error: struct 'cs_c' has no field 'w'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

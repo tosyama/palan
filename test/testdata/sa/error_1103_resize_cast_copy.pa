@@ -1,0 +1,4 @@
+int64 n = 2;
+int64 m = 4;
+[n]int32 a;
+[m]int32 b = a as [m]int32;

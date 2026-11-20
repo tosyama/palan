@@ -1,0 +1,2 @@
+import "lib_sa_opaque.pa";
+int64 n = sizeof(Handle);

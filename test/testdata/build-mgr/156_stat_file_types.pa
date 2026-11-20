@@ -37,3 +37,6 @@ printf("lnk=%d target_reg=%d\n",
 stat fi;
 lstat("/tmp/pln_156_fifo", @!fi);
 printf("fifo=%d\n", (fi.st_mode & S_IFMT) == S_IFIFO);
+
+// The same checks through sys/stat.h's function-like macros.
+printf("S_ISDIR=%d S_ISREG=%d\n", S_ISDIR(d.st_mode), S_ISREG(d.st_mode));

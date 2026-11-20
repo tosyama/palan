@@ -1,0 +1,60 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; };
+func take([3]int32 a) -> int32
+{
+	return a[0] + a[1] + a[2];
+}
+func pick(P p, @P q) -> int32
+{
+	return p.x + q.x;
+}
+func early(int32 c) -> int32
+{
+	[3]int32 a;
+	1 -> a[0];
+	if c == 1 {
+		return take(a>>) + 10;
+	}
+	return a[0];
+}
+mtrace();
+{
+	[3]int32 a;
+	[3]int32 b;
+	int32 i = 0;
+	int32 s = 0;
+	while i < 3 {
+		i + 1 -> i;
+		[3]int32 t;
+		i -> t[0];
+		t ->> a;
+		s + a[0] -> s;
+		a ->> b;
+	}
+	[3]int32 u;
+	u ->> a;
+	9 -> a[2];
+	while true {
+		if a[2] == 9 {
+			a ->> u;
+			[3]int32 v;
+			v ->> a;
+			break;
+		}
+	}
+	int32 k = 0;
+	while k < 2 {
+		k + 1 -> k;
+		if k == 1 {
+			a ->> u;
+			u ->> a;
+			continue;
+		}
+		s + a[2] -> s;
+	}
+	P p;
+	4 -> p.x;
+	printf("%d %d %d %d\n", s, b[0], int32(len(@a)), pick(p>>, @p));
+	printf("%d %d %d\n", early(1), early(2), p == NULL);
+}

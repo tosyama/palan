@@ -336,7 +336,6 @@ TEST(sa_error, field_arr_level_errors)
 		{"error_324_field_2d_embed_prim.pa", ":1:1: error: '$' applies only to a struct element or a '$[m]' row, not 'int32'."},
 		{"error_804_field_row_size_not_const.pa", ":3:2: error: struct field array size must be a compile-time constant integer; 'n' is not a const."},
 		{"error_805_field_unsized_row.pa", ":1:1: error: unsupported struct field type."},
-		{"error_806_field_ptr_slot_rows.pa", ":1:1: error: unsupported struct field type."},
 		{"error_807_field_sized_varr_elem.pa", ":1:1: error: a variable-length array element is written '[+]T', without a size: it starts empty."},
 		{"error_809_field_sized_varr.pa", ":1:1: error: a variable-length array element is written '[+]T', without a size: it starts empty."},
 		{"error_810_field_embed_varr_rows.pa", ":1:1: error: cannot embed '[+]int32' with '$': it owns storage of its own; use '[+]int32' without '$'."},
@@ -412,7 +411,7 @@ TEST(sa_error, arr_lit_assign)
 		{"error_467_struct_lit_ptr_arr_field.pa", ":3:8: error: array 'ps' cannot be given an array literal: only numeric and struct element types are supported."},
 		{"error_468_struct_lit_not_struct.pa", ":3:8: error: a value of struct 'P' must be written as '[...]' or '{name: value, ...}'."},
 		{"error_469_struct_lit_other_struct.pa", ":4:12: error: cannot copy 'R' into 'P'"},
-		{"error_470_embed_field_to_borrow.pa", ":4:1: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@[..]' or '@![..]' for a literal)."},
+		{"error_470_embed_field_to_borrow.pa", ":4:1: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@{..}', '@!{..}', '@[..]' or '@![..]' for a literal)."},
 		{"error_471_display_struct_value.pa", ":3:1: error: cannot convert 'P' to 'int64'."},
 		{"error_472_display_struct_param.pa", ":3:1: error: cannot convert 'int64' to 'P'."},
 		{"error_473_display_arr.pa", ":2:1: error: cannot convert '[3]int32' to 'int64'."},
@@ -424,7 +423,7 @@ TEST(sa_error, arr_lit_assign)
 		{"error_479_display_arr_borrow.pa", ":2:2: error: cannot convert '@[2][3]int32' to 'int64'."},
 		{"error_480_display_arr_borrow_row.pa", ":2:2: error: cannot convert '@[3]int32' to 'int64'."},
 		{"error_481_display_cast_struct.pa", ":3:11: error: Cannot cast type 'P' to 'int64'."},
-		{"error_482_call_borrow_needs_at.pa", ":4:11: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@[..]' or '@![..]' for a literal)."},
+		{"error_482_call_borrow_needs_at.pa", ":4:11: error: a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@f()' or '@!f()' for a call returning it, '@{..}', '@!{..}', '@[..]' or '@![..]' for a literal)."},
 		{"error_483_call_borrow_decl.pa", ":3:8: error: a struct or array returned by a call has no owner to borrow from"},
 		{"error_484_call_borrow_ro_to_mut.pa", ":4:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
 		{"error_485_call_borrow_not_struct.pa", ":3:3: error: cannot take the address of this expression"},
@@ -452,9 +451,8 @@ TEST(sa_error, arr_lit_assign)
 TEST(sa_error, varr)
 {
 	const pair<string, string> cases[] = {
-		{"error_725_varr_copy_to_sized.pa", ":3:1: error: cannot copy '[+]int32' into '[3]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
-		{"error_726_varr_copy_elem_mismatch.pa", ":2:1: error: cannot copy '[+]int32' into '[+]int64': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
-		{"error_727_varr_transfer_elem_mismatch.pa", ":3:1: error: cannot transfer '[+]int32' into '[+]int64': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
+		{"error_726_varr_copy_elem_mismatch.pa", ":2:1: error: cannot copy '[+]int32' into '[+]int64': both need the same element type and layout, and sizes, the same where both are known at compile time."},
+		{"error_727_varr_transfer_elem_mismatch.pa", ":3:1: error: cannot transfer '[+]int32' into '[+]int64': both need the same element type and layout, and the same sizes where both are known at compile time."},
 		{"error_728_varr_embed_owning_struct.pa", ":3:1: error: cannot embed 'Q' with '$': it owns storage of its own; use 'Q' without '$'."},
 		{"error_729_varr_lit_over_len.pa", ":1:1: error: array 'v' has size 2 but its array literal has 3 elements."},
 		{"error_730_varr_lit_len_not_const.pa", ":2:1: error: array 'v' given an array literal must have a compile-time constant size."},
@@ -464,6 +462,8 @@ TEST(sa_error, varr)
 		{"error_734_varr_push_no_match.pa", ":4:1: error: No function 'push' takes (@![+]int32, int64); there are push(@![+]flo64, flo64), push(@![+]int32, int32)."},
 		{"error_735_varr_borrow_needs_addr.pa", ":2:11: error: a variable-length array given to '@[+]T'/'@![+]T' must be written as '@name' or '@!name'."},
 		{"error_736_arr_len_needs_addr.pa", ":2:11: error: an array given to 'len' must be written as '@name'."},
+		{"error_1084_len_not_array.pa", ":2:15: error: 'len' takes an array; this value is 'int32'."},
+		{"error_1085_len_not_array_chain.pa", ":2:11: error: 'len' takes an array; this value is 'flo64'."},
 		{"error_861_len_addr_of_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_862_varr_borrow_addr_of.pa", ":4:3: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_863_len_addr_of_varr_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
@@ -479,7 +479,6 @@ TEST(sa_error, varr)
 		{"error_746_varr_builtin_redefined.pa", ":1:1: error: Function 'push' is already defined."},
 		{"error_747_varr_builtin_redefined_after.pa", ":2:1: error: Function 'push' is already defined."},
 		{"error_748_arr_len_redefined.pa", ":1:1: error: Function 'len' is already defined."},
-		{"error_749_varr_ptr_elem.pa", ":2:1: error: this statement is not supported in this version."},
 		{"error_826_varr_ptr_push_struct_no_addr.pa", ":4:1: error: a struct given to a '@T'/'@!T' pointer must be written as"},
 		{"error_827_varr_ptr_push_arr_no_addr.pa", ":3:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as"},
 		{"error_828_varr_ptr_push_upgrade.pa", ":4:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
@@ -495,9 +494,9 @@ TEST(sa_error, varr)
 		{"error_946_transfer_to_embed_varr.pa", ":4:1: error: '->>' needs a field that owns its value (T or [n]T); 'bytes' does not."},
 		{"error_754_varr_param_elem_mismatch.pa", ":3:1: error: cannot convert '[+]int64' to '[+]int32'."},
 		{"error_755_varr_named_ret_init.pa", ":1:26: error: named return 'r' of a struct or array type cannot have an initializer."},
-		{"error_756_varr_return_borrow_mismatch.pa", ":2:2: error: cannot copy '@[+]int64' into '[+]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
+		{"error_756_varr_return_borrow_mismatch.pa", ":2:2: error: cannot copy '@[+]int64' into '[+]int32': both need the same element type and layout, and sizes, the same where both are known at compile time."},
 		{"error_757_varr_lit_transfer.pa", ":2:1: error: '->>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
-		{"error_758_varr_copy_struct_layout.pa", ":3:1: error: cannot copy '[2]$P' into '[+]P': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
+		{"error_758_varr_copy_struct_layout.pa", ":3:1: error: cannot copy '[2]$P' into '[+]P': both need the same element type and layout, and sizes, the same where both are known at compile time."},
 		{"error_759_varr_embed_varr.pa", ":1:1: error: cannot embed '[+]int32' with '$': it owns storage of its own; use '[+]int32' without '$'."},
 		{"error_760_arr_embed_varr.pa", ":1:1: error: cannot embed '[+]int32' with '$': it owns storage of its own; use '[+]int32' without '$'."},
 		{"error_762_varr_elem_sized.pa", ":1:1: error: a variable-length array element is written '[+]T', without a size: it starts empty."},
@@ -513,29 +512,25 @@ TEST(sa_error, varr)
 		{"error_772_nested_varr_readonly_write.pa", ":2:2: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
 		{"error_773_arr_varr_readonly_write.pa", ":2:2: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
 		{"error_774_nested3_varr_readonly_write.pa", ":2:2: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
-		{"error_777_varr_row_ptr.pa", ":1:1: error: this statement is not supported in this version."},
 		{"error_778_varr_row_size_not_const.pa", ":2:1: error: the row size in '[][m]T' or '[+][m]T' must be a compile-time constant."},
 		{"error_779_varr_row_varr_sized.pa", ":1:1: error: a variable-length array element is written '[+]T', without a size: it starts empty."},
-		{"error_780_varr_row_push_size.pa", ":3:1: error: array shape '[3]int32' does not match the borrowed array type '@[4]int32'."},
-		{"error_781_varr_row_push_no_addr.pa", ":3:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@[..]' or '@![..]' for a literal)."},
+		{"error_780_varr_row_push_size.pa", ":3:1: error: cannot convert '[3]int32' to '[4]int32'."},
 		{"error_782_varr_row_lit_count.pa", ":1:26: error: array 'a' has rows of size 2 but a row of its array literal has 3 elements."},
-		{"error_783_varr_row_copy_layout.pa", ":2:1: error: cannot copy '[+][4]int32' into '[+]$[4]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
+		{"error_783_varr_row_copy_layout.pa", ":2:1: error: cannot copy '[+][4]int32' into '[+]$[4]int32': both need the same element type and layout, and sizes, the same where both are known at compile time."},
 		{"error_784_varr_row_readonly_write.pa", ":2:2: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
-		{"error_785_varr_row_pop_size.pa", ":2:1: error: cannot copy '[4]int32' into '[3]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
+		{"error_785_varr_row_pop_size.pa", ":2:1: error: cannot copy '[4]int32' into '[3]int32': both need the same element type and layout, and sizes, the same where both are known at compile time."},
 		{"error_786_varr_row_pop_index.pa", ":2:11: error: a struct or array returned by a call has no owner to access it through; receive it into a variable with '->' first."},
 		{"error_787_varr_row_embed_owning.pa", ":3:1: error: cannot embed 'P' with '$': it owns storage of its own; use 'P' without '$'."},
 		{"error_788_varr_row_pop_borrow.pa", ":2:15: error: a struct or array returned by a call has no owner to borrow from; receive it into a variable with '->' and borrow it with '@name' or '@!name' (only a call argument can borrow it directly, as '@f()' or '@!f()')."},
 		{"error_789_embed_varr.pa", ":1:1: error: cannot embed '[+]int32' with '$': it owns storage of its own; use '[+]int32' without '$'."},
 		{"error_790_embed_varr_deep.pa", ":1:1: error: cannot embed '[+]int32' with '$': it owns storage of its own; use '[+]int32' without '$'."},
 		{"error_791_unsized_rows_of_varr.pa", ":1:1: error: an unsized array of variable-length arrays ('[][+]T') is not supported in this version; borrow the array as '@[n][+]T' or '@[+][+]T'."},
-		{"error_792_copy_ptr_rows.pa", ":2:2: error: copying '@![2][3]@int32' is not supported in this version."},
 		{"error_793_varr_borrow_row_size.pa", ":3:1: error: array shape '@![+][4]int32' does not match '[+][3]int32': its elements must have the same size and layout, and be owned by both or by neither."},
 		{"error_794_arr_param_size_mismatch.pa", ":3:1: error: cannot convert '[4]int32' to '[3]int32'."},
 		{"error_795_arr_param_elem_mismatch.pa", ":3:1: error: cannot convert '[3]int16' to '[3]int32'."},
-		{"error_796_arr_param_from_varr.pa", ":3:1: error: cannot convert '[+]int32' to '[3]int32'."},
-		{"error_797_arr_return_size_mismatch.pa", ":3:2: error: cannot copy '[3]int32' into '[4]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
-		{"error_798_arr_return_call_size_mismatch.pa", ":3:2: error: cannot copy '[3]int32' into '[4]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
-		{"error_799_arr_return_borrow_size_mismatch.pa", ":2:2: error: cannot copy '@[4]int32' into '[3]int32': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's."},
+		{"error_797_arr_return_size_mismatch.pa", ":3:2: error: cannot transfer '[3]int32' into '[4]int32': both need the same element type and layout, and the same sizes where both are known at compile time."},
+		{"error_798_arr_return_call_size_mismatch.pa", ":3:2: error: cannot copy '[3]int32' into '[4]int32': both need the same element type and layout, and sizes, the same where both are known at compile time."},
+		{"error_799_arr_return_borrow_size_mismatch.pa", ":2:2: error: cannot copy '@[4]int32' into '[3]int32': both need the same element type and layout, and sizes, the same where both are known at compile time."},
 		{"error_800_arr_sig_size_not_const.pa", ":1:1: error: every size in an array parameter or return type must be a compile-time constant."},
 		{"error_801_arr_named_ret_init.pa", ":1:26: error: named return 'r' of a struct or array type cannot have an initializer."},
 		{"error_802_arr_return_lit_count.pa", ":2:2: error: array '[3]int32' has size 3 but its array literal has 2 elements."},
@@ -560,6 +555,61 @@ TEST(sa_error, owned_rows_c_ptrptr)
 		{"error_594_owned_rows_c_ptrptr.pa", ":3:1: error: array shape '@![1][4]uint8' " + mismatch},
 		{"error_595_owned_unsized_rows_c_ptrptr.pa", ":4:1: error: array shape '@![1][?]uint8' " + mismatch},
 		{"error_596_owned_rows_runtime_outer_c_ptrptr.pa", ":4:1: error: array shape '@![?][4]uint8' " + mismatch},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, run_size_move)
+{
+	const string runSize = "its size cannot change there, and a size known only at run time cannot be shown to match it";
+	const string resized = "can only be given away: '<<=', '->>', '>>' or 'return'.";
+	const pair<string, string> cases[] = {
+		{"error_1096_move_run_size_to_const_var.pa", ":4:1: error: cannot transfer '[?]int32' into '[4]int32': " + runSize},
+		{"error_1097_move_run_size_to_row.pa", ":5:1: error: cannot transfer '[?]int32' into '[?]int32': " + runSize},
+		{"error_1098_move_const_to_run_size_row.pa", ":4:1: error: cannot transfer '[2]int32' into '[?]int32': " + runSize},
+		{"error_1099_move_run_size_to_field.pa", ":5:1: error: cannot transfer '[?]int32' into '[4]int32': " + runSize},
+		{"error_1100_move_run_size_to_param.pa", ":4:1: error: cannot transfer '[?]int32' into '[4]int32': " + runSize},
+		{"error_1101_take_run_size_into_const.pa", ":3:1: error: cannot transfer '[?]int32' into '[4]int32': " + runSize},
+		{"error_1102_return_run_size.pa", ":4:2: error: cannot transfer '[?]int32' into '[4]int32': " + runSize},
+		{"error_1103_resize_cast_copy.pa", ":4:14: error: an array cast to '[?]int32' " + resized},
+		{"error_1104_resize_cast_read.pa", ":3:12: error: an array cast to '[4]int32' " + resized},
+		{"error_1105_resize_cast_elem_mismatch.pa", ":4:1: error: cannot transfer '[?]int32' into '[4]int64': both need the same element type and layout"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, use_after_given)
+{
+	const string given = " error: 'a' was given away and is NULL here; fill it with '->>' before using it.";
+	const pair<string, string> cases[] = {
+		{"error_1106_given_len.pa", ":4:16:" + given},
+		{"error_1107_given_read.pa", ":4:11:" + given},
+		{"error_1108_given_copy_into.pa", ":5:1:" + given},
+		{"error_1109_given_again.pa", ":5:1:" + given},
+		{"error_1110_given_by_arg.pa", ":4:6:" + given},
+		{"error_1111_given_by_take.pa", ":2:25:" + given},
+		{"error_1112_given_param.pa", ":5:9: error: 'p' was given away"},
+		{"error_1113_given_in_if.pa", ":9:6:" + given},
+		// Reached from the loop's head after the previous iteration gave it.
+		{"error_1114_given_prev_iteration.pa", ":5:7:" + given},
+		{"error_1115_given_break.pa", ":11:16:" + given},
+		{"error_1116_given_continue.pa", ":7:6:" + given},
+		{"error_1117_given_in_cond.pa", ":3:12:" + given},
+		{"error_1118_given_for_range.pa", ":5:14:" + given},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

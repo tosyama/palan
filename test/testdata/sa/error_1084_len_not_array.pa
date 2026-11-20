@@ -1,0 +1,2 @@
+int32 x = 1;
+int64 n = len(@x);

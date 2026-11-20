@@ -1,0 +1,5 @@
+const K = 3;
+export type Arr = [K]int32;
+export func sum(@Arr a) -> int32 { return a[0] + a[1] + a[2]; }
+export func total(Arr a) -> int32 { return a[0] + a[1] + a[2]; }
+export type Summer = @func([K]int32) -> int32;

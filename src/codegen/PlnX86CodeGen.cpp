@@ -20,23 +20,40 @@ const PhysRegs PlnX86CodeGen::x86PhysRegs = {
     { "%xmm10", "%xmm11", "%xmm12", "%xmm13", "%xmm14", "%xmm15" }
 };
 
+// Whether some function negates a float of `type`, which takes a sign mask (emitInstrNeg).
+static bool negatesFloat(const VProg& prog, VRegType type)
+{
+    for (auto& f : prog.funcs)
+        for (auto& instr : f.instrs)
+            if (auto* n = std::get_if<Neg>(&instr); n && n->type == type)
+                return true;
+    return false;
+}
+
 void PlnX86CodeGen::emit(const VProg& prog, const vector<RegAllocResult>& allocs)
 {
-    if (!prog.data.empty() || !prog.floatData.empty() || prog.needsF32Neg || prog.needsF64Neg) {
+    bool needsF32Neg = negatesFloat(prog, VRegType::Float32);
+    bool needsF64Neg = negatesFloat(prog, VRegType::Float64);
+    if (!prog.data.empty() || !prog.floatData.empty() || needsF32Neg || needsF64Neg) {
         emitSection(".rodata");
         // xorps/xorpd read a 16-byte operand, which must be 16-byte aligned.
-        if (prog.needsF32Neg)
+        if (needsF32Neg)
             out << "\t.p2align 4\n.neg_mask_f32:\n\t.long 0x80000000, 0, 0, 0\n";
-        if (prog.needsF64Neg)
+        if (needsF64Neg)
             out << "\t.p2align 4\n.neg_mask_f64:\n\t.quad 0x8000000000000000, 0\n";
         for (auto& d : prog.data)
             emitStringLiteral(d.label, d.value);
         for (auto& f : prog.floatData) {
+            // A flo80 is read as 16 bytes like any other copy of it.
+            if (f.type == VRegType::Float80)
+                out << "\t.p2align 4\n";
             emitLabel(f.label);
             if (f.type == VRegType::Float32)
                 out << "\t.float " << f.value << "\n";
-            else
+            else if (f.type == VRegType::Float64)
                 out << "\t.double " << f.value << "\n";
+            else
+                out << "\t.tfloat " << f.value << "\n\t.zero 6\n";
         }
     }
 
@@ -44,6 +61,7 @@ void PlnX86CodeGen::emit(const VProg& prog, const vector<RegAllocResult>& allocs
         emitSection(".bss");
         for (auto& b : prog.bss) {
             out << "\t.align " << b.align << "\n";
+            if (b.isExport) emitGlobal(b.label);
             emitLabel(b.label);
             out << "\t.zero " << b.size << "\n";
         }
@@ -210,7 +228,7 @@ void PlnX86CodeGen::emitInstrMov(const Mov& mv, const RegMap& rm)
         out << "\t" << movInstrForType(mv.type) << " " << s << ", " << d << "\n";
     } else {
         // Both on stack: route through scratch register.
-        string scratch = isFloat(mv.type) ? "%xmm8" : sizedRegName("%rax", mv.type);
+        string scratch = movedViaXmm(mv.type) ? "%xmm8" : sizedRegName("%rax", mv.type);
         out << "\t" << movInstrForType(mv.type) << " " << s << ", " << scratch << "\n";
         out << "\t" << movInstrForType(mv.type) << " " << scratch << ", " << d << "\n";
     }
@@ -258,16 +276,18 @@ void PlnX86CodeGen::emitStringLiteral(const string& label, const string& value)
 // must not inherit these methods; see the ticket for the deferred VProg-level
 // VGlobal promotion if a second backend or a second compiler-emitted global
 // ever appears.
-void PlnX86CodeGen::emitEntry(const string& mainSymbol)
+void PlnX86CodeGen::emitEntry(const vector<string>& symbols)
 {
     // The kernel enters _start with %rsp 16-byte aligned and argc, argv[0..]
     // on the stack, so a plain call keeps the callee's alignment standard.
     emitSection(".text");
     emitGlobal("_start");
     emitLabel("_start");
-    out << "\tmovq (%rsp), %rdi\n";
-    out << "\tleaq 8(%rsp), %rsi\n";
-    out << "\tcall " << mainSymbol << "\n";
+    for (auto& symbol : symbols) {
+        out << "\tmovq (%rsp), %rdi\n";
+        out << "\tleaq 8(%rsp), %rsi\n";
+        out << "\tcall " << symbol << "\n";
+    }
     out << "\tmovl $0, %edi\n";
     out << "\tcall exit\n";
 

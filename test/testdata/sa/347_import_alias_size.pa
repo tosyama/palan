@@ -1,0 +1,5 @@
+import "lib_sa_alias_size.pa";
+const K = 2;
+type Box { Arr a; };
+Box b;
+int64 n = len(@b.a);

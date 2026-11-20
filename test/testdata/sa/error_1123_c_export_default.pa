@@ -1,0 +1,1 @@
+cexport func scale(int32 a, int32 k = 2) -> int32 { return a * k; }

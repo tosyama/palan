@@ -8,41 +8,53 @@
 #include "PlnSaMessage.h"
 #include "../common/PlnDefs.h"
 #include <boost/assert.hpp>
-#include <cstdio>
-#include <regex>
-#include <cstdint>
+#include <cctype>
 
-using std::regex;
 using std::to_string;
 
-static const char localTypePrefix[] = "__pln_L";
+static const char typePrefix[] = "__pln_L";
 
-string PlnSaMessage::localTypeName(const string& moduleId, int seq, const string& name)
+string PlnSaMessage::typeIdentity(const string& moduleId, int seq, const string& name)
 {
-	// FNV-1a: the module's part must be the same in every build of it.
-	// A top-level type (seq 0) has only its name: a library's interface leaves
-	// other private types out, and the name must stay the one in the object.
-	uint64_t h = 14695981039346656037ull;
-	for (unsigned char c : moduleId) h = (h ^ c) * 1099511628211ull;
-	char hex[17];
-	snprintf(hex, sizeof hex, "%016llx", (unsigned long long)h);
-	return localTypePrefix + string(hex) + "_" + (seq ? to_string(seq) + "_" : "") + name;
+	string module;
+	for (char c : moduleId) module += c == '.' ? "_2e" : string(1, c);
+	return typePrefix + to_string(module.size()) + module + "_" + (seq ? to_string(seq) + "_" : "") + name;
 }
 
-static const regex& localTypePart()
+// Drops the module part of every type identity in `s`, whose length says
+// where it ends. A seq is all digits, which no written name starts with.
+static string dropTypeModules(const string& s)
 {
-	static const regex part(string(localTypePrefix) + "[0-9a-f]{16}_([0-9]+_)?"); // LCOV_EXCL_BR_LINE
-	return part;
+	static const size_t prefixLen = sizeof typePrefix - 1;
+	string out;
+	size_t pos = 0;
+	for (size_t at; (at = s.find(typePrefix, pos)) != string::npos; ) {
+		out.append(s, pos, at - pos);
+		size_t p = at + prefixLen, digits = p;
+		while (digits < s.size() && isdigit((unsigned char)s[digits])) digits++;
+		size_t end = digits == p ? string::npos : digits + stoul(s.substr(p, digits - p));
+		if (end >= s.size() || s[end] != '_') { // LCOV_EXCL_BR_LINE
+			out.append(typePrefix); // LCOV_EXCL_LINE
+			pos = p; // LCOV_EXCL_LINE
+			continue; // LCOV_EXCL_LINE
+		}
+		pos = end + 1;
+		size_t seq = pos;
+		while (seq < s.size() && isdigit((unsigned char)s[seq])) seq++;
+		if (seq > pos && seq < s.size() && s[seq] == '_') pos = seq + 1;
+	}
+	out.append(s, pos, string::npos);
+	return out;
 }
 
 string PlnSaMessage::writtenTypeName(const string& typeName)
 {
-	return regex_replace(typeName, localTypePart(), "");
+	return dropTypeModules(typeName);
 }
 
 string PlnSaMessage::getMessage(PlnSaMessageCode msg_code, string arg1, string arg2, string arg3)
 {
-	return regex_replace(format(msg_code, arg1, arg2, arg3), localTypePart(), "");
+	return dropTypeModules(format(msg_code, arg1, arg2, arg3));
 }
 
 string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2, string arg3)
@@ -58,6 +70,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 				" -i, --indent                 Output SA json with indent.\n"
 				" --interface                  Check a .pai's AST; output its functions' symbols.\n"
 				" --library=<pkg/mod>=<ast>    Where the AST of an import <pkg/mod> is.\n"
+				" --release                    Leave out the run-time checks of a debug build.\n"
 				" -v, --version                Display version.\n"
 				" -h, --help                   Display help.\n";
 
@@ -449,7 +462,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_StructBorrowNeedsAddrOf:
 			return "a struct given to a '@T'/'@!T' pointer must be written as '@name' or '@!name' "
-			       "('@f()' or '@!f()' for a call returning it, '@[..]' or '@![..]' for a literal).";
+			       "('@f()' or '@!f()' for a call returning it, '@{..}', '@!{..}', '@[..]' or '@![..]' for a literal).";
 
 		case E_VarrBorrowNeedsAddrOf:
 			return "a variable-length array given to '@[+]T'/'@![+]T' must be written as '@name' or '@!name'.";
@@ -497,7 +510,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_GlobalPermitUnknownVar:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "'" + arg1 + "' is not a global variable: declare it with 'global', or cinclude the C global first.";
+			return "'" + arg1 + "' is not a global variable: declare it with 'global', import it, or cinclude the C global first.";
 
 		case E_GlobalPermitNotFunc:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -507,15 +520,15 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
 			return "'" + arg2 + "' is already permitted to use '" + arg1 + "'.";
 
-		case E_GlobalUsedBeforeDecl:
+		case E_GlobalInitUsesTopVar:
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
-			return "this reaches '" + arg2 + "', which uses global variable '" + arg1
-			       + "', before '" + arg1 + "' is declared.";
+			return "the initializer of global '" + arg2 + "' cannot use top-level variable '" + arg1
+			       + "': globals are initialized before the top level runs.";
 
-		case E_ImportModuleWithGlobals:
+		case E_ExportedGlobalSizeNotConst:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "cannot import a module whose functions use its global variable '" + arg1
-			       + "': an imported module's top level does not run, so '" + arg1 + "' is never initialized.";
+			return "the sizes of exported global '" + arg1
+			       + "' must be constants or its array literal's: an importer cannot know them otherwise.";
 
 		case E_InterfaceAsProgram:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -540,6 +553,10 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ArrLenNeedsAddrOf:
 			return "an array given to 'len' must be written as '@name'.";
 
+		case E_LenNotArray:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'len' takes an array; this value is '" + arg1 + "'.";
+
 		case E_StructLitFieldCount:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
@@ -558,11 +575,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_StructLitExpected:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "a value of struct '" + arg1 + "' must be written as '[...]' or '{name: value, ...}'.";
-
-		case E_StructLitFieldType:
-			BOOST_ASSERT(arg1 != "\x01");
-			BOOST_ASSERT(arg2 != "\x01");
-			return "field '" + arg2 + "' of struct '" + arg1 + "' cannot be initialized by a literal: only numeric, struct and array fields are supported.";
 
 		case E_DictLitContext:
 			return "a '{name: value}' literal can only be used as a struct value: a struct variable's "
@@ -583,7 +595,14 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_CMacroFuncLike:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "C macro '" + arg1 + "' is function-like; Palan cannot use it.";
+			if (arg2 == "\x01")
+				return "C macro '" + arg1 + "' has a body Palan cannot translate.";
+			return "C macro '" + arg1 + "' uses " + arg2 + ", which Palan cannot translate.";
+
+		case E_CMacroUnresolvedName:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "C macro '" + arg1 + "' uses '" + arg2 + "', which does not name a C function or C variable here.";
 
 		case E_CMacroNotConstant:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -606,11 +625,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_CopyShapeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
-			return "cannot copy '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's.";
-
-		case E_CopyUnsupportedShape:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "copying '" + arg1 + "' is not supported in this version.";
+			return "cannot copy '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and sizes, the same where both are known at compile time.";
 
 		case E_AddrOfBorrowed:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -635,7 +650,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_ConvertedLiteralToBorrow:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "a string literal converted to '" + arg1 + "' is a temporary value with no owner to "
+			return "a literal converted to '" + arg1 + "' is a temporary value with no owner to "
 			       "borrow from; declare a '" + arg1 + "' variable initialized with it and borrow that "
 			       "(only a call argument or an operator's operand can borrow it directly).";
 
@@ -690,7 +705,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_TransferShapeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
-			return "cannot transfer '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time; a size known only at run time must be its owner's.";
+			return "cannot transfer '" + arg2 + "' into '" + arg1 + "': both need the same element type and layout, and the same sizes where both are known at compile time.";
 
 		case E_TransferToNonOwnedVar:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -702,15 +717,61 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "'" + arg1 + "' is given away with '>>' and set to NULL just before the call, "
 			       "but this later argument of the same call may change it.";
 
+		case E_UseAfterGiven:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' was given away and is NULL here; fill it with '->>' before using it.";
+
+		case E_CExportFunc:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "function '" + arg1 + "' cannot be exported to C: " + arg2 + ".";
+
+		case E_SpreadPlace:
+			return "'...' spreads an array only as the last argument of a call.";
+
+		case E_SpreadNotVariadic:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'...' spreads an array only into a variadic parameter '[...]T', which '" + arg1 + "' does not have.";
+
+		case E_SpreadPosition:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "the spread array gives all of '" + arg1 + "' of '" + arg2
+			     + "': it must be the only argument after the other parameters'.";
+
+		case E_SpreadNotArray:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'...' spreads an array, but this is " + arg1 + ".";
+
+		case E_SpreadBorrow:
+			return "'...' takes the array as a by-value parameter does: write '...a' for a copy or '...a>>' to give it, not '@a'.";
+
+		case E_SpreadUnsized:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' keeps no length, so it cannot be spread with '...'.";
+
+		case E_SpreadElemMismatch:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "'...' cannot spread '" + arg2 + "' into '" + arg1
+			     + "': the elements must be of exactly its type, since they are not converted.";
+
+		case E_AddrOfBitField:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "cannot take the address of bit-field '" + arg1 + "'.";
+
+		case E_BitFieldLiteralOutOfRange:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			BOOST_ASSERT(arg3 != "\x01");
+			return "Integer literal '" + arg1 + "' does not fit the " + arg3 + "-bit bit-field '" + arg2 + "'.";
+
 		case E_TransferToSelf:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'->>' cannot give '" + arg1 + "' to itself.";
 
 		case E_UnsizedArrRowSizeNotConst:
 			return "the row size in '[][m]T' or '[+][m]T' must be a compile-time constant.";
-
-		case E_UnsizedArrRowUnsupported:
-			return "'[][m]T' does not support rows of '@T'/'@!T' pointers in this version.";
 
 		case E_ArrElemShapeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -871,10 +932,9 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "the initializer of field '" + arg1 + "' must be a compile-time constant.";
 
-		case E_FieldInitUnsupported:
+		case E_FieldInitPtrNotNull:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "field '" + arg1 + "' cannot have an initializer in this version: only a primitive field "
-			       "or a one-dimensional array of primitives can.";
+			return "the initializer of pointer field '" + arg1 + "' must be NULL.";
 
 		case E_ParamDefaultNotConst:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -908,11 +968,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_SyscallVariadic:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "syscall '" + arg1 + "' cannot take a variadic parameter.";
-
-		case E_VariadicArgTempBorrow:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "a variadic argument of '" + arg1 + "' borrows a temporary value a call holds, which would be "
-			       "released before '" + arg1 + "' is called; keep the value in a variable first.";
 
 		case E_AppendFuncFirstParam:
 			return "the first parameter of operator function '<<' must be a writable borrow '@!T' of a struct.";
@@ -992,6 +1047,54 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01" && arg3 != "\x01");
 			return "no struct literal of '" + arg1 + "' can be written outside the module defining it: its " + arg3
 			       + " field '" + arg2 + "' has no initializer.";
+
+		case E_OpaqueContents:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "an opaque type holds what a variable owns through one pointer (a struct, an array of "
+			       "constant sizes or a '[+]T'), not '" + arg1 + "'.";
+
+		case E_OpaqueNeedsLayout:
+			BOOST_ASSERT(arg1 != "\x01" && arg2 != "\x01");
+			return arg2 + " needs the contents of the opaque type '" + arg1
+			       + "', which only a module able to write their type knows.";
+
+		case E_OpaqueField:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' is opaque and has no fields: its module reaches the contents through 'as'.";
+
+		case E_OpaqueConvert:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "an owned '" + arg1 + "' is converted only to or from its contents' type, in a module "
+			       "able to write that type.";
+
+		case E_OpaqueConvertMove:
+			return "an owned value converted between an opaque type and its contents is given by a move: "
+			       "'<<=', '->>', '>>' or 'return'.";
+
+		case E_OpaqueHeldCopy:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' holds an opaque value, and copying one held in another value is not "
+			       "supported in this version.";
+
+		case E_ReleaseFuncSig:
+			return "a 'release' function takes one owned opaque type of its module and returns nothing.";
+
+		case E_ReleaseFuncPlace:
+			return "a 'release' function is defined at the top level of the module defining its opaque type.";
+
+		case E_ReleaseFuncDup:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' has another 'release' function; a type has one.";
+
+		case E_MoveRunSize:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "cannot transfer '" + arg2 + "' into '" + arg1 + "': its size cannot change there, and a size known "
+			       "only at run time cannot be shown to match it; set the size with 'as' if they match.";
+
+		case E_ResizeNotMoved:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "an array cast to '" + arg1 + "' can only be given away: '<<=', '->>', '>>' or 'return'.";
 
 		default:
 			BOOST_ASSERT(false);

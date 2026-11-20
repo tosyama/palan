@@ -1,0 +1,9 @@
+func f() -> int64 { return 1; }
+[2]$[3]int32 c;
+int32 k = 3;
+[k][2]int32 a;
+int64 n = len(@c[f()]);
+int64 m = c[f()] -> len();
+int64 r = len(@a[f()]);
+[2][k]int32 b;
+int64 q = len(@b[f()]);

@@ -1,0 +1,13 @@
+cinclude <stdio.h>;
+cinclude "439_c_flo80.h" link "439_c_flo80.o";
+
+cexport func ld_scale(flo80 x, int32 k) -> flo80 { return x * k; }
+
+printf("%.3Lf\n", ld_late(1, 2, 3, 4, 5, 6, 7, 0.5, 9, 0.25));
+LdMix m = [3, 1.5];
+LdMix r = ld_mix(m, 0.25);
+printf("%d %.2Lf / %d %.2Lf\n", r.n, r.v, m.n, m.v);
+LdOne o = ld_one(5);
+printf("%.4Lf\n", o.v);
+ld_one(1);
+printf("%.20Lf\n", ld_call_back());

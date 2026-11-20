@@ -1,0 +1,5 @@
+cinclude <stdio.h>;
+import "init_b.pa";
+func mk() -> int32 { puts("init a"); return getb() + 1; }
+global int32 av = mk() for geta;
+export func geta() -> int32 { return av; }
