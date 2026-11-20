@@ -1027,7 +1027,7 @@ TEST(build_mgr, lib_errors) {
 	EXPECT_EQ(execTestCommand(libBuild("err_package.pa")),
 		"return1::palan: '" + lib_build + "other_package.pa' belongs to library 'other', not 'demo'\n");
 	EXPECT_EQ(execTestCommand(libBuild("err_local_header.pa")),
-		"return1::" + lib_build + "err_local_header.pa:2:1: error: a library's public declaration cannot yet use a C type of the local header 'local_type.h': its reader would not find the header.\n");
+		"return1::" + lib_build + "err_local_header.pa:2:1: error: a library's public declaration cannot use a C type of the local header 'local_type.h': its reader would not find the header; wrap the type in an opaque type to publish it.\n");
 	EXPECT_NE(execTestCommand(libBuild("err_no_export_clause.pa")).find("FILE"), string::npos);
 	string internal = "': declare it in the main source.\n";
 	EXPECT_EQ(execTestCommand(libBuild("err_internal_type.pa")),

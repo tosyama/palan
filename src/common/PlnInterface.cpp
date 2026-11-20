@@ -464,8 +464,8 @@ void Merger::ref(json& nameNode, int m, bool rename)
 	if (inc["path-type"] == "src") {
 		string at = (*modules_[m])["original"].get<string>() + ":" + to_string(inc["loc"][0].get<int>()) + ":"
 			+ to_string(inc["loc"][1].get<int>());
-		throw runtime_error(at + ": error: a library's public declaration cannot yet use a C type of the local header '"
-			+ inc["path"].get<string>() + "': its reader would not find the header.");
+		throw runtime_error(at + ": error: a library's public declaration cannot use a C type of the local header '"
+			+ inc["path"].get<string>() + "': its reader would not find the header; wrap the type in an opaque type to publish it.");
 	}
 	pair<string, string> id{inc["path"], inc.value("alias", "")};
 	if (!cIncludes_.count(id)) {
