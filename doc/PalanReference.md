@@ -826,6 +826,9 @@ Types and consts declared inside a block follow the same rules (see [Declaration
 
 `cinclude` inside a block makes the imported C functions available only within that block. A C function brought in again is the same function.
 
+Blocks and the statements holding them (`if`, `while`, `for`) nest up to about 3000 levels; a
+deeper source fails to parse with "memory exhausted".
+
 ### Optional Semicolons
 
 The semicolon at the end of the last statement in a block (or at top level) may be omitted. Statements ending with `}` (`if`, `while`, standalone block) never require a trailing semicolon. Other statements require a semicolon when followed by another statement.
@@ -2190,7 +2193,7 @@ Array **variables** (this section) allow non-constant `n`, except a stack array 
 - An array declared at the top level (outside any block) is not freed when the top-level statements end; the OS reclaims the memory at process exit.
 - Boundary checking is not performed.
 - `[n]$T` is not supported when `T` owns fields.
-- A `[][+]T` parameter is not supported.
+- A `[][+]T` parameter is not supported; borrow the array as `@[n][+]T` or `@[+][+]T` instead.
 
 ---
 
@@ -3165,8 +3168,9 @@ cinclude <math.h> link "m";  // link against libm (-lm) when building
 
 - `cinclude` makes C functions visible from the declaration point to the end of the enclosing scope.
 - A C function whose signature uses a C type Palan cannot represent (`va_list`, `__int128`, a
-  `_Complex` type) can be cincluded, but calling it is a compile error. `tgmath.h`
-  cannot be cincluded: it requires a GNU compiler.
+  `_Complex` type) can be cincluded, but calling it is a compile error. For a `v` function taking
+  a `va_list` (`vprintf`), call the one without the `v` (`printf`). `tgmath.h` cannot be
+  cincluded: it requires a GNU compiler.
 - With an alias, functions are accessible only via the qualified form `alias.funcName(...)`.
 - The number of arguments must match the number of parameters; a variadic C function takes at least
   its fixed parameters. A C function declared with empty parentheses `f()` takes no arguments, the
@@ -3217,8 +3221,9 @@ building it as a library (see [Building a Library](#building-a-library)).
 - The clause comes before `link`: `cinclude <uv.h> export uv_loop_t link "uv";`.
 - It is accepted only on a top-level `cinclude`; in a block or a function it is a compile error.
 - An ordinary `import` of a source file does not read the clause.
-- A local header (`cinclude "x.h" export T;`) is not supported yet when the library's public
-  declarations use the type: its reader would not find the header, so `--lib` reports an error.
+- The public declarations of a library can use C types of system headers only: a local header
+  (`cinclude "x.h" export T;`) would not be found by the library's reader, so `--lib` reports an
+  error. Wrap such a type in an [opaque type](#opaque-types) to publish it.
 
 ### Typedefs
 
@@ -3256,6 +3261,9 @@ building it as a library (see [Building a Library](#building-a-library)).
   is a compile error.
 - Aliased cinclude (`cinclude <x.h> as X;`) does not namespace imported typedefs — they are
   always registered globally. Only C function calls require the `X.` qualifier.
+- Headers are read as by a C compiler that is not GNU's, which keeps the C library's ABI except
+  for `sys/types.h`'s `register_t`: it is an `int32` rather than 64 bits. No C library function
+  uses it.
 
 ### Macro Constants
 
