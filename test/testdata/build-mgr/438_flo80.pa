@@ -8,6 +8,8 @@ func many(int64 a, int64 b, int64 c, int64 d, int64 e, int64 f, int64 g, flo80 h
 	return g + h + i + j + k;
 }
 func neg(flo80 x) -> flo80 { return -x; }
+func half(flo64 x) -> flo64 { return x / 2; }
+func widen(int64 v) -> flo80 { return v + 1; }
 type one { flo80 v; };
 type mix { int32 n; flo80 v; };
 func mkone(flo80 x) -> one { return [x * 2]; }
@@ -68,3 +70,9 @@ va.push(arr[2]);
 flo80 acc = 0;
 for @e in va { acc + e -> acc; }
 printf("%.2Lf %.2Lf %.2Lf\n", arr[2], va[2], acc);
+
+// A converted value in a register, and converted values kept across a call.
+printf("%.1Lf\n", widen(i64));
+flo64 r = flo64(m) + half(3.0);
+flo32 h = flo32(m) * flo32(half(4.0));
+printf("%.2f %.2f\n", r, h);

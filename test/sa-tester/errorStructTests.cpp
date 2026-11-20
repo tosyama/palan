@@ -1210,6 +1210,8 @@ TEST(sa_error, opaque_type)
 		 "type, in a module able to write that type."},
 		{"error_1064_opaque_convert_copy.pa", ":4:1: error: an owned value converted between an opaque type and "
 		 "its contents is given by a move: '<<=', '->>', '>>' or 'return'."},
+		{"error_1152_opaque_convert_assign.pa", ":6:1: error: an owned value converted between an opaque type and "
+		 "its contents is given by a move: '<<=', '->>', '>>' or 'return'."},
 		{"error_1065_opaque_held_copy.pa", ":4:1: error: 'W' holds an opaque value, and copying one held in "
 		 "another value is not supported in this version."},
 		{"error_1066_release_sig.pa", ":3:1: error: a 'release' function takes one owned opaque type of its "

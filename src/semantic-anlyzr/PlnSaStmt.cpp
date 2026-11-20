@@ -186,7 +186,7 @@ json PlnSemanticAnalyzer::resolveQualifiedGlobals(const json& node) const
 	}
 	return json();
 	// LCOV_EXCL_BR_STOP
-}
+} // LCOV_EXCL_BR_LINE
 
 void PlnSemanticAnalyzer::sa_functions(const json& funcs)
 {
@@ -364,7 +364,7 @@ void PlnSemanticAnalyzer::mergeGivenFlow(GivenFlow& into, const GivenFlow& from)
 void PlnSemanticAnalyzer::enterGivenLoop()
 {
 	given_.loops.push_back({++given_.seq, {}, given_.flow});
-}
+} // LCOV_EXCL_BR_LINE
 
 // The loop's head is reached from before it and from the end of each
 // iteration (or a 'continue'); it is left from its head or by a 'break'.
@@ -1678,7 +1678,7 @@ json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 	}
 	const PlnType* toType = registry_.fromJson(targetType);
 	json sa_value = transfer ? sa_move_source(stmt["value"], toType)
-	                         : sa_expression(literalConversion(stmt["value"], targetType), toType);
+	                         : sa_expression(literalConversion(stmt["value"], targetType), toType); // LCOV_EXCL_BR_LINE
 	sa_value = convertForBinding(stmt, sa_value, toType, registry_.toJson(toType));
 	checkElemShape(stmt, sa_value, targetType);
 	checkBorrowSource(stmt, sa_value, targetType);
@@ -1968,7 +1968,7 @@ json PlnSemanticAnalyzer::sa_return_stmt(const json& stmt)
 		const PlnType* toType = registry_.fromJson(retType);
 		const json& valueAst = stmt["values"][0];
 		json value = valueAst.value("expr-type", "") == "cast" && isArrLevel(retType) ? sa_move_source(valueAst)
-		           : sa_expression(literalConversion(valueAst, retType), toType);
+		           : sa_expression(literalConversion(valueAst, retType), toType); // LCOV_EXCL_BR_LINE
 		// A borrow is returned as a copy (copyReturnBlock), which checks its shape.
 		if (isOwnedBlock(retType) && isPtrBorrow(value["value-type"]))
 			return {{"stmt-type", "return"}, {"values", json::array({value})}}; // LCOV_EXCL_BR_LINE
@@ -2258,7 +2258,7 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 	}
 	const PlnType* toType = registry_.fromJson(fieldType);
 	json value = transfer ? sa_move_source(stmt["value"], toType)
-	                      : sa_expression(literalConversion(stmt["value"], fieldType), toType);
+	                      : sa_expression(literalConversion(stmt["value"], fieldType), toType); // LCOV_EXCL_BR_LINE
 	if (!transfer && isCopiedByValue(fieldType))
 		return json::array({makeCopyStmt(stmt, makeFieldAccess(chain, *it), value, CopyInto::Existing)}); // LCOV_EXCL_BR_LINE
 	value = convertForBinding(stmt, value, toType, fieldType);

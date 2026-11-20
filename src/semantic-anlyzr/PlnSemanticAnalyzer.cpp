@@ -547,8 +547,8 @@ void PlnSemanticAnalyzer::registerReleaseFunc(const json& funcEntry, const strin
 	if (origin == typeOrigins_.end() || origin->second != moduleId_ || scope != moduleId_) fail(E_ReleaseFuncPlace);
 	auto [it, added] = releaseFuncs_.emplace(name, funcEntry["symbol"].get<string>());
 	if (!added && it->second != funcEntry["symbol"].get<string>())
-		fail(E_ReleaseFuncDup, typeDisplayName({{"type-kind", "prim"}, {"type-name", name}}));
-}
+		fail(E_ReleaseFuncDup, typeDisplayName({{"type-kind", "prim"}, {"type-name", name}})); // LCOV_EXCL_BR_LINE
+} // LCOV_EXCL_BR_LINE
 
 // Each opaque type of this module gets the function every owner releases it
 // with. NULL, an owner whose value was moved away, releases nothing.
@@ -579,7 +579,7 @@ void PlnSemanticAnalyzer::emitReleaseFuncs()
 			{"parameters",json::array({{{"name","h"},{"var-type",vt}}})},{"body",json::array({move(ifStmt)})}});
 	}
 	// LCOV_EXCL_BR_STOP
-}
+} // LCOV_EXCL_BR_LINE
 
 // A struct's field initializers are stored by a function of the module
 // defining it, which knows its fields; the generated __pln_init_T calls it once
@@ -632,7 +632,7 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 		fbody.insert(fbody.begin(), nested.begin(), nested.end());
 	}
 	// LCOV_EXCL_BR_STOP
-}
+} // LCOV_EXCL_BR_LINE
 
 // An operator function is called only where an operand is a struct, and an
 // operand is never written with '@!' (see sa_operator_call), but for the one

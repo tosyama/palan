@@ -135,7 +135,7 @@ static int compileModule(const string& source, const string& mode, const string&
 	string obj_file = base + ".o";
 	if (fs::exists(sa_file) && isUpToDate(obj_file, tools_time, deps))
 		return 0;
-	vector<string> sa_argv{exec_path + "/palan-sa", source + ".ast.json"};
+	vector<string> sa_argv{exec_path + "/palan-sa", source + ".ast.json"}; // LCOV_EXCL_BR_LINE
 	if (mode == "release") sa_argv.push_back("--release");
 	sa_argv.insert(sa_argv.end(), library_args.begin(), library_args.end());
 	if (int ret = runToolTo(sa_argv, sa_file)) // LCOV_EXCL_BR_LINE

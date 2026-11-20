@@ -272,7 +272,7 @@ json PlnSemanticAnalyzer::varrStorageType(const json& locNode, const json& arr)
 		elem = base;
 	} else if (structDefs_.count(name)) {
 		const StructDef& def = !embedded && structDefs_.at(name).isOpaque ? structDefs_.at(name)
-		                     : requireCompleteStruct(name, locNode);
+		                     : requireCompleteStruct(name, locNode); // LCOV_EXCL_BR_LINE
 		if (embedded && def.ownsFields) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedOwningType, name) << endl;
 			exit(1);

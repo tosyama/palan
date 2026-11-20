@@ -337,7 +337,7 @@ TEST(build_mgr, stat_file_types) {
 TEST(build_mgr, function_macro) {
 	cleanTestEnv();
 	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/440_function_macro.pa");
-	ASSERT_EQ(output, "7 7\nx 5\n3 2\n3 1 12\n42 5\n");
+	ASSERT_EQ(output, "7 7\nx 5\n3 2\n3 1 12\n42 5\n9\n");
 }
 
 TEST(build_mgr, stat_mode_bits) {

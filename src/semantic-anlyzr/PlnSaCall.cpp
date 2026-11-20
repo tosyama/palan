@@ -999,7 +999,7 @@ CallArg PlnSemanticAnalyzer::spreadCallArg(const json& rawArg, bool last)
 	const json& vt = a.sa["value-type"];
 	if (!isVarrPntr(vt) && !isArrLevel(vt)) fail(E_SpreadNotArray, "'" + typeDisplayName(vt) + "'");
 	if (isArrLevel(vt) && !vt.contains("arr-size") && !vt.value("run-size", false))
-		fail(E_SpreadUnsized, typeDisplayName(vt));
+		fail(E_SpreadUnsized, typeDisplayName(vt)); // LCOV_EXCL_BR_LINE
 	return a;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 

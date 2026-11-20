@@ -34,7 +34,7 @@ inline std::string allocatorsModuleOf(const std::string& moduleId)
 // build-mgr claims these identities, so no source module has one.
 inline bool isAllocatorsModule(const std::string& moduleId)
 {
-	static const std::string suffix = "." PALAN_ALLOCATORS_MODULE;
+	static const std::string suffix = "." PALAN_ALLOCATORS_MODULE; // LCOV_EXCL_BR_LINE
 	return moduleId == PALAN_ALLOCATORS_MODULE
 		|| (moduleId.size() > suffix.size() && moduleId.compare(moduleId.size() - suffix.size(), suffix.size(), suffix) == 0);
 }

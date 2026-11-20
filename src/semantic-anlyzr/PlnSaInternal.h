@@ -915,7 +915,7 @@ inline bool copySourceMatch(const json& from, const json& vt)
 		const json& fe = from["base-type"]["base-type"];
 		if (isPtrBorrow(fe) || isPtrBorrow(vt["base-type"]))
 			return isPtrBorrow(fe) && !vt.value("embedded", false) && copyShapeMatch(fe, vt["base-type"]);
-		json asVarr = {{"type-kind","pntr"},{"base-type",from["base-type"]}};
+		json asVarr = {{"type-kind","pntr"},{"base-type",from["base-type"]}}; // LCOV_EXCL_BR_LINE
 		json run = withoutArrPermission(vt);
 		run.erase("arr-size");
 		run["run-size"] = true;

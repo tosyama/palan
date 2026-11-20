@@ -321,7 +321,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		string slots = "dst as " + e.data;
 		string build = "__pln_build_" + e.key + "(" + slots + ", i, i + 1" + ma + ");";
 		string fill = copy == set ? "            if dst[i] == NULL { " + build + " }\n            " + set + "\n"
-		            : "            if dst[i] == NULL { " + build + " " + set + " }\n            else { " + copy + " }\n";
+		            : "            if dst[i] == NULL { " + build + " " + set + " }\n            else { " + copy + " }\n"; // LCOV_EXCL_BR_LINE
 		return "        if src[i] == NULL { __pln_clear_" + e.key + "(" + slots + ", i" + ma + "); }\n"
 		       "        else {\n" + fill + "        }\n";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here

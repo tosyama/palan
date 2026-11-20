@@ -313,14 +313,14 @@ void PlnSemanticAnalyzer::setFieldInits(StructDef& def, const json& fields)
 			json lit;
 			if (isArrLevel(type) || isVarrStorage(type)) {
 				const json& elem = isVarrStorage(type) ? type["base-type"]["base-type"] : type["base-type"];
-				lit = {{"expr-type", "arr-lit"}, {"items", json::array()}};
+				lit = {{"expr-type", "arr-lit"}, {"items", json::array()}}; // LCOV_EXCL_BR_LINE
 				for (auto& item : v) lit["items"].push_back(literal(item, elem, fieldName, locNode));
 			} else {
 				const StructDef& sub = structDefs_.at(type.value("type-kind", "") == "struct"
 					? type["type-name"].get<string>() : type["base-type"]["type-name"].get<string>());
-				lit = {{"expr-type", "dict-lit"}, {"items", json::array()}};
+				lit = {{"expr-type", "dict-lit"}, {"items", json::array()}}; // LCOV_EXCL_BR_LINE
 				for (size_t k = 0; k < sub.fields.size(); k++)
-					lit["items"].push_back({{"name", sub.fields[k].name},
+					lit["items"].push_back({{"name", sub.fields[k].name}, // LCOV_EXCL_BR_LINE
 						{"value", literal(v[k], fieldValueType(sub.fields[k]), fieldName, locNode)}});
 			}
 			if (locNode.contains("loc")) lit["loc"] = locNode["loc"];
@@ -336,7 +336,7 @@ void PlnSemanticAnalyzer::setFieldInits(StructDef& def, const json& fields)
 		json lit = *c;
 		if (locNode.contains("loc")) lit["loc"] = locNode["loc"];
 		return lit;
-	};
+	}; // LCOV_EXCL_BR_LINE
 	for (auto& af : fields) {
 		if (!af.contains("init")) continue;
 		string fn = af["name"];

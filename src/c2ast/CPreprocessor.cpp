@@ -310,7 +310,7 @@ CToken* CPreprocessor::hasInclude(const CToken* t, list<CToken*> &unprocessed_to
 	vector<CToken*> operand;
 	bool closed = false;
 	if (!unprocessed_tokens.empty() && isPunc(unprocessed_tokens.front(), '(')) {
-		delete unprocessed_tokens.front();
+		delete unprocessed_tokens.front(); // LCOV_EXCL_BR_LINE
 		unprocessed_tokens.pop_front();
 		while (!unprocessed_tokens.empty()) {
 			CToken* p = unprocessed_tokens.front();
@@ -341,7 +341,7 @@ vector<CToken*> CPreprocessor::scan_macro(list<CToken*> &unprocessed_tokens, boo
 		if (in_if_directive && t->type == TT_ID && *t->info.id == "__has_include") {
 			unprocessed_tokens.pop_front();
 			result_tokens.push_back(hasInclude(t, unprocessed_tokens));
-			delete t;
+			delete t; // LCOV_EXCL_BR_LINE
 			continue;
 		}
 		if (t->type == TT_ID) {

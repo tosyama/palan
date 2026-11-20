@@ -910,6 +910,8 @@ TEST(sa_error, c_bit_field)
 		{"error_816_c_bitfield_addr.pa", ":3:13: error: cannot take the address of bit-field 'flag'."},
 		{"error_817_c_bitfield_struct_lit_range.pa", ":3:33: error: Integer literal '-5' does not fit the 3-bit bit-field 's'."},
 		{"error_818_c_bitfield_width.pa", ":2:1: error: struct 'BN' has no known layout"},
+		{"error_1151_c_bitfield_cross_lit.pa", ":2:15: error: cannot access field 'b' of 'BP': its type uses "
+		                                       "'packed bit-field across two units', a C type this version cannot represent."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

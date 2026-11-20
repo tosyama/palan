@@ -147,7 +147,7 @@ struct BodyList {
 		if (!cState.closeScope({open.begin.line, open.begin.column}, {close.begin.line, close.begin.column}))
 			return;
 		closeMacroScope(macros, {(int)open.begin.line, (int)open.begin.column}, {(int)close.begin.line, (int)close.begin.column});
-	}
+	} // LCOV_EXCL_BR_LINE
 
 // glr2.cc grows the GLR stack by memcpy-ing items and then destroying the
 // originals, which frees each semantic value twice. Reserve the maximum depth

@@ -569,7 +569,8 @@ TEST(c2ast, function_macro) {
             pair{"COMMA", "a comma operator"}, pair{"STRING", "a comma operator"},
             pair{"STRINGIZE", "#"}, pair{"PASTE", "##"}, pair{"VARIADIC", "__VA_ARGS__"},
             pair{"ADDRESS", "&"}, pair{"SIZEOF_EXPR", "sizeof of an expression"},
-            pair{"INCREMENT", "++/--"}, pair{"CALL_PTR", "a call through an expression"},
+            pair{"INCREMENT", "++/--"}, pair{"PRE_DECREMENT", "++/--"},
+            pair{"CALL_PTR", "a call through an expression"},
             pair{"FLOATING", "a floating constant"}})
         ASSERT_EQ(unexported(name), (json{{"name", name}, {"form", form}, {"function-like", true}})) << name;
     ASSERT_EQ(unexported("NOT_EXPR"), (json{{"name", "NOT_EXPR"}, {"function-like", true}}));

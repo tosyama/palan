@@ -15,3 +15,6 @@ printf("%d %d %d\n", MASKED(499), BOTH(1, 0), NESTED(3));
 // A macro is called over a C function of its name, but one whose body Palan
 // can't translate leaves the function to be called.
 printf("%d %d\n", atoi("7"), abs(-5));
+// A later header redefining a macro ends the earlier definition.
+cinclude "440_function_macro_redef.h";
+printf("%d\n", TWICE);

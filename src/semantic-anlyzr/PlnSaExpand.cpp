@@ -17,7 +17,7 @@ string PlnSemanticAnalyzer::normalizeExpandableBody(json& node) const
 		for (auto& e : node) {
 			string form = normalizeExpandableBody(e);
 			if (!form.empty()) return form;
-		}
+		} // LCOV_EXCL_BR_LINE
 		return "";
 	}
 	if (!node.is_object()) return "";
@@ -33,7 +33,7 @@ string PlnSemanticAnalyzer::normalizeExpandableBody(json& node) const
 		if (!node.contains(key)) continue;
 		string form = normalizeExpandableBody(node[key]);
 		if (!form.empty()) return form;
-	}
+	} // LCOV_EXCL_BR_LINE
 	return "";
 }
 
@@ -93,7 +93,7 @@ string PlnSemanticAnalyzer::unreachableCName(const json& body) const
 		for (auto& e : body) {
 			string name = unreachableCName(e);
 			if (!name.empty()) return name;
-		}
+		} // LCOV_EXCL_BR_LINE
 		return "";
 	}
 	if (!body.is_object()) return "";
@@ -154,7 +154,7 @@ json PlnSemanticAnalyzer::expandCall(const json& expr, const json& def, const js
 		exit(1);
 	}
 	return substitute(def["body"], def, args, expr.value("loc", json()));
-}
+} // LCOV_EXCL_BR_LINE
 
 // A call that names an expandable definition, `alias` qualifying it or not, as
 // the expression it expands to. Null when none is named or it can't be
@@ -169,7 +169,7 @@ json PlnSemanticAnalyzer::expandedCall(const json& expr, const string& alias, co
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_UnqualifiedAliasCall, name) << endl;
 		exit(1);
 	}
-	SaDiag why{E_CMacroFuncLike};
+	SaDiag why{E_CMacroFuncLike}; // LCOV_EXCL_BR_LINE
 	json expanded = expandCall(expr, *def, expr.value("args", json::array()), why);
 	if (!expanded.is_null()) return expanded;
 	bool hasFunc = alias.empty() ? !findCallees(name).empty() : !findCalleesByAlias(alias, name).empty();

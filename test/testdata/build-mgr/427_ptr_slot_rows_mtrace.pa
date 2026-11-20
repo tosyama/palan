@@ -54,4 +54,13 @@ mtrace();
 	@i -> f.g[1][2]; @j -> f.g[0][0];
 	F f2 = f;
 	printf("%d %d\n", f2.g[1][2][0], f2.g[0][0][0]);
+
+	// Pointer slots copied between a sized array and a variable-length one, both ways.
+	[2]@int32 sa;
+	@i -> sa[0]; @j -> sa[1];
+	[+]@int32 sv;
+	sa -> sv;
+	[2]@int32 sb;
+	sv -> sb;
+	printf("%ld %d %d\n", sv->len(), sv[1][0], sb[0][0]);
 }

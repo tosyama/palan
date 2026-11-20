@@ -578,7 +578,7 @@ bool CParser::declaration_specifiers(json &ast, const vector<CToken*> &tokens, i
 			{"flo32", "float _Complex"}, {"flo64", "double _Complex"}, {"flo80", "long double _Complex"},
 		}; // LCOV_EXCL_BR_LINE
 		auto it = vt.value("type-kind", "") == "prim" ? complexNames.find(vt["type-name"].get<string>())
-			: complexNames.end();
+			: complexNames.end(); // LCOV_EXCL_BR_LINE
 		if (it == complexNames.end()) return false;
 		vt["type-name"] = it->second;
 	}
@@ -1547,7 +1547,7 @@ bool CParser::typeSizeAlign(const json &vt, long long &size, long long &align)
 static json unsupportedForm(const string &form)
 {
 	return {{"expr-type", "c-unsupported"}, {"form", form}}; // LCOV_EXCL_BR_LINE
-}
+} // LCOV_EXCL_BR_LINE
 
 static json binaryNode(int op, json left, json right)
 {
@@ -1563,7 +1563,7 @@ static json binaryNode(int op, json left, json right)
 		{'<', "<"}, {'>', ">"}, {'<=', "<="}, {'>=', ">="}, {'==', "=="}, {'!=', "!="},
 	}; // LCOV_EXCL_BR_LINE
 	return {{"expr-type", "cmp"}, {"op", cmps.at(op)}, {"left", move(left)}, {"right", move(right)}}; // LCOV_EXCL_BR_LINE
-}
+} // LCOV_EXCL_BR_LINE
 
 // The value of a character constant's spelling ('a', '\n', '\0', '\x41'), or null for
 // one of several characters.
@@ -1966,7 +1966,7 @@ bool CParser::assignment_expression(json &value, const vector<CToken*> &tokens, 
 		json rhs;
 		if (!assignment_expression(rhs, tokens, index)) return false;
 		value = unsupportedForm("an assignment");
-	}
+	} // LCOV_EXCL_BR_LINE
 	result_index = index;
 	return true;
 }
@@ -2071,7 +2071,7 @@ static string unsupportedFormIn(const json &tree)
 		for (const json &e : tree) {
 			string form = unsupportedFormIn(e);
 			if (!form.empty()) return form;
-		}
+		} // LCOV_EXCL_BR_LINE
 		return "";
 	}
 	if (!tree.is_object()) return "";

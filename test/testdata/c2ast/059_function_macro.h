@@ -23,6 +23,7 @@ enum { RED = 3 };
 #define ADDRESS(x) (&(x))
 #define SIZEOF_EXPR(x) sizeof (x)
 #define INCREMENT(x) ((x)++)
+#define PRE_DECREMENT(x) (--(x))
 #define CALL_PTR(f) ((f)(0))
 #define FLOATING(x) ((x) * 1.5)
 #define NOT_EXPR(x) int x;

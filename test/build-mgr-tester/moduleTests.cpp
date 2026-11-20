@@ -100,7 +100,7 @@ TEST(build_mgr, import_mutual) {
 // The importer's own K does not size the imported alias.
 TEST(build_mgr, import_alias_size) {
 	cleanTestEnv();
-	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/414_import_alias_size.pa"), "3 6\n");
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/414_import_alias_size.pa"), "3 6 6\n");
 }
 
 TEST(build_mgr, block_import) {

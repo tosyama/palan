@@ -659,7 +659,7 @@ TEST(build_mgr, varr_ptr_slot_mtrace) {
 // Rows of pointer slots are rows of int64 to their helpers.
 TEST(build_mgr, ptr_slot_rows_mtrace) {
 	expectMtraceRun("427_ptr_slot_rows_mtrace",
-		"2 3 12\n3 1 3 2 3\n1 3\n2 13 13\n2\n5 6\n", 31);
+		"2 3 12\n3 1 3 2 3\n1 3\n2 13 13\n2\n5 6\n2 6 5\n", 35);
 }
 
 TEST(build_mgr, for_loop) {
@@ -708,7 +708,7 @@ TEST(build_mgr, for_struct_mtrace) {
 // Opaque values held in fields, rows and `[+]`, returned among several values,
 // and copied and converted where their contents are visible.
 TEST(build_mgr, opaque_mtrace) {
-	expectMtraceRun("415_opaque_mtrace", "5 5\n3\nclose 9\nclose 8\nclose 7\nclose 6\nclose 5\n", 24);
+	expectMtraceRun("415_opaque_mtrace", "5 5\nclose 5\n5\n3\nclose 9\nclose 8\nclose 7\nclose 6\nclose 5\n", 27);
 }
 
 TEST(build_mgr, top_var_const_in_sig) {

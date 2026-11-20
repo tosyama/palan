@@ -21,3 +21,8 @@ export func bag() -> Bag {
 	Q q;
 	return q as Bag;
 }
+export func dup(@Handle h) -> int32 {
+	Handle c = mk(0);
+	h -> c;
+	return x(@c);
+}

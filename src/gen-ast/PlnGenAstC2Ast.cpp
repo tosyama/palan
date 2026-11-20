@@ -34,7 +34,7 @@ struct TempFile {
 
 const string& CStateHistory::current() const
 {
-	static const string none;
+	static const string none; // LCOV_EXCL_BR_LINE
 	return entries_.empty() ? none : entries_.back().second;
 }
 

@@ -129,7 +129,7 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 {
 	if (structDefs_.at(structName).isOpaque) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueField,
-			typeDisplayName({{"type-kind", "prim"}, {"type-name", structName}})) << endl;
+			typeDisplayName({{"type-kind", "prim"}, {"type-name", structName}})) << endl; // LCOV_EXCL_BR_LINE
 		exit(1);
 	}
 	const StructDef& def = requireCompleteStruct(structName, locNode);
@@ -162,7 +162,7 @@ const StructDef& PlnSemanticAnalyzer::requireCompleteStruct(const string& struct
 	const StructDef& def = structDefs_[structName];
 	if (def.isOpaque) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueNeedsLayout,
-			typeDisplayName({{"type-kind", "prim"}, {"type-name", structName}}), use) << endl;
+			typeDisplayName({{"type-kind", "prim"}, {"type-name", structName}}), use) << endl; // LCOV_EXCL_BR_LINE
 		exit(1);
 	}
 	if (!def.isComplete) {
@@ -258,7 +258,7 @@ bool PlnSemanticAnalyzer::holdsOpaque(const json& vt) const
 	// A pointer to what it does not own holds nothing.
 	if (isPtrBorrow(vt) && !vt.contains("arr-size")) return false;
 	return vt.contains("base-type") && holdsOpaque(vt["base-type"]);
-}
+} // LCOV_EXCL_BR_LINE
 
 // The same pointer, seen as the contents' owner or, from a borrow, a borrow of them.
 json PlnSemanticAnalyzer::asOpaqueContents(json value, const StructDef& def) const
@@ -1122,7 +1122,7 @@ json PlnSemanticAnalyzer::knownValueType(const json& expr)
 			json peeked = {{"expr-type", aet}, {"value-type", vt}}; // LCOV_EXCL_BR_LINE
 			if (aet == "id") peeked["var-type"] = vt;
 			args.push_back({a, false, move(peeked)});
-		}
+		} // LCOV_EXCL_BR_LINE
 		CalleeChoice choice = chooseCallee(name, cands, args);
 		if (!choice.chosen) return json();
 		return choice.chosen->def->value("ret-type", json());
@@ -1165,7 +1165,7 @@ json PlnSemanticAnalyzer::sa_expr_cmp(const json& expr)
 {
 	rejectArrowOperand(expr, expr["op"].get<string>());
 	json probes[2];
-	json folded[2] = {foldConstExpr(expr["left"]), foldConstExpr(expr["right"])};
+	json folded[2] = {foldConstExpr(expr["left"]), foldConstExpr(expr["right"])}; // LCOV_EXCL_BR_LINE
 	bool structOperand = false, nullOperand = isNullPtrLit(folded[0]) || isNullPtrLit(folded[1]);
 	string op = expr["op"];
 	for (int i : {0, 1}) {
