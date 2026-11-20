@@ -37,7 +37,7 @@ coverage: build-cov/CMakeCache.txt
 	cd build-cov && bin/build-mgr-tester
 	cd build-cov && bin/std-tester
 	cd build-cov && lcov -c -d . -b src -o all.info $(LCOV_FLAGS) --ignore-errors mismatch,inconsistent
-	cd build-cov && lcov -e all.info '*/palanx/src/*' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
+	cd build-cov && lcov -e all.info '$(CURDIR)/src/*' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
 	cd build-cov && lcov -r lcov.info '*/PlnLexer.cpp' '*/PlnParser.cpp' '*/PlnParser.h' '*/location.hh' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
 build-cov/CMakeCache.txt:
 	mkdir -p build-cov
@@ -51,12 +51,12 @@ coverage-codegen: build-cov/CMakeCache.txt
 	rm -rf $$HOME/.palan/work
 	cd build-cov && bin/build-mgr-tester
 	cd build-cov && lcov -c -d . -b src -o all.info $(LCOV_FLAGS) --ignore-errors mismatch,inconsistent
-	cd build-cov && lcov -e all.info '*/palanx/src/codegen/*' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
+	cd build-cov && lcov -e all.info '$(CURDIR)/src/codegen/*' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
 coverage-sa: build-cov/CMakeCache.txt
 	find build-cov -name "*.gcda" -delete 2>/dev/null; true
 	cmake --build build-cov
 	cd build-cov && bin/sa-tester
 	cd build-cov && lcov -c -d . -b src -o all.info $(LCOV_FLAGS) --ignore-errors mismatch,inconsistent
-	cd build-cov && lcov -e all.info '*/palanx/src/semantic-anlyzr/*' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
+	cd build-cov && lcov -e all.info '$(CURDIR)/src/semantic-anlyzr/*' -o lcov.info $(LCOV_FLAGS) $(LCOV_FILTER)
 
 
