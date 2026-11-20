@@ -1915,4 +1915,4 @@ void PlnSemanticAnalyzer::emitInitFunc()
 	sa["functions"].push_back(move(func));
 	sa["init"] = name;
 	// LCOV_EXCL_BR_STOP
-}
+} // LCOV_EXCL_BR_LINE

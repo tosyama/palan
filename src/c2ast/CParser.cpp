@@ -1719,7 +1719,7 @@ bool CParser::postfix_expression(json &value, const vector<CToken*> &tokens, int
 
 	result_index = index;
 	return true;
-}
+} // LCOV_EXCL_BR_LINE
 
 bool CParser::unary_expression(json &value, const vector<CToken*> &tokens, int &result_index)
 {

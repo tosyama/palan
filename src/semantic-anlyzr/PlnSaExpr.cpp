@@ -148,7 +148,7 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 		exit(1);
 	}
 	return *it;
-}
+} // LCOV_EXCL_BR_LINE
 
 // `name` must already be a key in structDefs_ (checked by the caller, e.g. via
 // isKnownTypeName/count(), or because it's a chain hop whose base type was
@@ -171,7 +171,7 @@ const StructDef& PlnSemanticAnalyzer::requireCompleteStruct(const string& struct
 		exit(1);
 	}
 	return def;
-}
+} // LCOV_EXCL_BR_LINE
 
 const StructDef* PlnSemanticAnalyzer::opaqueDefOf(const json& vt) const
 {
@@ -635,7 +635,7 @@ json PlnSemanticAnalyzer::arrLenOf(const json& saArr, const json& locNode)
 		return wrapConvert(runtimeLen(*root, depth), {{"type-kind","prim"},{"type-name","int64"}}); // LCOV_EXCL_BR_LINE
 	}
 	return lenLit(constArrSizeOrExit(vt, locNode));
-}
+} // LCOV_EXCL_BR_LINE
 
 // Evaluates in int64, or uint64 once a 'u' operand joins, like the usual
 // arithmetic conversions; a C macro constant's own type is dropped here.
@@ -1128,7 +1128,7 @@ json PlnSemanticAnalyzer::knownValueType(const json& expr)
 		return choice.chosen->def->value("ret-type", json());
 	}
 	return json();
-}
+} // LCOV_EXCL_BR_LINE
 
 // Literals and variables under the operators takesExpectedType follows:
 // analyzing it has no effect but its type.
