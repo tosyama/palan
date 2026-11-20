@@ -6,6 +6,8 @@ add_executable(codegen-unit-tester
     ../../src/codegen/PlnRegAlloc.cpp
     ../../src/codegen/PlnDeserialize.cpp
     ../../src/codegen/PlnVCodeGen.cpp
+    ../../src/codegen/PlnVCodeGenExpr.cpp
+    ../../src/codegen/PlnVCodeGenCall.cpp
     ../../src/codegen/PlnCodegenMessage.cpp
 )
 target_include_directories(codegen-unit-tester PRIVATE ../../src/codegen ../../lib/json/single_include)

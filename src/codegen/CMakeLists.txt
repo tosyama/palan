@@ -5,6 +5,8 @@ add_executable(palan-codegen
 	PlnCodegenMessage.cpp
 	PlnDeserialize.cpp
 	PlnVCodeGen.cpp
+	PlnVCodeGenExpr.cpp
+	PlnVCodeGenCall.cpp
 	PlnRegAlloc.cpp
 	PlnX86CodeGen.cpp
 	PlnX86Arith.cpp

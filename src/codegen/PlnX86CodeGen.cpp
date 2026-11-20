@@ -20,14 +20,26 @@ const PhysRegs PlnX86CodeGen::x86PhysRegs = {
     { "%xmm10", "%xmm11", "%xmm12", "%xmm13", "%xmm14", "%xmm15" }
 };
 
+// Whether some function negates a float of `type`, which takes a sign mask (emitInstrNeg).
+static bool negatesFloat(const VProg& prog, VRegType type)
+{
+    for (auto& f : prog.funcs)
+        for (auto& instr : f.instrs)
+            if (auto* n = std::get_if<Neg>(&instr); n && n->type == type)
+                return true;
+    return false;
+}
+
 void PlnX86CodeGen::emit(const VProg& prog, const vector<RegAllocResult>& allocs)
 {
-    if (!prog.data.empty() || !prog.floatData.empty() || prog.needsF32Neg || prog.needsF64Neg) {
+    bool needsF32Neg = negatesFloat(prog, VRegType::Float32);
+    bool needsF64Neg = negatesFloat(prog, VRegType::Float64);
+    if (!prog.data.empty() || !prog.floatData.empty() || needsF32Neg || needsF64Neg) {
         emitSection(".rodata");
         // xorps/xorpd read a 16-byte operand, which must be 16-byte aligned.
-        if (prog.needsF32Neg)
+        if (needsF32Neg)
             out << "\t.p2align 4\n.neg_mask_f32:\n\t.long 0x80000000, 0, 0, 0\n";
-        if (prog.needsF64Neg)
+        if (needsF64Neg)
             out << "\t.p2align 4\n.neg_mask_f64:\n\t.quad 0x8000000000000000, 0\n";
         for (auto& d : prog.data)
             emitStringLiteral(d.label, d.value);

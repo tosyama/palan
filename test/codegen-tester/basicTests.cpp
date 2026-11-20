@@ -802,16 +802,15 @@ TEST(codegen, logical_ops) {
     ASSERT_EQ(err, "");
 
     string asm_text = readFile(asmf);
-    // logical-and: short-circuit label and conditional jump
-    ASSERT_NE(asm_text.find(".Lland0_end:"),    string::npos);
-    ASSERT_NE(asm_text.find("je .Lland0_end"),  string::npos);
-    // logical-or: short-circuit labels and jumps
-    ASSERT_NE(asm_text.find(".Llor1_true:"),    string::npos);
-    ASSERT_NE(asm_text.find(".Llor1_end:"),     string::npos);
-    ASSERT_NE(asm_text.find("jne .Llor1_true"), string::npos);
-    // logical-not: short-circuit label and conditional jump
-    ASSERT_NE(asm_text.find(".Lnot2_end:"),     string::npos);
-    ASSERT_NE(asm_text.find("je .Lnot2_end"),   string::npos);
+    // A value is 0 unless the condition, short-circuited, reaches the store of 1.
+    // logical-and: either operand false jumps past it
+    ASSERT_NE(asm_text.find(".Lbool0_end:"),     string::npos);
+    ASSERT_NE(asm_text.find("je .Lbool0_end"),   string::npos);
+    // logical-or: a true left operand skips the right one
+    ASSERT_NE(asm_text.find("jne .Llor2_skip"),  string::npos);
+    ASSERT_NE(asm_text.find("je .Lbool1_end"),   string::npos);
+    // logical-not: a true operand jumps past it
+    ASSERT_NE(asm_text.find("jne .Lbool3_end"),  string::npos);
 }
 
 TEST(codegen, if_not) {
