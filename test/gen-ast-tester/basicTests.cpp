@@ -44,38 +44,6 @@ TEST(gen_ast, module_identity) {
 	EXPECT_EQ(moduleOf("a_x.pa"), "a_x");
 }
 
-TEST(gen_ast, basic_tests) {
-	cleanTestEnv();
-	string output;
-	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/001_basicPattern.pa");
-	ASSERT_TRUE(checkerr(output));
-	json jout = json::parse(output);
-	ASSERT_EQ(jout["ast"]["statements"].size(), 12);
-
-	bool found_printf = false;
-	for (auto& stmt : jout["ast"]["statements"]) {
-		if (stmt["stmt-type"] != "cinclude") continue;
-		for (auto& f : stmt["functions"]) {
-			if (f["name"] == "printf" && f["func-type"] == "c") {
-				found_printf = true;
-				break;
-			}
-		}
-		if (found_printf) break;
-	}
-	ASSERT_TRUE(found_printf);
-
-	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/100_quicksort.pa");
-	ASSERT_TRUE(checkerr(output));
-	jout = json::parse(output);
-	ASSERT_EQ(jout["ast"]["statements"].size(), 6);
-
-	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/002_arraypattern.pa");
-	ASSERT_TRUE(checkerr(output));
-	jout = json::parse(output);
-	ASSERT_EQ(jout["ast"]["statements"].size(), 9);
-}
-
 static json stripLoc(const json& j) {
 	if (j.is_object()) {
 		json r = json::object();
@@ -89,6 +57,83 @@ static json stripLoc(const json& j) {
 		return r;
 	}
 	return j;
+}
+
+TEST(gen_ast, basic_tests) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/001_basicPattern.pa");
+	ASSERT_TRUE(checkerr(output));
+	const json ast = json::parse(output)["ast"];
+	const json& stmts = ast["statements"];
+
+	vector<string> kinds;
+	for (auto& st : stmts) kinds.push_back(st["stmt-type"]);
+	const vector<string> expectedKinds = {
+		"import", "import", "cinclude", "const-decl", "struct-def", "enum-def", "type-alias", "opaque-def",
+		"var-decl", "global-permit", "var-decl", "var-decl", "var-decl", "var-decl", "var-decl", "var-decl",
+		"var-decl", "assign", "tapple-decl", "tapple-assign", "expr", "expr", "assign", "if", "while", "for",
+		"expr"};
+	ASSERT_EQ(kinds, expectedKinds);
+
+	EXPECT_EQ(stmts[0]["alias"], "lib");
+	EXPECT_EQ(stmts[1]["targets"], json::parse(R"(["twice"])"));
+	bool found_printf = false;
+	for (auto& f : stmts[2]["functions"])
+		found_printf = found_printf || (f["name"] == "printf" && f["func-type"] == "c");
+	EXPECT_TRUE(found_printf);
+
+	EXPECT_EQ(stripLoc(stmts[3]), json::parse(R"({"stmt-type": "const-decl", "name": "N",
+		"value": {"expr-type": "lit-int", "value": "4"}})"));
+	EXPECT_EQ(stripLoc(stmts[4]), json::parse(R"({"stmt-type": "struct-def", "name": "Point", "export": true,
+		"fields": [{"name": "x", "var-type": {"type-kind": "prim", "type-name": "int32"}},
+		           {"name": "y", "var-type": {"type-kind": "prim", "type-name": "int32"}}]})"));
+	EXPECT_EQ(stripLoc(stmts[5]["enumerators"]), json::parse(R"([{"name": "RED"},
+		{"name": "GREEN", "value": {"expr-type": "lit-int", "value": "5"}}, {"name": "BLUE"}])"));
+	EXPECT_EQ(stmts[6]["type"]["type-name"], "int64");
+	EXPECT_EQ(stmts[7]["contents"]["type-name"], "Point");
+	EXPECT_EQ(stmts[8]["global"], true);
+	EXPECT_EQ(stripLoc(stmts[9]["funcs"]), json::parse(R"([{"name": "norm1", "writable": true}])"));
+
+	EXPECT_EQ(stmts[10]["vars"].size(), 2);
+	EXPECT_EQ(stmts[10]["vars"][1]["init"]["expr-type"], "add");
+	EXPECT_EQ(stmts[12]["vars"][0]["init"]["expr-type"], "field-access");
+	EXPECT_EQ(stmts[13]["vars"][0]["var-type"]["size-expr"]["name"], "N");
+	EXPECT_EQ(stmts[14]["vars"][0]["var-type"]["specifier"], "variable");
+	EXPECT_EQ(stmts[15]["vars"][0]["var-type"]["type-kind"], "embed");
+	EXPECT_EQ(stmts[15]["vars"][0]["init"]["expr-type"], "dict-lit");
+	EXPECT_EQ(stripLoc(stmts[17]), json::parse(R"({"stmt-type": "assign", "name": "q",
+		"value": {"expr-type": "id", "name": "p"}})"));
+	EXPECT_EQ(stmts[18]["vars"][1]["var-name"], "rr");
+	EXPECT_EQ(stmts[18]["vars"][1]["var-type"]["type-name"], "int32");
+	EXPECT_EQ(stmts[19]["targets"][1]["expr-type"], "arr-index");
+	EXPECT_EQ(stmts[20]["body"]["args"][0]["mutable"], true);
+	EXPECT_EQ(stmts[21]["body"]["expr-type"], "chain-call");
+	EXPECT_EQ(stripLoc(stmts[22]), json::parse(R"({"stmt-type": "assign", "name": "v", "ownership-transfer": true,
+		"value": {"expr-type": "chain-call", "call": {"expr-type": "call", "name": "grow", "args": []},
+		          "value": {"expr-type": "transfer", "op": "->>", "value": {"expr-type": "id", "name": "v"}}}})"));
+	EXPECT_TRUE(stmts[23].contains("else"));
+	EXPECT_EQ(stmts[24]["body"][1]["then"]["body"][0]["stmt-type"], "break");
+	EXPECT_EQ(stripLoc(stmts[25]["elem"]), json::parse(R"({"borrow": false, "name": "e"})"));
+	EXPECT_EQ(stmts[25]["index"], "i");
+
+	const json& funcs = ast["functions"];
+	ASSERT_EQ(funcs.size(), 4);
+	EXPECT_EQ(funcs[0]["parameters"][0]["var-type"]["mutable"], false);
+	EXPECT_EQ(funcs[1]["rets"][1]["name"], "r");
+	EXPECT_EQ(funcs[1]["parameters"][1]["var-type"]["type-name"], "int32");
+	EXPECT_EQ(funcs[2]["export"], true);
+	EXPECT_EQ(funcs[2]["parameters"][0]["var-type"]["mutable"], true);
+	EXPECT_EQ(stripLoc(funcs[2]["parameters"][1]["init"]), json::parse(R"({"expr-type": "lit-int", "value": "2"})"));
+	EXPECT_EQ(funcs[3]["c-export"], true);
+	EXPECT_EQ(funcs[3]["ret-type"]["specifier"], "variable");
+
+	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/100_quicksort.pa");
+	ASSERT_TRUE(checkerr(output));
+	EXPECT_EQ(json::parse(output)["ast"]["statements"].size(), 6);
+
+	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/002_arraypattern.pa");
+	ASSERT_TRUE(checkerr(output));
+	EXPECT_EQ(json::parse(output)["ast"]["statements"].size(), 12);
 }
 
 TEST(gen_ast, arr_lit_2d_forms) {
@@ -119,17 +164,15 @@ TEST(gen_ast, varr_var_decl) {
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/002_arraypattern.pa");
 	ASSERT_TRUE(checkerr(output));
 	json jout = json::parse(output);
-	const auto& stmts = jout["ast"]["statements"];
+	map<string, json> vars;
+	for (auto& stmt : jout["ast"]["statements"])
+		if (stmt["stmt-type"] == "var-decl")
+			for (auto& v : stmt["vars"]) vars[v["name"]] = v;
 
-	// [+]int64 a6 = [1,3,5]
-	ASSERT_EQ(stmts[2]["stmt-type"], "var-decl");
-	const json& a6 = stmts[2]["vars"][0];
-	ASSERT_EQ(a6["name"], "a6");
+	const json& a6 = vars["a6"];	// [+]int64 a6 = [1,3,5]
 	ASSERT_EQ(a6["var-type"]["specifier"], "variable");
 	ASSERT_TRUE(a6["var-type"]["size-expr"].is_null());
-	// [+][+]int64 a8
-	ASSERT_EQ(stmts[4]["stmt-type"], "var-decl");
-	ASSERT_EQ(stmts[4]["vars"][0]["var-type"]["base-type"]["specifier"], "variable");
+	ASSERT_EQ(vars["a8"]["var-type"]["base-type"]["specifier"], "variable");	// [+][+]int64 a8
 }
 
 TEST(gen_ast, arr_lit_trailing_comma) {

@@ -1,0 +1,2 @@
+export func twice(int64 n) -> int64 { return n * 2; }
+export func half(int64 n) -> int64 { return n / 2; }

@@ -1,3 +1,7 @@
+cinclude <stdio.h>;
+
+type Pair { int64 a; int64 b; };
+
 int32 n=10;
 
 [][]int64 a1 = [2,4,n+1][2,3,5]
@@ -6,10 +10,9 @@ int32 n=10;
 [n]int64 a7;
 [+][+]int64 a8;
 
-@[]int64 a9 = [1,2];
-$[2]myType a10 = [myType(1), myType(2)];
+@[+]int64 a9 = @a6;
+$[2]$Pair a10 = [{a: 1, b: 2}, {a: 3, b: 4}];
 [2][+]int64 a11;
 
 [1,2,3][4,5,6] -> a1;
-
-
+printf("%ld %ld %ld %ld %ld\n", a1[1][2], a2[0][2], len(@a6), a9[1], a10[1].b);
