@@ -6,32 +6,16 @@ This document specifies the goals, scope, architecture, and requirements for the
 ## 2. Goals
 - Palan aims to be a simpler, safer, and more enjoyable programming language alternative to C.
 
-### 2.1 Iteration Goal (2026-11-14)
-version: 0.2.6 — modules that libraries can be combined from
+### 2.1 Iteration Goal (2026-11-20)
+version: 0.2.7 — dictionaries, and the grammar holding only the language
 
-Libraries can be combined and can keep state (3.7):
+- A dictionary `[""]T` maps C strings to values of `T` and is used as `[+]T` is (3.10).
+- The grammar drops the forms the language has no plan for (3.2), and the gen-ast tests check
+  what the parser builds for the language as it is.
+- `std/utf8` iterates and counts grapheme clusters (3.9; doc/Issues.md #4 of 0.2.6).
 
-- A type is identified by its module, so two modules may export types of one name (doc/Issues.md
-  #31 of 0.2.5).
-- A library's interface holds only its main source's own declarations; a type is published with
-  its contents hidden as an `opaque` type, owned and released like a struct.
-- An imported module's `global` variables are initialized, and can be exported (doc/Issues.md #24
-  of 0.2.5).
-
-The other open issues are then each fixed, accepted as a stated limitation, or left; four are
-left. Fixed among them:
-
-- C: a function-like macro is expanded where it is called, through a mechanism an inline function
-  can share (3.4); `long double` (`flo80`), bit-fields, the glibc headers c2ast could not read, a
-  block's `cinclude` state ending with the block, and functions C calls by name (`cexport`, 3.7).
-- Arrays: the moves and copies of arrays sized at run time (4), an array spread into variadic
-  arguments (3.8), rows of pointer slots, and field initializers of any shape (3.6).
-- Checks: using a variable after it gives its value away (4), and run-time checks of array sizes
-  and allocations, left out of a release build (3.1).
-- Numeric literals convert to a struct (3.8); `PALAN_WORK` names the work directory (5.1).
-
-Out of scope: lazily initialized globals; copying or creating an `opaque` value outside its module.
-
+Out of scope: keys other than C strings; a function returning a default for a missing key; case
+mapping and normalization.
 
 ## 3. Command-line Tools' Responsibilities and Design
 
@@ -98,6 +82,11 @@ Design:
  declaration list's `ID = expr`, `[expr]` as a type or a literal) are resolved by reading further,
  which keeps the syntax free of rules made for the parser. The cost is a nesting depth limit
  (`YYMAXDEPTH`), since Bison's `glr2.cc` frees a value twice when it grows its stack.
+ The grammar holds the language and the forms reserved for a planned feature, which it parses
+ for palan-sa to reject as not implemented (`name = expr`, for type inference). A form without a
+ plan is not parsed (0.2.7 dropped `interface`, `construct`, methods in a type, anonymous
+ functions, `x++`, tuple values, `[#]T` and others): a feature is designed with the language of its
+ time, and a parsed form nothing uses has let code be silently ignored.
  A file named `.pai` is read as an interface (3.7): it may declare a function without a body and
  hold `link` statements, and must hold `built` and `target` statements of the tools' version and the target. `--interface`
  writes the module's own declarations in that form; merging a library's modules is `--lib`'s.
@@ -637,6 +626,65 @@ text type means by a position, rather than bytes.
   copying or counted `replace`, case mapping and normalization (Unicode data, doc/Issues.md #4),
   conversion with numbers (a formatting module's, such as `std/fmt`), compound assignment, `[]`
   indexing.
+
+**Grapheme clusters** (0.2.7; not implemented). `for copy g, i in s.graphemes()` gives each
+extended grapheme cluster of Unicode's UAX #29 as a `utf8`, in `s`'s mode as `slice` gives, and
+`graphemeCount(@s)` counts them. An invalid part is a cluster of its own.
+
+- `graphemes` returns an iterator type for `for`'s `iter`/`next` (3.8) rather than a `[+]utf8`, so a
+  long text is not held twice. Positions still count code points: making the clusters `utf8`'s
+  characters (as Swift does) would change what 0.2.5 decided a position is and scan every position
+  for boundaries. Functions taking cluster positions are left until wanted.
+- The properties the rules read (Grapheme_Cluster_Break, Extended_Pictographic,
+  Indic_Conjunct_Break) are tables of code point ranges searched by bisection, generated from the
+  Unicode Character Database of one pinned version by a script in `tools/` and committed, so a
+  build needs neither the network nor the script. The script runs only to move to another
+  version. The Unicode License, under which the data is redistributed, is kept in `src/std/` and
+  goes into a release.
+- Unicode's `GraphemeBreakTest.txt` of the same version is committed as test data, and a Palan
+  test program checks every case of it; `utf8.pa`'s own tests hold a few readable ones.
+
+### 3.10 Dictionaries
+
+**Status.** Designed for 0.2.7; not implemented.
+
+`[""]T` maps C strings to values of `T`. It is a built-in type rather than a library one, as
+`[+]T` is, because Palan has no generic types: like `[+]T`, it is made of functions generated for
+each shape of its values (3.6), and follows `[+]T`'s rules wherever a type may appear (elements,
+fields, parameters, returns, borrows, copy, `->>`, `$T` values).
+
+- A key is a C string: the dictionary copies its bytes up to the NUL and owns the copy, and keys
+  compare by those bytes. The type is written `[""]` rather than with a key type, since a key is
+  neither the `@[]uint8` borrow given nor a `[]uint8` the caller owns. Other key types are left
+  until wanted; `[K:]T` was not taken for integer keys, as it reads like a slice.
+- `x -> d[k]` adds `k` or replaces its value; any other use of `d[k]` (reading it, `d[k].f`,
+  `@!d[k]`) needs `k` to be there, and stops the program with a run-time error otherwise. Creating
+  an element on a read was not taken: a read through `@d` could not, and a mistyped key would pass
+  silently. Finding the key tells whether it is there, so the check costs nothing and stays in a
+  release build.
+- `len`, `has`, `remove` (false for a missing key) and `clear` (keeping the storage) are built-in
+  functions as `[+]T`'s are.
+- Elements are kept in the order they were added, so iterating gives the same order on every run.
+  `for copy v, k in d` gives the key as a borrow of the dictionary's copy. A loop's body cannot add
+  or remove a key of the dictionary iterated (`x -> d[k]` included, as it may add one), checked
+  as `[+]T`'s length is.
+- A literal is written as JSON is, `{"apple": 1, K: 2}`: a key is a string the compiler knows, a
+  string literal or a string constant's value, so a repeated key is a compile error. A key known
+  at run time is added with `x -> d[k]`. Taking a bare name as the key's text, as JavaScript does,
+  was not taken: a constant meant as the key would pass silently. gen-ast cannot tell `{x: 1}` for
+  a struct from one for a dictionary, so it emits one braced literal and palan-sa decides by the
+  type the literal is given to, as it already decides which struct.
+
+Layout: an owned slot pointing to a header that holds the live count, the keys, their hashes, an
+index table and the values as a `[+]T` (or `[+]$T`) does. Keys, hashes and values are arrays in the
+order of addition; the index table, of a power-of-two size, holds positions in them, found by the
+key's hash (FNV-1a) and linear probing, and grows when three quarters full. A removed element
+leaves its key NULL and its value released; the arrays are compacted when the removed outnumber
+the live, never during a `for` over the dictionary, which cannot remove. Everything on keys (hashing,
+finding, adding, removing, compacting the keys) does not depend on `T`, so it is written once in
+`std/rt` rather than generated; the generated functions build, release, copy and move the values,
+and `d[k]` is a generated call returning the value's address, so stores into it are those into an
+element.
 
 ## 4. Expression Value Categories
 
