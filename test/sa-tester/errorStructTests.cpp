@@ -1019,9 +1019,6 @@ TEST(sa_error, frame_var)
 		{"error_624_transfer_frame_struct.pa", ":5:1: error: '->>' needs a source that owns its value"},
 		{"error_625_transfer_frame_arr.pa", ":4:1: error: '->>' needs a source that owns its value"},
 		{"error_626_frame_embed_owning.pa", ":3:1: error: cannot embed 'Q' with '$': it owns storage of its own; use 'Q' without '$'."},
-		{"error_627_frame_param.pa", ":2:1: error: this parameter is not supported in this version."},
-		{"error_628_frame_named_ret.pa", ":2:1: error: this return value is not supported in this version."},
-		{"error_629_frame_ret_type.pa", ":2:13: error: this return value is not supported in this version."},
 		{"error_663_tapple_frame_prim.pa", ":2:1: error: '$' on a variable applies only to a struct or an array, not 'int32'."},
 		{"error_664_tapple_frame_arr.pa", ":3:1: error: cannot copy '[?]int32' into '[3]int32'"},
 	};

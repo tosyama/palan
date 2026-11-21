@@ -1142,12 +1142,6 @@ TEST(gen_ast, frame_var) {
 	ASSERT_EQ(stmts[2]["vars"][0]["var-type"]["base-type"]["type-kind"], "arr");
 	// A later name takes the first one's type, '$' included.
 	ASSERT_EQ(stmts[3]["vars"][1]["var-type"]["type-kind"], "embed");
-
-	// Frame storage belongs to local declarations only.
-	const auto& funcs = ast["functions"];
-	ASSERT_EQ(funcs[0]["parameters"][0]["not-impl"], true);
-	ASSERT_EQ(funcs[1]["rets"][0]["not-impl"], true);
-	ASSERT_EQ(funcs[2]["ret-type"]["not-impl"], true);
 }
 
 TEST(gen_ast, ro_ptr_slot_decl) {

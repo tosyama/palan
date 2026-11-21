@@ -43,6 +43,7 @@ enum PlnMessageCode {
 	E_ReceiveTarget,
 	E_ChainAfterReceive,
 	E_ConversionAsStoreLoc,	// the type name
+	E_FrameParamOrRet,
 };
 
 class PlnGenAstMessage

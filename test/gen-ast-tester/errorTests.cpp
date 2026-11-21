@@ -156,6 +156,28 @@ TEST(gen_ast_error, receive_misuse) {
 	}
 }
 
+// '$' is a property of a local declaration: a parameter or return value is never in the caller's frame.
+TEST(gen_ast_error, frame_param_or_ret) {
+	const string message = "error: '$' places a local variable in the stack frame; a parameter or return value cannot have it.";
+	struct { string source, location; } cases[] = {
+		{"func f($int32 x) { }\n", "m.pa:1:1: "},
+		{"type P { int32 x; };\nfunc f(int32 a, $P p) { }\n", "m.pa:2:1: "},
+		{"type P { int32 x; };\nfunc f($P a, b) { }\n", "m.pa:2:1: "},
+		{"func f($[4]int32 a) { }\n", "m.pa:1:1: "},
+		{"type P { int32 x; };\nfunc f() -> $P r { }\n", "m.pa:2:1: "},
+		{"type P { int32 x; };\nfunc f() -> $P { }\n", "m.pa:2:13: "},
+		{"func outer() {\n\tfunc inner($int32 x) { }\n}\n", "m.pa:2:2: "},
+		{"syscall s($int32 a) -> int64 = 1;\n", "m.pa:1:1: "},
+		{"syscall s(int64 a) -> $int64 = 1;\n", "m.pa:1:23: "},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.location + message), string::npos) << c.source << out;
+	}
+}
+
 TEST(gen_ast_error, interface_version) {
 	cleanTestEnv();
 	ofstream("out/old.pai") << "built \"0.0.0\";\ntarget \"" PALAN_TARGET "\";\nexport func f();\n";
@@ -199,8 +221,8 @@ TEST(gen_ast_error, cinclude_export_not_top_level) {
 
 TEST(gen_ast_error, interface_cannot_state) {
 	struct { string source, expected; } cases[] = {
-		{"export func f($int32 a) { }\n", "error: an interface cannot state this parameter or return."},
-		{"export func f() -> $int32 { }\n", "error: an interface cannot state this type."},
+		{"export func f([3]@[2]int32 a) { }\n", "error: an interface cannot state this parameter or return."},
+		{"export func f() -> [3]@[2]int32 { }\n", "error: an interface cannot state this type."},
 		{"const N = {x: 1};\n", "error: an interface cannot state this expression."},
 	};
 	for (auto& c : cases) {

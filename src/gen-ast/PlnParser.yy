@@ -307,21 +307,30 @@ struct BodyList {
 		return t;
 	} // LCOV_EXCL_BR_LINE
 
+	[[noreturn]] static void frameParamOrRet(const string& file, const palan::PlnParser::location_type& loc)
+	{
+		throw runtime_error(PlnGenAstMessage::locatedError(file, loc.begin.line, loc.begin.column,
+			PlnGenAstMessage::getMessage(E_FrameParamOrRet)));
+	}
+
 	// A parameter or return the compiler does not implement stays in the
 	// signature as is, so SA can reject the function where it is defined.
-	static json funcDecl(json& ast, bool exported, json fn, const vector<json>& params, const json& ret,
-	                     bool release, const palan::PlnParser::location_type& loc, bool cExport = false)
+	static json funcDecl(json& ast, const string& file, bool exported, json fn, const vector<json>& params,
+	                     const json& ret, bool release, const palan::PlnParser::location_type& loc,
+	                     bool cExport = false)
 	{
-		// Frame storage is a property of a local declaration, and a name after
-		// only unimplemented entries has no type to inherit; such a parameter or
-		// named return stays an unimplemented entry for SA to report.
+		// Parameter entries carry no location of their own, so a misplaced '$'
+		// is reported at the function. A name after only unimplemented entries
+		// has no type to inherit and stays an unimplemented entry for SA.
 		auto rejectUnimplemented = [&](vector<json> vars) {
-			for (auto& v : vars)
-				if (v.value("inherit-type", false)
-						|| (v.contains("var-type") && v["var-type"].value("type-kind", "") == "embed")) {
+			for (auto& v : vars) {
+				if (v.contains("var-type") && v["var-type"].value("type-kind", "") == "embed")
+					frameParamOrRet(file, loc);
+				if (v.value("inherit-type", false)) {
 					v = {{"not-impl", true}}; // LCOV_EXCL_BR_LINE
 					LOC(v, loc); // LCOV_EXCL_BR_LINE
 				}
+			}
 			return vars;
 		}; // LCOV_EXCL_BR_LINE
 		fn["parameters"] = rejectUnimplemented(params);
@@ -1308,12 +1317,12 @@ store_loc
 
 func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 	{
-		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, $7, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, lexer.inputFile, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, $7, @$); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $8}}, {} }); // LCOV_EXCL_BR_LINE
 	}
 	| func_export KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 	{
-		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$, $1); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, lexer.inputFile, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$, $1); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(fn), {{"block", $9}}, {} }); // LCOV_EXCL_BR_LINE
 	}
 	| func_export KW_FUNC func_name '(' paramaters ')' return_def release_mark ';'
@@ -1321,7 +1330,7 @@ func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 		if (!isInterfaceFile(lexer.inputFile))
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
 				PlnGenAstMessage::getMessage(E_InterfaceOnly, "a function without a body")));
-		$$ = leafNode(funcDecl(ast, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$, $1)); // LCOV_EXCL_BR_LINE
+		$$ = leafNode(funcDecl(ast, lexer.inputFile, true, {{"name", $3}, {"func-type", "palan"}}, $5, $7, $8, @$, $1)); // LCOV_EXCL_BR_LINE
 	}
 	// A type's '->', which comes with the type rather than being exported.
 	| KW_FUNC func_name '(' paramaters ')' return_def ';'
@@ -1329,7 +1338,7 @@ func_def: KW_FUNC func_name '(' paramaters ')' return_def release_mark block_obj
 		if (!isInterfaceFile(lexer.inputFile))
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
 				PlnGenAstMessage::getMessage(E_InterfaceOnly, "a function without a body")));
-		$$ = leafNode(funcDecl(ast, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, false, @$)); // LCOV_EXCL_BR_LINE
+		$$ = leafNode(funcDecl(ast, lexer.inputFile, false, {{"name", $2}, {"func-type", "palan"}}, $4, $6, false, @$)); // LCOV_EXCL_BR_LINE
 	}
 	;
 
@@ -1376,12 +1385,12 @@ func_item: func_def
 // function (Linux syscall ABI, not System V -- see doc/SpecAndDesign.md).
 syscall_decl: KW_SYSCALL ID '(' paramaters ')' syscall_ret '=' expression ';'
 	{
-		json fn = funcDecl(ast, false, {{"name", $2}, {"func-type", "syscall"}, {"syscall-number", $8}}, $4, $6, false, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, lexer.inputFile, false, {{"name", $2}, {"func-type", "syscall"}, {"syscall-number", $8}}, $4, $6, false, @$); // LCOV_EXCL_BR_LINE
 		$$ = leafNode(move(fn)); // LCOV_EXCL_BR_LINE
 	}
 	| KW_EXPORT KW_SYSCALL ID '(' paramaters ')' syscall_ret '=' expression ';'
 	{
-		json fn = funcDecl(ast, true, {{"name", $3}, {"func-type", "syscall"}, {"syscall-number", $9}}, $5, $7, false, @$); // LCOV_EXCL_BR_LINE
+		json fn = funcDecl(ast, lexer.inputFile, true, {{"name", $3}, {"func-type", "syscall"}, {"syscall-number", $9}}, $5, $7, false, @$); // LCOV_EXCL_BR_LINE
 		$$ = leafNode(move(fn)); // LCOV_EXCL_BR_LINE
 	}
 	;
@@ -1436,6 +1445,8 @@ syscall_named_rets: type_expr ID
 
 ret_type: type_expr
 	{
+		if ($1.value("type-kind", "") == "embed")
+			frameParamOrRet(lexer.inputFile, @1);
 		if (isDeclarableVarType($1)) {
 			$$ = move($1);
 		} else {

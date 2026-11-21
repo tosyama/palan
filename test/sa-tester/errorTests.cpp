@@ -874,14 +874,14 @@ TEST(sa_error, sig_not_implemented)
 	const string untyped = "is declared without a type; type inference is not supported yet";
 	const pair<string, string> cases[] = {
 		{"error_544_param_untyped_default.pa", ":1:8: error: variable 'x' " + untyped},
-		{"error_547_param_embed.pa", ":1:1: error: this parameter is not supported in this version."},
+		{"error_547_param_undeclarable.pa", ":1:8: error: this parameter is not supported in this version."},
 		{"error_549_syscall_param_default.pa", ":1:11: error: variable 'x' " + untyped},
-		{"error_550_inner_func_param.pa", ":2:2: error: this parameter is not supported in this version."},
+		{"error_550_inner_func_param.pa", ":2:13: error: this parameter is not supported in this version."},
 		{"error_552_ret_untyped.pa", ":1:13: error: this return value is not supported in this version."},
 		{"error_941_take_undeclarable.pa", ":2:1: error: this statement is not supported in this version."},
 		{"error_942_transfer_to_expr.pa", ":3:1: error: this expression is not supported in this version."},
 		{"error_944_unknown_field_overload_arg.pa", ":5:3: error: struct 'P' has no field 'nofield'."},
-		{"error_555_import_not_impl_sig.pa", "lib_sa_not_impl_sig.pa:1:1: error: this parameter is not supported in this version."},
+		{"error_555_import_not_impl_sig.pa", "lib_sa_not_impl_sig.pa:1:15: error: this parameter is not supported in this version."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

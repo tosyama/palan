@@ -149,6 +149,9 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'.";
 
+		case E_FrameParamOrRet:
+			return "'$' places a local variable in the stack frame; a parameter or return value cannot have it.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

@@ -272,7 +272,7 @@ Used in Palan function `parameters` and `rets`.
   (omitted when not written)
 
 A parameter or return the grammar parses but the compiler does not implement (an untyped
-`name = expr`, a `$T` parameter, a type with no declarable form) stays in the list as
+`name = expr`, a type with no declarable form) stays in the list as
 `{"not-impl": true, "loc": ...}`, plus `untyped-var` (the name) for `name = expr`; SA rejects
 the function at its definition. An unimplemented unnamed return type is a `ret-type` of the
 same shape.
@@ -373,8 +373,8 @@ Variable type
       declarable variable type in a variable declaration
     Note: In a `struct-def` field list, SA resolves the sub-struct layout and folds the embedded
     fields' offsets into the parent struct (no separate pointer). At the top of a local `var-decl`
-    var-type (`$P p;`, `$[4]int32 a;`), it places the variable's storage in the stack frame. A
-    parameter or named return with it is emitted as a not-impl entry (`{"not-impl": true}`).
+    var-type (`$P p;`, `$[4]int32 a;`), it places the variable's storage in the stack frame. At
+    the top of a parameter's or return's type it is a gen-ast error.
   5. strct - Struct type reference (by name), from a C struct-typed parameter/return in a
      `cinclude`d function signature
     - type-name - Struct name string; omitted only for a reference to a genuinely untagged

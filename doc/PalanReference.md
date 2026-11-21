@@ -429,8 +429,9 @@ int32 a = 5, b = 10;   // type inheritance: b is also int32
 and is currently a compile error. It is not an assignment — assignment is written `10 -> x;`.
 
 **Stack storage:** A struct or array variable is allocated on the heap; with `$` in front of its
-type (`$Point p;`, `$[4]int32 a;`) it is placed in the function's stack frame instead. See
-[Stack Arrays](#stack-arrays-nt) and [Stack Structs](#stack-structs-t).
+type (`$Point p;`, `$[4]int32 a;`) it is placed in the function's stack frame instead. A
+parameter or return value cannot have `$`. See [Stack Arrays](#stack-arrays-nt) and
+[Stack Structs](#stack-structs-t).
 
 **Initial contents:** A new struct or array starts undefined, as memory from C's `malloc` does:
 its primitive fields and elements, and its pointers (`@T`), hold whatever was there before, so
