@@ -675,16 +675,20 @@ fields, parameters, returns, borrows, copy, `->>`, `$T` values).
   a struct from one for a dictionary, so it emits one braced literal and palan-sa decides by the
   type the literal is given to, as it already decides which struct.
 
-Layout: an owned slot pointing to a header that holds the live count, the keys, their hashes, an
-index table and the values as a `[+]T` (or `[+]$T`) does. Keys, hashes and values are arrays in the
-order of addition; the index table, of a power-of-two size, holds positions in them, found by the
-key's hash (FNV-1a) and linear probing, and grows when three quarters full. A removed element
-leaves its key NULL and its value released; the arrays are compacted when the removed outnumber
-the live, never during a `for` over the dictionary, which cannot remove. Everything on keys (hashing,
-finding, adding, removing, compacting the keys) does not depend on `T`, so it is written once in
-`std/rt` rather than generated; the generated functions build, release, copy and move the values,
-and `d[k]` is a generated call returning the value's address, so stores into it are those into an
-element.
+Layout: an owned slot pointing to a header that `std/rt` allocates, holding the live count, the
+number of positions used, the entries `{hash, key}` in the order of addition, an index table, and
+at its end the values as a `[+]T` (or `[+]$T`) header, one value at each entry's position. The index
+table, of a power-of-two size, holds positions, found by the key's hash (FNV-1a) and linear probing,
+and grows when three quarters full, removed positions counted. A removed element leaves its key
+NULL, its value released and its table slot in place, which lookups probe past; the entries and
+values are compacted when the removed outnumber the live, never during a `for` over the
+dictionary, which cannot remove. Everything on keys (hashing, finding, adding, removing,
+compacting, copying the keys) does not depend on `T`, so it is written once in `std/rt` rather than
+generated, as `__pln_dict_*` C functions: compacting moves the values as bytes of the element's
+size, as the removed ones are already released. The values' header is an ordinary `[+]T` one, so
+the generated functions build, release and copy the values with `[+]T`'s, adding a value where
+adding the key gave a position equal to their length. `d[k]` is a generated call returning the
+value's address, so stores into it are those into an element.
 
 ## 4. Expression Value Categories
 
