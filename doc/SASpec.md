@@ -777,6 +777,9 @@ Additional statement kinds emitted by SA:
   (E_TransferShapeMismatch). It emits the same three statements with an `assign`; the free is the
   variable's own scope-exit release, which knows its sizes.
 
+  In all three, a value a call computes is first evaluated into a `__pin_N` by a `var-decl`
+  (category `expiring`), since it may read what the target holds (`f(v) ->> v`).
+
 - **Chained and once-evaluated stores** - an assignment whose `value` is another assignment
   (`v -> t1 -> t2`, or a `chain-call` starting from one) runs that assignment first and reads its
   target back as the value. Each call is evaluated once, values before targets: a call in a target

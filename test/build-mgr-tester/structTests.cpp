@@ -1331,6 +1331,12 @@ TEST(build_mgr, var_transfer_mtrace) {
 	expectFrameMtrace("319_var_transfer_mtrace", "4\n5\n3 4\n7\n9\n7\n0\n5\n9\n");
 }
 
+// The value is computed before the target releases what it held, so a value
+// that reads the target (`f(v) ->> v`) sees it intact.
+TEST(build_mgr, transfer_into_source_mtrace) {
+	expectMtraceRun("441_transfer_into_source_mtrace", "4 7\n3\n5 3\n3\n", 24);
+}
+
 // `[n]arr_P` and `[m][n]P` once shared the helper key `arr_arr_P`, so one of
 // them got no helpers and the program failed to link.
 TEST(build_mgr, alloc_key_struct_names) {

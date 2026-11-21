@@ -1,0 +1,30 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+func grow([+]int32 v) -> [+]int32 { v.push(7); return v; }
+func id3([3]int32 a) -> [3]int32 { return a; }
+type P { int32 x; [+]int32 a; };
+func fp(P p) -> P { 1 + p.x -> p.x; return p; }
+mtrace();
+{
+	[+]int32 v = [5, 6];
+	v ->> grow() ->> v;
+	grow(v) ->> v;
+	printf("%ld %d\n", len(@v), v[3]);
+
+	[3]int32 a = [1, 2, 3];
+	a ->> id3() ->> a;
+	id3(a) ->> a;
+	printf("%d\n", a[2]);
+
+	P p = {x: 3, a: [1]};
+	p ->> fp() ->> p;
+	fp(p) ->> p;
+	p.a ->> grow() ->> p.a;
+	grow(p.a) ->> p.a;
+	printf("%d %ld\n", p.x, len(@p.a));
+
+	[2][+]int32 m = [[1], [2]];
+	m[0] ->> grow() ->> m[0];
+	grow(m[0]) ->> m[0];
+	printf("%ld\n", len(@m[0]));
+}

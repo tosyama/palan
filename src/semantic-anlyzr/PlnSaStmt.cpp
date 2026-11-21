@@ -1807,6 +1807,18 @@ json PlnSemanticAnalyzer::transferStmts(const json& stmt, json targetRelease, js
 	json result = json::array();
 	if (isStructRetCall(value))
 		store["value"] = heapStructRet(store["value"], result);
+	// A computed value may read what the target holds (`f(v) ->> v`), so it is
+	// evaluated before the target releases that.
+	else if (value.value("category", "") == "expiring" && !isLocationExpr(value)) {
+		// LCOV_EXCL_BR_START
+		json type = value["value-type"];
+		string name = "__pin_" + to_string(tempVarCounter_++);
+		declareVar(name, type);
+		result.push_back({{"stmt-type", "var-decl"},
+		                  {"vars", json::array({{{"name", name}, {"var-type", type}, {"init", move(store["value"])}}})}});
+		store["value"] = {{"expr-type", "id"}, {"name", name}, {"var-type", type}, {"value-type", type}, {"category", "expiring"}};
+		// LCOV_EXCL_BR_STOP
+	}
 	result.push_back(move(targetRelease));
 	result.push_back(move(store));
 	appendTransferSourceReset(result, stmt, value);
