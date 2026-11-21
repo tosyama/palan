@@ -246,6 +246,8 @@ enum PlnSaMessageCode {
 	E_SpreadElemMismatch,	// arg1: parameter type, arg2: value type
 	E_AddrOfBitField,	// arg1: field name
 	E_BitFieldLiteralOutOfRange,	// arg1: the literal as written, arg2: field name, arg3: width
+	E_DictNotImplemented,
+	E_StructLitStringKey,	// arg1: struct name
 };
 
 class PlnSaMessage

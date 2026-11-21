@@ -44,6 +44,7 @@ enum PlnMessageCode {
 	E_ChainAfterReceive,
 	E_ConversionAsStoreLoc,	// the type name
 	E_FrameParamOrRet,
+	E_DictKeyTypeNotEmpty,
 };
 
 class PlnGenAstMessage

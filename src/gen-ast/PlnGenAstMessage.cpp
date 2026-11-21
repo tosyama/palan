@@ -152,6 +152,9 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 		case E_FrameParamOrRet:
 			return "'$' places a local variable in the stack frame; a parameter or return value cannot have it.";
 
+		case E_DictKeyTypeNotEmpty:
+			return "a dictionary type is written '[\"\"]T': its key is a C string, which has no type name to write.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

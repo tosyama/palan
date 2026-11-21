@@ -862,6 +862,10 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 			given[k] = &items[k];
 	} else {
 		for (auto& named : items) {
+			if (named.contains("key")) {
+				cerr << locPrefix(named) << PlnSaMessage::getMessage(E_StructLitStringKey, structDisplayName(def.name)) << endl;
+				exit(1);
+			}
 			string fn = named["name"].get<string>();
 			auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fn; });
 			if (it == def.fields.end()) {

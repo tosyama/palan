@@ -1339,3 +1339,27 @@ TEST(gen_ast, c_export) {
 	jout = json::parse(execTestCommand("palan-gen-ast out/m.pai"));
 	ASSERT_EQ(jout["export"][0]["c-export"], true);
 }
+
+TEST(gen_ast, dict_type) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/169_dict_type.pa");
+	ASSERT_TRUE(checkerr(output));
+	const json ast = json::parse(output)["ast"];
+	const json& stmts = ast["statements"];
+	ASSERT_EQ(stmts.size(), 5);
+
+	const json i32Dict = json::parse(R"({"type-kind": "dict", "base-type": {"type-kind": "prim", "type-name": "int32"}})");
+	EXPECT_EQ(stmts[0]["fields"][1]["var-type"], i32Dict);
+	EXPECT_EQ(stmts[1]["vars"][0]["var-type"], json::parse(R"({"type-kind": "dict", "embedded": true,
+		"base-type": {"type-kind": "prim", "type-name": "P"}})"));
+	EXPECT_EQ(stmts[2]["vars"][0]["var-type"], json::parse(R"({"type-kind": "arr", "specifier": "variable", "size-expr": null,
+		"base-type": {"type-kind": "dict", "base-type": {"type-kind": "pntr", "mutable": false,
+			"base-type": {"type-kind": "prim", "type-name": "P"}}}})"));
+	EXPECT_EQ(stmts[3]["vars"][0]["var-type"]["base-type"], i32Dict);
+	// '[""]' with nothing after it stays an array literal.
+	EXPECT_EQ(stmts[4]["value"]["expr-type"], "arr-lit");
+
+	const json& h = ast["functions"][0];
+	EXPECT_EQ(h["parameters"][0]["var-type"]["base-type"], i32Dict);
+	EXPECT_EQ(h["ret-type"]["type-kind"], "dict");
+}

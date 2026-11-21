@@ -467,6 +467,7 @@ class PlnSemanticAnalyzer {
 
 	json sa_statements(const json& stmts);
 	void beginModule(const json& ast);
+	void rejectDictTypes(const json& node, const json& locNode) const;
 	void prescanTypes(const json& stmts, const json& funcs);
 	void indexTopDecls(const json& stmts);
 	void indexCopyFuncs(const json& funcs);

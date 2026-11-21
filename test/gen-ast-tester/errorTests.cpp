@@ -178,6 +178,20 @@ TEST(gen_ast_error, frame_param_or_ret) {
 	}
 }
 
+TEST(gen_ast_error, dict_key_type) {
+	const string message = "error: a dictionary type is written '[\"\"]T': its key is a C string, which has no type name to write.";
+	struct { string source, location; } cases[] = {
+		{"[\"a\"]int32 d;\n", "m.pa:1:2: "},
+		{"type P { [\"key\"]int32 m; };\n", "m.pa:1:11: "},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.location + message), string::npos) << c.source << out;
+	}
+}
+
 TEST(gen_ast_error, interface_version) {
 	cleanTestEnv();
 	ofstream("out/old.pai") << "built \"0.0.0\";\ntarget \"" PALAN_TARGET "\";\nexport func f();\n";

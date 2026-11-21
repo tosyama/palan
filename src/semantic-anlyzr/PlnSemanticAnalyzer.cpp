@@ -985,9 +985,23 @@ void PlnSemanticAnalyzer::nonConstNames(const json& expr, vector<const json*>& i
 	}
 }
 
+// Until dictionaries are analyzed, one in any place a type is written is
+// rejected before the module is.
+void PlnSemanticAnalyzer::rejectDictTypes(const json& node, const json& locNode) const
+{
+	if (!node.is_structured()) return;
+	const json& at = node.is_object() && node.contains("loc") ? node : locNode;
+	if (node.is_object() && node.value("type-kind", "") == "dict") {
+		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_DictNotImplemented) << endl;
+		exit(1);
+	}
+	for (auto& child : node) rejectDictTypes(child, at);
+}
+
 void PlnSemanticAnalyzer::beginModule(const json& ast)
 {
 	inputFilePath = ast["original"];
+	rejectDictTypes(ast["ast"], ast["ast"]);
 	moduleId_     = ast["module"];
 	symbolScope_  = moduleId_;
 	sa["original"]      = ast["original"];

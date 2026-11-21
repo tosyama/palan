@@ -750,6 +750,9 @@ TEST(sa_error, struct_arr_lit)
 		{"error_693_dict_lit_prim_var.pa", ":1:11: error: a '{name: value}' literal can only be used as a struct value"},
 		{"error_269_dict_lit_prim_elem.pa", ":1:15: error: a '{name: value}' literal can only be used as a struct value: a struct variable's initializer, the source of '->' to a struct, an element of an array literal, or an argument for a struct parameter."},
 		{"error_270_dict_lit_context.pa", ":3:5: error: parameter 'p' of type 'int32' cannot take a '{name: value}' literal: only a struct parameter can."},
+		{"error_1155_struct_lit_string_key.pa", ":2:18: error: a value of struct 'Point' names its fields; a string key is for a dictionary."},
+		{"error_1153_dict_field.pa", ":1:1: error: a dictionary type is not supported in this version."},
+		{"error_1154_dict_var.pa", ":2:2: error: a dictionary type is not supported in this version."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -139,6 +139,19 @@ inline json varrTypeExpr(json sizeExpr, json base)
 	return t;
 } // LCOV_EXCL_BR_LINE
 
+// `[""]$T` keeps its values in place, marked like `[+]$T`.
+inline json dictTypeExpr(json base)
+{
+	json t = {{"type-kind","dict"}}; // LCOV_EXCL_BR_LINE
+	if (base.value("type-kind", "") == "embed") {
+		t["embedded"] = true;
+		t["base-type"] = std::move(base["base-type"]);
+	} else {
+		t["base-type"] = std::move(base);
+	}
+	return t;
+} // LCOV_EXCL_BR_LINE
+
 // A variable-length array.
 inline bool isVarrType(const json& t)
 {
@@ -156,7 +169,7 @@ inline bool isDeclarableVarType(const json& t)
 	string tk = t.value("type-kind", "");
 	if (tk == "prim" || tk == "pntr")
 		return true;
-	if (isVarrType(t))
+	if (isVarrType(t) || tk == "dict")
 		return t["base-type"].value("type-kind", "") == "prim" || isDeclarableVarType(t["base-type"]);
 	if (tk != "arr" || t.value("specifier", "") != "raw")
 		return false;
@@ -166,8 +179,8 @@ inline bool isDeclarableVarType(const json& t)
 	string btk = bt.value("type-kind", "");
 	if (btk == "prim")
 		return true;  // fixed-size array of prim
-	if (isVarrType(bt))
-		return isDeclarableVarType(bt);  // fixed-size array of [+]T
+	if (isVarrType(bt) || btk == "dict")
+		return isDeclarableVarType(bt);  // fixed-size array of [+]T or [""]T
 	if (btk == "pntr" && bt.contains("base-type")) {
 		const json& ibt = bt["base-type"];
 		if (ibt.value("type-kind", "") == "arr" && ibt.value("specifier", "") == "raw"

@@ -71,7 +71,7 @@ TEST(gen_ast, basic_tests) {
 	const vector<string> expectedKinds = {
 		"import", "import", "cinclude", "const-decl", "struct-def", "enum-def", "type-alias", "opaque-def",
 		"var-decl", "global-permit", "var-decl", "var-decl", "var-decl", "var-decl", "var-decl", "var-decl",
-		"var-decl", "assign", "tapple-decl", "tapple-assign", "expr", "expr", "assign", "if", "while", "for",
+		"var-decl", "var-decl", "assign", "tapple-decl", "tapple-assign", "expr", "expr", "assign", "if", "while", "for",
 		"expr"};
 	ASSERT_EQ(kinds, expectedKinds);
 
@@ -101,20 +101,25 @@ TEST(gen_ast, basic_tests) {
 	EXPECT_EQ(stmts[14]["vars"][0]["var-type"]["specifier"], "variable");
 	EXPECT_EQ(stmts[15]["vars"][0]["var-type"]["type-kind"], "embed");
 	EXPECT_EQ(stmts[15]["vars"][0]["init"]["expr-type"], "dict-lit");
-	EXPECT_EQ(stripLoc(stmts[17]), json::parse(R"({"stmt-type": "assign", "name": "q",
+	EXPECT_EQ(stripLoc(stmts[17]["vars"][0]), json::parse(R"({"name": "stock",
+		"var-type": {"type-kind": "dict", "base-type": {"type-kind": "prim", "type-name": "int32"}},
+		"init": {"expr-type": "dict-lit", "items": [
+			{"key": {"expr-type": "lit-str", "value": "apple"}, "value": {"expr-type": "lit-int", "value": "3"}},
+			{"name": "N", "value": {"expr-type": "lit-int", "value": "4"}}]}})"));
+	EXPECT_EQ(stripLoc(stmts[18]), json::parse(R"({"stmt-type": "assign", "name": "q",
 		"value": {"expr-type": "id", "name": "p"}})"));
-	EXPECT_EQ(stmts[18]["vars"][1]["var-name"], "rr");
-	EXPECT_EQ(stmts[18]["vars"][1]["var-type"]["type-name"], "int32");
-	EXPECT_EQ(stmts[19]["targets"][1]["expr-type"], "arr-index");
-	EXPECT_EQ(stmts[20]["body"]["args"][0]["mutable"], true);
-	EXPECT_EQ(stmts[21]["body"]["expr-type"], "chain-call");
-	EXPECT_EQ(stripLoc(stmts[22]), json::parse(R"({"stmt-type": "assign", "name": "v", "ownership-transfer": true,
+	EXPECT_EQ(stmts[19]["vars"][1]["var-name"], "rr");
+	EXPECT_EQ(stmts[19]["vars"][1]["var-type"]["type-name"], "int32");
+	EXPECT_EQ(stmts[20]["targets"][1]["expr-type"], "arr-index");
+	EXPECT_EQ(stmts[21]["body"]["args"][0]["mutable"], true);
+	EXPECT_EQ(stmts[22]["body"]["expr-type"], "chain-call");
+	EXPECT_EQ(stripLoc(stmts[23]), json::parse(R"({"stmt-type": "assign", "name": "v", "ownership-transfer": true,
 		"value": {"expr-type": "chain-call", "call": {"expr-type": "call", "name": "grow", "args": []},
 		          "value": {"expr-type": "transfer", "op": "->>", "value": {"expr-type": "id", "name": "v"}}}})"));
-	EXPECT_TRUE(stmts[23].contains("else"));
-	EXPECT_EQ(stmts[24]["body"][1]["then"]["body"][0]["stmt-type"], "break");
-	EXPECT_EQ(stripLoc(stmts[25]["elem"]), json::parse(R"({"borrow": false, "name": "e"})"));
-	EXPECT_EQ(stmts[25]["index"], "i");
+	EXPECT_TRUE(stmts[24].contains("else"));
+	EXPECT_EQ(stmts[25]["body"][1]["then"]["body"][0]["stmt-type"], "break");
+	EXPECT_EQ(stripLoc(stmts[26]["elem"]), json::parse(R"({"borrow": false, "name": "e"})"));
+	EXPECT_EQ(stmts[26]["index"], "i");
 
 	const json& funcs = ast["functions"];
 	ASSERT_EQ(funcs.size(), 4);
@@ -211,6 +216,13 @@ TEST(gen_ast, dict_lit) {
 	// A trailing comma is allowed, as in array literals.
 	ASSERT_EQ(items[1]["items"].size(), 2);
 	ASSERT_EQ(items[1]["items"][0]["name"], "y");
+
+	// A string key stays a literal; a name is left for palan-sa to read as a field or a constant.
+	ASSERT_EQ(stripLoc(jout["ast"]["statements"][1]["vars"][0]["init"]), json::parse(R"({"expr-type": "dict-lit", "items": [
+		{"key": {"expr-type": "lit-str", "value": "a\\tb"}, "value": {"expr-type": "lit-int", "value": "1"}},
+		{"name": "K", "value": {"expr-type": "lit-int", "value": "2"}},
+		{"key": {"expr-type": "lit-str", "value": "c"}, "value": {"expr-type": "lit-int", "value": "3"}}]})"));
+	ASSERT_EQ(jout["ast"]["statements"][1]["vars"][0]["init"]["items"][0]["loc"], json::array({2, 16, 2, 25}));
 }
 
 TEST(gen_ast, addition) {

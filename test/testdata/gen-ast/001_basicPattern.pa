@@ -37,6 +37,7 @@ Color col = Color.GREEN;
 [+]int32 v = [5, 6];
 $Point p = {x: 1, y: 2};
 Point q;
+[""]int32 stock = {"apple": 3, N: 4};
 p -> q;
 (int32 qq, rr) = divmod(17, 5);
 divmod(9, 4) -> (qq, a[0]);

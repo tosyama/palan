@@ -307,6 +307,17 @@ struct BodyList {
 		return t;
 	} // LCOV_EXCL_BR_LINE
 
+	// A string key stays a literal expression, so palan-sa reads it as any other string literal.
+	static json strKeyItem(const string& bytes, const palan::PlnParser::location_type& keyLoc, const json& value,
+	                       const palan::PlnParser::location_type& begin, const palan::PlnParser::location_type& end)
+	{
+		json key = {{"expr-type", "lit-str"}, {"value", strLitText(bytes)}}; // LCOV_EXCL_BR_LINE
+		LOC(key, keyLoc); // LCOV_EXCL_BR_LINE
+		json item = {{"key", move(key)}, {"value", value}}; // LCOV_EXCL_BR_LINE
+		LOC_BE(item, begin, end); // LCOV_EXCL_BR_LINE
+		return item;
+	} // LCOV_EXCL_BR_LINE
+
 	[[noreturn]] static void frameParamOrRet(const string& file, const palan::PlnParser::location_type& loc)
 	{
 		throw runtime_error(PlnGenAstMessage::locatedError(file, loc.begin.line, loc.begin.column,
@@ -1277,6 +1288,14 @@ dict_items: ID ':' expression
 		LOC_BE(item, @3, @5); // LCOV_EXCL_BR_LINE
 		$$ = $1.push(move(item));
 	}
+	| STRING ':' expression
+	{
+		$$ = PList<json>().push(strKeyItem($1, @1, $3, @1, @3));
+	}
+	| dict_items ',' STRING ':' expression
+	{
+		$$ = $1.push(strKeyItem($3, @3, $5, @3, @5));
+	}
 	;
 
 store_loc
@@ -1558,7 +1577,14 @@ type_expr: ID
 	{ $$ = {{"type-kind","embed"},{"base-type",move($2)}}; } // LCOV_EXCL_BR_LINE
 	| '[' expression ']' type_expr
 	{
-		if ($4.value("type-kind","") == "embed")
+		// `[""]T` is read by this rule: a rule of its own would parse the same
+		// input a second way.
+		if ($2.value("expr-type","") == "lit-str") {
+			if (!$2["value"].get<string>().empty())
+				throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @2.begin.line, @2.begin.column,
+					PlnGenAstMessage::getMessage(E_DictKeyTypeNotEmpty)));
+			$$ = dictTypeExpr($4);
+		} else if ($4.value("type-kind","") == "embed")
 			$$ = {{"type-kind","arr"},{"specifier","raw"},{"size-expr",move($2)},{"embedded",true},{"base-type",move($4["base-type"])}}; // LCOV_EXCL_BR_LINE
 		else
 			$$ = {{"type-kind","arr"},{"specifier","raw"},{"size-expr",move($2)},{"base-type",move($4)}}; // LCOV_EXCL_BR_LINE

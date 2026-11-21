@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Json Specification
 ============================================
 
-ver. 0.2.6
+ver. 0.2.7
 
 \* - Required
 
@@ -300,7 +300,7 @@ Same structure as Palan Parameter.
 
 Variable type
 -------------
-- type-kind\* - Type kind string: "prim" "pntr" "arr" "embed" "strct" "union" "enum" "func" "user" "keep"
+- type-kind\* - Type kind string: "prim" "pntr" "arr" "embed" "strct" "union" "enum" "func" "user" "keep" "dict"
 - const - Boolean, true if const qualified (omitted when false). c2ast/cinclude-only: a C
   pointer's own qualifier (`T * const`) is emitted on the `pntr` node itself; the pointee's
   qualifier (`const T *`) is emitted on `pntr`'s `base-type`. SA folds pointee `const` into
@@ -421,6 +421,12 @@ Variable type
   10. keep - `_` as a function type's parameter or return type: the type a cast's source has at
       that place (`free as @func(Q)`, `f as @func(_, P) -> _`). SA accepts it only in a cast's
       `target-type`. No other fields.
+  11. dict - Dictionary type (`[""]T`), whose keys are C strings
+    - base-type\* - The value type
+    - embedded - Boolean, true for `[""]$T`, whose values are laid out in place (omitted when
+      false), as `arr`'s `embedded` for `[+]$T`
+    Note: `[""]` is read where `[expr]` is, so a string literal there gives this type; one that
+    is not empty is a gen-ast error.
 
 Note: C `restrict` qualifier is not represented in the AST (optimization hint only).
 
@@ -727,9 +733,12 @@ Expression model
     - items\* - Element expression model list. A 2D literal is an `arr-lit` of row `arr-lit`s;
       the concatenated form `[a,b][c,d]` is normalized to the same shape as the nested form
       `[[a,b],[c,d]]` (only `loc` differs)
-  30. dict-lit - Named-value literal (`{x: a, y: b}`); a trailing comma is allowed
-    - items\* - List of named values in source order
-      - name\*  - Name string
+  30. dict-lit - Braced literal (`{x: a, "k": b}`), for a struct or a dictionary; a trailing
+      comma is allowed. A name is a struct's field or a dictionary key's string constant, which
+      palan-sa tells apart by the type the literal is given to
+    - items\* - List of items in source order, each with one of `name` and `key`
+      - name  - Name string
+      - key   - The key written as a string: a `lit-str` expression model
       - value\* - Value expression model
       - loc\*   - Location Array of `name: value`
   31. sizeof - Byte size of a type (`sizeof(T)`). A type with a `[+]` level is emitted as
