@@ -50,7 +50,7 @@ TEST(gen_ast, basic_tests) {
 	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/001_basicPattern.pa");
 	ASSERT_TRUE(checkerr(output));
 	json jout = json::parse(output);
-	ASSERT_EQ(jout["ast"]["statements"].size(), 19);
+	ASSERT_EQ(jout["ast"]["statements"].size(), 12);
 
 	bool found_printf = false;
 	for (auto& stmt : jout["ast"]["statements"]) {
@@ -73,7 +73,7 @@ TEST(gen_ast, basic_tests) {
 	output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/002_arraypattern.pa");
 	ASSERT_TRUE(checkerr(output));
 	jout = json::parse(output);
-	ASSERT_EQ(jout["ast"]["statements"].size(), 12);
+	ASSERT_EQ(jout["ast"]["statements"].size(), 9);
 }
 
 static json stripLoc(const json& j) {
@@ -122,14 +122,14 @@ TEST(gen_ast, varr_var_decl) {
 	const auto& stmts = jout["ast"]["statements"];
 
 	// [+]int64 a6 = [1,3,5]
-	ASSERT_EQ(stmts[5]["stmt-type"], "var-decl");
-	const json& a6 = stmts[5]["vars"][0];
+	ASSERT_EQ(stmts[2]["stmt-type"], "var-decl");
+	const json& a6 = stmts[2]["vars"][0];
 	ASSERT_EQ(a6["name"], "a6");
 	ASSERT_EQ(a6["var-type"]["specifier"], "variable");
 	ASSERT_TRUE(a6["var-type"]["size-expr"].is_null());
 	// [+][+]int64 a8
-	ASSERT_EQ(stmts[7]["stmt-type"], "var-decl");
-	ASSERT_EQ(stmts[7]["vars"][0]["var-type"]["base-type"]["specifier"], "variable");
+	ASSERT_EQ(stmts[4]["stmt-type"], "var-decl");
+	ASSERT_EQ(stmts[4]["vars"][0]["var-type"]["base-type"]["specifier"], "variable");
 }
 
 TEST(gen_ast, arr_lit_trailing_comma) {
@@ -891,7 +891,7 @@ TEST(gen_ast, addr_of_call) {
 	ASSERT_TRUE(checkerr(output));
 	json jout = json::parse(output);
 	const auto& stmts = jout["ast"]["statements"];
-	ASSERT_EQ(stmts.size(), 4);
+	ASSERT_EQ(stmts.size(), 3);
 
 	const auto& ro = stmts[0]["body"]["args"][0];
 	ASSERT_EQ(ro["expr-type"], "addr-of");
@@ -905,9 +905,8 @@ TEST(gen_ast, addr_of_call) {
 	ASSERT_EQ(rw["mutable"], true);
 	ASSERT_EQ(rw["object"]["expr-type"], "call");
 
-	// A call as an index base is an ordinary expression; a type-name cast stays unsupported.
+	// A call as an index base is an ordinary expression.
 	ASSERT_EQ(stmts[2]["body"]["args"][0]["object"]["array"]["expr-type"], "call");
-	ASSERT_EQ(stmts[3]["body"]["args"][0]["object"]["expr-type"], "not-impl");
 }
 
 TEST(gen_ast, addr_of_member_call) {
@@ -916,7 +915,7 @@ TEST(gen_ast, addr_of_member_call) {
 	ASSERT_TRUE(checkerr(output));
 	json jout = json::parse(output);
 	const auto& stmts = jout["ast"]["statements"];
-	ASSERT_EQ(stmts.size(), 5);
+	ASSERT_EQ(stmts.size(), 4);
 
 	// '@v.f()' is '@(v.f())' as '@v.x' is '@(v.x)', not '(@v).f()'.
 	const auto& ro = stmts[0]["body"]["args"][0];
@@ -938,9 +937,7 @@ TEST(gen_ast, addr_of_member_call) {
 	ASSERT_EQ(chained["object"]["expr-type"], "call");
 	ASSERT_EQ(chained["object"]["name"], "mk");
 
-	ASSERT_EQ(stmts[3]["body"]["args"][0]["object"]["expr-type"], "not-impl");
-
-	const auto& neg = stmts[4]["vars"][0]["init"];
+	const auto& neg = stmts[3]["vars"][0]["init"];
 	ASSERT_EQ(neg["expr-type"], "neg");
 	ASSERT_EQ(neg["operand"]["expr-type"], "member-call");
 }

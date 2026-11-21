@@ -1,2 +1,2 @@
 cinclude <stdio.h>;
-printf("%d\n", (1, 2) + 3);
+printf("%d\n", int32(1, 2) + 3);

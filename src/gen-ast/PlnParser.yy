@@ -272,6 +272,21 @@ struct BodyList {
 		return word;
 	}
 
+	static void requireCallValue(const string& file, const json& value, const palan::PlnParser::location_type& loc)
+	{
+		string et = value.value("expr-type", "");
+		if (et != "call" && et != "member-call" && et != "chain-call")
+			throw runtime_error(PlnGenAstMessage::locatedError(file, loc.begin.line, loc.begin.column,
+				PlnGenAstMessage::getMessage(E_ReceiveFromNonCall)));
+	}
+
+	static void rejectChainAfterReceive(const string& file, const json& value, const palan::PlnParser::location_type& arrow)
+	{
+		if (value.value("stmt-type", "") == "tapple-assign")
+			throw runtime_error(PlnGenAstMessage::locatedError(file, arrow.begin.line, arrow.begin.column,
+				PlnGenAstMessage::getMessage(E_ChainAfterReceive)));
+	}
+
 	[[noreturn]] static void variadicNotLast(PlnLexer& lexer, const palan::PlnParser::location_type& loc)
 	{
 		throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, loc.begin.line, loc.begin.column,
@@ -350,8 +365,6 @@ struct BodyList {
 %token KW_ENUM	"enum"
 %token KW_OPAQUE	"opaque"
 %token KW_RELEASE	"release"
-%token KW_CONSTRUCT	"construct"
-%token KW_INTERFACE	"interface"
 %token KW_CONST	"const"
 %token KW_GLOBAL	"global"
 %token KW_VOID	"void"
@@ -376,7 +389,6 @@ struct BodyList {
 %token DBL_ARROW	"->>"
 %token OPE_TAKE	"<<="
 %token AT_EXCL	"@!"
-%token DBL_PLUS	"++"
 %token OPE_EQ	"=="
 %token OPE_NE	"!="
 %token OPE_AND	"&&"
@@ -409,7 +421,8 @@ struct BodyList {
 %type <vector<json>>	paramaters
 %type <PList<json>>	expressions
 %type <NodeRef>	block_obj standalone_block block_body_items
-%type <json>	tapple_decl tapple_inner
+%type <json>	tapple_decl receive_target
+%type <PList<json>>	receive_targets
 %type <PList<json>>	tapple_decl_inner
 %type <NodeRef>	if_stmt else_stmt while_loop for_loop
 %type <json>	for_elem
@@ -478,8 +491,6 @@ statements: /* empty */
 
 block_stmt: standalone_block
 	{ $$ = $1; }
-	| construct_def
-	{ json j = {{"stmt-type", "not-impl"}}; LOC(j, @$); $$ = leafNode(move(j)); } // LCOV_EXCL_BR_LINE
 	| for_loop
 	{ $$ = $1; }
 	| while_loop
@@ -597,17 +608,12 @@ expr_stmt: import
 		} else if ($1.contains("enumerators")) {
 			$$ = {{"stmt-type", "enum-def"}, {"name", $1["name"]}, {"enumerators", move($1["enumerators"])}}; // LCOV_EXCL_BR_LINE
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
-		} else if ($1.contains("name")) {
-			$$ = {{"stmt-type", "struct-def"}, {"name", $1["name"]}, {"fields", move($1["fields"])}}; // LCOV_EXCL_BR_LINE
-			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		} else {
-			$$ = {{"stmt-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
+			$$ = {{"stmt-type", "struct-def"}, {"name", $1["name"]}, {"fields", move($1["fields"])}}; // LCOV_EXCL_BR_LINE
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		}
 		if ($1.contains("export")) $$["export"] = true;
 	}
-	| interface_decl
-	{ $$ = {{"stmt-type", "not-impl"}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| expression
 	{
 		if (isStoreStmt($1)) {
@@ -624,8 +630,6 @@ expr_stmt: import
 			$$["values"] = move($1["values"]);
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
-	| term DBL_PLUS
-	{ $$ = {{"stmt-type", "not-impl"}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_BREAK
 	{ $$ = {{"stmt-type", "break"}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_CONTINUE
@@ -895,8 +899,6 @@ var_declaration: type_expr ID
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		}
 	}
-	| type_expr DBL_GRTR ID
-	{ $$ = {{"not-impl", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| type_expr ID '=' expression
 	{
 		if (isDeclarableVarType($1) || isFrameVarType($1)) {
@@ -919,11 +921,8 @@ var_declaration: type_expr ID
 	{ $$ = {{"not-impl", true}, {"untyped-var", $1}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| tapple_decl '=' expression
 	{
-		string et = $3.value("expr-type","");
-		if ($1.is_array() && (et == "call" || et == "member-call" || et == "chain-call"))
-			$$ = {{"stmt-type", "tapple-decl"}, {"vars", $1}, {"value", $3}}; // LCOV_EXCL_BR_LINE
-		else
-			$$ = {{"not-impl", true}}; // LCOV_EXCL_BR_LINE
+		requireCallValue(lexer.inputFile, $3, @3);
+		$$ = {{"stmt-type", "tapple-decl"}, {"vars", $1}, {"value", $3}}; // LCOV_EXCL_BR_LINE
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
 	;
@@ -953,10 +952,10 @@ const_decl: KW_CONST ID '=' expression
 	{ $$ = {{"name", $2}, {"value", move($4)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
-type_decl: KW_TYPE ID implememts '{' type_members '}'
-	{ $$ = {{"name", $2}, {"fields", $5.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
-	| KW_EXPORT KW_TYPE ID implememts '{' type_members '}'
-	{ $$ = {{"name", $3}, {"fields", $6.toVector()}, {"export", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+type_decl: KW_TYPE ID '{' type_members '}'
+	{ $$ = {{"name", $2}, {"fields", $4.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| KW_EXPORT KW_TYPE ID '{' type_members '}'
+	{ $$ = {{"name", $3}, {"fields", $5.toVector()}, {"export", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_TYPE ID KW_ENUM '{' enumerators opt_comma '}'
 	{ $$ = {{"name", $2}, {"enumerators", $5.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_EXPORT KW_TYPE ID KW_ENUM '{' enumerators opt_comma '}'
@@ -973,10 +972,6 @@ type_decl: KW_TYPE ID implememts '{' type_members '}'
 	{ $$ = opaqueOfInterface(lexer.inputFile, $2, false, @$); }
 	| KW_EXPORT KW_TYPE ID '=' KW_OPAQUE
 	{ $$ = opaqueOfInterface(lexer.inputFile, $3, true, @$); }
-	| KW_TYPE ID
-	{ $$ = json{}; }
-	| KW_EXPORT KW_TYPE ID
-	{ $$ = json{}; }
 	;
 
 enumerators: enumerator
@@ -995,26 +990,10 @@ opt_comma: /* empty */
 	| ','
 	;
 
-implememts: /* empty */
-	| ':' implements_types
-	;
-
-implements_types: implements_type
-	| implements_types ',' implements_type
-	;
-
-implements_type: type_expr
-	| type_expr KW_AS ID
-	;
-
 type_members: type_member
-	{
-		if (!$1.value("not-impl", false)) $$ = PList<json>().push($1);
-	}
+	{ $$ = PList<json>().push($1); }
 	| type_members type_member
-	{
-		$$ = $2.value("not-impl", false) ? $1 : $1.push($2); // LCOV_EXCL_BR_LINE
-	}
+	{ $$ = $1.push($2); }
 	;
 
 type_member: type_expr ID ';'
@@ -1025,21 +1004,6 @@ type_member: type_expr ID ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
 	| ID type_expr ID '=' expression ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"init", move($5)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
-	| KW_FUNC long_func_name '(' paramaters ')' return_def block
-	{ $$ = {{"not-impl", true}}; } // LCOV_EXCL_BR_LINE
-	;
-
-long_func_name: ID
-	| long_func_name '.' ID
-	;
-
-interface_decl: KW_INTERFACE ID '{' interface_methods '}'
-	| KW_EXPORT KW_INTERFACE ID '{' interface_methods '}'
-	;
-
-interface_methods: /* empty */ 
-	| interface_methods KW_FUNC ID '(' paramaters ')' return_def ';'
-	| interface_methods KW_FUNC ID '(' paramaters ')' return_def block
 	;
 
 expression: term
@@ -1108,29 +1072,24 @@ expression: term
 	{ $$ = {{"expr-type", "addr-of"}, {"object", move($2)}, {"mutable", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| expression ARROW store_loc
 	{
-		string kind = $3.value("kind", "");
-		if (kind == "tapple") {
-			string et = $1.value("expr-type", "");
-			if (et == "call" || et == "member-call" || et == "chain-call") {
-				$$ = {{"stmt-type", "tapple-assign"}, {"targets", move($3["targets"])}, {"value", move($1)}}; // LCOV_EXCL_BR_LINE
-				LOC($$, @$); // LCOV_EXCL_BR_LINE
-			} else {
-				$$ = {{"expr-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
-				LOC($$, @$); // LCOV_EXCL_BR_LINE
-			}
-		} else if (kind == "call" && !chainsThroughTapple($1)) {
+		rejectChainAfterReceive(lexer.inputFile, $1, @2);
+		if ($3.value("kind", "") == "call") {
 			$$ = {{"expr-type", "chain-call"}, {"value", move($1)}, {"call", move($3["call"])}}; // LCOV_EXCL_BR_LINE
-			LOC($$, @$); // LCOV_EXCL_BR_LINE
-		} else if (kind == "call") {
-			$$ = {{"expr-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
-			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		} else {
 			$$ = storeStmt(move($3), move($1), false);
-			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		}
+		LOC($$, @$); // LCOV_EXCL_BR_LINE
+	}
+	| expression ARROW '(' receive_targets ')'
+	{
+		rejectChainAfterReceive(lexer.inputFile, $1, @2);
+		requireCallValue(lexer.inputFile, $1, @1);
+		$$ = {{"stmt-type", "tapple-assign"}, {"targets", $4.toVector()}, {"value", move($1)}}; // LCOV_EXCL_BR_LINE
+		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
 	| expression DBL_ARROW store_loc
 	{
+		rejectChainAfterReceive(lexer.inputFile, $1, @2);
 		string kind = $3.value("kind", "");
 		if (kind == "var" || kind == "arr-index" || kind == "field") {
 			$$ = storeStmt(move($3), move($1), true);
@@ -1147,6 +1106,7 @@ expression: term
 	// the owner it is viewed as, and a chained call's result is cast as before.
 	| expression DBL_ARROW store_loc KW_AS type_expr
 	{
+		rejectChainAfterReceive(lexer.inputFile, $1, @2);
 		string kind = $3.value("kind", "");
 		if (kind == "var" || kind == "arr-index" || kind == "field") {
 			$$ = storeStmt(move($3), move($1), true);
@@ -1164,8 +1124,22 @@ expression: term
 	}
 	| expression DBL_GRTR
 	{ $$ = {{"expr-type", "transfer"}, {"value", move($1)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
-	| noname_func
-	{ $$ = {{"expr-type", "not-impl"}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	;
+
+receive_targets: receive_target ',' receive_target
+	{ $$ = PList<json>().push($1).push($3); }
+	| receive_targets ',' receive_target
+	{ $$ = $1.push($3); }
+	;
+
+receive_target: expression
+	{
+		string et = $1.value("expr-type", "");
+		if (et != "id" && et != "arr-index" && et != "field-access")
+			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @1.begin.line, @1.begin.column,
+				PlnGenAstMessage::getMessage(E_ReceiveTarget)));
+		$$ = move($1);
+	}
 	;
 
 term: INT
@@ -1194,26 +1168,10 @@ term: INT
 	}
 	| ID
 	{ $$ = {{"expr-type", "id"}, {"name", move($1)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
-	| '(' tapple_inner ')'
-	{
-		// Single-expression grouping (e.g. -(2+3)): pass the inner expression through.
-		// Multi-expression tapple (e.g. (a, b)) is only a multiple-assignment target.
-		if ($2.count("not-impl") || $2.count("tapple-items")) {
-			$$ = {{"expr-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
-			LOC($$, @$); // LCOV_EXCL_BR_LINE
-		} else {
-			$$ = $2;
-		}
-	}
-	| '(' tapple_inner ')' '(' arguments ')'
-	{
-		if ($2.count("not-impl") || $2.count("tapple-items")) {
-			$$ = {{"expr-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
-		} else {
-			$$ = {{"expr-type", "call-ptr"}, {"callee", move($2)}, {"args", $5.toVector()}}; // LCOV_EXCL_BR_LINE
-		}
-		LOC($$, @$); // LCOV_EXCL_BR_LINE
-	}
+	| '(' expression ')'
+	{ $$ = $2; }
+	| '(' expression ')' '(' arguments ')'
+	{ $$ = {{"expr-type", "call-ptr"}, {"callee", move($2)}, {"args", $5.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| term '.' ID
 	{ $$ = {{"expr-type", "field-access"}, {"object", move($1)}, {"field", move($3)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| term '[' expression ']'
@@ -1246,25 +1204,6 @@ term: INT
 		      {"args", $5.toVector()}}; // LCOV_EXCL_BR_LINE
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
-	;
-
-tapple_inner: expression
-	{ $$ = $1; }
-	| '-'
-	{ $$ = {{"not-impl", true}}; } // LCOV_EXCL_BR_LINE
-	| tapple_inner ',' expression
-	{
-		if ($1.count("not-impl")) {
-			$$ = move($1);
-		} else if ($1.count("tapple-items")) {
-			$$ = move($1);
-			$$["tapple-items"].push_back(move($3));
-		} else {
-			$$ = {{"tapple-items", json::array({move($1), move($3)})}}; // LCOV_EXCL_BR_LINE
-		}
-	}
-	| tapple_inner ',' '-'
-	{ $$ = {{"not-impl", true}}; } // LCOV_EXCL_BR_LINE
 	;
 
 arguments: /* empty */
@@ -1342,44 +1281,27 @@ store_loc
 	}
 	| store_loc '.' ID
 	{ $$ = {{"kind", "field"}, {"base", move($1)}, {"field", move($3)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
-	| '(' tapple_inner ')'
-	{
-		$$ = {{"kind", "not-impl"}}; // LCOV_EXCL_BR_LINE
-		if (!$2.count("tapple-items") && !$2.count("not-impl")) {
-			$$ = {{"kind", "expr"}, {"expr", move($2)}}; // LCOV_EXCL_BR_LINE
-		} else if ($2.count("tapple-items")) {
-			bool all_ok = true;
-			for (auto& t : $2["tapple-items"]) {
-				string et = t.value("expr-type", "");
-				if (et != "id" && et != "arr-index" && et != "field-access") { all_ok = false; break; }
-			}
-			if (all_ok) $$ = {{"kind", "tapple"}, {"targets", move($2["tapple-items"])}}; // LCOV_EXCL_BR_LINE
-		}
-		LOC($$, @$); // LCOV_EXCL_BR_LINE
-	}
+	| '(' expression ')'
+	{ $$ = {{"kind", "expr"}, {"expr", move($2)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	// Not term's call rules: a term-rooted member call would let every `-> x[i]`
 	// also parse as the object of a pending `.f()` and split the GLR parse
 	// exponentially along an assignment chain.
 	| ID '(' arguments ')'
 	{
-		$$ = {{"kind", "not-impl"}}; // LCOV_EXCL_BR_LINE
-		if (!typeNames.count($1)) {
-			$$ = {{"kind", "call"},
-			      {"call", {{"expr-type", "call"}, {"name", move($1)}, {"args", $3.toVector()}}}}; // LCOV_EXCL_BR_LINE
-			LOC($$["call"], @$); // LCOV_EXCL_BR_LINE
-		}
+		if (typeNames.count($1))
+			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @1.begin.line, @1.begin.column,
+				PlnGenAstMessage::getMessage(E_ConversionAsStoreLoc, $1)));
+		$$ = {{"kind", "call"},
+		      {"call", {{"expr-type", "call"}, {"name", move($1)}, {"args", $3.toVector()}}}}; // LCOV_EXCL_BR_LINE
+		LOC($$["call"], @$); // LCOV_EXCL_BR_LINE
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
 	| store_loc '.' ID '(' arguments ')'
 	{
-		$$ = {{"kind", "not-impl"}}; // LCOV_EXCL_BR_LINE
-		json obj = storeLocToExpr($1);
-		if (obj.value("expr-type", "") != "not-impl") {
-			$$ = {{"kind", "call"},
-			      {"call", {{"expr-type", "member-call"}, {"object", move(obj)},
-			                {"method", move($3)}, {"args", $5.toVector()}}}}; // LCOV_EXCL_BR_LINE
-			LOC($$["call"], @$); // LCOV_EXCL_BR_LINE
-		}
+		$$ = {{"kind", "call"},
+		      {"call", {{"expr-type", "member-call"}, {"object", storeLocToExpr($1)},
+		                {"method", move($3)}, {"args", $5.toVector()}}}}; // LCOV_EXCL_BR_LINE
+		LOC($$["call"], @$); // LCOV_EXCL_BR_LINE
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
 	;
@@ -1523,14 +1445,6 @@ ret_type: type_expr
 	}
 	;
 
-noname_func: KW_FUNC '(' paramaters ')'
-	return_def block
-	;
-
-construct_def: KW_CONSTRUCT type_expr '(' paramaters ')' block
-	| KW_EXPORT KW_CONSTRUCT type_expr '(' paramaters ')' block
-	;
-
 return: KW_RETURN
 	{ }
 	| KW_RETURN expressions
@@ -1645,10 +1559,6 @@ type_expr: ID
 		else
 			$$ = {{"type-kind","arr"},{"specifier","raw"},{"size-expr",nullptr},{"base-type",move($3)}}; // LCOV_EXCL_BR_LINE
 	}
-	| '[' '#' ']' type_expr
-	{ $$ = {{"type-kind","arr"},{"specifier","fixed"},{"size-expr",nullptr},{"base-type",move($4)}}; } // LCOV_EXCL_BR_LINE
-	| '[' '#' expression ']' type_expr
-	{ $$ = {{"type-kind","arr"},{"specifier","fixed"},{"size-expr",move($3)},{"base-type",move($5)}}; } // LCOV_EXCL_BR_LINE
 	| '[' '+' ']' type_expr
 	{ $$ = varrTypeExpr(nullptr, move($4)); }
 	| '[' '+' expression ']' type_expr

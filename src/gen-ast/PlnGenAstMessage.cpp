@@ -136,6 +136,19 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 			BOOST_ASSERT(arg2 != "\x01");
 			return "'" + arg1 + "' cannot be defined: it is derived from '" + arg2 + "'.";
 
+		case E_ReceiveFromNonCall:
+			return "several values are received only from a call.";
+
+		case E_ReceiveTarget:
+			return "a received value is stored only into a variable, an element or a field.";
+
+		case E_ChainAfterReceive:
+			return "values received into several targets cannot be passed on with '->' or '->>'.";
+
+		case E_ConversionAsStoreLoc:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

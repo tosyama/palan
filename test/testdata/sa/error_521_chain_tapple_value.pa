@@ -1,4 +1,0 @@
-func f() -> int32 a, int32 b { 1 -> a; 2 -> b; }
-func g(int32 x) { }
-int32 a, b;
-f() -> (a, b) -> g();

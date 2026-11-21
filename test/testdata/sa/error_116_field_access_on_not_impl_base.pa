@@ -2,4 +2,4 @@ type Point { int64 x; int64 y; };
 type Line { $Point a; $Point b; };
 
 Line l;
-int64 v = (1,2).a.x;
+int64 v = int32(1, 2).a.x;

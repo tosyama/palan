@@ -7,40 +7,16 @@ const N = 10;
 int64 x = 10, y = x+3;
 int32 a=10, (int32 a1, a2) = myFunc(x-3);
 
-(int32 b1, b2) = (3, 5);
 (var z, zz) = myFunc(x);
 (int32 z1, int64 z2) = myFunc(x);
 (void, int64 zzz) = myFunc(x);
-
-myFunc(x) -> (z,-);
 
 export type MyType {
  	int64 y;
  	@MyType next;
 };
 
-export interface IMyObjStorage {
-	func size(@IMyObjStorage self) -> int32 {
-		return 0;
-	}
-
-	func add_item(@!IMyObjStorage self, Item >>item);
-};
-
-type MyTypeStorage : MyObjStorage as A {
-	[+]MyType storage;
-
-	func A.size(@MyTypeStorage self) -> int32 {
-		return self.storage.size();
-	}
-
-	func A.add_item(@!MyTypeStrage self, MyType >>item) {
-		self.storage.add(item>>);
-	}
-};
-
 type myInt = int64;
-type XType;
 
 ([x]MyType t, [x]MyType z) = myFuncZ();
 
@@ -60,10 +36,3 @@ export func myFuncZ(int64 x=3, []int32 z=[3,2])
 {
 }
 
-callback = func (int32 x) {
-		return x+1;
-	};
-
-construct int64(@MyType t) {
-	return t.y;
-}

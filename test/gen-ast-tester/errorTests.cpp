@@ -95,6 +95,67 @@ TEST(gen_ast_error, variadic_not_last) {
 	}
 }
 
+// Forms with no plan in the language are not parsed at all.
+TEST(gen_ast_error, unplanned_forms) {
+	struct { string source, expected; } cases[] = {
+		{"interface I { func f(); };\n", "m.pa:1:13: error: syntax error"},
+		{"type T : I as A { int32 x; };\n", "m.pa:1:8: error: syntax error"},
+		{"type T { int32 x; func A.f() { } };\n", "m.pa:1:19: error: syntax error"},
+		{"construct T(int32 x) { }\n", "m.pa:1:12: error: syntax error"},
+		{"f = func (int32 x) { };\n", "m.pa:1:5: error: syntax error"},
+		{"x++;\n", "m.pa:1:3: error: syntax error"},
+		{"type X;\n", "m.pa:1:7: error: syntax error"},
+		{"int32 >>b;\n", "m.pa:1:9: error: syntax error"},
+		{"func f(int32 >>b) { }\n", "m.pa:1:14: error: syntax error"},
+		{"(int32 a, b) = (3, 5);\n", "m.pa:1:18: error: syntax error"},
+		{"(3, 5) -> (a, b);\n", "m.pa:1:3: error: syntax error"},
+		{"f() -> (a, -);\n", "m.pa:1:13: error: syntax error"},
+		{"f() ->> (a, b);\n", "m.pa:1:11: error: syntax error"},
+		{"[#]int32 a = [1];\n", "m.pa:1:2: error: Unexpected character '#'."},
+		{"[#3]int32 a;\n", "m.pa:1:2: error: Unexpected character '#'."},
+		{"k(@int32(1));\n", "m.pa:1:4: error: 'int32(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'."},
+		{"k(@int32(1).f());\n", "m.pa:1:4: error: 'int32(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'."},
+		{"x -> int32();\n", "m.pa:1:6: error: 'int32(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'."},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.expected), string::npos) << c.source << out;
+	}
+
+	// The words those forms used are names again.
+	cleanTestEnv();
+	ofstream("out/m.pa") << "int32 interface = 1, construct = 2;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	ASSERT_EQ(out.find("error"), string::npos) << out;
+}
+
+// Several values come only from a call, into places that store them, and go no further.
+TEST(gen_ast_error, receive_misuse) {
+	struct { string source, expected; } cases[] = {
+		{"(int32 a, b) = x;\n", "m.pa:1:16: error: several values are received only from a call."},
+		{"x -> (a, b);\n", "m.pa:1:1: error: several values are received only from a call."},
+		{"f() -> (a, b + 1);\n", "m.pa:1:12: error: a received value is stored only into a variable, an element or a field."},
+		{"f() -> (a, b) -> g();\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) -> c;\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) ->> c;\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) ->> c as [+]int32;\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) -> (c, d);\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.expected), string::npos) << c.source << out;
+	}
+}
+
 TEST(gen_ast_error, interface_version) {
 	cleanTestEnv();
 	ofstream("out/old.pai") << "built \"0.0.0\";\ntarget \"" PALAN_TARGET "\";\nexport func f();\n";

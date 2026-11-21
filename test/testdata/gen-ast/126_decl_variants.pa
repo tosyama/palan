@@ -2,8 +2,6 @@ func dropFirst(x = 1) { }
 func dropAfterBlock(x = 1) { };
 func dropAfterSemicolon(x = 1) { }
 export type Alias = int32;
-export type Opaque;
-type MethodFirst { func m() { } int32 x; };
 f(a, b>>);
 (int32 c, void) = g();
 (void, d) = g();

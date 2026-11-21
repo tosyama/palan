@@ -1,4 +1,1 @@
-type T { int32 a; };
-construct T(int32 x) {
-	x -> a;
-}
+global x = 1;

@@ -999,7 +999,7 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
         "value-type": {"type-kind":"pntr","mutable":true,"base-type":{"type-kind":"prim","type-name":"int64"}}
       }
       ```
-    - Any other operand shape (a call result, a parenthesized tuple, …) is a compile error
+    - Any other operand shape (a call result, `@(a + b)`, …) is a compile error
       (E_AddrOfNotAddressable) — address-of is not general in this version.
     `mutable` is always present on the resulting `value-type` regardless of which shape was
     emitted.

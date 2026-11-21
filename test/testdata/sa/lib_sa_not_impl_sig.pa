@@ -1,1 +1,1 @@
-export func f(int32 >> x) { }
+export func f($int32 x) { }

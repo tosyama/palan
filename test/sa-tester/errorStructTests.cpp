@@ -204,15 +204,13 @@ TEST(sa_error, field_assign_on_arr_index_non_struct)
 	ASSERT_NE(sa.find("field access on non-struct variable"), string::npos);
 }
 
-TEST(sa_error, field_access_on_tuple_base)
+TEST(sa_error, field_access_on_not_impl_base)
 {
-	// type Point{...}; type Line{$Point a; $Point b;}; int64 v = (1,2).a.x; --
-	// a multi-expression tuple grouping normalizes to "not-impl" (see term's
-	// '(' tapple_inner ')' rule), reached as the base of a field-access chain.
+	// An unsupported expression reached as the base of a field-access chain.
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
 	ASSERT_EQ(execTestCommand(
-		"palan-gen-ast ../test/testdata/sa/error_116_field_access_on_tuple_base.pa -o " + ast_out), "");
+		"palan-gen-ast ../test/testdata/sa/error_116_field_access_on_not_impl_base.pa -o " + ast_out), "");
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("this expression is not supported in this version."), string::npos);

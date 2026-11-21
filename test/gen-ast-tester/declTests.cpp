@@ -939,13 +939,6 @@ TEST(gen_ast, tapple_assign) {
 
 	ASSERT_EQ(stmts[1]["stmt-type"], "tapple-assign");
 	ASSERT_EQ(stmts[1]["value"]["expr-type"], "member-call");
-
-	// Only a call can be assigned, and only to storable targets.
-	for (int i = 2; i <= 5; i++) {
-		ASSERT_EQ(stmts[i]["stmt-type"], "expr") << i;
-		ASSERT_EQ(stmts[i]["body"]["expr-type"], "not-impl") << i;
-		ASSERT_EQ(stmts[i]["body"]["loc"], stmts[i]["loc"]) << i;
-	}
 }
 
 TEST(gen_ast, field_transfer) {
@@ -986,7 +979,7 @@ TEST(gen_ast, assign_chain) {
 	ASSERT_TRUE(checkerr(output));
 	json jout = json::parse(output);
 	const auto& stmts = jout["ast"]["statements"];
-	ASSERT_EQ(stmts.size(), 3);
+	ASSERT_EQ(stmts.size(), 2);
 
 	// Each step's value is the previous step, whose target SA reads back.
 	const json* step = &stmts[0];
@@ -1007,8 +1000,6 @@ TEST(gen_ast, assign_chain) {
 	ASSERT_EQ(outer["value"]["value"]["name"], "x");
 	ASSERT_EQ(outer["value"].value("ownership-transfer", false), true);
 
-	ASSERT_EQ(stmts[2]["stmt-type"], "not-impl");
-
 	const auto& body = jout["ast"]["functions"][0]["block"]["body"];
 	ASSERT_EQ(body.size(), 1);
 	ASSERT_EQ(body[0]["name"], "b");
@@ -1025,23 +1016,20 @@ TEST(gen_ast, decl_variants) {
 	ASSERT_TRUE(checkerr(output));
 	json jout = json::parse(output);
 	const auto& stmts = jout["ast"]["statements"];
-	ASSERT_EQ(stmts.size(), 7);
+	ASSERT_EQ(stmts.size(), 5);
 
 	ASSERT_EQ(stmts[0]["stmt-type"], "type-alias");
 	ASSERT_EQ(stmts[0]["name"], "Alias");
 	ASSERT_EQ(stmts[0]["loc"], json::array({4, 1, 4, 26}));
-	ASSERT_EQ(stmts[1]["stmt-type"], "not-impl");
-	ASSERT_EQ(stmts[2]["stmt-type"], "struct-def");
-	ASSERT_EQ(stmts[2]["fields"].size(), 1);
-	ASSERT_EQ(stmts[3]["body"]["args"].size(), 2);
-	ASSERT_EQ(stmts[3]["body"]["args"][1]["expr-type"], "transfer");
-	ASSERT_EQ(stmts[3]["body"]["args"][1]["loc"], json::array({7, 6, 7, 9}));
-	ASSERT_EQ(stmts[4]["vars"].size(), 1);
-	ASSERT_EQ(stmts[4]["vars"][0]["var-name"], "c");
-	ASSERT_EQ(stmts[5]["vars"].size(), 0);
-	ASSERT_EQ(stmts[6]["stmt-type"], "expr");
-	ASSERT_EQ(stmts[6]["body"]["expr-type"], "not-impl");
-	ASSERT_EQ(stmts[6]["body"]["loc"], json::array({10, 1, 10, 12}));
+	ASSERT_EQ(stmts[1]["body"]["args"].size(), 2);
+	ASSERT_EQ(stmts[1]["body"]["args"][1]["expr-type"], "transfer");
+	ASSERT_EQ(stmts[1]["body"]["args"][1]["loc"], json::array({5, 6, 5, 9}));
+	ASSERT_EQ(stmts[2]["vars"].size(), 1);
+	ASSERT_EQ(stmts[2]["vars"][0]["var-name"], "c");
+	ASSERT_EQ(stmts[3]["vars"].size(), 0);
+	ASSERT_EQ(stmts[4]["stmt-type"], "expr");
+	ASSERT_EQ(stmts[4]["body"]["expr-type"], "not-impl");
+	ASSERT_EQ(stmts[4]["body"]["loc"], json::array({8, 1, 8, 12}));
 
 	// Definitions with an unsupported parameter form are kept wherever they
 	// appear, so SA can reject them where they are defined.
@@ -1052,7 +1040,7 @@ TEST(gen_ast, decl_variants) {
 	          json({{"not-impl", true}, {"untyped-var", "x"}, {"loc", {1, 16, 1, 21}}}));
 	ASSERT_EQ(funcs[3]["name"], "untypedFirst");
 	ASSERT_EQ(funcs[3]["parameters"].size(), 2);
-	ASSERT_EQ(funcs[3]["parameters"][1], json({{"not-impl", true}, {"loc", {11, 1, 11, 32}}}));
+	ASSERT_EQ(funcs[3]["parameters"][1], json({{"not-impl", true}, {"loc", {9, 1, 9, 32}}}));
 	ASSERT_EQ(funcs[6]["name"], "exportedSysNotImpl");
 	ASSERT_EQ(funcs[7]["name"], "outer");
 	ASSERT_EQ(funcs[7]["block"]["functions"].size(), 4);

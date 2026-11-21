@@ -2729,7 +2729,7 @@ to its storage, so `@s`/`@!s` and `@arr`/`@!arr` borrow it as it is (see
   (`@T`/`@!T`) or an array field is rejected.
 - Not usable on a 2D array row (`@mat[i]`) or a pointer-slot array element (`[n]@T`/`[n]@!T`) —
   only a primitive-typed or struct array element.
-- Not usable on a general expression (a parenthesized tuple, etc.) — only a local variable, a
+- Not usable on a general expression (`@(a + b)`, etc.) — only a local variable, a
   field reached from one, or an array element reached from one. A call returning a struct is the
   exception, as a call argument only (`f(@g())`); see
   [Struct types in function signatures](#struct-types-in-function-signatures).

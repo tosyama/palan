@@ -271,8 +271,8 @@ Used in Palan function `parameters` and `rets`.
 - init - Expression node for a parameter's default value, or a named return's initial value
   (omitted when not written)
 
-A parameter or return the grammar parses but the compiler does not implement (`T >> name`, an
-untyped `name = expr`, a type with no declarable form such as `[#]T`) stays in the list as
+A parameter or return the grammar parses but the compiler does not implement (an untyped
+`name = expr`, a `$T` parameter, a type with no declarable form) stays in the list as
 `{"not-impl": true, "loc": ...}`, plus `untyped-var` (the name) for `name = expr`; SA rejects
 the function at its definition. An unimplemented unnamed return type is a `ret-type` of the
 same shape.
@@ -331,7 +331,6 @@ Variable type
     - base-type\* - Base variable type
     - specifier\* - Array kind string:
       - "raw"      — `[expr]type` or `[]type`    raw heap array (C-array equivalent, no count stored)
-      - "fixed"    — `[#expr]type` or `[#]type`  heap array with element count in memory header
       - "variable" — `[+expr]type` or `[+]type`  variable-size array (size-expr = initial capacity)
       - "variadic" — `[...]type`  a variadic parameter, only as the outermost type of the last
         parameter of a function or a function pointer type (size-expr is always null); gen-ast
@@ -340,7 +339,6 @@ Variable type
       - non-null: size/capacity determined by this expression
       - null semantics differ by specifier:
         - "raw"      (`[]type`)  — initialization required; element count determined by SA from initializer
-        - "fixed"    (`[#]type`) — initialization required; element count determined by SA from initializer
         - "variable" (`[+]type`) — no initial capacity: the header is allocated, its data is not
           (no initialization required)
     - embedded - Boolean, true when the array's storage is laid out inline/contiguous rather than
@@ -540,8 +538,9 @@ Statement model
   - In a chained assignment `v -> t1 -> t2`, the `value` of the `t2` assign / arr-assign /
     field-assign is the whole `v -> t1` statement node, whose target SA reads back. An
     assignment feeding a chained call (`x -> v -> f()`) is likewise the `chain-call`'s `value`.
-    Elsewhere in an expression such a node is rejected by SA. A chain with a tapple-assign in
-    it is a single not-impl statement (a not-impl expression when a call follows).
+    Elsewhere in an expression such a node is rejected by SA. gen-ast rejects a tapple-assign
+    or tapple-decl whose value is not a call, a target that is not one of the three shapes, and
+    a chain continuing after a tapple-assign.
   14. block - standalone block statement (`{ ... }`)
     - functions\* - Palan function definition list local to this block (may be empty array)
     - body\* - Statement model list (does not contain func-def entries)
@@ -566,8 +565,9 @@ Statement model
     - body\* - Statement model list (raw array, no block wrapper)
   18. break - exit the innermost while or for loop (no additional fields)
   19. continue - skip to next iteration of innermost while or for loop (no additional fields)
-  20. not-impl - a statement the grammar parses but the compiler does not implement (e.g.
-      `construct`, `interface`, `x++`, a type-omitted declaration). Rejected by SA.
+  20. not-impl - a statement the grammar parses but the compiler does not implement (a
+      type-omitted declaration, reserved for type inference, or a declaration of a type with no
+      declarable form). Rejected by SA.
     - untyped-var - Name of the first type-omitted variable; present only for a `name = expr;`
       declaration (reserved for type inference; an assignment is `expr -> name`)
   21. enum-def - enum type definition (`type Name enum { X, Y = expr, ... }`; consumed by SA, not
@@ -688,7 +688,7 @@ Expression model
   21. addr-of - Address-of a local variable, a struct field reached from one, or an array
       element reached from one (`@` read-only, `@!`/`AT_EXCL` mutable). The operand grammar is
       `store_loc` — the same vocabulary the right side of `->` accepts (a bare identifier, a
-      `.`-chain of field accesses, a `[expr]` index, a parenthesized tuple, or a call `f(...)` /
+      `.`-chain of field accesses, a `[expr]` index, or a call `f(...)` /
       `x.f(...)` whose object is itself one of these, or a parenthesized expression) — so `@s.x`,
       `@!s.in.v`, and `@arr[i]` all parse — or an array literal or `{name: value}` literal
       (`@[1, 2]`, `@![1, 2][3, 4]`, `@{x: 1}`); SA decides in sa.json whether the target is
@@ -699,14 +699,13 @@ Expression model
       chains produce nested `field-access` objects), `arr-index` for a `[expr]`-indexed target,
       `call` for a call `f(...)` (`@f()`), `member-call` for a method-form or module-qualified
       call `x.f(...)` (`@v.f()`, `@M.f()`, `@f().g()`), the inner expression for a parenthesized
-      one (`@(x)`), or `not-impl` for a tuple grouping or a type-name cast `@int32(x)`. A call or
+      one (`@(x)`). gen-ast rejects a type-name cast there (`@int32(x)`, `x -> int32()`). A call or
       a parenthesized expression may also be the base of the chain (`@f().x`, `@(p as @!P).x`).
     - mutable\* - `true` for `@!`, `false` for `@`
   22. not-impl - An expression the grammar parses but the compiler does not implement (e.g. a
-      tuple `(a, b)` used as a value, `sizeof` of a `[#n]` type, a call argument `x>>`), or a `store_loc` shape that
-      carries no addressable location (a parenthesized tuple, or a type-name cast `int32(x)`, reached via
-      `@`/`@!` or as a chain root). Carries no
-      fields beyond `expr-type` and `loc`; SA rejects any expression of this shape.
+      type-name cast with several arguments `int32(a, b)`, `sizeof` of a `[+]` type, a value
+      stored into a parenthesized expression `x -> (a)`). Carries no fields beyond `expr-type`
+      and `loc`; SA rejects any expression of this shape.
   23. bitand - Binary bitwise AND (`a & b`; integer operands only)
     - left\*  - Left operand expression model
     - right\* - Right operand expression model
@@ -733,8 +732,8 @@ Expression model
       - name\*  - Name string
       - value\* - Value expression model
       - loc\*   - Location Array of `name: value`
-  31. sizeof - Byte size of a type (`sizeof(T)`). A type with a `[#n]`/`[+n]` level or a
-      template argument is emitted as `not-impl` instead
+  31. sizeof - Byte size of a type (`sizeof(T)`). A type with a `[+]` level is emitted as
+      `not-impl` instead
     - type\* - Type model
   32. chain-call - A chained call `value -> f(args)` (`f(value, args)`), `value -> L.f(args)`, or
       a method-form call `value -> s.f(args)` (`f(@!s, value, args)`);
@@ -749,8 +748,7 @@ Expression model
     - value\* - Expression model whose owned value is given away
     - op - Operator string for diagnostics: "->>" when it comes from `value ->> f(args)`;
       omitted for `>>`
-  34. call-ptr - A call through a parenthesized expression, `(callee)(args)`. A parenthesized
-      list of several expressions called this way is `not-impl`
+  34. call-ptr - A call through a parenthesized expression, `(callee)(args)`
     - callee\* - Expression model of a function pointer
     - args\* - Argument expression list
   35. append - `a << b`, a call of the operator function `<<` (precedence of the shifts);

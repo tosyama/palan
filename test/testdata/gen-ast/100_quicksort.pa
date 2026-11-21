@@ -1,7 +1,7 @@
 cinclude <stdio.h>;
 
 // init data.
-[#10]int16 data = [0,4,8,3,7,2,6,1,5,0];
+[10]int16 data = [0,4,8,3,7,2,6,1,5,0];
 
 // sort
 printf("before:");
@@ -12,30 +12,34 @@ data ->> quicksort()
 	->> data
 	-> show();
 
-func show(@[#]int16 data) {
+func show(@[]int16 data) {
 	for copy d in data {
 		printf(" %d", d);
 	}
 	printf("\n");
 }
 
-func quicksort([#]int16 >>data, int32 left=0, right=data.len()-1) -> var data {
+func quicksort([]int16 data, int32 left=0, right=data.len()-1) -> var data {
 	if left >= right { return; }
 
 	var mid = left, i=left+1;
 
 	while i<=right {
 		if data[i] < data[left] {
-			mid++;
-			// swap
-			(data[mid], data[i]) -> (data[i], data[mid]);
+			mid + 1 -> mid;
+			swap(@!data, mid, i);
 		}
-		i++;
+		i + 1 -> i;
 	}
-	// swap
-	(data[left], data[mid]) -> (data[mid], data[left]);
+	swap(@!data, left, mid);
 
 	data ->> quicksort(left, mid-1)
 		->> quicksort(mid+1, right)
 		->> data;
+}
+
+func swap(@![]int16 data, int32 a, b) {
+	int16 t = data[a];
+	data[b] -> data[a];
+	t -> data[b];
 }

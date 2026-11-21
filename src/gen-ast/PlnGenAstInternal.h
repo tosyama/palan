@@ -53,11 +53,9 @@ inline json storeLocToExpr(const json& loc)
 	} else if (kind == "arr-index") {
 		e = {{"expr-type", "arr-index"},
 		     {"array", loc["array"]}, {"index", loc["index"]}}; // LCOV_EXCL_BR_LINE
-	} else if (kind == "field") {
+	} else {
 		e = {{"expr-type", "field-access"},
 		     {"object", storeLocToExpr(loc["base"])}, {"field", loc["field"]}}; // LCOV_EXCL_BR_LINE
-	} else {
-		e = {{"expr-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
 	}
 	if (loc.contains("loc")) e["loc"] = loc["loc"];
 	return e;
@@ -68,19 +66,10 @@ inline bool isStoreStmt(const json& e)
 	return e.contains("stmt-type");
 }
 
-// Multiple values stored by a tapple have no single target to read back.
-inline bool chainsThroughTapple(const json& value)
-{
-	string t = value.value("stmt-type", "");
-	return t == "tapple-assign" || t == "not-impl";
-}
-
 // `value -> loc` (`->>` when transfer) as its statement. In a chain the value
 // is itself a store statement, whose target SA reads back.
 inline json storeStmt(json loc, json value, bool transfer)
 {
-	if (chainsThroughTapple(value))
-		return {{"stmt-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
 	string kind = loc["kind"];
 	json s;
 	if (kind == "var") {
@@ -129,7 +118,7 @@ inline json fptrSigType(json t)
 } // LCOV_EXCL_BR_LINE
 
 // Whether a type_expr result has no array level other than a plain '[n]'/'[]'
-// one ('[#n]'/'[+n]' are not implemented).
+// one ('[+n]' is not implemented).
 inline bool isImplementedTypeExpr(const json& t)
 {
 	if (t.value("type-kind", "") == "arr" && t.value("specifier", "") != "raw")

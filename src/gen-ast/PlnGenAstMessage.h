@@ -39,6 +39,10 @@ enum PlnMessageCode {
 	E_InvalidCodePointEscape,	// the escape as written
 	E_VariadicNotLast,
 	E_UnknownFieldMarker,	// the word before the field's type
+	E_ReceiveFromNonCall,
+	E_ReceiveTarget,
+	E_ChainAfterReceive,
+	E_ConversionAsStoreLoc,	// the type name
 };
 
 class PlnGenAstMessage
