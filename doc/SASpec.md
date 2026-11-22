@@ -655,6 +655,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     it has a call, into a `pinned` temp (`__pin_N`); then `__pin_M` initialized to
     `__pln_put_dict_T(d, k)`; then the store into `__pin_M[0]`. A literal is first put into a
     temp (`__lit_N`), which is then stored so. Through `@[""]T` it is E_WriteThroughReadOnlyPtr.
+    A constant key (`d[K]`) is its string.
   - Builtins, as `[+]T`'s are: `len(@d)` (inline, the header's first word), `has(@d, k)`,
     `remove(@!d, k)` and `clear(@!d)`, calling the generated functions above. A function with
     the parameter types of one is E_DuplicateFuncDef.

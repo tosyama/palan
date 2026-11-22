@@ -1,0 +1,2 @@
+const K = "a";
+func f(@[""]int32 d) -> int32 { return d[K]; }

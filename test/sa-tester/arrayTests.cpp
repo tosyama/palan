@@ -1435,3 +1435,13 @@ TEST(sa, dict_for)
 	const auto& writes = jout["functions"][1]["body"][0]["body"];
 	ASSERT_EQ(writes[3]["vars"][0]["var-type"]["mutable"], true);
 }
+
+// A string constant as the key is its string, not a variable.
+TEST(sa, dict_const_key)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/360_dict_const_key.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& at = jout["functions"][0]["body"][0]["values"][0]["array"];
+	ASSERT_EQ(at["args"][1]["expr-type"], "lit-str");
+}

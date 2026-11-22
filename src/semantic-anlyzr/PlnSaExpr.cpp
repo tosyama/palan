@@ -1748,9 +1748,9 @@ json PlnSemanticAnalyzer::dictValueAddr(json saDict, const json& dictAst, const 
 	vector<CallArg> args;
 	args.push_back(CallArg{argAst, false, move(saDict)});
 	// The key is only read, as an index is, so an array is given by name.
-	json keyArg = keyAst;
-	if (isLocationExpr(keyAst)) {
-		json kt = operandValueType(keyAst);
+	json keyArg = foldConstExpr(keyAst);
+	if (isLocationExpr(keyArg)) {
+		json kt = operandValueType(keyArg);
 		if ((isArrLevel(kt) || isVarrPntr(kt)) && !isArrBorrowVar(kt))
 			keyArg = {{"expr-type","addr-of"},{"object",keyAst},{"mutable",false},{"loc",keyAst.value("loc", json::array())}};
 	}
