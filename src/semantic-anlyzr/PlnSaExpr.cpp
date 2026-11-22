@@ -1735,7 +1735,7 @@ json PlnSemanticAnalyzer::dictValueAddr(json saDict, const json& dictAst, const 
 	json vt = saDict["value-type"];
 	const json& elem = vt["base-type"]["base-type"];
 	bool isPut = op == "put";
-	json self = dictPntrType(elem);
+	json self = dictPntrType(elem, isVarrEmbedded(vt));
 	self["mutable"] = isPut;
 	json argAst = dictAst;
 	if (isDictStorage(vt)) {
@@ -1743,8 +1743,10 @@ json PlnSemanticAnalyzer::dictValueAddr(json saDict, const json& dictAst, const 
 		argAst = {{"expr-type","addr-of"},{"object",dictAst},{"mutable",isPut}};
 	}
 	json key = {{"name","k"},{"var-type",{{"type-kind","pntr"},{"mutable",false},{"base-type",{{"type-kind","prim"},{"type-name","uint8"}}}}}};
-	json def = {{"name",op},{"func-type","palan"},{"symbol",allocHelperSymbol(dictShape(vt), op)},
-	            {"parameters",json::array({{{"name","d"},{"var-type",move(self)}}, move(key)})}};
+	AllocShapeRef shape = dictShape(vt);
+	json def = {{"name",op},{"func-type","palan"},{"symbol",allocHelperSymbol(shape, op)},
+	            {"parameters",json::array({{{"name","d"},{"var-type",move(self)}}, move(key)})},
+	            {"len-args",helperLens(shape.elem)}};
 	vector<CallArg> args;
 	args.push_back(CallArg{argAst, false, move(saDict)});
 	// The key is only read, as an index is, so an array is given by name.
@@ -1757,12 +1759,7 @@ json PlnSemanticAnalyzer::dictValueAddr(json saDict, const json& dictAst, const 
 	for (auto& a : analyzeCallArgs(json::array({keyArg}))) args.push_back(move(a));
 	json callAst = {{"expr-type","call"},{"loc",locNode.value("loc", json::array())}};
 	json call = makeCallNode(callAst, Callee{&def, false}, "[]", &args);
-	json data = {{"type-kind","pntr"},{"base-type",elem}};
-	if (!isWritableThrough(vt)) {
-		data["mutable"] = false;
-		data["base-type"] = withArrPermission(elem, false);
-	}
-	call["value-type"] = move(data);
+	call["value-type"] = valuesDataType(vt, false);
 	return call;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE

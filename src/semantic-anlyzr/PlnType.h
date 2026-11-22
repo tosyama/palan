@@ -82,7 +82,8 @@ struct VarrType : PlnType {
 // A `[""]T` header, kept by std/rt: only ever a pointer's base, as VarrType.
 struct DictType : PlnType {
     const PlnType* elem;
-    DictType(const PlnType* e) : PlnType(Kind::Dict), elem(e) {}
+    bool embedded;
+    DictType(const PlnType* e, bool emb) : PlnType(Kind::Dict), elem(e), embedded(emb) {}
 };
 
 // Type registry — owns all type instances and interns them
@@ -90,7 +91,7 @@ class PlnTypeRegistry {
     std::map<PrimType::Name, std::unique_ptr<PrimType>>  primCache_;
     std::map<const PlnType*, std::unique_ptr<PtrType>>   ptrCache_;
     std::map<std::pair<const PlnType*, bool>, std::unique_ptr<VarrType>> varrCache_;
-    std::map<const PlnType*, std::unique_ptr<DictType>>  dictCache_;
+    std::map<std::pair<const PlnType*, bool>, std::unique_ptr<DictType>> dictCache_;
     std::map<std::string, std::unique_ptr<StructType>>   structCache_;
     std::map<std::string, std::unique_ptr<EnumType>>     enumCache_;
     std::map<std::tuple<std::vector<const PlnType*>, const PlnType*, bool>, std::unique_ptr<FuncType>> funcCache_;
@@ -98,7 +99,7 @@ public:
     const PrimType*  prim(PrimType::Name name);
     const PtrType*   ptr(const PlnType* base);
     const VarrType*  varr(const PlnType* elem, bool embedded);
-    const DictType*  dict(const PlnType* elem);
+    const DictType*  dict(const PlnType* elem, bool embedded);
     const StructType* structType(const std::string& name);
     const EnumType*  enumType(const std::string& name, const PrimType* base);
     const FuncType*  funcType(const std::vector<const PlnType*>& params, const PlnType* ret, bool variadic = false);

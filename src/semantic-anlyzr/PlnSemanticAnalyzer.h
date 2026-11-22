@@ -66,7 +66,7 @@ enum class CopyInto { New, Existing };
 // family per shape: __pln_<op>_<struct>, and for an array of any element E,
 // __pln_<op>_arr_<E>, __pln_<op>_varr_<E> and __pln_<op>_evarr_<E> (`[+]$T`),
 // E written as the symbol of its layout.
-enum class AllocFamily { Struct, Arr, Varr, EVarr, Dict };
+enum class AllocFamily { Struct, Arr, Varr, EVarr, Dict, EDict };
 // elem is the struct for Struct, and otherwise the element as the array's
 // storage lays it out (layoutElem).
 struct AllocShapeRef { AllocFamily family; json elem; };
@@ -642,9 +642,11 @@ class PlnSemanticAnalyzer {
 	// Where an array literal's elements go: through its levels, each of a
 	// fixed size or a `[+]T` (size -1, varr its type) as long as its row, to
 	// numeric leaf values or structs (structDef set) given as struct literals.
-	struct ArrLitLevel { int64_t size; json varr; };
+	// A level of a `[+]T` or a `[""]T` has no size, but its type; a dictionary's
+	// literal gives its values under keys.
+	struct ArrLitLevel { int64_t size; json varr; json dict; };
 	struct ArrLitShape { vector<ArrLitLevel> levels; json leaf; const StructDef* structDef; };
-	// varrTop: saType itself may be a `[+]T`, the first level.
+	// varrTop: saType itself may be a `[+]T` or a `[""]T`, the first level.
 	ArrLitShape arrLitShape(const json& locNode, const string& name, const json& saType, bool varrTop = false);
 	json sa_arr_lit_values(const json& lit, const ArrLitShape& shape, const string& name, size_t depth = 0);
 	void checkArrLitCount(const json& locNode, const json& items, const string& name,
@@ -670,6 +672,7 @@ class PlnSemanticAnalyzer {
 	json allocHelperCall(const AllocShapeRef& shape, const string& op, json args) const;
 	void recordElemShape(const AllocShapeRef& shape);
 	json varrData(json varr);
+	json valuesDataType(const json& vt, bool readOnly);
 	void enterBlockDecls(const json& stmts);
 	void declareTypeIdentity(const json& stmt, int seq);
 	string topTypeIdentity(const string& written) const;
@@ -768,6 +771,7 @@ class PlnSemanticAnalyzer {
 	void  validateCExportSig(const json& funcDef);
 	json  normalizeArrBorrowType(const json& locNode, const json& type);
 	json  varrBorrowType(const json& locNode, const json& arr, bool isMutable);
+	json  valueElemType(const json& locNode, const json& holder);
 	json  varrStorageType(const json& locNode, const json& arr);
 	json  dictStorageType(const json& locNode, const json& dict);
 	json  varrElemType(const json& locNode, const json& varr);

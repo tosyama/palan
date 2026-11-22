@@ -147,8 +147,11 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		shared_ptr<const ElemOps> leaf;   // a row's element
 	};
 	map<string, const json*> varrElemDescs;
-	for (auto& shape : elem_arr_shapes)
+	map<string, string> dictValues;
+	for (auto& shape : elem_arr_shapes) {
 		if (shape["shape-kind"] == "varr") varrElemDescs[shape["shape-key"]] = &shape["elem"];
+		if (shape["shape-kind"] == "dict") dictValues[shape["shape-key"]] = shape["values"];
+	}
 	function<ElemOps(const json&)> opsOf = [&](const json& desc) {
 		string kind = desc["kind"];
 		ElemOps e;
@@ -197,8 +200,11 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		e.type = kind == "prim" ? desc["type"] : desc["name"];
 		e.release = desc.value("release-func", "");
 		bool isVarr = kind == "varr" || kind == "embed-varr";
-		e.nlens = isVarr ? opsOf(*varrElemDescs.at(e.inner)).nlens : 0;
-		e.owned = kind == "struct" || kind == "opaque" || isVarr;
+		// A dictionary's functions take the lengths its values' do.
+		const json* values = isVarr ? varrElemDescs.at(e.inner)
+		                   : kind == "dict" ? varrElemDescs.at(dictValues.at(e.inner)) : nullptr;
+		e.nlens = values ? opsOf(*values).nlens : 0;
+		e.owned = kind == "struct" || kind == "opaque" || kind == "dict" || isVarr;
 		e.embedded = kind == "embed-struct";
 		e.built = e.owned || (e.embedded && hasOwned(e.type));
 		e.assigns = isVarr ? opsOf(*varrElemDescs.at(e.inner)).assigns // LCOV_EXCL_BR_LINE
@@ -260,6 +266,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		if (e.kind == "embed-varr") return indent + "__pln_init_" + e.inner + "(@!" + slot + ", 0, 0" + lenArgs(names) + ");\n";
 		if (e.kind == "embed-row") return indent + "__pln_build_" + e.key + "(" + slot + " as " + e.data + ", 0, 1" + lenArgs(names) + ");\n";
 		if (e.kind == "varr") return indent + "__pln_calloc(1, 24) -> " + slot + ";\n";
+		if (e.kind == "dict") return indent + "__pln_dict_new() -> " + slot + ";\n";
 		if (e.kind == "opaque") return indent + "NULL -> " + slot + ";\n";
 		if (e.kind == "row") {
 			const ElemOps& l = *e.leaf;
@@ -273,7 +280,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	auto elemDrop = [&](const ElemOps& e, const string& slot, const string& indent, const vector<string>& names) {
 		if (e.kind == "embed-varr") return "__pln_fini_" + e.inner + "(@!" + slot + lenArgs(names) + ");";
 		if (e.kind == "embed-row") return "__pln_drop_" + e.key + "(" + slot + " as " + e.data + ", 0, 1" + lenArgs(names) + ");";
-		if (e.kind == "varr") return "__pln_free_" + e.inner + "(" + slot + lenArgs(names) + ");";
+		if (e.kind == "varr" || e.kind == "dict") return "__pln_free_" + e.inner + "(" + slot + lenArgs(names) + ");";
 		if (e.kind == "opaque") return e.release + "(" + slot + ");";
 		if (e.kind == "row") {
 			const ElemOps& l = *e.leaf;
@@ -293,6 +300,8 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			return "__pln_copyrun_" + e.key + "(" + dst + " as " + e.data + ", " + src + " as " + e.data + ", 1" + lenArgs(names) + ");";
 		if (e.kind == "varr")
 			return "__pln_copy_" + e.inner + "(" + dst + ", " + src + ".data, " + src + ".len" + lenArgs(names) + ");";
+		if (e.kind == "dict")
+			return "__pln_copy_" + e.inner + "(" + dst + ", " + src + lenArgs(names) + ");";
 		if (e.kind == "row") {
 			const ElemOps& l = *e.leaf;
 			if (l.owned) return "__pln_copyrun_" + l.key + "(" + dst + ", " + src + ", " + names[0] + lenArgs(names, 1) + ");";
@@ -303,7 +312,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	// An owned struct slot (an inner `[+]T`'s header is one) is passed to
 	// the helpers as a borrow, since a struct parameter would own and free it.
 	auto borrowed = [](const ElemOps& e, const string& v, bool isMutable = false) {
-		return e.kind == "struct" || e.kind == "varr" ? (isMutable ? "@!" : "@") + v : v;
+		return e.kind == "struct" || e.kind == "varr" || e.kind == "dict" ? (isMutable ? "@!" : "@") + v : v;
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 	// As elemSet, into a slot already holding a value: the parts a type's '->'
 	// writes are written by it.
@@ -324,7 +333,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 	// A slot pointing at a block of its own is NULL once `->>` has moved it out.
 	auto slotMayBeNull = [](const ElemOps& e) {
-		return e.kind == "struct" || e.kind == "varr" || e.kind == "row";
+		return e.kind == "struct" || e.kind == "varr" || e.kind == "dict" || e.kind == "row";
 	};
 	// The body of a run's copy loop: a NULL source element leaves the slot
 	// NULL, and a NULL slot is built before it is copied into whole.
@@ -406,7 +415,8 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "        i + 1 -> i;\n"
 		    << "    }\n"
 		    << "}\n";
-		if (slotMayBeNull(e))
+		// A removed dictionary value is cleared too, an opaque one included.
+		if (slotMayBeNull(e) || e.kind == "opaque")
 			out << "func __pln_clear_" << e.key << "([]" << e.buildElem << " slots, int64 i" << mp << ") {\n"
 			    << "    " << elemDrop(e, "slots[i]", "    ", names) << "\n"
 			    << "    NULL -> slots[i];\n"
@@ -609,74 +619,67 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 
 	// A dictionary's header is std/rt's, which keeps the keys; its values
 	// are the `[+]T` at its end, a value at each key's position. A removed
-	// key's value is already released, and its slot left NULL.
+	// key's value is released at once and its slots left NULL, so that
+	// nothing is released twice. Its functions take the lengths the values'
+	// do, alloc and has too, so that every one is called alike.
 	auto emitDict = [&](const string& key, const string& values) {
 		ElemOps e = opsOf(*varrElemDescs.at(values));
+		vector<string> names = lenNames(e.nlens);
+		string mp = lenParams(e.nlens), ma = lenArgs(names);
 		string hdr = "__pln_" + key, vals = "__pln_" + values;
 		out << "\nexport type " << hdr << " { int64 live; int64 used; int64 cap; int64 ents; int64 tsize; int64 table; $"
 		    << vals << " values; };\n"
-		    << "export func __pln_alloc_" << key << "() -> @!" << hdr << " h {\n"
+		    << "export func __pln_alloc_" << key << "(" << (mp.empty() ? "" : mp.substr(2)) << ") -> @!" << hdr << " h {\n"
 		    << "    __pln_dict_new() -> h;\n"
 		    << "}\n"
-		    << "export func __pln_free_" << key << "(@!" << hdr << " h) {\n"
+		    << "export func __pln_free_" << key << "(@!" << hdr << " h" << mp << ") {\n"
 		    << "    if (h == NULL) { return; }\n"
-		    << "    __pln_fini_" << values << "(@!h.values);\n"
+		    << "    __pln_fini_" << values << "(@!h.values" << ma << ");\n"
 		    << "    __pln_dict_free(h);\n"
 		    << "    return;\n"
-		    << "}\n";
-		// The source's removed positions are left out, so its values are
-		// copied one by one to the positions their keys take in dst. Owned
-		// slots are pointers, which '@' addresses only through a run of them.
-		string dstRun = e.owned ? "[]" + e.ownElem : e.data, srcRun = e.owned ? "[]" + e.ownElem : e.run;
-		out << "func __pln_copyvals_" << key << "(" << dstRun << " dst, " << srcRun << " src, @" << hdr << " s) {\n"
-		    << "    int64 i = 0;\n"
-		    << "    int64 j = 0;\n"
-		    << "    while i < s.used {\n"
-		    << "        if __pln_dict_key(s, i) != NULL {\n";
-		if (e.owned)
-			out << "            if src[i] == NULL { __pln_clear_" << e.key << "(dst as " << e.data << ", j); }\n"
-			    << "            else { __pln_set_" << e.key << "(dst, j, " << borrowed(e, "src[i]") << "); }\n";
-		else
-			out << "            src[i] -> dst[j];\n";
-		out << "            j + 1 -> j;\n"
-		    << "        }\n"
-		    << "        i + 1 -> i;\n"
-		    << "    }\n"
 		    << "}\n"
-		    << "export func __pln_copy_" << key << "(@!" << hdr << " dst, @" << hdr << " src) {\n"
+		// The keys keep their positions, so the values are copied as one run.
+		    << "export func __pln_copy_" << key << "(@!" << hdr << " dst, @" << hdr << " src" << mp << ") {\n"
 		    << "    if (dst as @void == src as @void) { return; }\n"
-		    << "    __pln_resize_" << values << "(@!dst.values, 0);\n"
 		    << "    __pln_dict_copy(dst, src);\n"
-		    << "    __pln_resize_" << values << "(@!dst.values, dst.live);\n"
-		    << "    __pln_copyvals_" << key << "(dst.values.data, src.values.data, src);\n"
+		    << "    __pln_copy_" << values << "(@!dst.values, src.values.data, src.values.len" << ma << ");\n"
 		    << "}\n";
 		// `d[k]` is the value's address. An owned value's slot is a pointer,
 		// which '@!' cannot address, so the address is reckoned as an integer.
-		string size = to_string(e.size);
+		string size = sizeOf(e, names);
 		auto valueAt = [&](const string& pos) {
 			return "(int64(h.values.data) + " + pos + " * " + size + ") as @!void";
 		}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
-		out << "export func __pln_at_" << key << "(@" << hdr << " h, @[]uint8 k) -> @!void {\n"
+		out << "export func __pln_at_" << key << "(@" << hdr << " h, @[]uint8 k" << mp << ") -> @!void {\n"
 		    << "    return " << valueAt("__pln_dict_at(h, k)") << ";\n"
 		    << "}\n"
 		// A new key's position is the values' length.
-		    << "export func __pln_put_" << key << "(@!" << hdr << " h, @[]uint8 k) -> @!void {\n"
+		    << "export func __pln_put_" << key << "(@!" << hdr << " h, @[]uint8 k" << mp << ") -> @!void {\n"
 		    << "    int64 pos = __pln_dict_add(h, k);\n"
-		    << "    if pos == h.values.len { __pln_resize_" << values << "(@!h.values, pos + 1); }\n"
+		    << "    if pos == h.values.len { __pln_resize_" << values << "(@!h.values, pos + 1" << ma << "); }\n"
 		    << "    return " << valueAt("pos") << ";\n"
 		    << "}\n"
-		    << "export func __pln_has_" << key << "(@" << hdr << " h, @[]uint8 k) -> bool {\n"
+		    << "export func __pln_has_" << key << "(@" << hdr << " h, @[]uint8 k" << mp << ") -> bool {\n"
 		    << "    return __pln_dict_find(h, k) >= 0;\n"
 		    << "}\n"
-		    << "export func __pln_remove_" << key << "(@!" << hdr << " h, @[]uint8 k) -> bool {\n"
+		    << "export func __pln_remove_" << key << "(@!" << hdr << " h, @[]uint8 k" << mp << ") -> bool {\n"
 		    << "    int64 pos = __pln_dict_remove(h, k);\n"
 		    << "    if pos < 0 { return false; }\n";
-		if (e.owned) out << "    __pln_clear_" << e.key << "(h.values.data, pos);\n";
+		if (e.kind == "embed-row" && e.leaf->owned) {
+			string n = countOf(e, names);
+			out << "    int64 j = 0;\n"
+			    << "    while j < " << n << " {\n"
+			    << "        __pln_clear_" << e.leaf->key << "(h.values.data, pos * " << n << " + j" << lenArgs(names, e.depth) << ");\n"
+			    << "        j + 1 -> j;\n"
+			    << "    }\n";
+		} else if (e.owned) {
+			out << "    __pln_clear_" << e.key << "(h.values.data, pos" << ma << ");\n";
+		}
 		out << "    __pln_dict_settle(h, " << size << ");\n"
 		    << "    return true;\n"
 		    << "}\n"
-		    << "export func __pln_clear_" << key << "(@!" << hdr << " h) {\n"
-		    << "    __pln_resize_" << values << "(@!h.values, 0);\n"
+		    << "export func __pln_clear_" << key << "(@!" << hdr << " h" << mp << ") {\n"
+		    << "    __pln_resize_" << values << "(@!h.values, 0" << ma << ");\n"
 		    << "    __pln_dict_clear(h);\n"
 		    << "}\n";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here

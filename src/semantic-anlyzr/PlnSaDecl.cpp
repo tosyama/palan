@@ -555,7 +555,7 @@ json PlnSemanticAnalyzer::sa_var_decl_group(const json& stmt2, VarStorage storag
 	string spec = vtype.value("specifier", "");
 	// std/rt allocates a dictionary's header, so it cannot be laid out in the frame.
 	if (isDictAstType(vtype) && storage == VarStorage::Frame) {
-		string shown = typeDisplayName(dictPntrType(vtype["base-type"]));
+		string shown = typeDisplayName(dictPntrType(vtype["base-type"], vtype.value("embedded", false)));
 		cerr << locPrefix(stmt2) << PlnSaMessage::getMessage(E_FrameVarType, shown) << endl;
 		exit(1);
 	}
@@ -702,9 +702,9 @@ PlnSemanticAnalyzer::ArrLitShape PlnSemanticAnalyzer::arrLitShape(const json& lo
 {
 	ArrLitShape shape = {{}, {}, nullptr};
 	const json* t = &saType;
-	while (isArrLevel(*t) || (isVarrStorage(*t) && (varrTop || !shape.levels.empty()))) {
-		if (isVarrStorage(*t)) {
-			shape.levels.push_back({-1, *t});
+	while (isArrLevel(*t) || ((isVarrStorage(*t) || isDictStorage(*t)) && (varrTop || !shape.levels.empty()))) {
+		if (isVarrStorage(*t) || isDictStorage(*t)) {
+			shape.levels.push_back(isDictStorage(*t) ? ArrLitLevel{-1, json(), *t} : ArrLitLevel{-1, *t, json()});
 			t = &(*t)["base-type"]["base-type"];
 			continue;
 		}
@@ -730,14 +730,18 @@ PlnSemanticAnalyzer::ArrLitShape PlnSemanticAnalyzer::arrLitShape(const json& lo
 } // LCOV_EXCL_BR_LINE
 
 // The values level by level: a row is an array of the next level's values,
-// and a struct element is the array sa_struct_lit gives.
+// a dictionary {keys, values} with its keys as `lit-str`s, and a struct
+// element is the array sa_struct_lit gives.
 json PlnSemanticAnalyzer::sa_arr_lit_values(const json& lit, const ArrLitShape& shape, const string& name, size_t depth)
 {
 	bool isRow = depth + 1 < shape.levels.size();
 	const PlnType* elemType = shape.structDef || isRow ? nullptr : registry_.fromJson(shape.leaf);
+	string rowLit = isRow && !shape.levels[depth + 1].dict.is_null() ? "dict-lit" : "arr-lit";
+	bool isDict = !shape.levels[depth].dict.is_null();
 	json values = json::array();
-	for (auto& item : lit["items"]) {
-		bool isLit = item.value("expr-type", "") == "arr-lit";
+	for (auto& entry : lit["items"]) {
+		const json& item = isDict ? entry["value"] : entry;
+		bool isLit = item.value("expr-type", "") == rowLit;
 		if (isRow != isLit && !(shape.structDef && !isRow)) {
 			cerr << locPrefix(item) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, name) << endl;
 			exit(1);
@@ -751,6 +755,7 @@ json PlnSemanticAnalyzer::sa_arr_lit_values(const json& lit, const ArrLitShape& 
 			values.push_back(convertForBinding(item, value, elemType, shape.leaf));
 		}
 	}
+	if (isDict) return {{"keys", dictLitKeys(lit)}, {"values", move(values)}}; // LCOV_EXCL_BR_LINE
 	return values;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
@@ -767,8 +772,11 @@ void PlnSemanticAnalyzer::checkArrLitCount(const json& locNode, const json& item
 	}
 	if (depth + 1 == shape.levels.size())
 		return;
-	for (auto& row : items)
+	bool isDict = !shape.levels[depth].dict.is_null();
+	for (auto& entry : items) {
+		const json& row = isDict ? entry["value"] : entry;
 		checkArrLitCount(row, row["items"], name, shape, depth + 1);
+	}
 } // LCOV_EXCL_BR_LINE
 
 void PlnSemanticAnalyzer::emitArrLitAssigns(const json& arrAst, const ArrLitShape& shape, const json& values, json& out,
@@ -778,6 +786,23 @@ void PlnSemanticAnalyzer::emitArrLitAssigns(const json& arrAst, const ArrLitShap
 		return {{"expr-type", "arr-index"}, {"array", move(array)},
 		        {"index", {{"expr-type", "lit-uint"}, {"value", to_string(i)}}}}; // LCOV_EXCL_BR_LINE
 	}; // LCOV_EXCL_BR_LINE
+	const json& dict = shape.levels[depth].dict;
+	if (!dict.is_null()) {
+		// LCOV_EXCL_BR_START
+		// An existing dictionary is given the literal's keys alone.
+		if (!sized)
+			out.push_back({{"stmt-type","expr"},{"body",allocHelperCall(dictShape(dict), "clear", json::array({sa_expression(arrAst)}))}});
+		// Each key is added, then its value written into the value the adding builds.
+		const json& keys = values["keys"];
+		for (size_t i = 0; i < keys.size(); i++) {
+			json addr = dictValueAddr(sa_expression(arrAst), arrAst, keys[i], "put", keys[i]);
+			json elemAst = {{"expr-type", "arr-index"}, {"array", pinValue(move(addr), keys[i], out)},
+			                {"index", {{"expr-type", "lit-int"}, {"value", "0"}}}};
+			emitArrLitElem(elemAst, shape, values["values"][i], out, depth);
+		}
+		return;
+		// LCOV_EXCL_BR_STOP
+	}
 	const json& varr = shape.levels[depth].varr;
 	if (!sized && !varr.is_null()) {
 		// LCOV_EXCL_BR_START
@@ -834,31 +859,21 @@ json PlnSemanticAnalyzer::sa_struct_lit_var_decl(const json& stmt, VarStorage st
 
 // `[""]T d = {k: v, ...}` declares d, then adds each key and writes its value
 // into the value the adding builds, as `v -> d[k]` does. The values are
-// analyzed as an array literal of T, before d is in scope.
+// analyzed before d is in scope.
 json PlnSemanticAnalyzer::sa_dict_lit_var_decl(const json& stmt, VarStorage storage)
 {
 	// LCOV_EXCL_BR_START
 	const json& var = stmt["vars"][0];
 	const json& lit = var["init"];
 	string name = var["name"];
-	json keys = dictLitKeys(lit);
-	json vt = dictStorageType(stmt, var["var-type"]);
-	ArrLitShape shape = arrLitShape(lit, name, varrPntrType(vt["base-type"]["base-type"], false), true);
-	json valueLit = {{"expr-type", "arr-lit"}, {"items", json::array()}};
-	for (auto& item : lit["items"]) valueLit["items"].push_back(item["value"]);
-	json values = sa_arr_lit_values(valueLit, shape, name);
+	ArrLitShape shape = arrLitShape(lit, name, dictStorageType(stmt, var["var-type"]), true);
+	json values = sa_arr_lit_values(lit, shape, name);
+	checkArrLitCount(lit, lit["items"], name, shape);
 
 	json declStmt = stmt;
 	declStmt["vars"][0].erase("init");
 	json result = sa_var_decl_group(declStmt, storage);
-	json dictAst = {{"expr-type", "id"}, {"name", name}};
-	for (size_t i = 0; i < keys.size(); i++) {
-		const json& item = lit["items"][i];
-		json addr = dictValueAddr(sa_expression(dictAst), dictAst, keys[i], "put", item);
-		json elemAst = {{"expr-type", "arr-index"}, {"array", pinValue(move(addr), item, result)},
-		                {"index", {{"expr-type", "lit-int"}, {"value", "0"}}}};
-		emitArrLitElem(elemAst, shape, values[i], result, 0);
-	}
+	emitArrLitAssigns({{"expr-type", "id"}, {"name", name}}, shape, values, result);
 	return result;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE

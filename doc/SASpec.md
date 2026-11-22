@@ -130,21 +130,27 @@ Root
   - shape-key\* - Shape key string (e.g. "varr\_int32", "varr\_P9\_\_pln\_B16", "evarr\_9\_\_pln\_B16")
   - elem\* - The element, as above
 
-  **Dict entry** (`[""]T`; `T` as in the varr entry): std/rt keeps the keys in a 72-byte header
-  whose last 24 bytes are the values, a `[+]T` header, one value at each key's position. A
-  removed key's value is released, and its slot left NULL, at once; the positions are compacted
-  later. The values' varr entry is listed before this one. build-mgr declares the header as
+  **Dict entry** (`[""]T`; `T` any element of the varr entry): std/rt keeps the keys in a
+  72-byte header whose last 24 bytes are the values, a `[+]T` header, one value at each key's
+  position. A removed key's value is released at once, leaving its slots NULL (a row laid out
+  in place, each of its elements' slots); the positions are compacted later. The values' varr
+  entry is listed before this one. build-mgr declares the header as
   `type __pln_dict_T { int64 …; $__pln_varr_T values; }` and generates `__pln_alloc_dict_T()`,
   `__pln_free_dict_T(@!hdr h)` (NULL-safe: `__pln_fini_varr_T` on the values, then
   `__pln_dict_free`) and `__pln_copy_dict_T(@!hdr dst, @hdr src)` (nothing when `dst` is `src`;
-  otherwise the keys by `__pln_dict_copy`, then each value whose key is live, to the positions
-  the keys take in `dst`). It also generates, with `k` an `@[]uint8`, `__pln_at_dict_T(@hdr h, k)`
-  and `__pln_put_dict_T(@!hdr h, k)` (the address of k's value as `@!void`; `at` stops the program
-  for a missing key through `__pln_dict_at`, `put` adds the key and a built value),
-  `__pln_has_dict_T(@hdr h, k) -> bool`, `__pln_remove_dict_T(@!hdr h, k) -> bool` (releases the
-  value, then `__pln_dict_settle`) and `__pln_clear_dict_T(@!hdr h)`:
+  otherwise the keys by `__pln_dict_copy`, which keeps their positions, the removed ones
+  included, then the values as one run by `__pln_copy_varr_T`). It also generates, with `k` an
+  `@[]uint8`, `__pln_at_dict_T(@hdr h, k)` and `__pln_put_dict_T(@!hdr h, k)` (the address of k's
+  value as `@!void`; `at` stops the program for a missing key through `__pln_dict_at`, `put` adds
+  the key and a built value), `__pln_has_dict_T(@hdr h, k) -> bool`,
+  `__pln_remove_dict_T(@!hdr h, k) -> bool` (releases the value, then `__pln_dict_settle`) and
+  `__pln_clear_dict_T(@!hdr h)`. Each also takes the lengths the varr entry's functions do.
+  As an element (of a `[+]T` or another dictionary's values), elem kind `"dict"` (`name`
+  `__pln_dict_T`, `shape-key`), a slot holds the header: a new one is `__pln_dict_new()`, a dropped
+  one is freed with `__pln_free_dict_T`, and a copy into one is `__pln_copy_dict_T`:
   - shape-kind\* - "dict"
-  - shape-key\* - `dict_` followed by the element's `key` (e.g. "dict\_int32")
+  - shape-key\* - `dict_` followed by the element's `key` (e.g. "dict\_int32"); `edict_` for
+    `[""]$T`, whose values are an `evarr_` entry
   - values\* - The shape key of the values' varr entry (e.g. "varr\_int32")
 
   **Bytes entry** (`__pln_B<n>`, the layout of a struct owning nothing that an element or an
@@ -637,11 +643,12 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
 
   **`[""]T` (dictionary):** The variable is one word pointing at a header std/rt allocates
   (the dict `alloc-shapes` entry). It follows `[+]T` above where nothing else is said.
-  - `var-type`: `pntr(strdict(E))`; `strdict` (`{"type-kind":"strdict","base-type":E}`) appears
-    only as this pointer's base, its kind other than the written `dict` so that an analyzed type
-    is not read as a written one. `E` is a primitive or, for a struct, `pntr(struct(T))`. Other
-    values, `[""]$T`, and a dictionary as an element or a field are E_StmtNotImplemented
-    (E_UnsupportedStructFieldType for a field); `$[""]T` is E_FrameVarType.
+  - `var-type`: `pntr(strdict(E))`; `strdict` (`{"type-kind":"strdict","base-type":E}`, with
+    `embedded` for `[""]$T`) appears only as this pointer's base, its kind other than the written
+    `dict` so that an analyzed type is not read as a written one. `E` is any element of a `[+]T`,
+    as `varr`'s is (a dictionary's being its `pntr(strdict(…))`); `[""]$T` of a type owning
+    storage is E_EmbedOwningType. A dictionary as a fixed array's element is
+    E_ArrBorrowUnsupportedElem, as a field E_UnsupportedStructFieldType; `$[""]T` is E_FrameVarType.
   - `init`: `__pln_alloc_dict_T()`; scope-exit free: `__pln_free_dict_T(<name>)`.
   - Copying takes a `[""]T` or `@[""]T`/`@![""]T` of the same `E` (`__pln_copy_dict_T(w, v)`);
     anything else is E_CopyShapeMismatch. `->>`, returns, owned parameters (symbol `PD` +
@@ -658,7 +665,9 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     A constant key (`d[K]`) is its string.
   - A literal `{"a": v, K: w}` initializing `d` is emitted as `d`'s declaration, then for each
     key in order `__pin_N` initialized to `__pln_put_dict_T(d, key)` and the value stored into
-    `__pin_N[0]` as an array literal's element is. The key is a `lit-str`, written or a string
+    `__pin_N[0]` as an array literal's element is; a value that is itself a dictionary literal is
+    written so into the value its key's adding builds, after `__pln_clear_dict_T` on it. The
+    values' rows are checked as an array literal's. The key is a `lit-str`, written or a string
     constant's (otherwise E_DictLitKeyNotConst); a repeated key is E_DictLitDupKey. The values
     are analyzed before `d` is declared. Elsewhere (`->`, a return, an argument) the literal
     initializes a temp `__lit_N`/`__ret_N` that is used in its place, as a `[+]T` literal is; an
@@ -667,6 +676,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   - Builtins, as `[+]T`'s are: `len(@d)` (inline, the header's first word), `has(@d, k)`,
     `remove(@!d, k)` and `clear(@!d)`, calling the generated functions above. A function with
     the parameter types of one is E_DuplicateFuncDef.
+  - In a `for` loop's checks (E_ChangeForRange), `d["a"]` and `d["b"]` with constant keys are
+    different values, as `v[0]` and `v[1]` are.
 
   **`[]$[m]T` (unsized embedded array parameter):** Normalized by SA to the same
   `pntr(pntr(T, arr-size:m), embedded:true, stride:m*sizeof(T))` type as the sized form. The inner dimension `m`

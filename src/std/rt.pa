@@ -253,17 +253,40 @@ cexport func __pln_dict_clear(@!void h)
 	}
 }
 
-// Replaces dst's keys with src's live ones, in order. The caller copies the
-// values of the positions where __pln_dict_key(src, i) is not NULL.
+// Replaces dst's keys with src's, each at its position, a removed one too, so
+// that the caller copies the values as one run.
 cexport func __pln_dict_copy(@!void dst, @void src)
 {
 	__pln_dict_clear(dst);
 	int64 n = word(src, USED);
+	if n > word(dst, CAP) {
+		setWord(dst, ENTS, int64(__pln_realloc(word(dst, ENTS) as @!void, uint64(n * 16))));
+		setWord(dst, CAP, n);
+	}
+	int64 from = word(src, ENTS);
+	int64 to = word(dst, ENTS);
 	int64 i = 0;
 	while i < n {
-		@uint8 k = __pln_dict_key(src, i);
-		if k != NULL { __pln_dict_add(dst, k as @[]uint8); }
+		(from as @uint64)[2 * i] -> (to as @!uint64)[2 * i];
+		int64 key = 0;
+		if entKey(from, i) != 0 {
+			uint64 size = strlen(entKey(from, i) as @int8) + 1u;
+			int64(__pln_malloc(size)) -> key;
+			memcpy(key as @!void, entKey(from, i) as @void, size);
+		}
+		key -> (to as @!int64)[2 * i + 1];
 		i + 1 -> i;
+	}
+	setWord(dst, USED, n);
+	setWord(dst, LIVE, word(src, LIVE));
+	// The positions are src's, so its table is too.
+	int64 tsize = word(src, TSIZE);
+	if tsize > 0 {
+		if tsize != word(dst, TSIZE) {
+			setWord(dst, TABLE, int64(__pln_realloc(word(dst, TABLE) as @!void, uint64(tsize * 8))));
+			setWord(dst, TSIZE, tsize);
+		}
+		memcpy(word(dst, TABLE) as @!void, word(src, TABLE) as @void, uint64(tsize * 8));
 	}
 }
 
@@ -360,9 +383,11 @@ func testDict()
 	@!void d = __pln_dict_new();
 	__pln_dict_add(d, "old");
 	__pln_dict_copy(d, h);
-	expect(word(d, LIVE) == 41 && word(d, USED) == 41, "copy counts");
-	expect(strcmp(__pln_dict_key(d, 0) as @int8, "k60" as @int8) == 0, "copy order");
-	expect(__pln_dict_find(d, "k5") == 40 && __pln_dict_find(d, "old") == -1, "copy keys");
+	expect(word(d, LIVE) == 41 && word(d, USED) == 50, "copy counts");
+	expect(__pln_dict_key(d, 0) == NULL && __pln_dict_next(d, 0) == 9, "copy keeps the removed");
+	expect(strcmp(__pln_dict_key(d, 9) as @int8, "k60" as @int8) == 0, "copy order");
+	expect(__pln_dict_find(d, "k5") == 49 && __pln_dict_find(d, "old") == -1, "copy keys");
+	expect(__pln_dict_add(d, "new") == 50, "add after a copy");
 
 	free(word(h, VDATA) as @!void);
 	__pln_dict_free(h);

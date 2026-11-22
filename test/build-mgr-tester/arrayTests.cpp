@@ -765,5 +765,12 @@ TEST(build_mgr, dict_for_mtrace) {
 // literal from a struct one.
 TEST(build_mgr, dict_lit_mtrace) {
 	expectMtraceRun("446_dict_lit_mtrace",
-		"a=1 kk=2 c=3 \nz=9 a=3 \nlit=4 \nchained=5 \n2\n1 2\n2 3 11 3\n9 1\n6 7\n", 63);
+		"a=1 kk=2 c=3 \nz=9 a=3 \nlit=4 \nchained=5 \n2\n1 2\n2 3 11 3\n9 1\n6 7\n", 62);
+}
+
+// Values of every kind a `[+]T` holds: removed ones are released at once, and
+// a copy keeps the positions of the removed keys, so nothing is freed twice.
+TEST(build_mgr, dict_values_mtrace) {
+	expectMtraceRun("447_dict_values_mtrace",
+		"1 3 3 30\n9 4 5\n4 12\n1 4 2\n5 2 0\none 101 2\nb 103 4\n11 8\nclose 1\n1 2\nclose 2\n", 146);
 }

@@ -696,18 +696,28 @@ json PlnSemanticAnalyzer::varrData(json varr)
 {
 	// LCOV_EXCL_BR_START
 	const json& vt = varr["value-type"];
+	json elems = valuesDataType(vt, varr.value("expr-type","") == "arr-index" && !isWritableElem(varr));
+	int offset = isDictPntr(vt) ? DictValuesOffset + 16 : 16;
+	return {{"expr-type","field-access"},{"ptr-expr",move(varr)},{"offset",offset},{"value-type",move(elems)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The type of the data pointer of vt's values, readOnly also when vt is
+// reached through what cannot be written.
+json PlnSemanticAnalyzer::valuesDataType(const json& vt, bool readOnly)
+{
+	// LCOV_EXCL_BR_START
 	json elems = {{"type-kind","pntr"},{"base-type",vt["base-type"]["base-type"]}};
 	if (isVarrEmbedded(vt)) {
 		elems["embedded"] = true;
 		elems["stride"] = inPlaceSize(vt["base-type"]["base-type"]);
 	}
 	// A row carries the permission on each of its levels, as in a borrowed `[m][n]T`.
-	if (!isWritableThrough(vt) || (varr.value("expr-type","") == "arr-index" && !isWritableElem(varr))) {
+	if (readOnly || !isWritableThrough(vt)) {
 		elems["mutable"] = false;
 		elems["base-type"] = withArrPermission(elems["base-type"], false);
 	}
-	int offset = isDictPntr(vt) ? DictValuesOffset + 16 : 16;
-	return {{"expr-type","field-access"},{"ptr-expr",move(varr)},{"offset",offset},{"value-type",move(elems)}};
+	return elems;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 

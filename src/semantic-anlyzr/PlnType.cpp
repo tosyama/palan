@@ -66,11 +66,11 @@ const VarrType* PlnTypeRegistry::varr(const PlnType* elem, bool embedded)
     return ins->second.get();
 } // LCOV_EXCL_BR_LINE
 
-const DictType* PlnTypeRegistry::dict(const PlnType* elem)
+const DictType* PlnTypeRegistry::dict(const PlnType* elem, bool embedded)
 {
-    auto it = dictCache_.find(elem);
+    auto it = dictCache_.find({elem, embedded});
     if (it != dictCache_.end()) return it->second.get();
-    auto [ins, ok] = dictCache_.emplace(elem, std::make_unique<DictType>(elem));
+    auto [ins, ok] = dictCache_.emplace(std::make_pair(elem, embedded), std::make_unique<DictType>(elem, embedded));
     return ins->second.get();
 } // LCOV_EXCL_BR_LINE
 
@@ -167,7 +167,7 @@ const PlnType* PlnTypeRegistry::fromJson(const json& j)
     if (kind == "varr")
         return varr(fromJson(j["base-type"]), j.value("embedded", false));
     if (kind == "strdict")
-        return dict(fromJson(j["base-type"]));
+        return dict(fromJson(j["base-type"]), j.value("embedded", false));
     if (kind == "func") {
         std::vector<const PlnType*> params;
         for (auto& p : j["parameters"]) params.push_back(fromJson(p["var-type"]));
@@ -203,8 +203,12 @@ json PlnTypeRegistry::toJson(const PlnType* t)
         if (v->embedded) j["embedded"] = true;
         return j;
     }
-    if (t->kind == PlnType::Kind::Dict)
-        return {{"type-kind", "strdict"}, {"base-type", toJson(static_cast<const DictType*>(t)->elem)}}; // LCOV_EXCL_BR_LINE
+    if (t->kind == PlnType::Kind::Dict) {
+        const auto* d = static_cast<const DictType*>(t);
+        json j = {{"type-kind", "strdict"}, {"base-type", toJson(d->elem)}}; // LCOV_EXCL_BR_LINE
+        if (d->embedded) j["embedded"] = true;
+        return j;
+    }
     if (t->kind == PlnType::Kind::Struct) {
         const auto* s = static_cast<const StructType*>(t);
         return {{"type-kind", "struct"}, {"type-name", s->name}}; // LCOV_EXCL_BR_LINE
@@ -415,7 +419,7 @@ std::string symbolType(const json& t)
         {"pntr",   {"type-kind", "base-type", "mutable", "embedded", "stride", "arr-size", "variadic"}},
         {"func",   {"type-kind", "parameters", "ret-type"}},
         {"varr",   {"type-kind", "base-type", "embedded"}},
-        {"strdict", {"type-kind", "base-type"}},
+        {"strdict", {"type-kind", "base-type", "embedded"}},
     };
     const std::string kind = t.value("type-kind", "");
     auto known = knownKeys.find(kind);
@@ -432,7 +436,7 @@ std::string symbolType(const json& t)
     if (kind == "struct") return symbolUserName(t["type-name"].get<std::string>());
     if (kind == "pntr") return symbolPntr(t);
     if (kind == "varr") return std::string(t.value("embedded", false) ? "VC" : "V") + symbolType(t["base-type"]);
-    if (kind == "strdict") return "D" + symbolType(t["base-type"]);
+    if (kind == "strdict") return std::string(t.value("embedded", false) ? "DC" : "D") + symbolType(t["base-type"]);
     const json& params = t["parameters"];
     std::string s = "F" + std::to_string(params.size()) + "_";
     for (auto& p : params) s += symbolType(p["var-type"]);

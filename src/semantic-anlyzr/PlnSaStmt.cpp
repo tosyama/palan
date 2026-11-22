@@ -399,8 +399,12 @@ bool PlnSemanticAnalyzer::locationPath(const json& e, vector<string>& path)
 		return true;
 	}
 	if (et == "arr-index" && locationPath(e["array"], path)) {
+		// A dictionary's values at different constant keys are different too.
+		json key = foldConstExpr(e["index"]);
 		optional<ConstVal> idx = evalConst(e["index"]);
-		if (idx && idx->kind == ConstVal::Kind::Int)
+		if (key.value("expr-type", "") == "lit-str")
+			path.push_back("[\"" + key["value"].get<string>() + "\"]");
+		else if (idx && idx->kind == ConstVal::Kind::Int)
 			path.push_back("[" + to_string(idx->i) + "]");
 		else if (idx && idx->kind == ConstVal::Kind::Uint)
 			path.push_back("[" + to_string(idx->u) + "]");

@@ -1461,3 +1461,28 @@ TEST(sa, dict_lit)
 		ASSERT_EQ(body[i + 1]["target"]["array"]["name"], body[i]["vars"][0]["name"]);
 	}
 }
+
+// A dictionary's values are any element of a `[+]T`: its functions take the
+// lengths the values' do, `[""]$T` has functions of its own, and a dictionary
+// of dictionaries keeps a dictionary in each value's slot.
+TEST(sa, dict_value_types)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/362_dict_value_types.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& body = jout["statements"][0]["body"];
+	const auto& rowsAlloc = body[0]["vars"][0]["init"];
+	ASSERT_EQ(funcName(rowsAlloc["name"]), "__pln_alloc_dict_Pint32");
+	ASSERT_EQ(rowsAlloc["args"][0]["value"], "3");
+	ASSERT_EQ(funcName(body[2]["vars"][0]["init"]["name"]), "__pln_alloc_edict_8__pln_B8");
+	ASSERT_EQ(body[2]["vars"][0]["var-type"]["base-type"]["embedded"], true);
+	const auto& rowsFree = body[9]["body"];
+	ASSERT_EQ(funcName(rowsFree["name"]), "__pln_free_dict_Pint32");
+	ASSERT_EQ(rowsFree["args"][1]["value"], "3");
+	const json* values = nullptr;
+	for (auto& s : jout["alloc-shapes"])
+		if (s["shape-key"] == "varr_PDint32") values = &s;
+	ASSERT_NE(values, nullptr);
+	ASSERT_EQ((*values)["elem"]["kind"], "dict");
+	ASSERT_EQ((*values)["elem"]["shape-key"], "dict_int32");
+}

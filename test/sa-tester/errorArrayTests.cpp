@@ -630,7 +630,7 @@ TEST(sa_error, dict)
 		{"error_1157_dict_borrow_var_no_addr.pa", ":2:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' ('@{..}' or '@!{..}' for a literal)."},
 		{"error_1158_dict_copy_elem_mismatch.pa", ":2:1: error: cannot copy '[\"\"]int32' into '[\"\"]int64'"},
 		{"error_1159_dict_write_through_borrow.pa", ":2:2: error: cannot write through read-only pointer '@T'"},
-		{"error_1160_dict_value_type.pa", ":1:1: error: this statement is not supported in this version."},
+		{"error_1160_dict_value_type.pa", ":2:1: error: cannot embed 'P' with '$': it owns storage of its own"},
 		{"error_1161_dict_key_type.pa", ":2:11: error: cannot convert 'int64' to '@uint8'."},
 		{"error_1162_dict_builtin_redefined.pa", ":1:1: error: Function 'has' is already defined."},
 		{"error_1163_dict_field_write_through_borrow.pa", ":3:7: error: cannot write through read-only pointer '@T'"},
@@ -653,6 +653,8 @@ TEST(sa_error, dict)
 		{"error_1180_struct_lit_string_key.pa", ":2:8: error: a value of struct 'P' names its fields; a string key is for a dictionary."},
 		{"error_1181_dict_lit_transfer.pa", ":2:1: error: '->>' needs a source that owns its value"},
 		{"error_1182_arr_lit_dict_arg.pa", ":2:3: error: parameter 'd' of type '@[\"\"]int32' cannot take an array literal"},
+		{"error_1183_dict_for_value_change.pa", ":2:24: error: cannot change what a 'for' loop iterates over ('a[\"x\"]')"},
+		{"error_1184_dict_lit_row_size.pa", ":1:24: error: array 'r' has rows of size 3 but a row of its array literal has 2 elements."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

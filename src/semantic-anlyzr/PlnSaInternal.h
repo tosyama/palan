@@ -273,6 +273,7 @@ inline bool isVarrPntr(const json& vt)
 	    && vt["base-type"].value("type-kind","") == "varr";
 }
 inline bool isVarrStorage(const json& vt) { return isVarrPntr(vt) && !vt.contains("mutable"); }
+inline bool isDictFamily(AllocFamily f) { return f == AllocFamily::Dict || f == AllocFamily::EDict; }
 inline bool isDictAstType(const json& t) { return t.value("type-kind","") == "dict"; }
 // std/rt's dictionary header: {live, used, cap, ents, tsize, table}, then the
 // values' `[+]T` header.
@@ -287,9 +288,14 @@ inline bool isDictPntr(const json& vt)
 	    && vt["base-type"].value("type-kind","") == "strdict";
 }
 inline bool isDictStorage(const json& vt) { return isDictPntr(vt) && !vt.contains("mutable"); }
-inline json dictPntrType(const json& elem)
+// elem and `embedded` are as a `[+]T`'s (varrPntrType), its values being one.
+inline json dictPntrType(const json& elem, bool embedded)
 {
-	return {{"type-kind","pntr"},{"base-type",{{"type-kind","strdict"},{"base-type",elem}}}}; // LCOV_EXCL_BR_LINE
+	// LCOV_EXCL_BR_START
+	json dict = {{"type-kind","strdict"},{"base-type",elem}};
+	if (embedded) dict["embedded"] = true;
+	return {{"type-kind","pntr"},{"base-type",move(dict)}};
+	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 // A variable or parameter declared as a borrowed array ('@[n]T'/'@![n]T',
 // '@[+]T'/'@![+]T') or dictionary ('@[""]T'/'@![""]T'). Checked on its var-type:
@@ -323,6 +329,7 @@ inline json varrPntrType(const json& elem, bool embedded)
 	return {{"type-kind","pntr"},{"base-type",move(varr)}};
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
+// Also a `[""]$T`'s, whose values are a `[+]$T`.
 inline bool isVarrEmbedded(const json& vt) { return vt["base-type"].value("embedded", false); }
 inline json lenLit(int64_t v)
 {
@@ -733,7 +740,8 @@ inline string PlnSemanticAnalyzer::typeDisplayName(const json& t) const {
 		return (isVarrStorage(t) ? "" : perm(t)) + "[+]" + (isVarrEmbedded(t) ? "$" : "")
 		     + typeDisplayName(t["base-type"]["base-type"]);
 	if (isDictPntr(t))
-		return (isDictStorage(t) ? "" : perm(t)) + "[\"\"]" + typeDisplayName(t["base-type"]["base-type"]);
+		return (isDictStorage(t) ? "" : perm(t)) + "[\"\"]" + (isVarrEmbedded(t) ? "$" : "")
+		     + typeDisplayName(t["base-type"]["base-type"]);
 	if (isStructStorage(t))
 		return typeDisplayName(t["base-type"]);
 	if (isPtrBorrow(t))
@@ -819,6 +827,7 @@ inline json astTypeOf(const json& saType)
 		elem = astTypeOf(saType["base-type"]["base-type"]);
 	} else if (isDictPntr(saType)) {
 		out = {{"type-kind","dict"}};
+		if (isVarrEmbedded(saType)) out["embedded"] = true;
 		elem = astTypeOf(saType["base-type"]["base-type"]);
 	} else if (isArrLevel(saType) && saType.contains("arr-size")) {
 		out = {{"type-kind","arr"},{"specifier","raw"},
