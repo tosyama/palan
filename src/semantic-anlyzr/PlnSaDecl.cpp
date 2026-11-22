@@ -180,6 +180,12 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			def.fields.push_back({.name=fieldName, .typeKind="embed-varr", .isMutable=false,
 			                      .offset=at, .size=24, .type=ownedFieldType(locNode, vtype["base-type"])});
 			def.ownsFields = true;
+		} else if (tk == "embed" && isDictAstType(vtype["base-type"])) {
+			// std/rt allocates a dictionary's header, so it cannot be laid out in the struct.
+			const json& dict = vtype["base-type"];
+			string shown = typeDisplayName(dictPntrType(dict["base-type"], dict.value("embedded", false)));
+			cerr << errPrefix << PlnSaMessage::getMessage(E_EmbedOwningType, shown) << endl;
+			exit(1);
 		} else if (tk == "embed" && vtype["base-type"].value("type-kind", "") == "arr") {
 			// `$[n]U`: the array laid out in the struct, as `$[n]U` lays it out in a frame.
 			FieldLayout fl = inlineArrField(locNode, name, vtype["base-type"]);
@@ -245,7 +251,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			                      .innerPtrMutable=leaf.innerPtrMutable,
 			                      .unsupported=unsupportedPointee(leaf),
 			                      .funcType=pointeeFuncType(leaf)});
-		} else if (tk == "arr") {
+		} else if (tk == "arr" || tk == "dict") {
 			int at = place(8, 8);
 			def.fields.push_back({.name=fieldName, .typeKind="owned", .isMutable=false,
 			                      .offset=at, .size=8, .type=ownedFieldType(locNode, vtype)});
@@ -309,6 +315,16 @@ void PlnSemanticAnalyzer::setFieldInits(StructDef& def, const json& fields)
 	// A value reaches here typed and, from an integer to a float, converted.
 	function<json(const json&, const json&, const string&, const json&)> literal
 		= [&](const json& v, const json& type, const string& fieldName, const json& locNode) -> json {
+		if (isDictLitValues(v)) {
+			// LCOV_EXCL_BR_START
+			json lit = {{"expr-type", "dict-lit"}, {"items", json::array()}};
+			for (size_t i = 0; i < v["keys"].size(); i++)
+				lit["items"].push_back({{"key", v["keys"][i]},
+					{"value", literal(v["values"][i], type["base-type"]["base-type"], fieldName, locNode)}});
+			if (locNode.contains("loc")) lit["loc"] = locNode["loc"];
+			return lit;
+			// LCOV_EXCL_BR_STOP
+		}
 		if (v.is_array()) {
 			json lit;
 			if (isArrLevel(type) || isVarrStorage(type)) {
@@ -1000,11 +1016,12 @@ json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const Fie
 		return sa_struct_lit(v, requireCompleteStruct(sub, v));
 	if (isLitArrField(f)) {
 		string vet = v.value("expr-type", "");
-		if (vet == "dict-lit") {
+		bool isDict = isDictStorage(f.type);
+		if (vet == "dict-lit" && !isDict) {
 			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
 			exit(1);
 		}
-		if (vet != "arr-lit") {
+		if (vet != (isDict ? "dict-lit" : "arr-lit")) {
 			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, f.name) << endl;
 			exit(1);
 		}

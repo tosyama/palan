@@ -58,7 +58,7 @@ Root
     entry), `"embed-struct"`
     with `"name"` (the struct itself, `total-size` bytes), or `"varr"` with `"name"` (an owned
     slot holding a `[+]U`, 8 bytes; the name is its header type, `__pln_varr_U`) and `"shape-key"`
-    (the `[+]U`'s own entry), or, for a row `[n]U`, `"row"` (an owned slot holding the row's
+    (the `[+]U`'s own entry), `"dict"` with the same for a `[""]U` (see the dict entry), or, for a row `[n]U`, `"row"` (an owned slot holding the row's
     own block, 8 bytes) with `"elem"` (the row's element, described the same way), or
     `"embed-row"` (rows laid out in place; no `"size"`, which depends on the lengths) with `"depth"` (how many consecutive levels are laid
     out in place: `[+]$[3]$[4]int32`'s element is one `"embed-row"` of depth 2) and `"elem"` (the
@@ -187,7 +187,7 @@ Root
     - name\* - Field name string, or the path to it through structs laid out in the struct
     - offset\* - Byte offset within the struct
     - elem\* - The element, as in the arr and varr entries (`"struct"` for `T`, `"varr"` for
-      `[+]U`, `"row"` for an owned array, `"embed-row"` for an array laid out in the struct),
+      `[+]U`, `"dict"` for `[""]U`, `"row"` for an owned array, `"embed-row"` for an array laid out in the struct),
       or `"embed-varr"` for `$[+]U`: the varr element's description with `"size"` 24
     - lens\* - The lengths of the field's levels, outermost first and on through the elements
       of a `[+]U`, which its element's helpers take (`[3]`, `[3, 4]`; empty for `T`)
@@ -647,8 +647,12 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     `embedded` for `[""]$T`) appears only as this pointer's base, its kind other than the written
     `dict` so that an analyzed type is not read as a written one. `E` is any element of a `[+]T`,
     as `varr`'s is (a dictionary's being its `pntr(strdict(…))`); `[""]$T` of a type owning
-    storage is E_EmbedOwningType. A dictionary as a fixed array's element is
-    E_ArrBorrowUnsupportedElem, as a field E_UnsupportedStructFieldType; `$[""]T` is E_FrameVarType.
+    storage is E_EmbedOwningType.
+  - A dictionary as a field or an element (`[n][""]T`, `[+][""]T`, another dictionary's value) is
+    an owned slot of elem kind `"dict"`, starting empty, as a `[+]T`'s is; a struct literal and a
+    field initializer give it a dictionary literal. Laid out in place (`$[""]T` as a field,
+    `[n]$[""]T`, `[+]$[""]T`, `[""]$[""]T`) it is E_EmbedOwningType, as a variable E_FrameVarType,
+    since std/rt allocates the header.
   - `init`: `__pln_alloc_dict_T()`; scope-exit free: `__pln_free_dict_T(<name>)`.
   - Copying takes a `[""]T` or `@[""]T`/`@![""]T` of the same `E` (`__pln_copy_dict_T(w, v)`);
     anything else is E_CopyShapeMismatch. `->>`, returns, owned parameters (symbol `PD` +

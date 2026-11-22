@@ -369,7 +369,7 @@ void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json&
 				cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownType, ename) << endl;
 				exit(1);
 			}
-			if ((ek == "prim" && !structDefs_.count(ename)) || (ek != "prim" && ek != "arr")) {
+			if ((ek == "prim" && !structDefs_.count(ename)) || (ek != "prim" && ek != "arr" && ek != "dict")) {
 				cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedElemNotStruct, typeDisplayName(elem)) << endl;
 				exit(1);
 			}

@@ -774,3 +774,10 @@ TEST(build_mgr, dict_values_mtrace) {
 	expectMtraceRun("447_dict_values_mtrace",
 		"1 3 3 30\n9 4 5\n4 12\n1 4 2\n5 2 0\none 101 2\nb 103 4\n11 8\nclose 1\n1 2\nclose 2\n", 146);
 }
+
+// A dictionary as a field (initialized, given by a struct literal, copied with
+// its struct) and as an element of a fixed and of a variable-length array.
+TEST(build_mgr, dict_holders_mtrace) {
+	expectMtraceRun("448_dict_holders_mtrace",
+		"1 5 2 7\n1 1\n9 1\n2\n0 1\n1 6 4 2\n2\n2\n3 0 3\n1 1\n1 2\n", 127);
+}

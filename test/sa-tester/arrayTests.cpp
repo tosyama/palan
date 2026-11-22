@@ -1486,3 +1486,22 @@ TEST(sa, dict_value_types)
 	ASSERT_EQ((*values)["elem"]["kind"], "dict");
 	ASSERT_EQ((*values)["elem"]["shape-key"], "dict_int32");
 }
+
+// A dictionary held as a field or an element is a slot of elem kind "dict",
+// built, freed and copied by the dictionary's own functions.
+TEST(sa, dict_holders)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/363_dict_holders.pa");
+	ASSERT_TRUE(jout.is_object());
+	map<string, const json*> shapes;
+	for (auto& s : jout["alloc-shapes"])
+		shapes[s.contains("shape-key") ? s["shape-key"].get<string>() : s["shape-name"].get<string>()] = &s;
+	const json& field = (*shapes.at("__pln_L17_363_dict_holders_S"))["owned-fields"][0];
+	ASSERT_EQ(field["name"], "d");
+	ASSERT_EQ(field["elem"]["kind"], "dict");
+	ASSERT_EQ(field["elem"]["shape-key"], "dict_int32");
+	ASSERT_TRUE(shapes.at("__pln_L17_363_dict_holders_S")->contains("init-func"));
+	for (const char* key : {"arr_PDint32", "varr_PDint32"})
+		ASSERT_EQ((*shapes.at(key))["elem"]["kind"], "dict");
+}

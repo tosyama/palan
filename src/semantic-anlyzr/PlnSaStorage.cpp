@@ -146,9 +146,10 @@ json PlnSemanticAnalyzer::sizedArrLevel(const json& locNode, const json& arr, op
 	}
 	if (isMutable) out["mutable"] = *isMutable;
 	json leaf = arr["base-type"];
-	// [n][+]T: each element stays the `[+]T` the array owns, as a struct element does.
-	if (isVarrAstType(leaf)) {
-		json elem = varrElemType(locNode, leaf);
+	// [n][+]T, [n][""]T: each element stays the `[+]T` or `[""]T` the array owns, as a
+	// struct element does.
+	if (isVarrAstType(leaf) || isDictAstType(leaf)) {
+		json elem = isDictAstType(leaf) ? dictStorageType(locNode, leaf) : varrElemType(locNode, leaf);
 		if (arr.value("embedded", false)) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedOwningType, typeDisplayName(elem)) << endl;
 			exit(1);
@@ -220,7 +221,7 @@ int64_t PlnSemanticAnalyzer::fieldArrSize(const json& locNode, const json& sizeE
 
 // An owned array field holds its block as a variable of its type does. Its
 // levels are checked first, so that their errors are the field's own. A
-// `[+]T` field is a slot like an element's, starting empty.
+// `[+]T` or `[""]T` field is a slot like an element's, starting empty.
 json PlnSemanticAnalyzer::ownedFieldType(const json& locNode, const json& vtype)
 {
 	auto unsupported = [&] {
@@ -229,6 +230,7 @@ json PlnSemanticAnalyzer::ownedFieldType(const json& locNode, const json& vtype)
 	};
 	requireKnownTypeNames(locNode, vtype);
 	if (isVarrAstType(vtype)) return varrElemType(locNode, vtype);
+	if (isDictAstType(vtype)) return dictStorageType(locNode, vtype);
 	const json* t = &vtype;
 	for (; t->value("type-kind","") == "arr" && !isVarrAstType(*t); t = &(*t)["base-type"]) {
 		if ((*t)["size-expr"].is_null()) unsupported();

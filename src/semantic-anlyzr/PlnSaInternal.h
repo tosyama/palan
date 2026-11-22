@@ -481,11 +481,14 @@ inline string fieldStructName(const FieldLayout& f)
 	return "";
 }
 
-// An array a struct literal gives the field, embedded or owned.
+// What sa_arr_lit_values gives for a dictionary level: {keys, values}, not
+// an analyzed expression.
+inline bool isDictLitValues(const json& v) { return v.is_object() && v.contains("keys") && !v.contains("expr-type"); }
+// An array or a dictionary a struct literal gives the field, embedded or owned.
 inline bool isLitArrField(const FieldLayout& f)
 {
 	return f.typeKind == "embed-arr" || f.typeKind == "embed-varr"
-	    || (f.typeKind == "owned" && (isArrLevel(f.type) || isVarrStorage(f.type)));
+	    || (f.typeKind == "owned" && (isArrLevel(f.type) || isVarrStorage(f.type) || isDictStorage(f.type)));
 }
 
 inline json fieldValueType(const FieldLayout& f)

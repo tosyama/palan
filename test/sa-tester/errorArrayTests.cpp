@@ -624,7 +624,7 @@ TEST(sa_error, use_after_given)
 TEST(sa_error, dict)
 {
 	const pair<string, string> cases[] = {
-		{"error_1153_dict_field.pa", ":1:1: error: unsupported struct field type."},
+		{"error_1153_dict_field.pa", ":1:1: error: cannot embed '[\"\"]int32' with '$': it owns storage of its own"},
 		{"error_1154_dict_frame_var.pa", ":2:2: error: '$' on a variable applies only to a struct or an array, not '[\"\"]int32'."},
 		{"error_1156_dict_borrow_no_addr.pa", ":3:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' ('@{..}' or '@!{..}' for a literal)."},
 		{"error_1157_dict_borrow_var_no_addr.pa", ":2:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' ('@{..}' or '@!{..}' for a literal)."},
@@ -655,6 +655,8 @@ TEST(sa_error, dict)
 		{"error_1182_arr_lit_dict_arg.pa", ":2:3: error: parameter 'd' of type '@[\"\"]int32' cannot take an array literal"},
 		{"error_1183_dict_for_value_change.pa", ":2:24: error: cannot change what a 'for' loop iterates over ('a[\"x\"]')"},
 		{"error_1184_dict_lit_row_size.pa", ":1:24: error: array 'r' has rows of size 3 but a row of its array literal has 2 elements."},
+		{"error_1185_dict_embedded_elem.pa", ":2:2: error: cannot embed '[\"\"]int32' with '$': it owns storage of its own"},
+		{"error_1186_dict_for_row_change.pa", ":3:23: error: cannot change what a 'for' loop iterates over ('a[0]')"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

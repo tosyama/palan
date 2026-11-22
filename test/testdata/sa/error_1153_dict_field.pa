@@ -1,1 +1,1 @@
-type P { int32 x; [""]int32 m; };
+type S { $[""]int32 d; };

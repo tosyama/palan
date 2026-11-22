@@ -1734,7 +1734,8 @@ json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
 		exit(1);
 	}
-	if (isAggregateLit(stmt["value"]) && (isVarrStorage(sa_target["value-type"]) || assignsByFunc(withoutArrPermission(sa_target["value-type"])))) // LCOV_EXCL_BR_LINE
+	if (isAggregateLit(stmt["value"]) && (isVarrStorage(sa_target["value-type"]) || isDictStorage(sa_target["value-type"]) // LCOV_EXCL_BR_LINE
+	    || assignsByFunc(withoutArrPermission(sa_target["value-type"])))) // LCOV_EXCL_BR_LINE
 		return sa_lit_assign_via_temp(stmt, sa_target["value-type"], litAddr);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(sa_target["value-type"]) || isArrLevel(sa_target["value-type"]))) {
 		json lit = sa_aggregate_lit_assign(stmt, stmt["target"], sa_target["value-type"], litAddr);
@@ -1850,6 +1851,10 @@ json PlnSemanticAnalyzer::sa_aggregate_lit_assign(const json& stmt, const json& 
 		for (auto& v : vals) {
 			if (v.is_array()) {
 				bindLeaves(v);
+				continue;
+			}
+			if (isDictLitValues(v)) {
+				bindLeaves(v["values"]);
 				continue;
 			}
 			string name = isStructPntr(v["value-type"]) ? bindStructTemp(move(v)) : bindTemp(move(v));
@@ -2340,7 +2345,7 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 	}
 	json fieldType = fieldValueType(*it);
 	if (isAggregateLit(stmt["value"]) && !transfer
-	    && (isVarrStorage(fieldType) || assignsByFunc(withoutArrPermission(fieldType))))
+	    && (isVarrStorage(fieldType) || isDictStorage(fieldType) || assignsByFunc(withoutArrPermission(fieldType))))
 		return sa_lit_assign_via_temp(stmt, fieldType, litAddr);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(fieldType) || isArrLevel(fieldType))) {
 		json fieldAst = {{"expr-type", "field-access"}, {"object", stmt["object"]}, {"field", fn}}; // LCOV_EXCL_BR_LINE
