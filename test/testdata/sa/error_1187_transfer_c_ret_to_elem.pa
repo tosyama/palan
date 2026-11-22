@@ -1,0 +1,3 @@
+cinclude <stdio.h>;
+[+]FILE f; f.resize(1);
+fopen("/dev/null", "r") ->> f[0];

@@ -1929,7 +1929,7 @@ json PlnSemanticAnalyzer::heapStructRet(json value, json& pre)
 // accept NULL. A call result has no owner to reset.
 void PlnSemanticAnalyzer::appendTransferSourceReset(json& stmts, const json& stmt, const json& saValue, const string& op)
 {
-	if (saValue.value("category", "") == "expiring")
+	if (isExpiringOwned(saValue))
 		return;
 	if (saValue.value("category", "") == "opaque-convert" || saValue.value("category", "") == "resized") {
 		json converted = stmt;
