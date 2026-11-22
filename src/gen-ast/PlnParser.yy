@@ -255,14 +255,6 @@ struct BodyList {
 		return json::array();
 	} // LCOV_EXCL_BR_LINE
 
-	static void requireInKeyword(const string& file, const string& word,
-	                             const palan::PlnParser::location_type& loc)
-	{
-		if (word != "in")
-			throw runtime_error(PlnGenAstMessage::locatedError(file, loc.begin.line, loc.begin.column,
-				PlnGenAstMessage::getMessage(E_ExpectedInKeyword, word)));
-	}
-
 	static string fieldAccess(const string& file, const string& word,
 	                          const palan::PlnParser::location_type& loc)
 	{
@@ -390,6 +382,7 @@ struct BodyList {
 %token KW_VOID	"void"
 %token KW_RETURN	"return"
 %token KW_FOR	"for"
+%token KW_IN	"in"
 %token KW_WHILE	"while"
 %token KW_IF	"if"
 %token KW_ELSE	"else"
@@ -423,7 +416,7 @@ struct BodyList {
 %type <json>	import cinclude import_path
 %type <PList<string>>	import_ids link_libs c_type_names cinclude_export
 %type <vector<string>>	link_clause
-%type <string>	import_as func_name op_func_name library_decl library_name
+%type <string>	field_name import_as func_name op_func_name library_decl library_name
 %type <json>	expression term store_loc argument
 %type <PList<json>>	arguments
 %type <json>	array_desc array_row dict_desc
@@ -1016,14 +1009,21 @@ type_members: type_member
 	{ $$ = $1.push($2); }
 	;
 
-type_member: type_expr ID ';'
+type_member: type_expr field_name ';'
 	{ $$ = {{"name", move($2)}, {"var-type", move($1)}}; } // LCOV_EXCL_BR_LINE
-	| type_expr ID '=' expression ';'
+	| type_expr field_name '=' expression ';'
 	{ $$ = {{"name", move($2)}, {"var-type", move($1)}, {"init", move($4)}}; } // LCOV_EXCL_BR_LINE
-	| ID type_expr ID ';'
+	| ID type_expr field_name ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
-	| ID type_expr ID '=' expression ';'
+	| ID type_expr field_name '=' expression ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"init", move($5)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
+	;
+
+// 'in' is reserved for 'for', but fields, C structs' among them, are still named 'in'.
+field_name: ID
+	{ $$ = move($1); }
+	| KW_IN
+	{ $$ = "in"; } // LCOV_EXCL_BR_LINE
 	;
 
 expression: term
@@ -1192,7 +1192,7 @@ term: INT
 	{ $$ = $2; }
 	| '(' expression ')' '(' arguments ')'
 	{ $$ = {{"expr-type", "call-ptr"}, {"callee", move($2)}, {"args", $5.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
-	| term '.' ID
+	| term '.' field_name
 	{ $$ = {{"expr-type", "field-access"}, {"object", move($1)}, {"field", move($3)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| term '[' expression ']'
 	{
@@ -1276,13 +1276,13 @@ dict_desc: '{' dict_items '}'
 	{ $$ = {{"expr-type", "dict-lit"}, {"items", $2.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
-dict_items: ID ':' expression
+dict_items: field_name ':' expression
 	{
 		json item = {{"name", move($1)}, {"value", move($3)}}; // LCOV_EXCL_BR_LINE
 		LOC(item, @$); // LCOV_EXCL_BR_LINE
 		$$ = PList<json>().push(move(item));
 	}
-	| dict_items ',' ID ':' expression
+	| dict_items ',' field_name ':' expression
 	{
 		json item = {{"name", move($3)}, {"value", move($5)}}; // LCOV_EXCL_BR_LINE
 		LOC_BE(item, @3, @5); // LCOV_EXCL_BR_LINE
@@ -1307,7 +1307,7 @@ store_loc
 		$$ = {{"kind", "arr-index"}, {"array", move(array_expr)}, {"index", move($3)}}; // LCOV_EXCL_BR_LINE
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
-	| store_loc '.' ID
+	| store_loc '.' field_name
 	{ $$ = {{"kind", "field"}, {"base", move($1)}, {"field", move($3)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| '(' expression ')'
 	{ $$ = {{"kind", "expr"}, {"expr", move($2)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
@@ -1481,24 +1481,20 @@ return: KW_RETURN
 	{ $$["values"] = $2.toVector(); }
 	;
 
-// 'in' stays an identifier elsewhere: C structs and existing code name fields 'in'.
-for_loop: KW_FOR for_elem ID expression block
+for_loop: KW_FOR for_elem KW_IN expression block
 	{
-		requireInKeyword(lexer.inputFile, $3, @3);
 		json f = {{"stmt-type", "for"}, {"elem", move($2)}, {"range", move($4)}}; // LCOV_EXCL_BR_LINE
 		LOC(f, @$); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(f), {}, {{"body", $5}} }); // LCOV_EXCL_BR_LINE
 	}
-	| KW_FOR for_elem ',' ID ID expression block
+	| KW_FOR for_elem ',' ID KW_IN expression block
 	{
-		requireInKeyword(lexer.inputFile, $5, @5);
 		json f = {{"stmt-type", "for"}, {"elem", move($2)}, {"index", $4}, {"range", move($6)}}; // LCOV_EXCL_BR_LINE
 		LOC(f, @$); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(f), {}, {{"body", $7}} }); // LCOV_EXCL_BR_LINE
 	}
-	| KW_FOR for_elem ',' type_expr ID ID expression block
+	| KW_FOR for_elem ',' type_expr ID KW_IN expression block
 	{
-		requireInKeyword(lexer.inputFile, $6, @6);
 		json f = {{"stmt-type", "for"}, {"elem", move($2)}, {"index", $5}, {"index-type", move($4)}, {"range", move($7)}}; // LCOV_EXCL_BR_LINE
 		LOC(f, @$); // LCOV_EXCL_BR_LINE
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(f), {}, {{"body", $8}} }); // LCOV_EXCL_BR_LINE

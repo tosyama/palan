@@ -714,7 +714,7 @@ printf("\n");                          // 0:20 1:40 2:60
   iteration). `@a` and `@!a` are the element itself, read-only and writable: `a` stands for
   `arr[i]` wherever it is written (`0 -> a`, `a.x`, `a[j]`, `a.push(1)`), so it is given to a
   function as an element is (`f(@!a)`, `len(@a)`). `copy` is not a reserved word; it can still
-  name a variable or field.
+  name a variable or field. `in` is a reserved word, but it can still name a field.
 - `i` cannot be assigned to.
 - A type can be written before `i`: `for @c, int32 x in row` gives `x` as an `int32`, so it is
   passed to an `int32` parameter without a cast. It must be an integer type, and for an array of

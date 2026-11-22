@@ -440,7 +440,15 @@ TEST(gen_ast_error, for_expected_in) {
 	cleanTestEnv();
 	string out = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/error_021_for_expected_in.pa");
 	EXPECT_EQ(out.rfind("return1::", 0), 0u) << out;
-	EXPECT_NE(out.find(":1:12: error: Expected 'in' after the loop variable, but found 'on'."), string::npos) << out;
+	EXPECT_NE(out.find(":1:12: error: syntax error, unexpected identifier, expecting in or ','"), string::npos) << out;
+}
+
+// 'in' is reserved so a 'for' range never reads as a typed index.
+TEST(gen_ast_error, in_reserved) {
+	cleanTestEnv();
+	ofstream("out/m.pa") << "int32 in = 1;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	EXPECT_NE(out.find("m.pa:1:7: error: syntax error, unexpected in"), string::npos) << out;
 }
 
 TEST(gen_ast_error, for_elem_mode) {

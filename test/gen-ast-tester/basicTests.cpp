@@ -1523,6 +1523,14 @@ TEST(gen_ast, for_loop_index_type) {
 	ASSERT_EQ(stmts[0]["range"]["name"], "v");
 	ASSERT_EQ(stmts[1]["elem"]["borrow"], false);
 	ASSERT_EQ(stmts[1]["index-type"]["type-name"], "Idx");
+	ASSERT_FALSE(stmts[2].contains("index-type"));
+	ASSERT_EQ(stmts[2]["index"], "i");
+	ASSERT_EQ(stmts[2]["range"]["expr-type"], "arr-index");
+	ASSERT_EQ(stmts[3]["index-type"]["type-name"], "int64");
+	ASSERT_EQ(stmts[3]["range"]["expr-type"], "arr-index");
+	ASSERT_EQ(stmts[4]["index-type"]["type-name"], "int64");
+	ASSERT_EQ(stmts[4]["range"]["expr-type"], "arr-lit");
+	ASSERT_EQ(stmts[5]["vars"][0]["init"]["items"][0]["name"], "in");
 }
 
 TEST(gen_ast, global_decl) {

@@ -47,6 +47,7 @@ enum {
 	KW_VOID =	PlnParser::token::KW_VOID,
 	KW_RETURN = PlnParser::token::KW_RETURN,
 	KW_FOR =	PlnParser::token::KW_FOR,
+	KW_IN =	PlnParser::token::KW_IN,
 	KW_WHILE =	PlnParser::token::KW_WHILE,
 	KW_IF = PlnParser::token::KW_IF,
 	KW_ELSE = PlnParser::token::KW_ELSE,
@@ -163,6 +164,7 @@ COMMENT1	\/\/[^\n]*\n
 <*>"void" { return KW_VOID; }
 <*>"return" { return KW_RETURN; }
 <*>"for" { return KW_FOR; }
+<*>"in" { return KW_IN; }
 <*>"while" { return KW_WHILE; }
 <*>"if" { return KW_IF; }
 <*>"else" { return KW_ELSE; }
