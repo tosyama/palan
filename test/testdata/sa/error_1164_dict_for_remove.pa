@@ -1,0 +1,2 @@
+[""]int32 d;
+for copy v, k in d { d.remove(k); }

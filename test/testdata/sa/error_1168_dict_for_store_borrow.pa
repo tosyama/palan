@@ -1,0 +1,1 @@
+func f(@![""]int32 d) { for @v in d { 1 -> d["x"]; } }

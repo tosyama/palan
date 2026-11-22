@@ -1,0 +1,69 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; int32 y; };
+func mk(int32 v) -> P p { v -> p.x; }
+func make3() -> [""]int32 d
+{
+	1 -> d["one"];
+	2 -> d["two"];
+	3 -> d["three"];
+}
+func total(@[""]int32 d) -> int32 t
+{
+	for @v in d { t + v -> t; }
+}
+func double(@![""]int32 d)
+{
+	for @!v in d { v * 2 -> v; }
+}
+mtrace();
+{
+	[""]int32 d;
+	for copy v, k in d { printf("never\n"); }
+	5 -> d["e"];
+	3 -> d["c"];
+	1 -> d["a"];
+	4 -> d["d"];
+	2 -> d["b"];
+	d.remove("c");
+	for copy v, k in d { printf("%s=%d ", k, v); }
+	printf("\n");
+	for @!v, k in d {
+		if v == 4 { continue; }
+		v + 10 -> v;
+		if v == 11 { break; }
+	}
+	double(@!d);
+	for @v, k in d { printf("%s=%d ", k, v); }
+	printf("%d\n", total(@d));
+
+	[20]uint8 buf;
+	int32 i = 0;
+	while i < 20 {
+		sprintf(buf, "k%d", i);
+		i -> d[buf];
+		i + 1 -> i;
+	}
+	0 -> i;
+	while i < 18 {
+		sprintf(buf, "k%d", i);
+		remove(@!d, @buf);
+		i + 1 -> i;
+	}
+	for copy v, k in d { printf("%s=%d ", k, v); }
+	printf("\n");
+
+	for copy v, k in make3() { printf("%s=%d ", k, v); }
+	printf("\n");
+
+	[""]P ps;
+	mk(1) ->> ps["a"];
+	mk(2) -> ps["b"];
+	for @!p, k in ps {
+		p.x * 10 -> p.y;
+		p.y + 1 -> ps[k].y;
+	}
+	for copy p in ps { printf("%d %d ", p.x, p.y); }
+	printf("\n");
+}
+muntrace();

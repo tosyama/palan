@@ -690,7 +690,8 @@ void PlnSemanticAnalyzer::validateOperatorSig(const json& funcDef)
 }
 
 // The header's data pointer: what `v[i]` indexes and a C function or a `[]T`
-// receives. Through a read-only borrow the elements are read-only too.
+// receives. Through a read-only borrow the elements are read-only too. A
+// dictionary's values are a `[+]T` header embedded at the end of its own.
 json PlnSemanticAnalyzer::varrData(json varr)
 {
 	// LCOV_EXCL_BR_START
@@ -705,7 +706,8 @@ json PlnSemanticAnalyzer::varrData(json varr)
 		elems["mutable"] = false;
 		elems["base-type"] = withArrPermission(elems["base-type"], false);
 	}
-	return {{"expr-type","field-access"},{"ptr-expr",move(varr)},{"offset",16},{"value-type",move(elems)}};
+	int offset = isDictPntr(vt) ? DictValuesOffset + 16 : 16;
+	return {{"expr-type","field-access"},{"ptr-expr",move(varr)},{"offset",offset},{"value-type",move(elems)}};
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 

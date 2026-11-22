@@ -634,6 +634,16 @@ TEST(sa_error, dict)
 		{"error_1161_dict_key_type.pa", ":2:11: error: cannot convert 'int64' to '@uint8'."},
 		{"error_1162_dict_builtin_redefined.pa", ":1:1: error: Function 'has' is already defined."},
 		{"error_1163_dict_field_write_through_borrow.pa", ":3:7: error: cannot write through read-only pointer '@T'"},
+		{"error_1164_dict_for_remove.pa", ":2:22: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1165_dict_for_clear.pa", ":2:21: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1166_dict_for_store.pa", ":2:19: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1167_dict_for_store_key.pa", ":2:22: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1168_dict_for_store_borrow.pa", ":1:39: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1169_dict_for_transfer.pa", ":3:15: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1170_dict_for_pass.pa", ":3:17: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1171_dict_for_key_assign.pa", ":2:22: error: cannot assign to 'k': the index or key of a 'for' loop is read-only."},
+		{"error_1172_dict_for_key_typed.pa", ":2:1: error: the key of a 'for' loop over a dictionary is '@[]uint8', which is not written."},
+		{"error_1173_dict_for_write_through_borrow.pa", ":1:28: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -227,10 +227,19 @@ cexport func __pln_dict_settle(@!void h, int64 elemSize)
 	rebuild(h, word(h, TSIZE));
 }
 
-// The key at position i, or NULL for a removed one.
+// The key at position i, or NULL for a removed one or one past those used.
 cexport func __pln_dict_key(@void h, int64 i) -> @uint8
 {
+	if i >= word(h, USED) { return NULL; }
 	return entKey(word(h, ENTS), i) as @uint8;
+}
+
+// The first position from i on whose key is not removed, or the number used.
+cexport func __pln_dict_next(@void h, int64 i) -> int64
+{
+	int64 n = word(h, USED);
+	while i < n && entKey(word(h, ENTS), i) == 0 { i + 1 -> i; }
+	return i;
 }
 
 // Removes the keys, keeping the storage; the caller empties the values first.
@@ -344,7 +353,9 @@ func testDict()
 		pos -> last;
 		i + 1 -> i;
 	}
+	expect(__pln_dict_next(h, 0) == 9 && __pln_dict_next(h, 9) == 9, "next skips the removed");
 	expect(__pln_dict_add(h, "k5") == 49, "add a removed key again");
+	expect(__pln_dict_next(h, 50) == 50 && __pln_dict_key(h, 50) == NULL, "past those used");
 
 	@!void d = __pln_dict_new();
 	__pln_dict_add(d, "old");

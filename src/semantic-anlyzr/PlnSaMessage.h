@@ -248,6 +248,7 @@ enum PlnSaMessageCode {
 	E_BitFieldLiteralOutOfRange,	// arg1: the literal as written, arg2: field name, arg3: width
 	E_DictBorrowNeedsAddrOf,
 	E_StructLitStringKey,	// arg1: struct name
+	E_ForDictKeyTyped,
 };
 
 class PlnSaMessage

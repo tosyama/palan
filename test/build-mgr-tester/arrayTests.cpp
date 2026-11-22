@@ -752,3 +752,10 @@ TEST(build_mgr, dict_index_mtrace) {
 	expectMtraceRun("443_dict_index_mtrace",
 		"13 5 2 3\n1 0 0\n4 99\n3\n4 36 39\n105 4 7 9\n4 1 3 105 4\n", 90);
 }
+
+// A 'for' runs in the order the keys were added, past removed ones and after
+// compacting, over a dictionary a call returns too.
+TEST(build_mgr, dict_for_mtrace) {
+	expectMtraceRun("445_dict_for_mtrace",
+		"e=5 a=1 d=4 b=2 \ne=30 a=22 d=8 b=4 64\ne=30 a=22 d=8 b=4 k18=18 k19=19 \none=1 two=2 three=3 \n1 11 2 21 \n", 58);
+}

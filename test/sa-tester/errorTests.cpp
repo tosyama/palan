@@ -1283,9 +1283,9 @@ TEST(sa_error, implicit_args)
 TEST(sa_error, for_loop)
 {
 	const pair<string, string> cases[] = {
-		{"error_838_for_not_array.pa", ":1:28: error: 'for' takes an array, or a struct whose type has 'iter' and 'next', to iterate over."},
-		{"error_839_for_index_assign.pa", ":1:34: error: cannot assign to 'i': the index of a 'for' loop is read-only."},
-		{"error_840_for_index_addr_of.pa", ":1:46: error: cannot assign to 'i': the index of a 'for' loop is read-only."},
+		{"error_838_for_not_array.pa", ":1:28: error: 'for' takes an array, a dictionary, or a struct whose type has 'iter' and 'next', to iterate over."},
+		{"error_839_for_index_assign.pa", ":1:34: error: cannot assign to 'i': the index or key of a 'for' loop is read-only."},
+		{"error_840_for_index_addr_of.pa", ":1:46: error: cannot assign to 'i': the index or key of a 'for' loop is read-only."},
 		{"error_841_for_unsized.pa", ":1:35: error: 'len' cannot tell this array's length: an array declared with its size, or a variable-length array, keeps one, but a '[]T' does not."},
 		{"error_843_for_ro_write.pa", ":1:27: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
 		{"error_845_for_dup_name.pa", ":1:17: error: Variable 'a' is already declared."},
@@ -1310,7 +1310,7 @@ TEST(sa_error, for_loop)
 		{"error_874_for_ro_row_write_borrow.pa", ":1:43: error: cannot write through read-only pointer '@T'"},
 		{"error_875_for_index_not_integer.pa", ":2:1: error: the index of a 'for' loop must be of an integer type, not 'flo64'."},
 		{"error_876_for_index_too_narrow.pa", ":2:1: error: the index type 'int8' cannot hold every index of an array of length 129."},
-		{"error_877_for_typed_index_assign.pa", ":2:28: error: cannot assign to 'i': the index of a 'for' loop is read-only."},
+		{"error_877_for_typed_index_assign.pa", ":2:28: error: cannot assign to 'i': the index or key of a 'for' loop is read-only."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

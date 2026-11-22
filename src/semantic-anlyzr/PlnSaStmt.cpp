@@ -475,7 +475,9 @@ static void aliasLoopElem(json& node, const string& name, const json& elem)
 }
 
 // `for a, i in arr { }` becomes a while over i, in a block of its own that
-// holds arr, evaluated once, and its length.
+// holds arr, evaluated once, and its length. Over a dictionary `for a, k in d`,
+// i runs over the values' positions that std/rt finds live, and k is the key
+// at i.
 json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 {
 	// LCOV_EXCL_BR_START
@@ -497,6 +499,12 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	json block = json::array();
 
 	json arrType = range["value-type"];
+	bool isDict = isDictPntr(arrType);
+	bool typedIdx = stmt.contains("index-type");
+	if (isDict && typedIdx) {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ForDictKeyTyped) << endl;
+		exit(1);
+	}
 	bool rangeBorrow = arrType.contains("mutable");
 	string arr = "__for_" + to_string(tempVarCounter_++);
 	// The range is moved into `arr` below; a length known only at run time is
@@ -522,21 +530,54 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	// A typed index is a conversion of a hidden int64 counter, so an index type
 	// too narrow for a run-time length wraps like `int32(i)` instead of
 	// looping forever, and the elements are still reached through the counter.
-	bool typedIdx = stmt.contains("index-type");
-	string idx = typedIdx || !stmt.contains("index") ? "__for_i_" + to_string(tempVarCounter_++) : stmt["index"].get<string>();
-	for (auto& s : sa_var_decl(varDecl(idx, i64, {{"expr-type","lit-int"},{"value","0"},{"loc",loc}}, loc)))
-		block.push_back(move(s));
-	string len = "__for_len_" + to_string(tempVarCounter_++);
+	string idx = typedIdx || isDict || !stmt.contains("index") ? "__for_i_" + to_string(tempVarCounter_++) : stmt["index"].get<string>();
 	json saArr = {{"expr-type","id"},{"name",arr},{"var-type",arrType},{"value-type",arrType}};
-	json lenVal = arrLenOf(saArr, stmt["range"]);
+	json idxPlus1 = {{"expr-type","add"},{"left",id(idx)},{"loc",loc},
+	                 {"right",{{"expr-type","lit-int"},{"value","1"},{"loc",loc}}}};
+	auto rtCall = [&](const string& name, json pos, json ret) {
+		return json{{"expr-type","call"},{"name",name},{"func-type","c"},
+		            {"args",json::array({saArr, move(pos)})},{"value-type",move(ret)}};
+	};
+	json step = json::array();
+	if (isDict) {
+		declareVar(idx, i64);
+		block.push_back({{"stmt-type","var-decl"},
+		                 {"vars",json::array({{{"name",idx},{"var-type",i64},{"init",rtCall("__pln_dict_next", lenLit(0), i64)}}})}});
+		step.push_back({{"stmt-type","assign"},{"name",idx},{"value",rtCall("__pln_dict_next", sa_expression(idxPlus1), i64)}});
+		if (stmt.contains("index")) {
+			const string& key = stmt["index"];
+			json keyType = {{"type-kind","pntr"},{"mutable",false},{"base-type",{{"type-kind","prim"},{"type-name","uint8"}}}};
+			declareVar(key, keyType);
+			block.push_back({{"stmt-type","var-decl"},
+			                 {"vars",json::array({{{"name",key},{"var-type",keyType},{"init",rtCall("__pln_dict_key", id(idx), keyType)}}})}});
+			step.push_back({{"stmt-type","assign"},{"name",key},{"value",rtCall("__pln_dict_key", sa_expression(id(idx)), keyType)}});
+		}
+	} else {
+		for (auto& s : sa_var_decl(varDecl(idx, i64, {{"expr-type","lit-int"},{"value","0"},{"loc",loc}}, loc)))
+			block.push_back(move(s));
+		step.push_back({{"stmt-type","assign"},{"name",idx},{"value",sa_expression(idxPlus1)}});
+	}
+	string len = "__for_len_" + to_string(tempVarCounter_++);
+	json lenVal = isDict ? json{{"expr-type","field-access"},{"ptr-expr",saArr},{"offset",DictUsedOffset},{"value-type",i64}}
+	                     : arrLenOf(saArr, stmt["range"]);
 	declareVar(len, i64);
 	block.push_back({{"stmt-type","var-decl"},
 	                 {"vars",json::array({{{"name",len},{"var-type",i64},{"init",move(lenVal)}}})}});
 
 	json cond = sa_expression({{"expr-type","cmp"},{"op","<"},{"left",id(idx)},{"right",id(len)},{"loc",loc}});
-	json step = json::array({{{"stmt-type","assign"},{"name",idx},
-		{"value",sa_expression({{"expr-type","add"},{"left",id(idx)},{"loc",loc},
-		                        {"right",{{"expr-type","lit-int"},{"value","1"},{"loc",loc}}}})}}});
+
+	// The values do not move, as the body cannot add a key; they are indexed as
+	// an array is.
+	if (isDict) {
+		arr = "__for_vals_" + to_string(tempVarCounter_++);
+		json data = varrData(saArr);
+		arrType = data["value-type"];
+		arrType["mutable"] = isWritableThrough(arrType);
+		declareVar(arr, arrType);
+		block.push_back({{"stmt-type","var-decl"},
+		                 {"vars",json::array({{{"name",arr},{"var-type",arrType},{"init",move(data)}}})}});
+		saArr = {{"expr-type","id"},{"name",arr},{"var-type",arrType},{"value-type",arrType}};
+	}
 
 	const json& elemType = isVarrPntr(arrType) ? arrType["base-type"]["base-type"] : arrType["base-type"];
 	json declType = astTypeOf(elemType);
@@ -574,7 +615,7 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	bool viaAddrOf = rangeAst.value("expr-type", "") == "addr-of";
 	vector<string> path;
 	bool pinned = locationPath(viaAddrOf ? rangeAst["object"] : rangeAst, path);
-	if (pinned) pinnedRanges_.push_back({move(path), isVarrPntr(arrType), !viaAddrOf && rangeBorrow});
+	if (pinned) pinnedRanges_.push_back({move(path), isDict || isVarrPntr(arrType), !viaAddrOf && rangeBorrow});
 	string idxName = stmt.value("index", idx);
 	forIndexVars_.insert(idxName);
 	enterGivenLoop();
@@ -614,7 +655,7 @@ json PlnSemanticAnalyzer::sa_for_stmt(const json& stmt)
 		json t = vt;
 		return sa_for_struct(stmt, t, &rangeSa);
 	}
-	if (!isVarrPntr(vt) && !isArrLevel(vt)) {
+	if (!isVarrPntr(vt) && !isArrLevel(vt) && !isDictPntr(vt)) {
 		cerr << locPrefix(range) << PlnSaMessage::getMessage(E_ForRangeNotArray) << endl;
 		exit(1);
 	}
@@ -1652,6 +1693,7 @@ json PlnSemanticAnalyzer::pinValue(json saValue, const json& astValue, json& bod
 // address the adding returns.
 json PlnSemanticAnalyzer::sa_dict_store_stmt(const json& stmt, json saDict, json* litAddr)
 {
+	checkRangeChange(stmt, stmt["target"]["array"], RangeChange::Borrow);
 	if (!isWritableThrough(saDict["value-type"])) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
 		exit(1);

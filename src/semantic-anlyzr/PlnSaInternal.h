@@ -274,6 +274,10 @@ inline bool isVarrPntr(const json& vt)
 }
 inline bool isVarrStorage(const json& vt) { return isVarrPntr(vt) && !vt.contains("mutable"); }
 inline bool isDictAstType(const json& t) { return t.value("type-kind","") == "dict"; }
+// std/rt's dictionary header: {live, used, cap, ents, tsize, table}, then the
+// values' `[+]T` header.
+constexpr int DictUsedOffset = 8;
+constexpr int DictValuesOffset = 48;
 // A `[""]T` value: one word pointing at the header std/rt keeps. Its kind is
 // not the written "dict", so that a type already analyzed is not taken for one
 // written.

@@ -498,7 +498,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "'len' cannot tell this array's length: an array declared with its size, or a variable-length array, keeps one, but a '[]T' does not.";
 
 		case E_ForRangeNotArray:
-			return "'for' takes an array, or a struct whose type has 'iter' and 'next', to iterate over.";
+			return "'for' takes an array, a dictionary, or a struct whose type has 'iter' and 'next', to iterate over.";
 
 		case E_GlobalNotReplaceable:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -536,7 +536,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_AssignToForIndex:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "cannot assign to '" + arg1 + "': the index of a 'for' loop is read-only.";
+			return "cannot assign to '" + arg1 + "': the index or key of a 'for' loop is read-only.";
 
 		case E_ChangeForRange:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -579,6 +579,9 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_StructLitStringKey:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "a value of struct '" + arg1 + "' names its fields; a string key is for a dictionary.";
+
+		case E_ForDictKeyTyped:
+			return "the key of a 'for' loop over a dictionary is '@[]uint8', which is not written.";
 
 		case E_DictBorrowNeedsAddrOf:
 			return "a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'.";

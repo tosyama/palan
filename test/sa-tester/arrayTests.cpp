@@ -1415,3 +1415,23 @@ TEST(sa, dict_index)
 	ASSERT_EQ(funcName(g["left"]["name"]), "__pln_has_dict_int32");
 	ASSERT_EQ(funcName(g["right"]["name"]), "__pln_has_dict_int32");
 }
+
+// A 'for' over a dictionary runs over the positions std/rt finds live, with the
+// key at each, and indexes the values' data as an array.
+TEST(sa, dict_for)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/359_dict_for.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& block = jout["functions"][0]["body"][0]["body"];
+	ASSERT_EQ(block[1]["vars"][0]["init"]["name"], "__pln_dict_next");
+	ASSERT_EQ(block[2]["vars"][0]["name"], "k");
+	ASSERT_EQ(block[2]["vars"][0]["init"]["name"], "__pln_dict_key");
+	ASSERT_EQ(block[3]["vars"][0]["init"]["offset"], 8);
+	ASSERT_EQ(block[4]["vars"][0]["init"]["offset"], 64);
+	const auto& loop = block[5]["body"];
+	ASSERT_EQ(loop[loop.size() - 2]["value"]["name"], "__pln_dict_next");
+	ASSERT_EQ(loop[loop.size() - 1]["name"], "k");
+	const auto& writes = jout["functions"][1]["body"][0]["body"];
+	ASSERT_EQ(writes[3]["vars"][0]["var-type"]["mutable"], true);
+}

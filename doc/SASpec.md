@@ -762,6 +762,16 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   method-form push/pop/resize, or a `@!` borrow passed on or bound as is). Indices on the path
   are not compared, so any index counts as the iterated one.
 
+  Over a dictionary `d` (`for copy v, k in d`), the block is the same with these differences.
+  The hidden index starts at `__pln_dict_next(__for_N, 0)` and steps to
+  `__pln_dict_next(__for_N, index + 1)` (std/rt's first live position from there on, or the
+  number of positions used); `k`, when written, is a read-only `@uint8` declared from
+  `__pln_dict_key(__for_N, index)` and set again after each step, and is read-only as an index
+  is. The length is the header's number of positions used (offset 8), and the elements are
+  those of a hidden `__for_vals_N`, the values' data pointer (offset 64), indexed as above. A
+  type on `k` is E_ForDictKeyTyped. A store `x -> d[k]` into the range is E_ChangeForRange too,
+  as it may add a key; one into a value's field is not.
+
   Over a struct `s` (`for copy c, i in s`), SA lowers it to a `block` holding, in order:
   - the iterator `__pin_N` that the call `iter(@s)` (or `iter(@!s)`) returns. When `s` is a value
     a call returns, it is first held in a `__pin_N` of its own, which the block frees if it owns it.

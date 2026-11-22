@@ -1,0 +1,2 @@
+[""]int32 d;
+for copy v in d { 1 -> d["x"]; }
