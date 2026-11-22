@@ -1,0 +1,4 @@
+func mk() -> [3]int32 r
+{
+	return [1, 2, 3];
+}

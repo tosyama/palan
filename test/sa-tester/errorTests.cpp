@@ -1084,6 +1084,24 @@ TEST(sa_error, named_ret_single_return_value)
 	ASSERT_NE(sa.find(":2:2: error: Function with named return values requires bare 'return;' statement."), string::npos) << sa;
 }
 
+TEST(sa_error, named_ret_lit_return_value)
+{
+	const char* files[] = {
+		"error_1195_named_ret_varr_lit.pa",
+		"error_1196_named_ret_dict_lit.pa",
+		"error_1197_named_ret_empty_dict.pa",
+		"error_1198_named_ret_fixed_arr_lit.pa",
+	};
+	for (auto file : files) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			string("palan-gen-ast ../test/testdata/sa/") + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(":3:2: error: Function with named return values requires bare 'return;' statement."), string::npos) << file << ": " << sa;
+	}
+}
+
 TEST(sa_error, lit_arg)
 {
 	const pair<string, string> cases[] = {

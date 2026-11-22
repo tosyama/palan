@@ -2120,8 +2120,8 @@ json PlnSemanticAnalyzer::bindReturnValueToTemp(const json& stmt, json& ret)
 // ret-type, which is the block's storage pointer.
 json PlnSemanticAnalyzer::bindReturnLit(json& stmt)
 {
-	if (!currentFunc_->contains("ret-type") || !isOwnedBlock((*currentFunc_)["ret-type"])
-			|| !stmt.contains("values") || stmt["values"].size() != 1
+	if (currentFunc_->contains("rets") || !currentFunc_->contains("ret-type")
+			|| !isOwnedBlock((*currentFunc_)["ret-type"]) || !stmt.contains("values") || stmt["values"].size() != 1
 			|| !isAggregateLit(stmt["values"][0]))
 		return json::array();
 	if (!retSlot_.empty()) {
