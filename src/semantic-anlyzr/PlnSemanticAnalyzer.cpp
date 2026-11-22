@@ -354,7 +354,7 @@ void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json&
 {
 	const json* t = &type;
 	bool isPointee = false;
-	while (t->value("type-kind","") == "arr" || t->value("type-kind","") == "pntr") {
+	while (t->value("type-kind","") == "arr" || t->value("type-kind","") == "pntr" || isDictAstType(*t)) {
 		isPointee = t->value("type-kind","") == "pntr";
 		if (isFuncPtr(*t) && t->value("mutable", false)) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_FuncPtrMutable) << endl;
@@ -441,7 +441,7 @@ static string unsupportedNativeSigTypeKind(const json& vt)
 	string k = vt.value("type-kind", "");
 	if (k == "pntr")
 		return vt.contains("base-type") ? unsupportedNativeSigTypeKind(vt["base-type"]) : "";
-	if (k == "prim" || k == "struct" || k == "func" || k == "varr" || k.empty())
+	if (k == "prim" || k == "struct" || k == "func" || k == "varr" || k == "strdict" || k.empty())
 		return "";
 	return k == "arr" ? "array" : k;
 }
@@ -985,23 +985,9 @@ void PlnSemanticAnalyzer::nonConstNames(const json& expr, vector<const json*>& i
 	}
 }
 
-// Until dictionaries are analyzed, one in any place a type is written is
-// rejected before the module is.
-void PlnSemanticAnalyzer::rejectDictTypes(const json& node, const json& locNode) const
-{
-	if (!node.is_structured()) return;
-	const json& at = node.is_object() && node.contains("loc") ? node : locNode;
-	if (node.is_object() && node.value("type-kind", "") == "dict") {
-		cerr << locPrefix(at) << PlnSaMessage::getMessage(E_DictNotImplemented) << endl;
-		exit(1);
-	}
-	for (auto& child : node) rejectDictTypes(child, at);
-}
-
 void PlnSemanticAnalyzer::beginModule(const json& ast)
 {
 	inputFilePath = ast["original"];
-	rejectDictTypes(ast["ast"], ast["ast"]);
 	moduleId_     = ast["module"];
 	symbolScope_  = moduleId_;
 	sa["original"]      = ast["original"];
@@ -1300,7 +1286,10 @@ json PlnSemanticAnalyzer::exportedGlobalType(const json& stmt)
 	takeVarStorage(vt);
 	program_->resolving.push_back({this, name, &stmt});
 	string spec = vt.value("specifier", "");
-	if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")) {
+	if (isDictAstType(vt)) {
+		ensureTypeRefs(vt);
+		vt = arrVarStorage(stmt, resolveKnownType(stmt, vt)).type;
+	} else if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")) {
 		if (!fixArrDeclSizes(stmt, var, vt)) {
 			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ExportedGlobalSizeNotConst, name) << endl;
 			exit(1);

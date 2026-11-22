@@ -66,6 +66,14 @@ const VarrType* PlnTypeRegistry::varr(const PlnType* elem, bool embedded)
     return ins->second.get();
 } // LCOV_EXCL_BR_LINE
 
+const DictType* PlnTypeRegistry::dict(const PlnType* elem)
+{
+    auto it = dictCache_.find(elem);
+    if (it != dictCache_.end()) return it->second.get();
+    auto [ins, ok] = dictCache_.emplace(elem, std::make_unique<DictType>(elem));
+    return ins->second.get();
+} // LCOV_EXCL_BR_LINE
+
 const StructType* PlnTypeRegistry::structType(const std::string& name)
 {
     auto it = structCache_.find(name);
@@ -114,7 +122,7 @@ std::string unrepresentableTypeName(const json& j)
         if (tname.empty()) return "malformed type"; // LCOV_EXCL_BR_LINE -- no real producer emits this
         return PrimTypeNames::instance().toEnum.count(tname) ? "" : tname; // LCOV_EXCL_BR_LINE
     }
-    if (kind == "pntr" || kind == "varr")
+    if (kind == "pntr" || kind == "varr" || kind == "strdict")
         return j.contains("base-type") ? unrepresentableTypeName(j["base-type"]) : "malformed type"; // LCOV_EXCL_BR_LINE
     if (kind == "struct")
         return j.contains("type-name") ? "" : "anonymous struct"; // LCOV_EXCL_BR_LINE -- normalizeCType only folds a named tag to "struct"
@@ -158,6 +166,8 @@ const PlnType* PlnTypeRegistry::fromJson(const json& j)
         return ptr(fromJson(j["base-type"]));
     if (kind == "varr")
         return varr(fromJson(j["base-type"]), j.value("embedded", false));
+    if (kind == "strdict")
+        return dict(fromJson(j["base-type"]));
     if (kind == "func") {
         std::vector<const PlnType*> params;
         for (auto& p : j["parameters"]) params.push_back(fromJson(p["var-type"]));
@@ -193,6 +203,8 @@ json PlnTypeRegistry::toJson(const PlnType* t)
         if (v->embedded) j["embedded"] = true;
         return j;
     }
+    if (t->kind == PlnType::Kind::Dict)
+        return {{"type-kind", "strdict"}, {"base-type", toJson(static_cast<const DictType*>(t)->elem)}}; // LCOV_EXCL_BR_LINE
     if (t->kind == PlnType::Kind::Struct) {
         const auto* s = static_cast<const StructType*>(t);
         return {{"type-kind", "struct"}, {"type-name", s->name}}; // LCOV_EXCL_BR_LINE
@@ -282,7 +294,8 @@ TypeCompat typeCompat(const PlnType* from, const PlnType* to,
         const auto* pt = static_cast<const PtrType*>(to);
         if (pf->base == pt->base) return TypeCompat::Identical;
         // A header is not its elements, so it must not pass as `@void`.
-        if (pf->base->kind == PlnType::Kind::Varr || pt->base->kind == PlnType::Kind::Varr)
+        auto isHeader = [](const PlnType* b) { return b->kind == PlnType::Kind::Varr || b->kind == PlnType::Kind::Dict; };
+        if (isHeader(pf->base) || isHeader(pt->base))
             return TypeCompat::Incompatible;
 
         bool fromIsVoid = pf->base->kind == PlnType::Kind::Prim
@@ -402,6 +415,7 @@ std::string symbolType(const json& t)
         {"pntr",   {"type-kind", "base-type", "mutable", "embedded", "stride", "arr-size", "variadic"}},
         {"func",   {"type-kind", "parameters", "ret-type"}},
         {"varr",   {"type-kind", "base-type", "embedded"}},
+        {"strdict", {"type-kind", "base-type"}},
     };
     const std::string kind = t.value("type-kind", "");
     auto known = knownKeys.find(kind);
@@ -418,6 +432,7 @@ std::string symbolType(const json& t)
     if (kind == "struct") return symbolUserName(t["type-name"].get<std::string>());
     if (kind == "pntr") return symbolPntr(t);
     if (kind == "varr") return std::string(t.value("embedded", false) ? "VC" : "V") + symbolType(t["base-type"]);
+    if (kind == "strdict") return "D" + symbolType(t["base-type"]);
     const json& params = t["parameters"];
     std::string s = "F" + std::to_string(params.size()) + "_";
     for (auto& p : params) s += symbolType(p["var-type"]);

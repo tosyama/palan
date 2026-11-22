@@ -580,8 +580,8 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "a value of struct '" + arg1 + "' names its fields; a string key is for a dictionary.";
 
-		case E_DictNotImplemented:
-			return "a dictionary type is not supported in this version.";
+		case E_DictBorrowNeedsAddrOf:
+			return "a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'.";
 
 		case E_DictLitContext:
 			return "a '{name: value}' literal can only be used as a struct value: a struct variable's "

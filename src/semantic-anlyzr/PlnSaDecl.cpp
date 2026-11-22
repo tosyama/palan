@@ -479,7 +479,8 @@ json PlnSemanticAnalyzer::sa_resolved_var_decl(const json& stmt2, vector<VarStor
 {
 	storage.resize(stmt2["vars"].size(), VarStorage::Heap);
 	auto isArrInit = [](const json& var) {
-		return var["var-type"].value("type-kind", "") == "arr" && var.contains("init");
+		const json& vt = var["var-type"];
+		return (vt.value("type-kind", "") == "arr" || isDictAstType(vt)) && var.contains("init");
 	};
 	auto isLitInit = [](const json& var) { return var.contains("init") && isAggregateLit(var["init"]); };
 	auto isStructInit = [&](const json& var) {
@@ -550,7 +551,13 @@ json PlnSemanticAnalyzer::sa_var_decl_group(const json& stmt2, VarStorage storag
 	string tk = vtype.value("type-kind", "");
 
 	string spec = vtype.value("specifier", "");
-	if (tk == "arr" && (spec == "variable" || spec == "raw"))
+	// std/rt allocates a dictionary's header, so it cannot be laid out in the frame.
+	if (isDictAstType(vtype) && storage == VarStorage::Frame) {
+		string shown = typeDisplayName(dictPntrType(vtype["base-type"]));
+		cerr << locPrefix(stmt2) << PlnSaMessage::getMessage(E_FrameVarType, shown) << endl;
+		exit(1);
+	}
+	if (isDictAstType(vtype) || (tk == "arr" && (spec == "variable" || spec == "raw")))
 		return sa_arr_var_decl(stmt2, storage);
 	if (tk == "prim" && structDefs_.count(vtype.value("type-name", "")))
 		return sa_struct_var_decl(stmt2, storage);
@@ -1396,7 +1403,7 @@ json PlnSemanticAnalyzer::resolveWrittenType(const json& locNode, const json& ty
 		return bound ? *bound : type;
 	}
 	json resolved = type;
-	if ((tk == "pntr" || tk == "arr" || tk == "embed") && type.contains("base-type"))
+	if ((tk == "pntr" || tk == "arr" || tk == "dict" || tk == "embed") && type.contains("base-type"))
 		resolved["base-type"] = resolveWrittenType(locNode, type["base-type"]);
 	if (tk == "func") {
 		for (auto& p : resolved["parameters"]) p["var-type"] = resolveWrittenType(locNode, p["var-type"]);

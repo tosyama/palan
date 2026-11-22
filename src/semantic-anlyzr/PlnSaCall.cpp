@@ -1076,6 +1076,8 @@ optional<SaDiag> PlnSemanticAnalyzer::callArgMismatch(const json& argAst, const 
 		return SaDiag{E_StructBorrowNeedsAddrOf}; // LCOV_EXCL_BR_LINE
 	if (isVarrPntr(paramVT) && isPtrBorrow(paramVT) && isVarrStorage(saArg["value-type"]))
 		return SaDiag{E_VarrBorrowNeedsAddrOf}; // LCOV_EXCL_BR_LINE
+	if (isDictPntr(paramVT) && isPtrBorrow(paramVT) && isDictStorage(saArg["value-type"]))
+		return SaDiag{E_DictBorrowNeedsAddrOf}; // LCOV_EXCL_BR_LINE
 	// A C function takes an array by name, as C passes one.
 	if (!isCFunc && isPtrBorrow(paramVT) && namesArrStorage(saArg))
 		return SaDiag{E_ArrBorrowNeedsAddrOf}; // LCOV_EXCL_BR_LINE

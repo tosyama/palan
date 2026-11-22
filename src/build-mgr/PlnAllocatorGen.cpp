@@ -44,6 +44,13 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	    << "void *memcpy(void *dest, const void *src, unsigned long n);\n"
 	    << "void *memmove(void *dest, const void *src, unsigned long n);\n"
 	    << "void abort(void);\n";
+	bool hasDict = any_of(shapes.arrays.begin(), shapes.arrays.end(),
+	                      [](const json& s) { return s["shape-kind"] == "dict"; });
+	if (hasDict)
+		hdr << "void *__pln_dict_new(void);\n"
+		    << "void __pln_dict_free(void *h);\n"
+		    << "void __pln_dict_copy(void *dst, const void *src);\n"
+		    << "const unsigned char *__pln_dict_key(const void *h, long i);\n";
 	// A type's '->' and the function storing its field initializers are
 	// Palan functions, called as C calls them.
 	for (auto& shape : shapes.structs) {
@@ -594,9 +601,58 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			    << "}\n";
 	}
 
+	// A dictionary's header is std/rt's, which keeps the keys; its values
+	// are the `[+]T` at its end, a value at each key's position. A removed
+	// key's value is already released, and its slot left NULL.
+	auto emitDict = [&](const string& key, const string& values) {
+		ElemOps e = opsOf(*varrElemDescs.at(values));
+		string hdr = "__pln_" + key, vals = "__pln_" + values;
+		out << "\nexport type " << hdr << " { int64 live; int64 used; int64 cap; int64 ents; int64 tsize; int64 table; $"
+		    << vals << " values; };\n"
+		    << "export func __pln_alloc_" << key << "() -> @!" << hdr << " h {\n"
+		    << "    __pln_dict_new() -> h;\n"
+		    << "}\n"
+		    << "export func __pln_free_" << key << "(@!" << hdr << " h) {\n"
+		    << "    if (h == NULL) { return; }\n"
+		    << "    __pln_fini_" << values << "(@!h.values);\n"
+		    << "    __pln_dict_free(h);\n"
+		    << "    return;\n"
+		    << "}\n";
+		// The source's removed positions are left out, so its values are
+		// copied one by one to the positions their keys take in dst. Owned
+		// slots are pointers, which '@' addresses only through a run of them.
+		string dstRun = e.owned ? "[]" + e.ownElem : e.data, srcRun = e.owned ? "[]" + e.ownElem : e.run;
+		out << "func __pln_copyvals_" << key << "(" << dstRun << " dst, " << srcRun << " src, @" << hdr << " s) {\n"
+		    << "    int64 i = 0;\n"
+		    << "    int64 j = 0;\n"
+		    << "    while i < s.used {\n"
+		    << "        if __pln_dict_key(s, i) != NULL {\n";
+		if (e.owned)
+			out << "            if src[i] == NULL { __pln_clear_" << e.key << "(dst as " << e.data << ", j); }\n"
+			    << "            else { __pln_set_" << e.key << "(dst, j, " << borrowed(e, "src[i]") << "); }\n";
+		else
+			out << "            src[i] -> dst[j];\n";
+		out << "            j + 1 -> j;\n"
+		    << "        }\n"
+		    << "        i + 1 -> i;\n"
+		    << "    }\n"
+		    << "}\n"
+		    << "export func __pln_copy_" << key << "(@!" << hdr << " dst, @" << hdr << " src) {\n"
+		    << "    if (dst as @void == src as @void) { return; }\n"
+		    << "    __pln_resize_" << values << "(@!dst.values, 0);\n"
+		    << "    __pln_dict_copy(dst, src);\n"
+		    << "    __pln_resize_" << values << "(@!dst.values, dst.live);\n"
+		    << "    __pln_copyvals_" << key << "(dst.values.data, src.values.data, src);\n"
+		    << "}\n";
+	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
 	for (auto& shape : elem_arr_shapes) {
-		ElemOps e = opsOf(shape["elem"]);
 		string key = shape["shape-key"];
+		if (shape["shape-kind"] == "dict") {
+			emitDict(key, shape["values"]);
+			continue;
+		}
+		ElemOps e = opsOf(shape["elem"]);
 		emitElemHelpers(e);
 		vector<string> names = lenNames(e.nlens);
 		string mp = lenParams(e.nlens), ma = lenArgs(names);

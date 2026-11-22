@@ -291,7 +291,7 @@ void PlnSemanticAnalyzer::requireSupportedCGlobal(const json& entry, const strin
 // taking the address of its slot. Null for any other variable.
 json PlnSemanticAnalyzer::storageBorrowType(const string& name, const json& varType, bool isMutable) const
 {
-	if (isStructStorage(varType) || isVarrStorage(varType)) {
+	if (isStructStorage(varType) || isVarrStorage(varType) || isDictStorage(varType)) {
 		json vt = varType;
 		vt["mutable"] = isMutable;
 		return vt;
@@ -1359,6 +1359,10 @@ void PlnSemanticAnalyzer::checkBorrowSource(const json& locNode, const json& saV
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_VarrBorrowNeedsAddrOf) << endl;
 		exit(1);
 	}
+	if (isDictPntr(dstType) && isPtrBorrow(dstType) && isDictStorage(saValue["value-type"])) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_DictBorrowNeedsAddrOf) << endl;
+		exit(1);
+	}
 	if (isPtrBorrow(dstType) && namesArrStorage(saValue)) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ArrBorrowNeedsAddrOf) << endl;
 		exit(1);
@@ -1718,6 +1722,10 @@ json PlnSemanticAnalyzer::sa_expr_arr_index(const json& expr, bool forWrite)
 		: arr_kind == "arr-index"    ? sa_expr_arr_index(arr, true)
 		: sa_expression(arr);
 	requireOwnedBase(sa_array, arr);
+	if (isDictPntr(sa_array["value-type"])) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_StmtNotImplemented) << endl;
+		exit(1);
+	}
 	if (isVarrPntr(sa_array["value-type"]))
 		sa_array = varrData(move(sa_array));
 	const json& array_type = sa_array["value-type"];

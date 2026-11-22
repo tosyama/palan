@@ -1,0 +1,26 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; [+]int32 v; };
+func make() -> [""]int32 { [""]int32 d; return d; }
+func dup(@[""]int32 d) -> [""]int32 { return d; }
+func two() -> [""]P a, [""]int32 b { }
+func sink([""]P d) { }
+func fill(@![""]int32 d) { }
+mtrace();
+{
+	[""]int32 a = make();
+	[""]int32 b = dup(@a);
+	b -> a;
+	a -> a;
+	dup(@a) -> b;
+	fill(@!a);
+	([""]P p, [""]int32 q) = two();
+	two() -> (p, q);
+	[""]P r = p;
+	sink(p);
+	sink(p>>);
+	[""]int32 c <<= dup(@b);
+	c ->> a;
+}
+muntrace();
+printf("ok\n");

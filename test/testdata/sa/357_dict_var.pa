@@ -1,0 +1,7 @@
+type P { int32 x; [+]int32 v; };
+func f(@[""]int32 d, [""]P p) -> [""]int32 {
+	[""]int32 c = d;
+	d -> c;
+	[""]P q <<= p;
+	return c;
+}

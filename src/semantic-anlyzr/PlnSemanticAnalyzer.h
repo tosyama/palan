@@ -66,7 +66,7 @@ enum class CopyInto { New, Existing };
 // family per shape: __pln_<op>_<struct>, and for an array of any element E,
 // __pln_<op>_arr_<E>, __pln_<op>_varr_<E> and __pln_<op>_evarr_<E> (`[+]$T`),
 // E written as the symbol of its layout.
-enum class AllocFamily { Struct, Arr, Varr, EVarr };
+enum class AllocFamily { Struct, Arr, Varr, EVarr, Dict };
 // elem is the struct for Struct, and otherwise the element as the array's
 // storage lays it out (layoutElem).
 struct AllocShapeRef { AllocFamily family; json elem; };
@@ -467,7 +467,6 @@ class PlnSemanticAnalyzer {
 
 	json sa_statements(const json& stmts);
 	void beginModule(const json& ast);
-	void rejectDictTypes(const json& node, const json& locNode) const;
 	void prescanTypes(const json& stmts, const json& funcs);
 	void indexTopDecls(const json& stmts);
 	void indexCopyFuncs(const json& funcs);
@@ -656,6 +655,7 @@ class PlnSemanticAnalyzer {
 	// the array's length and then those of elem's levels, and of the `[+]T` vt.
 	AllocShapeRef arrShape(const json& elem) { return {AllocFamily::Arr, layoutElem(elem)}; }
 	AllocShapeRef varrShape(const json& vt);
+	AllocShapeRef dictShape(const json& vt);
 	void recordArrShape(const json& elem);
 	void recordVarrShape(const json& vt);
 	// The symbol of one of the functions build-mgr generates, and a call to it.
@@ -762,6 +762,7 @@ class PlnSemanticAnalyzer {
 	json  normalizeArrBorrowType(const json& locNode, const json& type);
 	json  varrBorrowType(const json& locNode, const json& arr, bool isMutable);
 	json  varrStorageType(const json& locNode, const json& arr);
+	json  dictStorageType(const json& locNode, const json& dict);
 	json  varrElemType(const json& locNode, const json& varr);
 	json  takeOverType(const json& locNode, const json& varType);
 	// The owned block a variable of `varType` holds (a struct's or a

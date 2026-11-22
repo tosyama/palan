@@ -239,7 +239,13 @@ json PlnSemanticAnalyzer::ownedFieldType(const json& locNode, const json& vtype)
 
 json PlnSemanticAnalyzer::normalizeArrBorrowType(const json& locNode, const json& type)
 {
-	if (type.value("type-kind","") != "pntr" || type["base-type"].value("type-kind","") != "arr")
+	if (type.value("type-kind","") != "pntr") return type;
+	if (isDictAstType(type["base-type"])) {
+		json vt = dictStorageType(locNode, type["base-type"]);
+		vt["mutable"] = type.value("mutable", false);
+		return vt;
+	}
+	if (type["base-type"].value("type-kind","") != "arr")
 		return type;
 	const json& arr = type["base-type"];
 	if (arr.value("specifier","") == "variable")
@@ -287,6 +293,25 @@ json PlnSemanticAnalyzer::varrStorageType(const json& locNode, const json& arr)
 	}
 	json vt = varrPntrType(elem, embedded);
 	recordVarrShape(vt);
+	return vt;
+} // LCOV_EXCL_BR_LINE
+
+json PlnSemanticAnalyzer::dictStorageType(const json& locNode, const json& dict)
+{
+	const json& base = dict["base-type"];
+	string name = base.value("type-kind","") == "prim" ? base.value("type-name","") : "";
+	json elem;
+	if (!dict.value("embedded", false) && elemSizeBytes(name) >= 0) {
+		elem = base;
+	} else if (!dict.value("embedded", false) && structDefs_.count(name)) {
+		if (!structDefs_.at(name).isOpaque) requireCompleteStruct(name, locNode);
+		elem = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",name}}}}; // LCOV_EXCL_BR_LINE
+	} else {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_StmtNotImplemented) << endl;
+		exit(1);
+	}
+	json vt = dictPntrType(elem);
+	recordElemShape(dictShape(vt));
 	return vt;
 } // LCOV_EXCL_BR_LINE
 
@@ -346,6 +371,10 @@ json PlnSemanticAnalyzer::varrBorrowType(const json& locNode, const json& arr, b
 Storage PlnSemanticAnalyzer::arrVarStorage(const json& locNode, const json& vtype)
 {
 	Storage st;
+	if (isDictAstType(vtype)) {
+		st.type = dictStorageType(locNode, vtype);
+		return st;
+	}
 	if (isVarrAstType(vtype)) {
 		st.type = varrStorageType(locNode, vtype);
 		if (!vtype["size-expr"].is_null()) st.lens.push_back(sa_arr_size_expr(locNode, vtype["size-expr"]));
@@ -363,6 +392,7 @@ Storage PlnSemanticAnalyzer::arrVarStorage(const json& locNode, const json& vtyp
 // what a call result must be for the variable to take it over.
 json PlnSemanticAnalyzer::takeOverType(const json& locNode, const json& varType)
 {
+	if (isDictAstType(varType)) return dictStorageType(locNode, varType);
 	if (varType.value("type-kind","") != "arr") return json();
 	bool sized = !varType["size-expr"].is_null();
 	if (isVarrAstType(varType) ? sized : !sized) return json();
@@ -390,7 +420,9 @@ json PlnSemanticAnalyzer::sigType(const json& locNode, const json& type)
 		return {{"type-kind","pntr"},{"variadic",true},{"base-type",sigType(locNode, elem)}}; // LCOV_EXCL_BR_LINE
 	}
 	json t = normalizeArrBorrowType(locNode, unsizedArrToPntr(locNode, type));
-	if (isVarrAstType(t)) {
+	if (isDictAstType(t)) {
+		t = dictStorageType(locNode, t);
+	} else if (isVarrAstType(t)) {
 		t = varrStorageType(locNode, t);
 	} else if (t.value("type-kind","") == "arr") {
 		t = takeOverType(locNode, t);
@@ -471,6 +503,7 @@ string allocShapeKey(const AllocShapeRef& shape)
 	case AllocFamily::Arr:          return "arr_" + symbolType(shapeElem(shape.elem));
 	case AllocFamily::Varr:         return "varr_" + symbolType(shapeElem(shape.elem));
 	case AllocFamily::EVarr:        return "evarr_" + symbolType(shapeElem(shape.elem));
+	case AllocFamily::Dict:         return "dict_" + symbolType(shapeElem(shape.elem));
 	}
 	return ""; // LCOV_EXCL_LINE -- every family is handled above
 	// LCOV_EXCL_BR_STOP
@@ -563,6 +596,10 @@ static string allocSymbolIn(const string& allocators, const AllocShapeRef& shape
 		if (op == "initrun") params = {permPtrTo(shape.elem, true), i64, i64};
 		else if (op == "copy" || op == "assign") params = {permPtrTo(shape.elem, true), permPtrTo(shape.elem, false)};
 		else if (op != "alloc") params.push_back(permPtrTo(shape.elem, true));
+	} else if (shape.family == AllocFamily::Dict) {
+		json header = {{"type-kind","struct"},{"type-name","__pln_" + allocShapeKey(shape)}};
+		if (op == "copy") params = {permPtrTo(header, true), permPtrTo(header, false)};
+		else if (op != "alloc") params.push_back(permPtrTo(header, true));
 	} else {
 		bool isVarr = shape.family != AllocFamily::Arr;
 		GenElem g = genElem(shapeElem(shape.elem), shape.family == AllocFamily::EVarr, 0);
@@ -793,11 +830,23 @@ AllocShapeRef PlnSemanticAnalyzer::varrShape(const json& vt)
 	return laidOutVarrShape(layoutElem(vt));
 }
 
+AllocShapeRef PlnSemanticAnalyzer::dictShape(const json& vt)
+{
+	return {AllocFamily::Dict, layoutElem(vt["base-type"]["base-type"])};
+}
+
 void PlnSemanticAnalyzer::recordElemShape(const AllocShapeRef& shape)
 {
 	string shape_key = allocShapeKey(shape);
 	for (auto& s : sa["alloc-shapes"])
 		if (s.value("shape-key","") == shape_key) return;
+	// A dictionary's values are a `[+]T`, built and copied by its functions.
+	if (shape.family == AllocFamily::Dict) {
+		AllocShapeRef values{AllocFamily::Varr, shape.elem};
+		recordElemShape(values);
+		sa["alloc-shapes"].push_back({{"shape-kind","dict"},{"shape-key",shape_key},{"values",allocShapeKey(values)}}); // LCOV_EXCL_BR_LINE
+		return;
+	}
 	json desc = allocElemDesc(shape.elem, shape.family == AllocFamily::EVarr);
 	sa["alloc-shapes"].push_back({ // LCOV_EXCL_BR_LINE
 		{"shape-kind", shape.family == AllocFamily::Arr ? "arr" : "varr"}, {"shape-key",shape_key}, {"elem",move(desc)}
@@ -957,6 +1006,8 @@ json PlnSemanticAnalyzer::makeOwnedValueFreeStmt(json value, json lens)
 	}
 	if (isVarrStorage(vt))
 		return {{"stmt-type","expr"},{"body",allocHelperCall(varrShape(vt), "free", move(args))}};
+	if (isDictStorage(vt))
+		return {{"stmt-type","expr"},{"body",allocHelperCall(dictShape(vt), "free", move(args))}};
 	if (!ownsElems(vt)) return freeCall();
 	auto [elem, lenArgs] = ownedRun(vt, lens.is_null() ? locationLens(args[0]) : lens);
 	recordArrShape(elem);
@@ -1061,6 +1112,8 @@ json PlnSemanticAnalyzer::makeCopyStmt(const json& locNode, const json& dst, con
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_OpaqueHeldCopy, typeDisplayName(t)) << endl;
 		exit(1);
 	}
+	if (isDictStorage(t))
+		return {{"stmt-type","expr"},{"body",allocHelperCall(dictShape(t), "copy", json::array({dst, src}))}}; // LCOV_EXCL_BR_LINE
 
 	// LCOV_EXCL_BR_START
 	json uint64_type = {{"type-kind","prim"},{"type-name","uint64"}};
@@ -1336,7 +1389,12 @@ AggregatePlace PlnSemanticAnalyzer::arrPlace(const json& self, const vector<json
 		return json{{"expr-type","mul"},{"value-type",uint64_type},{"left",move(l)},{"right",move(r)}};
 	};
 	AggregatePlace place;
-	if (isVarrStorage(vt)) {
+	if (isDictStorage(vt)) {
+		place.shape = dictShape(vt);
+		place.heapInit = allocHelperCall(*place.shape, "alloc", json::array());
+		place.frameBytes = -1;
+		place.frameAlign = 8;
+	} else if (isVarrStorage(vt)) {
 		json zero = lenLit(0);
 		json cap = lens.empty() ? zero : lens[0];
 		place.shape = varrShape(vt);

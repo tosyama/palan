@@ -620,3 +620,24 @@ TEST(sa_error, use_after_given)
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, dict)
+{
+	const pair<string, string> cases[] = {
+		{"error_1153_dict_field.pa", ":1:1: error: unsupported struct field type."},
+		{"error_1154_dict_frame_var.pa", ":2:2: error: '$' on a variable applies only to a struct or an array, not '[\"\"]int32'."},
+		{"error_1156_dict_borrow_no_addr.pa", ":3:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'."},
+		{"error_1157_dict_borrow_var_no_addr.pa", ":2:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'."},
+		{"error_1158_dict_copy_elem_mismatch.pa", ":2:1: error: cannot copy '[\"\"]int32' into '[\"\"]int64'"},
+		{"error_1159_dict_index.pa", ":2:11: error: this statement is not supported in this version."},
+		{"error_1160_dict_value_type.pa", ":1:1: error: this statement is not supported in this version."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

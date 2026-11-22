@@ -1362,3 +1362,32 @@ TEST(sa, arr_borrow_return)
 	ASSERT_EQ(funcs.at("ar")["ret-type"]["mutable"], true);
 	ASSERT_EQ(funcs.at("vb")["ret-type"]["base-type"]["type-kind"], "varr");
 }
+
+// A dictionary is one word pointing at the header std/rt keeps; its values'
+// `[+]T` shape is recorded with its own, as the generated functions use it.
+TEST(sa, dict_var)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/357_dict_var.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& f = jout["functions"][0];
+	const auto& d = f["parameters"][0]["var-type"];
+	ASSERT_EQ(d["base-type"]["type-kind"], "strdict");
+	ASSERT_EQ(d["mutable"], false);
+	ASSERT_FALSE(f["parameters"][1]["var-type"].contains("mutable"));
+
+	const auto& body = f["body"];
+	ASSERT_EQ(funcName(body[0]["vars"][0]["init"]["name"]), "__pln_alloc_dict_int32");
+	ASSERT_EQ(funcName(body[1]["body"]["name"]), "__pln_copy_dict_int32");
+	ASSERT_EQ(body[1]["body"]["args"][1]["name"], "d");
+	ASSERT_EQ(funcName(body[2]["body"]["name"]), "__pln_copy_dict_int32");
+	ASSERT_EQ(funcName(body[7]["body"]["name"]), "__pln_free_dict_P24__pln_L13_357_dict_var_P");
+	ASSERT_EQ(body[7]["body"]["args"][0]["name"], "q");
+
+	map<string, json> shapes;
+	for (auto& s : jout["alloc-shapes"]) shapes[s.value("shape-key", s.value("shape-name", ""))] = s;
+	ASSERT_EQ(shapes["dict_int32"]["shape-kind"], "dict");
+	ASSERT_EQ(shapes["dict_int32"]["values"], "varr_int32");
+	ASSERT_EQ(shapes["varr_int32"]["shape-kind"], "varr");
+	ASSERT_EQ(shapes["dict_P24__pln_L13_357_dict_var_P"]["values"], "varr_P24__pln_L13_357_dict_var_P");
+}

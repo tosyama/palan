@@ -271,13 +271,28 @@ inline bool isVarrPntr(const json& vt)
 	    && vt["base-type"].value("type-kind","") == "varr";
 }
 inline bool isVarrStorage(const json& vt) { return isVarrPntr(vt) && !vt.contains("mutable"); }
+inline bool isDictAstType(const json& t) { return t.value("type-kind","") == "dict"; }
+// A `[""]T` value: one word pointing at the header std/rt keeps. Its kind is
+// not the written "dict", so that a type already analyzed is not taken for one
+// written.
+inline bool isDictPntr(const json& vt)
+{
+	return vt.value("type-kind","") == "pntr" && vt.contains("base-type")
+	    && vt["base-type"].value("type-kind","") == "strdict";
+}
+inline bool isDictStorage(const json& vt) { return isDictPntr(vt) && !vt.contains("mutable"); }
+inline json dictPntrType(const json& elem)
+{
+	return {{"type-kind","pntr"},{"base-type",{{"type-kind","strdict"},{"base-type",elem}}}}; // LCOV_EXCL_BR_LINE
+} // LCOV_EXCL_BR_LINE
 // A variable or parameter declared as a borrowed array ('@[n]T'/'@![n]T',
-// '@[+]T'/'@![+]T'). Checked on its var-type: a row reached through it also
-// carries "mutable" but is part of the borrowed storage, not a borrow of its own.
+// '@[+]T'/'@![+]T') or dictionary ('@[""]T'/'@![""]T'). Checked on its var-type:
+// a row reached through it also carries "mutable" but is part of the borrowed
+// storage, not a borrow of its own.
 inline bool isArrBorrowVar(const json& vt)
 {
 	return vt.value("type-kind","") == "pntr" && vt.contains("mutable")
-	    && (vt.contains("arr-size") || isVarrPntr(vt));
+	    && (vt.contains("arr-size") || isVarrPntr(vt) || isDictPntr(vt));
 }
 // Where a `[+]T` passes its data instead of its header: to C, to an unsized
 // `[]T` (whose length the callee is told some other way), or, borrowed, to a
@@ -331,7 +346,7 @@ inline bool isArrLevel(const json& t);
 // parameter owns and frees, and what a copy into it fills.
 inline bool isOwnedBlock(const json& vt)
 {
-	return isStructStorage(vt) || isVarrStorage(vt)
+	return isStructStorage(vt) || isVarrStorage(vt) || isDictStorage(vt)
 	    || (isArrLevel(vt) && (vt.contains("arr-size") || vt.contains("run-size")) && !vt.contains("mutable"));
 }
 // An owned element (a struct's, a `[+]T`'s or a row's storage) has no
@@ -657,7 +672,7 @@ inline void setArrSize(json& pntrType, const json& saSize) {
 // The array levels stop at an element that is a struct's own storage or a
 // '@T'/'@!T' pointer.
 inline bool isArrLevel(const json& t) {
-	return t.value("type-kind","") == "pntr" && !isStructStorage(t) && !isPtrBorrow(t) && !isVarrPntr(t);
+	return t.value("type-kind","") == "pntr" && !isStructStorage(t) && !isPtrBorrow(t) && !isVarrPntr(t) && !isDictPntr(t);
 }
 // An array whose elements are blocks of their own (structs, `[+]U`s, rows of
 // any length), built and freed through the generated helpers, rather than
@@ -711,6 +726,8 @@ inline string PlnSemanticAnalyzer::typeDisplayName(const json& t) const {
 	if (isVarrPntr(t))
 		return (isVarrStorage(t) ? "" : perm(t)) + "[+]" + (isVarrEmbedded(t) ? "$" : "")
 		     + typeDisplayName(t["base-type"]["base-type"]);
+	if (isDictPntr(t))
+		return (isDictStorage(t) ? "" : perm(t)) + "[\"\"]" + typeDisplayName(t["base-type"]["base-type"]);
 	if (isStructStorage(t))
 		return typeDisplayName(t["base-type"]);
 	if (isPtrBorrow(t))
@@ -794,6 +811,9 @@ inline json astTypeOf(const json& saType)
 		out = {{"type-kind","arr"},{"specifier","variable"},{"size-expr",nullptr}};
 		if (isVarrEmbedded(saType)) out["embedded"] = true;
 		elem = astTypeOf(saType["base-type"]["base-type"]);
+	} else if (isDictPntr(saType)) {
+		out = {{"type-kind","dict"}};
+		elem = astTypeOf(saType["base-type"]["base-type"]);
 	} else if (isArrLevel(saType) && saType.contains("arr-size")) {
 		out = {{"type-kind","arr"},{"specifier","raw"},
 			{"size-expr",{{"expr-type","lit-uint"},{"value",to_string(saType["arr-size"].get<int64_t>())}}}};
@@ -841,6 +861,8 @@ inline bool copyShapeMatch(const json& from, const json& to) {
 		return from["base-type"] == to["base-type"];
 	if (isVarrPntr(from) || isVarrPntr(to))
 		return isVarrPntr(from) && isVarrPntr(to) && from["base-type"] == to["base-type"];
+	if (isDictPntr(from) || isDictPntr(to))
+		return isDictPntr(from) && isDictPntr(to) && from["base-type"] == to["base-type"];
 	return from.value("type-kind","") == to.value("type-kind","")
 	    && from.value("type-name","") == to.value("type-name","");
 }
@@ -911,6 +933,7 @@ inline bool varrCopySourceMatch(const json& from, const json& vt)
 inline bool copySourceMatch(const json& from, const json& vt)
 {
 	if (isVarrStorage(vt)) return varrCopySourceMatch(from, vt);
+	if (isDictStorage(vt)) return isDictPntr(from) && from["base-type"] == vt["base-type"];
 	if (isVarrPntr(from) && isArrLevel(vt) && (vt.contains("arr-size") || vt.value("run-size", false))) {
 		const json& fe = from["base-type"]["base-type"];
 		if (isPtrBorrow(fe) || isPtrBorrow(vt["base-type"]))

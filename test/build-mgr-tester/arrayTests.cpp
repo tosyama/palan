@@ -737,3 +737,9 @@ TEST(build_mgr, runtime_len_mtrace) {
 	expectMtraceRun("405_runtime_len_mtrace",
 		"len 3 4 4 3\n0 1 2 3 \n10 11 12 13 \n20 21 22 23 \n0 1 2 \n10 11 12 13 \n2 0\n", 12);
 }
+
+// A dictionary is allocated, copied, moved, passed and returned as a `[+]T` is,
+// its header from std/rt; every header is freed once.
+TEST(build_mgr, dict_mtrace) {
+	expectMtraceRun("442_dict_mtrace", "ok\n", 10);
+}

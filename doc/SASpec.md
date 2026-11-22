@@ -1,7 +1,7 @@
 Palan Semantic Analyzer JSON Specification
 ==========================================
 
-ver. 0.2.6
+ver. 0.2.7
 
 Output of palan-sa. Extends the AST JSON format (see ASTSpec.md) with resolved
 type information and pre-collected literal tables.
@@ -44,7 +44,7 @@ Root
   manager unions it across modules and passes each path to `ld` after the program's own objects.
 - alloc-shapes\* - List of shape descriptors for arrays and structs requiring custom allocators.
   Empty array when no qualifying var-decls are present.
-  Five entry kinds: struct, bytes, opaque, arr and varr.
+  Six entry kinds: struct, bytes, opaque, arr, varr and dict.
 
   The arr and varr entries describe their element by its layout: the element as `data` (or the
   array) holds it, with each integer type replaced by the signed one of its width (`uint32` and
@@ -129,6 +129,19 @@ Root
   - shape-kind\* - "varr"
   - shape-key\* - Shape key string (e.g. "varr\_int32", "varr\_P9\_\_pln\_B16", "evarr\_9\_\_pln\_B16")
   - elem\* - The element, as above
+
+  **Dict entry** (`[""]T`; `T` as in the varr entry): std/rt keeps the keys in a 72-byte header
+  whose last 24 bytes are the values, a `[+]T` header, one value at each key's position. A
+  removed key's value is released, and its slot left NULL, at once; the positions are compacted
+  later. The values' varr entry is listed before this one. build-mgr declares the header as
+  `type __pln_dict_T { int64 …; $__pln_varr_T values; }` and generates `__pln_alloc_dict_T()`,
+  `__pln_free_dict_T(@!hdr h)` (NULL-safe: `__pln_fini_varr_T` on the values, then
+  `__pln_dict_free`) and `__pln_copy_dict_T(@!hdr dst, @hdr src)` (nothing when `dst` is `src`;
+  otherwise the keys by `__pln_dict_copy`, then each value whose key is live, to the positions
+  the keys take in `dst`):
+  - shape-kind\* - "dict"
+  - shape-key\* - `dict_` followed by the element's `key` (e.g. "dict\_int32")
+  - values\* - The shape key of the values' varr entry (e.g. "varr\_int32")
 
   **Bytes entry** (`__pln_B<n>`, the layout of a struct owning nothing that an element or an
   owned field holds): build-mgr only declares it, as `type __pln_B<n> { $[n]uint8 …; }`, for
@@ -617,6 +630,20 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     above applies to it, except that it is neither the source nor the target of `->>`
     (E_TransferFromNonOwner, E_TransferToNonOwnedField), as the header of a `$[+]U` variable.
     `$[n]$[+]U` is E_EmbedOwningType.
+
+  **`[""]T` (dictionary):** The variable is one word pointing at a header std/rt allocates
+  (the dict `alloc-shapes` entry). It follows `[+]T` above where nothing else is said.
+  - `var-type`: `pntr(strdict(E))`; `strdict` (`{"type-kind":"strdict","base-type":E}`) appears
+    only as this pointer's base, its kind other than the written `dict` so that an analyzed type
+    is not read as a written one. `E` is a primitive or, for a struct, `pntr(struct(T))`. Other
+    values, `[""]$T`, and a dictionary as an element or a field are E_StmtNotImplemented
+    (E_UnsupportedStructFieldType for a field); `$[""]T` is E_FrameVarType.
+  - `init`: `__pln_alloc_dict_T()`; scope-exit free: `__pln_free_dict_T(<name>)`.
+  - Copying takes a `[""]T` or `@[""]T`/`@![""]T` of the same `E` (`__pln_copy_dict_T(w, v)`);
+    anything else is E_CopyShapeMismatch. `->>`, returns, owned parameters (symbol `PD` +
+    element), `@v`/`@!v` (`pntr(strdict(E))` with `mutable`; without `@`,
+    E_DictBorrowNeedsAddrOf) and `@[""]T`/`@![""]T` types are as for `[+]T`.
+  - `d[k]` is E_StmtNotImplemented.
 
   **`[]$[m]T` (unsized embedded array parameter):** Normalized by SA to the same
   `pntr(pntr(T, arr-size:m), embedded:true, stride:m*sizeof(T))` type as the sized form. The inner dimension `m`

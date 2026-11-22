@@ -1453,7 +1453,7 @@ json PlnSemanticAnalyzer::snapshotCopy(const json& saSrc, const json& locNode, j
 	const json& vt = saSrc["value-type"];
 	bool isStruct = isStructPntr(vt);
 	json declType = isStruct ? json{{"type-kind", "prim"}, {"type-name", vt["base-type"]["type-name"]}}
-	              : isVarrPntr(vt) || vt.contains("arr-size") ? astTypeOf(vt) : json();
+	              : isVarrPntr(vt) || isDictPntr(vt) || vt.contains("arr-size") ? astTypeOf(vt) : json();
 	if (declType.is_null())
 		return locNode;
 	string name = "__snap_" + to_string(tempVarCounter_++);
@@ -2104,7 +2104,7 @@ json PlnSemanticAnalyzer::copyReturnBlock(const json& stmt, json& ret)
 	json& value = ret["values"][0];
 	if (!value.contains("value-type") || isExpiringOwned(value)
 			|| !(isStructPntr(value["value-type"]) || isVarrPntr(value["value-type"])
-			     || isArrLevel(value["value-type"])))
+			     || isDictPntr(value["value-type"]) || isArrLevel(value["value-type"])))
 		return json::array();
 	string name = "__ret_" + to_string(tempVarCounter_++);
 	json decl = {{"stmt-type", "var-decl"}, {"loc", stmt.value("loc", json::array())}, // LCOV_EXCL_BR_LINE
@@ -2178,7 +2178,7 @@ json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector
 		bool movesIntoFrame = storage == VarStorage::Frame && isOwnedBlock(retType) && !isStructValue(retType);
 		// A length known only at run time is no signature's, so such an array
 		// copies from the returned one.
-		json declared = varType.value("type-kind","") == "arr" ? takeOverType(stmt, varType)
+		json declared = varType.value("type-kind","") == "arr" || isDictAstType(varType) ? takeOverType(stmt, varType)
 		              : sigType(stmt, varType);
 		if (isStructValue(retType) && declared == retType) {
 			declareVar(name, retType);

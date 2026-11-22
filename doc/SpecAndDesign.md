@@ -680,8 +680,8 @@ number of positions used, the entries `{hash, key}` in the order of addition, an
 at its end the values as a `[+]T` (or `[+]$T`) header, one value at each entry's position. The index
 table, of a power-of-two size, holds positions, found by the key's hash (FNV-1a) and linear probing,
 and grows when three quarters full, removed positions counted. A removed element leaves its key
-NULL, its value released and its table slot in place, which lookups probe past; the entries and
-values are compacted when the removed outnumber the live, never during a `for` over the
+NULL, its value released (a slot set to NULL, so that releasing all the values releases nothing
+twice) and its table slot in place, which lookups probe past; the entries and values are compacted when the removed outnumber the live, never during a `for` over the
 dictionary, which cannot remove. Everything on keys (hashing, finding, adding, removing,
 compacting, copying the keys) does not depend on `T`, so it is written once in `std/rt` rather than
 generated, as `__pln_dict_*` C functions: compacting moves the values as bytes of the element's
