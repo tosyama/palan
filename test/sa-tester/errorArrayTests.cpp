@@ -462,8 +462,8 @@ TEST(sa_error, varr)
 		{"error_734_varr_push_no_match.pa", ":4:1: error: No function 'push' takes (@![+]int32, int64); there are push(@![+]flo64, flo64), push(@![+]int32, int32)."},
 		{"error_735_varr_borrow_needs_addr.pa", ":2:11: error: a variable-length array given to '@[+]T'/'@![+]T' must be written as '@name' or '@!name'."},
 		{"error_736_arr_len_needs_addr.pa", ":2:11: error: an array given to 'len' must be written as '@name'."},
-		{"error_1084_len_not_array.pa", ":2:15: error: 'len' takes an array; this value is 'int32'."},
-		{"error_1085_len_not_array_chain.pa", ":2:11: error: 'len' takes an array; this value is 'flo64'."},
+		{"error_1084_len_not_array.pa", ":2:15: error: 'len' takes an array or a dictionary; this value is 'int32'."},
+		{"error_1085_len_not_array_chain.pa", ":2:11: error: 'len' takes an array or a dictionary; this value is 'flo64'."},
 		{"error_861_len_addr_of_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_862_varr_borrow_addr_of.pa", ":4:3: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_863_len_addr_of_varr_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
@@ -629,8 +629,11 @@ TEST(sa_error, dict)
 		{"error_1156_dict_borrow_no_addr.pa", ":3:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'."},
 		{"error_1157_dict_borrow_var_no_addr.pa", ":2:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'."},
 		{"error_1158_dict_copy_elem_mismatch.pa", ":2:1: error: cannot copy '[\"\"]int32' into '[\"\"]int64'"},
-		{"error_1159_dict_index.pa", ":2:11: error: this statement is not supported in this version."},
+		{"error_1159_dict_write_through_borrow.pa", ":2:2: error: cannot write through read-only pointer '@T'"},
 		{"error_1160_dict_value_type.pa", ":1:1: error: this statement is not supported in this version."},
+		{"error_1161_dict_key_type.pa", ":2:11: error: cannot convert 'int64' to '@uint8'."},
+		{"error_1162_dict_builtin_redefined.pa", ":1:1: error: Function 'has' is already defined."},
+		{"error_1163_dict_field_write_through_borrow.pa", ":3:7: error: cannot write through read-only pointer '@T'"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -1391,3 +1391,27 @@ TEST(sa, dict_var)
 	ASSERT_EQ(shapes["varr_int32"]["shape-kind"], "varr");
 	ASSERT_EQ(shapes["dict_P24__pln_L13_357_dict_var_P"]["values"], "varr_P24__pln_L13_357_dict_var_P");
 }
+
+// `d[k]` indexes by 0 the value's address that a generated function returns;
+// a whole store evaluates its value before the key is added.
+TEST(sa, dict_index)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/358_dict_index.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& body = jout["functions"][0]["body"];
+	ASSERT_EQ(funcName(body[0]["vars"][0]["init"]["name"]), "__pln_put_dict_int32");
+	ASSERT_EQ(body[1]["target"]["array"]["name"], body[0]["vars"][0]["name"]);
+	ASSERT_EQ(body[1]["target"]["index"]["value"], "0");
+	ASSERT_EQ(body[2]["vars"][0]["init"]["src"]["expr-type"], "field-access");
+	ASSERT_EQ(funcName(body[3]["vars"][0]["init"]["name"]), "__pln_put_dict_int32");
+	ASSERT_EQ(body[4]["value"]["name"], body[2]["vars"][0]["name"]);
+	const auto& read = body[6]["vars"][0]["init"];
+	ASSERT_EQ(funcName(read["array"]["name"]), "__pln_at_dict_int32");
+	ASSERT_EQ(read["array"]["args"][1]["name"], "b");
+	ASSERT_EQ(read["index"]["value"], "0");
+
+	const auto& g = jout["functions"][1]["body"][0]["values"][0];
+	ASSERT_EQ(funcName(g["left"]["name"]), "__pln_has_dict_int32");
+	ASSERT_EQ(funcName(g["right"]["name"]), "__pln_has_dict_int32");
+}

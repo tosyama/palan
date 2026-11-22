@@ -198,10 +198,10 @@ class PlnSemanticAnalyzer {
 	vector<map<string, json>> expandableScopes;
 	// A deque keeps every definition where it is while overloads are added.
 	vector<map<string, deque<json>>> plnFuncScopes;
-	// len/push/resize/pop for each `[+]T` element type, outside every scope:
-	// they exist for every T, and are registered as each T is first used.
-	map<string, deque<json>> varrBuiltins_;
-	set<string> varrBuiltinTypes_;
+	// The builtins of each `[+]T` and `[""]T` element type, outside every
+	// scope: they exist for every T, and are registered as each T is first used.
+	map<string, deque<json>> builtins_;
+	set<string> builtinTypes_;
 	// scope stack: alias("" = unqualified) → funcname → funcDefs (several
 	// when unqualified imports of different modules export the same name)
 	vector<map<string, map<string, vector<json>>>> importScopes;
@@ -590,7 +590,8 @@ class PlnSemanticAnalyzer {
 	// forWrite: the result is written through (store, '@!', or a field write
 	// below it), so every hop back to the chain's root must be writable --
 	// the same rule resolveObjectChain applies to struct field chains.
-	json sa_expr_arr_index(const json& expr, bool forWrite = false);
+	json sa_index_base(const json& arr, bool forWrite);
+	json sa_expr_arr_index(const json& expr, bool forWrite = false, json saBase = json());
 	json sa_expr_field_access(const json& expr, bool forWrite);
 	// Evaluate an array-size sub-expression (an `[n]T` declaration's `n`, or
 	// a 2D array's inner/outer dimension) and normalize the result to
@@ -658,6 +659,8 @@ class PlnSemanticAnalyzer {
 	AllocShapeRef dictShape(const json& vt);
 	void recordArrShape(const json& elem);
 	void recordVarrShape(const json& vt);
+	void recordDictShape(const json& vt);
+	json dictValueAddr(json saDict, const json& dictAst, const json& keyAst, const string& op, const json& locNode);
 	// The symbol of one of the functions build-mgr generates, and a call to it.
 	string allocHelperSymbol(const AllocShapeRef& shape, const string& op) const;
 	json allocHelperCall(const AllocShapeRef& shape, const string& op, json args) const;
@@ -869,6 +872,7 @@ class PlnSemanticAnalyzer {
 	json makeCopyStmt(const json& locNode, const json& dst, const json& src, CopyInto into);
 	bool assignsByFunc(const json& t) const;
 	json sa_arr_assign_stmt(const json& stmt, json* litAddr = nullptr);  // returns json::array()
+	json sa_dict_store_stmt(const json& stmt, json saDict, json* litAddr);
 	// `[...] -> target` / `{...} -> target` for a struct or array target; returns a block.
 	// With litAddr, returns the statements without a scope of their own and
 	// sets litAddr to the target's address, held in a temp, to read it back.

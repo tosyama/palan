@@ -517,6 +517,8 @@ TEST(build_mgr, runtime_errors) {
 		{"436_array_negative_size", "--release", "out of memory"},
 		{"437_array_out_of_memory", "--debug", "out of memory"},
 		{"437_array_out_of_memory", "--release", "out of memory"},
+		{"444_dict_missing_key", "--debug", "key \"b\" is not in the dictionary"},
+		{"444_dict_missing_key", "--release", "key \"b\" is not in the dictionary"},
 	};
 	for (auto& c : cases) {
 		cleanTestEnv();
@@ -742,4 +744,11 @@ TEST(build_mgr, runtime_len_mtrace) {
 // its header from std/rt; every header is freed once.
 TEST(build_mgr, dict_mtrace) {
 	expectMtraceRun("442_dict_mtrace", "ok\n", 10);
+}
+
+// The values of numbers and structs are added, replaced, read, removed and
+// compacted; a value is evaluated before its key is added.
+TEST(build_mgr, dict_index_mtrace) {
+	expectMtraceRun("443_dict_index_mtrace",
+		"13 5 2 3\n1 0 0\n4 99\n3\n4 36 39\n105 4 7 9\n4 1 3 105 4\n", 90);
 }

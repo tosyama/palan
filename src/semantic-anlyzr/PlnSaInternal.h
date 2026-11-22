@@ -129,6 +129,8 @@ inline AllocShapeRef structShape(const string& name)
 // candidates calling impl's helpers in module `allocators`; only their signatures
 // without impl.
 json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl = nullptr, const string& allocators = "");
+// len, has, remove and clear of the `[""]T` whose header type is dict, as varrBuiltinDefs.
+json dictBuiltinDefs(const json& dict, const AllocShapeRef* impl = nullptr, const string& allocators = "");
 
 enum class PtrPermission { Ok, Upgrade, InnerNarrowing, FuncSigMismatch };
 

@@ -1,0 +1,4 @@
+type P { int32 x; };
+func f(@[""]P d) {
+	1 -> d["k"].x;
+}

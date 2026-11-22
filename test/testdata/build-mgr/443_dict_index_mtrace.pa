@@ -1,0 +1,54 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; int32 y; };
+func addKey(@![""]int64 d) -> int64 { 99 -> d["f"]; return len(d); }
+func sum(@[""]int64 d) -> int64 { return d["a"] + d["b"]; }
+func mk(int32 v) -> P p { v -> p.x; }
+func bump(@!P p) { p.x + 100 -> p.x; }
+mtrace();
+{
+	[""]int64 d;
+	3 -> d["apple"];
+	5 -> d["banana"];
+	d["apple"] + 10 -> d["apple"];
+	len(@d) -> d["n"];
+	printf("%ld %ld %ld %ld\n", d["apple"], d["banana"], d["n"], len(@d));
+	printf("%d %d %d\n", has(@d, "apple"), d -> has("zz"), d.remove("zz"));
+	addKey(@!d) -> d["g"];
+	printf("%ld %ld\n", d["g"], d["f"]);
+	1 -> d["a"];
+	2 -> d["b"];
+	printf("%ld\n", sum(@d));
+	d.clear();
+	[20]uint8 buf;
+	int64 i = 0;
+	while i < 40 {
+		sprintf(buf, "k%d", int32(i));
+		i -> d[buf];
+		i + 1 -> i;
+	}
+	0 -> i;
+	while i < 36 {
+		sprintf(buf, "k%d", int32(i));
+		remove(@!d, @buf);
+		i + 1 -> i;
+	}
+	printf("%ld %ld %ld\n", len(@d), d["k36"], d["k39"]);
+
+	[""]P ps;
+	mk(3) ->> ps["a"];
+	mk(4) -> ps["b"];
+	{x: 7, y: 8} -> ps["c"];
+	P q = mk(5);
+	q ->> ps["a"];
+	bump(@!ps["a"]);
+	9 -> ps["c"].y;
+	printf("%d %d %d %d\n", ps["a"].x, ps["b"].x, ps["c"].x, ps["c"].y);
+	[""]P copied = ps;
+	P r;
+	ps["b"] ->> r;
+	ps.remove("b");
+	ps.remove("a");
+	printf("%d %ld %ld %d %d\n", r.x, len(@ps), len(@copied), copied["a"].x, copied["b"].x);
+}
+muntrace();

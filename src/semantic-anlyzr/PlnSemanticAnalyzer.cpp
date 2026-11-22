@@ -273,7 +273,7 @@ static bool sameParamTypes(const json& a, const json& b)
 	return true;
 }
 
-// The builtins exist for every T, whether or not a `[+]T` has made them
+// The builtins exist for every T, whether or not a `[+]T` or `[""]T` has made them
 // candidates yet, so declaration order does not matter. A `len` of a borrowed
 // constant-size array would never be called: such a len is folded first.
 static bool definesBuiltin(const string& name, const json& def)
@@ -283,8 +283,9 @@ static bool definesBuiltin(const string& name, const json& def)
 	const json& first = params[0]["var-type"];
 	if (name == "len" && params.size() == 1 && first.contains("arr-size") && first.contains("mutable"))
 		return true;
-	if (!isVarrPntr(first)) return false;
-	for (auto& builtin : varrBuiltinDefs(first["base-type"]))
+	json builtins = isVarrPntr(first) ? varrBuiltinDefs(first["base-type"])
+	              : isDictPntr(first) ? dictBuiltinDefs(first["base-type"]) : json::array();
+	for (auto& builtin : builtins)
 		if (builtin["name"] == name && sameParamTypes(builtin, def)) return true;
 	return false;
 }

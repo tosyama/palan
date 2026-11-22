@@ -1584,6 +1584,7 @@ void PlnSemanticAnalyzer::adoptVarTypeDeps(PlnSemanticAnalyzer& sub, const json&
 	adoptTypeDeps(sub, type, locNode);
 	for (const json* t = &type; t->contains("base-type"); t = &(*t)["base-type"])
 		if (isVarrStorage(*t)) recordVarrShape(*t);
+		else if (isDictStorage(*t)) recordDictShape(*t);
 }
 
 void PlnSemanticAnalyzer::adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)

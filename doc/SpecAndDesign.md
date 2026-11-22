@@ -661,7 +661,9 @@ fields, parameters, returns, borrows, copy, `->>`, `$T` values).
   `@!d[k]`) needs `k` to be there, and stops the program with a run-time error otherwise. Creating
   an element on a read was not taken: a read through `@d` could not, and a mistyped key would pass
   silently. Finding the key tells whether it is there, so the check costs nothing and stays in a
-  release build.
+  release build. `x` is evaluated before `k` is added, so `len(@d) -> d["n"]` stores the count
+  without `"n"`, as Python's `d[k] = len(d)` does. `k` is only read, as an index is, so an array
+  is written by name (`d[buf]`), while `has(@d, @buf)` gives it as any call does.
 - `len`, `has`, `remove` (false for a missing key) and `clear` (keeping the storage) are built-in
   functions as `[+]T`'s are.
 - Elements are kept in the order they were added, so iterating gives the same order on every run.

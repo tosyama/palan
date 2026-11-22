@@ -50,7 +50,13 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 		hdr << "void *__pln_dict_new(void);\n"
 		    << "void __pln_dict_free(void *h);\n"
 		    << "void __pln_dict_copy(void *dst, const void *src);\n"
-		    << "const unsigned char *__pln_dict_key(const void *h, long i);\n";
+		    << "const unsigned char *__pln_dict_key(const void *h, long i);\n"
+		    << "long __pln_dict_find(const void *h, const unsigned char *k);\n"
+		    << "long __pln_dict_at(const void *h, const unsigned char *k);\n"
+		    << "long __pln_dict_add(void *h, const unsigned char *k);\n"
+		    << "long __pln_dict_remove(void *h, const unsigned char *k);\n"
+		    << "void __pln_dict_settle(void *h, long elemSize);\n"
+		    << "void __pln_dict_clear(void *h);\n";
 	// A type's '->' and the function storing its field initializers are
 	// Palan functions, called as C calls them.
 	for (auto& shape : shapes.structs) {
@@ -643,6 +649,35 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "    __pln_dict_copy(dst, src);\n"
 		    << "    __pln_resize_" << values << "(@!dst.values, dst.live);\n"
 		    << "    __pln_copyvals_" << key << "(dst.values.data, src.values.data, src);\n"
+		    << "}\n";
+		// `d[k]` is the value's address. An owned value's slot is a pointer,
+		// which '@!' cannot address, so the address is reckoned as an integer.
+		string size = to_string(e.size);
+		auto valueAt = [&](const string& pos) {
+			return "(int64(h.values.data) + " + pos + " * " + size + ") as @!void";
+		}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+		out << "export func __pln_at_" << key << "(@" << hdr << " h, @[]uint8 k) -> @!void {\n"
+		    << "    return " << valueAt("__pln_dict_at(h, k)") << ";\n"
+		    << "}\n"
+		// A new key's position is the values' length.
+		    << "export func __pln_put_" << key << "(@!" << hdr << " h, @[]uint8 k) -> @!void {\n"
+		    << "    int64 pos = __pln_dict_add(h, k);\n"
+		    << "    if pos == h.values.len { __pln_resize_" << values << "(@!h.values, pos + 1); }\n"
+		    << "    return " << valueAt("pos") << ";\n"
+		    << "}\n"
+		    << "export func __pln_has_" << key << "(@" << hdr << " h, @[]uint8 k) -> bool {\n"
+		    << "    return __pln_dict_find(h, k) >= 0;\n"
+		    << "}\n"
+		    << "export func __pln_remove_" << key << "(@!" << hdr << " h, @[]uint8 k) -> bool {\n"
+		    << "    int64 pos = __pln_dict_remove(h, k);\n"
+		    << "    if pos < 0 { return false; }\n";
+		if (e.owned) out << "    __pln_clear_" << e.key << "(h.values.data, pos);\n";
+		out << "    __pln_dict_settle(h, " << size << ");\n"
+		    << "    return true;\n"
+		    << "}\n"
+		    << "export func __pln_clear_" << key << "(@!" << hdr << " h) {\n"
+		    << "    __pln_resize_" << values << "(@!h.values, 0);\n"
+		    << "    __pln_dict_clear(h);\n"
 		    << "}\n";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 

@@ -138,7 +138,11 @@ Root
   `__pln_free_dict_T(@!hdr h)` (NULL-safe: `__pln_fini_varr_T` on the values, then
   `__pln_dict_free`) and `__pln_copy_dict_T(@!hdr dst, @hdr src)` (nothing when `dst` is `src`;
   otherwise the keys by `__pln_dict_copy`, then each value whose key is live, to the positions
-  the keys take in `dst`):
+  the keys take in `dst`). It also generates, with `k` an `@[]uint8`, `__pln_at_dict_T(@hdr h, k)`
+  and `__pln_put_dict_T(@!hdr h, k)` (the address of k's value as `@!void`; `at` stops the program
+  for a missing key through `__pln_dict_at`, `put` adds the key and a built value),
+  `__pln_has_dict_T(@hdr h, k) -> bool`, `__pln_remove_dict_T(@!hdr h, k) -> bool` (releases the
+  value, then `__pln_dict_settle`) and `__pln_clear_dict_T(@!hdr h)`:
   - shape-kind\* - "dict"
   - shape-key\* - `dict_` followed by the element's `key` (e.g. "dict\_int32")
   - values\* - The shape key of the values' varr entry (e.g. "varr\_int32")
@@ -643,7 +647,17 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     anything else is E_CopyShapeMismatch. `->>`, returns, owned parameters (symbol `PD` +
     element), `@v`/`@!v` (`pntr(strdict(E))` with `mutable`; without `@`,
     E_DictBorrowNeedsAddrOf) and `@[""]T`/`@![""]T` types are as for `[+]T`.
-  - `d[k]` is E_StmtNotImplemented.
+  - `d[k]` is an `arr-index` by `lit-int` 0 whose `array` is a call of `__pln_at_dict_T(d, k)`,
+    typed `pntr(E)` as a `[+]T`'s data pointer is (read-only through `@[""]T`), so the element
+    is read, written into, borrowed and given away as a `[+]T`'s is. `k` is checked as an
+    argument to `@[]uint8`, but an array is given by name (`d[buf]`).
+  - A whole store (`x -> d[k]`, `x ->> d[k]`, a literal included) is emitted as: the value, when
+    it has a call, into a `pinned` temp (`__pin_N`); then `__pin_M` initialized to
+    `__pln_put_dict_T(d, k)`; then the store into `__pin_M[0]`. A literal is first put into a
+    temp (`__lit_N`), which is then stored so. Through `@[""]T` it is E_WriteThroughReadOnlyPtr.
+  - Builtins, as `[+]T`'s are: `len(@d)` (inline, the header's first word), `has(@d, k)`,
+    `remove(@!d, k)` and `clear(@!d)`, calling the generated functions above. A function with
+    the parameter types of one is E_DuplicateFuncDef.
 
   **`[]$[m]T` (unsized embedded array parameter):** Normalized by SA to the same
   `pntr(pntr(T, arr-size:m), embedded:true, stride:m*sizeof(T))` type as the sized form. The inner dimension `m`

@@ -311,7 +311,7 @@ json PlnSemanticAnalyzer::dictStorageType(const json& locNode, const json& dict)
 		exit(1);
 	}
 	json vt = dictPntrType(elem);
-	recordElemShape(dictShape(vt));
+	recordDictShape(vt);
 	return vt;
 } // LCOV_EXCL_BR_LINE
 
@@ -598,7 +598,10 @@ static string allocSymbolIn(const string& allocators, const AllocShapeRef& shape
 		else if (op != "alloc") params.push_back(permPtrTo(shape.elem, true));
 	} else if (shape.family == AllocFamily::Dict) {
 		json header = {{"type-kind","struct"},{"type-name","__pln_" + allocShapeKey(shape)}};
+		json key = permPtrTo({{"type-kind","prim"},{"type-name","uint8"}}, false);
 		if (op == "copy") params = {permPtrTo(header, true), permPtrTo(header, false)};
+		else if (op == "at" || op == "has") params = {permPtrTo(header, false), key};
+		else if (op == "put" || op == "remove") params = {permPtrTo(header, true), key};
 		else if (op != "alloc") params.push_back(permPtrTo(header, true));
 	} else {
 		bool isVarr = shape.family != AllocFamily::Arr;
@@ -863,10 +866,19 @@ void PlnSemanticAnalyzer::recordArrShape(const json& elem)
 // `[+]int32` but has builtins of its own types.
 void PlnSemanticAnalyzer::recordVarrShape(const json& vt)
 {
-	if (!varrBuiltinTypes_.insert(symbolType(vt)).second) return;
+	if (!builtinTypes_.insert(symbolType(vt)).second) return;
 	AllocShapeRef shape = varrShape(vt);
 	for (auto& def : varrBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
-		varrBuiltins_[def["name"].get<string>()].push_back(def);
+		builtins_[def["name"].get<string>()].push_back(def);
+	recordElemShape(shape);
+}
+
+void PlnSemanticAnalyzer::recordDictShape(const json& vt)
+{
+	if (!builtinTypes_.insert(symbolType(vt)).second) return;
+	AllocShapeRef shape = dictShape(vt);
+	for (auto& def : dictBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
+		builtins_[def["name"].get<string>()].push_back(def);
 	recordElemShape(shape);
 }
 
@@ -900,6 +912,33 @@ json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl, const string& 
 	add("push", json::array({self(true), {{"name","x"},{"var-type",value}}}), nullptr);
 	add("resize", json::array({self(true), {{"name","n"},{"var-type",i64}}}), nullptr);
 	add("pop", json::array({self(true)}), &value);
+	return defs;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+json dictBuiltinDefs(const json& dict, const AllocShapeRef* impl, const string& allocators)
+{
+	// LCOV_EXCL_BR_START
+	json i64 = {{"type-kind","prim"},{"type-name","int64"}};
+	json boolean = {{"type-kind","prim"},{"type-name","bool"}};
+	json key = {{"name","k"},{"var-type",permPtrTo({{"type-kind","prim"},{"type-name","uint8"}}, false)}};
+	auto self = [&](bool isMutable) {
+		json vt = dictPntrType(dict["base-type"]);
+		vt["mutable"] = isMutable;
+		return json{{"name","d"},{"var-type",move(vt)}};
+	};
+	json defs = json::array();
+	auto add = [&](const string& name, json params, const json* ret) {
+		json def = {{"name",name},{"func-type","palan"},{"parameters",move(params)}};
+		if (name == "len") def["inline"] = true;
+		else if (impl) def["symbol"] = allocSymbolIn(allocators, *impl, name);
+		if (ret) def["ret-type"] = *ret;
+		defs.push_back(move(def));
+	};
+	add("len", json::array({self(false)}), &i64);
+	add("has", json::array({self(false), key}), &boolean);
+	add("remove", json::array({self(true), key}), &boolean);
+	add("clear", json::array({self(true)}), nullptr);
 	return defs;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE

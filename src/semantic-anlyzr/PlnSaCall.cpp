@@ -129,8 +129,8 @@ vector<Callee> PlnSemanticAnalyzer::findCallees(const string& name) const
 		if (f != alias_it->second.end())
 			for (auto& def : f->second) add(def, def.value("_c-func", false));
 	}
-	auto b = varrBuiltins_.find(name);
-	if (b != varrBuiltins_.end())
+	auto b = builtins_.find(name);
+	if (b != builtins_.end())
 		for (auto& def : b->second) add(def, false);
 	return cands;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
@@ -236,7 +236,7 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 	bool match = isArrLevel(vt) ? arrShapeMatch(vt, paramVT)
 	           : isStructStorage(vt) ? base.value("type-kind", "") == "struct" // LCOV_EXCL_BR_LINE
 	                                   && base["type-name"] == vt["base-type"]["type-name"]
-	           : isVarrStorage(vt) ? base == vt["base-type"]
+	           : isVarrStorage(vt) || isDictStorage(vt) ? base == vt["base-type"]
 	           : base == vt;
 	return match ? ArgFit::Exact : ArgFit::None;
 }
@@ -1624,7 +1624,7 @@ json PlnSemanticAnalyzer::chainArg(const json& value, const json* paramVT, bool 
 	if (et != "arr-lit" && et != "dict-lit") {
 		json vt = valueType ? *valueType : operandValueType(value);
 		bool ownedArr = isArrLevel(vt) && !isArrBorrowVar(vt);
-		if (!isStructStorage(vt) && !isVarrStorage(vt) && vt.value("type-kind", "") != "prim"
+		if (!isStructStorage(vt) && !isVarrStorage(vt) && !isDictStorage(vt) && vt.value("type-kind", "") != "prim"
 				&& !(ownedArr && !isCFunc && isArrBorrowVar(*paramVT)))
 			return value;
 	}

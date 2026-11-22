@@ -555,7 +555,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_LenNotArray:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "'len' takes an array; this value is '" + arg1 + "'.";
+			return "'len' takes an array or a dictionary; this value is '" + arg1 + "'.";
 
 		case E_StructLitFieldCount:
 			BOOST_ASSERT(arg1 != "\x01");

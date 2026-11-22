@@ -1647,9 +1647,40 @@ json PlnSemanticAnalyzer::pinValue(json saValue, const json& astValue, json& bod
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
+// `x -> d[k]` adds k if it is not there, which may move the values, so x is
+// evaluated first (`len(@d) -> d["n"]` counts without "n") and stored at the
+// address the adding returns.
+json PlnSemanticAnalyzer::sa_dict_store_stmt(const json& stmt, json saDict, json* litAddr)
+{
+	if (!isWritableThrough(saDict["value-type"])) {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
+		exit(1);
+	}
+	const json& value = stmt["value"];
+	if (isAggregateLit(value))
+		return sa_lit_assign_via_temp(stmt, saDict["value-type"]["base-type"]["base-type"], litAddr);
+	// LCOV_EXCL_BR_START
+	const json& target = stmt["target"];
+	json body = json::array();
+	json store = stmt;
+	if (hasCall(value)) {
+		json saValue = stmt.value("ownership-transfer", false) ? sa_move_source(value) : sa_expression(value);
+		store["value"] = pinValue(move(saValue), value, body);
+	}
+	json addr = dictValueAddr(move(saDict), target["array"], target["index"], "put", stmt);
+	store["target"] = {{"expr-type","arr-index"},{"array",pinValue(move(addr), target, body)},
+	                   {"index",{{"expr-type","lit-int"},{"value","0"}}},{"loc",target.value("loc", json::array())}};
+	for (auto& s : sa_arr_assign_stmt(store)) body.push_back(move(s));
+	return body;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 {
-	json sa_target = sa_expr_arr_index(stmt["target"], /*forWrite=*/true);
+	json sa_base = sa_index_base(stmt["target"]["array"], /*forWrite=*/true);
+	if (isDictPntr(sa_base["value-type"]))
+		return sa_dict_store_stmt(stmt, move(sa_base), litAddr);
+	json sa_target = sa_expr_arr_index(stmt["target"], /*forWrite=*/true, move(sa_base));
 	bool transfer = stmt.value("ownership-transfer", false);
 	if (!isWritableThrough(sa_target["array"]["value-type"])) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
