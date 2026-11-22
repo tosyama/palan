@@ -1363,3 +1363,26 @@ TEST(gen_ast, dict_type) {
 	EXPECT_EQ(h["parameters"][0]["var-type"]["base-type"], i32Dict);
 	EXPECT_EQ(h["ret-type"]["type-kind"], "dict");
 }
+
+TEST(gen_ast, empty_dict_lit) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/170_empty_dict_lit.pa");
+	ASSERT_TRUE(checkerr(output));
+	const json ast = json::parse(output)["ast"];
+	const json& stmts = ast["statements"];
+	ASSERT_EQ(stmts.size(), 5);
+	const json empty = json::parse(R"({"expr-type": "dict-lit", "items": []})");
+	auto noLoc = [](json e) { e.erase("loc"); return e; };
+	EXPECT_EQ(noLoc(stmts[0]["vars"][0]["init"]), empty);
+	EXPECT_EQ(noLoc(stmts[1]["vars"][0]["init"]["items"][1]["value"]), empty);
+	const json& v = stmts[2]["vars"][0]["init"]["items"];
+	EXPECT_EQ(noLoc(v[0]), empty);
+	EXPECT_EQ(noLoc(v[1]["items"][0]["value"]), empty);
+	const json& args = stmts[3]["body"]["args"];
+	EXPECT_EQ(noLoc(args[0]), empty);
+	EXPECT_EQ(noLoc(args[1]["object"]), empty);
+	EXPECT_EQ(args[2]["mutable"], true);
+	EXPECT_EQ(noLoc(ast["functions"][0]["block"]["body"][0]["values"][0]), empty);
+	// At the start of a statement '{}' stays an empty block.
+	EXPECT_EQ(stmts[4]["body"][0]["stmt-type"], "block");
+}

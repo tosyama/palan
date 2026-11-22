@@ -1,0 +1,22 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type H { int32 n; [""]int32 d; };
+type Z { int32 n = 3; };
+func cnt([""]int32 d) -> int64 { return len(@d); }
+func cntb(@[""]int32 d) -> int64 { return len(d); }
+func mk() -> [""]int32 { return {}; }
+func f() {
+	[""]int32 a = {};
+	5 -> a["x"];
+	H h = {n: 1, d: {}};
+	7 -> h.d["k"];
+	[""][""]int32 o = {"o": {}};
+	[+][""]int32 v = [{}, {"a": 1}];
+	Z z = {};
+	[""]int32 m = mk();
+	2 -> m["y"];
+	printf("%ld %ld %ld %ld %ld %ld\n", len(@a), len(@h.d), len(@o), len(@o["o"]), len(@v[0]), len(@v[1]));
+	printf("%ld %ld %ld %d\n", cnt({}), cntb(@{}), len(@m), z.n);
+}
+mtrace();
+f();

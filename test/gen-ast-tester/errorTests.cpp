@@ -451,6 +451,14 @@ TEST(gen_ast_error, in_reserved) {
 	EXPECT_NE(out.find("m.pa:1:7: error: syntax error, unexpected in"), string::npos) << out;
 }
 
+// '{}' at the start of a statement is an empty block, so it is never the source of '->'.
+TEST(gen_ast_error, empty_braces_statement) {
+	cleanTestEnv();
+	ofstream("out/m.pa") << "[\"\"]int32 d;\n{} -> d;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	EXPECT_NE(out.find("m.pa:2:4: error: syntax error, unexpected ->"), string::npos) << out;
+}
+
 TEST(gen_ast_error, for_elem_mode) {
 	const pair<string, string> cases[] = {
 		{"error_022_for_bare_elem.pa", ":1:5: error: The loop variable 'a' needs 'copy', '@' or '@!': 'copy a' copies each element, '@a'/'@!a' is the element itself."},

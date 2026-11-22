@@ -1,0 +1,4 @@
+type P { int32 x = 1; };
+func f(P p) { }
+func f([""]int32 d) { }
+f({});

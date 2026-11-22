@@ -417,9 +417,9 @@ struct BodyList {
 %type <PList<string>>	import_ids link_libs c_type_names cinclude_export
 %type <vector<string>>	link_clause
 %type <string>	field_name import_as func_name op_func_name library_decl library_name
-%type <json>	expression term store_loc argument
+%type <json>	expression value term store_loc argument
 %type <PList<json>>	arguments
-%type <json>	array_desc array_row dict_desc
+%type <json>	array_desc array_row dict_desc empty_braces
 %type <PList<json>>	array_rows array_items dict_items
 %type <json>	type_expr fptr_ret
 %type <PList<json>>	fptr_params fptr_param_list
@@ -897,9 +897,9 @@ global_func: func_name
 
 inherit_var_decl: ID
 	{ $$ = {{"name", $1}, {"inherit-type", true}}; } // LCOV_EXCL_BR_LINE
-	| ID '=' expression
+	| ID '=' value
 	{ $$ = {{"name", $1}, {"inherit-type", true}, {"init", $3}}; } // LCOV_EXCL_BR_LINE
-	| ID OPE_TAKE expression
+	| ID OPE_TAKE value
 	{ $$ = {{"name", $1}, {"inherit-type", true}, {"init", $3}, {"ownership-transfer", true}}; } // LCOV_EXCL_BR_LINE
 	;
 
@@ -912,7 +912,7 @@ var_declaration: type_expr ID
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		}
 	}
-	| type_expr ID '=' expression
+	| type_expr ID '=' value
 	{
 		if (isDeclarableVarType($1) || isFrameVarType($1)) {
 			$$ = {{"name", $2}, {"var-type", move($1)}, {"init", move($4)}}; // LCOV_EXCL_BR_LINE
@@ -921,7 +921,7 @@ var_declaration: type_expr ID
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		}
 	}
-	| type_expr ID OPE_TAKE expression
+	| type_expr ID OPE_TAKE value
 	{
 		if (isDeclarableVarType($1) || isFrameVarType($1)) {
 			$$ = {{"name", $2}, {"var-type", move($1)}, {"init", move($4)}, {"ownership-transfer", true}}; // LCOV_EXCL_BR_LINE
@@ -1011,11 +1011,11 @@ type_members: type_member
 
 type_member: type_expr field_name ';'
 	{ $$ = {{"name", move($2)}, {"var-type", move($1)}}; } // LCOV_EXCL_BR_LINE
-	| type_expr field_name '=' expression ';'
+	| type_expr field_name '=' value ';'
 	{ $$ = {{"name", move($2)}, {"var-type", move($1)}, {"init", move($4)}}; } // LCOV_EXCL_BR_LINE
 	| ID type_expr field_name ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
-	| ID type_expr field_name '=' expression ';'
+	| ID type_expr field_name '=' value ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"init", move($5)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
 	;
 
@@ -1089,6 +1089,10 @@ expression: term
 	| '@' dict_desc %prec UNARY_MINUS
 	{ $$ = {{"expr-type", "addr-of"}, {"object", move($2)}, {"mutable", false}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| AT_EXCL dict_desc %prec UNARY_MINUS
+	{ $$ = {{"expr-type", "addr-of"}, {"object", move($2)}, {"mutable", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| '@' empty_braces %prec UNARY_MINUS
+	{ $$ = {{"expr-type", "addr-of"}, {"object", move($2)}, {"mutable", false}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| AT_EXCL empty_braces %prec UNARY_MINUS
 	{ $$ = {{"expr-type", "addr-of"}, {"object", move($2)}, {"mutable", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| expression ARROW store_loc
 	{
@@ -1234,7 +1238,7 @@ arguments: /* empty */
 	{ $$ = $1.push($3); }
 	;
 
-argument: expression
+argument: value
 	{ $$ = move($1); }
 	| ELLIPSIS expression
 	{ $$ = {{"expr-type", "spread"}, {"value", move($2)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
@@ -1264,10 +1268,21 @@ array_row: '[' array_items ']'
 	{ $$ = {{"expr-type", "arr-lit"}, {"items", json::array()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
-array_items: expression
+array_items: value
 	{ $$ = PList<json>().push($1); }
-	| array_items ',' expression
+	| array_items ',' value
 	{ $$ = $1.push($3); }
+	;
+
+// Only where a value goes: at the start of a statement '{}' is an empty block.
+value: expression
+	{ $$ = move($1); }
+	| empty_braces
+	{ $$ = move($1); }
+	;
+
+empty_braces: '{' '}'
+	{ $$ = {{"expr-type", "dict-lit"}, {"items", json::array()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
 dict_desc: '{' dict_items '}'
@@ -1276,23 +1291,23 @@ dict_desc: '{' dict_items '}'
 	{ $$ = {{"expr-type", "dict-lit"}, {"items", $2.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
-dict_items: field_name ':' expression
+dict_items: field_name ':' value
 	{
 		json item = {{"name", move($1)}, {"value", move($3)}}; // LCOV_EXCL_BR_LINE
 		LOC(item, @$); // LCOV_EXCL_BR_LINE
 		$$ = PList<json>().push(move(item));
 	}
-	| dict_items ',' field_name ':' expression
+	| dict_items ',' field_name ':' value
 	{
 		json item = {{"name", move($3)}, {"value", move($5)}}; // LCOV_EXCL_BR_LINE
 		LOC_BE(item, @3, @5); // LCOV_EXCL_BR_LINE
 		$$ = $1.push(move(item));
 	}
-	| STRING ':' expression
+	| STRING ':' value
 	{
 		$$ = PList<json>().push(strKeyItem($1, @1, $3, @1, @3));
 	}
-	| dict_items ',' STRING ':' expression
+	| dict_items ',' STRING ':' value
 	{
 		$$ = $1.push(strKeyItem($3, @3, $5, @3, @5));
 	}
@@ -1547,9 +1562,9 @@ else_stmt: /* empty */
 	{ $$ = $2; }
 	;
 
-expressions: expression
+expressions: value
 	{ $$ = PList<json>().push($1); }
-	| expressions ',' expression
+	| expressions ',' value
 	{ $$ = $1.push($3); }
 	;
 

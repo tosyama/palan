@@ -676,6 +676,9 @@ fields, parameters, returns, borrows, copy, `->>`, `$T` values).
   was not taken: a constant meant as the key would pass silently. gen-ast cannot tell `{x: 1}` for
   a struct from one for a dictionary, so it emits one braced literal and palan-sa decides by the
   type the literal is given to, as it already decides which struct.
+- `{}` is the empty literal, as `[]` is for `[+]T`, written only where a value goes (an initializer,
+  an argument, a return, an item of a literal): at the start of a statement it is an empty block,
+  so a dictionary is emptied with `clear`. Given to a struct, it is a literal naming no field.
 
 Layout: an owned slot pointing to a header that `std/rt` allocates, holding the live count, the
 number of positions used, the entries `{hash, key}` in the order of addition, an index table, and

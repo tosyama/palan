@@ -781,3 +781,8 @@ TEST(build_mgr, dict_holders_mtrace) {
 	expectMtraceRun("448_dict_holders_mtrace",
 		"1 5 2 7\n1 1\n9 1\n2\n0 1\n1 6 4 2\n2\n2\n3 0 3\n1 1\n1 2\n", 127);
 }
+
+// '{}' where a value goes: an initializer, a field, nested, an argument, a return.
+TEST(build_mgr, empty_dict_lit_mtrace) {
+	expectMtraceRun("449_empty_dict_lit_mtrace", "1 1 1 0 0 1\n0 0 1 3\n", 33);
+}

@@ -735,7 +735,9 @@ Expression model
       `[[a,b],[c,d]]` (only `loc` differs)
   30. dict-lit - Braced literal (`{x: a, "k": b}`), for a struct or a dictionary; a trailing
       comma is allowed. A name is a struct's field or a dictionary key's string constant, which
-      palan-sa tells apart by the type the literal is given to
+      palan-sa tells apart by the type the literal is given to. `{}` has no items; it is parsed
+      only where a value goes (an initializer, an argument, a return value, an item of a literal,
+      the operand of `@`/`@!`), since at the start of a statement it is an empty block
     - items\* - List of items in source order, each with one of `name` and `key`
       - name  - Name string
       - key   - The key written as a string: a `lit-str` expression model

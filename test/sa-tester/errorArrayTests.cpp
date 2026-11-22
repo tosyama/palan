@@ -657,6 +657,9 @@ TEST(sa_error, dict)
 		{"error_1184_dict_lit_row_size.pa", ":1:24: error: array 'r' has rows of size 3 but a row of its array literal has 2 elements."},
 		{"error_1185_dict_embedded_elem.pa", ":2:2: error: cannot embed '[\"\"]int32' with '$': it owns storage of its own"},
 		{"error_1186_dict_for_row_change.pa", ":3:23: error: cannot change what a 'for' loop iterates over ('a[0]')"},
+		{"error_1192_empty_dict_lit_array.pa", ":1:14: error: a '{name: value}' literal can only be used as a struct or dictionary value"},
+		{"error_1193_empty_lit_missing_field.pa", ":2:7: error: the literal of struct 'P' is missing field 'x'."},
+		{"error_1194_empty_lit_overload_ambiguous.pa", ":4:1: error: Ambiguous function call 'f': it can mean f(P), f([\"\"]int32)."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
