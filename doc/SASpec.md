@@ -656,6 +656,14 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     `__pln_put_dict_T(d, k)`; then the store into `__pin_M[0]`. A literal is first put into a
     temp (`__lit_N`), which is then stored so. Through `@[""]T` it is E_WriteThroughReadOnlyPtr.
     A constant key (`d[K]`) is its string.
+  - A literal `{"a": v, K: w}` initializing `d` is emitted as `d`'s declaration, then for each
+    key in order `__pin_N` initialized to `__pln_put_dict_T(d, key)` and the value stored into
+    `__pin_N[0]` as an array literal's element is. The key is a `lit-str`, written or a string
+    constant's (otherwise E_DictLitKeyNotConst); a repeated key is E_DictLitDupKey. The values
+    are analyzed before `d` is declared. Elsewhere (`->`, a return, an argument) the literal
+    initializes a temp `__lit_N`/`__ret_N` that is used in its place, as a `[+]T` literal is; an
+    argument to `@[""]T` is written `@{..}`. A literal whose keys are all strings or string
+    constants fits a dictionary parameter, and one with a string key fits no struct parameter.
   - Builtins, as `[+]T`'s are: `len(@d)` (inline, the header's first word), `has(@d, k)`,
     `remove(@!d, k)` and `clear(@!d)`, calling the generated functions above. A function with
     the parameter types of one is E_DuplicateFuncDef.

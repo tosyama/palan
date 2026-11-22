@@ -249,6 +249,8 @@ enum PlnSaMessageCode {
 	E_DictBorrowNeedsAddrOf,
 	E_StructLitStringKey,	// arg1: struct name
 	E_ForDictKeyTyped,
+	E_DictLitKeyNotConst,	// arg1: name
+	E_DictLitDupKey,	// arg1: the key as written in sa.json
 };
 
 class PlnSaMessage

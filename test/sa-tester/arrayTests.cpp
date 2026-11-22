@@ -1445,3 +1445,19 @@ TEST(sa, dict_const_key)
 	const auto& at = jout["functions"][0]["body"][0]["values"][0]["array"];
 	ASSERT_EQ(at["args"][1]["expr-type"], "lit-str");
 }
+
+// A literal declares the dictionary, then adds each key and writes its value
+// at the address the adding returns.
+TEST(sa, dict_lit)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/361_dict_lit.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& body = jout["functions"][0]["body"];
+	ASSERT_EQ(funcName(body[0]["vars"][0]["init"]["name"]), "__pln_alloc_dict_int32");
+	for (int i : {1, 3}) {
+		ASSERT_EQ(funcName(body[i]["vars"][0]["init"]["name"]), "__pln_put_dict_int32");
+		ASSERT_EQ(body[i]["vars"][0]["init"]["args"][1]["expr-type"], "lit-str");
+		ASSERT_EQ(body[i + 1]["target"]["array"]["name"], body[i]["vars"][0]["name"]);
+	}
+}

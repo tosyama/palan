@@ -1,0 +1,33 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; int32 y; };
+const K = "kk";
+func mk(int32 v) -> P p { v -> p.x; v + 1 -> p.y; }
+func made() -> [""]P { return {"m": [5, 6], K: mk(7)}; }
+func show(@[""]int32 d)
+{
+	for copy v, k in d { printf("%s=%d ", k, v); }
+	printf("\n");
+}
+func keep([""]int32 d) -> int64 { return len(@d); }
+func pick(@[""]int32 d) -> int32 { return 1; }
+func pick(@P p) -> int32 { return 2; }
+mtrace();
+{
+	[""]int32 d = {"a": 1, K: 2, "c": 3};
+	show(@d);
+	{"z": 9, "a": d["c"]} -> d;
+	show(@d);
+	show(@{"lit": 4});
+	{"chained": 5} -> show();
+	printf("%ld\n", keep({"x": 1, "y": 2}));
+	printf("%d %d\n", pick(@{"s": 1}), pick(@{x: 1, y: 2}));
+
+	[""]P ps = {"p": {x: 1, y: 2}, "q": [3, 4], "r": mk(10)};
+	printf("%d %d %d %ld\n", ps["p"].y, ps["q"].x, ps["r"].y, len(@ps));
+	{"only": {x: 8, y: 9}} -> ps;
+	printf("%d %ld\n", ps["only"].y, len(@ps));
+	[""]P m = made();
+	printf("%d %d\n", m["m"].y, m[K].x);
+}
+muntrace();

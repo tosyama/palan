@@ -627,6 +627,9 @@ class PlnSemanticAnalyzer {
 	json sa_arr_lit_var_decl(const json& stmt, VarStorage storage);   // single var; returns array of statements
 	json sa_arr_copy_var_decl(const json& stmt, VarStorage storage);  // single var; returns array of statements
 	json sa_struct_lit_var_decl(const json& stmt, VarStorage storage); // single var; returns array of statements
+	json sa_dict_lit_var_decl(const json& stmt, VarStorage storage);   // single var; returns array of statements
+	// A dictionary literal's keys as `lit-str`s, in the order written.
+	json dictLitKeys(const json& lit);
 	json placeAggregateVar(const json& stmt, const string& name, const json& varType,
 	                       json heapInit, json heapRelease, VarStorage storage,
 	                       int64_t frameBytes, int frameAlign, json& post,
@@ -648,6 +651,7 @@ class PlnSemanticAnalyzer {
 	                      const ArrLitShape& shape, size_t depth = 0);
 	// sized: a `[+]T` array already has the literal's length, as a declared
 	// variable does; otherwise it is resized to it first.
+	void emitArrLitElem(const json& elemAst, const ArrLitShape& shape, const json& value, json& out, size_t depth);
 	void emitArrLitAssigns(const json& arrAst, const ArrLitShape& shape, const json& values, json& out,
 	                       bool sized = true, size_t depth = 0);
 	json allocElemDesc(const json& elem, bool inPlace = false);

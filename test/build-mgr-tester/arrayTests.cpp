@@ -759,3 +759,11 @@ TEST(build_mgr, dict_for_mtrace) {
 	expectMtraceRun("445_dict_for_mtrace",
 		"e=5 a=1 d=4 b=2 \ne=30 a=22 d=8 b=4 64\ne=30 a=22 d=8 b=4 k18=18 k19=19 \none=1 two=2 three=3 \n1 11 2 21 \n", 58);
 }
+
+// A literal initializes, replaces with '->', is returned and is given as an
+// argument; a key may be a string constant, and overloads tell a dictionary
+// literal from a struct one.
+TEST(build_mgr, dict_lit_mtrace) {
+	expectMtraceRun("446_dict_lit_mtrace",
+		"a=1 kk=2 c=3 \nz=9 a=3 \nlit=4 \nchained=5 \n2\n1 2\n2 3 11 3\n9 1\n6 7\n", 63);
+}

@@ -584,12 +584,22 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "the key of a 'for' loop over a dictionary is '@[]uint8', which is not written.";
 
 		case E_DictBorrowNeedsAddrOf:
-			return "a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name'.";
+			return "a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' "
+			       "('@{..}' or '@!{..}' for a literal).";
 
 		case E_DictLitContext:
-			return "a '{name: value}' literal can only be used as a struct value: a struct variable's "
-			       "initializer, the source of '->' to a struct, an element of an array literal, or an "
-			       "argument for a struct parameter.";
+			return "a '{name: value}' literal can only be used as a struct or dictionary value: a "
+			       "variable's initializer, the source of '->', a returned value, an element of an array "
+			       "literal, or an argument.";
+
+		case E_DictLitKeyNotConst:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' is not a string constant: a key of a dictionary literal is a string "
+			       "or a string constant.";
+
+		case E_DictLitDupKey:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "key \"" + arg1 + "\" appears more than once in the dictionary literal.";
 
 		case E_ArrLitArgType:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -601,7 +611,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
 			return "parameter '" + arg1 + "' of type '" + arg2 + "' cannot take a '{name: value}' literal: "
-			       "only a struct parameter can.";
+			       "only a struct or dictionary parameter can.";
 
 		case E_CMacroFuncLike:
 			BOOST_ASSERT(arg1 != "\x01");

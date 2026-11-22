@@ -198,7 +198,7 @@ ArgFit PlnSemanticAnalyzer::typeFit(const json& argVT, const json& paramVT)
 // How an argument fits a parameter. A pending argument is judged by what it
 // can become once the parameter is known: a literal fits any primitive and is
 // exact only for its default type, an aggregate literal fits any pointer or
-// struct and is never exact, and a function name is exact when one of its
+// struct it can be read as and is never exact, and a function name is exact when one of its
 // functions has the parameter's type.
 ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t argIdx,
                                    bool isCFunc, const string& funcName)
@@ -212,8 +212,22 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 		return typeFit(sa["value-type"], paramVT);
 	};
 	if (!arg.pending) return fitOf(arg.ast, arg.sa);
-	if (isAggregateLitArg(arg.ast))
+	if (isAggregateLitArg(arg.ast)) {
+		// `{x: 1}` is read as a dictionary only when x is a string constant, and
+		// a string key only as a dictionary.
+		const json& lit = isAggregateLit(arg.ast) ? arg.ast : arg.ast["object"];
+		const json& items = lit["items"];
+		bool dictLit = lit["expr-type"] == "dict-lit";
+		auto constKey = [&](const json& item) {
+			return item.contains("key")
+				|| foldConstExpr({{"expr-type", "id"}, {"name", item["name"]}}).value("expr-type", "") == "lit-str"; // LCOV_EXCL_BR_LINE
+		};
+		if (isDictPntr(paramVT))
+			return dictLit && all_of(items.begin(), items.end(), constKey) ? ArgFit::Viable : ArgFit::None;
+		if (dictLit && any_of(items.begin(), items.end(), [](const json& item) { return item.contains("key"); }))
+			return ArgFit::None;
 		return paramVT.value("type-kind", "") == "pntr" || isStructStorage(paramVT) ? ArgFit::Viable : ArgFit::None; // LCOV_EXCL_BR_LINE
+	}
 	if (namesOverloadedFunc(arg.ast)) {
 		const PlnType* want = registry_.fromJson(paramVT);
 		for (auto& c : findCallees(arg.ast["name"].get<string>())) {
@@ -575,9 +589,12 @@ json PlnSemanticAnalyzer::sa_lit_arg(const json& arg, const json* paramVT, const
 	if (!paramVT)
 		rejectContext();
 	bool isStruct = isStructPntr(*paramVT);
+	bool isDict = isDictPntr(*paramVT);
+	if (isDict && lit["expr-type"] != "dict-lit")
+		rejectParamType(E_ArrLitArgType);
 	json declType = isStruct
 		? json{{"type-kind","prim"},{"type-name",(*paramVT)["base-type"]["type-name"]}} // LCOV_EXCL_BR_LINE
-		: paramVT->contains("arr-size") ? astTypeOf(*paramVT) : json();
+		: paramVT->contains("arr-size") || isDict ? astTypeOf(*paramVT) : json();
 	if (declType.is_null()) {
 		if (!paramVT->contains("arr-size"))
 			rejectContext();
@@ -588,15 +605,17 @@ json PlnSemanticAnalyzer::sa_lit_arg(const json& arg, const json* paramVT, const
 	enterScope();
 	// LCOV_EXCL_BR_START
 	string name = "__lit_" + to_string(tempVarCounter_++);
+	json declVar = {{"name",name},{"var-type",declType}};
+	if (isDict) declVar["init"] = lit;
 	json decl = {{"stmt-type","var-decl"},{"loc",lit.value("loc", json::array())},
-		{"vars",json::array({{{"name",name},{"var-type",declType}}})}};
+		{"vars",json::array({move(declVar)})}};
 	body = sa_resolved_var_decl(decl);
 	json target = {{"expr-type","id"},{"name",name}};
 	const json varType = *findVar(name);
 	if (isStruct) {
 		const StructDef& def = requireCompleteStruct(varType["base-type"]["type-name"].get<string>(), lit);
 		emitStructLitAssigns(target, def, sa_struct_lit(lit, def), body);
-	} else {
+	} else if (!isDict) {
 		if (lit["expr-type"] != "arr-lit")
 			rejectParamType(E_DictLitArgType);
 		ArrLitShape shape = arrLitShape(lit, paramName, varType);

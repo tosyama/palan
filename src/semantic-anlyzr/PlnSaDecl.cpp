@@ -512,6 +512,8 @@ json PlnSemanticAnalyzer::sa_resolved_var_decl(const json& stmt2, vector<VarStor
 			lowered = sa_struct_lit_var_decl(run, storage[begin]);
 		else if (!isArrInit(vars[begin]))
 			lowered = sa_var_decl_group(run, storage[begin]);
+		else if (isDictAstType(vars[begin]["var-type"]) && vars[begin]["init"].value("expr-type", "") == "dict-lit")
+			lowered = sa_dict_lit_var_decl(run, storage[begin]);
 		else if (vars[begin]["init"].value("expr-type", "") == "arr-lit")
 			lowered = sa_arr_lit_var_decl(run, storage[begin]);
 		else
@@ -785,21 +787,25 @@ void PlnSemanticAnalyzer::emitArrLitAssigns(const json& arrAst, const ArrLitShap
 		out.push_back({{"stmt-type","expr"},{"body",move(resize)}});
 		// LCOV_EXCL_BR_STOP
 	}
-	bool isRow = depth + 1 < shape.levels.size();
-	for (size_t i = 0; i < values.size(); i++) {
-		json elemAst = indexOf(arrAst, i);
-		const json& value = values[i];
-		if (isRow) {
-			emitArrLitAssigns(elemAst, shape, value, out, false, depth + 1);
-		} else if (shape.structDef && value.is_object()) {
-			out.push_back(makeCopyStmt(elemAst, sa_expression(elemAst), value, CopyInto::New));
-		} else if (shape.structDef) {
-			emitStructLitAssigns(elemAst, *shape.structDef, value, out);
-		} else {
-			out.push_back({{"stmt-type", "arr-assign"}, {"target", sa_expression(elemAst)}, {"value", value}}); // LCOV_EXCL_BR_LINE
-		}
-	}
+	for (size_t i = 0; i < values.size(); i++)
+		emitArrLitElem(indexOf(arrAst, i), shape, values[i], out, depth);
 } // LCOV_EXCL_BR_LINE
+
+// An element at `depth` of what sa_arr_lit_values gives, written into the
+// built element elemAst.
+void PlnSemanticAnalyzer::emitArrLitElem(const json& elemAst, const ArrLitShape& shape, const json& value, json& out,
+                                         size_t depth)
+{
+	if (depth + 1 < shape.levels.size()) {
+		emitArrLitAssigns(elemAst, shape, value, out, false, depth + 1);
+	} else if (shape.structDef && value.is_object()) {
+		out.push_back(makeCopyStmt(elemAst, sa_expression(elemAst), value, CopyInto::New));
+	} else if (shape.structDef) {
+		emitStructLitAssigns(elemAst, *shape.structDef, value, out);
+	} else {
+		out.push_back({{"stmt-type", "arr-assign"}, {"target", sa_expression(elemAst)}, {"value", value}}); // LCOV_EXCL_BR_LINE
+	}
+}
 
 json PlnSemanticAnalyzer::sa_struct_lit_var_decl(const json& stmt, VarStorage storage)
 {
@@ -824,6 +830,62 @@ json PlnSemanticAnalyzer::sa_struct_lit_var_decl(const json& stmt, VarStorage st
 	json result = sa_var_decl_group(declStmt, storage);
 	emitStructLitAssigns({{"expr-type", "id"}, {"name", var["name"]}}, def, values, result); // LCOV_EXCL_BR_LINE
 	return result;
+} // LCOV_EXCL_BR_LINE
+
+// `[""]T d = {k: v, ...}` declares d, then adds each key and writes its value
+// into the value the adding builds, as `v -> d[k]` does. The values are
+// analyzed as an array literal of T, before d is in scope.
+json PlnSemanticAnalyzer::sa_dict_lit_var_decl(const json& stmt, VarStorage storage)
+{
+	// LCOV_EXCL_BR_START
+	const json& var = stmt["vars"][0];
+	const json& lit = var["init"];
+	string name = var["name"];
+	json keys = dictLitKeys(lit);
+	json vt = dictStorageType(stmt, var["var-type"]);
+	ArrLitShape shape = arrLitShape(lit, name, varrPntrType(vt["base-type"]["base-type"], false), true);
+	json valueLit = {{"expr-type", "arr-lit"}, {"items", json::array()}};
+	for (auto& item : lit["items"]) valueLit["items"].push_back(item["value"]);
+	json values = sa_arr_lit_values(valueLit, shape, name);
+
+	json declStmt = stmt;
+	declStmt["vars"][0].erase("init");
+	json result = sa_var_decl_group(declStmt, storage);
+	json dictAst = {{"expr-type", "id"}, {"name", name}};
+	for (size_t i = 0; i < keys.size(); i++) {
+		const json& item = lit["items"][i];
+		json addr = dictValueAddr(sa_expression(dictAst), dictAst, keys[i], "put", item);
+		json elemAst = {{"expr-type", "arr-index"}, {"array", pinValue(move(addr), item, result)},
+		                {"index", {{"expr-type", "lit-int"}, {"value", "0"}}}};
+		emitArrLitElem(elemAst, shape, values[i], result, 0);
+	}
+	return result;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+json PlnSemanticAnalyzer::dictLitKeys(const json& lit)
+{
+	json keys = json::array();
+	set<string> seen;
+	for (auto& item : lit["items"]) {
+		json key;
+		if (item.contains("key")) {
+			key = item["key"];
+		} else {
+			key = foldConstExpr({{"expr-type", "id"}, {"name", item["name"]}}); // LCOV_EXCL_BR_LINE
+			if (key.value("expr-type", "") != "lit-str") {
+				cerr << locPrefix(item) << PlnSaMessage::getMessage(E_DictLitKeyNotConst, item["name"].get<string>()) << endl;
+				exit(1);
+			}
+			if (item.contains("loc")) key["loc"] = item["loc"];
+		}
+		if (!seen.insert(key["value"].get<string>()).second) {
+			cerr << locPrefix(item) << PlnSaMessage::getMessage(E_DictLitDupKey, key["value"].get<string>()) << endl;
+			exit(1);
+		}
+		keys.push_back(move(key));
+	}
+	return keys;
 } // LCOV_EXCL_BR_LINE
 
 // Normalizes a struct value written in field order (`[0, 1]`) or by name

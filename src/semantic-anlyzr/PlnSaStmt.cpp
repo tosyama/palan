@@ -1086,7 +1086,7 @@ json PlnSemanticAnalyzer::sa_assign_stmt(const json& stmt)
 		exit(1);
 	}
 	requireAssignable(name, stmt);
-	if (isAggregateLit(stmt["value"]) && (isVarrStorage(*varType) || assignsByFunc(*varType)))
+	if (isAggregateLit(stmt["value"]) && (isVarrStorage(*varType) || isDictStorage(*varType) || assignsByFunc(*varType)))
 		return sa_lit_assign_via_temp(stmt, *varType);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(*varType) || isArrLevel(*varType)))
 		return json::array({sa_aggregate_lit_assign(stmt, {{"expr-type", "id"}, {"name", name}}, *varType)}); // LCOV_EXCL_BR_LINE
@@ -1148,13 +1148,15 @@ json PlnSemanticAnalyzer::sa_lit_assign_via_temp(const json& stmt, const json& v
 	json loc = stmt.value("loc", json::array());
 	string temp = "__lit_" + to_string(tempVarCounter_++);
 	json arr = astTypeOf(varType);
-	if (!isStructPntr(varType) && !stmt["value"]["items"].empty()) arr["specifier"] = "raw";
+	bool isDict = isDictPntr(varType);
+	if (!isStructPntr(varType) && !isDict && !stmt["value"]["items"].empty()) arr["specifier"] = "raw";
 	string target = arrLitTargetName(targetAst);
 	json decl = {{"stmt-type","var-decl"},{"loc",loc},
 		{"vars",json::array({{{"name",temp},{"lit-name",target},{"var-type",move(arr)},{"init",stmt["value"]}}})}};
 	store["value"] = {{"expr-type","id"},{"name",temp},{"loc",loc}};
 	enterScope();
-	json body = sa_resolved_var_decl(decl, {VarStorage::Frame});
+	// std/rt allocates a dictionary, so it cannot be laid out in the frame.
+	json body = sa_resolved_var_decl(decl, {isDict ? VarStorage::Heap : VarStorage::Frame});
 	for (auto& st : sa_store_stmt(store)) body.push_back(move(st));
 	size_t idx = arrayScopeVars_.size() - 1;
 	for (auto& st : collectFreeStmts(idx, idx + 1)) body.push_back(move(st));
