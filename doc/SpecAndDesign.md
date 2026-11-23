@@ -633,12 +633,12 @@ text type means by a position, rather than bytes.
   conversion with numbers (a formatting module's, such as `std/fmt`), compound assignment, `[]`
   indexing.
 
-**Grapheme clusters** (0.2.7; not implemented). `for copy g, i in s.graphemes()` gives each
+**Grapheme clusters** (0.2.7). `for copy g, i in s -> graphemes()` gives each
 extended grapheme cluster of Unicode's UAX #29 as a `utf8`, in `s`'s mode as `slice` gives, and
 `graphemeCount(@s)` counts them. An invalid part is a cluster of its own.
 
 - `graphemes` returns an iterator type for `for`'s `iter`/`next` (3.8) rather than a `[+]utf8`, so a
-  long text is not held twice. Positions still count code points: making the clusters `utf8`'s
+  long text is not held twice; it borrows `s`. Positions still count code points: making the clusters `utf8`'s
   characters (as Swift does) would change what 0.2.5 decided a position is and scan every position
   for boundaries. Functions taking cluster positions are left until wanted.
 - The properties the rules read (Grapheme_Cluster_Break, Extended_Pictographic,
