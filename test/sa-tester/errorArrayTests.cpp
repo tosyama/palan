@@ -660,6 +660,12 @@ TEST(sa_error, dict)
 		{"error_1192_empty_dict_lit_array.pa", ":1:14: error: a '{name: value}' literal can only be used as a struct or dictionary value"},
 		{"error_1193_empty_lit_missing_field.pa", ":2:7: error: the literal of struct 'P' is missing field 'x'."},
 		{"error_1194_empty_lit_overload_ambiguous.pa", ":4:1: error: Ambiguous function call 'f': it can mean f(P), f([\"\"]int32)."},
+		{"error_1199_dict_copy_to_varr.pa", ":3:1: error: cannot copy '[\"\"]int32' into '[+]int32'"},
+		{"error_1200_dict_to_varr_borrow.pa", ":3:1: error: cannot convert '[\"\"]int32' to '@[+]int32'."},
+		{"error_1201_arr_lit_overload_dict.pa", ":4:1: error: Ambiguous function call 'f': it can mean f(@[2]int32), f(@[3]int32)."},
+		{"error_1202_return_nothing_for_block.pa", ":1:24: error: Single-return function requires exactly one return expression."},
+		{"error_1203_return_two_for_block.pa", ":1:37: error: Single-return function requires exactly one return expression."},
+		{"error_1204_chained_varr_dict_overloads.pa", ":4:16: error: No function 'f' takes ([+]int32); there are f(@[\"\"]int32), f(@[\"\"]flo64)."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -749,7 +749,7 @@ bool PlnSemanticAnalyzer::staticArrLitData(json& decl, const string& name, const
 		return false;
 	(*init)["data"] = {{"type", shape.leaf}, {"values", move(data)}}; // LCOV_EXCL_BR_LINE
 	return true;
-}
+} // LCOV_EXCL_BR_LINE
 
 // The levels of an already declared array, down to the elements a literal can
 // give: numeric values or structs (stored in place or owned). A fixed level's
@@ -887,7 +887,7 @@ void PlnSemanticAnalyzer::emitArrLitElem(const json& elemAst, const ArrLitShape&
 	} else {
 		out.push_back({{"stmt-type", "arr-assign"}, {"target", sa_expression(elemAst)}, {"value", value}}); // LCOV_EXCL_BR_LINE
 	}
-}
+} // LCOV_EXCL_BR_LINE
 
 json PlnSemanticAnalyzer::sa_struct_lit_var_decl(const json& stmt, VarStorage storage)
 {

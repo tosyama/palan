@@ -719,6 +719,12 @@ TEST(build_mgr, dict_global) {
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/452_dict_global.pa"), "1 2 4 2 1\n");
 }
 
+// Initializers that static data cannot hold.
+TEST(build_mgr, dynamic_global_data) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/454_dynamic_global_data.pa"), "1 4 1 4 11\n");
+}
+
 // Opaque values held in fields, rows and `[+]`, returned among several values,
 // and copied and converted where their contents are visible.
 TEST(build_mgr, opaque_mtrace) {
@@ -797,4 +803,10 @@ TEST(build_mgr, dict_holders_mtrace) {
 // '{}' where a value goes: an initializer, a field, nested, an argument, a return.
 TEST(build_mgr, empty_dict_lit_mtrace) {
 	expectMtraceRun("449_empty_dict_lit_mtrace", "1 1 1 0 0 1\n0 0 1 3\n", 33);
+}
+
+// Overloads told apart by a dictionary, one passed and returned by value, and
+// rows and structs laid out in place in dictionaries.
+TEST(build_mgr, dict_calls_mtrace) {
+	expectMtraceRun("453_dict_calls_mtrace", "4 1\n7 100\n2 11\n1\n1 2\n2 6\n", 50);
 }

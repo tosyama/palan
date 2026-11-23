@@ -1,0 +1,33 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; int32 y; };
+func pick(@[3]int32 a) -> int32 { return a[0]; }
+func pick(@[""]int32 d) -> int32 { return 100; }
+func total(@[+]int32 v) -> int64 { return len(v); }
+func total(@[""]int32 d) -> int64 { return 10 + len(d); }
+func copied(@[""]int32 d) -> [""]int32 { return d; }
+func same(@[""]$P d) -> @[""]$P { return d; }
+func take([""]int32 d) -> int64 { return len(@d); }
+func f() {
+	[""]$[2]int32 r = {"a": [1, 2], "b": [3, 4]};
+	r.remove("a");
+	printf("%d %ld\n", r["b"][1], len(@r));
+	printf("%d %d\n", pick(@[7, 8, 9]), pick(@{"k": 1}));
+	[+]int32 v = [1, 2];
+	[""]int32 d = {"x": 1};
+	int64 a = v -> total();
+	int64 b = d -> total();
+	printf("%ld %ld\n", a, b);
+	[""]int32 e = copied(@d);
+	5 -> e["y"];
+	printf("%ld\n", take(d));
+	printf("%ld %ld\n", len(@d), len(@e));
+	[2][""]$P h;
+	{x: 1, y: 2} -> h[0]["p"];
+	[2][""]$P h2 = h;
+	[""]$P ps = {"q": {x: 5, y: 6}};
+	@[""]$P bp = same(@ps);
+	printf("%d %d\n", h2[0]["p"].y, bp["q"].y);
+}
+mtrace();
+f();

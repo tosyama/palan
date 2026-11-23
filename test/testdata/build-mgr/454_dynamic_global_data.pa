@@ -1,0 +1,12 @@
+cinclude <stdio.h>;
+type P { int32 x; int32 y; };
+func one() -> int32 { return 1; }
+func sum(@[2]int32 a) -> int32 { return a[0] + a[1]; }
+
+// Initializers that cannot be laid out as static data: a nested row with a
+// call, structs, and a literal argument of a call.
+global $[2]$[2]int32 g = [[one(), 2], [3, 4]] for show;
+global $[2]$P ps = [{x: 1, y: 2}, {x: 3, y: 4}] for show;
+global int32 s = sum(@[5, 6]) for show;
+func show() { printf("%d %d %d %d %d\n", g[0][0], g[1][1], ps[0].x, ps[1].y, s); }
+show();

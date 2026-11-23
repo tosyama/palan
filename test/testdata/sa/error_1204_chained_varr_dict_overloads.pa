@@ -1,0 +1,4 @@
+func f(@[""]int32 d) -> int64 { return 1; }
+func f(@[""]flo64 d) -> int64 { return 2; }
+[+]int32 v;
+int64 a = v -> f();

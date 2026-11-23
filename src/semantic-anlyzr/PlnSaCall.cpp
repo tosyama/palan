@@ -221,7 +221,7 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 		auto constKey = [&](const json& item) {
 			return item.contains("key")
 				|| foldConstExpr({{"expr-type", "id"}, {"name", item["name"]}}).value("expr-type", "") == "lit-str"; // LCOV_EXCL_BR_LINE
-		};
+		}; // LCOV_EXCL_BR_LINE
 		if (isDictPntr(paramVT))
 			return dictLit && all_of(items.begin(), items.end(), constKey) ? ArgFit::Viable : ArgFit::None;
 		if (dictLit && any_of(items.begin(), items.end(), [](const json& item) { return item.contains("key"); }))
