@@ -594,8 +594,7 @@ borrow, would also reject a struct that borrows nothing.
 **Character literals.** A literal is its code point. One of 128 or more adopts only an integer type
 of 32 bits or more: UTF-8 text never holds it as a byte, so `buf[i] == 'é'` on a `[]uint8` would be
 silently false. A character of several code points is an error suggesting a string literal; the
-characters of `std/utf8` are code points, grapheme clusters being left for later (doc/Issues.md
-#4).
+characters of `std/utf8` are code points.
 
 **Hidden and read-only fields.** The boundary is the module, as for `export`. Unmarked fields stay
 public, since most exported structs are plain data (`samples/raytracer/vecmath.pa`'s `vec3`).
@@ -633,12 +632,10 @@ text type means by a position, rather than bytes.
   conversion with numbers (a formatting module's, such as `std/fmt`), compound assignment, `[]`
   indexing.
 
-**Grapheme clusters** (0.2.7). `for copy g, i in s -> graphemes()` gives each
-extended grapheme cluster of Unicode's UAX #29 as a `utf8`, in `s`'s mode as `slice` gives, and
-`graphemeCount(@s)` counts them. An invalid part is a cluster of its own.
+**Grapheme clusters** (0.2.7).
 
 - `graphemes` returns an iterator type for `for`'s `iter`/`next` (3.8) rather than a `[+]utf8`, so a
-  long text is not held twice; it borrows `s`. Positions still count code points: making the clusters `utf8`'s
+  long text is not held twice. Positions still count code points: making the clusters `utf8`'s
   characters (as Swift does) would change what 0.2.5 decided a position is and scan every position
   for boundaries. Functions taking cluster positions are left until wanted.
 - The properties the rules read (Grapheme_Cluster_Break, Extended_Pictographic,
@@ -652,39 +649,21 @@ extended grapheme cluster of Unicode's UAX #29 as a `utf8`, in `s`'s mode as `sl
 
 ### 3.10 Dictionaries
 
-**Status.** Designed for 0.2.7; not implemented.
+**Status.** Implemented in 0.2.7; PalanReference.md states what it does.
 
-`[""]T` maps C strings to values of `T`. It is a built-in type rather than a library one, as
-`[+]T` is, because Palan has no generic types: like `[+]T`, it is made of functions generated for
-each shape of its values (3.6), and follows `[+]T`'s rules wherever a type may appear (elements,
-fields, parameters, returns, borrows, copy, `->>`, `$T` values).
+It is a built-in type rather than a library one, as `[+]T` is, because Palan has no generic types:
+like `[+]T`, it is made of functions generated for each shape of its values (3.6), and follows
+`[+]T`'s rules wherever a type may appear.
 
-- A key is a C string: the dictionary copies its bytes up to the NUL and owns the copy, and keys
-  compare by those bytes. The type is written `[""]` rather than with a key type, since a key is
-  neither the `@[]uint8` borrow given nor a `[]uint8` the caller owns. Other key types are left
-  until wanted; `[K:]T` was not taken for integer keys, as it reads like a slice.
-- `x -> d[k]` adds `k` or replaces its value; any other use of `d[k]` (reading it, `d[k].f`,
-  `@!d[k]`) needs `k` to be there, and stops the program with a run-time error otherwise. Creating
-  an element on a read was not taken: a read through `@d` could not, and a mistyped key would pass
-  silently. Finding the key tells whether it is there, so the check costs nothing and stays in a
-  release build. `x` is evaluated before `k` is added, so `len(@d) -> d["n"]` stores the count
-  without `"n"`, as Python's `d[k] = len(d)` does. `k` is only read, as an index is, so an array
-  is written by name (`d[buf]`), while `has(@d, @buf)` gives it as any call does.
-- `len`, `has`, `remove` (false for a missing key) and `clear` (keeping the storage) are built-in
-  functions as `[+]T`'s are.
-- Elements are kept in the order they were added, so iterating gives the same order on every run.
-  `for copy v, k in d` gives the key as a borrow of the dictionary's copy. A loop's body cannot add
-  or remove a key of the dictionary iterated (`x -> d[k]` included, as it may add one), checked
-  as `[+]T`'s length is.
-- A literal is written as JSON is, `{"apple": 1, K: 2}`: a key is a string the compiler knows, a
-  string literal or a string constant's value, so a repeated key is a compile error. A key known
-  at run time is added with `x -> d[k]`. Taking a bare name as the key's text, as JavaScript does,
-  was not taken: a constant meant as the key would pass silently. gen-ast cannot tell `{x: 1}` for
-  a struct from one for a dictionary, so it emits one braced literal and palan-sa decides by the
-  type the literal is given to, as it already decides which struct.
-- `{}` is the empty literal, as `[]` is for `[+]T`, written only where a value goes (an initializer,
-  an argument, a return, an item of a literal): at the start of a statement it is an empty block,
-  so a dictionary is emptied with `clear`. Given to a struct, it is a literal naming no field.
+- The type is written `[""]` rather than with a key type, since a key is neither the `@[]uint8`
+  borrow given nor a `[]uint8` the caller owns. Other key types are left until wanted; `[K:]T` was
+  not taken for integer keys, as it reads like a slice.
+- Creating an element on a read was not taken: a read through `@d` could not, and a mistyped key
+  would pass silently. Finding the key tells whether it is there, so the check costs nothing and
+  stays in a release build. The value is evaluated before its key is added, as Python does.
+- In a literal, taking a bare name as the key's text, as JavaScript does, was not taken: a constant
+  meant as the key would pass silently. gen-ast cannot tell `{x: 1}` for a struct from one for a
+  dictionary, so it emits one braced literal and palan-sa decides by the type it is given to.
 
 Layout: an owned slot pointing to a header that `std/rt` allocates, holding the live count, the
 number of positions used, the entries `{hash, key}` in the order of addition, an index table, and

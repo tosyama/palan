@@ -1,6 +1,6 @@
 # Palan Language Reference
 
-**Version:** v0.2.6
+**Version:** v0.2.7
 
 Palan is a compiled systems programming language designed as a simpler, safer, and more enjoyable alternative to C. It targets developers who want low-level control and direct access to C libraries, without the sharp edges of C syntax. Palan code compiles to native x86-64 binaries via AT&T assembly, with no runtime overhead.
 
@@ -2026,6 +2026,89 @@ printf("%d\n", two[1][0]);   // 4
   `@x` / `@!x` (`ps.push(@!p)`, `@!q -> ps[0]`) and nothing it points to is freed. `[+]@[]T`
   holds pointers to arrays of any length; the program's arguments, `args`, are a
   `@[+]@[]uint8` (see [Program Structure](#program-structure)).
+
+### Dictionaries (`[""]T`)
+
+`[""]T` is a dictionary: it maps C strings, its keys, to values of type `T`. It starts empty.
+
+```palan
+cinclude <stdio.h>;
+
+[""]int32 stock = {"apple": 3, "pear": 5};
+7 -> stock["fig"];                  // adds a key
+stock["apple"] + 1 -> stock["apple"];
+printf("%d %ld\n", stock["apple"], len(@stock));    // 4 3
+if stock.remove("pear") && !has(@stock, "pear") { printf("sold out\n"); }
+
+for copy n, k in stock { printf("%s=%d ", k, n); }  // apple=4 fig=7
+printf("\n");
+```
+
+| Function | Meaning |
+|----------|---------|
+| `len(@d)` | the number of keys, an `int64` |
+| `has(@d, k)` | whether `k` is there, a `bool` |
+| `remove(@!d, k)` | removes `k` and its value; `false` if it was not there |
+| `clear(@!d)` | removes every key, keeping the room |
+
+They are ordinary functions, so those taking `@!d` can be called in method form (`d.remove(k)`) and
+all of them after `->`. A function with the same parameter types as one of them is a compile error.
+
+- A key is the bytes up to the first NUL. The dictionary keeps a copy of them, so what `k` was read
+  from may change or be freed afterwards.
+- `k` is what a `@[]uint8` parameter takes: a string literal, a string constant, `args[i]`, a C
+  function's string. In `d[k]` an array is written by name (`d[buf]`), since it is only read; given
+  to a function it is `@buf`, as always (`has(@d, @buf)`).
+- Only `x -> d[k]` (and `x ->> d[k]`) adds a key, or replaces the value of one that is there. Every
+  other use of `d[k]` (reading it, `1 -> d[k].x`, `@!d[k]`) stops the program with a run-time error
+  if `k` is not there, also in a release build; ask with `has` first. `x` is evaluated before `k` is
+  added: `len(@d) -> d["n"]` stores the count without `"n"`.
+- Adding or removing a key can move or free the values, so a borrow of one (`@!d[k]`) must not be
+  kept across it. This is not checked.
+
+**Literals.** `{"a": 1, K: 2}` gives keys and values. A key is a string literal or a string
+[constant](#constant-declarations), whose value is the key; any other key is added with `x -> d[k]`.
+A repeated key is a compile error. `{}` is the empty dictionary. It is written only where a value goes
+(an initializer, an argument, a return value, an item of a literal), since at the start of a
+statement it is an empty block: an existing dictionary is emptied with `clear`. `{..} -> d` replaces
+what `d` holds. An argument to a `@[""]T` is written `@{..}`.
+
+**Iteration.** `for copy v, k in d` visits the keys in the order they were added (replacing a value
+keeps its key's place). `v` is `copy`, `@` or `@!`, as for an array, and `k`, which may be left out, is
+the dictionary's own copy of the key: a read-only `@[]uint8`, valid only for the iteration and
+written without a type. The body cannot add or remove a key of `d`, nor store whole into it
+(`x -> d[k]`, as it may add a key): that is a compile error, checked as for a `[+]T`'s length.
+Writing through `@!v` or into a field (`1 -> d[k].x`) is fine.
+
+**Ownership and values.** A dictionary is owned, copied, moved with `->>`, passed, returned and
+borrowed (`@[""]T`, `@![""]T`) as a `[+]T` is. A value can be anything a `[+]T`'s element can, and a
+dictionary can be a struct's field or another array's or dictionary's element:
+
+```palan
+cinclude <stdio.h>;
+
+type Point { int64 x; int64 y; };
+type Map { [""]Point places; };
+
+func add(@![""][+]int64 groups, @[]uint8 k, int64 x)
+{
+    if !has(groups, k) { [] -> groups[k]; }
+    groups[k].push(x);
+}
+
+Map m = {places: {"home": {x: 1, y: 2}}};
+[3, 4] -> m.places["work"];
+5 -> m.places["home"].y;
+[""]Point c = m.places;             // a copy
+printf("%ld %ld\n", c["home"].y, c["work"].x);      // 5 3
+
+[""][+]int64 g;
+add(@!g, "a", 1); add(@!g, "a", 2); add(@!g, "b", 3);
+printf("%ld %ld\n", len(@g), len(@g["a"]));         // 2 2
+```
+
+- `[""]$T` lays its values out next to each other, as `[+]$T` does; `T` cannot own storage.
+- `$` cannot lay out a dictionary itself: `$[""]T` is a compile error.
 
 ### Array Literals
 
