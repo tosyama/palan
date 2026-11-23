@@ -1,0 +1,13 @@
+cinclude <stdio.h>;
+import "lib_dict_global.pa";
+
+// Exported dictionaries, one with its values laid out in place.
+global counts;
+global places;
+func at(@[""]$At d, @[]uint8 k) -> @At { return @d[k]; }
+
+2 -> counts["b"];
+{x: 3, y: 4} -> places["work"];
+[""]$At copied = places;
+copied.remove("home");
+printf("%d %d %ld %ld %ld\n", counts["a"], counts["b"], at(@places, "work").y, len(@places), len(@copied));

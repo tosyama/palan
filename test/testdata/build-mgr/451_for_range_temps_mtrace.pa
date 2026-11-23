@@ -22,6 +22,8 @@ func bump(@!int64 n) -> int64 { n[0] + 1 -> n[0]; return n[0]; }
 func mkBump(@!int64 n) -> nums r { n[0] + 1 -> n[0]; r.v.push(n[0]); r.v.push(n[0] + 1); r.v.push(n[0] + 2); }
 func ptrs(@nums a, @nums b) -> [+]@nums r { r.push(a); r.push(b); }
 
+func mk2(int64 n) -> nums r, int64 skip { r.v.push(n); r.v.push(n + 1); r.v.push(n + 2); 2 -> skip; }
+
 func firstOf(int64 n) -> int64
 {
 	for copy x in over(@mk(n)) { return x; }
@@ -52,6 +54,9 @@ func main()
 	for copy x in over(@mkBump(@!n), n) { printf("%ld ", x); }
 	for copy x in over(@mkBump(@!n), bump(@!n) - 2) { printf("%ld ", x); }
 	printf("%ld\n", n);
+	// A chain whose values are evaluated first, as the range and within it.
+	for copy x in mk2(80) -> over() { printf("%ld ", x); }
+	for copy x in mk2(90) -> over() -> again() { printf("%ld\n", x); }
 }
 
 mtrace();

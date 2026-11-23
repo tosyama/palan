@@ -711,7 +711,12 @@ TEST(build_mgr, for_struct_mtrace) {
 // 'return' out of it, and the arguments are evaluated in the order written.
 TEST(build_mgr, for_range_temps_mtrace) {
 	expectMtraceRun("451_for_range_temps_mtrace",
-		"11 12 13 22 23 65 66 \n33 42 43 51 61 \n1 3 11 12 71\n2 3 3 4 3\n", 51);
+		"11 12 13 22 23 65 66 \n33 42 43 51 61 \n1 3 11 12 71\n2 3 3 4 3\n82 92\n", 61);
+}
+
+TEST(build_mgr, dict_global) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/452_dict_global.pa"), "1 2 4 2 1\n");
 }
 
 // Opaque values held in fields, rows and `[+]`, returned among several values,
