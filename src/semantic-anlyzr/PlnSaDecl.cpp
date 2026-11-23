@@ -706,9 +706,50 @@ json PlnSemanticAnalyzer::sa_arr_lit_var_decl(const json& stmt, VarStorage stora
 	checkArrLitCount(stmt, items, name, shape);
 
 	json result = sa_arr_var_decl(declStmt, storage, st, isVarr);
-	emitArrLitAssigns({{"expr-type", "id"}, {"name", declVar["name"]}}, shape, values, result); // LCOV_EXCL_BR_LINE
+	if (!staticArrLitData(result, declVar["name"], shape, values))
+		emitArrLitAssigns({{"expr-type", "id"}, {"name", declVar["name"]}}, shape, values, result); // LCOV_EXCL_BR_LINE
 	return result;
 } // LCOV_EXCL_BR_LINE
+
+// A global's frame block, which sa_global_decl makes static, takes the literal
+// as its initial data when every element is a constant number laid out in
+// place. Otherwise every element is stored: storing only the others in ..init
+// would let a function the initializer calls see the constants early.
+bool PlnSemanticAnalyzer::staticArrLitData(json& decl, const string& name, const ArrLitShape& shape,
+                                           const json& values)
+{
+	if (!globalInitTopScope_ || name != globalInitName_ || shape.structDef)
+		return false;
+	json* init = nullptr;
+	for (auto& s : decl)
+		if (s.value("stmt-type", "") == "var-decl" && s["vars"][0]["name"] == name)
+			init = &s["vars"][0]["init"];
+	if (!init || init->value("expr-type", "") != "frame-alloc")
+		return false;
+	for (const json* t = &(*init)["value-type"]; (*t)["base-type"].value("type-kind", "") == "pntr";
+	     t = &(*t)["base-type"])
+		if (!t->value("embedded", false))
+			return false;
+
+	json data = json::array();
+	auto flatten = [&](auto& self, const json& vs) -> bool {
+		for (auto& v : vs) {
+			if (v.is_array()) {
+				if (!self(self, v)) return false;
+				continue;
+			}
+			string et = v.value("expr-type", "");
+			if (et != "lit-int" && et != "lit-uint" && et != "lit-flo")
+				return false;
+			data.push_back(v["value"]);
+		}
+		return true;
+	};
+	if (!flatten(flatten, values))
+		return false;
+	(*init)["data"] = {{"type", shape.leaf}, {"values", move(data)}}; // LCOV_EXCL_BR_LINE
+	return true;
+}
 
 // The levels of an already declared array, down to the elements a literal can
 // give: numeric values or structs (stored in place or owned). A fixed level's

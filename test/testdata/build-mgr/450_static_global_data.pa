@@ -1,0 +1,22 @@
+cinclude <stdio.h>;
+const K = 4;
+global $[3]int32 t = [1, -2, 3] for f!;
+global $[2]$[2]int16 m = [[1, 2], [3, -4]] for f;
+global $[2]bool b = [true, false] for f;
+global $[2]flo64 u = [1.5, 2] for f;
+global $[2]flo32 v = [0.25, -3] for f;
+global $[1]flo80 x = [1.25] for f;
+global $[2]uint8 w = [K, K + 251] for f;
+global $[2]uint64 q = [18446744073709551615u, 0] for f;
+global $[2]int32 n = [g(), 5] for f;
+global $[2][1]int64 o = [[6], [8]] for f;
+func g() -> int32 { return 9; }
+func f()
+{
+	printf("%d %d %d %d %d %d %d %d\n", t[0], t[1], t[2], m[0][0], m[0][1], m[1][0], m[1][1], b[0]);
+	printf("%g %g %g %g %Lg %d %d %lu %lu %d %d\n", u[0], u[1], v[0], v[1], x[0], w[0], w[1], q[0], q[1], n[0], n[1]);
+	printf("%ld %ld\n", o[0][0], o[1][0]);
+	7 -> t[1];
+	printf("%d\n", t[1]);
+}
+f();

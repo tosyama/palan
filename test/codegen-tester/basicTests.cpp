@@ -1592,3 +1592,22 @@ TEST(codegen, flo80)
     ASSERT_NE(asm_text.find("flo80\n\taddq $32, %rsp\n\tfstpt "), string::npos);
     ASSERT_EQ(execTestCommand("as " + asmf + " -o out/082_flo80.o"), "");
 }
+
+TEST(codegen, static_data)
+{
+    cleanTestEnv();
+    string sa   = "../test/testdata/codegen/083_static_data.sa.json";
+    string asmf = "out/083_static_data.s";
+    ASSERT_EQ(run_codegen(sa, asmf), "");
+    string asm_text = readFile(asmf);
+    ASSERT_NE(asm_text.find("\t.section .data\n\t.align 4\n"), string::npos);
+    ASSERT_NE(asm_text.find(".a.data:\n\t.long 1, -2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16\n\t.long 17\n"), string::npos);
+    ASSERT_NE(asm_text.find(".b.data:\n\t.short 1, -2\n"), string::npos);
+    ASSERT_NE(asm_text.find(".c.data:\n\t.byte 1, 255\n"), string::npos);
+    ASSERT_NE(asm_text.find(".d.data:\n\t.quad 18446744073709551615\n"), string::npos);
+    ASSERT_NE(asm_text.find(".e.data:\n\t.float 0.25, -3\n"), string::npos);
+    ASSERT_NE(asm_text.find(".f.data:\n\t.double 1.5\n"), string::npos);
+    ASSERT_NE(asm_text.find(".g.data:\n\t.tfloat 1.25\n\t.zero 6\n\t.tfloat 2\n\t.zero 6\n"), string::npos);
+    ASSERT_NE(asm_text.find(".z.data:\n\t.zero 8\n"), string::npos);
+    ASSERT_EQ(execTestCommand("as " + asmf + " -o out/083_static_data.o"), "");
+}

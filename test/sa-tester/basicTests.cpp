@@ -1117,6 +1117,35 @@ TEST(sa, global_var)
 	ASSERT_EQ(fs[2]["globals"][0]["var-type"]["mutable"], false);
 }
 
+// An array of constants is the initial data of a global's static storage; one
+// with any other element, or with rows of its own, is stored in ..init.
+TEST(sa, static_global_data)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/364_static_global_data.pa");
+	ASSERT_TRUE(jout.is_object());
+	map<string, json> data;
+	map<string, int> stores;
+	for (auto& s : jout["functions"].back()["body"]) {
+		if (s["stmt-type"] == "var-decl") {
+			const json& v = s["vars"][0];
+			if (v["init"].contains("data")) data[v["name"]] = v["init"]["data"];
+		} else if (s["stmt-type"] == "arr-assign") {
+			const json* a = &s["target"];
+			while (a->contains("array")) a = &(*a)["array"];
+			stores[a->value("name", "")]++;
+		}
+	}
+	ASSERT_EQ(data.size(), 2);
+	ASSERT_EQ(data["m"]["type"]["type-name"], "int16");
+	ASSERT_EQ(data["m"]["values"], json({"1", "-2", "4", "5"}));
+	ASSERT_EQ(data["u"]["values"], json({"1.5", "2"}));
+	ASSERT_EQ(stores["m"], 0);
+	ASSERT_EQ(stores["u"], 0);
+	ASSERT_EQ(stores["n"], 2);
+	ASSERT_EQ(stores["o"], 2);
+}
+
 // A character literal of 128 or more takes an integer type of 32 bits or
 // more; an ASCII one also a byte, and one with no type to take is an int.
 TEST(sa, code_point_literal)

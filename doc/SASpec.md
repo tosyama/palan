@@ -1182,7 +1182,11 @@ SA-only expression kinds (not present in AST JSON):
 
 - static-alloc - The storage of a `$T` or fixed-size array `global` variable, in place of its
   `frame-alloc`: a block in `.bss`, so it outlives the top level. Its value is the block's
-  address. Same fields as `frame-alloc`, plus `label` (the variable's label + `.data`).
+  address. Same fields as `frame-alloc`, plus `label` (the variable's label + `.data`), and
+  `data` when the variable's array literal is all constants of a `prim` leaf: `type` (the leaf)
+  and `values` (each element's `value` text, as its `lit-int`/`lit-uint`/`lit-flo` gives it, rows
+  in order). The block then holds those values from the start, in `.data`, and the var-decl is
+  followed by no `arr-assign` of them.
 - frame-alloc - A block in the function's stack frame; its value is the block's address. Appears
   only as the `init` of a stack variable's var-decl (see Stack variable declarations) or of
   `args`'s (see Root `statements`).

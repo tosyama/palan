@@ -135,7 +135,11 @@ Design:
  variable's initializer is analyzed in statement order.
  A static variable (SASpec.md's Static variables) follows the rule a parameter of its type follows.
  The storage of a `$T` or fixed-size array `global` is static rather than in the top level's frame,
- so a function C calls after the top level returns (an `atexit` handler) still finds it.
+ so a function C calls after the top level returns (an `atexit` handler) still finds it. An array
+ of numbers whose literal is all constants starts with its values in `.data` instead of being
+ stored element by element in `..init` (0.2.7), so a table such as std's grapheme properties costs
+ its data alone; with any element not constant, every element is stored as before, since storing
+ the constant ones first would change what a function called by the initializer sees.
  A C bit-field is a field of its declared type at the unit of that type holding it, with its
  shift and width (SASpec.md), and codegen reads and writes the unit by shifts and masks. Turning
  it into shift and mask expressions in palan-sa was not taken: a write reads, changes and writes
@@ -219,8 +223,8 @@ Design:
    leaves nothing on its own stack between instructions, and a copy moves its 16 bytes through an
    XMM register.
 
- Static variables (SASpec.md) are local `.bss` slots and blocks, a C global the C library's own
- symbol. Every access goes to memory, since a call may change the variable.
+ Static variables (SASpec.md) are local `.bss` slots and blocks (`.data` for a block with initial
+ values), a C global the C library's own symbol. Every access goes to memory, since a call may change the variable.
 
  A string literal may hold any bytes, but JSON holds only valid UTF-8 text, so the literal's
  value travels through ast.json, sa.json and a module's interface as one escaped text

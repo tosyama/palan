@@ -42,7 +42,7 @@ VReg PlnVCodeGen::lowerExpr(const Expr& expr, VFunc& func)
         }
         case ExprKind::StaticAlloc: {
             auto& e = static_cast<const StaticAllocExpr&>(expr);
-            prog_->bss.push_back({e.label, e.size, e.align}); // LCOV_EXCL_BR_LINE
+            prog_->bss.push_back({e.label, e.size, e.align, false, e.dataType, e.data}); // LCOV_EXCL_BR_LINE
             VReg dst = allocVReg();
             func.instrs.push_back(LeaLabel{dst, VRegType::Ptr64, e.label});
             return dst;

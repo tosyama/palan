@@ -57,13 +57,17 @@ void PlnX86CodeGen::emit(const VProg& prog, const vector<RegAllocResult>& allocs
         }
     }
 
-    if (!prog.bss.empty()) {
-        emitSection(".bss");
+    for (bool initialized : {true, false}) {
+        bool opened = false;
         for (auto& b : prog.bss) {
+            if (b.data.empty() == initialized) continue;
+            if (!opened) emitSection(initialized ? ".data" : ".bss");
+            opened = true;
             out << "\t.align " << b.align << "\n";
             if (b.isExport) emitGlobal(b.label);
             emitLabel(b.label);
-            out << "\t.zero " << b.size << "\n";
+            if (initialized) emitStaticData(b);
+            else out << "\t.zero " << b.size << "\n";
         }
     }
 
@@ -247,6 +251,30 @@ void PlnX86CodeGen::emitGlobal(const string& name)
 void PlnX86CodeGen::emitLabel(const string& name)
 {
     out << name << ":\n";
+}
+
+// The values are literal texts, which as encodes; a flo80 takes 16 bytes.
+void PlnX86CodeGen::emitStaticData(const StaticBlock& b)
+{
+    const char* dir;
+    switch (b.dataType) {
+        case VRegType::Int8:  case VRegType::Uint8:  dir = ".byte";  break;
+        case VRegType::Int16: case VRegType::Uint16: dir = ".short"; break;
+        case VRegType::Int32: case VRegType::Uint32: dir = ".long";  break;
+        case VRegType::Float32: dir = ".float";  break;
+        case VRegType::Float64: dir = ".double"; break;
+        case VRegType::Float80:
+            for (auto& v : b.data) out << "\t.tfloat " << v << "\n\t.zero 6\n";
+            return;
+        default: dir = ".quad"; break;
+    }
+    const size_t perLine = 16;
+    for (size_t i = 0; i < b.data.size(); i += perLine) {
+        out << "\t" << dir << " ";
+        for (size_t k = i; k < std::min(i + perLine, b.data.size()); k++)
+            out << (k > i ? ", " : "") << b.data[k];
+        out << "\n";
+    }
 }
 
 void PlnX86CodeGen::emitStringLiteral(const string& label, const string& value)

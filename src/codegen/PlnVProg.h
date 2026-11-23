@@ -198,7 +198,11 @@ struct VFloatLiteral {
 };
 
 struct FrameBlock { int size; int align; };
-struct StaticBlock { string label; int size; int align; bool isExport = false; };
+struct StaticBlock {
+    string label; int size; int align; bool isExport = false;
+    VRegType dataType = VRegType::Uint8;
+    vector<string> data;  // initial element values, emitted in .data; empty for .bss
+};
 
 struct VFunc {
     string         name;

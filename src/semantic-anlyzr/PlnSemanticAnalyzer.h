@@ -656,6 +656,7 @@ class PlnSemanticAnalyzer {
 	void emitArrLitElem(const json& elemAst, const ArrLitShape& shape, const json& value, json& out, size_t depth);
 	void emitArrLitAssigns(const json& arrAst, const ArrLitShape& shape, const json& values, json& out,
 	                       bool sized = true, size_t depth = 0);
+	bool staticArrLitData(json& decl, const string& name, const ArrLitShape& shape, const json& values);
 	json allocElemDesc(const json& elem, bool inPlace = false);
 	json layoutElem(const json& elem);
 	// The generated helpers of a fixed array of owned elements elem, which take

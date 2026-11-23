@@ -1,0 +1,6 @@
+const K = 4;
+func g() -> int32 { return 9; }
+global $[2]$[2]int16 m = [[1, -2], [K, K + 1]];
+global $[2]flo64 u = [1.5, 2];
+global $[2]int32 n = [g(), 5];
+global $[2][1]int64 o = [[6], [8]];
