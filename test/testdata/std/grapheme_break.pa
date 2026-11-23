@@ -1,0 +1,78 @@
+import <std/utf8>;
+cinclude <stdio.h>;
+cinclude <stdlib.h>;
+
+// Checks graphemes() against each case of GraphemeBreakTest.txt, given as args[1].
+
+// The code points of a line up to '#' go to s, the number of them before each '÷' to breaks.
+func readCase(@[]uint8 line, @!utf8 s, @![+]int64 breaks) -> int64 n
+{
+	int64 i = 0;
+	int32 c = 0;
+	bool inHex = false;
+	while line[i] != 0 && line[i] != '#' {
+		uint8 b = line[i];
+		i + 1 -> i;
+		if b >= '0' && b <= '9' {
+			c * 16 + (b - '0') -> c;
+			true -> inHex;
+			continue;
+		}
+		if b >= 'A' && b <= 'F' {
+			c * 16 + (b - 'A' + 10) -> c;
+			true -> inHex;
+			continue;
+		}
+		if inHex {
+			// A utf8 holds no NUL; U+0001 has the same properties.
+			if c == 0 { 1 -> c; }
+			s.appendChar(c);
+			n + 1 -> n;
+			0 -> c;
+			false -> inHex;
+		}
+		// The UTF-8 bytes of '÷'; those of '×' are C3 97.
+		if b == 195 && line[i] == 183 { breaks.push(n); }
+	}
+}
+
+func check(@[]uint8 line) -> bool
+{
+	utf8 s;
+	[+]int64 breaks;
+	int64 n = readCase(line, @!s, @!breaks);
+	// The first break is the one before the text.
+	if charCount(@s) != n || s.hadInvalid || graphemeCount(@s) != len(@breaks) - 1 { return false; }
+	int64 pos = 0;
+	int64 k = 0;
+	for copy g in graphemes(@s) {
+		k + 1 -> k;
+		pos + charCount(@g) -> pos;
+		if k >= len(@breaks) || breaks[k] != pos { return false; }
+	}
+	return k == len(@breaks) - 1;
+}
+
+func checkFile(@[]uint8 path)
+{
+	@!FILE f = fopen(path, "r");
+	if f == NULL {
+		printf("cannot open %s\n", path);
+		exit(1);
+	}
+	$[4096]uint8 line;
+	int64 no = 0, cases = 0, failed = 0;
+	while fgets(@!line, 4096, f) != NULL {
+		no + 1 -> no;
+		if line[0] == '#' { continue; }
+		cases + 1 -> cases;
+		if !check(@line) {
+			printf("line %ld: %s", no, line);
+			failed + 1 -> failed;
+		}
+	}
+	fclose(f);
+	printf("%ld cases, %ld failed\n", cases, failed);
+}
+
+checkFile(args[1]);
