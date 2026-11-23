@@ -14,6 +14,11 @@ TEST(std_utf8, top_level_tests) {
 	ASSERT_EQ(execTestCommand("bin/palan ../src/std/utf8.pa"), "");
 }
 
+TEST(std_graphemeprops, top_level_tests) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../src/std/graphemeprops.pa"), "");
+}
+
 TEST(std_utf8, imported_from_the_build_tree) {
 	cleanTestEnv();
 	ofstream("out/uses.pa") << "import <std/utf8>;\ncinclude <stdio.h>;\n"

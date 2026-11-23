@@ -793,7 +793,7 @@ All tools write error messages to **stderr** and exit with code **1** on error.
     <target>/c2ast/predefined.h
     <target>/std/utf8.pai, utf8.a
     <target>/std/rt.pai, rt.a         linked into every program (3.1)
-    src/std/utf8.pa                  for reference; not read when compiling
+    src/std/*.pa, LICENSE-Unicode.txt  for reference; not read when compiling
     uninstall
   share/doc/palan/<version>/
 ```

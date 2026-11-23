@@ -184,4 +184,4 @@ Palan compiles through a pipeline of independent tools that pass JSON between th
 
 ## License
 
-MIT License — see [LICENSE](LICENSE). The bundled [nlohmann/json](lib/json) is distributed under its own MIT license (`lib/json/LICENSE.MIT`).
+MIT License — see [LICENSE](LICENSE). The bundled [nlohmann/json](lib/json) is distributed under its own MIT license (`lib/json/LICENSE.MIT`). The grapheme property table and the conformance test data made from the Unicode Character Database (`src/std/graphemeprops.pa`, `test/testdata/std/GraphemeBreakTest.txt`) are under the [Unicode License v3](src/std/LICENSE-Unicode.txt).
