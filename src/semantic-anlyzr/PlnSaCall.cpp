@@ -535,9 +535,18 @@ json PlnSemanticAnalyzer::bindCallTemp(json saArg)
 	json valueType = saArg["value-type"];
 	json value = {{"expr-type","id"},{"name",name},{"var-type",storage},{"value-type",move(valueType)}};
 	if (isStructRetCall(saArg)) {
-		json release = frameStructRelease(name, storage);
-		return makeTempExpr(declareStructRet(name, storage, move(saArg), VarStorage::Frame), move(value),
-		                    release.is_null() ? json::array() : json::array({move(release)}));
+		json body = json::array(), release = json::array();
+		json fini = frameStructRelease(name, storage);
+		if (!fini.is_null()) release.push_back(move(fini));
+		// The struct may hold a borrow of a chained call's temps, so they are released after it.
+		if (saArg["expr-type"] == "temp") {
+			body = move(saArg["body"]);
+			for (auto& s : saArg["release"]) release.push_back(move(s));
+			json call = move(saArg["value"]);
+			saArg = move(call);
+		}
+		for (auto& s : declareStructRet(name, storage, move(saArg), VarStorage::Frame)) body.push_back(move(s));
+		return makeTempExpr(move(body), move(value), move(release));
 	}
 	json decl = {{"stmt-type","var-decl"},
 	             {"vars",json::array({{{"name",name},{"var-type",storage},{"init",move(saArg)}}})}};

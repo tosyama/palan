@@ -799,6 +799,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   Over a struct `s` (`for copy c, i in s`), SA lowers it to a `block` holding, in order:
   - the iterator `__pin_N` that the call `iter(@s)` (or `iter(@!s)`) returns. When `s` is a value
     a call returns, it is first held in a `__pin_N` of its own, which the block frees if it owns it.
+    The `release` of each `temp` the call was given moves to the end of the block as well, as it does
+    for an array a call returns; a `temp` that is the call itself has its `body` laid in the block.
     `iter` and `next` are those visible under any alias whose shape fits
     (`iter(@T s) -> I` or `iter(@!T s) -> I`, with `I` a struct; `next(@!I it) -> bool ok, E`);
     none is E_ForIterShape or E_ForNextShape, both `iter(@T)` and `iter(@!T)` E_ForIterAmbiguous.

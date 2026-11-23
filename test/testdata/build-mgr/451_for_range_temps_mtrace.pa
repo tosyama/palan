@@ -1,0 +1,58 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+
+type nums { [+]int64 v; };
+type pair { int64 a; int64 b; };
+type view { @nums p; int64 skip; int64 pos = 0; };
+func mk(int64 n) -> nums r { r.v.push(n + 1); r.v.push(n + 2); r.v.push(n + 3); }
+func nums(@[]uint8 s) -> nums r { r.v.push(int64(s[0])); r.v.push(int64(s[1])); }
+func over(@nums p, int64 skip = 0) -> view r { p -> r.p; skip -> r.skip; }
+func over(@nums p, @pair q) -> view r { p -> r.p; q.b -> r.skip; }
+func iter(@view w) -> view r { w.p -> r.p; w.skip -> r.pos; }
+func next(@!view it) -> bool ok, int64 x
+{
+	if it.pos >= len(@it.p.v) { return; }
+	it.p.v[it.pos] -> x;
+	it.pos + 1 -> it.pos;
+	true -> ok;
+}
+// A view of a view's numbers: what is nested is held too.
+func again(@view w) -> view r { w.p -> r.p; w.skip -> r.skip; }
+func bump(@!int64 n) -> int64 { n[0] + 1 -> n[0]; return n[0]; }
+func mkBump(@!int64 n) -> nums r { n[0] + 1 -> n[0]; r.v.push(n[0]); r.v.push(n[0] + 1); r.v.push(n[0] + 2); }
+func ptrs(@nums a, @nums b) -> [+]@nums r { r.push(a); r.push(b); }
+
+func firstOf(int64 n) -> int64
+{
+	for copy x in over(@mk(n)) { return x; }
+	return 0;
+}
+
+func main()
+{
+	for copy x in over(@mk(10)) { printf("%ld ", x); }
+	for copy x in mk(20) -> over(1) { printf("%ld ", x); }
+	for copy x in over("AB") { printf("%ld ", x); }
+	printf("\n");
+	for copy x in over(@mk(30), @[0, 2]) { printf("%ld ", x); }
+	for copy x in again(@over(@mk(40), 1)) { printf("%ld ", x); }
+	for @p in ptrs(@mk(50), @mk(60)) { printf("%ld ", p.v[0]); }
+	printf("\n");
+	for copy i, int64 k in over(@mk(0)) {
+		for copy x in over(@mk(k * 10)) {
+			if x == 2 { continue }
+			if x == 13 { break }
+			printf("%ld ", x);
+		}
+		if k == 1 { break }
+	}
+	printf("%ld\n", firstOf(70));
+	// Evaluated in the order written.
+	int64 n = 0;
+	for copy x in over(@mkBump(@!n), n) { printf("%ld ", x); }
+	for copy x in over(@mkBump(@!n), bump(@!n) - 2) { printf("%ld ", x); }
+	printf("%ld\n", n);
+}
+
+mtrace();
+main();

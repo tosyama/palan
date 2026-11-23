@@ -708,7 +708,8 @@ printf("\n");                          // 0:20 1:40 2:60
 - `arr` can be any array `len` gives the length of (see [Variable-Length
   Arrays](#variable-length-arrays-t)): a fixed-size or variable-length array, a borrowed one, a
   struct's array field or a row. It is evaluated once, before the first iteration; an array
-  returned by a function call is freed after the loop.
+  returned by a function call is freed after the loop, as are the structs and literals given to
+  that call as arguments.
 - The loop variable has no type written, but one of `copy`, `@` or `@!` is required. `copy a` is
   a copy of the element (an owned struct or array is copied deeply and freed at the end of each
   iteration). `@a` and `@!a` are the element itself, read-only and writable: `a` stands for
@@ -763,7 +764,8 @@ for copy c, i in g { printf("%ld:%d ", i, c); }    // 0:10 1:20
   itself, as for an array.
 - `i` counts the iterations from 0. A type may be written for it, which is not checked to fit,
   as for an array whose length is known only at run time.
-- `s` is evaluated once; a struct returned by a call is freed after the loop. The body cannot
+- `s` is evaluated once; a struct returned by a call is freed after the loop, as are the structs
+  and literals given to that call as arguments, which what it returned may borrow. The body cannot
   change `s` itself: `->` or `->>` into or out of it, and passing `@!s` (also `s.f()` and
   `s << x`), are compile errors. Reading `s` and writing its fields are fine.
 

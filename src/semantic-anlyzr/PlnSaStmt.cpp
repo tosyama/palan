@@ -515,6 +515,7 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	// kept by the location it names, which the copy's rows then index by.
 	json runLens = bindRunLens(arr, range);
 	if (isExpiringOwned(range)) {
+		holdCallTemps(range);
 		declareVar(arr, arrType);
 		addOwnedScopeVar(arr, makeOwnedFreeStmt(arr, arrType));
 	} else {
@@ -636,6 +637,36 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
+// The temps the calls in `node` were given are released with the current scope
+// rather than after the expression, since a value a call returns may hold a
+// borrow of one. Those a condition or a '&&'/'||' operand ends stay there.
+void PlnSemanticAnalyzer::holdCallTemps(json& node)
+{
+	// LCOV_EXCL_BR_START
+	if (node.is_array()) {
+		for (auto& n : node) holdCallTemps(n);
+		return;
+	}
+	if (!node.is_object()) return;
+	string et = node.value("expr-type", "");
+	if (et == "logical-and" || et == "logical-or") return;
+	string st = node.value("stmt-type", "");
+	if (st == "if" || st == "while" || st == "block") return;
+	if (et != "temp") {
+		for (auto& [key, child] : node.items())
+			if (child.is_structured()) holdCallTemps(child);
+		return;
+	}
+	holdCallTemps(node["body"]);
+	holdCallTemps(node["value"]);
+	// Scope releases run last first.
+	json& release = node["release"];
+	for (auto r = release.rbegin(); r != release.rend(); ++r)
+		arrayScopeVars_.back().push_back({"__held_" + to_string(tempVarCounter_++), move(*r), false});
+	release = json::array();
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // `for a, i in x { }`: over an array, or over a struct by its type's `iter`
 // and `next`.
 json PlnSemanticAnalyzer::sa_for_stmt(const json& stmt)
@@ -741,6 +772,13 @@ json PlnSemanticAnalyzer::sa_for_struct(const json& stmt, const json& rangeVT, j
 	json block = json::array();
 	json rangeArg;
 	if (rangeSa) {
+		holdCallTemps(*rangeSa);
+		// Receiving the struct would put a temp's body in a block of its own.
+		if (rangeSa->value("expr-type", "") == "temp") {
+			for (auto& b : (*rangeSa)["body"]) block.push_back(move(b));
+			json value = move((*rangeSa)["value"]);
+			*rangeSa = move(value);
+		}
 		bool owned = isExpiringOwned(*rangeSa);
 		string held = pinTemp(move(*rangeSa), rangeAst, block);
 		if (owned) addOwnedScopeVar(held, makeOwnedFreeStmt(held, storageVT));

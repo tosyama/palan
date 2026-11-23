@@ -587,7 +587,9 @@ than an `int64` position, lets the state be anything (a tree's path, a file's bu
 index-based protocol was not taken, since indexing `utf8` by character costs a scan each time. The
 iterator is a struct returned by value and `next` is chosen by it, so the iterations of unrelated
 types do not compete for one `next(@!int64)`. `iter` and `next` are found as operator functions
-are, an alias not hiding them, since `for` never writes their names.
+are, an alias not hiding them, since `for` never writes their names. What the range's call was given
+is held until the loop ends (0.2.7), not only what it returned: an error, as for a call returning a
+borrow, would also reject a struct that borrows nothing.
 
 **Character literals.** A literal is its code point. One of 128 or more adopts only an integer type
 of 32 bits or more: UTF-8 text never holds it as a byte, so `buf[i] == 'é'` on a `[]uint8` would be

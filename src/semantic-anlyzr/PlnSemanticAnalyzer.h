@@ -913,6 +913,7 @@ class PlnSemanticAnalyzer {
 	json sa_loop_body(const json& astBody, const json& heads, json step);
 	json sa_for_stmt(const json& stmt);
 	json sa_for_array(const json& stmt, json range);
+	void  holdCallTemps(json& node);
 	json sa_for_struct(const json& stmt, const json& rangeVT, json* rangeSa);
 	json forIndexHead(const json& stmt, const string& idx, const json* arrType);
 	json sa_break_stmt(const json& stmt);

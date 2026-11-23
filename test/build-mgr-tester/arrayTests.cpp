@@ -707,6 +707,13 @@ TEST(build_mgr, for_struct_mtrace) {
 	expectMtraceRun("413_for_struct_mtrace", "1 2 3 2 \n", 34);
 }
 
+// What the range's call was given lives until the loop ends, also by a
+// 'return' out of it, and the arguments are evaluated in the order written.
+TEST(build_mgr, for_range_temps_mtrace) {
+	expectMtraceRun("451_for_range_temps_mtrace",
+		"11 12 13 22 23 65 66 \n33 42 43 51 61 \n1 3 11 12 71\n2 3 3 4 3\n", 51);
+}
+
 // Opaque values held in fields, rows and `[+]`, returned among several values,
 // and copied and converted where their contents are visible.
 TEST(build_mgr, opaque_mtrace) {
