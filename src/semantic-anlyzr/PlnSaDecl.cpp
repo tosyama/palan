@@ -16,36 +16,20 @@
 
 static int alignUp(int val, int align) { return (val + align - 1) & ~(align - 1); }
 
-// The non-pointer type a pointer field finally points to, and the mutability
-// of each pointer level passed on the way (excluding the field's own).
-struct PointeeLeaf { const json* type; vector<bool> innerPtrMutable; };
-static PointeeLeaf pointeeLeaf(const json& pntr)
+// The non-pointer type a pointer finally points to.
+static const json& pointeeLeaf(const json& pntr)
 {
-	PointeeLeaf leaf{&pntr["base-type"], {}};
-	while (leaf.type->value("type-kind", "") == "pntr") {
-		leaf.innerPtrMutable.push_back(leaf.type->value("mutable", false));
-		leaf.type = &(*leaf.type)["base-type"];
-	}
-	return leaf;
+	const json* leaf = &pntr["base-type"];
+	while (leaf->value("type-kind", "") == "pntr") leaf = &(*leaf)["base-type"];
+	return *leaf;
 }
 
 // Only a cinclude'd struct can have such a field: a native function type is
-// checked where it is written.
-static string unsupportedPointee(const PointeeLeaf& leaf)
+// checked where it is written, and a native array is borrowed.
+static string unsupportedPointee(const json& leaf)
 {
-	return leaf.type->value("type-kind", "") == "func" && !unrepresentableTypeName(*leaf.type).empty()
+	return leaf.value("type-kind", "") == "func" && !unrepresentableTypeName(leaf).empty()
 		? "function pointer" : "";
-}
-
-static string pointeeElemKind(const PointeeLeaf& leaf)
-{
-	if (leaf.type->value("type-kind", "") == "func") return "func";
-	return isPrimPointeeName(leaf.type->value("type-name", "")) ? "prim" : "struct";
-}
-
-static json pointeeFuncType(const PointeeLeaf& leaf)
-{
-	return leaf.type->value("type-kind", "") == "func" ? *leaf.type : json();
 }
 
 // Its levels are checked first, so that their errors are the field's own. A
@@ -64,7 +48,7 @@ FieldLayout PlnSemanticAnalyzer::inlineArrField(const json& locNode, const strin
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_RecursiveStruct, structName) << endl;
 		exit(1);
 	}
-	FieldLayout f{.typeKind="embed-arr", .isMutable=false}; // LCOV_EXCL_BR_LINE
+	FieldLayout f{.typeKind="embed-arr"}; // LCOV_EXCL_BR_LINE
 	json laidOut = arr;
 	if (leaf->value("type-kind", "") == "pntr") {
 		f.unsupported = unsupportedPointee(pointeeLeaf(*leaf));
@@ -138,11 +122,11 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			if (fieldName.empty()) continue;
 			int64_t unitBits = int64_t(align) * 8, unit = at / unitBits;
 			if ((at + width - 1) / unitBits == unit) {
-				def.fields.push_back({.name=fieldName, .typeKind="prim", .typeName=tname, .isMutable=false,
+				def.fields.push_back({.name=fieldName, .typeKind="prim", .typeName=tname,
 				                      .offset=int(unit * align), .size=align, .enumName=vtype.value("enum", ""),
 				                      .bitShift=int(at - unit * unitBits), .bitWidth=int(width)});
 			} else {
-				def.fields.push_back({.name=fieldName, .typeKind="prim", .typeName=tname, .isMutable=false,
+				def.fields.push_back({.name=fieldName, .typeKind="prim", .typeName=tname,
 				                      .offset=int(at / 8), .size=int((at + width + 7) / 8 - at / 8),
 				                      .unsupported="packed bit-field across two units"});
 			}
@@ -160,7 +144,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 					exit(1);
 				}
 				int at = place(8, 8);
-				def.fields.push_back({.name=fieldName, .typeKind="owned", .isMutable=false,
+				def.fields.push_back({.name=fieldName, .typeKind="owned",
 				                      .offset=at, .size=8, .type=toStructPntrType(vtype)});
 				def.ownsFields = true;
 			} else {
@@ -171,13 +155,13 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 				}
 				int at = place(sz, sz);
 				def.fields.push_back({.name=fieldName, .typeKind="prim",
-				                      .typeName=tname, .isMutable=false,
+				                      .typeName=tname,
 				                      .offset=at, .size=sz, .enumName=vtype.value("enum", "")});
 			}
 		} else if (tk == "embed" && isVarrAstType(vtype["base-type"])) {
 			// `$[+]U`: the header laid out in the struct, as `$[+]U` lays it out in a frame.
 			int at = place(24, 8);
-			def.fields.push_back({.name=fieldName, .typeKind="embed-varr", .isMutable=false,
+			def.fields.push_back({.name=fieldName, .typeKind="embed-varr",
 			                      .offset=at, .size=24, .type=ownedFieldType(locNode, vtype["base-type"])});
 			def.ownsFields = true;
 		} else if (tk == "embed" && isDictAstType(vtype["base-type"])) {
@@ -190,6 +174,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			// `$[n]U`: the array laid out in the struct, as `$[n]U` lays it out in a frame.
 			FieldLayout fl = inlineArrField(locNode, name, vtype["base-type"]);
 			fl.name = fieldName;
+			if (f.contains("unsupported")) fl.unsupported = f["unsupported"];
 			fl.offset = place(fl.size, inPlaceAlign(fl.type));
 			// Its owned elements' slots are built with the struct.
 			if (ownsElems(fl.type)) def.ownsFields = true;
@@ -236,24 +221,16 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 				continue;
 			}
 			def.fields.push_back({.name=fieldName, .typeKind="embed",
-			                      .typeName=structName, .isMutable=false,
+			                      .typeName=structName,
 			                      .offset=at, .size=sub.totalSize});
 		} else if (tk == "pntr") {
-			int sz = 8, align = 8;
-			PointeeLeaf leaf = pointeeLeaf(vtype);
-			string baseName = leaf.type->value("type-name", "");
-			bool isMut = vtype.value("mutable", false);
-			int at = place(sz, align);
-			def.fields.push_back({.name=fieldName, .typeKind="raw-ptr",
-			                      .typeName=baseName, .isMutable=isMut,
-			                      .offset=at, .size=sz, .elemKind=pointeeElemKind(leaf),
-			                      .enumName=leaf.type->value("enum", ""),
-			                      .innerPtrMutable=leaf.innerPtrMutable,
-			                      .unsupported=unsupportedPointee(leaf),
-			                      .funcType=pointeeFuncType(leaf)});
+			FieldLayout fl{.name=fieldName, .typeKind="raw-ptr", .offset=place(8, 8), .size=8}; // LCOV_EXCL_BR_LINE
+			fl.unsupported = f.value("unsupported", unsupportedPointee(pointeeLeaf(vtype)));
+			if (fl.unsupported.empty()) fl.type = ptrFieldType(locNode, vtype);
+			def.fields.push_back(move(fl));
 		} else if (tk == "arr" || tk == "dict") {
 			int at = place(8, 8);
-			def.fields.push_back({.name=fieldName, .typeKind="owned", .isMutable=false,
+			def.fields.push_back({.name=fieldName, .typeKind="owned",
 			                      .offset=at, .size=8, .type=ownedFieldType(locNode, vtype)});
 			def.ownsFields = true;
 		} else {
@@ -1074,7 +1051,10 @@ json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const Fie
 	BOOST_ASSERT(f.typeKind == "prim" || f.typeKind == "raw-ptr");
 	json fieldType = fieldValueType(f);
 	const PlnType* toType = registry_.fromJson(fieldType);
-	json value = convertForBinding(v, sa_expression(v, toType), toType, fieldType);
+	json value = sa_expression(v, toType);
+	if (fieldType.contains("arr-size"))
+		checkArrBorrowBinding(v, v, value, fieldType);
+	value = convertForBinding(v, value, toType, fieldType);
 	if (f.typeKind == "raw-ptr") {
 		checkBorrowSource(v, value, fieldType);
 		checkPtrPermission(v, value["value-type"], fieldType);
@@ -1202,7 +1182,7 @@ json PlnSemanticAnalyzer::sa_struct_def(const json& stmt)
 		const json* t = type;
 		while (t->value("type-kind", "") == "arr") t = &(*t)["base-type"];
 		if (t->value("type-kind", "") != "pntr") continue;
-		string pointee = pointeeLeaf(*t).type->value("type-name", "");
+		string pointee = pointeeLeaf(*t).value("type-name", "");
 		bool laterDef = pointee == name || declaredStructs_.count(pointee);
 		if (!laterDef) requireKnownTypeNames(stmt, *type);
 		json* leaf = const_cast<json*>(t);
@@ -1282,6 +1262,17 @@ static bool isSupportedCFieldType(const json& vtype, const map<string, StructDef
 	return elemSizeBytes(leaf) >= 0 || isCompleteStruct(leaf);
 }
 
+// The array a C pointer field or array of pointers points to, which no
+// signature takes either (E_UnsupportedCSignature); null when there is none.
+static json* cArrPointee(json& vtype)
+{
+	json* t = &vtype;
+	while (t->value("type-kind", "") == "embed" || t->value("type-kind", "") == "arr") t = &(*t)["base-type"];
+	if (t->value("type-kind", "") != "pntr") return nullptr;
+	while (t->value("type-kind", "") == "pntr") t = &(*t)["base-type"];
+	return t->value("type-kind", "") == "arr" ? t : nullptr;
+}
+
 void PlnSemanticAnalyzer::registerCStruct(const json& cincludeStmt, const json& s)
 {
 	string name = s["name"].get<string>();
@@ -1325,6 +1316,10 @@ void PlnSemanticAnalyzer::registerCStruct(const json& cincludeStmt, const json& 
 			return;
 		}
 		json field = {{"var-type", vt}}; // LCOV_EXCL_BR_LINE
+		if (json* slot = cArrPointee(field["var-type"])) {
+			*slot = {{"type-kind", "prim"}, {"type-name", "void"}}; // LCOV_EXCL_BR_LINE
+			field["unsupported"] = "array";
+		}
 		for (const char* key : {"name", "packed", "aligned", "bits"})
 			if (f.contains(key)) field[key] = f[key];
 		fields.push_back(field);
@@ -1677,19 +1672,25 @@ void PlnSemanticAnalyzer::adoptStruct(PlnSemanticAnalyzer& sub, const string& na
 			adoptVarTypeDeps(sub, f.type, locNode);
 			continue;
 		}
-		if (sub.structDefs_.count(f.typeName)) {
-			adoptStruct(sub, f.typeName, "", "", locNode);
-		} else if (f.elemKind == "struct" && sub.declaredStructs_.count(f.typeName)) {
-			// A pointee the exporting module has yet to resolve.
-			string pointee = f.typeName;
-			const json* loc = &locNode;
-			whenSettled([this, &sub, pointee, loc] { // LCOV_EXCL_BR_LINE
-				sub.ensureStructDef(pointee);
-				adoptStruct(sub, pointee, "", "", *loc);
-			});
+		if (f.typeKind == "raw-ptr") {
+			if (!f.unsupported.empty()) continue;
+			adoptVarTypeDeps(sub, f.type, locNode);
+			const json* leaf = &f.type;
+			while (leaf->contains("base-type")) leaf = &(*leaf)["base-type"];
+			string pointee = leaf->value("type-name", "");
+			if (leaf->value("type-kind", "") == "struct" && !sub.structDefs_.count(pointee)
+			    && sub.declaredStructs_.count(pointee)) {
+				// A pointee the exporting module has yet to resolve.
+				const json* loc = &locNode;
+				whenSettled([this, &sub, pointee, loc] { // LCOV_EXCL_BR_LINE
+					sub.ensureStructDef(pointee);
+					adoptStruct(sub, pointee, "", "", *loc);
+				});
+			}
+			continue;
 		}
+		if (sub.structDefs_.count(f.typeName)) adoptStruct(sub, f.typeName, "", "", locNode);
 		if (!f.enumName.empty()) adoptEnum(sub, f.enumName, "", "", locNode);
-		if (f.elemKind == "func") adoptTypeDeps(sub, f.funcType, locNode);
 	}
 } // LCOV_EXCL_BR_LINE
 
@@ -1717,9 +1718,12 @@ void PlnSemanticAnalyzer::adoptEnum(const PlnSemanticAnalyzer& sub, const string
 void PlnSemanticAnalyzer::adoptVarTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)
 {
 	adoptTypeDeps(sub, type, locNode);
-	for (const json* t = &type; t->contains("base-type"); t = &(*t)["base-type"])
-		if (isVarrStorage(*t)) recordVarrShape(*t);
-		else if (isDictStorage(*t)) recordDictShape(*t);
+	for (const json* t = &type; t->contains("base-type"); t = &(*t)["base-type"]) {
+		json storage = *t;
+		storage.erase("mutable");
+		if (isVarrStorage(storage)) recordVarrShape(storage);
+		else if (isDictStorage(storage)) recordDictShape(storage);
+	}
 }
 
 void PlnSemanticAnalyzer::adoptTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)

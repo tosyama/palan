@@ -1838,8 +1838,9 @@ json PlnSemanticAnalyzer::sa_aggregate_lit_assign(const json& stmt, const json& 
 	} else {
 		string name = arrLitTargetName(targetAst);
 		// A row reached through a borrowed array has the same type, but it is
-		// the borrowed storage itself, so only the variable is a borrow.
-		if (targetAst.value("expr-type", "") == "id" && isArrBorrowVar(targetType)) {
+		// the borrowed storage itself, so only the variable or field is a borrow.
+		string tet = targetAst.value("expr-type", "");
+		if ((tet == "id" || tet == "field-access") && isArrBorrowVar(targetType)) {
 			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ArrLitTarget, name) << endl;
 			exit(1);
 		}
@@ -2393,8 +2394,10 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 	const PlnType* toType = registry_.fromJson(fieldType);
 	json value = transfer ? sa_move_source(stmt["value"], toType)
 	                      : sa_expression(literalConversion(stmt["value"], fieldType), toType); // LCOV_EXCL_BR_LINE
-	if (!transfer && isCopiedByValue(fieldType))
+	if (!transfer && it->typeKind != "raw-ptr" && isCopiedByValue(fieldType))
 		return json::array({makeCopyStmt(stmt, makeFieldAccess(chain, *it), value, CopyInto::Existing)}); // LCOV_EXCL_BR_LINE
+	if (it->typeKind == "raw-ptr" && fieldType.contains("arr-size"))
+		checkArrBorrowBinding(stmt, stmt["value"], value, fieldType);
 	value = convertForBinding(stmt, value, toType, fieldType);
 	checkBorrowSource(stmt, value, fieldType);
 	checkPtrPermission(stmt, value["value-type"], fieldType);

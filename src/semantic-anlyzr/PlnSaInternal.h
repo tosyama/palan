@@ -462,17 +462,6 @@ inline json fieldPrimLeaf(const FieldLayout& f)
 	return t;
 }
 
-// What a raw-ptr field points to.
-inline json fieldPointeeType(const FieldLayout& f)
-{
-	json t = f.elemKind == "func" ? f.funcType
-		: f.elemKind == "struct" ? json{{"type-kind","struct"},{"type-name",f.typeName}}
-		: fieldPrimLeaf(f);
-	for (auto m = f.innerPtrMutable.rbegin(); m != f.innerPtrMutable.rend(); ++m)
-		t = {{"type-kind","pntr"},{"base-type",t},{"mutable",*m}};
-	return t;
-}
-
 // The struct a field holds, embedded or owned; empty for any other field.
 inline string fieldStructName(const FieldLayout& f)
 {
@@ -495,11 +484,9 @@ inline json fieldValueType(const FieldLayout& f)
 {
 	if (f.typeKind == "prim")
 		return fieldPrimLeaf(f);
-	if (f.typeKind == "owned" || f.typeKind == "embed-arr" || f.typeKind == "embed-varr")
-		return f.type;
-	if (f.typeKind == "raw-ptr")
-		return {{"type-kind","pntr"},{"base-type",fieldPointeeType(f)},{"mutable",f.isMutable}};
-	return {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",f.typeName}}}};
+	if (f.typeKind == "embed")
+		return {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",f.typeName}}}};
+	return f.type;
 }
 // LCOV_EXCL_BR_STOP
 

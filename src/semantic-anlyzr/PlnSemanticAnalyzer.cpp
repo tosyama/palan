@@ -726,7 +726,7 @@ optional<SaDiag> PlnSemanticAnalyzer::arrBorrowBindingMismatch(const json& srcAs
 {
 	string et = saValue.value("expr-type","");
 	bool namesBorrow = (et == "id" && saValue.contains("var-type") && isArrBorrowVar(saValue["var-type"]))
-	                   || ((et == "call" || et == "call-ptr") && isArrBorrowVar(saValue["value-type"]));
+	                   || ((et == "call" || et == "call-ptr" || et == "field-access") && isArrBorrowVar(saValue["value-type"]));
 	// Only an explicit cast converts into a borrowed array type.
 	bool castBorrow = et == "convert";
 	if (srcAst.value("expr-type","") != "addr-of" && !namesBorrow && !castBorrow)
@@ -1152,7 +1152,8 @@ void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
 	if (!node.is_object()) return;
 	string tk = node.value("type-kind", "");
 	if (!tk.empty()) {
-		viaPointer = viaPointer || tk == "pntr";
+		// A borrowed array or dictionary is typed by its elements' layout.
+		viaPointer = tk != "arr" && tk != "dict" && (viaPointer || tk == "pntr");
 		if (node.contains("type-name") && node["type-name"].is_string())
 			ensureTypeName(node["type-name"].get<string>(), viaPointer);
 		// A size expression (`[N]@T`) is evaluated whatever the element is.

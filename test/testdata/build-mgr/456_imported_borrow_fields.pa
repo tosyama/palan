@@ -1,0 +1,17 @@
+cinclude <stdio.h>;
+import "lib_borrow_fields.pa";
+import "lib_borrow_holder.pa";
+func f() {
+	S s;
+	[+]int32 v = [1];
+	[""]$Pub d = {"a": {y: 2}};
+	[2]$Pub a = [{y: 3}, {y: 4}];
+	@!v -> s.v;
+	@d -> s.d;
+	@a -> s.a;
+	s.v.push(5);
+	printf("%ld %d %d %d\n", count(@s), s.v[1], s.d["a"].y, s.a[1].y);
+	for copy p in s.d { printf("%d\n", p.y); }
+}
+f();
+func get(@S s) -> int32 { return s.ro[0] + s.v[0]; }

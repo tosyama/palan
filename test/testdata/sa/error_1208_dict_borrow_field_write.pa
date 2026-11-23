@@ -1,0 +1,2 @@
+type S { @[""]int32 d; };
+func f(@!S s) { 1 -> s.d["a"]; }

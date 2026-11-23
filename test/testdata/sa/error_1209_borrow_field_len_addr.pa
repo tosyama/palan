@@ -1,0 +1,2 @@
+type S { @[3]int32 a; };
+func f(@S s) -> int64 { return len(@s.a); }

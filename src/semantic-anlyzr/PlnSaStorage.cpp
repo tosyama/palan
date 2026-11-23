@@ -258,6 +258,21 @@ json PlnSemanticAnalyzer::normalizeArrBorrowType(const json& locNode, const json
 	return sizedArrLevel(locNode, arr, type.value("mutable", false));
 }
 
+// A pointer or borrow field, typed as a variable of the type is. A pointee may
+// be a struct whose layout is not resolved yet, so it is not looked up.
+json PlnSemanticAnalyzer::ptrFieldType(const json& locNode, const json& pntr)
+{
+	const json& base = pntr["base-type"];
+	string bk = base.value("type-kind", "");
+	if (bk == "arr" || bk == "dict")
+		return deepNormalizePrimToStruct(locNode, normalizeArrBorrowType(locNode, pntr));
+	json elem = bk == "pntr" ? ptrFieldType(locNode, base) : base;
+	// LCOV_EXCL_BR_START
+	return pointeeNamesAsStructs({{"type-kind","pntr"},{"mutable",pntr.value("mutable", false)},
+	                              {"base-type",move(elem)}});
+	// LCOV_EXCL_BR_STOP
+}
+
 // The element a `[+]U` or `[""]U` (an AST type marked `embedded` for `$U`)
 // holds, as the data of its values lays it out.
 json PlnSemanticAnalyzer::valueElemType(const json& locNode, const json& holder)

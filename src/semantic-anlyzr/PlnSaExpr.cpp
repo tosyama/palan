@@ -69,11 +69,11 @@ FieldChain PlnSemanticAnalyzer::resolveObjectChain(const json& obj, bool forWrit
 		cerr << locPrefix(obj) << PlnSaMessage::getMessage(E_FieldAccessOnNonStruct) << endl;
 		exit(1);
 	}
-	if (forWrite && it->typeKind == "raw-ptr" && !it->isMutable) {
+	if (forWrite && it->typeKind == "raw-ptr" && !isWritableThrough(it->type)) {
 		cerr << locPrefix(obj) << PlnSaMessage::getMessage(E_WriteToImmutablePtrField) << endl;
 		exit(1);
 	}
-	if (it->typeKind == "raw-ptr" && (it->elemKind != "struct" || !it->innerPtrMutable.empty())) {
+	if (it->typeKind == "raw-ptr" && !isStructPntr(it->type)) {
 		// A pointer-to-primitive (e.g. `@!int64 p;`) or pointer-to-pointer field
 		// has nothing further to chain into -- this hop must be the chain's
 		// terminal, typed by the caller via fieldValueType, not
@@ -87,9 +87,7 @@ FieldChain PlnSemanticAnalyzer::resolveObjectChain(const json& obj, bool forWrit
 		return base;
 	}
 	// LCOV_EXCL_BR_START
-	json pntr_type = it->typeKind == "owned" ? it->type
-		: json{{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",it->typeName}}}};
-	if (it->typeKind == "raw-ptr") pntr_type["mutable"] = it->isMutable;
+	json pntr_type = fieldValueType(*it);
 	string structName = pntr_type["base-type"]["type-name"];
 	json ptrNode;
 	if (!base.isPointerBased)
@@ -545,6 +543,10 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 	};
 	// A borrowed array variable is passed by name, as to a function's parameter.
 	auto namesArrBorrow = [&](const json& e) {
+		if (e.value("expr-type", "") == "field-access") {
+			json vt = knownValueType(e);
+			return vt.is_object() && isArrBorrowVar(vt);
+		}
 		if (e.value("expr-type", "") != "id") return false;
 		const json* vt = findVar(e["name"].get<string>());
 		return vt && isArrBorrowVar(*vt);
@@ -564,7 +566,7 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 		const json& addrOf = *arr;
 		arr = &addrOf["object"];
 		if (namesArrBorrow(*arr)) {
-			cerr << locPrefix(addrOf) << PlnSaMessage::getMessage(E_AddrOfBorrowed, (*arr)["name"].get<string>()) << endl;
+			cerr << locPrefix(addrOf) << PlnSaMessage::getMessage(E_AddrOfBorrowed, (*arr)[arr->contains("field") ? "field" : "name"].get<string>()) << endl;
 			exit(1);
 		}
 	}

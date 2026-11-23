@@ -810,3 +810,16 @@ TEST(build_mgr, empty_dict_lit_mtrace) {
 TEST(build_mgr, dict_calls_mtrace) {
 	expectMtraceRun("453_dict_calls_mtrace", "4 1\n7 100\n2 11\n1\n1 2\n2 6\n", 50);
 }
+
+// Fields borrowing arrays and dictionaries: bound, read, written through, passed
+// on, iterated, and copied with their struct; nothing is freed through them.
+TEST(build_mgr, borrow_fields_mtrace) {
+	expectMtraceRun("455_borrow_fields_mtrace",
+		"10 3 7 40 e\n3 30 11 12 1 3\n10 2 3 k=7 40 5 6 \n5 5\n", 37);
+}
+
+// Borrow fields of an imported struct, in a module that declares no such array.
+TEST(build_mgr, imported_borrow_fields) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/456_imported_borrow_fields.pa"), "2 5 2 4\n2\n");
+}

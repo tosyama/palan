@@ -1540,7 +1540,8 @@ func fill(@![H][W]int32 g, int32 x) {
   when `g` is itself a borrowed array.
 - An array field is borrowed the same way: `@s.v` / `@!s.v` gives a `[n]T`, `$[n]$T` or `$[n]@T`
   field as `@[n]T`, `@[n]$T` or `@[n]@T`.
-- A borrowed array can also be a local variable (`@[4]int64 p = @v;`).
+- A borrowed array can also be a local variable (`@[4]int64 p = @v;`) or a struct field (see
+  [Array Fields](#array-fields)).
 - A borrowed array is already a borrow, like a `@T`/`@!T` pointer: pass it on, bind it, and
   rebind it by name (`sum(g)`, `len(g)`, `@[4]int64 q = p;`, `q -> p`). `@g` on it is a compile
   error. A `@!` borrow may be given where `@` is expected. A row (`g[i]`) is part of the borrowed
@@ -2447,6 +2448,7 @@ An array field takes the type an array variable can, with the same meaning. Wher
 | `$[n]T field` (struct `T`), `$[n][m]T field`, `$[n][+]T field`, ... | Array laid out in the struct, holding elements that own storage | parent's block (slots); elements cascade with parent's alloc/free |
 | `$[+]T field` | Variable-length array whose header is laid out in the struct | parent's block (header); elements cascade with parent's alloc/free |
 | `$[n]@T field` / `$[n]@!T field` | Non-owning pointer slots laid out in the struct | parent's block (slots only) |
+| `@[n]T field`, `@[]T field`, `@[+]T field`, `@[""]T field`, ... (or `@!`) | Non-owning borrow of an array or a dictionary | none |
 
 `n` (and each `m`) must be a compile-time integer: a literal, a [const](#constant-declarations),
 or `sizeof(T)`. An owned array field is allocated, copied and freed with its struct; its
@@ -2457,6 +2459,9 @@ with it, as those of an array variable in the stack frame are with the variable;
 with such a field owns storage itself. `$` on an element that owns storage is rejected as for
 a variable. A `$[+]T` field starts empty and is used as a `[+]T` field is, but, like a `$[+]T`
 variable, it cannot be given away or taken over with `->>`.
+A borrow field is used as a borrow variable of its type is: `@!v -> s.f` binds it, it is passed on
+and measured by name (`len(s.f)`), and copying the struct copies the borrow. `NULL` cannot be
+given to it, nor to such a variable, unless it is a `@[]T`.
 `field[i]` accesses an element; for struct-leaf forms, `field[i].sub` continues the field
 chain.
 
@@ -2655,7 +2660,8 @@ type Pos { flo64 x; flo64 y; };
 
 A type must not contain itself. Embedding or owning in a cycle (`type A { $B b; };` with
 `type B { $A a; };`, possibly across files that import each other) or an alias cycle is a
-compile error. A pointer field (`@T`/`@!T`) may close a cycle.
+compile error. A pointer field (`@T`/`@!T`) may close a cycle, but
+a borrow of an array or a dictionary of the type may not.
 
 ### Restrictions
 

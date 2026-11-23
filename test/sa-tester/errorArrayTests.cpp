@@ -666,6 +666,15 @@ TEST(sa_error, dict)
 		{"error_1202_return_nothing_for_block.pa", ":1:24: error: Single-return function requires exactly one return expression."},
 		{"error_1203_return_two_for_block.pa", ":1:37: error: Single-return function requires exactly one return expression."},
 		{"error_1204_chained_varr_dict_overloads.pa", ":4:16: error: No function 'f' takes ([+]int32); there are f(@[\"\"]int32), f(@[\"\"]flo64)."},
+		{"error_1205_borrow_field_shape.pa", ":2:29: error: array shape '@![4]int32' does not match the borrowed array type '@![3]int32'."},
+		{"error_1206_borrow_field_no_addr.pa", ":2:29: error: an array given to a borrowed array"},
+		{"error_1207_borrow_field_lit.pa", ":2:17: error: an array literal cannot be given to the borrowed array 'a'"},
+		{"error_1208_dict_borrow_field_write.pa", ":2:17: error: cannot write through read-only pointer '@T'"},
+		{"error_1209_borrow_field_len_addr.pa", ":2:36: error: 'a' is already a borrow"},
+		{"error_1210_borrow_field_lit_shape.pa", ":2:34: error: array shape '[4]int32' does not match the borrowed array type '@[3]int32'."},
+		{"error_1211_borrow_field_cycle.pa", ":2:1: error: type 'A' depends on itself: A -> B -> A."},
+		{"error_1212_c_arr_ptr_field.pa", ":2:39: error: cannot access field 'rows' of 'CA': its type uses 'array'"},
+		{"error_1213_c_arr_ptr_slots.pa", ":2:33: error: cannot access field 'slots' of 'CA': its type uses 'array'"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

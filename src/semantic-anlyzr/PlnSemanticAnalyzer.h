@@ -25,25 +25,19 @@ using json = nlohmann::json;
 struct FieldLayout {
 	string name;
 	string typeKind;   // "prim" | "embed" | "owned" | "raw-ptr" | "embed-arr" | "embed-varr"
-	string typeName;   // prim type name, embed struct name, raw-ptr base type name
-	bool   isMutable;  // raw-ptr: @T=false, @!T=true
+	string typeName;   // prim type name, embed struct name
 	int    offset;     // byte offset from struct start (C ABI aligned)
 	int    size;       // prim: type size, embed: sub-struct totalSize, owned/raw-ptr: 8,
 	                    // embed-arr: the array's bytes
-	string  elemKind = "";  // raw-ptr: the pointee's kind, "prim" | "struct" | "func" (see funcType)
-
-	string  enumName = "";  // enum the primitive leaf is typed as, if any
-	// raw-ptr: mutability of each pointer level between the field's own
-	// pointer and the leaf (typeName), outermost first; empty = @T.
-	vector<bool> innerPtrMutable;
+	string  enumName = "";  // enum a primitive is typed as, if any
 	// A C type this version cannot represent (e.g. "function pointer"): the
 	// field keeps its place in the layout but cannot be accessed.
 	string  unsupported = "";
-	json    funcType;  // elemKind == "func": the pointee function type
 	// An owned field (a struct `T` or an array `[n]...`) is a slot holding the
 	// block it owns, typed as a variable holding that block is; an embed-arr
 	// field (`$[n]...`) is the array laid out in the struct, typed as a
-	// variable whose array is laid out in a frame.
+	// variable whose array is laid out in a frame. A raw-ptr field is typed as
+	// a variable of its pointer or borrow type is.
 	json    type;
 	json    initAst;   // the field's initializer as a literal of typed constants; null when it has none
 	// "private" or "readonly" toward code outside the module defining the
@@ -771,6 +765,7 @@ class PlnSemanticAnalyzer {
 	void  validateVariadicSig(const json& funcDef);
 	void  validateCExportSig(const json& funcDef);
 	json  normalizeArrBorrowType(const json& locNode, const json& type);
+	json  ptrFieldType(const json& locNode, const json& pntr);
 	json  varrBorrowType(const json& locNode, const json& arr, bool isMutable);
 	json  valueElemType(const json& locNode, const json& holder);
 	json  varrStorageType(const json& locNode, const json& arr);
