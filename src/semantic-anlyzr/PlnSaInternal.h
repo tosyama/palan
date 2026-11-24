@@ -236,6 +236,15 @@ inline bool isNullPtrLit(const json& expr)
 	return expr.value("expr-type", "") == "lit-int" && expr.contains("value-type") // LCOV_EXCL_BR_LINE
 	    && expr["value-type"].value("type-kind", "") == "pntr"; // LCOV_EXCL_BR_LINE
 }
+// NULL bound to a borrow takes the borrow's type, so that only '@name' and
+// NULL, not any 'void*', reach a borrowed array, '[+]T' or '[""]T'.
+inline json typedNull(json value, const json& dstType)
+{
+	if (isNullPtrLit(value) && value.value("value", "") == "0" // LCOV_EXCL_BR_LINE
+	    && dstType.value("type-kind","") == "pntr" && dstType.contains("mutable")) // LCOV_EXCL_BR_LINE
+		value["value-type"] = dstType;
+	return value;
+}
 inline bool isAggregateLit(const json& expr)
 {
 	string et = expr.value("expr-type", "");

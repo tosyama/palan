@@ -847,3 +847,8 @@ TEST(build_mgr, func_ptr_arrs_mtrace) {
 TEST(build_mgr, lend_elems_mtrace) {
 	expectMtraceRun("460_lend_elems_mtrace", "6 3 3 3 4 4 6 3 3 5 5 8\n", 46);
 }
+
+TEST(build_mgr, null_borrow_mtrace) {
+	expectMtraceRun("461_null_borrow_mtrace",
+		"-1 -2 -3 -4\n-1 1\n6 7 1\n6 1\n1 1 1\n8 3 4\n1 1 1\n1 1 1 1\n1 1 1 1\n7 5 9\n1 1\n-1 6\n", 20);
+}

@@ -692,6 +692,13 @@ TEST(sa_error, dict)
 		{"error_1242_func_cast_elems_owner.pa", "error: cannot cast '@func([3]@P)' to '@func([3]P)'"},
 		{"error_1243_func_cast_varr_elems_owner.pa", "error: cannot cast '@func([+]@P)' to '@func([+]P)'"},
 		{"error_1244_func_cast_owned_kind.pa", "error: cannot cast '@func(Q)' to '@func(P)'"},
+		{"error_1245_null_owned_varr.pa", "error: cannot copy '[?]void' into '[+]int32'"},
+		{"error_1246_null_owned_dict.pa", "error: cannot copy '[?]void' into '[\"\"]int32'"},
+		{"error_1247_null_owned_arg.pa", "error: cannot convert '[?]void' to '[+]int32'"},
+		{"error_1248_null_owned_ret.pa", "error: cannot convert '[?]void' to '[+]int32'"},
+		{"error_1249_null_overload.pa", "error: Ambiguous function call 'f': it can mean f(@P), f(@[+]int32)."},
+		{"error_1250_null_other_ptr.pa", "error: cannot convert '[?]void' to '@[+]int32'"},
+		{"error_1251_null_other_ptr_arr.pa", "error: an array given to a borrowed array"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

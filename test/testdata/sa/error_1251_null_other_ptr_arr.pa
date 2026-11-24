@@ -1,0 +1,2 @@
+cinclude <sys/mman.h>;
+@[3]int32 v = MAP_FAILED;

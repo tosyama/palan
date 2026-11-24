@@ -1,0 +1,2 @@
+cinclude <stddef.h>;
+type P { int32 x; }; func f(@P a) { } func f(@[+]int32 b) { } f(NULL);

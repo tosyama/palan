@@ -1,0 +1,2 @@
+cinclude <stddef.h>;
+[""]int32 d; NULL -> d;

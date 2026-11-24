@@ -208,7 +208,7 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 	if (literalConversion(arg.ast, paramVT) != arg.ast) return ArgFit::Converted;
 	auto fitOf = [&](const json& ast, const json& sa0) {
 		json sa = takesVarrData(sa0["value-type"], &paramVT, isCFunc) ? varrData(sa0) : sa0;
-		if (callArgMismatch(ast, sa, param, argIdx, isCFunc, funcName)) return ArgFit::None;
+		if (callArgMismatch(ast, isCFunc ? sa : typedNull(sa, paramVT), param, argIdx, isCFunc, funcName)) return ArgFit::None;
 		return typeFit(sa["value-type"], paramVT);
 	};
 	if (!arg.pending) return fitOf(arg.ast, arg.sa);
@@ -1330,6 +1330,7 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 		if (takesVarrData(saArg["value-type"], paramVT, isCFunc))
 			saArg = varrData(move(saArg));
 		if (paramVT) {
+			if (!isCFunc) saArg = typedNull(move(saArg), *paramVT);
 			if (auto d = callArgMismatch(argAst, saArg, *param, argIdx, isCFunc, funcName))
 				reportDiag(locNode, *d);
 			if (!isCFunc)

@@ -728,7 +728,8 @@ optional<SaDiag> PlnSemanticAnalyzer::arrBorrowBindingMismatch(const json& srcAs
 	                   || ((et == "call" || et == "call-ptr" || et == "field-access") && isArrBorrowVar(saValue["value-type"]));
 	// Only an explicit cast converts into a borrowed array type.
 	bool castBorrow = et == "convert";
-	if (srcAst.value("expr-type","") != "addr-of" && !namesBorrow && !castBorrow)
+	bool null = isNullPtrLit(saValue) && isArrBorrowVar(saValue["value-type"]);
+	if (srcAst.value("expr-type","") != "addr-of" && !namesBorrow && !castBorrow && !null)
 		return SaDiag{E_ArrBorrowNeedsAddrOf}; // LCOV_EXCL_BR_LINE
 	if (!arrShapeMatch(saValue["value-type"], dstType)) {
 		// Shown as the owned type, without the permission the borrow added.
@@ -872,7 +873,7 @@ void PlnSemanticAnalyzer::normalizeParamDefaults(json& funcEntry)
 			probe["value-type"] = strLitType();
 			if (auto d = callArgMismatch(init, probe, p, i, false, funcName)) reportDiag(init, *d);
 		} else {
-			value = sa_expression(folded, registry_.fromJson(vt));
+			value = typedNull(sa_expression(folded, registry_.fromJson(vt)), vt);
 			if (auto d = callArgMismatch(init, value, p, i, false, funcName)) reportDiag(init, *d);
 			value = convertCallArg(move(value), vt);
 			const json& lit = value.value("expr-type", "") == "convert" ? value["src"] : value; // LCOV_EXCL_BR_LINE

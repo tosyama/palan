@@ -2464,8 +2464,10 @@ with such a field owns storage itself. `$` on an element that owns storage is re
 a variable. A `$[+]T` field starts empty and is used as a `[+]T` field is, but, like a `$[+]T`
 variable, it cannot be given away or taken over with `->>`.
 A borrow field is used as a borrow variable of its type is: `@!v -> s.f` binds it, it is passed on
-and measured by name (`len(s.f)`), and copying the struct copies the borrow. `NULL` cannot be
-given to it, nor to such a variable, unless it is a `@[]T`.
+and measured by name (`len(s.f)`), and copying the struct copies the borrow. Any borrow can be
+`NULL`: given to a variable, a field or an argument, or returned. It is not an empty array or
+dictionary, and using one (`len`, `for`, an index) is not checked, as reading through a `NULL`
+`@T` is not; compare it with `NULL` first.
 `field[i]` accesses an element; for struct-leaf forms, `field[i].sub` continues the field
 chain.
 
