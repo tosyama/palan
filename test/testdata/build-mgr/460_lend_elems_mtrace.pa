@@ -1,0 +1,36 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; };
+func own(@[2]P v) -> int32 { [2]P c = v; return v[0].x + c[1].x; }
+func owns(@[]P v) -> int32 { return v[1].x; }
+func vown(@[+]P v) -> int32 { [+]P c = v; return c[0].x; }
+func vbor(@[+]@P v) -> int32 { return v[0].x; }
+func vvbor(@[+][+]@P v) -> int32 { return v[0][0].x; }
+func down(@[""]P v) -> int32 { [""]P c = v; return c["k"].x; }
+func dbor(@[""]@P v) -> int32 { return v["k"].x; }
+func sum([3]int32 v) -> int32 { return v[0]; }
+func f() {
+	P p = {x: 3};
+	[2]@P a;
+	@p -> a[0];
+	@p -> a[1];
+	[+]@P b;
+	b.push(@p);
+	[+]P c;
+	c.resize(1);
+	4 -> c[0].x;
+	[+][+]P cc;
+	cc.resize(1);
+	cc[0].resize(1);
+	6 -> cc[0][0].x;
+	[""]@P d;
+	@p -> d["k"];
+	[""]P e;
+	P q = {x: 5};
+	q ->> e["k"];
+	@func([2]int32) -> int32 g = sum as @func([2]int32) -> int32;
+	printf("%d %d %d %d %d %d %d ", own(@a), owns(@a), vown(@b), vbor(@b), vbor(@c), vown(@c), vvbor(@cc));
+	printf("%d %d %d %d %d\n", down(@d), dbor(@d), down(@e), dbor(@e), g([8, 9]));
+}
+mtrace();
+f();

@@ -842,3 +842,8 @@ TEST(build_mgr, func_ptr_arr_shape) {
 TEST(build_mgr, func_ptr_arrs_mtrace) {
 	expectMtraceRun("459_func_ptr_arrs_mtrace", "1 2 5\n5 5 5 3\n8 9 2 5\n5 2 3 7\n", 34);
 }
+
+// Arrays and dictionaries lent read-only where the elements' owner differs.
+TEST(build_mgr, lend_elems_mtrace) {
+	expectMtraceRun("460_lend_elems_mtrace", "6 3 3 3 4 4 6 3 3 5 5 8\n", 46);
+}

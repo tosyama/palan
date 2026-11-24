@@ -1145,6 +1145,7 @@ json PlnSemanticAnalyzer::sa_assign_stmt(const json& stmt)
 	if (varType->contains("arr-size") && !isOwnedVar(name))
 		checkArrBorrowBinding(stmt, stmt["value"], value, *varType);
 	value = convertForBinding(stmt, value, toType, registry_.toJson(toType));
+	checkElemShape(stmt, value, *varType);
 	checkBorrowSource(stmt, value, *varType);
 	checkPtrPermission(stmt, value["value-type"], *varType);
 	checkRangeBorrowBinding(stmt, stmt["value"], *varType);
@@ -2399,6 +2400,7 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 	if (it->typeKind == "raw-ptr" && fieldType.contains("arr-size"))
 		checkArrBorrowBinding(stmt, stmt["value"], value, fieldType);
 	value = convertForBinding(stmt, value, toType, fieldType);
+	checkElemShape(stmt, value, fieldType);
 	checkBorrowSource(stmt, value, fieldType);
 	checkPtrPermission(stmt, value["value-type"], fieldType);
 	checkRangeBorrowBinding(stmt, stmt["value"], fieldType);

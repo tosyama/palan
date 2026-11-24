@@ -1456,6 +1456,8 @@ This does not depend on whether the sizes are known at compile time.
 
 An owned element can be lent as a read-only `@T` slot when the slots are read-only too
 (`@[n]@P`, or a C `const T * const *`): the callee can neither replace it nor free a borrow.
+For the same reason a `@T` element can be read as an owned one (`[n]@P` given to `@[n]P`). A
+`[+]T` and a `[""]T` follow the same rules: a `[+]@P` can be given to `@[+]P` but not to `@![+]P`.
 A C function that declares `T **` without `const` but does not write the slots takes the owned
 rows through a cast, which states that the C declaration is looser than its use:
 

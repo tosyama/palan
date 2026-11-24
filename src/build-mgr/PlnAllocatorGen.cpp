@@ -793,7 +793,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			out << "    memcpy(" << slotAddr(e, "h.data", "h.len", names) << ", x, " << size << ");\n"
 			    << "    free(x);\n";
 		else
-			out << "    x -> h.data[h.len];\n";
+			out << "    x" << (e.kind == "row" ? " as " + e.popped : "") << " -> h.data[h.len];\n";
 		out << "    h.len + 1 -> h.len;\n"
 		    << "}\n"
 		    << "export func __pln_resize_" << key << "(@!" << hdr << " h, int64 n" << mp << ") {\n"

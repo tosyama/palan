@@ -580,6 +580,7 @@ json PlnSemanticAnalyzer::sa_var_decl_group(const json& stmt2, VarStorage storag
 			if (isArrBorrow)
 				checkArrBorrowBinding(stmt2, var["init"], init, varType);
 			init = convertForBinding(stmt2, init, toType, varType);
+			checkElemShape(stmt2, init, varType);
 			checkBorrowSource(stmt2, init, varType);
 			checkPtrPermission(stmt2, init["value-type"], varType);
 			checkRangeBorrowBinding(stmt2, var["init"], varType);
@@ -1056,6 +1057,7 @@ json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const Fie
 		checkArrBorrowBinding(v, v, value, fieldType);
 	value = convertForBinding(v, value, toType, fieldType);
 	if (f.typeKind == "raw-ptr") {
+		checkElemShape(v, value, fieldType);
 		checkBorrowSource(v, value, fieldType);
 		checkPtrPermission(v, value["value-type"], fieldType);
 	}

@@ -149,10 +149,13 @@ inline bool sigShapeOk(const json& from, const json& to);
 inline PtrPermission ptrPermission(const json& from, const json& to)
 {
 	bool aboveAllReadOnly = true, innerNarrowing = false;
+	// An owned element is writable as far as the array it is reached through.
+	bool fw = true, tw = true;
 	const json* f = &from;
 	const json* t = &to;
 	while (f->value("type-kind","") == "pntr" && t->value("type-kind","") == "pntr") {
-		bool fw = isWritableThrough(*f), tw = isWritableThrough(*t);
+		fw = f->value("mutable", fw);
+		tw = t->value("mutable", tw);
 		if (!fw && tw) return PtrPermission::Upgrade;
 		if (fw && !tw && !aboveAllReadOnly) innerNarrowing = true;
 		if (tw) aboveAllReadOnly = false;
@@ -169,8 +172,8 @@ inline bool ptrPermissionOk(const json& from, const json& to)
 }
 
 // A function owning a parameter frees it, so it cannot stand in for one
-// borrowing it, nor the reverse.
-inline bool sameOwnership(const json& a, const json& b) { return isOwnedBlock(a) == isOwnedBlock(b); }
+// borrowing it, nor the reverse, nor for one freeing something else.
+inline bool sameOwnership(const json& a, const json& b);
 
 // A function stored as `to` is called with `to`'s arguments and its result is
 // read as `to`'s, so permissions are checked in the direction each value
@@ -749,62 +752,85 @@ inline string PlnSemanticAnalyzer::typeDisplayName(const json& t) const {
 	return out + typeDisplayName(*cur);
 } // LCOV_EXCL_BR_LINE
 
+inline bool arrShapeMatch(const json& from, const json& to, bool toSlotsMutable = true);
+
+// The elements of a '[+]T' or '[""]T' bound as another: laid out the same way
+// and matching as an array's do. The registry tells other types apart.
+inline bool holderShapeMatch(const json& from, const json& to, bool toSlotsMutable) {
+	if (!(isVarrPntr(from) && isVarrPntr(to)) && !(isDictPntr(from) && isDictPntr(to))) return true;
+	const json& f = from["base-type"];
+	const json& t = to["base-type"];
+	return f.value("embedded", false) == t.value("embedded", false)
+	    && arrShapeMatch(f["base-type"], t["base-type"], toSlotsMutable);
+}
+
 // Shape equality for binding an array to a borrowed array type: same depth,
 // same embedded layout, every size `to` names known and equal (a borrowed
-// array type names them all), owned elements (a struct's storage or a `[+]T`)
-// in both or neither, and pointer elements in both or neither. The element type is left
+// array type names them all), owned elements (a struct's storage, a `[+]T` or
+// a `[""]T`) in both or neither, and pointer elements in both or neither. The element type is left
 // to the usual type compatibility check, which cannot tell a stored struct
 // from a pointer to one and ignores pointer permissions. A pointer element
 // keeps its permission, except that read-only slots may narrow '@!T' to '@T':
 // with writable slots the callee could store a '@T' where the caller expects
-// a '@!T'. An owned element (a row, a struct's storage or a `[+]T`) may be lent to a
-// read-only '@T' slot when the slots are read-only too: the callee can neither
-// replace it nor free a borrow.
-inline bool arrShapeMatch(const json& from, const json& to, bool toSlotsMutable = true) {
+// a '@!T'. Through read-only slots the callee can neither replace an element
+// nor free one, so an owned element may be lent as '@T', and a borrowed one
+// read as an owned one.
+inline bool arrShapeMatch(const json& from, const json& to, bool toSlotsMutable) {
 	bool fp = isArrLevel(from), tp = isArrLevel(to);
-	if (!toSlotsMutable && isPtrBorrow(to) && !isWritableThrough(to)) {
-		if (fp) return arrShapeMatch(from["base-type"], to["base-type"], false);
-		if (isOwnedBlock(from)) return true;
+	if (!toSlotsMutable) {
+		if (isPtrBorrow(to) && !isWritableThrough(to)) {
+			if (fp) return arrShapeMatch(from["base-type"], to["base-type"], false);
+			if (isOwnedBlock(from)) return holderShapeMatch(from, to, false);
+		}
+		if (isPtrBorrow(from) && !tp && isOwnedBlock(to)) return holderShapeMatch(from, to, false);
 	}
 	if (!fp || !tp) {
 		if (fp != tp || isOwnedBlock(from) != isOwnedBlock(to) || isPtrBorrow(from) != isPtrBorrow(to))
 			return false;
-		return !isPtrBorrow(to) || isWritableThrough(from) == isWritableThrough(to)
-		    || (!toSlotsMutable && !isWritableThrough(to));
+		if (!isPtrBorrow(to)) return holderShapeMatch(from, to, toSlotsMutable);
+		return (isWritableThrough(from) == isWritableThrough(to) || (!toSlotsMutable && !isWritableThrough(to)))
+		    && holderShapeMatch(from, to, isWritableThrough(to));
 	}
 	return (!to.contains("arr-size") || (from.contains("arr-size") && from["arr-size"] == to["arr-size"]))
 	    && from.value("embedded", false) == to.value("embedded", false)
 	    && arrShapeMatch(from["base-type"], to["base-type"], isWritableThrough(to));
 }
 
-// Binding an array to a pointer that has no size of its own ('[]T', '[][m]T',
-// a '[k]@![]T' slot, a C 'T*'). The type registry ignores sizes and cannot
+inline bool isVoidType(const json& t)
+{
+	return t.value("type-kind","") == "prim" && t.value("type-name","") == "void";
+}
+
+// Binding to a pointer that has no size of its own ('[]T', '[][m]T', a
+// '[k]@![]T' slot, a C 'T*', a '[+]T' or '[""]T' borrow). The type registry ignores sizes and cannot
 // tell an owned row or struct from a '@T'/'@!T' pointer, so only this check
 // keeps rows of another size out and keeps the elements' owner unchanged:
 // either side would free, or overwrite, what the other one owns. A 'void*'
 // on either side (NULL, a C 'void*') says nothing about the elements.
-// A '[+]T' borrow must name the same rows, laid out the same way.
 // Pointer elements follow the slots of a borrowed `[n]@T`.
 inline bool elemShapeMatch(const json& from, const json& to) {
-	if (isVarrPntr(from) && isVarrPntr(to)) {
-		const json& fe = from["base-type"]["base-type"];
-		const json& te = to["base-type"]["base-type"];
-		if (isArrLevel(te) || isArrLevel(fe)) return from["base-type"] == to["base-type"];
-		if (isPtrBorrow(te)) return isPtrBorrow(fe) && arrShapeMatch(fe, te, isWritableThrough(to));
-	}
-	if (to.value("type-kind","") != "pntr" || to.contains("arr-size") || !isArrLevel(from))
+	if (to.value("type-kind","") != "pntr" || to.contains("arr-size") || from.value("type-kind","") != "pntr")
 		return true;
-	auto isVoid = [](const json& t) {
-		return t.value("type-kind","") == "prim" && t.value("type-name","") == "void";
-	};
-	if (isVoid(from["base-type"]) || isVoid(to["base-type"]))
-		return true;
-	return arrShapeMatch(from["base-type"], to["base-type"], isWritableThrough(to));
+	const json& fe = from["base-type"];
+	const json& te = to["base-type"];
+	if (isVoidType(fe) || isVoidType(te)) return true;
+	if (isVarrPntr(to) || isDictPntr(to)) return holderShapeMatch(from, to, isWritableThrough(to));
+	bool rows = isPtrBorrow(from) && isPtrBorrow(to) && (isArrLevel(fe) || isArrLevel(te));
+	return (!isArrLevel(from) && !rows) || arrShapeMatch(fe, te, isWritableThrough(to));
 }
 
-inline bool isVoidPntr(const json& t)
+// An array of primitives is one block whatever its size.
+inline bool isPrimArr(const json& vt)
 {
-	return t.value("type-kind","") == "pntr" && t["base-type"].value("type-name","") == "void";
+	const json* t = &vt;
+	while (isArrLevel(*t)) t = &(*t)["base-type"];
+	return t != &vt && t->value("type-kind","") == "prim" && !ownsElems(vt);
+}
+
+inline bool sameOwnership(const json& a, const json& b)
+{
+	if (!isOwnedBlock(a) || !isOwnedBlock(b)) return isOwnedBlock(a) == isOwnedBlock(b);
+	return a == b || (isPrimArr(a) && isPrimArr(b));
 }
 
 // What a function type's parameter or return must agree on beyond its registry
@@ -813,11 +839,7 @@ inline bool isVoidPntr(const json& t)
 inline bool sigShapeOk(const json& from, const json& to)
 {
 	if (isOwnedBlock(from) || isOwnedBlock(to)) return from == to;
-	if (isVoidPntr(from) || isVoidPntr(to)) return true;
-	if (to.contains("arr-size")) return arrShapeMatch(from, to);
-	if (isVarrPntr(to) || isDictPntr(to)) return from["base-type"] == to["base-type"];
-	if (isPtrBorrow(from) && isPtrBorrow(to) && (isArrLevel(from["base-type"]) || isArrLevel(to["base-type"])))
-		return arrShapeMatch(from["base-type"], to["base-type"], isWritableThrough(to));
+	if (to.contains("arr-size")) return isVoidType(from.value("base-type", json())) || arrShapeMatch(from, to);
 	return elemShapeMatch(from, to);
 }
 
