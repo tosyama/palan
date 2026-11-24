@@ -1005,6 +1005,13 @@ TEST(sa_error, func_ptr)
 		{"error_1218_func_ptr_arr_for_ptr.pa", ":2:1: error: cannot convert '@func(@[3]int32)' to '@func(@int32)'."},
 		{"error_1219_func_ptr_nested_arr_size.pa", ":2:1: error: cannot convert '@func(@func([4]int32))' to '@func(@func([3]int32))'."},
 		{"error_1220_func_ptr_field_arr_size.pa", ":3:22: error: cannot convert '@func([4]int32)' to '@func([3]int32)'."},
+		{"error_1221_func_ptr_arr_borrow_permission.pa", ":2:1: error: cannot convert '@func(@![3]int32)' to '@func(@[3]int32)'."},
+		{"error_1222_func_ptr_arr_borrow_size.pa", ":2:1: error: cannot convert '@func(@[4]int32)' to '@func(@[3]int32)'."},
+		{"error_1223_func_ptr_arr_borrow_ret_size.pa", ":2:1: error: cannot convert '@func(@[3]int32) -> @[3]int32' to '@func(@[3]int32) -> @[4]int32'."},
+		{"error_1224_func_ptr_rows.pa", ":2:1: error: cannot convert '@func(@@[3]int32)' to '@func(@@[4]int32)'."},
+		{"error_1225_func_ptr_varr_borrow_permission.pa", ":2:1: error: cannot convert '@func(@![+]int32)' to '@func(@[+]int32)'."},
+		{"error_1226_func_ptr_dict_permission.pa", ":2:1: error: cannot convert '@func(@[\"\"]int32) -> @[\"\"]int32' to '@func(@[\"\"]int32) -> @![\"\"]int32'."},
+		{"error_1227_func_ptr_owned_dict.pa", ":2:1: error: cannot convert '@func(@![\"\"]int32)' to '@func([\"\"]int32)'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

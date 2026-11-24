@@ -400,8 +400,7 @@ void PlnSemanticAnalyzer::requireFuncSigTypes(const json& locNode, const json& f
 		bool ownedArr = tk == "arr" && !t.value("embedded", false)
 		             && (isVarrAstType(t) || !t["size-expr"].is_null());
 		bool ok = tk == "prim" ? isRet || t.value("type-name","") != "void"
-		        : tk == "pntr" ? t["base-type"].value("type-kind","") != "arr"
-		        : ownedArr;
+		        : tk == "pntr" || tk == "dict" || ownedArr;
 		if (!ok) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_FuncPtrSigType, typeDisplayName(t)) << endl;
 			exit(1);

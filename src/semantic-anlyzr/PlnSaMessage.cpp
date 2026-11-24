@@ -337,7 +337,8 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_FuncPtrSigType:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' cannot be a parameter or return type of a function pointer; "
-			       "use a primitive type, a pointer, or an owned struct or array ('T', '[n]T', '[+]T').";
+			       "use a primitive type, a pointer, a borrow, or an owned struct, array or dictionary "
+			       "('T', '[n]T', '[+]T', '[\"\"]T').";
 
 		case E_CallNonFuncPtr:
 			BOOST_ASSERT(arg1 != "\x01");

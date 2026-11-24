@@ -1,0 +1,7 @@
+export type P { int32 x; };
+export type O { @func(@![+]P) -> @![+]P g; @func([""]P) -> [""]P d; @func(@![3]int32) -> @![3]int32 a; };
+func grow(@![+]P v) -> @![+]P { v.resize(len(v) + 1); 5 -> v[len(v)-1].x; return v; }
+func same([""]P d) -> [""]P { return d; }
+func third(@![3]int32 a) -> @![3]int32 { 9 -> a[2]; return a; }
+export func make() -> O o { grow -> o.g; same -> o.d; third -> o.a; }
+export func size(@O o, @![+]P v) -> int64 { return len(o.g(v)); }

@@ -1116,10 +1116,11 @@ printf("%d\n", o.op(4));           // 8
 - It is read-only like `@T`: code is never written through it, so `@!func(...)` is an error.
   The variable itself can be given another function with `->`.
 - A parameter or return type is a primitive, a borrowed pointer (`@T`/`@!T`, including another
-  function pointer), or an owned struct or array (`T`, `[n]T` with a constant `n`, `[+]T`), which
-  is passed and returned as a function passes it: the called function owns an owned argument and
-  frees it, and the caller owns an owned return value. A `$T` or `[]T` is not allowed. The last
-  parameter can be [variadic](#variadic-arguments) (`[...]T`).
+  function pointer), a borrowed array or dictionary (`@[n]T`, `@[]T`, `@[+]T`, `@[""]T`, or with
+  `@!`), or an owned struct, array or dictionary (`T`, `[n]T` with a constant `n`, `[+]T`,
+  `[""]T`), which is passed and returned as a function passes it: the called function owns an
+  owned argument and frees it, and the caller owns an owned return value. A `$T` or `[]T` is not
+  allowed. The last parameter can be [variadic](#variadic-arguments) (`[...]T`).
 - A function becomes a function pointer by writing its name where a value is expected. This works
   for a Palan function returning nothing or one value (a single named return counts as one), an
   imported function, and a C function that is not variadic. A function with several return

@@ -836,3 +836,9 @@ TEST(build_mgr, func_ptr_arr_shape) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/458_func_ptr_arr_shape.pa"), "6 8 1\n");
 }
+
+// Function pointers taking and returning borrowed arrays and dictionaries and
+// owned dictionaries, also through an imported struct's fields.
+TEST(build_mgr, func_ptr_arrs_mtrace) {
+	expectMtraceRun("459_func_ptr_arrs_mtrace", "1 2 5\n5 5 5 3\n8 9 2 5\n5 2 3 7\n", 34);
+}
