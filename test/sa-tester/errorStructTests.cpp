@@ -998,6 +998,13 @@ TEST(sa_error, func_ptr)
 		{"error_687_method_on_non_func_ptr_field.pa", ":3:11: error: Undefined function 'n'."},
 		{"error_694_func_ptr_param_count.pa",
 		 ":3:1: error: cannot convert '@func(int32) -> int32' to '@func(int32, int32) -> int32'."},
+		{"error_1214_func_ptr_arr_size.pa", ":2:1: error: cannot convert '@func([4]int32)' to '@func([3]int32)'."},
+		{"error_1215_func_ptr_ret_arr_size.pa", ":2:1: error: cannot convert '@func() -> [3]int32' to '@func() -> [4]int32'."},
+		{"error_1216_func_ptr_borrowed_elems.pa", ":3:1: error: cannot convert '@func([+]P)' to '@func([+]@P)'."},
+		{"error_1217_func_ptr_dict_borrowed_elems.pa", ":3:1: error: cannot convert '@func(@![\"\"]P)' to '@func(@![\"\"]@P)'."},
+		{"error_1218_func_ptr_arr_for_ptr.pa", ":2:1: error: cannot convert '@func(@[3]int32)' to '@func(@int32)'."},
+		{"error_1219_func_ptr_nested_arr_size.pa", ":2:1: error: cannot convert '@func(@func([4]int32))' to '@func(@func([3]int32))'."},
+		{"error_1220_func_ptr_field_arr_size.pa", ":3:22: error: cannot convert '@func([4]int32)' to '@func([3]int32)'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

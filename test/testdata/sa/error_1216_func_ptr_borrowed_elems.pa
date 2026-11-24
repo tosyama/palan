@@ -1,0 +1,3 @@
+type P { int32 x; };
+func a([+]P v) { }
+@func([+]@P) g = a;

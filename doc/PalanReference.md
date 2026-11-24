@@ -1131,7 +1131,8 @@ printf("%d\n", o.op(4));           // 8
   permissions flow the right way: a function taking `@!T` does not fit a pointer that passes
   `@T`, while a function taking `@T` fits one that passes `@!T`. Ownership must match too: a
   function owning a parameter (`T`) does not fit a pointer that lends it (`@!T`), nor the
-  reverse. A `@void` parameter or return matches any pointer, as it does elsewhere.
+  reverse, and so must an array's shape: its size (`[3]T` does not fit `[4]T`) and whether it
+  owns its elements (`[+]T` does not fit `[+]@T`). A `@void` parameter or return matches any pointer, as it does elsewhere.
 - A function pointer is a pointer otherwise: it can be `NULL` and compared with `==`/`!=`, a
   `@void` converts to it, and `as` converts it to `@void` or `int64`/`uint64` and back. Calling a
   `NULL` function pointer is not checked.

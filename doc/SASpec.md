@@ -1000,7 +1000,9 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     A function type's parameter and return types take the form a Palan function's do (`sigType`),
     wherever the type is written, so an owned struct is `pntr(struct)` without `mutable`. A
     binding between function pointer types also requires each parameter and the return to agree
-    in being owned (`isOwnedBlock`), which the type registry does not tell apart.
+    in what the type registry does not tell apart (`sigShapeOk`): an owned block (`isOwnedBlock`)
+    has the same type on both sides, and a borrowed array a shape that fits, in the direction the
+    value flows.
   - addr-of: SA dispatches on the AST node's `object` (see ASTSpec.md) and emits one of three
     shapes — the `addr-of` expr-type only ever appears for the plain-variable case; a struct-field
     or array-element target lowers to an ordinary `field-access`/`arr-index` node instead:

@@ -830,3 +830,9 @@ TEST(build_mgr, borrow_field_lit) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/457_borrow_field_lit.pa"), "4 9 3\n");
 }
+
+// Function pointers whose arrays have the functions' shapes.
+TEST(build_mgr, func_ptr_arr_shape) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/458_func_ptr_arr_shape.pa"), "6 8 1\n");
+}

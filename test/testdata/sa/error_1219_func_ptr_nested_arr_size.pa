@@ -1,0 +1,2 @@
+func a(@func([4]int32) f) { }
+@func(@func([3]int32)) g = a;

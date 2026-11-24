@@ -1,0 +1,2 @@
+func a([4]int32 v) { }
+@func([3]int32) g = a;

@@ -140,9 +140,11 @@ enum class PtrPermission { Ok, Upgrade, InnerNarrowing, FuncSigMismatch };
 // a `@!@int32` made from a `@!@!int32`, a read-only pointer could be stored
 // where the original still treats it as mutable (C's `int**` -> `const int**`).
 // Non-pointer types, and narrowing while every level above is read-only, are fine.
-// FuncSigMismatch: the function types reached differ in a pointer permission.
+// FuncSigMismatch: the function types reached differ in a pointer permission,
+// an owner or an array's shape.
 inline bool funcSigPermissionOk(const json& from, const json& to);
 inline bool isOwnedBlock(const json& vt);
+inline bool sigShapeOk(const json& from, const json& to);
 
 inline PtrPermission ptrPermission(const json& from, const json& to)
 {
@@ -181,9 +183,9 @@ inline bool funcSigPermissionOk(const json& from, const json& to)
 	const json& tp = to["parameters"];
 	BOOST_ASSERT(fp.size() == tp.size());
 	for (size_t i = 0; i < fp.size(); i++)
-		if (!sameOwnership(tp[i]["var-type"], fp[i]["var-type"])
+		if (!sigShapeOk(tp[i]["var-type"], fp[i]["var-type"])
 		    || !ptrPermissionOk(tp[i]["var-type"], fp[i]["var-type"])) return false;
-	return sameOwnership(from["ret-type"], to["ret-type"]) && ptrPermissionOk(from["ret-type"], to["ret-type"]);
+	return sigShapeOk(from["ret-type"], to["ret-type"]) && ptrPermissionOk(from["ret-type"], to["ret-type"]);
 }
 
 // funcSigPermissionOk's ownership half alone, for a cast: a cast may change
@@ -798,6 +800,25 @@ inline bool elemShapeMatch(const json& from, const json& to) {
 	if (isVoid(from["base-type"]) || isVoid(to["base-type"]))
 		return true;
 	return arrShapeMatch(from["base-type"], to["base-type"], isWritableThrough(to));
+}
+
+inline bool isVoidPntr(const json& t)
+{
+	return t.value("type-kind","") == "pntr" && t["base-type"].value("type-name","") == "void";
+}
+
+// What a function type's parameter or return must agree on beyond its registry
+// type, where a value typed `from` is used as `to`. What is given away is freed
+// as it was built, so its type is the same.
+inline bool sigShapeOk(const json& from, const json& to)
+{
+	if (isOwnedBlock(from) || isOwnedBlock(to)) return from == to;
+	if (isVoidPntr(from) || isVoidPntr(to)) return true;
+	if (to.contains("arr-size")) return arrShapeMatch(from, to);
+	if (isVarrPntr(to) || isDictPntr(to)) return from["base-type"] == to["base-type"];
+	if (isPtrBorrow(from) && isPtrBorrow(to) && (isArrLevel(from["base-type"]) || isArrLevel(to["base-type"])))
+		return arrShapeMatch(from["base-type"], to["base-type"], isWritableThrough(to));
+	return elemShapeMatch(from, to);
 }
 
 // '->' into a value of this type copies its contents: a struct's own storage
