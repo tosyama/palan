@@ -1,0 +1,3 @@
+import "465_ptr_cycle_mtrace.pa";
+export type Node { int32 v; [2]@Node kids; @func(@Node) -> int32 f; [+]@Peer peers; @func(@![+]@Node) -> int64 n; };
+export type Peer { int32 w; [""]@Node by; @func(@Node, @Peer) -> int32 g; [2]@Back back; @[+]@Peer near; };

@@ -868,3 +868,8 @@ TEST(build_mgr, row_layouts) {
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/464_row_layouts.pa"),
 		"7 6 7\n7 6 7\n8\n6 7\n");
 }
+
+// Types in two modules, one type and block-scoped types in pointer cycles.
+TEST(build_mgr, ptr_cycle_mtrace) {
+	expectMtraceRun("465_ptr_cycle_mtrace", "7 7 5 7 12\n4 2 1 5\n7 1\n5\n9\n", 27);
+}

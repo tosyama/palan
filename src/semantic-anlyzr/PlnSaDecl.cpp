@@ -34,7 +34,7 @@ static string unsupportedPointee(const json& leaf)
 
 // Its levels are checked first, so that their errors are the field's own. A
 // C pointer slot keeps its place even when its pointee cannot be accessed.
-FieldLayout PlnSemanticAnalyzer::inlineArrField(const json& locNode, const string& structName, const json& arr)
+FieldLayout PlnSemanticAnalyzer::inlineArrField(const json& locNode, const json& arr)
 {
 	const json* leaf = &arr;
 	for (; leaf->value("type-kind", "") == "arr" && !isVarrAstType(*leaf); leaf = &(*leaf)["base-type"]) {
@@ -43,10 +43,6 @@ FieldLayout PlnSemanticAnalyzer::inlineArrField(const json& locNode, const strin
 			exit(1);
 		}
 		fieldArrSize(locNode, (*leaf)["size-expr"]);
-	}
-	if (leaf->value("type-name", "") == structName) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_RecursiveStruct, structName) << endl;
-		exit(1);
 	}
 	FieldLayout f{.typeKind="embed-arr"}; // LCOV_EXCL_BR_LINE
 	json laidOut = arr;
@@ -172,7 +168,7 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 			exit(1);
 		} else if (tk == "embed" && vtype["base-type"].value("type-kind", "") == "arr") {
 			// `$[n]U`: the array laid out in the struct, as `$[n]U` lays it out in a frame.
-			FieldLayout fl = inlineArrField(locNode, name, vtype["base-type"]);
+			FieldLayout fl = inlineArrField(locNode, vtype["base-type"]);
 			fl.name = fieldName;
 			if (f.contains("unsupported")) fl.unsupported = f["unsupported"];
 			fl.offset = place(fl.size, inPlaceAlign(fl.type));
@@ -191,10 +187,6 @@ StructDef PlnSemanticAnalyzer::buildStructDef(const string& name, const json& fi
 				exit(1);
 			}
 			string structName = vtype["base-type"]["type-name"].get<string>();
-			if (structName == name) {
-				cerr << errPrefix << PlnSaMessage::getMessage(E_RecursiveStruct, name) << endl;
-				exit(1);
-			}
 			if (!structDefs_.count(structName)) {
 				PlnSaMessageCode code = elemSizeBytes(structName) >= 0 ? E_EmbedElemNotStruct : E_UnknownType;
 				cerr << errPrefix << PlnSaMessage::getMessage(code, structName) << endl;
@@ -1167,6 +1159,18 @@ bool PlnSemanticAnalyzer::isWrittenNameTaken(const string& name) const
 		|| constDecls_.count(name) || elemSizeBytes(name) >= 0;
 }
 
+void PlnSemanticAnalyzer::rejectSelfEmbedding(const json& structDef) const
+{
+	for (auto& f : structDef["fields"]) {
+		if (f["var-type"].value("type-kind", "") != "embed") continue;
+		const json* t = &f["var-type"]["base-type"];
+		while (t->value("type-kind", "") == "arr" && !isVarrAstType(*t)) t = &(*t)["base-type"];
+		if (t->value("type-kind", "") != "prim" || (*t)["type-name"] != structDef["name"]) continue;
+		cerr << locPrefix(structDef) << PlnSaMessage::getMessage(E_RecursiveStruct, structDef["name"]) << endl;
+		exit(1);
+	}
+}
+
 json PlnSemanticAnalyzer::sa_struct_def(const json& stmt)
 {
 	string written = stmt["name"].get<string>();
@@ -1177,16 +1181,13 @@ json PlnSemanticAnalyzer::sa_struct_def(const json& stmt)
 	json fields = stmt["fields"];
 	for (auto& f : fields) {
 		f["var-type"] = resolveWrittenType(stmt, f["var-type"]);
-		// Only a pointee may name a struct that is not registered yet; every
-		// other field type is checked by buildStructDef against structDefs_.
+		// Every other field type is checked by buildStructDef.
 		const json* type = &f["var-type"];
 		if (type->value("type-kind", "") == "embed") type = &(*type)["base-type"];
 		const json* t = type;
 		while (t->value("type-kind", "") == "arr") t = &(*t)["base-type"];
 		if (t->value("type-kind", "") != "pntr") continue;
-		string pointee = pointeeLeaf(*t).value("type-name", "");
-		bool laterDef = pointee == name || declaredStructs_.count(pointee);
-		if (!laterDef) requireKnownTypeNames(stmt, *type);
+		requireKnownTypeNames(stmt, *type);
 		json* leaf = const_cast<json*>(t);
 		while (leaf->value("type-kind", "") == "pntr") leaf = &(*leaf)["base-type"];
 		if (leaf->value("type-kind", "") == "func") *leaf = deepNormalizePrimToStruct(stmt, *leaf);

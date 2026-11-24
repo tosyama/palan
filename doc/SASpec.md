@@ -399,7 +399,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     so their order in the source does not matter. A block-scoped import's types are
     registered at the import and writable until the end of the block.
   - Reaching a declaration that is still being resolved is a cycle, reported as
-    `E_CircularTypeDecl` at the declaration that reached it. A struct named through a
+    `E_CircularTypeDecl` at the declaration that reached it, except that a struct
+    embedding itself (`$T`, `$[n]T`) is `E_RecursiveStruct`. A struct named through a
     pointer only has to be declared; it is resolved once no declaration is being
     resolved, so a pointer may close a cycle.
   - A struct comes with every struct and enum its fields use, and a signature with every

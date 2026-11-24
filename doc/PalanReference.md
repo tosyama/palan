@@ -2673,8 +2673,9 @@ type Pos { flo64 x; flo64 y; };
 
 A type must not contain itself. Embedding or owning in a cycle (`type A { $B b; };` with
 `type B { $A a; };`, possibly across files that import each other) or an alias cycle is a
-compile error. A pointer field (`@T`/`@!T`) may close a cycle, but
-a borrow of an array or a dictionary of the type may not.
+compile error. A pointer (`@T`/`@!T`) may close a cycle, as a field, as an element of an array or
+a dictionary, or in the signature of a function pointer (`[2]@T`, `@func(@T)`). The type itself in
+a signature, or a borrow of an array or a dictionary of the type, may not.
 
 ### Restrictions
 

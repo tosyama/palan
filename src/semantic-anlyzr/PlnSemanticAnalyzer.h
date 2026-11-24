@@ -676,6 +676,8 @@ class PlnSemanticAnalyzer {
 	bool isDeclNameTaken(const string& name) const;
 	bool isWrittenNameTaken(const string& name) const;  // isDeclNameTaken but for topDecls_
 	static void addDeclaredVarNames(const json& stmt, set<string>& names);
+	// Reported before its field types are resolved, where it would be a cycle.
+	void rejectSelfEmbedding(const json& structDef) const;
 	json sa_struct_def(const json& stmt);         // consume struct-def, register in structDefs_
 	void setFieldInits(StructDef& def, const json& fields);
 	json initRunCall(const string& structName, json run, json count);
@@ -683,7 +685,7 @@ class PlnSemanticAnalyzer {
 	                         bool isUnion = false, bool packed = false, int aligned = 1);
 	int64_t fieldArrSize(const json& locNode, const json& sizeExpr);
 	json ownedFieldType(const json& locNode, const json& vtype);
-	FieldLayout inlineArrField(const json& locNode, const string& structName, const json& arr);
+	FieldLayout inlineArrField(const json& locNode, const json& arr);
 	void registerCStruct(const json& cincludeStmt, const json& s);  // consume c2ast "structs" entry, register in structDefs_
 	json sa_struct_var_decl(const json& stmt, VarStorage storage); // returns array of statements
 	json sa_type_alias(const json& stmt);         // consume type-alias, register in typeAliases_

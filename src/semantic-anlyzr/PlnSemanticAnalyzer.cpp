@@ -334,7 +334,8 @@ bool PlnSemanticAnalyzer::isKnownPointeeTypeName(const string& name) const
 {
 	// `void` is pointee-only (PlnType.h PrimType::Name::Void): @void/@!void are
 	// C's void*, while a standalone `void x;` stays rejected by isKnownTypeName.
-	return isPrimPointeeName(name) || isKnownTypeName(name);
+	// A declared struct may be pointed to before its layout is resolved.
+	return isPrimPointeeName(name) || isKnownTypeName(name) || declaredStructs_.count(name);
 }
 
 void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json& type) const
@@ -416,7 +417,7 @@ json PlnSemanticAnalyzer::deepNormalizePrimToStruct(const json& locNode, const j
 		t["ret-type"] = sigType(locNode, t["ret-type"]);
 		return t;
 	}
-	if (isStructType(resolved))
+	if (isStructType(resolved) || declaredStructs_.count(resolved.value("type-name","")))
 		return {{"type-kind","struct"},{"type-name",resolved["type-name"]}}; // LCOV_EXCL_BR_LINE
 	return resolved;
 } // LCOV_EXCL_BR_LINE
@@ -1142,8 +1143,6 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	if (d.state == TopDecl::Done) return;
 	auto& resolving = program_->resolving;
 	if (d.state == TopDecl::Resolving) {
-		// A struct embedding itself is E_RecursiveStruct's to report.
-		if (resolving.back().module == this && resolving.back().name == name) return;
 		string path;
 		bool inCycle = false;
 		for (auto& r : resolving) {
@@ -1158,8 +1157,9 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	d.state = TopDecl::Resolving;
 	resolving.push_back({this, name, d.stmt});
 	const json& stmt = *d.stmt;
-	ensureTypeRefs(stmt);
 	string t = stmt["stmt-type"].get<string>();
+	if (t == "struct-def") rejectSelfEmbedding(stmt);
+	ensureTypeRefs(stmt);
 	bool resolved = true;
 	if (t != "const-decl") rejectDeferredConstRefs(stmt, stmt);
 	if      (t == "struct-def") sa_struct_def(stmt);

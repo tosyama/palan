@@ -779,3 +779,29 @@ TEST(sa_error, row_layout_mismatch) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, type_self_cycle) {
+	const vector<pair<string, string>> cases = {
+		{"error_1296_self_owned_field.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1297_self_borrow_varr.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1298_self_borrow_dict.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1299_self_sig_value.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1300_self_sig_borrow.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1301_self_row_borrow.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1302_self_alias.pa", "error: type 'X' depends on itself: X -> X."},
+		{"error_1303_self_sig_alias.pa", "error: type 'F' depends on itself: F -> F."},
+		{"error_1304_self_const.pa", "error: type 'N' depends on itself: N -> N."},
+		{"error_1305_self_local.pa", "error: type 'L' depends on itself: L -> L."},
+		{"error_1306_ptr_elem_unknown.pa", "error: unknown type 'Z'."},
+		{"error_1307_sig_ptr_unknown.pa", "error: unknown type 'Z'."},
+		{"error_1308_self_embed_borrow.pa", "error: struct 'P' recursively contains itself."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
