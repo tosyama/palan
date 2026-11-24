@@ -1447,7 +1447,10 @@ array. `[][m]T` takes the rows of a `[n][m]T` array (and `[][m]$T` those of a `[
 array); `m` must be a constant, and an array whose rows have another size is a compile error.
 `[]@![]T` takes the slots of a `[n]@![]T` array.
 
-Only the outermost size may be left out: the elements must match exactly. An element owned by
+Only the outermost size may be left out: the elements must match exactly, including what a pointer
+element points to. The rows of a `[n]$[m]T` array are in one block, so it is taken as `[]$[m]T`
+and never as `[][]T` or `[][m]T`, whose elements are pointers to rows, or the other way around. An
+element owned by
 the array (a row, or a struct of `[n]T`) cannot be given as a `@!T` pointer slot, or the
 other way around, since one side would free or overwrite what the other one owns. For example,
 a `[n]@![]int32` array is returned as `[]@![]int32`, not as `[][]int32`, and a `[n]P` array

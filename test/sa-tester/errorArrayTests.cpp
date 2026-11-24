@@ -747,3 +747,35 @@ TEST(sa_error, unsized_rows) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, row_layout_mismatch) {
+	const vector<pair<string, string>> cases = {
+		{"error_1277_row_layout_param.pa", "does not match '"},
+		{"error_1278_row_layout_value_param.pa", "does not match '"},
+		{"error_1279_row_layout_sized_row_param.pa", "does not match '"},
+		{"error_1280_row_layout_assign.pa", "does not match '"},
+		{"error_1281_row_layout_ptr_ptr.pa", "does not match '"},
+		{"error_1282_row_layout_rows_to_embed.pa", "does not match '"},
+		{"error_1283_row_layout_slot.pa", "does not match '"},
+		{"error_1284_row_layout_field.pa", "does not match '"},
+		{"error_1285_row_layout_borrow_var.pa", "does not match '"},
+		{"error_1286_row_layout_run_size.pa", "does not match '"},
+		{"error_1287_row_layout_varr.pa", "does not match '"},
+		{"error_1288_row_layout_func_ptr.pa", "cannot convert '@func("},
+		{"error_1289_row_layout_slots.pa", "does not match the borrowed array type"},
+		{"error_1290_row_layout_slots_embed_size.pa", "does not match the borrowed array type"},
+		{"error_1291_row_layout_slots_row_size.pa", "does not match the borrowed array type"},
+		{"error_1292_row_layout_slots_ptr_elems.pa", "does not match the borrowed array type"},
+		{"error_1293_row_layout_lent_rows.pa", "does not match the borrowed array type"},
+		{"error_1294_row_layout_varr_elems.pa", "does not match '"},
+		{"error_1295_row_layout_dict_elems.pa", "does not match '"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

@@ -1,0 +1,2 @@
+func g(@[][]int32 x) {}
+@func(@[]$[3]int32) h = g;

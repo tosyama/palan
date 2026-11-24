@@ -1,0 +1,28 @@
+cinclude <stdio.h>;
+func rows(@[][]int32 x) -> int32 { return x[1][2]; }
+func embed(@[]$[3]int32 x) -> int32 { return x[1][2]; }
+func ptrs(@[]@[]int32 x) -> int32 { return x[1][2]; }
+func slots(@[2]@[][]int32 x) -> int32 { return x[0][1][2]; }
+func eslots(@[2]@[]$[3]int32 x) -> int32 { return x[0][1][2]; }
+func pslots(@[2]@[]@[]int32 x) -> int32 { return x[0][1][2]; }
+func lent(@[2]@[]$[3]int32 x) -> int32 { return x[1][1][2]; }
+func f() {
+    [2]$[3]int32 e = [[1, 2, 3], [4, 5, 6]];
+    [2][3]int32 r = [[1, 2, 3], [4, 5, 7]];
+    printf("%d %d %d\n", rows(@r), embed(@e), ptrs(@r));
+    [2]@![][]int32 sr;
+    @!r -> sr[0];
+    [2]@![]$[3]int32 se;
+    @!e -> se[0];
+    printf("%d %d %d\n", slots(@sr), eslots(@se), pslots(@sr));
+    [2][2]$[3]int32 k;
+    8 -> k[1][1][2];
+    printf("%d\n", lent(@k));
+    // One kind of element does not make the other's push ambiguous.
+    [+]@[]$[3]int32 ve;
+    [+]@[][]int32 vr;
+    ve.push(@e);
+    vr.push(@r);
+    printf("%d %d\n", ve[0][1][2], vr[0][1][2]);
+}
+f();

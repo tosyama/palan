@@ -862,3 +862,9 @@ TEST(build_mgr, unsized_rows_borrow_mtrace) {
 	expectMtraceRun("463_unsized_rows_borrow_mtrace",
 		"6 8 6\n60\n60 8 2 1\n60\n8\n60\n5\n7 6 90 90\n6 60 6\n", 26);
 }
+
+TEST(build_mgr, row_layouts) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/464_row_layouts.pa"),
+		"7 6 7\n7 6 7\n8\n6 7\n");
+}

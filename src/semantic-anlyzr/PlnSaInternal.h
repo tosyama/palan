@@ -762,6 +762,13 @@ inline string PlnSemanticAnalyzer::typeDisplayName(const json& t) const {
 } // LCOV_EXCL_BR_LINE
 
 inline bool arrShapeMatch(const json& from, const json& to, bool toSlotsMutable = true);
+inline bool elemShapeMatch(const json& from, const json& to);
+
+// Rows laid out in place and pointers to them are never read as each other.
+inline bool rowLayoutMatch(const json& from, const json& to) {
+	return (from["base-type"].value("type-kind","") != "pntr" && to["base-type"].value("type-kind","") != "pntr")
+	    || from.value("embedded", false) == to.value("embedded", false);
+}
 
 // The elements of a '[+]T' or '[""]T' bound as another: laid out the same way
 // and matching as an array's do. The registry tells other types apart.
@@ -779,7 +786,7 @@ inline bool holderShapeMatch(const json& from, const json& to, bool toSlotsMutab
 // a `[""]T`) in both or neither, and pointer elements in both or neither. The element type is left
 // to the usual type compatibility check, which cannot tell a stored struct
 // from a pointer to one and ignores pointer permissions. A pointer element
-// keeps its permission, except that read-only slots may narrow '@!T' to '@T':
+// keeps its permission and the shape of what it points to, except that read-only slots may narrow '@!T' to '@T':
 // with writable slots the callee could store a '@T' where the caller expects
 // a '@!T'. Through read-only slots the callee can neither replace an element
 // nor free one, so an owned element may be lent as '@T', and a borrowed one
@@ -788,7 +795,7 @@ inline bool arrShapeMatch(const json& from, const json& to, bool toSlotsMutable)
 	bool fp = isArrLevel(from), tp = isArrLevel(to);
 	if (!toSlotsMutable) {
 		if (isPtrBorrow(to) && !isWritableThrough(to)) {
-			if (fp) return arrShapeMatch(from["base-type"], to["base-type"], false);
+			if (fp) return rowLayoutMatch(from, to) && arrShapeMatch(from["base-type"], to["base-type"], false);
 			if (isOwnedBlock(from)) return holderShapeMatch(from, to, false);
 		}
 		if (isPtrBorrow(from) && !tp && isOwnedBlock(to)) return holderShapeMatch(from, to, false);
@@ -798,7 +805,7 @@ inline bool arrShapeMatch(const json& from, const json& to, bool toSlotsMutable)
 			return false;
 		if (!isPtrBorrow(to)) return holderShapeMatch(from, to, toSlotsMutable);
 		return (isWritableThrough(from) == isWritableThrough(to) || (!toSlotsMutable && !isWritableThrough(to)))
-		    && holderShapeMatch(from, to, isWritableThrough(to));
+		    && elemShapeMatch(from, to);
 	}
 	return (!to.contains("arr-size") || (from.contains("arr-size") && from["arr-size"] == to["arr-size"]))
 	    && from.value("embedded", false) == to.value("embedded", false)
@@ -816,6 +823,7 @@ inline bool isVoidType(const json& t)
 // keeps rows of another size out and keeps the elements' owner unchanged:
 // either side would free, or overwrite, what the other one owns. A 'void*'
 // on either side (NULL, a C 'void*') says nothing about the elements.
+// Rows are laid out in place on both sides or on neither.
 // Pointer elements follow the slots of a borrowed `[n]@T`.
 inline bool elemShapeMatch(const json& from, const json& to) {
 	if (to.value("type-kind","") != "pntr" || to.contains("arr-size") || from.value("type-kind","") != "pntr")
@@ -825,7 +833,8 @@ inline bool elemShapeMatch(const json& from, const json& to) {
 	if (isVoidType(fe) || isVoidType(te)) return true;
 	if (isVarrPntr(to) || isDictPntr(to)) return holderShapeMatch(from, to, isWritableThrough(to));
 	bool rows = isPtrBorrow(from) && isPtrBorrow(to) && (isArrLevel(fe) || isArrLevel(te));
-	return (!isArrLevel(from) && !rows) || arrShapeMatch(fe, te, isWritableThrough(to));
+	return rowLayoutMatch(from, to)
+	    && ((!isArrLevel(from) && !rows) || arrShapeMatch(fe, te, isWritableThrough(to)));
 }
 
 // An array of primitives is one block whatever its size.

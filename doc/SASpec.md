@@ -741,8 +741,11 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   local's initializer, or an assignment to such a destination, the source must be written as
   `@x`/`@!x` (`E_ArrBorrowNeedsAddrOf`) and its value-type must match depth, `embedded`,
   every `arr-size`, whether the element is a stored struct or a pointer, and a
-  pointer element's `mutable`, which a read-only borrow may narrow from `true` to `false`
-  (`E_ArrBorrowShapeMismatch`). A row read through an
+  pointer element's `mutable`, which a read-only borrow may narrow from `true` to `false`, and the
+  shape of what that element points to (`E_ArrBorrowShapeMismatch`). A destination without a size
+  (`@[][]T`, `@@T`, a `[k]@[]T` slot) takes a source whose outermost level agrees in `embedded`
+  when its elements are rows or pointers, and whose elements match in the same way
+  (`E_ArrElemShapeMismatch`). A row read through an
   embedded borrow inherits its `mutable`.
 
   Scope-exit cleanup:
