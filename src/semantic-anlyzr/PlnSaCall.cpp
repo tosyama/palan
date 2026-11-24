@@ -22,16 +22,23 @@ static json makeTempExpr(json body, json value, json release)
 }
 // LCOV_EXCL_BR_STOP
 
+// A function pointer type names no parameters.
+static string paramLabel(const json& param, size_t argIdx)
+{
+	string name = param.value("name", "");
+	return name.empty() ? "#" + to_string(argIdx + 1) : name;
+}
+
 static bool givenIn(const json& arg)
 {
 	return arg.value("expr-type", "") == "transfer";
 }
 
-json PlnSemanticAnalyzer::sa_arg_expression(const json& ast, const PlnType* expectedType)
+json PlnSemanticAnalyzer::sa_arg_expression(const json& ast, const json* toType)
 {
 	bool saved = transferAllowed_;
 	transferAllowed_ = givenIn(ast);
-	json out = sa_expression(ast, expectedType);
+	json out = toType ? sa_expression_for(ast, *toType) : sa_expression(ast);
 	transferAllowed_ = saved;
 	return out;
 }
@@ -175,7 +182,7 @@ static bool firstParamMutable(const json& def)
 }
 
 // The type registry does not tell a read-only pointer from a writable one at
-// any level, down through the pointers and a `[+]T`'s elements.
+// any level, down through the pointers and the elements of a `[+]T` or `[""]T`.
 ArgFit PlnSemanticAnalyzer::typeFit(const json& argVT, const json& paramVT)
 {
 	if (registry_.fromJson(argVT) != registry_.fromJson(paramVT)) return ArgFit::Viable;
@@ -184,7 +191,7 @@ ArgFit PlnSemanticAnalyzer::typeFit(const json& argVT, const json& paramVT)
 	const json* p = &paramVT;
 	for (bool outermost = true; ; outermost = false) {
 		string kind = p->value("type-kind", "");
-		if (kind != "pntr" && kind != "varr") return fit;
+		if (kind != "pntr" && kind != "varr" && kind != "strdict") return fit;
 		bool aw = a->value("mutable", true), pw = p->value("mutable", true);
 		if (kind == "pntr" && aw != pw) {
 			if (!outermost || !aw) return ArgFit::Viable;
@@ -229,12 +236,8 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 		return paramVT.value("type-kind", "") == "pntr" || isStructStorage(paramVT) ? ArgFit::Viable : ArgFit::None; // LCOV_EXCL_BR_LINE
 	}
 	if (namesOverloadedFunc(arg.ast)) {
-		const PlnType* want = registry_.fromJson(paramVT);
-		for (auto& c : findCallees(arg.ast["name"].get<string>())) {
-			json fp;
-			if (funcRefType(c, fp).empty() && registry_.fromJson(fp) == want) return ArgFit::Exact; // LCOV_EXCL_BR_LINE
-		}
-		return ArgFit::None;
+		bool fits = isFuncPtr(paramVT) && !funcsOfType(arg.ast["name"].get<string>(), paramVT).empty();
+		return fits ? ArgFit::Exact : ArgFit::None;
 	}
 	if (!arg.chained || !arg.probe.contains("expr-type")) {
 		const PlnType* t = registry_.fromJson(paramVT);
@@ -254,6 +257,31 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 	           : base == vt;
 	return match ? ArgFit::Exact : ArgFit::None;
 }
+
+static json withoutPermission(json t)
+{
+	string kind = t.value("type-kind", "");
+	if (kind != "pntr" && kind != "varr" && kind != "strdict") return t;
+	t.erase("mutable");
+	t["base-type"] = withoutPermission(move(t["base-type"]));
+	return t;
+} // LCOV_EXCL_BR_LINE
+
+// Whether an argument has a parameter's type also in what the type registry
+// does not hold: lengths, rows, elements' owners and functions' signatures.
+bool PlnSemanticAnalyzer::sameShape(const CallArg& arg, const json& paramVT, bool isCFunc)
+{
+	if (arg.pending && namesOverloadedFunc(arg.ast)) {
+		json fp;
+		for (auto& c : funcsOfType(arg.ast["name"].get<string>(), paramVT))
+			if (funcRefType(c, fp).empty() && fp == paramVT) return true; // LCOV_EXCL_BR_LINE
+		return false;
+	}
+	const json& sa = arg.pending ? arg.probe : arg.sa;
+	if (!sa.contains("value-type")) return true;  // typed by the parameter
+	const json vt = takesVarrData(sa["value-type"], &paramVT, isCFunc) ? varrData(sa)["value-type"] : sa["value-type"]; // LCOV_EXCL_BR_LINE
+	return withoutPermission(vt) == withoutPermission(paramVT);
+} // LCOV_EXCL_BR_LINE
 
 // Parameters with defaults come last, so the first one ends those a call must give.
 static size_t requiredArgCount(const json& params, size_t fixedCount)
@@ -316,7 +344,8 @@ string PlnSemanticAnalyzer::calleesText(const string& name, const vector<Callee>
 
 // Among several functions of one name, the one every argument fits; when more
 // than one fits, the one every argument matches exactly, or else the one every
-// argument matches but for a writable borrow given as read-only. Those needing
+// argument matches but for a writable borrow given as read-only; among several
+// of these, the one whose types the arguments have also in shape. Those needing
 // a literal converted are only looked at when no other fits, and are
 // ranked the same way among themselves, a converted argument as exact.
 CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<Callee>& cands,
@@ -362,10 +391,20 @@ CalleeChoice PlnSemanticAnalyzer::chooseCallee(const string& name, const vector<
 	// A candidate fitting through its defaults or its variadic parameter is not
 	// ranked against the others, so that a reader follows no further rule to
 	// tell which one is called.
-	if (!fit.unranked && fit.exact.size() == 1) return {fit.exact[0], {}};
-	if (!fit.unranked && fit.exact.empty() && fit.narrowed.size() == 1) return {fit.narrowed[0], {}};
-	return {nullopt, fit.unranked ? fit.viable : !fit.exact.empty() ? fit.exact
-	                 : !fit.narrowed.empty() ? fit.narrowed : fit.viable};
+	if (fit.unranked) return {nullopt, fit.viable};
+	const vector<Callee>& best = !fit.exact.empty() ? fit.exact : fit.narrowed;
+	if (best.empty()) return {nullopt, fit.viable};
+	if (best.size() == 1) return {best[0], {}};
+	vector<Callee> shaped;
+	for (auto& c : best) {
+		const json& params = (*c.def)["parameters"];
+		bool same = true;
+		for (size_t i = 0; i < args.size() && same; i++)
+			same = sameShape(args[i], params[i]["var-type"], c.isC);
+		if (same) shaped.push_back(c);
+	}
+	if (shaped.size() == 1) return {shaped[0], {}};
+	return {nullopt, best};
 }
 
 Callee PlnSemanticAnalyzer::selectCallee(const json& locNode, const string& name,
@@ -718,10 +757,27 @@ bool PlnSemanticAnalyzer::namesOverloadedFunc(const json& expr) const
 	return !findVar(name) && !findCGlobal(name) && findCallees(name).size() > 1; // LCOV_EXCL_BR_LINE
 }
 
+// The functions of a name that fit a function pointer type, or the one whose
+// own type it is. Those differing from it only in permission, owner or shape
+// go to `mismatched`.
+vector<Callee> PlnSemanticAnalyzer::funcsOfType(const string& name, const json& funcPtr, vector<Callee>* mismatched)
+{
+	const PlnType* want = registry_.fromJson(funcPtr);
+	vector<Callee> fitting, exact;
+	for (auto& c : findCallees(name)) {
+		json fp;
+		if (!funcRefType(c, fp).empty() || registry_.fromJson(fp) != want) continue; // LCOV_EXCL_BR_LINE
+		if (ptrPermissionOk(fp, funcPtr)) fitting.push_back(c);
+		else if (mismatched) mismatched->push_back(c);
+		if (fp == funcPtr) exact.push_back(c);
+	}
+	return exact.size() == 1 ? exact : fitting;
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
 // A function named as a value: its address, typed as the `@func` it can be
 // called through. Null if `expr` names no function. Of several functions of
-// the name, the one whose type expectedType is.
-json PlnSemanticAnalyzer::sa_func_ref(const json& expr, const PlnType* expectedType)
+// the name, the one fitting toType.
+json PlnSemanticAnalyzer::sa_func_ref(const json& expr, const json* toType)
 {
 	const string& name = expr["name"].get<string>();
 	vector<Callee> cands = findCallees(name);
@@ -729,11 +785,10 @@ json PlnSemanticAnalyzer::sa_func_ref(const json& expr, const PlnType* expectedT
 	Callee callee = cands[0];
 	json funcPtr;
 	if (cands.size() > 1) {
-		vector<Callee> typed;
-		for (auto& c : cands) {
-			json fp;
-			if (funcRefType(c, fp).empty() && registry_.fromJson(fp) == expectedType) typed.push_back(c); // LCOV_EXCL_BR_LINE
-		}
+		vector<Callee> typed, mismatched;
+		if (toType) typed = funcsOfType(name, *toType, &mismatched);
+		// A single one is bound as it is, so that its mismatch is what is reported.
+		if (typed.empty() && mismatched.size() == 1) typed = mismatched;
 		if (typed.size() > 1) {
 			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_AmbiguousCall,
 				name, calleesText(name, typed)) << endl;
@@ -1115,9 +1170,7 @@ optional<SaDiag> PlnSemanticAnalyzer::callArgMismatch(const json& argAst, const 
 	// permission comes from const-qualification while a Palan parameter's comes
 	// from `@!T`.
 	if (isCFunc && ptrPermission(saArg["value-type"], paramVT) == PtrPermission::Upgrade) {
-		string paramName = param.value("name", "");
-		if (paramName.empty()) paramName = "#" + to_string(argIdx + 1);
-		return SaDiag{E_ReadOnlyPtrToNonConstCParam, funcName, paramName}; // LCOV_EXCL_BR_LINE
+		return SaDiag{E_ReadOnlyPtrToNonConstCParam, funcName, paramLabel(param, argIdx)}; // LCOV_EXCL_BR_LINE
 	}
 	return ptrPermissionMismatch(saArg["value-type"], paramVT);
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
@@ -1306,8 +1359,7 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 		bool ownedParam = !isCFunc && paramVT && isOwnedBlock(*paramVT);
 		argAsts.push_back(arg);
 		if (givenIn(arg) && !ownedParam) {
-			string paramName = param ? param->value("name", "") : "";
-			if (paramName.empty()) paramName = "#" + to_string(argIdx + 1);
+			string paramName = paramLabel(param ? *param : json::object(), argIdx); // LCOV_EXCL_BR_LINE
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_TransferToParam, paramName, funcName) << endl;
 			exit(1);
 		} // LCOV_EXCL_LINE
@@ -1319,13 +1371,13 @@ json PlnSemanticAnalyzer::bindCallArgs(const json& locNode, vector<CallArg>& arg
 		// operator's operand may be one with no call written for '@' to take.
 		bool borrowsProbe = probed && arg != ca.ast && isExpiringOwned(ca.probe);
 		json saArg = isLit ? sa_lit_arg(arg, isCFunc && !byValStruct ? nullptr : paramVT,
-		                                param ? param->value("name", "") : "", funcName,
+		                                paramLabel(param ? *param : json::object(), argIdx), funcName, // LCOV_EXCL_BR_LINE
 		                                argAst, litBody, litRelease)
 		           : probed && arg == ca.ast ? move(ca.probe)
 		           : borrowsProbe ? borrowExpiring(move(ca.probe), arg["mutable"])
 		           : !ca.pending ? move(ca.sa)
 		           : isCallBorrow(arg) ? sa_call_borrow_arg(arg)
-		           : sa_arg_expression(arg, paramVT ? registry_.fromJson(*paramVT) : nullptr);
+		           : sa_arg_expression(arg, paramVT);
 		bool expiring = borrowsProbe || isCallBorrow(arg) || isExpiringOwned(saArg);
 		if (takesVarrData(saArg["value-type"], paramVT, isCFunc))
 			saArg = varrData(move(saArg));
@@ -1479,7 +1531,7 @@ json PlnSemanticAnalyzer::ownedBlockArg(const json& locNode, const json& arg, Ca
 	if (!isLit) {
 		bool probed = ca.chained && ca.probe.contains("expr-type") && arg == ca.ast;
 		saArg = !ca.pending ? move(ca.sa) : probed ? move(ca.probe)
-		      : sa_arg_expression(arg, registry_.fromJson(paramVT));
+		      : sa_arg_expression(arg, &paramVT);
 		if (auto d = callArgMismatch(arg, saArg, param, argIdx, false, funcName))
 			reportDiag(locNode, *d);
 		if (isStructRetCall(saArg)) {
@@ -1496,7 +1548,7 @@ json PlnSemanticAnalyzer::ownedBlockArg(const json& locNode, const json& arg, Ca
 	json var = {{"name",name},{"var-type",astTypeOf(paramVT)}};
 	if (isLit) {
 		var["init"] = arg;
-		var["lit-name"] = param.value("name", "");
+		var["lit-name"] = paramLabel(param, argIdx);
 	}
 	json decl = {{"stmt-type","var-decl"},{"loc",arg.value("loc", json::array())},{"vars",json::array({var})}};
 	enterScope();
@@ -1736,7 +1788,7 @@ json PlnSemanticAnalyzer::chainValueAhead(const json& value, const json* paramVT
 		sa["value-type"].erase("mutable");
 	} else {
 		bool typed = paramVT && paramVT->value("type-kind", "") != "pntr";
-		sa = sa_expression(value, typed ? registry_.fromJson(*paramVT) : nullptr);
+		sa = typed ? sa_expression_for(value, *paramVT) : sa_expression(value);
 		if (!sa.contains("value-type")) return value;
 	}
 	noteEscape(sa);

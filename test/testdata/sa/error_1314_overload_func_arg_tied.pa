@@ -1,0 +1,3 @@
+func a([3]int32 v) { } func a([4]int32 v) { }
+func t(@func([3]int32) g) { } func t(@func([4]int32) g) { }
+t(a);

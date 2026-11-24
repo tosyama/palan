@@ -873,3 +873,10 @@ TEST(build_mgr, row_layouts) {
 TEST(build_mgr, ptr_cycle_mtrace) {
 	expectMtraceRun("465_ptr_cycle_mtrace", "7 7 5 7 12\n4 2 1 5\n7 1\n5\n9\n", 27);
 }
+
+// Overloads differing only in lengths, rows, elements' owners or permissions.
+TEST(build_mgr, overload_shape) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/466_overload_shape.pa"),
+		"3 4 4 3 4 4 3\n1 2 1 2 1 2 2\n1 2 1 1 2\n1 1 2 1 2 2\n1 1 2 1\n1\n");
+}

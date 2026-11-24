@@ -825,7 +825,7 @@ void PlnSemanticAnalyzer::normalizeParamDefaults(json& funcEntry)
 			probe["value-type"] = strLitType();
 			if (auto d = callArgMismatch(init, probe, p, i, false, funcName)) reportDiag(init, *d);
 		} else {
-			value = typedNull(sa_expression(folded, registry_.fromJson(vt)), vt);
+			value = typedNull(sa_expression_for(folded, vt), vt);
 			if (auto d = callArgMismatch(init, value, p, i, false, funcName)) reportDiag(init, *d);
 			value = convertCallArg(move(value), vt);
 			const json& lit = value.value("expr-type", "") == "convert" ? value["src"] : value; // LCOV_EXCL_BR_LINE

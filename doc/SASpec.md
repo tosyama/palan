@@ -1471,25 +1471,29 @@ not fit it. With several, each argument is analyzed once without a parameter typ
   variadic function; from the parameters without defaults to all of them for a function with
   defaults) and every argument passes the parameter's checks; an argument matches
   exactly when its type is the parameter's, including `mutable` on every pointer level (through
-  pointers and a `[+]T`'s elements).
+  pointers and the elements of a `[+]T` or `[""]T`).
 - An argument whose type comes only from its parameter is matched by what it can become: an
   untyped literal (or one the parameter's type reaches through `-`, `~`, a shift or arithmetic)
   fits any primitive and matches exactly its default type (int64, uint64, flo64; for an
   expression of literals and variables, the type it has with no parameter); an aggregate literal
   fits a pointer or struct and never matches exactly; a function name matches a function pointer
-  parameter of one of its functions' types. It is analyzed with the chosen parameter's type.
+  parameter one of its functions fits (`ptrPermission`). It is analyzed with the chosen parameter's type.
 - A chained value fits as `@v` where the parameter would take it so, and as `v` otherwise.
 - The one fitting candidate is chosen; of several, the one every argument matches exactly
   (and no variadic argument is passed), or else the one every argument matches exactly but for
-  a writable outermost pointer given to a read-only parameter. When one of several fitting
+  a writable outermost pointer given to a read-only parameter. Of several ranking so, the one
+  whose parameter types are the arguments' also in what the type registry leaves out (lengths,
+  rows, elements' owners, functions' signatures; permissions aside) is chosen. When one of several fitting
   candidates needs a default to fit, none is preferred. Otherwise E_NoMatchingFunc (the argument
   types and the candidates) or E_AmbiguousCall (the candidates that fit, a default shown as
   `int32 = 0`).
 - Receiving several values (`(a, b) = f(x)`) considers only the candidates returning that many,
   which must agree on what they return, since the receivers are declared before the arguments
   choose one (E_AmbiguousCall).
-- A function name used as a value takes the function whose `@func` type is the expected one (a
-  variable's, field's or parameter's): none is E_FuncNameNeedsType, several E_AmbiguousCall.
+- A function name used as a value takes the function fitting the `@func` type it is given to (a
+  variable's, field's or parameter's), or of several the one whose own type it is: none is
+  E_FuncNameNeedsType (a single one differing only in permission, owner or shape is bound, and
+  its mismatch reported), several E_AmbiguousCall.
 
 ### Default arguments
 

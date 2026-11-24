@@ -805,3 +805,27 @@ TEST(sa_error, type_self_cycle) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, overload_shape) {
+	const vector<pair<string, string>> cases = {
+		{"error_1309_overload_func_none.pa", "'a' names a([3]int32), a([4]int32); it must be given where a function pointer type chooses one."},
+		{"error_1310_overload_func_perm_none.pa", "'a' names a(@!P), a(P); it must be given where"},
+		{"error_1311_overload_func_one_mismatch.pa", "cannot convert '@func(@!int32)' to '@func(@int32)'"},
+		{"error_1312_overload_func_tied.pa", "Ambiguous function call 'a': it can mean a(@int32, @!int32), a(@!int32, @int32)."},
+		{"error_1313_overload_func_arg_none.pa", "No function 't' takes (function)"},
+		{"error_1314_overload_func_arg_tied.pa", "Ambiguous function call 't'"},
+		{"error_1315_overload_shape_tied.pa", "Ambiguous function call 'k'"},
+		{"error_1316_overload_dict_perm.pa", "Ambiguous function call 'k'"},
+		{"error_1317_func_ptr_arg_arr_lit.pa", "parameter '#1' of type '@[+]int32' cannot take an array literal"},
+		{"error_1318_func_ptr_arg_dict_lit.pa", "parameter '#2' of type 'int32' cannot take a '{name: value}' literal"},
+		{"error_1319_func_ptr_arg_lit_size.pa", "array '#1' has size 3 but its array literal has 2 elements."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

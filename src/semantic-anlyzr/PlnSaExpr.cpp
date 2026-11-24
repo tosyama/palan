@@ -789,6 +789,12 @@ json PlnSemanticAnalyzer::sa_expression(const json &rawExpr, const PlnType* expe
 	return sa;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
+json PlnSemanticAnalyzer::sa_expression_for(const json& expr, const json& toType)
+{
+	if (isFuncPtr(toType) && namesOverloadedFunc(expr)) return sa_func_ref(expr, &toType);
+	return sa_expression(expr, registry_.fromJson(toType));
+}
+
 // '->' binds tighter than a comparison or a logical operator, so code written
 // to store such a result (`x < y -> b`) now nests an assignment in it.
 void PlnSemanticAnalyzer::rejectArrowOperand(const json& expr, const string& op) const
@@ -890,7 +896,7 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 			if (isOwnedVar(expr["name"].get<string>()))
 				sa_expr["category"] = "owned";
 		} else {
-			json ref = sa_func_ref(expr, expectedType);
+			json ref = sa_func_ref(expr);
 			if (!ref.is_null()) return ref;
 			undefinedNameError(expr, expr, E_UndefinedVariable);
 		}

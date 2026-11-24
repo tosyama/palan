@@ -448,6 +448,7 @@ class PlnSemanticAnalyzer {
 	                    const vector<CallArg>& args);
 	ArgFit argFit(const CallArg& arg, const json& param, size_t argIdx, bool isCFunc, const string& funcName);
 	ArgFit typeFit(const json& argVT, const json& paramVT);
+	bool   sameShape(const CallArg& arg, const json& paramVT, bool isCFunc);
 	string argTypesText(const vector<CallArg>& args);
 	string defaultText(const json& d) const;
 	string calleesText(const string& name, const vector<Callee>& cands) const;
@@ -534,7 +535,10 @@ class PlnSemanticAnalyzer {
 	void checkBitFieldLiteral(const FieldLayout& field, const json& value);
 	void rejectWideCharLit(const json& lit, const json& type);
 	json sa_expr_call(const json& expr);
-	json sa_func_ref(const json& expr, const PlnType* expectedType);
+	json sa_func_ref(const json& expr, const json* toType = nullptr);
+	// sa_expression given to toType, which chooses among functions of a name.
+	json sa_expression_for(const json& expr, const json& toType);
+	vector<Callee> funcsOfType(const string& name, const json& funcPtr, vector<Callee>* mismatched = nullptr);
 	string funcRefType(const Callee& callee, json& funcPtr) const;
 	bool namesOverloadedFunc(const json& expr) const;
 	json literalDefaultType(const json& expr);
@@ -884,7 +888,7 @@ class PlnSemanticAnalyzer {
 	// the owner reset to NULL after it. Typed as the owned value, category "expiring".
 	json giveValue(const json& srcAst, const json& locNode, const string& op, json& body, json& reset);
 	json sa_expr_transfer(const json& expr);
-	json sa_arg_expression(const json& ast, const PlnType* expectedType = nullptr);
+	json sa_arg_expression(const json& ast, const json* toType = nullptr);
 	void checkGivenOwners(const json& locNode, const vector<json>& argAsts, const json& saArgs);
 	bool isGlobalName(const string& name) const;
 	// `T b <<= v`: the initializer as a pinned value b takes over; its evaluation goes to pre.

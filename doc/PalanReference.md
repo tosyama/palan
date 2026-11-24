@@ -1165,9 +1165,11 @@ show(2.5);          // float 2.5
   `cinclude <stdlib.h>;`, `func abs(flo64 x) -> flo64` adds a float version of C's `abs(int)`.
 - If one function fits the arguments, it is called. If several fit, the one every argument
   matches exactly (same type, and for a pointer the same `@`/`@!`, down to the elements of a
-  borrowed array) is called. Failing that, the one that differs only by taking a `@!` argument as
+  borrowed array or dictionary) is called. Failing that, the one that differs only by taking a `@!` argument as
   `@`, at its outermost level, is called: given `@!s` of a `[2]@!P s`, `f(@[2]@!P)` is chosen
-  over `f(@[2]@P)`. Otherwise the call is ambiguous and a compile error. With `f(int32)` and `f(int64)`, an `int16` argument is
+  over `f(@[2]@P)`. Where several remain that differ only in an array's shape, the one whose shapes
+  (lengths, rows and who owns the elements) are also the arguments' is called: given `@a` of a
+  `[3]int32 a`, `f(@[3]int32)` is chosen over `f(@[]int32)`. Otherwise the call is ambiguous and a compile error. With `f(int32)` and `f(int64)`, an `int16` argument is
   ambiguous: write `f(int32(x))`.
 - A literal matches exactly only its default type: `int64` for an integer, `uint64` with `u`,
   `flo64` for a decimal. With `f(int32)` and `f(int64)`, `f(1)` calls `f(int64)`.
@@ -1180,7 +1182,8 @@ show(2.5);          // float 2.5
   `g` is chosen.
 - A method-form call `x.f()` considers only the functions whose first parameter is `@!`. In a
   chained call `v -> f()`, `v` fits a `@T` parameter as `@v`.
-- A function name used as a value takes the function of the pointer type it is given to:
+- A function name used as a value takes the function that [fits](#function-pointers) the pointer
+  type it is given to, and of several, the one of exactly that type:
   `@func(int32) -> int32 g = show;` is an error here (no `show` returns `int32`), and one
   written where no function pointer type is expected is a compile error.
 - Receiving several return values (`(a, b) = f(x)`) needs the functions returning that many to

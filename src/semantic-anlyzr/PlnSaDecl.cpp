@@ -568,7 +568,7 @@ json PlnSemanticAnalyzer::sa_var_decl_group(const json& stmt2, VarStorage storag
 			// itself is not in scope during its own initializer (e.g. `int32 z = z+1`
 			// should be an error, not silently read uninitialized z).
 			const PlnType* toType = registry_.fromJson(varType);
-			json init = typedNull(sa_expression(literalConversion(var["init"], varType), toType), varType);
+			json init = typedNull(sa_expression_for(literalConversion(var["init"], varType), varType), varType);
 			if (isArrBorrow)
 				checkArrBorrowBinding(stmt2, var["init"], init, varType);
 			init = convertForBinding(stmt2, init, toType, varType);
@@ -778,7 +778,7 @@ json PlnSemanticAnalyzer::sa_arr_lit_values(const json& lit, const ArrLitShape& 
 		} else if (shape.structDef) {
 			values.push_back(sa_struct_lit(item, *shape.structDef));
 		} else {
-			json value = sa_expression(literalConversion(item, shape.leaf), elemType);
+			json value = sa_expression_for(literalConversion(item, shape.leaf), shape.leaf);
 			values.push_back(convertForBinding(item, value, elemType, shape.leaf));
 		}
 	}
@@ -1044,7 +1044,7 @@ json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const Fie
 	BOOST_ASSERT(f.typeKind == "prim" || f.typeKind == "raw-ptr");
 	json fieldType = fieldValueType(f);
 	const PlnType* toType = registry_.fromJson(fieldType);
-	json value = typedNull(sa_expression(v, toType), fieldType);
+	json value = typedNull(sa_expression_for(v, fieldType), fieldType);
 	if (fieldType.contains("arr-size"))
 		checkArrBorrowBinding(v, v, value, fieldType);
 	value = convertForBinding(v, value, toType, fieldType);
