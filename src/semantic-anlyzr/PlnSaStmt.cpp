@@ -1742,8 +1742,9 @@ json PlnSemanticAnalyzer::sa_dict_store_stmt(const json& stmt, json saDict, json
 		exit(1);
 	}
 	const json& value = stmt["value"];
-	if (isAggregateLit(value))
-		return sa_lit_assign_via_temp(stmt, saDict["value-type"]["base-type"]["base-type"], litAddr);
+	const json elem = saDict["value-type"]["base-type"]["base-type"];
+	if (isAggregateLit(value) && (isStructPntr(elem) || isCopiedByValue(elem) || elem["type-kind"] == "struct"))
+		return sa_lit_assign_via_temp(stmt, elem, litAddr);
 	// LCOV_EXCL_BR_START
 	const json& target = stmt["target"];
 	json body = json::array();

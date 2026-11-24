@@ -96,6 +96,7 @@ enum PlnSaMessageCode {
 	E_ArrLitCountMismatch,	// arg1: variable name, arg2: declared size, arg3: literal element count
 	E_ArrLitSizeNotConst,	// arg1: variable name
 	E_ArrLitDimMismatch,	// arg1: variable name
+	E_DictArrLit,		// arg1: dictionary name
 	E_ArrLitElemType,	// arg1: variable name
 	E_ArrLitRowSizeMismatch,	// arg1: variable name, arg2: row size, arg3: the row's element count
 	E_ArrBorrowSizeNotConst,

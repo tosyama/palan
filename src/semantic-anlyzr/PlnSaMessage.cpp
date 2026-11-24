@@ -430,6 +430,11 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "the array literal's dimensions do not match array '" + arg1 + "'.";
 
+		case E_DictArrLit:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "dictionary '" + arg1 + "' cannot be given an array literal: write '{\"key\": value}', "
+			       "or '{}' for an empty one.";
+
 		case E_ArrLitElemType:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "array '" + arg1 + "' cannot be given an array literal: only numeric and struct element types are supported.";

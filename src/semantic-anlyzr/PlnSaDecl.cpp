@@ -763,13 +763,17 @@ json PlnSemanticAnalyzer::sa_arr_lit_values(const json& lit, const ArrLitShape& 
 {
 	bool isRow = depth + 1 < shape.levels.size();
 	const PlnType* elemType = shape.structDef || isRow ? nullptr : registry_.fromJson(shape.leaf);
-	string rowLit = isRow && !shape.levels[depth + 1].dict.is_null() ? "dict-lit" : "arr-lit";
 	bool isDict = !shape.levels[depth].dict.is_null();
+	string litKind = lit.value("expr-type", "");
+	if (litKind != (isDict ? "dict-lit" : "arr-lit")) {
+		cerr << locPrefix(lit) << PlnSaMessage::getMessage(
+			litKind == "arr-lit" ? E_DictArrLit : E_ArrLitDimMismatch, name) << endl;
+		exit(1);
+	}
 	json values = json::array();
 	for (auto& entry : lit["items"]) {
 		const json& item = isDict ? entry["value"] : entry;
-		bool isLit = item.value("expr-type", "") == rowLit;
-		if (isRow != isLit && !(shape.structDef && !isRow)) {
+		if (!isRow && !shape.structDef && item.value("expr-type", "") == "arr-lit") {
 			cerr << locPrefix(item) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, name) << endl;
 			exit(1);
 		}
@@ -1026,14 +1030,8 @@ json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const Fie
 	if (!sub.empty())
 		return sa_struct_lit(v, requireCompleteStruct(sub, v));
 	if (isLitArrField(f)) {
-		string vet = v.value("expr-type", "");
-		bool isDict = isDictStorage(f.type);
-		if (vet == "dict-lit" && !isDict) {
+		if (v.value("expr-type", "") == "dict-lit" && !isDictStorage(f.type)) {
 			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
-			exit(1);
-		}
-		if (vet != (isDict ? "dict-lit" : "arr-lit")) {
-			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_ArrLitDimMismatch, f.name) << endl;
 			exit(1);
 		}
 		ArrLitShape shape = arrLitShape(v, f.name, fieldValueType(f), true);

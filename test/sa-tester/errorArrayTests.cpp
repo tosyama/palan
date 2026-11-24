@@ -829,3 +829,30 @@ TEST(sa_error, overload_shape) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, dict_arr_lit) {
+	const vector<pair<string, string>> cases = {
+		{"error_1320_dict_arr_lit_var.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1321_dict_arr_lit_assign.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1322_dict_arr_lit_empty.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1323_dict_arr_lit_param.pa", "error: dictionary 'v' cannot be given an array literal: write '{"},
+		{"error_1324_dict_arr_lit_variadic.pa", "error: dictionary 'v' cannot be given an array literal: write '{"},
+		{"error_1325_dict_arr_lit_return.pa", "error: dictionary '[\"\"]int32' cannot be given an array literal: write '{"},
+		{"error_1326_dict_arr_lit_field.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1327_dict_arr_lit_field_value.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1328_dict_arr_lit_elem.pa", "error: dictionary 'a' cannot be given an array literal: write '{"},
+		{"error_1329_dict_arr_lit_row.pa", "error: dictionary 'a' cannot be given an array literal: write '{"},
+		{"error_1330_dict_arr_lit_structs.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1331_dict_arr_lit_arr_values.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1332_dict_elem_arr_lit.pa", "error: an array literal can only be used as"},
+		{"error_1333_dict_ptr_elem_lit.pa", "error: an array literal can only be used as"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
