@@ -329,8 +329,7 @@ result as it is and otherwise a copy, of what a copy into it accepts (E_Incompat
 `return` copies a value the function doesn't own, and any value whose shape a copy would reject,
 an owning variable's included, is E_CopyShapeMismatch; `return [..]` declares `__ret_N` from the
 literal, as for a struct. A borrowed array return (`-> @[]T`, `@[n]T`, `@[+]T`) is normalized as a
-parameter is (see `@[n]T` below); its call is a borrow, bound and passed by name. Only a pointer
-to a borrowed array (`@@[n]T`) is E_UnsupportedParamType.
+parameter is (see `@[n]T` below); its call is a borrow, bound and passed by name.
 
 A struct parameter `T` (`pntr(struct)` with no `mutable`) is owned the same way: a call result
 is passed as it is, anything else (a struct literal included) is copied into a `temp`
@@ -547,7 +546,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     for `[n]$U`, or an owned `[+]V`), with `"embedded": true` on the `varr` for `[+]$[n]U`. The
     row size must be a constant (E_UnsizedArrRowSizeNotConst). Further levels follow the same
     rules at any depth (`[+][m][n]U`, `[+][m]$[n]U`). For a pointer element (`[+]@T`, `[+]@!T`,
-    `[+]@[]T`), `pntr(T, mutable)`, the slot a `[n]@T` element is; it borrows and is laid out as
+    `[+]@[]T`, `[+]@[+]T`, `[+]@[""]T`), `pntr(T, mutable)`, the slot a `[n]@T` element is; it borrows and is laid out as
     an `int64`, so its shape key is `varr_int64`. A row of pointer slots (`[+][n]@T`) is laid out as
     a row of `int64` the same way (`varr_Pint64`). Below, `T` stands for `E` and `varr_T` for the shape key, made from
     `E`'s layout.
@@ -734,8 +733,9 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   slot, `pntr(T, mutable)` (a row keeping `mutable: false` on each level when read-only), so it
   is the same type as `@T` / `@!T`. Every other size must be constant
   (`E_ArrBorrowSizeNotConst`) and `T` primitive, struct or a pointer to one, with neither a
-  struct nor a pointer inside a `$[m]` row (`E_ArrBorrowUnsupportedElem`). A
-  return type of this form stays rejected (`E_UnsupportedParamType`). At a call argument, a
+  struct nor a pointer inside a `$[m]` row (`E_ArrBorrowUnsupportedElem`). An `@[n]T` with a
+  size, as an element or what a pointer points to (`[2]@[3]T`, `@@[3]T`), is E_NestedArrBorrow: as
+  an element it would be typed as a borrowed array's row is. At a call argument, a
   local's initializer, or an assignment to such a destination, the source must be written as
   `@x`/`@!x` (`E_ArrBorrowNeedsAddrOf`) and its value-type must match depth, `embedded`,
   every `arr-size`, whether the element is a stored struct or a pointer, and a
@@ -1703,13 +1703,6 @@ a named `strct`/`union`→`struct`) and then check every type against `unreprese
   and parameters, so a C function pointer has the same shape as a native `@func(...)`. A C
   typedef of a function type (not a pointer, e.g. `cookie_read_function_t`) is expanded by
   c2ast where it is referenced, so `cookie_read_function_t *` arrives as a `pntr` to a `func`.
-
-This differs from a native Palan signature's check (`validateNativeSig`): a native signature only
-rejects a structural type-kind `PlnTypeRegistry::fromJson` can never build (currently just a bare
-`arr`), and defers a not-yet-registered struct name to the more specific E_UnknownType /
-E_IncompleteStructType diagnosed at the point of use — a cinclude'd C signature has no such later
-resolution step to defer to, since c2ast's typedef registration has already resolved anything
-resolvable before the signature is emitted.
 
 **Deferred to reference time, not rejected at cinclude time**: a hit does not fail the `cinclude`
 statement itself. It is recorded on the entry (`_unsupported-sig` for a function,

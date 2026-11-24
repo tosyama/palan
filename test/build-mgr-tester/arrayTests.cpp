@@ -852,3 +852,8 @@ TEST(build_mgr, null_borrow_mtrace) {
 	expectMtraceRun("461_null_borrow_mtrace",
 		"-1 -2 -3 -4\n-1 1\n6 7 1\n6 1\n1 1 1\n8 3 4\n1 1 1\n1 1 1 1\n1 1 1 1\n7 5 9\n1 1\n-1 6\n", 20);
 }
+
+TEST(build_mgr, nested_borrow_mtrace) {
+	expectMtraceRun("462_nested_borrow_mtrace",
+		"3 2 36 21\n20 1 1\n7 50 3\n4\n30 10\n7\n7 1 0\n5 4 v 4\nw 4\n1 8 20\n2 8\n3\n9\n118\n", 46);
+}

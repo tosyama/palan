@@ -856,6 +856,16 @@ inline bool sigShapeOk(const json& from, const json& to)
 // or an array level. Rebinding would alias the source and free it twice.
 inline bool isCopiedByValue(const json& t) { return isOwnedBlock(t) || isArrLevel(t); }
 
+inline json astTypeOf(const json& saType);
+
+// An element borrowing a `[+]T` or `[""]T` is declared as the borrow.
+inline json astElemTypeOf(const json& elem)
+{
+	json t = astTypeOf(elem);
+	if (t.is_null() || !isPtrBorrow(elem) || !(isVarrPntr(elem) || isDictPntr(elem))) return t; // LCOV_EXCL_BR_LINE
+	return {{"type-kind","pntr"},{"mutable",elem["mutable"]},{"base-type",move(t)}}; // LCOV_EXCL_BR_LINE
+} // LCOV_EXCL_BR_LINE
+
 // The source type that declares an owned value of saType: an array of its
 // levels (a borrowed array parameter's), a `[+]T`, a struct or a primitive;
 // null when an element is not one a literal gives.
@@ -866,16 +876,16 @@ inline json astTypeOf(const json& saType)
 	if (isVarrPntr(saType)) {
 		out = {{"type-kind","arr"},{"specifier","variable"},{"size-expr",nullptr}};
 		if (isVarrEmbedded(saType)) out["embedded"] = true;
-		elem = astTypeOf(saType["base-type"]["base-type"]);
+		elem = astElemTypeOf(saType["base-type"]["base-type"]);
 	} else if (isDictPntr(saType)) {
 		out = {{"type-kind","dict"}};
 		if (isVarrEmbedded(saType)) out["embedded"] = true;
-		elem = astTypeOf(saType["base-type"]["base-type"]);
+		elem = astElemTypeOf(saType["base-type"]["base-type"]);
 	} else if (isArrLevel(saType) && saType.contains("arr-size")) {
 		out = {{"type-kind","arr"},{"specifier","raw"},
 			{"size-expr",{{"expr-type","lit-uint"},{"value",to_string(saType["arr-size"].get<int64_t>())}}}};
 		if (saType.value("embedded", false)) out["embedded"] = true;
-		elem = astTypeOf(saType["base-type"]);
+		elem = astElemTypeOf(saType["base-type"]);
 	} else if (saType.value("type-kind","") == "struct") {
 		return {{"type-kind","prim"},{"type-name",saType["type-name"]}};
 	} else if (isStructStorage(saType)) {
@@ -884,7 +894,7 @@ inline json astTypeOf(const json& saType)
 		return saType;
 	} else if (isPtrBorrow(saType)) {
 		out = {{"type-kind","pntr"},{"mutable",saType["mutable"]}};
-		elem = astTypeOf(saType["base-type"]);
+		elem = astElemTypeOf(saType["base-type"]);
 	}
 	if (elem.is_null())
 		return nullptr;

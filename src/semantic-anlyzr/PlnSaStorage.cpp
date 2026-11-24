@@ -102,14 +102,26 @@ static json pointeeNamesAsStructs(json t)
 	return t;
 } // LCOV_EXCL_BR_LINE
 
+// As an element or a pointee, a sized array's borrow would have the type of a
+// borrowed array's row.
+void PlnSemanticAnalyzer::rejectSizedArrBorrow(const json& locNode, const json& pntr) const
+{
+	const json& target = pntr["base-type"];
+	if (target.value("type-kind","") != "arr" || isVarrAstType(target) || target["size-expr"].is_null()) return;
+	cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_NestedArrBorrow) << endl;
+	exit(1);
+}
+
 // A slot to an unsized array ('@![]T') points at the array's elements, so it
 // is that array's pointer carrying the slot's permission.
 json PlnSemanticAnalyzer::ptrSlotElemType(const json& locNode, const json& type)
 {
+	rejectSizedArrBorrow(locNode, type);
 	const json& target = type["base-type"];
+	if (isVarrAstType(target) || isDictAstType(target)) return normalizeArrBorrowType(locNode, type);
 	json elem = target.value("type-kind","") == "arr"
 		? unsizedArrToPntr(locNode, target)
-		: json{{"type-kind","pntr"},{"base-type",target}}; // LCOV_EXCL_BR_LINE
+		: json{{"type-kind","pntr"},{"base-type",normalizeArrBorrowType(locNode, target)}}; // LCOV_EXCL_BR_LINE
 	elem["mutable"] = type.value("mutable", false);
 	// A row carries the permission on each of its levels, as in a borrowed `[m][n]T`.
 	if (!elem["mutable"].get<bool>() && isArrLevel(elem["base-type"]))
@@ -247,6 +259,12 @@ json PlnSemanticAnalyzer::normalizeArrBorrowType(const json& locNode, const json
 		vt["mutable"] = type.value("mutable", false);
 		return vt;
 	}
+	if (type["base-type"].value("type-kind","") == "pntr") {
+		rejectSizedArrBorrow(locNode, type["base-type"]);
+		json vt = type;
+		vt["base-type"] = normalizeArrBorrowType(locNode, type["base-type"]);
+		return vt;
+	}
 	if (type["base-type"].value("type-kind","") != "arr")
 		return type;
 	const json& arr = type["base-type"];
@@ -262,15 +280,9 @@ json PlnSemanticAnalyzer::normalizeArrBorrowType(const json& locNode, const json
 // be a struct whose layout is not resolved yet, so it is not looked up.
 json PlnSemanticAnalyzer::ptrFieldType(const json& locNode, const json& pntr)
 {
-	const json& base = pntr["base-type"];
-	string bk = base.value("type-kind", "");
-	if (bk == "arr" || bk == "dict")
-		return deepNormalizePrimToStruct(locNode, normalizeArrBorrowType(locNode, pntr));
-	json elem = bk == "pntr" ? ptrFieldType(locNode, base) : base;
-	// LCOV_EXCL_BR_START
-	return pointeeNamesAsStructs({{"type-kind","pntr"},{"mutable",pntr.value("mutable", false)},
-	                              {"base-type",move(elem)}});
-	// LCOV_EXCL_BR_STOP
+	string bk = pntr["base-type"].value("type-kind", "");
+	json vt = normalizeArrBorrowType(locNode, pntr);
+	return bk == "arr" || bk == "dict" ? deepNormalizePrimToStruct(locNode, vt) : pointeeNamesAsStructs(vt); // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
 // The element a `[+]U` or `[""]U` (an AST type marked `embedded` for `$U`)

@@ -288,12 +288,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			       "this version); it can only be used through a pointer ('@" + arg1 + "' / '@!"
 			       + arg1 + "').";
 
-		case E_UnsupportedParamType:
-			BOOST_ASSERT(arg1 != "\x01");
-			BOOST_ASSERT(arg2 != "\x01");
-			return "function '" + arg1 + "' has a parameter or return type this version cannot "
-			       "represent: '" + arg2 + "'.";
-
 		case E_UnsupportedCFuncSignature:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
@@ -451,6 +445,13 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_ArrBorrowUnsupportedElem:
 			return "a borrowed array type ('@[n]T'/'@![n]T') supports only primitive, struct and '@T'/'@!T' pointer elements in this version.";
+
+		case E_NestedArrBorrow:
+			return "a borrow of a sized array ('@[n]T'/'@![n]T') cannot be an array's or a dictionary's element, "
+			       "nor what a pointer points to, in this version; '@[]T' can.";
+
+		case E_EmbedUnderPointer:
+			return "'$' cannot be what '@' or '@!' points to.";
 
 		case E_ArrBorrowNeedsAddrOf:
 			return "an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as '@name' or '@!name' "

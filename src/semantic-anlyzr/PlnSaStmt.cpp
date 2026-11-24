@@ -585,7 +585,7 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	}
 
 	const json& elemType = isVarrPntr(arrType) ? arrType["base-type"]["base-type"] : arrType["base-type"];
-	json declType = astTypeOf(elemType);
+	json declType = astElemTypeOf(elemType);
 	if (declType.is_null()) declType = elemType;
 	json heads = json::array();
 	if (typedIdx) heads.push_back(forIndexHead(stmt, idx, &arrType));
@@ -1028,7 +1028,6 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	if (currentFunc_->value("export", false)) saFunc["export"] = true;
 	normalizeSig(saFunc);
 	validateEmbeddedParams(saFunc);
-	validateNativeSig(saFunc);
 	if (!variadic.empty()) {
 		saFunc["parameters"].back()["var-type"] = variadicType;
 		saFunc["parameters"].push_back({{"name","__" + variadic + "_d0"},{"var-type",u64}}); // LCOV_EXCL_BR_LINE

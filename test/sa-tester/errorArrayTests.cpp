@@ -250,7 +250,7 @@ TEST(sa_error, arr_borrow)
 		{"error_241_arr_borrow_mut_of_ro.pa", "cannot bind a read-only pointer"},
 		{"error_242_arr_borrow_local_no_addr_of.pa", ":2:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as"},
 		{"error_243_arr_borrow_assign_mismatch.pa", ":4:1: error: array shape '[3]int32' does not match"},
-		{"error_245_ptr_to_arr_borrow.pa", "cannot represent: 'array'"},
+		{"error_245_ptr_to_arr_borrow.pa", ":1:1: error: a borrow of a sized array ('@[n]T'/'@![n]T') cannot be an array's or a dictionary's element"},
 		{"error_858_ro_unsized_borrow_write.pa", ":1:22: error: cannot write through read-only pointer '@T'"},
 		{"error_859_unsized_borrow_no_addr_of.pa", ":3:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as"},
 		{"error_860_unsized_borrow_ro_to_mut.pa", ":2:1: error: cannot bind a read-only pointer"},
@@ -699,6 +699,19 @@ TEST(sa_error, dict)
 		{"error_1249_null_overload.pa", "error: Ambiguous function call 'f': it can mean f(@P), f(@[+]int32)."},
 		{"error_1250_null_other_ptr.pa", "error: cannot convert '[?]void' to '@[+]int32'"},
 		{"error_1251_null_other_ptr_arr.pa", "error: an array given to a borrowed array"},
+		{"error_1252_nested_arr_borrow_varr.pa", "error: a borrow of a sized array"},
+		{"error_1253_nested_arr_borrow_dict.pa", "error: a borrow of a sized array"},
+		{"error_1254_nested_arr_borrow_var.pa", "error: a borrow of a sized array"},
+		{"error_1255_nested_arr_borrow_field.pa", "error: a borrow of a sized array"},
+		{"error_1256_nested_arr_borrow_param.pa", "error: a borrow of a sized array"},
+		{"error_1257_nested_arr_borrow_borrowed.pa", "error: a borrow of a sized array"},
+		{"error_1258_nested_arr_borrow_ptr_var.pa", "error: a borrow of a sized array"},
+		{"error_1259_nested_arr_borrow_ptr_field.pa", "error: a borrow of a sized array"},
+		{"error_1260_nested_arr_borrow_func_sig.pa", "error: a borrow of a sized array"},
+		{"error_1261_embed_under_ptr_func_sig.pa", "error: '$' cannot be what '@' or '@!' points to."},
+		{"error_1262_embed_under_ptr_param.pa", "error: '$' cannot be what '@' or '@!' points to."},
+		{"error_1263_embed_under_ptr_elem.pa", "error: '$' cannot be what '@' or '@!' points to."},
+		{"error_1264_embed_under_ptr_field.pa", "error: '$' cannot be what '@' or '@!' points to."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

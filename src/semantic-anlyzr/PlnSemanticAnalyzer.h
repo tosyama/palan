@@ -733,6 +733,7 @@ class PlnSemanticAnalyzer {
 	json  unsizedArrToPntr(const json& locNode, const json& type);
 	// A '@T'/'@!T' array element (a pointer slot) as SA represents it.
 	json  ptrSlotElemType(const json& locNode, const json& type);
+	void  rejectSizedArrBorrow(const json& locNode, const json& pntr) const;
 	// A function type's parameters and return take sigType's form, so a
 	// function pointer passes and returns owned values as a function does.
 	json  deepNormalizePrimToStruct(const json& locNode, const json& type);
@@ -752,11 +753,6 @@ class PlnSemanticAnalyzer {
 	json  normalizeSigType(const json& locNode, const json& type);
 	json  sigType(const json& locNode, const json& type);
 	void  normalizeSig(json& funcDef);
-	// Diagnose (and exit) if `funcDef`'s parameters/ret-type/rets use a type
-	// PlnTypeRegistry::fromJson cannot represent. Must be called after
-	// normalizeSig -- a struct parameter is still prim(Name) before
-	// that runs and would be misclassified as unsupported.
-	void  validateNativeSig(const json& funcDef);
 	void  validateOperatorSig(const json& funcDef);
 	void  registerCopyFunc(json& funcEntry, const string& scope);
 	void  registerReleaseFunc(const json& funcEntry, const string& scope);

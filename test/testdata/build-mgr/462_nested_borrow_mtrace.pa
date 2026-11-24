@@ -1,0 +1,64 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; };
+type S { [2]@[+]int32 a; [+]@[""]int32 d; @@[+]int32 pp; };
+func sum([2]@[+]int32 a) -> int32 {
+    int32 s = 0;
+    for copy v in a { if v != NULL { for copy x in v { s + x -> s; } } }
+    return s;
+}
+func lsum(@[2]@[+]int32 a) -> int32 { return a[0][0] + a[1][1]; }
+func vlen(@[+]@[+]int32 v) -> int64 { return len(v[0]) + len(v[1]); }
+func grow(@[+]@![+]int32 v) { v[0].push(50); }
+func pp(@@[+]int32 p) -> int32 { return p[0][2]; }
+func get(@[""]@[""]P d) -> int32 { return d["a"]["k"].x; }
+func f() {
+    [+]int32 v = [1, 2, 3];
+    [+]int32 w = [10, 20];
+    [2]@[+]int32 a;
+    @v -> a[0];
+    @w -> a[1];
+    printf("%d %ld %d %d\n", a[0][2], len(a[1]), sum(a), lsum(@a));
+    [2]@[+]int32 b = a;
+    @w -> b[0];
+    NULL -> b[1];
+    printf("%d %d %d\n", b[0][1], b[1] == NULL, a[0][0]);
+    [+]@![+]int32 q;
+    q.push(@!v);
+    q.push(@!w);
+    q[1].push(30);
+    grow(@q);
+    printf("%ld %d %ld\n", vlen(@q), v[3], len(@w));
+    [+]@![+]int32 q2 = q;
+    printf("%ld\n", len(q2[0]));
+    [""]@[+]int32 d;
+    @v -> d["v"];
+    @w -> d["w"];
+    @w -> d["v"];
+    printf("%d %d\n", d["v"][2], d["w"][0]);
+    [""]P e = {"k": {x: 7}};
+    [""]@[""]P de;
+    @e -> de["a"];
+    printf("%d\n", get(@de));
+    [+]@[""]P ve;
+    ve.push(@e);
+    printf("%d %ld %d\n", ve[0]["k"].x, len(ve[0]), has(ve[0], "z"));
+    q.push(NULL);
+    for copy x in q { if x != NULL { x.push(1); printf("%ld ", len(x)); } }
+    for copy x, k in d { printf("%s %ld\n", k, len(x)); }
+    S s;
+    @v -> s.a[0];
+    [""]int32 i = {"n": 8};
+    s.d.push(@i);
+    @a -> s.pp;
+    printf("%d %d %d\n", s.a[0][0], s.d[0]["n"], s.pp[1][1]);
+    S t = s;
+    printf("%d %d\n", t.a[0][1], t.d[0]["n"]);
+    printf("%d\n", pp(@a));
+    @func(@[+]@[+]int32) -> int64 g = vlen;
+    printf("%ld\n", g(@q));
+    @func([2]@[+]int32) -> int32 h = sum;
+    printf("%d\n", h(a));
+}
+mtrace();
+f();

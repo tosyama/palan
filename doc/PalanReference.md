@@ -1578,6 +1578,10 @@ memory from C `malloc`, or an array as `@!arr`) and free that memory yourself. `
 `[n]@[]T` declares read-only slots the same way: they take `@arr` as well as `@!arr`, and
 nothing can be written through them. Slots can be the elements of rows as other elements can
 (`[n][m]@T`, `[n]$[m]@T`, `[+][m]@T`, a `[n][m]@T` field, a `[][m]@T` parameter).
+`[n]@[+]T` and `[n]@[""]T` hold borrows of variable-length arrays and dictionaries: a slot takes
+`@v` / `@!v`, and `a[i]` is used as a borrow variable is (`len(a[i])`, `a[i][j]`). A slot cannot
+borrow an array of a given length (`[n]@[3]T`), nor can a pointer point to such a borrow
+(`@@[3]T`); both are compile errors in this version, as is `$` under `@` (`@$T`).
 
 ```palan
 int64 rows = 4;
@@ -2029,7 +2033,7 @@ printf("%d\n", two[1][0]);   // 4
 - `[+]@T` / `[+]@!T` holds pointer slots, as `[n]@T` does (see [Array of Pointer
   Slots](#array-of-pointer-slots-nt)): each element borrows what it points to, so it takes
   `@x` / `@!x` (`ps.push(@!p)`, `@!q -> ps[0]`) and nothing it points to is freed. `[+]@[]T`
-  holds pointers to arrays of any length; the program's arguments, `args`, are a
+  holds pointers to arrays of any length, `[+]@[+]T` and `[+]@[""]T` borrows of those; the program's arguments, `args`, are a
   `@[+]@[]uint8` (see [Program Structure](#program-structure)).
 
 ### Dictionaries (`[""]T`)

@@ -45,3 +45,9 @@ A pointer viewed as an owner (`T b <<= p as T;`) is not reset as a variable give
 ## 4. Case Mapping and Normalization
 
 **Summary:** `std/utf8` compares and searches by bytes, so `"é"` as one code point and as `e` with a combining accent differ, and it has no conversion to upper or lower case. Both need Unicode's data (and case mapping, in part, the language of the text), as grapheme clusters (v0.2.7) do; the tables would be generated as theirs are.
+
+---
+
+## 5. A Borrow of a Sized Array as an Element or Pointee
+
+**Summary:** `[2]@[3]int32`, `[+]@[3]int32` and `@@[3]int32` are compile errors, while `@[]T`, `@[+]T` and `@[""]T` can be an element or what a pointer points to. palan-sa types a row of a borrowed array (`@[2][3]T`) and a borrow held as an element (`@[2]@[3]T`) the same way, so it would copy the contents where the element should be bound again, and replace the element's own permission by the outer borrow's. Supporting it needs the two told apart in the type, and every place that takes a level of an array for owned rows to be revisited.

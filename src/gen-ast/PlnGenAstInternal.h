@@ -181,19 +181,8 @@ inline bool isDeclarableVarType(const json& t)
 		return true;  // fixed-size array of prim
 	if (isVarrType(bt) || btk == "dict")
 		return isDeclarableVarType(bt);  // fixed-size array of [+]T or [""]T
-	if (btk == "pntr" && bt.contains("base-type")) {
-		const json& ibt = bt["base-type"];
-		if (ibt.value("type-kind", "") == "arr" && ibt.value("specifier", "") == "raw"
-			&& ibt.contains("size-expr") && ibt["size-expr"].is_null())
-			return true;  // array of @/@! slots into an unsized array
-	}
-	if (btk == "pntr") {
-		const json* pointee = &bt["base-type"];
-		while (pointee->value("type-kind", "") == "pntr") pointee = &(*pointee)["base-type"];
-		string pk = pointee->value("type-kind", "");
-		if (pk == "prim" || pk == "func")
-			return true;  // array of pointers (@T, @!@T, @func(...) elements)
-	}
+	if (btk == "pntr")
+		return true;  // array of pointers; SA decides what they may point to
 	if (btk == "arr" && bt.value("specifier", "") == "raw" && !bt["size-expr"].is_null())
 		return isDeclarableVarType(bt);  // fixed-size multidim array (also covers embedded-struct arrays)
 	return false;

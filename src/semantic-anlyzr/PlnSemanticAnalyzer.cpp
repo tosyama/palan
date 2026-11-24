@@ -376,6 +376,10 @@ void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json&
 		}
 		t = &(*t)["base-type"];
 	}
+	if (isPointee && t->value("type-kind","") == "embed") {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedUnderPointer) << endl;
+		exit(1);
+	}
 	if (t->value("type-kind","") == "func") {
 		requireFuncSigTypes(locNode, *t);
 		return;
@@ -430,45 +434,6 @@ json PlnSemanticAnalyzer::deepNormalizePrimToStruct(const json& locNode, const j
 		return {{"type-kind","struct"},{"type-name",resolved["type-name"]}}; // LCOV_EXCL_BR_LINE
 	return resolved;
 } // LCOV_EXCL_BR_LINE
-
-// Structural-only counterpart to unrepresentableTypeName for native Palan
-// signatures: names were already checked by preregisterFunc, so only a
-// type-kind that can never build is reported: "arr", left by sigType only
-// under a pointer to a borrowed array (`@@[]T`). A function type's own parameters were
-// checked by requireFuncSigTypes.
-static string unsupportedNativeSigTypeKind(const json& vt)
-{
-	string k = vt.value("type-kind", "");
-	if (k == "pntr")
-		return vt.contains("base-type") ? unsupportedNativeSigTypeKind(vt["base-type"]) : "";
-	if (k == "prim" || k == "struct" || k == "func" || k == "varr" || k == "strdict" || k.empty())
-		return "";
-	return k == "arr" ? "array" : k;
-}
-
-void PlnSemanticAnalyzer::validateNativeSig(const json& funcDef)
-{
-	string bad;
-	if (funcDef.contains("parameters"))
-		for (auto& p : funcDef["parameters"]) {
-			if (!p.contains("var-type")) continue;
-			bad = unsupportedNativeSigTypeKind(p["var-type"]);
-			if (!bad.empty()) break;
-		}
-	if (bad.empty() && funcDef.contains("ret-type"))
-		bad = unsupportedNativeSigTypeKind(funcDef["ret-type"]);
-	if (bad.empty() && funcDef.contains("rets"))
-		for (auto& r : funcDef["rets"]) {
-			if (!r.contains("var-type")) continue;
-			bad = unsupportedNativeSigTypeKind(r["var-type"]);
-			if (!bad.empty()) break;
-		}
-	if (!bad.empty()) {
-		cerr << locPrefix(funcDef)
-		     << PlnSaMessage::getMessage(E_UnsupportedParamType, funcDef["name"].get<string>(), bad) << endl;
-		exit(1);
-	}
-}
 
 void PlnSemanticAnalyzer::validateVariadicSig(const json& funcDef)
 {
@@ -937,7 +902,6 @@ json PlnSemanticAnalyzer::normalizeFuncSig(const json& f, const string& scope)
 	validateEmbeddedParams(funcEntry);
 	if (!funcEntry.contains("ret-type") && funcEntry.contains("rets") && funcEntry["rets"].size() == 1)
 		funcEntry["ret-type"] = funcEntry["rets"][0]["var-type"];
-	validateNativeSig(funcEntry);
 	validateVariadicSig(funcEntry);
 	validateOperatorSig(funcEntry);
 	normalizeParamDefaults(funcEntry);

@@ -65,7 +65,6 @@ enum PlnSaMessageCode {
 	E_AddrOfNotPrimitiveElem,
 	E_BitwiseOpNotInteger,
 	E_IncompleteStructType,		// arg1: struct name, arg2: incomplete reason ("unsupported-field" or "forward-declared")
-	E_UnsupportedParamType,		// arg1: function name, arg2: unsupported type display name
 	E_UnsupportedCFuncSignature,	// arg1: C function name, arg2: unsupported type display name
 	E_GlobalNotWritable,		// arg1: variable name
 	E_GlobalNotReplaceable,		// arg1: variable name
@@ -101,6 +100,8 @@ enum PlnSaMessageCode {
 	E_ArrLitRowSizeMismatch,	// arg1: variable name, arg2: row size, arg3: the row's element count
 	E_ArrBorrowSizeNotConst,
 	E_ArrBorrowUnsupportedElem,
+	E_NestedArrBorrow,
+	E_EmbedUnderPointer,
 	E_ArrBorrowNeedsAddrOf,
 	E_ArrBorrowShapeMismatch,	// arg1: expected shape, arg2: actual shape
 	E_StructBorrowNeedsAddrOf,
