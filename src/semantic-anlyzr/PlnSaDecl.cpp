@@ -28,8 +28,8 @@ static const json& pointeeLeaf(const json& pntr)
 // checked where it is written, and a native array is borrowed.
 static string unsupportedPointee(const json& leaf)
 {
-	return leaf.value("type-kind", "") == "func" && !unrepresentableTypeName(leaf).empty()
-		? "function pointer" : "";
+	if (leaf.value("type-kind", "") != "func") return "";
+	return unrepresentableTypeName(leaf).empty() ? "" : "function pointer";
 }
 
 // Its levels are checked first, so that their errors are the field's own. A
@@ -1266,11 +1266,13 @@ static bool isSupportedCFieldType(const json& vtype, const map<string, StructDef
 // signature takes either (E_UnsupportedCSignature); null when there is none.
 static json* cArrPointee(json& vtype)
 {
-	json* t = &vtype;
-	while (t->value("type-kind", "") == "embed" || t->value("type-kind", "") == "arr") t = &(*t)["base-type"];
-	if (t->value("type-kind", "") != "pntr") return nullptr;
-	while (t->value("type-kind", "") == "pntr") t = &(*t)["base-type"];
-	return t->value("type-kind", "") == "arr" ? t : nullptr;
+	bool inPntr = false;
+	for (json* t = &vtype; t->contains("base-type"); t = &(*t)["base-type"]) {
+		const string& kind = (*t)["type-kind"].get_ref<const string&>();
+		if (inPntr && kind == "arr") return t;
+		if (kind == "pntr") inPntr = true;
+	}
+	return nullptr;
 }
 
 void PlnSemanticAnalyzer::registerCStruct(const json& cincludeStmt, const json& s)
@@ -1678,8 +1680,7 @@ void PlnSemanticAnalyzer::adoptStruct(PlnSemanticAnalyzer& sub, const string& na
 			const json* leaf = &f.type;
 			while (leaf->contains("base-type")) leaf = &(*leaf)["base-type"];
 			string pointee = leaf->value("type-name", "");
-			if (leaf->value("type-kind", "") == "struct" && !sub.structDefs_.count(pointee)
-			    && sub.declaredStructs_.count(pointee)) {
+			if (!sub.structDefs_.count(pointee) && sub.declaredStructs_.count(pointee)) {
 				// A pointee the exporting module has yet to resolve.
 				const json* loc = &locNode;
 				whenSettled([this, &sub, pointee, loc] { // LCOV_EXCL_BR_LINE

@@ -1,0 +1,3 @@
+cinclude "457_c_arr_ptr.h";
+export type H { @CA c; int32 n; };
+export func num(@H h) -> int32 { return h.n; }

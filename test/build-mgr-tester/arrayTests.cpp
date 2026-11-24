@@ -823,3 +823,10 @@ TEST(build_mgr, imported_borrow_fields) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/456_imported_borrow_fields.pa"), "2 5 2 4\n2\n");
 }
+
+// A struct literal's value for a borrow field, and an imported struct that
+// points to a C struct with a field of an unsupported type.
+TEST(build_mgr, borrow_field_lit) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/457_borrow_field_lit.pa"), "4 9 3\n");
+}

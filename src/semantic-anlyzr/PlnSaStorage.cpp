@@ -271,7 +271,7 @@ json PlnSemanticAnalyzer::ptrFieldType(const json& locNode, const json& pntr)
 	return pointeeNamesAsStructs({{"type-kind","pntr"},{"mutable",pntr.value("mutable", false)},
 	                              {"base-type",move(elem)}});
 	// LCOV_EXCL_BR_STOP
-}
+} // LCOV_EXCL_BR_LINE
 
 // The element a `[+]U` or `[""]U` (an AST type marked `embedded` for `$U`)
 // holds, as the data of its values lays it out.

@@ -24,7 +24,9 @@ clean:
 	rm -rf build build-debug
 # lcov reads exclusion markers only from files it treats as C/C++, which by
 # default excludes .yy grammar files.
-LCOV_FLAGS = --rc branch_coverage=1 --rc c_file_extensions=h,c,i,C,H,I,cpp,hpp,icc,cc,hh,cxx,hxx,yy
+# No test can take the failing branch of a message's argument check.
+LCOV_FLAGS = --rc branch_coverage=1 --rc c_file_extensions=h,c,i,C,H,I,cpp,hpp,icc,cc,hh,cxx,hxx,yy \
+	--rc 'lcov_excl_br_line=LCOV_EXCL_BR_LINE|BOOST_ASSERT[(]arg'
 LCOV_FILTER = --rc no_exception_branch=1
 coverage: build-cov/CMakeCache.txt
 	find build-cov -name "*.gcda" -delete 2>/dev/null; true
