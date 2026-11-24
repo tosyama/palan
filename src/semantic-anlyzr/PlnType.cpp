@@ -404,6 +404,7 @@ static std::string symbolPntr(const json& t)
     if (t.value("embedded", false)) s += "E";
     if (t.contains("stride")) s += "S" + std::to_string(t["stride"].get<int64_t>()) + "_";
     if (t.contains("arr-size")) s += "A" + std::to_string(t["arr-size"].get<int64_t>()) + "_";
+    if (t.value("unsized", false)) s += "U";
     if (!t.contains("mutable")) s += "P";
     else s += t["mutable"].get<bool>() ? "W" : "R";
     return s + symbolType(t["base-type"]);
@@ -416,7 +417,7 @@ std::string symbolType(const json& t)
     static const std::map<std::string, std::set<std::string>> knownKeys = {
         {"prim",   {"type-kind", "type-name", "enum"}},
         {"struct", {"type-kind", "type-name"}},
-        {"pntr",   {"type-kind", "base-type", "mutable", "embedded", "stride", "arr-size", "variadic"}},
+        {"pntr",   {"type-kind", "base-type", "mutable", "embedded", "stride", "arr-size", "unsized", "variadic"}},
         {"func",   {"type-kind", "parameters", "ret-type"}},
         {"varr",   {"type-kind", "base-type", "embedded"}},
         {"strdict", {"type-kind", "base-type", "embedded"}},

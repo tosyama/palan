@@ -1027,7 +1027,6 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	saFunc["name"] = (*currentFunc_)["symbol"];
 	if (currentFunc_->value("export", false)) saFunc["export"] = true;
 	normalizeSig(saFunc);
-	validateEmbeddedParams(saFunc);
 	if (!variadic.empty()) {
 		saFunc["parameters"].back()["var-type"] = variadicType;
 		saFunc["parameters"].push_back({{"name","__" + variadic + "_d0"},{"var-type",u64}}); // LCOV_EXCL_BR_LINE

@@ -72,16 +72,14 @@ json PlnSemanticAnalyzer::unsizedArrToPntr(const json& locNode, const json& type
 			// LCOV_EXCL_BR_STOP
 			return pntr;
 		}
-		string et = sizedRow ? bt["size-expr"].value("expr-type","") : "";
-		if (et == "lit-int" || et == "lit-uint") {
+		if (sizedRow) {
 			json row = sizedArrLevel(locNode, bt, nullopt);
 			pntr["stride"] = inPlaceSize(row);
 			pntr["base-type"] = move(row);
 			return pntr;
 		}
-		// []$[]T or []$[var]T: no stride -> validateEmbeddedParams reports it
-		pntr["base-type"] = {{"type-kind","pntr"},{"base-type",bt.value("base-type", json{})}}; // LCOV_EXCL_BR_LINE
-		return pntr;
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbeddedArrUnsizedInner) << endl;
+		exit(1);
 	}
 	if (sizedRow)
 		return {{"type-kind","pntr"}, {"base-type", sizedArrLevel(locNode, bt, nullopt)}}; // LCOV_EXCL_BR_LINE

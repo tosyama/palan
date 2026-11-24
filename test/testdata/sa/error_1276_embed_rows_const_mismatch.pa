@@ -1,0 +1,4 @@
+const M = 3;
+func f(@[]$[M]int32 x) {}
+[2]$[4]int32 a;
+f(@a);

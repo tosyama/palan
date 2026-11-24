@@ -176,7 +176,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "Logical operator operand must be an integer type.";
 
 		case E_EmbeddedArrUnsizedInner:
-			return "Embedded array parameter must have a fixed inner dimension (use []$[n]T).";
+			return "an array laid out in place without a length ('[]$..') needs rows of a constant length ('[]$[m]T') or a struct element ('[]$T').";
 
 		case E_EmbeddedArrInnerSizeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");

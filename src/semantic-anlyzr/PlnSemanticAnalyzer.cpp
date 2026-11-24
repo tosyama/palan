@@ -317,20 +317,6 @@ void PlnSemanticAnalyzer::registerPlnFunc(const string& name, const json& def, c
 	plnFuncScopes.back()[name].push_back(def);
 }
 
-void PlnSemanticAnalyzer::validateEmbeddedParams(const json& funcDef)
-{
-	if (!funcDef.contains("parameters")) return;
-	for (auto& p : funcDef["parameters"]) {
-		if (!p.contains("var-type")) continue;
-		const auto& vt = p["var-type"];
-		if (vt.value("embedded", false) && !vt.contains("stride")) {
-			cerr << locPrefix(funcDef)
-			     << PlnSaMessage::getMessage(E_EmbeddedArrUnsizedInner) << endl;
-			exit(1);
-		}
-	}
-}
-
 bool PlnSemanticAnalyzer::isStructType(const json& type) const
 {
 	// LCOV_EXCL_BR_START
@@ -899,7 +885,6 @@ json PlnSemanticAnalyzer::normalizeFuncSig(const json& f, const string& scope)
 		written.push_back(writeType(p["var-type"]));
 	funcEntry["_written-params"] = written;
 	normalizeSig(funcEntry);
-	validateEmbeddedParams(funcEntry);
 	if (!funcEntry.contains("ret-type") && funcEntry.contains("rets") && funcEntry["rets"].size() == 1)
 		funcEntry["ret-type"] = funcEntry["rets"][0]["var-type"];
 	validateVariadicSig(funcEntry);

@@ -1860,8 +1860,8 @@ func row_sum([]$[4]int32 mat, int64 r) -> int32 {
 }
 ```
 
-**Function parameters:** Declare as `[]$[m]T` with a fixed inner dimension `m`. The compiler
-rejects calls where the argument's inner dimension is variable or does not match `m`.
+**Function parameters:** Declare as `[]$[m]T` with a constant inner dimension `m`, which a
+borrow (`@[]$[m]T`) needs too: without it the rows cannot be located. The compiler rejects calls where the argument's inner dimension is variable or does not match `m`.
 
 **Memory management:** A single `malloc` is called at declaration and a single `free` is
 inserted at scope exit. No helper functions are generated.

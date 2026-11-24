@@ -39,7 +39,7 @@ enum PlnSaMessageCode {
 	E_NotArrayType,
 	E_UnsizedArrVarDecl,
 	E_LogicalOpNotInteger,
-	E_EmbeddedArrUnsizedInner,		// []$[]T in parameter: inner dimension must be fixed
+	E_EmbeddedArrUnsizedInner,		// []$[]T: no row length to locate the rows by
 	E_EmbeddedArrInnerSizeMismatch,	// arg1: expected inner-size, arg2: actual
 	E_AmbiguousCall,			// arg1: function name
 	E_UnknownAlias,				// arg1: alias name

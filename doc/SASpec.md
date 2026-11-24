@@ -303,8 +303,8 @@ the function marked `release` releases its own parameter as the contents.
 - `<param>`: the parameter's normalized `var-type`, each type self-delimiting:
   - prim: its name (`int32`, `flo64`, `bool`, `void`); an enum: `N<len><enum name><base prim>`
   - struct: `<len><type-name>`, the type's identity (the examples here write the name alone)
-  - pntr: `E` if `embedded`, `S<stride>_` if `stride`, `A<arr-size>_` if `arr-size`, then `P`
-    (no `mutable`: owned or by value), `R` (`mutable: false`) or `W` (`mutable: true`), then the
+  - pntr: `E` if `embedded`, `S<stride>_` if `stride`, `A<arr-size>_` if `arr-size`, `U`
+    if `unsized`, then `P` (no `mutable`: owned or by value), `R` (`mutable: false`) or `W` (`mutable: true`), then the
     base type
   - func: `F<parameter count>_`, each parameter type, then the return type (a `void` prim when none)
   - varr: `V` (`VC` if `embedded`), then the element type (`@![+]int32` is `WVint32`,
@@ -684,8 +684,9 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
 
   **`[]$[m]T` (unsized embedded array parameter):** Normalized by SA to the same
   `pntr(pntr(T, arr-size:m), embedded:true, stride:m*sizeof(T))` type as the sized form. The inner dimension `m`
-  must be a compile-time constant literal; `[]$[]T` or `[]$[var]T` in a parameter is a
-  compile error (`E_EmbeddedArrUnsizedInner`).
+  must be a compile-time constant (`E_UnsizedArrRowSizeNotConst`). Without it there is no stride, so
+  `[]$[]T` is `E_EmbeddedArrUnsizedInner` wherever the type is written (a parameter, `@[]$[]T`, an
+  element `[+]@[]$[]T`); a declaration's initializer literal gives the lengths first.
 
   **`arr-index` on embedded array (row access):** When the array expression has an embedded
   pntr type (`embedded:true`), `arr[i]` is treated as a row access:
@@ -727,8 +728,9 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   is any pointer type (`@!@T`, `@func(...)`), each level keeping its own `mutable`; a name
   other than a primitive's under it is `struct(T)`, its layout not needed. A `pntr` with
   `mutable` and none of `arr-size`, `embedded` and `unsized` is a `@T`/`@!T` pointer, never an
-  array level. `@name` of an array whose size is known only at run time marks each such level
-  `"unsized": true` beside its `mutable`, so it stays an array level.
+  array level. A borrowed level without `arr-size` has `"unsized": true` beside its `mutable`, so
+  that it stays an array level: `@name` of an array whose size is known only at run time, and the
+  rows of a read-only `@[][]T`.
   Without the outer size, `@[]T` / `@![]T` becomes the element type of a `[n]@[]T` / `[n]@![]T`
   slot, `pntr(T, mutable)` (a row keeping `mutable: false` on each level when read-only), so it
   is the same type as `@T` / `@!T`. Every other size must be constant

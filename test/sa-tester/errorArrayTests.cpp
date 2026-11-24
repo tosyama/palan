@@ -15,7 +15,7 @@ TEST(sa_error, embed_arr_unsized_inner) {
 		"palan-gen-ast ../test/testdata/sa/error_050_embed_arr_unsized_inner.pa -o " + ast_out), "");
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
-	ASSERT_NE(sa.find("inner dimension"), string::npos);
+	ASSERT_NE(sa.find("an array laid out in place without a length"), string::npos);
 }
 
 TEST(sa_error, embed_arr_inner_size_mismatch) {
@@ -712,6 +712,31 @@ TEST(sa_error, dict)
 		{"error_1262_embed_under_ptr_param.pa", "error: '$' cannot be what '@' or '@!' points to."},
 		{"error_1263_embed_under_ptr_elem.pa", "error: '$' cannot be what '@' or '@!' points to."},
 		{"error_1264_embed_under_ptr_field.pa", "error: '$' cannot be what '@' or '@!' points to."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, unsized_rows) {
+	const vector<pair<string, string>> cases = {
+		{"error_1265_embed_rows_borrowed_param.pa", "error: an array laid out in place without a length"},
+		{"error_1266_embed_rows_var.pa", "error: an array laid out in place without a length"},
+		{"error_1267_embed_rows_elem.pa", "error: an array laid out in place without a length"},
+		{"error_1268_embed_rows_dict_elem.pa", "error: an array laid out in place without a length"},
+		{"error_1269_embed_rows_field.pa", "error: an array laid out in place without a length"},
+		{"error_1270_embed_rows_func_sig.pa", "error: an array laid out in place without a length"},
+		{"error_1271_embed_rows_ret.pa", "error: an array laid out in place without a length"},
+		{"error_1272_embed_rows_inner.pa", "error: an array laid out in place without a length"},
+		{"error_1273_embed_rows_dict.pa", "error: an array laid out in place without a length"},
+		{"error_1274_embed_rows_run_size.pa", "must be a compile-time constant."},
+		{"error_1275_unsized_rows_write.pa", "cannot write through read-only pointer"},
+		{"error_1276_embed_rows_const_mismatch.pa", "Embedded array inner size mismatch: expected 3, got 4."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

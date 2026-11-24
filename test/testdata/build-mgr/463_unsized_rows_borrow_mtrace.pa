@@ -1,0 +1,53 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+const M = 3;
+type S { @[]$[M]int32 e; @[][]int32 r; };
+func at(@[][]int32 x) -> int32 { return x[1][2]; }
+func at3(@[][][]int32 x) -> int32 { return x[1][1][1]; }
+func set(@![][]int32 x) { 60 -> x[1][2]; }
+func through(@@[][]int32 x) -> int32 { return x[0][1][2]; }
+// Rows and pointers to rows are different types, so both link.
+func kind(@[][]int32 x) -> int32 { return 1; }
+func kind(@[]@[]int32 x) -> int32 { return 2; }
+func esum([]$[M]int32 x) -> int32 { return x[0][0] + x[1][2]; }
+func eat(@[]$[M]int32 x) -> int32 { return x[1][2]; }
+func eset(@![]$[M]int32 x) { 90 -> x[0][1]; }
+func f() {
+    [2][3]int32 a = [[1, 2, 3], [4, 5, 6]];
+    int64 n = 2;
+    [n][3]int32 dyn;
+    8 -> dyn[1][2];
+    @[][]int32 p = @a;
+    [1]@[][]int32 one;
+    p -> one[0];
+    printf("%d %d %d\n", at(@a), at(@dyn), through(@one));
+    set(@!a);
+    printf("%d\n", at(p));
+    [+]@[][]int32 v;
+    v.push(@a);
+    v.push(@dyn);
+    [+]@[][]int32 w = v;
+    NULL -> w[0];
+    [""]@[][]int32 d;
+    @a -> d["k"];
+    printf("%d %d %d %d\n", v[0][1][2], at(v[1]), d["k"][0][1], w[0] == NULL);
+    for copy q in v { printf("%d\n", q[1][2]); }
+    @func(@[][]int32) -> int32 g = at;
+    printf("%d\n", g(@a));
+    [2][2][2]int32 c;
+    5 -> c[1][1][1];
+    printf("%d\n", at3(@c));
+    [2]$[M]int32 e = [[1, 2, 3], [4, 5, 6]];
+    @[]$[M]int32 ep = @e;
+    eset(@!e);
+    [1]@[]$[M]int32 ev;
+    @e -> ev[0];
+    S s;
+    @e -> s.e;
+    @a -> s.r;
+    printf("%d %d %d %d\n", esum(e), eat(@e), ep[0][1], ev[0][0][1]);
+    printf("%d %d %d\n", s.e[1][2], s.r[1][2], eat(s.e));
+}
+mtrace();
+f();
+muntrace();

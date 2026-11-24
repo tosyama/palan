@@ -844,7 +844,6 @@ class PlnSemanticAnalyzer {
 	// the type is fully representable.
 	void requireSupportedCGlobal(const json& entry, const string& globalName, const json& locNode);
 	json sa_expr_addr_of(const json& expr);
-	void validateEmbeddedParams(const json& funcDef);
 	void sa_functions(const json& funcs);
 	void sa_function(const json& funcDef, bool topLevel = false);
 	json sa_store_scope(const json& stmt);  // returns json::array()
