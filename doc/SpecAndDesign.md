@@ -84,9 +84,8 @@ Design:
  (`YYMAXDEPTH`), since Bison's `glr2.cc` frees a value twice when it grows its stack.
  The grammar holds the language and the forms reserved for a planned feature, which it parses
  for palan-sa to reject as not implemented (`name = expr`, for type inference). A form without a
- plan is not parsed (0.2.7 dropped `interface`, `construct`, methods in a type, anonymous
- functions, `x++`, tuple values, `[#]T` and others): a feature is designed with the language of its
- time, and a parsed form nothing uses has let code be silently ignored.
+ plan is not parsed: a feature is designed with the language of its time, and a parsed form nothing
+ uses has let code be silently ignored.
  A file named `.pai` is read as an interface (3.7): it may declare a function without a body and
  hold `link` statements, and must hold `built` and `target` statements of the tools' version and the target. `--interface`
  writes the module's own declarations in that form; merging a library's modules is `--lib`'s.
@@ -137,7 +136,7 @@ Design:
  The storage of a `$T` or fixed-size array `global` is static rather than in the top level's frame,
  so a function C calls after the top level returns (an `atexit` handler) still finds it. An array
  of numbers whose literal is all constants starts with its values in `.data` instead of being
- stored element by element in `..init` (0.2.7), so a table such as std's grapheme properties costs
+ stored element by element in `..init`, so a table such as std's grapheme properties costs
  its data alone; with any element not constant, every element is stored as before, since storing
  the constant ones first would change what a function called by the initializer sees.
  A C bit-field is a field of its declared type at the unit of that type holding it, with its
@@ -224,7 +223,8 @@ Design:
    XMM register.
 
  Static variables (SASpec.md) are local `.bss` slots and blocks (`.data` for a block with initial
- values), a C global the C library's own symbol. Every access goes to memory, since a call may change the variable.
+ values), a C global the C library's own symbol. Every access goes to memory, since a call may
+ change the variable.
 
  A string literal may hold any bytes, but JSON holds only valid UTF-8 text, so the literal's
  value travels through ast.json, sa.json and a module's interface as one escaped text
@@ -302,12 +302,10 @@ names). It comes from its source alone, never from the entry or the source's loc
 | `io/file.pa` declaring `library std.io;` | `std.io.file` |
 | `util.pa` declaring nothing | `util` |
 
-A declaration comes first in the file, at most one. palan-gen-ast reads it and records the identity
-in ast.json; later tools only receive it. The file name is escaped as SASpec.md's Symbol names
-says; a leading digit gets a `_` in front rather than being escaped, which `as` needs and which
-reads better; so a few names meet (`1x.pa` and `_1x.pa`), as do `a/util.pa` and `b/util.pa` declaring
-nothing. One identity in a program is an error; declaring `library proj.a;` and `library proj.b;`
-lets them coexist.
+PalanReference.md's Module Names states the rules. palan-gen-ast reads the declaration and records the
+identity in ast.json; later tools only receive it. The file name is escaped as SASpec.md's Symbol
+names says; a leading digit gets a `_` in front rather than being escaped, which `as` needs and
+which reads better, so `1x.pa` and `_1x.pa` meet.
 
 **Type identity.** A Palan struct or enum is identified by its module and its name, exported or not:
 `__pln_L<len><module>_<Name>`, with the identity's `.` written `_2e` (`std.utf8`'s `Point` is
@@ -316,17 +314,14 @@ is what sa.json, symbols (a type's `->` is `__pln_cp_<len><that name>`) and the 
 use; a message shows the written name. A C type keeps its C name, global as in C. So does a type
 declared in a generated allocators module, whose names are already the types' identities.
 
-- Before 0.2.6 an exported type was identified by its written name alone, so two modules exporting
-  `Point` were `E_DuplicateTypeName` and library types took a prefix (`utf8mode`); a private type
-  had a hash of its module in place of `<len><module>`. Both now take one form.
-- The identity itself rather than a hash: it reads in assembly and symbol tables, and two modules
+- The identity itself rather than a hash of it: it reads in assembly and symbol tables, and two modules
   never meet. Escaping `.` as `_2e` cannot meet an identity's own `_2e`, which is already `_5f2e`;
   the length marks where the identity ends. The written name cannot be used, since the generated
   allocators are C and take no `.`.
 - Not taken: identifying a type by its package (`library std;`), which would leave two modules of
   one package colliding.
-- `utf8mode` and `utf8iter` keep their names: imported without an alias, a type's name is written
-  bare in the importer, where `mode` would collide more often.
+- A library's own type names still take a prefix (`utf8mode`): imported without an alias, a type's
+  name is written bare in the importer, where `mode` would collide more often.
 
 **Finding a library.** PalanReference.md's Using a Library states the rules. A library path has no
 `.`, since a module is named and not a file. A package found under two `libpath`s is an error rather
@@ -359,23 +354,17 @@ source module is reported at its own line, and one in a library at its `.pai`'s.
 A library's `.pai` declares types only of its main source, so how the library's source is divided is
 never published:
 
-- Public: the main's exports. Private: the main's types and consts the public declarations need.
+- PalanReference.md's Building a Library states what is public and what a public declaration may name.
 - The consts and aliases of internal modules the public declarations need are written as the main's,
   renamed (`__m<n>_<Name>`) when two share a name: they identify nothing, since a symbol holds what
   they stand for.
 - A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
   declarations need it or not, since its archive is linked). A C type comes through
   `cinclude ... export`. An `import "..."` of an internal module disappears.
-- A public declaration naming a type of an internal module — directly, through an alias or through
-  a field of a type it names — is an error of `--lib`. A type a library publishes is declared in
-  its main, which internal modules import to use it (imports may be circular), or published with
-  its contents hidden as an `opaque` type.
-- Before 0.2.6, the exported types of internal modules that public declarations used were written
-  into the main's `.pai` as the main's own, and private ones renamed (`__m<n>_<Name>`) when two
-  shared a name; the reader then identified them by the main's module, unlike their objects. Not
-  taken: stating each such type's module in the `.pai` (`export type Kept from std.kept {...}`, or a
-  statement switching the module of the declarations after it), which would publish the library's
-  internal modules.
+- A struct or enum of an internal module is not written in the main's `.pai`: its reader would identify
+  it by the main's module, unlike the objects. Not taken: stating each such type's module in the
+  `.pai` (`export type Kept from std.kept {...}`, or a statement switching the module of the
+  declarations after it), which would publish the library's internal modules.
 - `link "m";` lists the libraries of every module's `link` clauses. The statement is accepted
   only in a `.pai`. An object file named by a `link` clause goes into the archive instead.
 - `built "<version>";` records the tools' version, and `target "<name>";` the target. Reading a `.pai`
@@ -392,29 +381,23 @@ const naming anything else that cannot be written, such as a variable whose valu
 is left out with it: no declaration could use it either (`E_ConstUsedBeforeKnown`). An exported
 `global` is written without its initializer (`export global int64 count;`).
 
-`cinclude <stdio.h> export FILE, fpos_t;` names the C types the module's public declarations use.
-It limits nothing in the module; it only puts the `cinclude` in the `.pai`, whose reader then needs
-the header, as any user of a C type needs its SDK. An ordinary import reads the whole AST, so the
-clause matters only to `--lib`. palan-gen-ast rejects it on a block's `cinclude` rather than leave a
-type silently unpublished. The public declarations use C types of system headers only: a local
-header's path would not exist for the reader, and installing it beside the `.pai` would need rules
-for where it and the headers it includes go. Its types are published wrapped in an `opaque` type,
-which needs no header.
+`cinclude <stdio.h> export FILE, fpos_t;` (PalanReference.md's Exporting C Types) only puts the
+`cinclude` in the `.pai`, so the clause matters only to `--lib`. palan-gen-ast rejects it on a block's
+`cinclude` rather than leave a type silently unpublished. A local header's types are not exported:
+installing the header beside the `.pai` would need rules for where it and the headers it includes go.
 
-**Opaque types.** `export type Handle = opaque K.Inner;` declares a type of its module whose
-contents are `K.Inner`'s, which only modules able to write `K.Inner` see; a `.pai` writes it
-`export type Handle = opaque;`. It lets a library publish a type defined in an internal module, or
-hide a type of its main, without the reader learning its layout or its module.
+**Opaque types.** PalanReference.md's Opaque Types states the rules. A type such as
+`export type Handle = opaque K.Inner;` (`export type Handle = opaque;` in a `.pai`) lets a library
+publish a type defined in an internal module, or hide a type of its main, without the reader learning
+its layout or its module.
 
 - It is a type of its own, not an alias: an alias stands for its type in a function's symbol, which
   would name the internal module (`get(Handle)` would link as `get` of `K.Inner`).
-- The contents must be owned through one pointer, so a user holds the value as a struct without
-  knowing its size; only what needs the layout (a declaration without an initializer, a copy) is
-  an error, and only where the contents' type cannot be written.
-- An owned field or element of an opaque type starts empty (NULL, as after a move) wherever it is
-  created, so a type holding one is allocated the same in every module. Copying a value holding
-  one is left out until wanted: the allocators that would copy it know the opaque type by its
-  name only.
+- The contents are owned through one pointer, so a user holds the value as a struct without knowing
+  its size.
+- An owned field or element starts empty wherever it is created, so a type holding one is allocated
+  the same in every module. Copying a value holding one is left out until wanted: the allocators
+  that would copy it know the opaque type by its name only.
 - The release function, or without one the contents' release, is reached through a function
   generated in the type's module, whose symbol is made of the type's identity alone
   (`__pln_rl_<len><identity>`), carried with the type as a type's `->` is (3.8), so the `.pai`
@@ -431,19 +414,11 @@ order, once (a flag in the module). The entry's `_start` calls the entry's `..in
 `..main` (the top-level statements, which still run only for the entry). A library's internal
 modules are initialized through its main's, so a program needs to know only what it imports.
 
-- Before 0.2.6 a `global` was initialized where its top-level statement stood, so a module whose
-  functions used one could not be imported (`E_ImportModuleWithGlobals`) or built into a library
-  (`E_LibModuleWithGlobals`), and a top-level statement before the declaration could not reach a
-  function using it (`E_GlobalUsedBeforeDecl`). All three go.
-- An initializer cannot name an ordinary top-level variable, since it does not exist for an imported
-  module; the entry follows the same rule, so a module compiles the same whichever is the entry.
-- In a circle of imports, modules are initialized in import order, and a function reached from one
-  may see another's globals not initialized yet (zero, an owner NULL), as in Go's or C++'s static
-  initialization.
-- A module wanting its state built at a time of its user's choosing declares the variable without
-  an initializer and exports a function setting it. Not taken: initializing on first use (a check at
-  every access), or an import deferring a module's initialization, which another import of the same
-  module would defeat and a library's internal modules would not receive.
+- The entry follows the rule that an initializer cannot name an ordinary top-level variable, which does
+  not exist for an imported module, so a module compiles the same whichever is the entry.
+- Not taken: initializing on first use (a check at every access), or an import deferring a module's
+  initialization, which another import of the same module would defeat and a library's internal
+  modules would not receive.
 
 **Exported globals.** An exported `global` is used in an importer as in its own module, through
 the importer's own `global` statements, so a function's access to module state is stated where the
@@ -488,8 +463,8 @@ modules may share a file name and every module's allocators do.
 
 ### 3.8 Type-Defined Behavior, Default and Variadic Arguments
 
-**Status.** Implemented in 0.2.5. PalanReference.md (§2, §7, §8, §9, §11) states the rules and
-SASpec.md how palan-sa represents them; this section keeps why they are so.
+PalanReference.md (§2, §7, §8, §9, §11) states the rules and SASpec.md how palan-sa represents them;
+this section keeps why they are so.
 
 Two rules run through all of it:
 
@@ -521,8 +496,7 @@ added.
 by construction. A three-way comparison was not taken: for text, `==` is answered by the lengths
 alone when they differ, which a three-way comparison cannot use.
 
-- Before 0.2.5 two structs compared by address, silently. Now a struct operand always calls a
-  function, a C struct included, and with none it is an error. No field-by-field `==` is given by
+- Structs are not compared by address, a C struct included, nor is a field-by-field `==` given by
   default: how deep owned fields compare, whether a borrow compares the pointer, and what `NaN` is
   differ by type, so the type states them.
 - A comparison with `NULL` stays a pointer comparison, since the generated allocators (3.6) and C
@@ -588,7 +562,7 @@ index-based protocol was not taken, since indexing `utf8` by character costs a s
 iterator is a struct returned by value and `next` is chosen by it, so the iterations of unrelated
 types do not compete for one `next(@!int64)`. `iter` and `next` are found as operator functions
 are, an alias not hiding them, since `for` never writes their names. What the range's call was given
-is held until the loop ends (0.2.7), not only what it returned: an error, as for a call returning a
+is held until the loop ends, not only what it returned: an error, as for a call returning a
 borrow, would also reject a struct that borrows nothing.
 
 **Character literals.** A literal is its code point. One of 128 or more adopts only an integer type
@@ -606,25 +580,20 @@ and generated modules (the allocators) are exempt.
 
 ### 3.9 std/utf8
 
-**Status.** Implemented in 0.2.5; PalanStdLibReference.md states what it does.
+PalanStdLibReference.md states what it does; this section keeps why.
 
-`utf8` stays an ordinary library type, built only on the features of 3.8. A character is a code
-point and positions count characters, so a position is reached by a scan (O(n)); that is what a
-text type means by a position, rather than bytes.
+`utf8` stays an ordinary library type, built only on the features of 3.8. Positions count characters
+and are reached by a scan, since that is what a text type means by a position, rather than bytes.
 
-- `mode` decides how invalid bytes are taken in. `EMPTY_ON_INVALID` of 0.2.4 is replaced by
-  `DELETE_INVALID`: emptying the whole text for one bad part, and keeping it empty, is rarely
-  wanted, and whoever wants it checks `hadInvalid`.
-- A new value keeps its own mode (3.8's first rule); `x -> s` takes `x` in by `s`'s mode, which is
-  why `replaced` of 0.2.4 goes (`utf8 r; s -> r;`).
-- `hadInvalid` is ORed from every text something was made from, and never cleared: through a mode
-  other than `KEEP_INVALID` no invalid bytes remain, so judging by the bytes would lose that one was
-  replaced or deleted. A sequence cut at the end of what was added thus stays counted when later
-  bytes complete it (0.2.4 checked the whole text again); a function checking again can be added
-  when wanted.
-- A function taking text takes `@utf8`, a literal converting to it, except `+`, `<<`, `append` and
-  the comparisons, which also take a literal or `@[]uint8` as it is: converting made
-  `s == "abc"` about 15 times slower.
+- No mode empties the whole text for one bad part: it is rarely wanted, and whoever wants it checks
+  `hadInvalid`.
+- `x -> s` takes `x` in by `s`'s mode (3.8's first rule keeps a new value's own), so no function making
+  a text valid is needed (`utf8 r; s -> r;`).
+- `hadInvalid` is kept rather than judged from the bytes: through a mode other than `KEEP_INVALID` no
+  invalid bytes remain, so that one was replaced or deleted would be lost. A function checking the
+  whole text again can be added when wanted.
+- `+`, `<<`, `append` and the comparisons also take a literal or `@[]uint8` as it is, the others only
+  `@utf8`: converting made `s == "abc"` about 15 times slower.
 - The functions changing `s` return `@!utf8` because each was decided to chain; it is not a rule of
   the library. A character is not appended with `<<`, since `s << n` for an integer would do it.
 - Left out: functions doing what a shorter form does (`isEmpty`, `clear`), `trimStart`/`trimEnd`, a
@@ -632,12 +601,12 @@ text type means by a position, rather than bytes.
   conversion with numbers (a formatting module's, such as `std/fmt`), compound assignment, `[]`
   indexing.
 
-**Grapheme clusters** (0.2.7).
+**Grapheme clusters.**
 
 - `graphemes` returns an iterator type for `for`'s `iter`/`next` (3.8) rather than a `[+]utf8`, so a
   long text is not held twice. Positions still count code points: making the clusters `utf8`'s
-  characters (as Swift does) would change what 0.2.5 decided a position is and scan every position
-  for boundaries. Functions taking cluster positions are left until wanted.
+  characters (as Swift does) would scan every position for boundaries. Functions taking cluster
+  positions are left until wanted.
 - The properties the rules read (Grapheme_Cluster_Break, Extended_Pictographic,
   Indic_Conjunct_Break) are tables of code point ranges searched by bisection, generated from the
   Unicode Character Database of one pinned version by a script in `tools/` and committed, so a
@@ -649,11 +618,10 @@ text type means by a position, rather than bytes.
 
 ### 3.10 Dictionaries
 
-**Status.** Implemented in 0.2.7; PalanReference.md states what it does.
-
-It is a built-in type rather than a library one, as `[+]T` is, because Palan has no generic types:
-like `[+]T`, it is made of functions generated for each shape of its values (3.6), and follows
-`[+]T`'s rules wherever a type may appear.
+PalanReference.md states what a dictionary does, and SASpec.md the functions generated for it. It is a
+built-in type rather than a library one, as `[+]T` is, because Palan has no generic types: like
+`[+]T`, it is made of functions generated for each shape of its values (3.6), and follows `[+]T`'s
+rules wherever a type may appear.
 
 - The type is written `[""]` rather than with a key type, since a key is neither the `@[]uint8`
   borrow given nor a `[]uint8` the caller owns. Other key types are left until wanted; `[K:]T` was
@@ -669,16 +637,14 @@ Layout: an owned slot pointing to a header that `std/rt` allocates, holding the 
 number of positions used, the entries `{hash, key}` in the order of addition, an index table, and
 at its end the values as a `[+]T` (or `[+]$T`) header, one value at each entry's position. The index
 table, of a power-of-two size, holds positions, found by the key's hash (FNV-1a) and linear probing,
-and grows when three quarters full, removed positions counted. A removed element leaves its key
-NULL, its value released (a slot set to NULL, so that releasing all the values releases nothing
-twice) and its table slot in place, which lookups probe past; the entries and values are compacted when the removed outnumber the live, never during a `for` over the
-dictionary, which cannot remove. Everything on keys (hashing, finding, adding, removing,
-compacting, copying the keys) does not depend on `T`, so it is written once in `std/rt` rather than
-generated, as `__pln_dict_*` C functions: compacting moves the values as bytes of the element's
-size, as the removed ones are already released. The values' header is an ordinary `[+]T` one, so
-the generated functions build, release and copy the values with `[+]T`'s, adding a value where
-adding the key gave a position equal to their length. `d[k]` is a generated call returning the
-value's address, so stores into it are those into an element.
+and grows when three quarters full, removed positions counted. A removed element leaves its
+key NULL and its table slot in place, which lookups probe past; the entries and values are compacted
+when the removed outnumber the live, never during a `for` over the dictionary, which cannot remove.
+Everything on keys (hashing, finding, adding, removing, compacting, copying the keys) does not
+depend on `T`, so it is written once in `std/rt` rather than generated, as `__pln_dict_*` C
+functions: compacting moves the values as bytes of the element's size, as the removed ones are
+already released. The values' header is an ordinary `[+]T` one, so the generated functions build,
+release and copy the values with `[+]T`'s.
 
 ## 4. Expression Value Categories
 
