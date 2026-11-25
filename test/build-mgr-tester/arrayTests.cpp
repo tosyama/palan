@@ -880,3 +880,10 @@ TEST(build_mgr, overload_shape) {
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/466_overload_shape.pa"),
 		"3 4 4 3 4 4 3\n1 2 1 2 1 2 2\n1 2 1 1 2\n1 1 2 1 2 2\n1 1 2 1\n1\n");
 }
+
+// Borrowed arrays through '@void', function pointers and fields; copies of dictionaries.
+TEST(build_mgr, borrow_bindings) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/467_borrow_bindings.pa"),
+		"3 2 1\n1\n2\n2 1 1\n");
+}

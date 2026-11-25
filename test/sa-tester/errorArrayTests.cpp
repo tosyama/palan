@@ -856,3 +856,23 @@ TEST(sa_error, dict_arr_lit) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, dict_elem_mismatch) {
+	const vector<pair<string, string>> cases = {
+		{"error_1334_dict_copy_from_prim.pa", ":3:1: error: cannot copy '[2]int32' into '[2][\"\"]int32'"},
+		{"error_1335_dict_copy_into_prim.pa", ":3:1: error: cannot copy '[2][\"\"]int32' into '[2]int32'"},
+		{"error_1336_dict_copy_from_varr.pa", ":3:1: error: cannot copy '[2][+]int32' into '[2][\"\"]int32'"},
+		{"error_1337_dict_copy_value_type.pa", ":3:1: error: cannot copy '[2][\"\"]flo64' into '[2][\"\"]int32'"},
+		{"error_1338_dict_return_as_varr.pa", ":2:5: error: cannot copy '@[\"\"]int32' into '[+]int32'"},
+		{"error_1339_dict_lit_varr_field.pa", ":2:11: error: a '{name: value}' literal can only be used as"},
+		{"error_1340_overload_func_no_func_type.pa", ":3:11: error: 'f' names f(int32), f(flo64); it must be given where a function pointer type chooses one."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
