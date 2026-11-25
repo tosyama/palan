@@ -206,11 +206,13 @@ inline json boolLiteral(const char* value)
 
 // Unary minus on an untyped integer literal becomes one negative literal, so
 // SA's range check sees `-128` as a single value (an int8 `neg(128)` operand
-// would be out of range). A typed lit-int (macro-folded) keeps its `neg`.
+// would be out of range). Negated, a hexadecimal one is a number, no longer
+// the bits it was written as. A typed lit-int (macro-folded) keeps its `neg`.
 inline json negateExpr(json operand)
 {
 	if (operand.value("expr-type", "") == "lit-int" && !operand.contains("value-type")) {
 		string v = operand["value"];
+		operand.erase("hex");
 		operand["value"] = (v[0] == '-') ? v.substr(1) : "-" + v;
 		return operand;
 	}

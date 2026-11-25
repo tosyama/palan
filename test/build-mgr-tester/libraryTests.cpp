@@ -172,6 +172,8 @@ const LIMIT = 40;
 export func run(int32 a, int32 lim = LIMIT + 2, Mode m = Mode.Slow, @[]uint8 tag = "dflt") {
 	printf("%d %d %d %s\n", a, lim, m, tag);
 }
+const MASK = 0xFFFF0000;
+export func bits(int32 a = 0xFFFFFFFE, int32 b = MASK) { printf("%d %d\n", a, b); }
 )");
 	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/opt.pa"), "");
 	fs::remove_all("out/src");
@@ -179,8 +181,9 @@ export func run(int32 a, int32 lim = LIMIT + 2, Mode m = Mode.Slow, @[]uint8 tag
 import <kit/opt> as K;
 K.run(1);
 K.run(2, 7, K.Mode.Fast);
+K.bits();
 )");
-	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "1 42 1 dflt\n2 7 0 dflt\n");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "1 42 1 dflt\n2 7 0 dflt\n-2 -65536\n");
 }
 
 // A variadic parameter crosses the interface as written, also inside a

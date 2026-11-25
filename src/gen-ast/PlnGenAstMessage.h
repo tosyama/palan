@@ -20,6 +20,7 @@ enum PlnMessageCode {
 	E_UnexpectedChar,		// character
 	E_InvalidCharLiteral,		// literal text
 	E_InvalidNumberLiteral,		// literal text
+	E_HexLiteralTooLarge,		// literal text
 	E_SyscallNamedReturn,
 	E_ForElemNoMode,		// loop variable name
 	E_ExpectedCopyKeyword,	// identifier

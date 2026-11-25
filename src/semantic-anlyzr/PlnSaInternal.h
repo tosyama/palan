@@ -83,22 +83,39 @@ inline bool intLiteralFitsBits(const string& value, int bits, bool isSigned)
 	return bits == 64 || mag <= (uint64_t(1) << bits) - 1;
 }
 
+inline int intTypeBits(PrimType::Name pn)
+{
+	switch (pn) {
+		case PrimType::Name::Int8:  case PrimType::Name::Uint8:  return 8;
+		case PrimType::Name::Int16: case PrimType::Name::Uint16: return 16;
+		case PrimType::Name::Int32: case PrimType::Name::Uint32: return 32;
+		case PrimType::Name::Bool:  return 1;
+		default:                    return 64;
+	}
+}
+
+inline bool isSignedInt(PrimType::Name pn)
+{
+	return pn == PrimType::Name::Int8 || pn == PrimType::Name::Int16
+	    || pn == PrimType::Name::Int32 || pn == PrimType::Name::Int64;
+}
+
 inline bool intLiteralFits(const string& value, PrimType::Name pn)
 {
-	int bits = 64;
-	bool isSigned = true;
-	switch (pn) {
-		case PrimType::Name::Int8:   bits = 8;  break;
-		case PrimType::Name::Int16:  bits = 16; break;
-		case PrimType::Name::Int32:  bits = 32; break;
-		case PrimType::Name::Int64:  bits = 64; break;
-		case PrimType::Name::Uint8:  bits = 8;  isSigned = false; break;
-		case PrimType::Name::Uint16: bits = 16; isSigned = false; break;
-		case PrimType::Name::Uint32: bits = 32; isSigned = false; break;
-		case PrimType::Name::Bool:   bits = 1;  isSigned = false; break;
-		default:                     bits = 64; isSigned = false; break;
-	}
-	return intLiteralFitsBits(value, bits, isSigned);
+	return intLiteralFitsBits(value, intTypeBits(pn), isSignedInt(pn));
+}
+
+// A hexadecimal literal whose type is not decided yet.
+inline bool isUntypedHexLit(const json& e)
+{
+	return e.value("hex", false) && !e.contains("value-type");
+}
+
+// The number whose two's complement in `bits` bits is `value`.
+inline string signedFromBits(const string& value, int bits)
+{
+	int shift = 64 - bits;
+	return to_string((int64_t)(stoull(value) << shift) >> shift);
 }
 
 inline bool isBoolPrim(const PlnType* t) {

@@ -435,6 +435,19 @@ json PlnSemanticAnalyzer::sa_expr_addr_of(const json& expr)
 	exit(1);
 } // LCOV_EXCL_BR_LINE
 
+// A hexadecimal literal is the bits of the type it takes.
+void PlnSemanticAnalyzer::readHexLit(json& lit)
+{
+	if (!lit.value("hex", false)) return;
+	const PlnType* t = registry_.fromJson(lit["value-type"]);
+	if (!isIntegerPrim(t)) return;
+	auto pn = static_cast<const PrimType*>(t)->name;
+	string value = lit["value"];
+	int bits = intTypeBits(pn);
+	if (isSignedInt(pn) && intLiteralFitsBits(value, bits, false))
+		lit["value"] = signedFromBits(value, bits);
+}
+
 void PlnSemanticAnalyzer::checkIntLiteralRange(const json& lit)
 {
 	const PlnType* t = registry_.fromJson(lit["value-type"]);
@@ -453,6 +466,7 @@ void PlnSemanticAnalyzer::checkBitFieldLiteral(const FieldLayout& field, const j
 {
 	if (value.value("expr-type", "") != "lit-int" && value.value("expr-type", "") != "lit-uint") return;
 	string v = value["value"];
+	if (value.value("hex", false) && intLiteralFitsBits(v, field.bitWidth, false)) return;
 	if (intLiteralFitsBits(v, field.bitWidth, field.typeName.rfind("int", 0) == 0)) return;
 	cerr << locPrefix(value) << PlnSaMessage::getMessage(E_BitFieldLiteralOutOfRange,
 		v, field.name, to_string(field.bitWidth)) << endl;
@@ -514,7 +528,12 @@ json PlnSemanticAnalyzer::foldConstExpr(const json& expr)
 		optional<ConstVal> v = evalConst(expr);
 		if (!v) return expr;
 		switch (v->kind) {
-			case ConstVal::Kind::Int:  lit = {{"expr-type", "lit-int"},  {"value", to_string(v->i)}}; break; // LCOV_EXCL_BR_LINE
+			case ConstVal::Kind::Int:
+				if (v->hex) {
+					lit = {{"expr-type", "lit-int"}, {"value", to_string((uint64_t)v->i)}, {"hex", true}}; // LCOV_EXCL_BR_LINE
+					break;
+				}
+				lit = {{"expr-type", "lit-int"},  {"value", to_string(v->i)}}; break; // LCOV_EXCL_BR_LINE
 			case ConstVal::Kind::Uint: lit = {{"expr-type", "lit-uint"}, {"value", to_string(v->u)}}; break; // LCOV_EXCL_BR_LINE
 			case ConstVal::Kind::Flo: {
 				char buf[64];
@@ -657,6 +676,11 @@ optional<ConstVal> PlnSemanticAnalyzer::evalConst(const json& expr)
 		ConstVal v{et == "lit-int" ? K::Int : K::Uint};
 		const char* first = text.data();
 		const char* last = text.data() + text.size();
+		if (expr.value("hex", false)) {
+			v.i = stoll(signedFromBits(text, 64));
+			v.hex = true;
+			return v;
+		}
 		bool ok = v.kind == K::Int ? from_chars(first, last, v.i).ec == errc()
 		                           : from_chars(first, last, v.u).ec == errc();
 		if (!ok) overflow();
@@ -684,6 +708,7 @@ optional<ConstVal> PlnSemanticAnalyzer::evalConst(const json& expr)
 	if (et == "neg" || et == "bitnot") {
 		optional<ConstVal> v = evalConst(expr["operand"]);
 		if (!v) return nullopt;
+		v->hex = false;
 		if (et == "bitnot") {
 			if (v->kind == K::Flo) {
 				cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_BitwiseOpNotInteger) << endl;
@@ -717,6 +742,7 @@ optional<ConstVal> PlnSemanticAnalyzer::evalConst(const json& expr)
 		bits = et == "shl" ? bits << count : bits >> count;
 		l->i = (int64_t)bits;
 		l->u = bits;
+		l->hex = false;
 		return l;
 	}
 	if (l->kind == K::Flo || r->kind == K::Flo) {
@@ -776,6 +802,8 @@ optional<ConstVal> PlnSemanticAnalyzer::evalConst(const json& expr)
 	else if (et == "bitand") v.i = a & b;
 	else if (et == "bitor")  v.i = a | b;
 	else                     v.i = a ^ b;
+	// Bits combined with bits are bits still.
+	v.hex = isBit && l->hex && r->hex;
 	return v;
 }
 
@@ -851,8 +879,10 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 			// sees an integer literal that must be materialized as a float.
 			if (isFloatPrim(expectedType))
 				sa_expr["expr-type"] = "lit-flo";
-			else
+			else {
+				readHexLit(sa_expr);
 				checkIntLiteralRange(sa_expr);
+			}
 		}
 
 	} else if (expr_type == "lit-uint") {
@@ -1190,8 +1220,26 @@ json PlnSemanticAnalyzer::sa_expr_cmp(const json& expr)
 	if (structOperand && !nullOperand)
 		return sa_compare_call(expr, probes);
 
-	json left  = probes[0].is_null() ? sa_expression(expr["left"]) : move(probes[0]);
-	json right = probes[1].is_null() ? sa_expression(expr["right"]) : move(probes[1]);
+	// A hexadecimal literal is the other operand's bits, if it fits them, so
+	// that comparing with what was assigned to a variable is true.
+	auto operand = [&](int i, const json& other) {
+		const PlnType* type = nullptr;
+		if (isUntypedHexLit(folded[i])) {
+			const PlnType* t = registry_.fromJson(promoteOperand(other)["value-type"]);
+			if (isFloatPrim(t) || (isIntegerPrim(t)
+			    && intLiteralFitsBits(folded[i]["value"], intTypeBits(static_cast<const PrimType*>(t)->name), false)))
+				type = t;
+		}
+		return sa_expression(expr[i ? "right" : "left"], type);
+	};
+	json left, right;
+	if (isUntypedHexLit(folded[0])) {
+		right = probes[1].is_null() ? sa_expression(expr["right"]) : move(probes[1]);
+		left  = operand(0, right);
+	} else {
+		left  = probes[0].is_null() ? sa_expression(expr["left"]) : move(probes[0]);
+		right = probes[1].is_null() ? operand(1, left) : move(probes[1]);
+	}
 	// A literal here takes no type from the other operand, so a narrow one
 	// is checked against the literal directly.
 	rejectWideCharLit(left, right["value-type"]);

@@ -569,6 +569,10 @@ are, an alias not hiding them, since `for` never writes their names. What the ra
 is held until the loop ends, not only what it returned: an error, as for a call returning a
 borrow, would also reject a struct that borrows nothing.
 
+**Hexadecimal literals.** One is the bits of the type it adopts, as hexadecimal is written for a bit
+pattern and the type gives the width. A comparison types it by the other operand for the same
+reason, though it does not type a decimal one.
+
 **Character literals.** A literal is its code point. One of 128 or more adopts only an integer type
 of 32 bits or more: UTF-8 text never holds it as a byte, so `buf[i] == 'é'` on a `[]uint8` would be
 silently false. A character of several code points is an error suggesting a string literal; the

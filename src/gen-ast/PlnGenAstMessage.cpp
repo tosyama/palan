@@ -94,6 +94,8 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 		case E_InvalidNumberLiteral:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "Invalid number literal '" + arg1 + "'.";
+		case E_HexLiteralTooLarge:
+			return "Hexadecimal literal '" + arg1 + "' does not fit in 64 bits.";
 
 		case E_VariadicNotLast:
 			return "a variadic parameter ('[...]T') must be the last parameter.";

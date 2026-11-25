@@ -1,0 +1,36 @@
+cinclude <stdio.h>;
+
+func pick(int32 v) -> int32 { return v; }
+
+type F { int8 b; int32 w; };
+int8 a = 0xFF;
+int32 x = 0xFFFFFFFF;
+uint32 u = 0Xffffffff;
+int64 y = 0xFFFFFFFF;
+int64 z = 0xFFFFFFFFFFFFFFFF;
+uint64 m = 0xFFFFFFFFFFFFFFFF;
+int8 n = -0x80;
+printf("%d %d %u %ld %ld %lu %d\n", a, x, u, y, z, m, n);
+
+[2]int32 arr = [0x80000000, 0x7FFFFFFF];
+F f = {b: 0x80, w: 0xFFFFFFFE};
+printf("%d %d %d %d %d\n", arr[0], arr[1], f.b, f.w, pick(0xFFFFFFFD));
+
+if x == 0xFFFFFFFF { printf("eq\n"); }
+if 0xFF == a { printf("eq\n"); }
+if a == 0x1FF { printf("ne\n"); }
+if x == 4294967295 { printf("ne\n"); }
+flo64 d = 0xFF;
+if d == 0xFF { printf("eq\n"); }
+printf("%d %d\n", x & 0xFF000000, a & 0xFF);
+
+const M = 0xFF000000;
+int32 k = M;
+int64 l = 0xFF000000 | 0xFF;
+printf("%d %ld %u %ld %d\n", k, l, 0x10u, 0xFFFFFFFFFFFFFFFF & 0xFF, int32(0xFFFFFFFF));
+
+const HI = M | 0xFF;
+int32 q = HI & 0xFF0000FF ^ 0x1;
+int32 w = 0xFF000000 | 0xFF;
+printf("%d %d\n", q, w);
+if w == (M | 0xFF) { printf("eq\n"); }

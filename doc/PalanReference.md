@@ -1,6 +1,6 @@
 # Palan Language Reference
 
-**Version:** v0.2.7
+**Version:** v0.2.8
 
 Palan is a compiled systems programming language designed as a simpler, safer, and more enjoyable alternative to C. It targets developers who want low-level control and direct access to C libraries, without the sharp edges of C syntax. Palan code compiles to native x86-64 binaries via AT&T assembly, with no runtime overhead.
 
@@ -92,12 +92,26 @@ from a cincluded C header may start with `__` and is used as it is.
 **Integer literals:**
 - Signed: `[0-9]+` (e.g., `42`, `1000`)
 - Unsigned: `[0-9]+u` (e.g., `42u`)
+- Hexadecimal: `0x` or `0X`, then `[0-9a-fA-F]+`, up to 64 bits (e.g., `0x1F`); with `u`, unsigned
 
 A literal must fit the type it adopts from its context (the declared variable, parameter, or the
 other operand); otherwise it is a compile error — `int8 x = 300;` and `uint8 y = -1;` are both
 rejected. A minus sign directly on an integer literal is part of the value, so `int8 x = -128;`
 is accepted. A constant expression (see [Constant Declarations](#constant-declarations)) is
 folded first, so its result is what must fit: `int8 x = 100 + 100;` is rejected.
+
+A hexadecimal literal without `u` is the bits of the integer type it adopts, so it must fit that
+type's width: `int32 x = 0xFFFFFFFF;` and `int8 y = 0xFF;` are -1, `int64 z = 0xFFFFFFFF;` is
+4294967295, and `int8 w = 0x1FF;` is rejected.
+
+- Compared with an integer whose width it fits, it adopts that integer's type, so
+  `x == 0xFFFFFFFF` is true for the `x` above.
+- Adopting the other operand's type, a mask does not widen: for an `int8 b` of -1, `b & 0xFF` is
+  still -1. Write `uint8(b)` for the value 255.
+- With a minus sign it is a number: `-0xFF` is -255.
+- A const names the literal as it is (`const M = 0xFF000000; int32 x = M;`), but a constant
+  expression is a number computed in `int64`: `int32 x = 0xFF000000 + 0xFF;` is rejected. Only
+  `|`, `&` and `^` of hexadecimal operands give bits again: `int32 x = 0xFF000000 | 0xFF;`.
 
 **Character literals:** `'a'` is an integer literal whose value is the character's Unicode code
 point (`'a'` is 97, `'é'` is 233, `'😀'` is 128512), written as is or as `\u{X}` (`'\u{20AC}'` is

@@ -1,0 +1,3 @@
+int8 a = 0x1F;
+int8 b = 0X1fu;
+int8 c = -0x80;

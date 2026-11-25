@@ -373,6 +373,15 @@ TEST(build_mgr, int_literal_range)
 	ASSERT_EQ(output, "18446744073709551600 -128 127\n");
 }
 
+TEST(build_mgr, hex_literal)
+{
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/469_hex_literal.pa");
+	ASSERT_EQ(output, "-1 -1 4294967295 4294967295 -1 18446744073709551615 -128\n"
+		"-2147483648 2147483647 -128 -2 -3\neq\neq\neq\n-16777216 -1\n"
+		"-16777216 4278190335 16 255 -1\n-16776962 -16776961\neq\n");
+}
+
 TEST(build_mgr, int64_imm_range)
 {
 	// mov to memory only encodes a sign-extended imm32, so wider values

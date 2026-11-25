@@ -7,6 +7,7 @@
 /// @copyright 2024-2026 YAMAGUCHI Toshinobu
 
 #include <string>
+#include <charconv>
 #include <fstream>
 #include "PlnParser.h"
 #include "PlnLexer.h"
@@ -24,6 +25,7 @@ using namespace palan;
 
 enum {
 	INT =	PlnParser::token::INT,
+	HEX =	PlnParser::token::HEX,
 	CHAR_LIT =	PlnParser::token::CHAR_LIT,
 	UINT =	PlnParser::token::UINT,
 	ID =	PlnParser::token::ID,
@@ -95,6 +97,9 @@ PlnLexer::PlnLexer(const string& input_file)
 %option noyywrap
 
 DIGIT	[0-9]+
+HEXNUM	0[xX][0-9a-fA-F]+
+UHEXNUM	0[xX][0-9a-fA-F]+"u"
+BADHEX	0[xX][0-9a-zA-Z_]*\.[0-9][0-9a-zA-Z_]*
 UDIGIT	[0-9]+"u"
 FLOAT	[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+
 BADNUM	[0-9]+(\.[0-9]+)?[a-zA-Z_][0-9a-zA-Z_]*
@@ -124,7 +129,17 @@ COMMENT1	\/\/[^\n]*\n
 		lval.build<string>() = yytext;
 		return INT;
 	}
-<*>{BADNUM} {
+<*>{HEXNUM}|{UHEXNUM} {
+		bool u = yytext[yyleng-1] == 'u';
+		uint64_t v;
+		if (from_chars(yytext+2, yytext+yyleng-u, v, 16).ec != errc())
+			throw runtime_error(PlnGenAstMessage::locatedError(inputFile,
+				loc.begin.line, loc.begin.column,
+				PlnGenAstMessage::getMessage(E_HexLiteralTooLarge, yytext)));
+		lval.build<string>() = to_string(v);
+		return u ? UINT : HEX;
+	}
+<*>{BADNUM}|{BADHEX} {
 		throw runtime_error(PlnGenAstMessage::locatedError(inputFile,
 			loc.begin.line, loc.begin.column,
 			PlnGenAstMessage::getMessage(E_InvalidNumberLiteral, yytext)));

@@ -1079,6 +1079,22 @@ TEST(gen_ast, char_literal) {
 	ASSERT_EQ(stmts[0]["vars"][0]["init"]["char"], true);
 }
 
+TEST(gen_ast, hex_literal) {
+	cleanTestEnv();
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/171_hex_literal.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+
+	auto init = [&](int i) { return jout["ast"]["statements"][i]["vars"][0]["init"]; };
+	EXPECT_EQ(init(0)["expr-type"], "lit-int");
+	EXPECT_EQ(init(0)["value"], "31");
+	EXPECT_EQ(init(0)["hex"], true);
+	EXPECT_EQ(init(1)["expr-type"], "lit-uint");
+	EXPECT_EQ(init(1)["value"], "31");
+	EXPECT_EQ(init(2)["value"], "-128");
+	EXPECT_FALSE(init(2).contains("hex"));
+}
+
 // A character literal is the code point it holds, written as is or as '\u{X}';
 // in a string literal '\u{X}' writes the code point's UTF-8 bytes.
 TEST(gen_ast, code_point_literal) {

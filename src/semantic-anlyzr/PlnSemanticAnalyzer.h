@@ -165,6 +165,7 @@ struct ConstVal {
 	int64_t  i = 0;
 	uint64_t u = 0;
 	long double f = 0;  // the widest float, flo80, so a flo80 constant keeps its precision
+	bool hex = false;  // an Int that is a bit pattern, as a hexadecimal literal is
 };
 
 class PlnSemanticAnalyzer {
@@ -531,6 +532,7 @@ class PlnSemanticAnalyzer {
 	json sa_expr_append(const json& expr);
 	json sa_expr_cmp(const json& expr);
 	json sa_compare_call(const json& expr, json probes[2]);
+	void readHexLit(json& lit);
 	void checkIntLiteralRange(const json& lit);
 	void checkBitFieldLiteral(const FieldLayout& field, const json& value);
 	void rejectWideCharLit(const json& lit, const json& type);

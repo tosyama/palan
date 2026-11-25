@@ -412,6 +412,10 @@ TEST(gen_ast_error, invalid_number_literal) {
 		{"error_015_number_literal_int_suffix.pa", ":2:12: error: Invalid number literal '100px'."},
 		{"error_016_number_literal_float_suffix.pa", ":2:12: error: Invalid number literal '1.5f'."},
 		{"error_017_number_literal_exponent_suffix.pa", ":2:12: error: Invalid number literal '1e10x'."},
+		{"error_036_hex_no_digits.pa", ":2:12: error: Invalid number literal '0x'."},
+		{"error_037_hex_bad_digit.pa", ":2:12: error: Invalid number literal '0xG'."},
+		{"error_038_hex_fraction.pa", ":2:12: error: Invalid number literal '0x1.5'."},
+		{"error_039_hex_too_large.pa", ":2:12: error: Hexadecimal literal '0x10000000000000000' does not fit in 64 bits."},
 	};
 	for (auto& c : cases) {
 		string out = execTestCommand(string("palan-gen-ast ../test/testdata/gen-ast/") + c[0]);

@@ -115,6 +115,12 @@ string Writer::expr(const json& e) const
 			snprintf(esc, sizeof(esc), "'\\u{%lX}'", stol(e["value"].get<string>()));
 			return string(esc);
 		}
+		// Written in decimal, it would no longer be read as bits.
+		if (e.value("hex", false)) {
+			char hex[24];
+			snprintf(hex, sizeof(hex), "0x%llX", stoull(e["value"].get<string>()));
+			return string(hex);
+		}
 		return e["value"];
 	}
 	if (kind == "lit-uint") return e["value"].get<string>() + "u";

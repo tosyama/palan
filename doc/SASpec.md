@@ -1,7 +1,7 @@
 Palan Semantic Analyzer JSON Specification
 ==========================================
 
-ver. 0.2.7
+ver. 0.2.8
 
 Output of palan-sa. Extends the AST JSON format (see ASTSpec.md) with resolved
 type information and pre-collected literal tables.
@@ -964,6 +964,11 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     is rejected with `E_IntLiteralOutOfRange`. A literal operand of a binary operator is typed only
     once -- from the other operand's type when that has one, else from the expected type -- so the
     check never runs against a provisional type. For `bool` the range is 0..1.
+  - Hexadecimal literal (`hex`): one taking a signed integer type and fitting its width is emitted
+    with the negative number those bits are, when its top bit is set. In a comparison it takes the
+    other operand's type if that is a float, or an integer it fits the width of; a folded constant
+    expression reads it in int64, and its result has `hex` only for `bitand`, `bitor` and `bitxor`
+    of two operands that have it. `hex` stays on the node in sa.json; codegen ignores it.
   - Character literal of 128 or more (`char`): an integer type under 32 bits (`int8` `int16`
     `uint8` `uint16` `bool`) is rejected with `E_WideCharLitNarrowType`, both where the literal
     takes the type and where it is compared with an operand of that type (a comparison types no

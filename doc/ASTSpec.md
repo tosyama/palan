@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Json Specification
 ============================================
 
-ver. 0.2.7
+ver. 0.2.8
 
 \* - Required
 
@@ -612,8 +612,11 @@ Expression model
     `true`/`false` are emitted as a `bool`-typed `lit-int`
     - char - `true` for a character literal (omitted otherwise): one of 128 or more takes only
       an integer type of 32 bits or more, and one with no type to take is an `int32`
+    - hex - `true` for a hexadecimal literal without `u` or a minus sign (HEX token; omitted
+      otherwise): it is read as the bits of the integer type it takes
     - value\* - Decimal string, optionally with a leading `-` (e.g. "10", "-128"); a macro
-      substitute's value may exceed int64 when its `value-type` is `uint64`
+      substitute's value may exceed int64 when its `value-type` is `uint64`, and one with `hex` may
+      be up to 64 bits
     - value-type - Variable type; present only for `true`/`false` (value `"1"`/`"0"`, value-type
       `bool`) or when this node is gen-ast's in-place substitute
       for a reference to a cinclude'd macro constant that has a `value-type` (see Constant

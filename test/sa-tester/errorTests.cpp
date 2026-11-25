@@ -494,6 +494,11 @@ TEST(sa_error, int_literal_out_of_range)
 	const pair<string, string> cases[] = {
 		{"error_200_int_lit_range_int8.pa", ":1:10: error: Integer literal '300' is out of range for type 'int8'."},
 		{"error_702_call_arg_lit_range.pa", ":2:5: error: Integer literal '300' is out of range for type 'int8'."},
+		{"error_1359_hex_range.pa", ":1:10: error: Integer literal '511' is out of range for type 'int8'."},
+		{"error_1360_hex_neg_range.pa", "'-255' is out of range for type 'int8'"},
+		{"error_1362_hex_const_mixed.pa", "'4278190335' is out of range for type 'int32'"},
+		{"error_1363_hex_const_shift.pa", "'4278190080' is out of range for type 'int32'"},
+		{"error_1361_hex_const_expr.pa", "'4278190335' is out of range for type 'int32'"},
 		{"error_201_int_lit_range_uint32.pa", "'5000000000' is out of range for type 'uint32'"},
 		{"error_202_int_lit_range_int64.pa", "'99999999999999999999' is out of range for type 'int64'"},
 		{"error_203_int_lit_range_uint64.pa", "'18446744073709551616' is out of range for type 'uint64'"},
