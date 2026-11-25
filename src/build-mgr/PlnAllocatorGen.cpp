@@ -347,6 +347,21 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		return "        if src[i] == NULL { __pln_clear_" + e.key + "(" + slots + ", i" + ma + "); }\n"
 		       "        else {\n" + fill + "        }\n";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+	// As keepingNull, for a struct's field.
+	auto fieldKeepingNull = [&](const ElemOps& e, const string& slot, const vector<string>& names, bool assign) {
+		string dst = "dst." + slot, src = "src." + slot;
+		string set = elemSet(e, dst, src, names);
+		string into = assign ? elemAssign(e, dst, src, names) : set;
+		if (!slotMayBeNull(e)) return "    " + into + "\n";
+		string build = "            if " + dst + " == NULL {\n" + elemBuild(e, dst, "                ", names);
+		return "    if " + src + " == NULL {\n"
+		       "        " + elemDrop(e, dst, "        ", names) + "\n"
+		       "        NULL -> " + dst + ";\n"
+		       "    } else {\n" + build
+		     + (into == set ? "            }\n            " + set + "\n"
+		                    : "                " + set + "\n            } else { " + into + " }\n")
+		     + "    }\n";
+	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 	set<string> elemHelpersDone;
 	function<void(const ElemOps&)> emitElemHelpers = [&](const ElemOps& e) {
 		if (!e.built || !elemHelpersDone.insert(e.key).second) return;
@@ -588,7 +603,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		for (auto& [pad, size] : struct_pads[name])
 			out << "    memcpy(dst." << pad << ", src." << pad << ", " << size << ");\n";
 		for (auto& f : owned)
-			out << "    " << elemSet(f.e, "dst." + f.slot, "src." + f.slot, f.lens) << "\n";
+			out << fieldKeepingNull(f.e, f.slot, f.lens, false);
 		out << forRuns(shape, [](const string& sub, const string& slot) {
 			return "__pln_copy_" + sub + "(@!dst." + slot + ", @src." + slot + ");";
 		});
@@ -599,7 +614,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			for (auto& [pad, size] : struct_pads[name])
 				out << "    memcpy(dst." << pad << ", src." << pad << ", " << size << ");\n";
 			for (auto& f : owned)
-				out << "    " << elemAssign(f.e, "dst." + f.slot, "src." + f.slot, f.lens) << "\n";
+				out << fieldKeepingNull(f.e, f.slot, f.lens, true);
 			out << forRuns(shape, [&](const string& sub, const string& slot) {
 				return structAssign(sub, "@!dst." + slot, "@src." + slot);
 			});

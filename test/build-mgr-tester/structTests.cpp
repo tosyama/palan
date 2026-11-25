@@ -1440,6 +1440,11 @@ TEST(build_mgr, copy_null_elem_mtrace) {
 	expectMtraceRun("432_copy_null_elem_mtrace", "1 2 -1\n1 1\n1\n1 5\n1\n7\n1 2 1\n3\n", 69);
 }
 
+// So it is with a struct's fields.
+TEST(build_mgr, copy_null_field_mtrace) {
+	expectMtraceRun("468_copy_null_field_mtrace", "0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n1 1 1 1 1 1 1 1\n1 1 1 1 1 1 1 1\n0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n1\n101\n1\n", 148);
+}
+
 // '...a' passes a copy the callee may write, '...a>>' the array itself, whose
 // block alone the caller frees after the call.
 TEST(build_mgr, spread_arg_mtrace) {

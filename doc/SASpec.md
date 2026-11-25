@@ -215,6 +215,8 @@ Root
     `__pln_copy_T`, but writing the parts of such types through their `->`. Such a struct is never
     reduced to a bytes entry.
 
+  `__pln_copy_T` and `__pln_assign_T` treat an owned field that is NULL as the arr entry's do an element.
+
   Non-owned fields are deliberately not described: build-mgr re-declares the struct in the
   generated allocator module with only the owned fields at their offsets and opaque padding
   elsewhere, because the full layout cannot always be re-expressed as Palan source (C unions,

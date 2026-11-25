@@ -1,0 +1,30 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type L { int32 x = 0; };
+type M { L l; };
+type J { [+]int32 a; [+]L v; [""]int32 d; L s; M m; [2]int32 r; [2]L rl; [+]$L vl; };
+type K { int32 n; };
+func -> (@K a, @!K b) { a.n + 100 -> b.n; }
+type W { K k; [+]K ks; };
+func fill(@!J j) { j.a.push(1); L q; 5 -> q.x; j.v.push(q); 2 -> j.d["x"]; 3 -> j.s.x; 4 -> j.m.l.x; 6 -> j.r[1]; 7 -> j.rl[1].x; }
+func show(@J j) {
+	printf("%d %d %d %d %d %d %d %d\n", j.a == NULL, j.v == NULL, j.d == NULL, j.s == NULL, j.m == NULL, j.r == NULL, j.rl == NULL, j.vl == NULL);
+	if j.a != NULL { printf("  %d %d %d %d %d %d %d\n", j.a[0], j.v[0].x, j.d["x"], j.s.x, j.m.l.x, j.r[1], j.rl[1].x); }
+}
+func empty(@!J j) {
+	[+]int32 a; [+]L v; [""]int32 d; L s; M m; [2]int32 r; [2]L rl; [+]$L vl;
+	j.a ->> a; j.v ->> v; j.d ->> d; j.s ->> s; j.m ->> m; j.r ->> r; j.rl ->> rl; j.vl ->> vl;
+}
+func run() {
+	J t; fill(@!t); J full = t; show(@full);
+	empty(@!t); J c = t; show(@c);        // NULL source, new value
+	J u; fill(@!u); c -> u; show(@u);     // NULL source into a held value
+	full -> c; show(@c);                  // into NULL fields
+	c -> c; show(@c);
+	[2]J arr; full -> arr[0]; c -> arr[1]; show(@arr[1]);
+	W w; W x; 1 -> x.k.n; K o; w.k ->> o; x -> w; printf("%d\n", w.k.n); x -> w; printf("%d\n", w.k.n);
+	K o2; x.k ->> o2; x -> w; printf("%d\n", w.k == NULL);
+}
+mtrace();
+run();
+muntrace();

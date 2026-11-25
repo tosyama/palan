@@ -1618,8 +1618,8 @@ minos[0][3] -> mino[0];      // copy one struct element
   [up to the shorter one](#sizes-known-only-at-run-time).
 - What the destination owns is copied too: owned struct fields and arrays, and the structs of a
   `[n]T` array, get copies of the source's. A `@T`/`@!T` pointer is copied as a pointer.
-- An element taken out with `->>` is NULL, and stays NULL in the copy. An element copied into
-  a slot that is NULL is made there first, as a new value.
+- An element or a field taken out with `->>` is NULL, and stays NULL in the copy of what holds it. One
+  copied into a slot that is NULL with what holds it is made there first, as a new value.
 - A struct returned by a function is copied the same way, and then freed. A `[]T` return has
   no size known at compile time, so it cannot be copied into an array.
 
