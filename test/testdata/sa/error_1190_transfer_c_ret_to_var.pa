@@ -1,0 +1,3 @@
+cinclude <stdio.h>;
+FILE x;
+fopen("/dev/null", "r") ->> x;

@@ -73,8 +73,9 @@ string Writer::type(const json& t) const
 		bool isVoid = ret["type-kind"] == "prim" && ret["type-name"] == "void";
 		return isVoid ? s : s + " -> " + type(ret);
 	}
+	if (kind == "dict") return string("[\"\"]") + (t.value("embedded", false) ? "$" : "") + type(t["base-type"]);
 	// Only "arr" is left: the other kinds come from C headers, whose declarations are not written.
-	string mark = t["specifier"] == "fixed" ? "#" : t["specifier"] == "variable" ? "+"
+	string mark = t["specifier"] == "variable" ? "+"
 		: t["specifier"] == "variadic" ? "..." : "";
 	string size = t["size-expr"].is_null() ? "" : expr(t["size-expr"]);
 	return "[" + mark + size + "]" + (t.value("embedded", false) ? "$" : "") + type(t["base-type"]);

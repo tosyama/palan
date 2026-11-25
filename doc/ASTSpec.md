@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Json Specification
 ============================================
 
-ver. 0.2.6
+ver. 0.2.7
 
 \* - Required
 
@@ -271,8 +271,8 @@ Used in Palan function `parameters` and `rets`.
 - init - Expression node for a parameter's default value, or a named return's initial value
   (omitted when not written)
 
-A parameter or return the grammar parses but the compiler does not implement (`T >> name`, an
-untyped `name = expr`, a type with no declarable form such as `[#]T`) stays in the list as
+A parameter or return the grammar parses but the compiler does not implement (an untyped
+`name = expr`, a type with no declarable form) stays in the list as
 `{"not-impl": true, "loc": ...}`, plus `untyped-var` (the name) for `name = expr`; SA rejects
 the function at its definition. An unimplemented unnamed return type is a `ret-type` of the
 same shape.
@@ -300,7 +300,7 @@ Same structure as Palan Parameter.
 
 Variable type
 -------------
-- type-kind\* - Type kind string: "prim" "pntr" "arr" "embed" "strct" "union" "enum" "func" "user" "keep"
+- type-kind\* - Type kind string: "prim" "pntr" "arr" "embed" "strct" "union" "enum" "func" "user" "keep" "dict"
 - const - Boolean, true if const qualified (omitted when false). c2ast/cinclude-only: a C
   pointer's own qualifier (`T * const`) is emitted on the `pntr` node itself; the pointee's
   qualifier (`const T *`) is emitted on `pntr`'s `base-type`. SA folds pointee `const` into
@@ -331,7 +331,6 @@ Variable type
     - base-type\* - Base variable type
     - specifier\* - Array kind string:
       - "raw"      — `[expr]type` or `[]type`    raw heap array (C-array equivalent, no count stored)
-      - "fixed"    — `[#expr]type` or `[#]type`  heap array with element count in memory header
       - "variable" — `[+expr]type` or `[+]type`  variable-size array (size-expr = initial capacity)
       - "variadic" — `[...]type`  a variadic parameter, only as the outermost type of the last
         parameter of a function or a function pointer type (size-expr is always null); gen-ast
@@ -340,7 +339,6 @@ Variable type
       - non-null: size/capacity determined by this expression
       - null semantics differ by specifier:
         - "raw"      (`[]type`)  — initialization required; element count determined by SA from initializer
-        - "fixed"    (`[#]type`) — initialization required; element count determined by SA from initializer
         - "variable" (`[+]type`) — no initial capacity: the header is allocated, its data is not
           (no initialization required)
     - embedded - Boolean, true when the array's storage is laid out inline/contiguous rather than
@@ -375,8 +373,8 @@ Variable type
       declarable variable type in a variable declaration
     Note: In a `struct-def` field list, SA resolves the sub-struct layout and folds the embedded
     fields' offsets into the parent struct (no separate pointer). At the top of a local `var-decl`
-    var-type (`$P p;`, `$[4]int32 a;`), it places the variable's storage in the stack frame. A
-    parameter or named return with it is emitted as a not-impl entry (`{"not-impl": true}`).
+    var-type (`$P p;`, `$[4]int32 a;`), it places the variable's storage in the stack frame. At
+    the top of a parameter's or return's type it is a gen-ast error.
   5. strct - Struct type reference (by name), from a C struct-typed parameter/return in a
      `cinclude`d function signature
     - type-name - Struct name string; omitted only for a reference to a genuinely untagged
@@ -423,6 +421,12 @@ Variable type
   10. keep - `_` as a function type's parameter or return type: the type a cast's source has at
       that place (`free as @func(Q)`, `f as @func(_, P) -> _`). SA accepts it only in a cast's
       `target-type`. No other fields.
+  11. dict - Dictionary type (`[""]T`), whose keys are C strings
+    - base-type\* - The value type
+    - embedded - Boolean, true for `[""]$T`, whose values are laid out in place (omitted when
+      false), as `arr`'s `embedded` for `[+]$T`
+    Note: `[""]` is read where `[expr]` is, so a string literal there gives this type; one that
+    is not empty is a gen-ast error.
 
 Note: C `restrict` qualifier is not represented in the AST (optimization hint only).
 
@@ -540,8 +544,9 @@ Statement model
   - In a chained assignment `v -> t1 -> t2`, the `value` of the `t2` assign / arr-assign /
     field-assign is the whole `v -> t1` statement node, whose target SA reads back. An
     assignment feeding a chained call (`x -> v -> f()`) is likewise the `chain-call`'s `value`.
-    Elsewhere in an expression such a node is rejected by SA. A chain with a tapple-assign in
-    it is a single not-impl statement (a not-impl expression when a call follows).
+    Elsewhere in an expression such a node is rejected by SA. gen-ast rejects a tapple-assign
+    or tapple-decl whose value is not a call, a target that is not one of the three shapes, and
+    a chain continuing after a tapple-assign.
   14. block - standalone block statement (`{ ... }`)
     - functions\* - Palan function definition list local to this block (may be empty array)
     - body\* - Statement model list (does not contain func-def entries)
@@ -566,8 +571,9 @@ Statement model
     - body\* - Statement model list (raw array, no block wrapper)
   18. break - exit the innermost while or for loop (no additional fields)
   19. continue - skip to next iteration of innermost while or for loop (no additional fields)
-  20. not-impl - a statement the grammar parses but the compiler does not implement (e.g.
-      `construct`, `interface`, `x++`, a type-omitted declaration). Rejected by SA.
+  20. not-impl - a statement the grammar parses but the compiler does not implement (a
+      type-omitted declaration, reserved for type inference, or a declaration of a type with no
+      declarable form). Rejected by SA.
     - untyped-var - Name of the first type-omitted variable; present only for a `name = expr;`
       declaration (reserved for type inference; an assignment is `expr -> name`)
   21. enum-def - enum type definition (`type Name enum { X, Y = expr, ... }`; consumed by SA, not
@@ -688,7 +694,7 @@ Expression model
   21. addr-of - Address-of a local variable, a struct field reached from one, or an array
       element reached from one (`@` read-only, `@!`/`AT_EXCL` mutable). The operand grammar is
       `store_loc` — the same vocabulary the right side of `->` accepts (a bare identifier, a
-      `.`-chain of field accesses, a `[expr]` index, a parenthesized tuple, or a call `f(...)` /
+      `.`-chain of field accesses, a `[expr]` index, or a call `f(...)` /
       `x.f(...)` whose object is itself one of these, or a parenthesized expression) — so `@s.x`,
       `@!s.in.v`, and `@arr[i]` all parse — or an array literal or `{name: value}` literal
       (`@[1, 2]`, `@![1, 2][3, 4]`, `@{x: 1}`); SA decides in sa.json whether the target is
@@ -699,14 +705,13 @@ Expression model
       chains produce nested `field-access` objects), `arr-index` for a `[expr]`-indexed target,
       `call` for a call `f(...)` (`@f()`), `member-call` for a method-form or module-qualified
       call `x.f(...)` (`@v.f()`, `@M.f()`, `@f().g()`), the inner expression for a parenthesized
-      one (`@(x)`), or `not-impl` for a tuple grouping or a type-name cast `@int32(x)`. A call or
+      one (`@(x)`). gen-ast rejects a type-name cast there (`@int32(x)`, `x -> int32()`). A call or
       a parenthesized expression may also be the base of the chain (`@f().x`, `@(p as @!P).x`).
     - mutable\* - `true` for `@!`, `false` for `@`
   22. not-impl - An expression the grammar parses but the compiler does not implement (e.g. a
-      tuple `(a, b)` used as a value, `sizeof` of a `[#n]` type, a call argument `x>>`), or a `store_loc` shape that
-      carries no addressable location (a parenthesized tuple, or a type-name cast `int32(x)`, reached via
-      `@`/`@!` or as a chain root). Carries no
-      fields beyond `expr-type` and `loc`; SA rejects any expression of this shape.
+      type-name cast with several arguments `int32(a, b)`, `sizeof` of a `[+]` type, a value
+      stored into a parenthesized expression `x -> (a)`). Carries no fields beyond `expr-type`
+      and `loc`; SA rejects any expression of this shape.
   23. bitand - Binary bitwise AND (`a & b`; integer operands only)
     - left\*  - Left operand expression model
     - right\* - Right operand expression model
@@ -728,13 +733,18 @@ Expression model
     - items\* - Element expression model list. A 2D literal is an `arr-lit` of row `arr-lit`s;
       the concatenated form `[a,b][c,d]` is normalized to the same shape as the nested form
       `[[a,b],[c,d]]` (only `loc` differs)
-  30. dict-lit - Named-value literal (`{x: a, y: b}`); a trailing comma is allowed
-    - items\* - List of named values in source order
-      - name\*  - Name string
+  30. dict-lit - Braced literal (`{x: a, "k": b}`), for a struct or a dictionary; a trailing
+      comma is allowed. A name is a struct's field or a dictionary key's string constant, which
+      palan-sa tells apart by the type the literal is given to. `{}` has no items; it is parsed
+      only where a value goes (an initializer, an argument, a return value, an item of a literal,
+      the operand of `@`/`@!`), since at the start of a statement it is an empty block
+    - items\* - List of items in source order, each with one of `name` and `key`
+      - name  - Name string
+      - key   - The key written as a string: a `lit-str` expression model
       - value\* - Value expression model
       - loc\*   - Location Array of `name: value`
-  31. sizeof - Byte size of a type (`sizeof(T)`). A type with a `[#n]`/`[+n]` level or a
-      template argument is emitted as `not-impl` instead
+  31. sizeof - Byte size of a type (`sizeof(T)`). A type with a `[+]` level is emitted as
+      `not-impl` instead
     - type\* - Type model
   32. chain-call - A chained call `value -> f(args)` (`f(value, args)`), `value -> L.f(args)`, or
       a method-form call `value -> s.f(args)` (`f(@!s, value, args)`);
@@ -749,8 +759,7 @@ Expression model
     - value\* - Expression model whose owned value is given away
     - op - Operator string for diagnostics: "->>" when it comes from `value ->> f(args)`;
       omitted for `>>`
-  34. call-ptr - A call through a parenthesized expression, `(callee)(args)`. A parenthesized
-      list of several expressions called this way is `not-impl`
+  34. call-ptr - A call through a parenthesized expression, `(callee)(args)`
     - callee\* - Expression model of a function pointer
     - args\* - Argument expression list
   35. append - `a << b`, a call of the operator function `<<` (precedence of the shifts);

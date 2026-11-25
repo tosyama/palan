@@ -1,0 +1,2 @@
+cinclude "c_arr_ptr_field.h";
+func f(@CA c) -> int32 { return c.x + c.rows[0][1]; }

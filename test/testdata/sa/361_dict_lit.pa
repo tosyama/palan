@@ -1,0 +1,5 @@
+const K = "k";
+func f() -> int32 {
+	[""]int32 d = {"a": 1, K: 2};
+	return d[K];
+}

@@ -3,11 +3,11 @@ int32 n = 3;
 int64 big = -1;
 uint32 mode = 8;
 
-m & n;
-n & m;
-big & mode;
-mode & big;
-n < m;
+uint32 r1 = m & n;
+uint32 r2 = n & m;
+int64 r3 = big & mode;
+int64 r4 = mode & big;
+bool r5 = n < m;
 
 func take_u32(uint32 x) -> uint32 {
     return x;

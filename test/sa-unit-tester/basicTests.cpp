@@ -435,8 +435,8 @@ TEST(sysv_struct, one_eightbyte_integer) {
     StructDef def;
     def.totalSize = 8;
     def.fields = {
-        {"quot", "prim", "int32", false, 0, 4},
-        {"rem",  "prim", "int32", false, 4, 4},
+        {"quot", "prim", "int32", 0, 4},
+        {"rem",  "prim", "int32", 4, 4},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -450,8 +450,8 @@ TEST(sysv_struct, two_eightbyte_integer) {
     StructDef def;
     def.totalSize = 16;
     def.fields = {
-        {"quot", "prim", "int64", false, 0, 8},
-        {"rem",  "prim", "int64", false, 8, 8},
+        {"quot", "prim", "int64", 0, 8},
+        {"rem",  "prim", "int64", 8, 8},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -464,10 +464,10 @@ TEST(sysv_struct, flo80_memory_or_x87) {
     // A flo80 alone comes back in %st(0); passed, or beside another field, it is MEMORY.
     StructDef one;
     one.totalSize = 16;
-    one.fields = { {"v", "prim", "flo80", false, 0, 16} };
+    one.fields = { {"v", "prim", "flo80", 0, 16} };
     StructDef mix;
     mix.totalSize = 32;
-    mix.fields = { {"n", "prim", "int32", false, 0, 4}, {"v", "prim", "flo80", false, 16, 16} };
+    mix.fields = { {"n", "prim", "int32", 0, 4}, {"v", "prim", "flo80", 16, 16} };
     map<string, StructDef> defs;
     auto ret = classifySysVStruct(one, defs, true);
     ASSERT_EQ(ret.size(), 1);
@@ -480,7 +480,7 @@ TEST(sysv_struct, flo80_memory_or_x87) {
 TEST(sysv_struct, one_eightbyte_sse) {
     StructDef def;
     def.totalSize = 8;
-    def.fields = { {"x", "prim", "flo64", false, 0, 8} };
+    def.fields = { {"x", "prim", "flo64", 0, 8} };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
@@ -491,8 +491,8 @@ TEST(sysv_struct, two_flo32_one_eightbyte) {
     StructDef def;
     def.totalSize = 8;
     def.fields = {
-        {"a", "prim", "flo32", false, 0, 4},
-        {"b", "prim", "flo32", false, 4, 4},
+        {"a", "prim", "flo32", 0, 4},
+        {"b", "prim", "flo32", 4, 4},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -506,8 +506,8 @@ TEST(sysv_struct, integer_wins_within_eightbyte) {
     StructDef def;
     def.totalSize = 8;
     def.fields = {
-        {"a", "prim", "flo32", false, 0, 4},
-        {"b", "prim", "int32", false, 4, 4},
+        {"a", "prim", "flo32", 0, 4},
+        {"b", "prim", "int32", 4, 4},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -519,8 +519,8 @@ TEST(sysv_struct, mixed_integer_sse) {
     StructDef def;
     def.totalSize = 16;
     def.fields = {
-        {"a", "prim", "int64", false, 0, 8},
-        {"b", "prim", "flo64", false, 8, 8},
+        {"a", "prim", "int64", 0, 8},
+        {"b", "prim", "flo64", 8, 8},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -534,9 +534,9 @@ TEST(sysv_struct, partial_tail_eightbyte) {
     StructDef def;
     def.totalSize = 12;
     def.fields = {
-        {"a", "prim", "int32", false, 0, 4},
-        {"b", "prim", "int32", false, 4, 4},
-        {"c", "prim", "int32", false, 8, 4},
+        {"a", "prim", "int32", 0, 4},
+        {"b", "prim", "int32", 4, 4},
+        {"c", "prim", "int32", 8, 4},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -550,9 +550,9 @@ TEST(sysv_struct, memory_class) {
     StructDef def;
     def.totalSize = 24;
     def.fields = {
-        {"a", "prim", "int64", false, 0,  8},
-        {"b", "prim", "int64", false, 8,  8},
-        {"c", "prim", "int64", false, 16, 8},
+        {"a", "prim", "int64", 0,  8},
+        {"b", "prim", "int64", 8,  8},
+        {"c", "prim", "int64", 16, 8},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -563,7 +563,7 @@ TEST(sysv_struct, fractional_tail_width) {
     StructDef def;
     def.totalSize = 3;
     def.fields = {
-        {.name="a", .typeKind="embed-arr", .isMutable=false, .offset=0, .size=3,
+        {.name="a", .typeKind="embed-arr", .offset=0, .size=3,
          .type={{"type-kind","pntr"},{"arr-size",3},{"base-type",{{"type-kind","prim"},{"type-name","int8"}}}}},
     };
     map<string, StructDef> defs;
@@ -578,8 +578,8 @@ TEST(sysv_struct, union_float_and_int) {
     StructDef def;
     def.totalSize = 4;
     def.fields = {
-        {"f", "prim", "flo32", false, 0, 4},
-        {"i", "prim", "int32", false, 0, 4},
+        {"f", "prim", "flo32", 0, 4},
+        {"i", "prim", "int32", 0, 4},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -591,7 +591,7 @@ TEST(sysv_struct, union_float_and_int) {
 TEST(sysv_struct, raw_ptr_field) {
     StructDef def;
     def.totalSize = 8;
-    def.fields = { {"p", "raw-ptr", "int32", false, 0, 8} };
+    def.fields = { {"p", "raw-ptr", "int32", 0, 8} };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
@@ -601,7 +601,7 @@ TEST(sysv_struct, raw_ptr_field) {
 TEST(sysv_struct, owned_field) {
     StructDef def;
     def.totalSize = 8;
-    def.fields = { {"p", "owned", "", false, 0, 8} };
+    def.fields = { {"p", "owned", "", 0, 8} };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
     ASSERT_EQ(result.size(), 1);
@@ -613,13 +613,13 @@ TEST(sysv_struct, embed_struct_recursion) {
     // Outer must recurse into `defs.at("Inner")` at the embed field's offset.
     StructDef inner;
     inner.totalSize = 8;
-    inner.fields = { {"x", "prim", "flo64", false, 0, 8} };
+    inner.fields = { {"x", "prim", "flo64", 0, 8} };
 
     StructDef outer;
     outer.totalSize = 16;
     outer.fields = {
-        {"in", "embed", "Inner", false, 0, 8},
-        {"n",  "prim",  "int64", false, 8, 8},
+        {"in", "embed", "Inner", 0, 8},
+        {"n",  "prim",  "int64", 8, 8},
     };
 
     map<string, StructDef> defs = { {"Inner", inner} };
@@ -634,7 +634,7 @@ TEST(sysv_struct, embed_arr_prim_float) {
     StructDef def;
     def.totalSize = 16;
     def.fields = {
-        {.name="v", .typeKind="embed-arr", .isMutable=false, .offset=0, .size=16,
+        {.name="v", .typeKind="embed-arr", .offset=0, .size=16,
          .type={{"type-kind","pntr"},{"arr-size",4},{"base-type",{{"type-kind","prim"},{"type-name","flo32"}}}}},
     };
     map<string, StructDef> defs;
@@ -650,14 +650,14 @@ TEST(sysv_struct, embed_arr_struct_leaf) {
     StructDef elem;
     elem.totalSize = 8;
     elem.fields = {
-        {"a", "prim", "int32", false, 0, 4},
-        {"b", "prim", "int32", false, 4, 4},
+        {"a", "prim", "int32", 0, 4},
+        {"b", "prim", "int32", 4, 4},
     };
 
     StructDef def;
     def.totalSize = 16;
     def.fields = {
-        {.name="arr", .typeKind="embed-arr", .isMutable=false, .offset=0, .size=16,
+        {.name="arr", .typeKind="embed-arr", .offset=0, .size=16,
          .type={{"type-kind","pntr"},{"arr-size",2},{"embedded",true},{"stride",8},
                 {"base-type",{{"type-kind","struct"},{"type-name","Elem"}}}}},
     };
@@ -676,9 +676,9 @@ TEST(sysv_struct, embed_arr_rows) {
     StructDef def;
     def.totalSize = 16;
     def.fields = {
-        {.name="m", .typeKind="embed-arr", .isMutable=false, .offset=0, .size=8,
+        {.name="m", .typeKind="embed-arr", .offset=0, .size=8,
          .type={{"type-kind","pntr"},{"arr-size",2},{"embedded",true},{"stride",4},{"base-type",row}}},
-        {.name="f", .typeKind="prim", .typeName="flo64", .isMutable=false, .offset=8, .size=8},
+        {.name="f", .typeKind="prim", .typeName="flo64", .offset=8, .size=8},
     };
     map<string, StructDef> defs;
     auto result = classifySysVStruct(def, defs, false);
@@ -692,7 +692,7 @@ TEST(sysv_struct, embed_arr_ptr_slots) {
     StructDef def;
     def.totalSize = 16;
     def.fields = {
-        {.name="v", .typeKind="embed-arr", .isMutable=false, .offset=0, .size=16,
+        {.name="v", .typeKind="embed-arr", .offset=0, .size=16,
          .type={{"type-kind","pntr"},{"arr-size",2},{"base-type",{{"type-kind","pntr"},{"mutable",true},
                 {"base-type",{{"type-kind","prim"},{"type-name","int32"}}}}}}},
     };

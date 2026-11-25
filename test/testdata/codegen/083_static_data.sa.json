@@ -1,0 +1,632 @@
+{
+    "alloc-shapes": [],
+    "functions": [
+        {
+            "body": [
+                {
+                    "cond": {
+                        "expr-type": "cmp",
+                        "left": {
+                            "expr-type": "id",
+                            "name": "__init_done",
+                            "value-type": {
+                                "type-kind": "prim",
+                                "type-name": "uint8"
+                            },
+                            "var-type": {
+                                "type-kind": "prim",
+                                "type-name": "uint8"
+                            }
+                        },
+                        "op": "!=",
+                        "right": {
+                            "expr-type": "lit-int",
+                            "value": "0",
+                            "value-type": {
+                                "type-kind": "prim",
+                                "type-name": "uint8"
+                            }
+                        },
+                        "value-type": {
+                            "type-kind": "prim",
+                            "type-name": "bool"
+                        }
+                    },
+                    "stmt-type": "if",
+                    "then": {
+                        "body": [
+                            {
+                                "stmt-type": "return"
+                            }
+                        ],
+                        "stmt-type": "block"
+                    }
+                },
+                {
+                    "name": "__init_done",
+                    "stmt-type": "assign",
+                    "value": {
+                        "expr-type": "lit-int",
+                        "value": "1",
+                        "value-type": {
+                            "type-kind": "prim",
+                            "type-name": "uint8"
+                        }
+                    }
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 4,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "int32"
+                                    },
+                                    "values": [
+                                        "1",
+                                        "-2",
+                                        "3",
+                                        "4",
+                                        "5",
+                                        "6",
+                                        "7",
+                                        "8",
+                                        "9",
+                                        "10",
+                                        "11",
+                                        "12",
+                                        "13",
+                                        "14",
+                                        "15",
+                                        "16",
+                                        "17"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.a.data",
+                                "size": 68,
+                                "value-type": {
+                                    "arr-size": 17,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "int32"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.a",
+                            "name": "a",
+                            "var-type": {
+                                "arr-size": 17,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "int32"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 2,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "int16"
+                                    },
+                                    "values": [
+                                        "1",
+                                        "-2"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.b.data",
+                                "size": 4,
+                                "value-type": {
+                                    "arr-size": 2,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "int16"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.b",
+                            "name": "b",
+                            "var-type": {
+                                "arr-size": 2,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "int16"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 1,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "uint8"
+                                    },
+                                    "values": [
+                                        "1",
+                                        "255"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.c.data",
+                                "size": 2,
+                                "value-type": {
+                                    "arr-size": 2,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "uint8"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.c",
+                            "name": "c",
+                            "var-type": {
+                                "arr-size": 2,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "uint8"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 8,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "uint64"
+                                    },
+                                    "values": [
+                                        "18446744073709551615"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.d.data",
+                                "size": 8,
+                                "value-type": {
+                                    "arr-size": 1,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "uint64"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.d",
+                            "name": "d",
+                            "var-type": {
+                                "arr-size": 1,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "uint64"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 4,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "flo32"
+                                    },
+                                    "values": [
+                                        "0.25",
+                                        "-3"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.e.data",
+                                "size": 8,
+                                "value-type": {
+                                    "arr-size": 2,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "flo32"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.e",
+                            "name": "e",
+                            "var-type": {
+                                "arr-size": 2,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "flo32"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 8,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "flo64"
+                                    },
+                                    "values": [
+                                        "1.5"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.f.data",
+                                "size": 8,
+                                "value-type": {
+                                    "arr-size": 1,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "flo64"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.f",
+                            "name": "f",
+                            "var-type": {
+                                "arr-size": 1,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "flo64"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 16,
+                                "data": {
+                                    "type": {
+                                        "type-kind": "prim",
+                                        "type-name": "flo80"
+                                    },
+                                    "values": [
+                                        "1.25",
+                                        "2"
+                                    ]
+                                },
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.g.data",
+                                "size": 32,
+                                "value-type": {
+                                    "arr-size": 2,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "flo80"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.g",
+                            "name": "g",
+                            "var-type": {
+                                "arr-size": 2,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "flo80"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "stmt-type": "var-decl",
+                    "vars": [
+                        {
+                            "init": {
+                                "align": 4,
+                                "expr-type": "static-alloc",
+                                "label": "static_5fdata.z.data",
+                                "size": 8,
+                                "value-type": {
+                                    "arr-size": 2,
+                                    "base-type": {
+                                        "type-kind": "prim",
+                                        "type-name": "int32"
+                                    },
+                                    "type-kind": "pntr"
+                                }
+                            },
+                            "label": "static_5fdata.z",
+                            "name": "z",
+                            "var-type": {
+                                "arr-size": 2,
+                                "base-type": {
+                                    "type-kind": "prim",
+                                    "type-name": "int32"
+                                },
+                                "type-kind": "pntr"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "export": true,
+            "func-type": "palan",
+            "globals": [
+                {
+                    "label": "static_5fdata..init.done",
+                    "name": "__init_done",
+                    "var-type": {
+                        "type-kind": "prim",
+                        "type-name": "uint8"
+                    }
+                }
+            ],
+            "name": "static_5fdata..init",
+            "parameters": []
+        }
+    ],
+    "globals": [
+        {
+            "label": "static_5fdata.a",
+            "var-type": {
+                "arr-size": 17,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "int32"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.b",
+            "var-type": {
+                "arr-size": 2,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "int16"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.c",
+            "var-type": {
+                "arr-size": 2,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "uint8"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.d",
+            "var-type": {
+                "arr-size": 1,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "uint64"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.e",
+            "var-type": {
+                "arr-size": 2,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "flo32"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.f",
+            "var-type": {
+                "arr-size": 1,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "flo64"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.g",
+            "var-type": {
+                "arr-size": 2,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "flo80"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata.z",
+            "var-type": {
+                "arr-size": 2,
+                "base-type": {
+                    "type-kind": "prim",
+                    "type-name": "int32"
+                },
+                "type-kind": "pntr"
+            }
+        },
+        {
+            "label": "static_5fdata..init.done",
+            "var-type": {
+                "type-kind": "prim",
+                "type-name": "uint8"
+            }
+        }
+    ],
+    "init": "static_5fdata..init",
+    "libs": [],
+    "main": {
+        "globals": [
+            {
+                "label": "static_5fdata.a",
+                "name": "a",
+                "var-type": {
+                    "arr-size": 17,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "int32"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.b",
+                "name": "b",
+                "var-type": {
+                    "arr-size": 2,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "int16"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.c",
+                "name": "c",
+                "var-type": {
+                    "arr-size": 2,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "uint8"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.d",
+                "name": "d",
+                "var-type": {
+                    "arr-size": 1,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "uint64"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.e",
+                "name": "e",
+                "var-type": {
+                    "arr-size": 2,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "flo32"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.f",
+                "name": "f",
+                "var-type": {
+                    "arr-size": 1,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "flo64"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.g",
+                "name": "g",
+                "var-type": {
+                    "arr-size": 2,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "flo80"
+                    },
+                    "type-kind": "pntr"
+                }
+            },
+            {
+                "label": "static_5fdata.z",
+                "name": "z",
+                "var-type": {
+                    "arr-size": 2,
+                    "base-type": {
+                        "type-kind": "prim",
+                        "type-name": "int32"
+                    },
+                    "type-kind": "pntr"
+                }
+            }
+        ],
+        "name": "static_5fdata..main",
+        "parameters": [
+            {
+                "name": "__argc",
+                "var-type": {
+                    "type-kind": "prim",
+                    "type-name": "int64"
+                }
+            },
+            {
+                "name": "__argv",
+                "var-type": {
+                    "base-type": {
+                        "base-type": {
+                            "type-kind": "prim",
+                            "type-name": "uint8"
+                        },
+                        "type-kind": "pntr"
+                    },
+                    "type-kind": "pntr"
+                }
+            }
+        ]
+    },
+    "objs": [],
+    "original": "083_static_data.pa",
+    "statements": [],
+    "str-literals": [],
+    "target": "x86_64-linux-gnu"
+}

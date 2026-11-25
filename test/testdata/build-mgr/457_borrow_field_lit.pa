@@ -1,0 +1,15 @@
+cinclude <stdio.h>;
+import "lib_c_arr_ptr.pa";
+type S { @![3]int32 a; };
+func get(@!S s) -> @![3]int32 { return s.a; }
+func f() {
+	[3]int32 a = [4, 5, 6];
+	S s = {a: @!a};
+	S t = {a: s.a};
+	S u = {a: get(@!s)};
+	9 -> t.a[1];
+	H h;
+	3 -> h.n;
+	printf("%d %d %d\n", s.a[0], u.a[1], num(@h));
+}
+f();

@@ -1,1 +1,1 @@
-uint64 c = sizeof([#3]int32);
+uint64 c = sizeof([+]int32);

@@ -1,0 +1,2 @@
+func a(@int32 v, @!int32 w) { } func a(@!int32 v, @int32 w) { }
+@func(@!int32, @!int32) g = a;

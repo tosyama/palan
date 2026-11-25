@@ -15,7 +15,7 @@ TEST(sa_error, embed_arr_unsized_inner) {
 		"palan-gen-ast ../test/testdata/sa/error_050_embed_arr_unsized_inner.pa -o " + ast_out), "");
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
-	ASSERT_NE(sa.find("inner dimension"), string::npos);
+	ASSERT_NE(sa.find("an array laid out in place without a length"), string::npos);
 }
 
 TEST(sa_error, embed_arr_inner_size_mismatch) {
@@ -250,7 +250,7 @@ TEST(sa_error, arr_borrow)
 		{"error_241_arr_borrow_mut_of_ro.pa", "cannot bind a read-only pointer"},
 		{"error_242_arr_borrow_local_no_addr_of.pa", ":2:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as"},
 		{"error_243_arr_borrow_assign_mismatch.pa", ":4:1: error: array shape '[3]int32' does not match"},
-		{"error_245_ptr_to_arr_borrow.pa", "cannot represent: 'array'"},
+		{"error_245_ptr_to_arr_borrow.pa", ":1:1: error: a borrow of a sized array ('@[n]T'/'@![n]T') cannot be an array's or a dictionary's element"},
 		{"error_858_ro_unsized_borrow_write.pa", ":1:22: error: cannot write through read-only pointer '@T'"},
 		{"error_859_unsized_borrow_no_addr_of.pa", ":3:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as"},
 		{"error_860_unsized_borrow_ro_to_mut.pa", ":2:1: error: cannot bind a read-only pointer"},
@@ -258,7 +258,7 @@ TEST(sa_error, arr_borrow)
 		{"error_271_struct_arr_borrow_write_ro.pa", ":3:7: error: cannot write through read-only pointer"},
 		{"error_272_struct_arr_borrow_mut_elem_of_ro.pa", ":3:10: error: cannot write through read-only pointer"},
 		{"error_273_struct_arr_borrow_elem_no_addr_of.pa", ":3:2: error: a struct given to a '@T'/'@!T' pointer must be written as"},
-		{"error_274_struct_arr_borrow_ptr_slots.pa", "array shape '[2]@P' does not match the borrowed array type '@[2]P'."},
+		{"error_274_struct_arr_borrow_ptr_slots.pa", "array shape '[2]@P' does not match the borrowed array type '@![2]P'."},
 		{"error_275_struct_arr_borrow_size_mismatch.pa", "array shape '[2][4]P' does not match the borrowed array type '@[2][3]P'."},
 		{"error_276_embed_struct_arr_borrow_write_ro.pa", ":3:7: error: cannot write through read-only pointer"},
 		{"error_277_embed_struct_arr_borrow_mut_elem_of_ro.pa", ":3:10: error: cannot write through read-only pointer"},
@@ -404,10 +404,10 @@ TEST(sa_error, arr_lit_assign)
 		{"error_460_arr_lit_assign_transfer.pa", ":3:1: error: '->>' needs a source that owns its value: an owning variable, an owned field or element, a call result, or a pointer viewed as an owner ('p as T')."},
 		{"error_461_arr_lit_assign_readonly_field.pa", ":3:12: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
 		{"error_462_addr_of_readonly_arr_field.pa", ":3:19: error: cannot write through read-only pointer '@T'; use '@!T' for mutable."},
-		{"error_463_arr_lit_assign_dict.pa", ":2:1: error: a '{name: value}' literal can only be used as a struct value"},
+		{"error_463_arr_lit_assign_dict.pa", ":2:1: error: a '{name: value}' literal can only be used as a struct or dictionary value"},
 		{"error_464_struct_lit_arr_field_count.pa", ":2:8: error: array 'albedo' has size 4 but its array literal has 2 elements."},
 		{"error_465_struct_lit_arr_field_not_lit.pa", ":3:8: error: the array literal's dimensions do not match array 'v'."},
-		{"error_466_struct_lit_arr_field_dict.pa", ":2:8: error: a '{name: value}' literal can only be used as a struct value"},
+		{"error_466_struct_lit_arr_field_dict.pa", ":2:8: error: a '{name: value}' literal can only be used as a struct or dictionary value"},
 		{"error_467_struct_lit_ptr_arr_field.pa", ":3:8: error: array 'ps' cannot be given an array literal: only numeric and struct element types are supported."},
 		{"error_468_struct_lit_not_struct.pa", ":3:8: error: a value of struct 'P' must be written as '[...]' or '{name: value, ...}'."},
 		{"error_469_struct_lit_other_struct.pa", ":4:12: error: cannot copy 'R' into 'P'"},
@@ -462,8 +462,8 @@ TEST(sa_error, varr)
 		{"error_734_varr_push_no_match.pa", ":4:1: error: No function 'push' takes (@![+]int32, int64); there are push(@![+]flo64, flo64), push(@![+]int32, int32)."},
 		{"error_735_varr_borrow_needs_addr.pa", ":2:11: error: a variable-length array given to '@[+]T'/'@![+]T' must be written as '@name' or '@!name'."},
 		{"error_736_arr_len_needs_addr.pa", ":2:11: error: an array given to 'len' must be written as '@name'."},
-		{"error_1084_len_not_array.pa", ":2:15: error: 'len' takes an array; this value is 'int32'."},
-		{"error_1085_len_not_array_chain.pa", ":2:11: error: 'len' takes an array; this value is 'flo64'."},
+		{"error_1084_len_not_array.pa", ":2:15: error: 'len' takes an array or a dictionary; this value is 'int32'."},
+		{"error_1085_len_not_array_chain.pa", ":2:11: error: 'len' takes an array or a dictionary; this value is 'flo64'."},
 		{"error_861_len_addr_of_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_862_varr_borrow_addr_of.pa", ":4:3: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
 		{"error_863_len_addr_of_varr_borrow.pa", ":3:15: error: 'h' is already a borrow ('@T'/'@[n]T'/'@[+]T'); pass it by name."},
@@ -610,6 +610,262 @@ TEST(sa_error, use_after_given)
 		{"error_1116_given_continue.pa", ":7:6:" + given},
 		{"error_1117_given_in_cond.pa", ":3:12:" + given},
 		{"error_1118_given_for_range.pa", ":5:14:" + given},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, dict)
+{
+	const pair<string, string> cases[] = {
+		{"error_1153_dict_field.pa", ":1:1: error: cannot embed '[\"\"]int32' with '$': it owns storage of its own"},
+		{"error_1154_dict_frame_var.pa", ":2:2: error: '$' on a variable applies only to a struct or an array, not '[\"\"]int32'."},
+		{"error_1156_dict_borrow_no_addr.pa", ":3:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' ('@{..}' or '@!{..}' for a literal)."},
+		{"error_1157_dict_borrow_var_no_addr.pa", ":2:1: error: a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' ('@{..}' or '@!{..}' for a literal)."},
+		{"error_1158_dict_copy_elem_mismatch.pa", ":2:1: error: cannot copy '[\"\"]int32' into '[\"\"]int64'"},
+		{"error_1159_dict_write_through_borrow.pa", ":2:2: error: cannot write through read-only pointer '@T'"},
+		{"error_1160_dict_value_type.pa", ":2:1: error: cannot embed 'P' with '$': it owns storage of its own"},
+		{"error_1161_dict_key_type.pa", ":2:11: error: cannot convert 'int64' to '@uint8'."},
+		{"error_1162_dict_builtin_redefined.pa", ":1:1: error: Function 'has' is already defined."},
+		{"error_1163_dict_field_write_through_borrow.pa", ":3:7: error: cannot write through read-only pointer '@T'"},
+		{"error_1164_dict_for_remove.pa", ":2:22: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1165_dict_for_clear.pa", ":2:21: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1166_dict_for_store.pa", ":2:19: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1167_dict_for_store_key.pa", ":2:22: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1168_dict_for_store_borrow.pa", ":1:39: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1169_dict_for_transfer.pa", ":3:15: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1170_dict_for_pass.pa", ":3:17: error: cannot change what a 'for' loop iterates over ('d')."},
+		{"error_1171_dict_for_key_assign.pa", ":2:22: error: cannot assign to 'k': the index or key of a 'for' loop is read-only."},
+		{"error_1172_dict_for_key_typed.pa", ":2:1: error: the key of a 'for' loop over a dictionary is '@[]uint8', which is not written."},
+		{"error_1173_dict_for_write_through_borrow.pa", ":1:28: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1174_dict_lit_key_var.pa", ":2:16: error: 'n' is not a string constant: a key of a dictionary literal is a string or a string constant."},
+		{"error_1175_dict_lit_key_int_const.pa", ":2:16: error: 'N' is not a string constant: a key of a dictionary literal is a string or a string constant."},
+		{"error_1176_dict_lit_key_undefined.pa", ":1:24: error: 'zz' is not a string constant: a key of a dictionary literal is a string or a string constant."},
+		{"error_1177_dict_lit_dup_key.pa", ":1:32: error: key \"a\" appears more than once in the dictionary literal."},
+		{"error_1178_dict_lit_dup_const_key.pa", ":2:24: error: key \"a\" appears more than once in the dictionary literal."},
+		{"error_1179_dict_lit_overload_ambiguous.pa", ":5:1: error: Ambiguous function call 'f': it can mean f(@[\"\"]int32), f(@P)."},
+		{"error_1180_struct_lit_string_key.pa", ":2:8: error: a value of struct 'P' names its fields; a string key is for a dictionary."},
+		{"error_1181_dict_lit_transfer.pa", ":2:1: error: '->>' needs a source that owns its value"},
+		{"error_1182_arr_lit_dict_arg.pa", ":2:3: error: parameter 'd' of type '@[\"\"]int32' cannot take an array literal"},
+		{"error_1183_dict_for_value_change.pa", ":2:24: error: cannot change what a 'for' loop iterates over ('a[\"x\"]')"},
+		{"error_1184_dict_lit_row_size.pa", ":1:24: error: array 'r' has rows of size 3 but a row of its array literal has 2 elements."},
+		{"error_1185_dict_embedded_elem.pa", ":2:2: error: cannot embed '[\"\"]int32' with '$': it owns storage of its own"},
+		{"error_1186_dict_for_row_change.pa", ":3:23: error: cannot change what a 'for' loop iterates over ('a[0]')"},
+		{"error_1192_empty_dict_lit_array.pa", ":1:14: error: a '{name: value}' literal can only be used as a struct or dictionary value"},
+		{"error_1193_empty_lit_missing_field.pa", ":2:7: error: the literal of struct 'P' is missing field 'x'."},
+		{"error_1194_empty_lit_overload_ambiguous.pa", ":4:1: error: Ambiguous function call 'f': it can mean f(P), f([\"\"]int32)."},
+		{"error_1199_dict_copy_to_varr.pa", ":3:1: error: cannot copy '[\"\"]int32' into '[+]int32'"},
+		{"error_1200_dict_to_varr_borrow.pa", ":3:1: error: cannot convert '[\"\"]int32' to '@[+]int32'."},
+		{"error_1201_arr_lit_overload_dict.pa", ":4:1: error: Ambiguous function call 'f': it can mean f(@[2]int32), f(@[3]int32)."},
+		{"error_1202_return_nothing_for_block.pa", ":1:24: error: Single-return function requires exactly one return expression."},
+		{"error_1203_return_two_for_block.pa", ":1:37: error: Single-return function requires exactly one return expression."},
+		{"error_1204_chained_varr_dict_overloads.pa", ":4:16: error: No function 'f' takes ([+]int32); there are f(@[\"\"]int32), f(@[\"\"]flo64)."},
+		{"error_1205_borrow_field_shape.pa", ":2:29: error: array shape '@![4]int32' does not match the borrowed array type '@![3]int32'."},
+		{"error_1206_borrow_field_no_addr.pa", ":2:29: error: an array given to a borrowed array"},
+		{"error_1207_borrow_field_lit.pa", ":2:17: error: an array literal cannot be given to the borrowed array 'a'"},
+		{"error_1208_dict_borrow_field_write.pa", ":2:17: error: cannot write through read-only pointer '@T'"},
+		{"error_1209_borrow_field_len_addr.pa", ":2:36: error: 'a' is already a borrow"},
+		{"error_1210_borrow_field_lit_shape.pa", ":2:34: error: array shape '[4]int32' does not match the borrowed array type '@[3]int32'."},
+		{"error_1211_borrow_field_cycle.pa", ":2:1: error: type 'A' depends on itself: A -> B -> A."},
+		{"error_1212_c_arr_ptr_field.pa", ":2:39: error: cannot access field 'rows' of 'CA': its type uses 'array'"},
+		{"error_1213_c_arr_ptr_slots.pa", ":2:33: error: cannot access field 'slots' of 'CA': its type uses 'array'"},
+		{"error_1228_varr_elems_owner.pa", "error: array shape '@![+]@P' does not match '[+]P'"},
+		{"error_1229_varr_elems_owner_assign.pa", "error: array shape '@![+]@P' does not match '[+]P'"},
+		{"error_1230_varr_elems_owner_arg.pa", "error: array shape '@![+]@P' does not match '[+]P'"},
+		{"error_1231_varr_elems_owner_field.pa", "error: array shape '@![+]@P' does not match '[+]P'"},
+		{"error_1232_varr_elems_owner_lit.pa", "error: array shape '@![+]@P' does not match '[+]P'"},
+		{"error_1233_dict_elems_owner.pa", "error: array shape '@![\"\"]@P' does not match '[\"\"]P'"},
+		{"error_1234_dict_elems_owner_rev.pa", "error: array shape '@![\"\"]P' does not match '[\"\"]@P'"},
+		{"error_1235_dict_elems_permission.pa", "error: array shape '@![\"\"]@P' does not match '[\"\"]@!P'"},
+		{"error_1236_dict_elem_rows.pa", "error: array shape '@[\"\"][3]int32' does not match '[\"\"][4]int32'"},
+		{"error_1237_nested_varr_elems_owner.pa", "error: array shape '@![+][+]@P' does not match '[+][+]P'"},
+		{"error_1238_arr_of_varr_elems_owner.pa", "error: array shape '[2][+]@P' does not match the borrowed array type '@![2][+]P'"},
+		{"error_1239_unsized_elems_owner.pa", "error: array shape '@![2]@P' does not match '[?]P'"},
+		{"error_1240_unsized_rows_var.pa", "error: array shape '@@[3]int32' does not match '[?]$[4]int32'"},
+		{"error_1241_unsized_rows_ret.pa", "error: array shape '@@[3]int32' does not match '[?]$[4]int32'"},
+		{"error_1242_func_cast_elems_owner.pa", "error: cannot cast '@func([3]@P)' to '@func([3]P)'"},
+		{"error_1243_func_cast_varr_elems_owner.pa", "error: cannot cast '@func([+]@P)' to '@func([+]P)'"},
+		{"error_1244_func_cast_owned_kind.pa", "error: cannot cast '@func(Q)' to '@func(P)'"},
+		{"error_1245_null_owned_varr.pa", "error: cannot copy '[?]void' into '[+]int32'"},
+		{"error_1246_null_owned_dict.pa", "error: cannot copy '[?]void' into '[\"\"]int32'"},
+		{"error_1247_null_owned_arg.pa", "error: cannot convert '[?]void' to '[+]int32'"},
+		{"error_1248_null_owned_ret.pa", "error: cannot convert '[?]void' to '[+]int32'"},
+		{"error_1249_null_overload.pa", "error: Ambiguous function call 'f': it can mean f(@P), f(@[+]int32)."},
+		{"error_1250_null_other_ptr.pa", "error: cannot convert '[?]void' to '@[+]int32'"},
+		{"error_1251_null_other_ptr_arr.pa", "error: an array given to a borrowed array"},
+		{"error_1252_nested_arr_borrow_varr.pa", "error: a borrow of a sized array"},
+		{"error_1253_nested_arr_borrow_dict.pa", "error: a borrow of a sized array"},
+		{"error_1254_nested_arr_borrow_var.pa", "error: a borrow of a sized array"},
+		{"error_1255_nested_arr_borrow_field.pa", "error: a borrow of a sized array"},
+		{"error_1256_nested_arr_borrow_param.pa", "error: a borrow of a sized array"},
+		{"error_1257_nested_arr_borrow_borrowed.pa", "error: a borrow of a sized array"},
+		{"error_1258_nested_arr_borrow_ptr_var.pa", "error: a borrow of a sized array"},
+		{"error_1259_nested_arr_borrow_ptr_field.pa", "error: a borrow of a sized array"},
+		{"error_1260_nested_arr_borrow_func_sig.pa", "error: a borrow of a sized array"},
+		{"error_1261_embed_under_ptr_func_sig.pa", "error: '$' cannot be what '@' or '@!' points to."},
+		{"error_1262_embed_under_ptr_param.pa", "error: '$' cannot be what '@' or '@!' points to."},
+		{"error_1263_embed_under_ptr_elem.pa", "error: '$' cannot be what '@' or '@!' points to."},
+		{"error_1264_embed_under_ptr_field.pa", "error: '$' cannot be what '@' or '@!' points to."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, unsized_rows) {
+	const vector<pair<string, string>> cases = {
+		{"error_1265_embed_rows_borrowed_param.pa", "error: an array laid out in place without a length"},
+		{"error_1266_embed_rows_var.pa", "error: an array laid out in place without a length"},
+		{"error_1267_embed_rows_elem.pa", "error: an array laid out in place without a length"},
+		{"error_1268_embed_rows_dict_elem.pa", "error: an array laid out in place without a length"},
+		{"error_1269_embed_rows_field.pa", "error: an array laid out in place without a length"},
+		{"error_1270_embed_rows_func_sig.pa", "error: an array laid out in place without a length"},
+		{"error_1271_embed_rows_ret.pa", "error: an array laid out in place without a length"},
+		{"error_1272_embed_rows_inner.pa", "error: an array laid out in place without a length"},
+		{"error_1273_embed_rows_dict.pa", "error: an array laid out in place without a length"},
+		{"error_1274_embed_rows_run_size.pa", "must be a compile-time constant."},
+		{"error_1275_unsized_rows_write.pa", "cannot write through read-only pointer"},
+		{"error_1276_embed_rows_const_mismatch.pa", "Embedded array inner size mismatch: expected 3, got 4."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, row_layout_mismatch) {
+	const vector<pair<string, string>> cases = {
+		{"error_1277_row_layout_param.pa", "does not match '"},
+		{"error_1278_row_layout_value_param.pa", "does not match '"},
+		{"error_1279_row_layout_sized_row_param.pa", "does not match '"},
+		{"error_1280_row_layout_assign.pa", "does not match '"},
+		{"error_1281_row_layout_ptr_ptr.pa", "does not match '"},
+		{"error_1282_row_layout_rows_to_embed.pa", "does not match '"},
+		{"error_1283_row_layout_slot.pa", "does not match '"},
+		{"error_1284_row_layout_field.pa", "does not match '"},
+		{"error_1285_row_layout_borrow_var.pa", "does not match '"},
+		{"error_1286_row_layout_run_size.pa", "does not match '"},
+		{"error_1287_row_layout_varr.pa", "does not match '"},
+		{"error_1288_row_layout_func_ptr.pa", "cannot convert '@func("},
+		{"error_1289_row_layout_slots.pa", "does not match the borrowed array type"},
+		{"error_1290_row_layout_slots_embed_size.pa", "does not match the borrowed array type"},
+		{"error_1291_row_layout_slots_row_size.pa", "does not match the borrowed array type"},
+		{"error_1292_row_layout_slots_ptr_elems.pa", "does not match the borrowed array type"},
+		{"error_1293_row_layout_lent_rows.pa", "does not match the borrowed array type"},
+		{"error_1294_row_layout_varr_elems.pa", "does not match '"},
+		{"error_1295_row_layout_dict_elems.pa", "does not match '"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, type_self_cycle) {
+	const vector<pair<string, string>> cases = {
+		{"error_1296_self_owned_field.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1297_self_borrow_varr.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1298_self_borrow_dict.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1299_self_sig_value.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1300_self_sig_borrow.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1301_self_row_borrow.pa", "error: type 'P' depends on itself: P -> P."},
+		{"error_1302_self_alias.pa", "error: type 'X' depends on itself: X -> X."},
+		{"error_1303_self_sig_alias.pa", "error: type 'F' depends on itself: F -> F."},
+		{"error_1304_self_const.pa", "error: type 'N' depends on itself: N -> N."},
+		{"error_1305_self_local.pa", "error: type 'L' depends on itself: L -> L."},
+		{"error_1306_ptr_elem_unknown.pa", "error: unknown type 'Z'."},
+		{"error_1307_sig_ptr_unknown.pa", "error: unknown type 'Z'."},
+		{"error_1308_self_embed_borrow.pa", "error: struct 'P' recursively contains itself."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, overload_shape) {
+	const vector<pair<string, string>> cases = {
+		{"error_1309_overload_func_none.pa", "'a' names a([3]int32), a([4]int32); it must be given where a function pointer type chooses one."},
+		{"error_1310_overload_func_perm_none.pa", "'a' names a(@!P), a(P); it must be given where"},
+		{"error_1311_overload_func_one_mismatch.pa", "cannot convert '@func(@!int32)' to '@func(@int32)'"},
+		{"error_1312_overload_func_tied.pa", "Ambiguous function call 'a': it can mean a(@int32, @!int32), a(@!int32, @int32)."},
+		{"error_1313_overload_func_arg_none.pa", "No function 't' takes (function)"},
+		{"error_1314_overload_func_arg_tied.pa", "Ambiguous function call 't'"},
+		{"error_1315_overload_shape_tied.pa", "Ambiguous function call 'k'"},
+		{"error_1316_overload_dict_perm.pa", "Ambiguous function call 'k'"},
+		{"error_1317_func_ptr_arg_arr_lit.pa", "parameter '#1' of type '@[+]int32' cannot take an array literal"},
+		{"error_1318_func_ptr_arg_dict_lit.pa", "parameter '#2' of type 'int32' cannot take a '{name: value}' literal"},
+		{"error_1319_func_ptr_arg_lit_size.pa", "array '#1' has size 3 but its array literal has 2 elements."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, dict_arr_lit) {
+	const vector<pair<string, string>> cases = {
+		{"error_1320_dict_arr_lit_var.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1321_dict_arr_lit_assign.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1322_dict_arr_lit_empty.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1323_dict_arr_lit_param.pa", "error: dictionary 'v' cannot be given an array literal: write '{"},
+		{"error_1324_dict_arr_lit_variadic.pa", "error: dictionary 'v' cannot be given an array literal: write '{"},
+		{"error_1325_dict_arr_lit_return.pa", "error: dictionary '[\"\"]int32' cannot be given an array literal: write '{"},
+		{"error_1326_dict_arr_lit_field.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1327_dict_arr_lit_field_value.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1328_dict_arr_lit_elem.pa", "error: dictionary 'a' cannot be given an array literal: write '{"},
+		{"error_1329_dict_arr_lit_row.pa", "error: dictionary 'a' cannot be given an array literal: write '{"},
+		{"error_1330_dict_arr_lit_structs.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1331_dict_arr_lit_arr_values.pa", "error: dictionary 'd' cannot be given an array literal: write '{"},
+		{"error_1332_dict_elem_arr_lit.pa", "error: an array literal can only be used as"},
+		{"error_1333_dict_ptr_elem_lit.pa", "error: an array literal can only be used as"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, dict_elem_mismatch) {
+	const vector<pair<string, string>> cases = {
+		{"error_1334_dict_copy_from_prim.pa", ":3:1: error: cannot copy '[2]int32' into '[2][\"\"]int32'"},
+		{"error_1335_dict_copy_into_prim.pa", ":3:1: error: cannot copy '[2][\"\"]int32' into '[2]int32'"},
+		{"error_1336_dict_copy_from_varr.pa", ":3:1: error: cannot copy '[2][+]int32' into '[2][\"\"]int32'"},
+		{"error_1337_dict_copy_value_type.pa", ":3:1: error: cannot copy '[2][\"\"]flo64' into '[2][\"\"]int32'"},
+		{"error_1338_dict_return_as_varr.pa", ":2:5: error: cannot copy '@[\"\"]int32' into '[+]int32'"},
+		{"error_1339_dict_lit_varr_field.pa", ":2:11: error: a '{name: value}' literal can only be used as"},
+		{"error_1340_overload_func_no_func_type.pa", ":3:11: error: 'f' names f(int32), f(flo64); it must be given where a function pointer type chooses one."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

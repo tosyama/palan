@@ -1,0 +1,74 @@
+cinclude <stdio.h>;
+type P { int32 x; };
+func a([3]int32 v) -> int32 { return 3; }
+func a([4]int32 v) -> int32 { return 4; }
+func b(@int32 v) -> int32 { return 1; }
+func b(@!int32 v) -> int32 { return 2; }
+func k(P p) -> int32 { return 1; }
+func k(@!P p) -> int32 { return 2; }
+func e(@[+]P v) -> int32 { return 1; }
+func e(@[+]@P v) -> int32 { return 2; }
+func r(@![3]int32 v) -> int32 { return 1; }
+func r(@[4]int32 v) -> int32 { return 2; }
+func take(@func([4]int32) -> int32 g) -> int32 { return g([1, 2, 3, 4]); }
+func pick() -> @func([3]int32) -> int32 { return a; }
+type S { @func([4]int32) -> int32 g; };
+
+func kind(@[2][3]int32 v) -> int32 { return 1; }
+func kind(@[2]@int32 v) -> int32 { return 2; }
+func rows(@[][3]int32 v) -> int32 { return 1; }
+func rows(@[]@int32 v) -> int32 { return 2; }
+func unsized(@[][]int32 v) -> int32 { return 1; }
+func unsized(@[]@[]int32 v) -> int32 { return 2; }
+func n(@[3]int32 v) -> int32 { return 1; }
+func n(@[]int32 v) -> int32 { return 2; }
+func own(@[""]P v) -> int32 { return 1; }
+func own(@[""]@P v) -> int32 { return 2; }
+func perm(@[""]@P v) -> int32 { return 1; }
+func perm(@[""]@!P v) -> int32 { return 2; }
+func t(@func(@[3]int32) -> int32 g) -> int32 { return 1; }
+func t(@func(@![3]int32) -> int32 g) -> int32 { return 2; }
+func x(@[3]int32 v) -> int32 { return 0; }
+func y(@![3]int32 v) -> int32 { return 0; }
+func ov(@[3]int32 v) -> int32 { return 0; }
+func ov(flo64 v) -> int32 { return 0; }
+func viaRows(@[][3]int32 p) -> int32 { return rows(p); }
+func viaUnsized(@[][]int32 p) -> int32 { return unsized(p); }
+func viaSlots(@[]@[]int32 p) -> int32 { return unsized(p); }
+func main2() {
+	@func([3]int32) -> int32 a3 = a;
+	@func([4]int32) -> int32 a4 = a3 as @func([4]int32) -> int32;
+	a -> a4;
+	S s = {g: a};
+	S s2;
+	a -> s2.g;
+	[2]@func([3]int32) -> int32 as2;
+	a -> as2[1];
+	printf("%d %d %d %d %d %d %d\n", a3([1, 2, 3]), a4([1, 2, 3, 4]), take(a), (pick())([1, 2, 3]),
+		s.g([1, 2, 3, 4]), s2.g([1, 2, 3, 4]), (as2[1])([1, 2, 3]));
+	int32 i = 0;
+	P p = {x: 1};
+	@func(@int32) -> int32 b1 = b;
+	@func(@!int32) -> int32 b2 = b;
+	@func(P) -> int32 k1 = k;
+	@func(@!P) -> int32 k2 = k;
+	@func(@[+]P) -> int32 e1 = e;
+	@func(@[+]@P) -> int32 e2 = e;
+	@func(@![4]int32) -> int32 r2 = r;
+	[+]P pv;
+	[+]@P qv;
+	[4]int32 f4 = [1, 2, 3, 4];
+	printf("%d %d %d %d %d %d %d\n", b1(@i), b2(@!i), k1(p), k2(@!p), e1(@pv), e2(@qv), r2(@!f4));
+	[2][3]int32 m;
+	[2]@int32 q;
+	printf("%d %d %d %d %d\n", kind(@m), kind(@q), viaRows(@m), viaUnsized(@m), viaSlots(@q));
+	[3]int32 f3 = [1, 2, 3];
+	[""]P d1;
+	[""]@P d2;
+	[""]@!P d3;
+	printf("%d %d %d %d %d %d\n", n(@f3), n(@!f3), n(@f4), own(@d1), own(@d2), perm(@d3));
+	printf("%d %d %d %d\n", perm(@d2), t(x), t(y), t(ov));
+	@f3 -> n() -> i;
+	printf("%d\n", i);
+}
+main2();

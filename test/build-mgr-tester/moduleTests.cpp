@@ -572,6 +572,12 @@ TEST(build_mgr, global_var) {
 		"1 3 5\n5 3 1\n1 13 4\n7\n");
 }
 
+TEST(build_mgr, static_global_data) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/450_static_global_data.pa"),
+		"1 -2 3 1 2 3 -4 1\n1.5 2 0.25 -3 1.25 4 255 18446744073709551615 0 9 5\n6 8\n7\n");
+}
+
 // What a global owns lives as long as the process: only the value it was
 // moved away from is freed.
 TEST(build_mgr, global_var_mtrace) {

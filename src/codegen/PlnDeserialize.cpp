@@ -111,6 +111,10 @@ static unique_ptr<Expr> deserializeExpr(const json& j)
         e->label = j["label"];
         e->size  = j["size"];
         e->align = j["align"];
+        if (j.contains("data")) {
+            e->dataType = toVRegType(j["data"]["type"]);
+            e->data     = j["data"]["values"].get<vector<string>>();
+        }
         return e;
     }
     if (expr_type == "addr-of") {

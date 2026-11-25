@@ -6,6 +6,7 @@ library std;
 
 cinclude <stdlib.h>;
 cinclude <unistd.h>;
+cinclude <string.h>;
 
 // write, as stdio's buffers may be what ran out.
 func fail(@[]uint8 msg, uint64 n)
@@ -42,3 +43,356 @@ cexport func __pln_negative_size()
 {
 	fail("runtime error: negative array size\n", 35);
 }
+
+// A dictionary's header, in 8-byte words. Its keys are entries {hash, key} in
+// the order they were added; a removed one keeps its place with a NULL key, and
+// so does its position in the table, which lookups probe past. The table holds
+// a position plus one (0 for an empty slot). Its values are a [+]T header
+// {len, cap, data} that the generated functions keep at VLEN, one value at each
+// position, so they only have bytes moved here.
+const LIVE = 0;
+const USED = 1;
+const CAP = 2;
+const ENTS = 3;
+const TSIZE = 4;
+const TABLE = 5;
+const VLEN = 6;
+const VDATA = 8;
+const HEADER_SIZE = 72;
+
+func word(@void h, int64 i) -> int64
+{
+	return (h as @int64)[i];
+}
+
+func setWord(@!void h, int64 i, int64 v)
+{
+	v -> (h as @!int64)[i];
+}
+
+func entKey(int64 ents, int64 i) -> int64
+{
+	return (ents as @int64)[2 * i + 1];
+}
+
+// FNV-1a over the bytes up to the NUL.
+func hashOf(@[]uint8 k) -> uint64 h
+{
+	14695981039346656037u -> h;
+	int64 i = 0;
+	while k[i] != 0 {
+		(h ^ uint64(k[i])) * 1099511628211u -> h;
+		i + 1 -> i;
+	}
+}
+
+// The table slot holding k's position, or the empty one where it would go.
+func slotOf(@void h, @[]uint8 k, uint64 hash) -> int64
+{
+	int64 mask = word(h, TSIZE) - 1;
+	int64 table = word(h, TABLE);
+	int64 ents = word(h, ENTS);
+	int64 s = int64(hash) & mask;
+	while (table as @int64)[s] != 0 {
+		int64 pos = (table as @int64)[s] - 1;
+		int64 key = entKey(ents, pos);
+		if key != 0 && (ents as @uint64)[2 * pos] == hash && strcmp(key as @int8, k as @int8) == 0 {
+			return s;
+		}
+		(s + 1) & mask -> s;
+	}
+	return s;
+}
+
+// Puts the live positions into a new table of tsize slots.
+func rebuild(@!void h, int64 tsize)
+{
+	free(word(h, TABLE) as @!void);
+	int64 table = int64(__pln_calloc(uint64(tsize), 8u));
+	setWord(h, TABLE, table);
+	setWord(h, TSIZE, tsize);
+	int64 ents = word(h, ENTS);
+	int64 n = word(h, USED);
+	int64 i = 0;
+	while i < n {
+		if entKey(ents, i) != 0 {
+			int64 s = int64((ents as @uint64)[2 * i]) & (tsize - 1);
+			while (table as @int64)[s] != 0 { (s + 1) & (tsize - 1) -> s; }
+			i + 1 -> (table as @!int64)[s];
+		}
+		i + 1 -> i;
+	}
+}
+
+func freeKeys(@!void h)
+{
+	int64 ents = word(h, ENTS);
+	int64 n = word(h, USED);
+	int64 i = 0;
+	while i < n {
+		free(entKey(ents, i) as @!void);
+		i + 1 -> i;
+	}
+}
+
+cexport func __pln_dict_new() -> @!void
+{
+	return __pln_calloc(1u, uint64(HEADER_SIZE));
+}
+
+// k's position, or -1.
+cexport func __pln_dict_find(@void h, @[]uint8 k) -> int64
+{
+	if word(h, TSIZE) == 0 { return -1; }
+	return (word(h, TABLE) as @int64)[slotOf(h, k, hashOf(k))] - 1;
+}
+
+cexport func __pln_dict_at(@void h, @[]uint8 k) -> int64 pos
+{
+	__pln_dict_find(h, k) -> pos;
+	if pos < 0 {
+		write(2, "runtime error: key \"", 20);
+		write(2, k, strlen(k as @int8));
+		fail("\" is not in the dictionary\n", 27);
+	}
+}
+
+// k's position, adding a copy of k if it is not there. A new key's position is
+// the values' length, where the caller adds its value.
+cexport func __pln_dict_add(@!void h, @[]uint8 k) -> int64
+{
+	uint64 hash = hashOf(k);
+	int64 n = word(h, USED);
+	int64 tsize = word(h, TSIZE);
+	if (n + 1) * 4 > tsize * 3 {
+		if tsize == 0 { rebuild(h, 8); } else { rebuild(h, tsize * 2); }
+	}
+	int64 s = slotOf(h, k, hash);
+	@!int64 table = word(h, TABLE) as @!int64;
+	if table[s] != 0 { return table[s] - 1; }
+	if n == word(h, CAP) {
+		int64 cap = 8;
+		if n > 0 { n * 2 -> cap; }
+		setWord(h, ENTS, int64(__pln_realloc(word(h, ENTS) as @!void, uint64(cap * 16))));
+		setWord(h, CAP, cap);
+	}
+	int64 ents = word(h, ENTS);
+	uint64 size = strlen(k as @int8) + 1u;
+	@!void key = __pln_malloc(size);
+	memcpy(key, k, size);
+	hash -> (ents as @!uint64)[2 * n];
+	int64(key) -> (ents as @!int64)[2 * n + 1];
+	n + 1 -> table[s];
+	setWord(h, USED, n + 1);
+	setWord(h, LIVE, word(h, LIVE) + 1);
+	return n;
+}
+
+// k's position, or -1. The caller releases the value there, then calls
+// __pln_dict_settle.
+cexport func __pln_dict_remove(@!void h, @[]uint8 k) -> int64 pos
+{
+	__pln_dict_find(h, k) -> pos;
+	if pos < 0 { return; }
+	int64 ents = word(h, ENTS);
+	free(entKey(ents, pos) as @!void);
+	0 -> (ents as @!int64)[2 * pos + 1];
+	setWord(h, LIVE, word(h, LIVE) - 1);
+}
+
+// Once the removed outnumber the live, moves the live keys and values of
+// elemSize bytes to the front, keeping their order.
+cexport func __pln_dict_settle(@!void h, int64 elemSize)
+{
+	int64 live = word(h, LIVE);
+	int64 n = word(h, USED);
+	if n - live <= live { return; }
+	int64 ents = word(h, ENTS);
+	int64 vals = word(h, VDATA);
+	int64 i = 0;
+	int64 j = 0;
+	while i < n {
+		if entKey(ents, i) != 0 {
+			if j != i {
+				(ents as @uint64)[2 * i] -> (ents as @!uint64)[2 * j];
+				entKey(ents, i) -> (ents as @!int64)[2 * j + 1];
+				memmove((vals + j * elemSize) as @!void, (vals + i * elemSize) as @void, uint64(elemSize));
+			}
+			j + 1 -> j;
+		}
+		i + 1 -> i;
+	}
+	setWord(h, USED, live);
+	setWord(h, VLEN, live);
+	rebuild(h, word(h, TSIZE));
+}
+
+// The key at position i, or NULL for a removed one or one past those used.
+cexport func __pln_dict_key(@void h, int64 i) -> @uint8
+{
+	if i >= word(h, USED) { return NULL; }
+	return entKey(word(h, ENTS), i) as @uint8;
+}
+
+// The first position from i on whose key is not removed, or the number used.
+cexport func __pln_dict_next(@void h, int64 i) -> int64
+{
+	int64 n = word(h, USED);
+	while i < n && entKey(word(h, ENTS), i) == 0 { i + 1 -> i; }
+	return i;
+}
+
+// Removes the keys, keeping the storage; the caller empties the values first.
+cexport func __pln_dict_clear(@!void h)
+{
+	freeKeys(h);
+	setWord(h, USED, 0);
+	setWord(h, LIVE, 0);
+	if word(h, TSIZE) > 0 {
+		memset(word(h, TABLE) as @!void, 0, uint64(word(h, TSIZE) * 8));
+	}
+}
+
+// Replaces dst's keys with src's, each at its position, a removed one too, so
+// that the caller copies the values as one run.
+cexport func __pln_dict_copy(@!void dst, @void src)
+{
+	__pln_dict_clear(dst);
+	int64 n = word(src, USED);
+	if n > word(dst, CAP) {
+		setWord(dst, ENTS, int64(__pln_realloc(word(dst, ENTS) as @!void, uint64(n * 16))));
+		setWord(dst, CAP, n);
+	}
+	int64 from = word(src, ENTS);
+	int64 to = word(dst, ENTS);
+	int64 i = 0;
+	while i < n {
+		(from as @uint64)[2 * i] -> (to as @!uint64)[2 * i];
+		int64 key = 0;
+		if entKey(from, i) != 0 {
+			uint64 size = strlen(entKey(from, i) as @int8) + 1u;
+			int64(__pln_malloc(size)) -> key;
+			memcpy(key as @!void, entKey(from, i) as @void, size);
+		}
+		key -> (to as @!int64)[2 * i + 1];
+		i + 1 -> i;
+	}
+	setWord(dst, USED, n);
+	setWord(dst, LIVE, word(src, LIVE));
+	// The positions are src's, so its table is too.
+	int64 tsize = word(src, TSIZE);
+	if tsize > 0 {
+		if tsize != word(dst, TSIZE) {
+			setWord(dst, TABLE, int64(__pln_realloc(word(dst, TABLE) as @!void, uint64(tsize * 8))));
+			setWord(dst, TSIZE, tsize);
+		}
+		memcpy(word(dst, TABLE) as @!void, word(src, TABLE) as @void, uint64(tsize * 8));
+	}
+}
+
+// The caller releases the values first.
+cexport func __pln_dict_free(@!void h)
+{
+	if h == NULL { return; }
+	freeKeys(h);
+	free(word(h, ENTS) as @!void);
+	free(word(h, TABLE) as @!void);
+	free(h);
+}
+
+func expect(bool ok, @[]uint8 what)
+{
+	if !ok {
+		write(2, "rt test failed: ", 16);
+		write(2, what, strlen(what as @int8));
+		fail("\n", 1);
+	}
+}
+
+// "k<i>" into buf.
+func numKey(@!uint8 buf, int64 i) -> @[]uint8
+{
+	'k' -> buf[0];
+	int64 len = 1;
+	int64 m = i;
+	while true {
+		len + 1 -> len;
+		m / 10 -> m;
+		if m == 0 { break; }
+	}
+	0 -> buf[len];
+	while len > 1 {
+		len - 1 -> len;
+		uint8(48 + i % 10) -> buf[len];
+		i / 10 -> i;
+	}
+	return buf as @[]uint8;
+}
+
+func testDict()
+{
+	@!void h = __pln_dict_new();
+	expect(__pln_dict_find(h, "apple") == -1, "find in empty");
+	expect(__pln_dict_add(h, "apple") == 0, "add first");
+	expect(__pln_dict_add(h, "pear") == 1, "add second");
+	expect(__pln_dict_add(h, "apple") == 0, "add again");
+	expect(__pln_dict_find(h, "pear") == 1, "find");
+	expect(__pln_dict_at(h, "apple") == 0, "at");
+	expect(__pln_dict_find(h, "app") == -1, "find a prefix");
+	expect(word(h, LIVE) == 2, "live");
+	__pln_dict_clear(h);
+	expect(word(h, LIVE) == 0 && __pln_dict_find(h, "apple") == -1, "clear");
+	expect(__pln_dict_add(h, "pear") == 0, "add after clear");
+	__pln_dict_clear(h);
+
+	// Values of 8 bytes, as a caller keeps them, across the table's growth.
+	@!uint8 buf = __pln_calloc(8u, 1u);
+	int64 i = 0;
+	while i < 100 {
+		expect(__pln_dict_add(h, numKey(buf, i)) == i, "add many");
+		i + 1 -> i;
+	}
+	@!int64 vals = __pln_calloc(100u, 8u);
+	0 -> i;
+	while i < 100 { i -> vals[i]; i + 1 -> i; }
+	setWord(h, VDATA, int64(vals));
+	setWord(h, VLEN, 100);
+	setWord(h, VLEN + 1, 100);
+	0 -> i;
+	while i < 60 {
+		expect(__pln_dict_remove(h, numKey(buf, i)) >= 0, "remove");
+		__pln_dict_settle(h, 8);
+		i + 1 -> i;
+	}
+	expect(__pln_dict_remove(h, "k5") == -1, "remove a removed key");
+	// Settled at the 51st removal: k51 to k99 moved to the front.
+	expect(word(h, USED) == 49 && word(h, LIVE) == 40 && word(h, VLEN) == 49, "settled counts");
+	expect(__pln_dict_key(h, 0) == NULL, "removed after settling");
+	int64 last = -1;
+	60 -> i;
+	while i < 100 {
+		int64 pos = __pln_dict_find(h, numKey(buf, i));
+		expect(pos > last && (word(h, VDATA) as @int64)[pos] == i, "value moved with its key");
+		pos -> last;
+		i + 1 -> i;
+	}
+	expect(__pln_dict_next(h, 0) == 9 && __pln_dict_next(h, 9) == 9, "next skips the removed");
+	expect(__pln_dict_add(h, "k5") == 49, "add a removed key again");
+	expect(__pln_dict_next(h, 50) == 50 && __pln_dict_key(h, 50) == NULL, "past those used");
+
+	@!void d = __pln_dict_new();
+	__pln_dict_add(d, "old");
+	__pln_dict_copy(d, h);
+	expect(word(d, LIVE) == 41 && word(d, USED) == 50, "copy counts");
+	expect(__pln_dict_key(d, 0) == NULL && __pln_dict_next(d, 0) == 9, "copy keeps the removed");
+	expect(strcmp(__pln_dict_key(d, 9) as @int8, "k60" as @int8) == 0, "copy order");
+	expect(__pln_dict_find(d, "k5") == 49 && __pln_dict_find(d, "old") == -1, "copy keys");
+	expect(__pln_dict_add(d, "new") == 50, "add after a copy");
+
+	free(word(h, VDATA) as @!void);
+	__pln_dict_free(h);
+	__pln_dict_free(d);
+	free(buf);
+}
+
+testDict();

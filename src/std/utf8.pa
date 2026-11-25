@@ -1,5 +1,6 @@
 library std;
 
+import "graphemeprops.pa";
 cinclude <string.h>;
 
 // What a utf8 does with bytes that are not valid UTF-8, when it is made or added to.
@@ -20,6 +21,12 @@ export type utf8 {
 };
 
 export type utf8iter {
+	private @utf8 s;
+	private int64 pos = 0;
+};
+
+// The grapheme clusters of a text, and where a loop over them is. It borrows the text.
+export type utf8graphemes {
 	private @utf8 s;
 	private int64 pos = 0;
 };
@@ -126,12 +133,18 @@ func at(@utf8 s, int64 i, @utf8 x) -> bool
 	return memcmp(@s.bytes[i], cstr(x), n) == 0;
 }
 
+// Makes the empty r the bytes b[from] to b[end - 1] of s, in s's mode.
+func fillPart(@!utf8 r, @utf8 s, int64 from, int64 end)
+{
+	s.mode -> r.mode;
+	takeIn(r, cstr(s), from, end);
+	if s.hadInvalid { true -> r.hadInvalid; }
+}
+
 // The bytes b[from] to b[end - 1] of s, as a text in s's mode.
 func part(@utf8 s, int64 from, int64 end) -> utf8 r
 {
-	s.mode -> r.mode;
-	takeIn(@!r, cstr(s), from, end);
-	if s.hadInvalid { true -> r.hadInvalid; }
+	fillPart(@!r, s, from, end);
 }
 
 // Makes a utf8 of the NUL-terminated bytes cs, by the rules of mode m.
@@ -201,6 +214,87 @@ export func next(@!utf8iter it) -> bool ok, int32 c
 	if it.pos >= byteLen(it.s) { return; }
 	nextChar(it.s, @!it.pos) -> c;
 	true -> ok;
+}
+
+// Whether no cluster ends between characters of the properties a and b by the rules that read
+// only these two (GB3 to GB9b of UAX #29).
+func joins(gcbProp a, gcbProp b) -> bool
+{
+	if a == gcbProp.CR { return b == gcbProp.LF; }
+	if a == gcbProp.LF || a == gcbProp.CONTROL { return false; }
+	if b == gcbProp.CR || b == gcbProp.LF || b == gcbProp.CONTROL { return false; }
+	if b == gcbProp.EXTEND || b == gcbProp.ZWJ || b == gcbProp.SPACING_MARK { return true; }
+	if a == gcbProp.PREPEND { return true; }
+	if a == gcbProp.L {
+		return b == gcbProp.L || b == gcbProp.V || b == gcbProp.LV || b == gcbProp.LVT;
+	}
+	if a == gcbProp.LV || a == gcbProp.V { return b == gcbProp.V || b == gcbProp.T; }
+	if a == gcbProp.LVT || a == gcbProp.T { return b == gcbProp.T; }
+	return false;
+}
+
+// The byte position after the grapheme cluster at byte position i, by UAX #29 of Unicode 18.0.0.
+// The rules look no further back than the cluster's start.
+func graphemeEnd(@utf8 s, int64 i) -> int64
+{
+	int64 pos = i;
+	int32 c = nextChar(s, @!pos);
+	if c < 0 { return pos; }
+	gcbProp prev = gcbProp.OTHER;
+	bool pict = false;      // Extended_Pictographic Extend*
+	bool pictZwj = false;   // ... ZWJ
+	bool linker = false;    // InCB=Linker InCB=Extend*
+	int64 flags = 0;        // Regional_Indicator run
+	int64 end = i;
+	while true {
+		uint8 p = graphemeProps(c);
+		gcbProp g = gcbOf(p);
+		incbProp k = incbOf(p);
+		bool ext = isExtPict(p);
+		if end > i && !joins(prev, g) && !(pictZwj && ext) && !(linker && k == incbProp.CONSONANT)
+			&& !(g == gcbProp.REGIONAL_INDICATOR && flags % 2 == 1) { return end; }
+		(pict && g == gcbProp.ZWJ) -> pictZwj;
+		(ext || (pict && g == gcbProp.EXTEND)) -> pict;
+		(k == incbProp.LINKER || (linker && k == incbProp.EXTEND)) -> linker;
+		if g == gcbProp.REGIONAL_INDICATOR { flags + 1 -> flags; } else { 0 -> flags; }
+		g -> prev;
+		pos -> end;
+		if pos >= byteLen(s) { return end; }
+		nextChar(s, @!pos) -> c;
+		if c < 0 { return end; }
+	}
+	return end;
+}
+
+// The grapheme clusters of s, to iterate over with 'for'.
+export func graphemes(@utf8 s) -> utf8graphemes g
+{
+	s -> g.s;
+}
+
+export func iter(@utf8graphemes g) -> utf8graphemes it
+{
+	g.s -> it.s;
+}
+
+// The next grapheme cluster, in the text's mode; an invalid part is one of its own.
+export func next(@!utf8graphemes it) -> bool ok, utf8 g
+{
+	if it.pos >= byteLen(it.s) { return; }
+	int64 end = graphemeEnd(it.s, it.pos);
+	fillPart(@!g, it.s, it.pos, end);
+	end -> it.pos;
+	true -> ok;
+}
+
+// The number of grapheme clusters; an invalid part counts as one.
+export func graphemeCount(@utf8 s) -> int64 n
+{
+	int64 pos = 0;
+	while pos < byteLen(s) {
+		graphemeEnd(s, pos) -> pos;
+		n + 1 -> n;
+	}
 }
 
 // Adds t by the rules of s's mode.
@@ -729,6 +823,46 @@ func testMakeFrom()
 	if ej.mode != utf8mode.REPLACE_INVALID { fail("join none mode"); }
 }
 
+func expectGraphemes(@utf8 s, @[]uint8 what, [...]@utf8 expected)
+{
+	int64 n = 0;
+	for copy g, i in graphemes(s) {
+		if i >= len(@expected) || g != expected[i] || g.mode != s.mode || g.hadInvalid != s.hadInvalid {
+			printf("%ld: [%s]\n", i, g -> cstr());
+			fail(what);
+		}
+		n + 1 -> n;
+	}
+	if n != len(@expected) || graphemeCount(s) != n { fail(what); }
+}
+
+func testGraphemes()
+{
+	expectGraphemes("", "no graphemes");
+	expectGraphemes("ab", "ascii", "a", "b");
+	expectGraphemes("\r\n\n\r\u{301}", "CR LF, control", "\r\n", "\n", "\r", "\u{301}");
+	expectGraphemes("e\u{301}\u{327}x", "combining", "e\u{301}\u{327}", "x");
+	expectGraphemes("\u{1F1EF}\u{1F1F5}\u{1F1FA}\u{1F1F8}\u{1F1EF}", "flags", "\u{1F1EF}\u{1F1F5}", "\u{1F1FA}\u{1F1F8}", "\u{1F1EF}");
+	expectGraphemes("\u{1F44D}\u{1F3FD}\u{1F44D}", "skin tone", "\u{1F44D}\u{1F3FD}", "\u{1F44D}");
+	expectGraphemes("\u{1F468}\u{200D}\u{1F469}\u{1F3FD}\u{200D}\u{1F467}a\u{200D}\u{1F467}", "ZWJ",
+		"\u{1F468}\u{200D}\u{1F469}\u{1F3FD}\u{200D}\u{1F467}", "a\u{200D}", "\u{1F467}");
+	expectGraphemes("\u{1112}\u{1161}\u{11AB}\u{AE00}\u{1100}", "Hangul", "\u{1112}\u{1161}\u{11AB}", "\u{AE00}", "\u{1100}");
+	expectGraphemes("\u{915}\u{94D}\u{200D}\u{937}\u{93F}\u{915}", "conjunct", "\u{915}\u{94D}\u{200D}\u{937}\u{93F}", "\u{915}");
+	expectGraphemes("\u{600}1", "prepend", "\u{600}1");
+
+	utf8 k = utf8("a\xE2\x82\u{301}\xFFb", utf8mode.KEEP_INVALID);
+	int64 n = 0;
+	for copy g, i in k -> graphemes() {
+		if g.mode != utf8mode.KEEP_INVALID { fail("grapheme mode"); }
+		if i == 1 && g != "\xE2\x82" || i == 2 && g != "\u{301}" || i == 3 && g != "\xFF" { fail("invalid graphemes"); }
+		n + 1 -> n;
+	}
+	if n != 5 || k -> graphemeCount() != 5 { fail("invalid grapheme count"); }
+
+	for copy g in utf8("xe\u{301}") -> graphemes() { n + byteLen(@g) -> n; }
+	if n != 9 { fail("graphemes of a temporary"); }
+}
+
 testMake();
 testRead();
 testCopy();
@@ -737,3 +871,4 @@ testOperators();
 testSearch();
 testChange();
 testMakeFrom();
+testGraphemes();

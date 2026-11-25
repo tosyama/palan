@@ -52,6 +52,6 @@ add_subdirectory(src/std)
 add_subdirectory(test/std-tester)
 
 set(PALAN_INSTALL_DOC_DIR share/doc/palan/${PALAN_VERSION})
-install(FILES README.md LICENSE DESTINATION ${PALAN_INSTALL_DOC_DIR} COMPONENT doc)
+install(FILES README.md LICENSE src/std/LICENSE-Unicode.txt DESTINATION ${PALAN_INSTALL_DOC_DIR} COMPONENT doc)
 install(DIRECTORY doc DESTINATION ${PALAN_INSTALL_DOC_DIR} COMPONENT doc PATTERN Issues.md EXCLUDE)
 

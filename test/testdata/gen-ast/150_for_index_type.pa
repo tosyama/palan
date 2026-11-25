@@ -1,2 +1,6 @@
 for @a, int32 i in v { }
 for copy a, Idx i in v { }
+for copy a, i in rows[0] { }
+for copy a, int64 i in d["x"] { }
+for copy a, int64 i in [1, 2] { }
+P p = {in: 1};

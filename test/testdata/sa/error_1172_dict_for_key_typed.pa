@@ -1,0 +1,2 @@
+[""]int32 d;
+for copy v, int64 k in d { }

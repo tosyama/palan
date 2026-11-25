@@ -1,0 +1,2 @@
+func a(@[3]int32 v) -> @[3]int32 { return v; }
+@func(@[3]int32) -> @[4]int32 g = a;

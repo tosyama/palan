@@ -1,7 +1,7 @@
 Palan Semantic Analyzer JSON Specification
 ==========================================
 
-ver. 0.2.6
+ver. 0.2.7
 
 Output of palan-sa. Extends the AST JSON format (see ASTSpec.md) with resolved
 type information and pre-collected literal tables.
@@ -44,7 +44,7 @@ Root
   manager unions it across modules and passes each path to `ld` after the program's own objects.
 - alloc-shapes\* - List of shape descriptors for arrays and structs requiring custom allocators.
   Empty array when no qualifying var-decls are present.
-  Five entry kinds: struct, bytes, opaque, arr and varr.
+  Six entry kinds: struct, bytes, opaque, arr, varr and dict.
 
   The arr and varr entries describe their element by its layout: the element as `data` (or the
   array) holds it, with each integer type replaced by the signed one of its width (`uint32` and
@@ -58,7 +58,7 @@ Root
     entry), `"embed-struct"`
     with `"name"` (the struct itself, `total-size` bytes), or `"varr"` with `"name"` (an owned
     slot holding a `[+]U`, 8 bytes; the name is its header type, `__pln_varr_U`) and `"shape-key"`
-    (the `[+]U`'s own entry), or, for a row `[n]U`, `"row"` (an owned slot holding the row's
+    (the `[+]U`'s own entry), `"dict"` with the same for a `[""]U` (see the dict entry), or, for a row `[n]U`, `"row"` (an owned slot holding the row's
     own block, 8 bytes) with `"elem"` (the row's element, described the same way), or
     `"embed-row"` (rows laid out in place; no `"size"`, which depends on the lengths) with `"depth"` (how many consecutive levels are laid
     out in place: `[+]$[3]$[4]int32`'s element is one `"embed-row"` of depth 2) and `"elem"` (the
@@ -130,6 +130,29 @@ Root
   - shape-key\* - Shape key string (e.g. "varr\_int32", "varr\_P9\_\_pln\_B16", "evarr\_9\_\_pln\_B16")
   - elem\* - The element, as above
 
+  **Dict entry** (`[""]T`; `T` any element of the varr entry): std/rt keeps the keys in a
+  72-byte header whose last 24 bytes are the values, a `[+]T` header, one value at each key's
+  position. A removed key's value is released at once, leaving its slots NULL (a row laid out
+  in place, each of its elements' slots); the positions are compacted later. The values' varr
+  entry is listed before this one. build-mgr declares the header as
+  `type __pln_dict_T { int64 …; $__pln_varr_T values; }` and generates `__pln_alloc_dict_T()`,
+  `__pln_free_dict_T(@!hdr h)` (NULL-safe: `__pln_fini_varr_T` on the values, then
+  `__pln_dict_free`) and `__pln_copy_dict_T(@!hdr dst, @hdr src)` (nothing when `dst` is `src`;
+  otherwise the keys by `__pln_dict_copy`, which keeps their positions, the removed ones
+  included, then the values as one run by `__pln_copy_varr_T`). It also generates, with `k` an
+  `@[]uint8`, `__pln_at_dict_T(@hdr h, k)` and `__pln_put_dict_T(@!hdr h, k)` (the address of k's
+  value as `@!void`; `at` stops the program for a missing key through `__pln_dict_at`, `put` adds
+  the key and a built value), `__pln_has_dict_T(@hdr h, k) -> bool`,
+  `__pln_remove_dict_T(@!hdr h, k) -> bool` (releases the value, then `__pln_dict_settle`) and
+  `__pln_clear_dict_T(@!hdr h)`. Each also takes the lengths the varr entry's functions do.
+  As an element (of a `[+]T` or another dictionary's values), elem kind `"dict"` (`name`
+  `__pln_dict_T`, `shape-key`), a slot holds the header: a new one is `__pln_dict_new()`, a dropped
+  one is freed with `__pln_free_dict_T`, and a copy into one is `__pln_copy_dict_T`:
+  - shape-kind\* - "dict"
+  - shape-key\* - `dict_` followed by the element's `key` (e.g. "dict\_int32"); `edict_` for
+    `[""]$T`, whose values are an `evarr_` entry
+  - values\* - The shape key of the values' varr entry (e.g. "varr\_int32")
+
   **Bytes entry** (`__pln_B<n>`, the layout of a struct owning nothing that an element or an
   owned field holds): build-mgr only declares it, as `type __pln_B<n> { $[n]uint8 …; }`, for
   the functions of the arrays and structs holding it:
@@ -164,7 +187,7 @@ Root
     - name\* - Field name string, or the path to it through structs laid out in the struct
     - offset\* - Byte offset within the struct
     - elem\* - The element, as in the arr and varr entries (`"struct"` for `T`, `"varr"` for
-      `[+]U`, `"row"` for an owned array, `"embed-row"` for an array laid out in the struct),
+      `[+]U`, `"dict"` for `[""]U`, `"row"` for an owned array, `"embed-row"` for an array laid out in the struct),
       or `"embed-varr"` for `$[+]U`: the varr element's description with `"size"` 24
     - lens\* - The lengths of the field's levels, outermost first and on through the elements
       of a `[+]U`, which its element's helpers take (`[3]`, `[3, 4]`; empty for `T`)
@@ -280,8 +303,8 @@ the function marked `release` releases its own parameter as the contents.
 - `<param>`: the parameter's normalized `var-type`, each type self-delimiting:
   - prim: its name (`int32`, `flo64`, `bool`, `void`); an enum: `N<len><enum name><base prim>`
   - struct: `<len><type-name>`, the type's identity (the examples here write the name alone)
-  - pntr: `E` if `embedded`, `S<stride>_` if `stride`, `A<arr-size>_` if `arr-size`, then `P`
-    (no `mutable`: owned or by value), `R` (`mutable: false`) or `W` (`mutable: true`), then the
+  - pntr: `E` if `embedded`, `S<stride>_` if `stride`, `A<arr-size>_` if `arr-size`, `U`
+    if `unsized`, then `P` (no `mutable`: owned or by value), `R` (`mutable: false`) or `W` (`mutable: true`), then the
     base type
   - func: `F<parameter count>_`, each parameter type, then the return type (a `void` prim when none)
   - varr: `V` (`VC` if `embedded`), then the element type (`@![+]int32` is `WVint32`,
@@ -306,8 +329,7 @@ result as it is and otherwise a copy, of what a copy into it accepts (E_Incompat
 `return` copies a value the function doesn't own, and any value whose shape a copy would reject,
 an owning variable's included, is E_CopyShapeMismatch; `return [..]` declares `__ret_N` from the
 literal, as for a struct. A borrowed array return (`-> @[]T`, `@[n]T`, `@[+]T`) is normalized as a
-parameter is (see `@[n]T` below); its call is a borrow, bound and passed by name. Only a pointer
-to a borrowed array (`@@[n]T`) is E_UnsupportedParamType.
+parameter is (see `@[n]T` below); its call is a borrow, bound and passed by name.
 
 A struct parameter `T` (`pntr(struct)` with no `mutable`) is owned the same way: a call result
 is passed as it is, anything else (a struct literal included) is copied into a `temp`
@@ -377,7 +399,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     so their order in the source does not matter. A block-scoped import's types are
     registered at the import and writable until the end of the block.
   - Reaching a declaration that is still being resolved is a cycle, reported as
-    `E_CircularTypeDecl` at the declaration that reached it. A struct named through a
+    `E_CircularTypeDecl` at the declaration that reached it, except that a struct
+    embedding itself (`$T`, `$[n]T`) is `E_RecursiveStruct`. A struct named through a
     pointer only has to be declared; it is resolved once no declaration is being
     resolved, so a pointer may close a cycle.
   - A struct comes with every struct and enum its fields use, and a signature with every
@@ -524,7 +547,7 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     for `[n]$U`, or an owned `[+]V`), with `"embedded": true` on the `varr` for `[+]$[n]U`. The
     row size must be a constant (E_UnsizedArrRowSizeNotConst). Further levels follow the same
     rules at any depth (`[+][m][n]U`, `[+][m]$[n]U`). For a pointer element (`[+]@T`, `[+]@!T`,
-    `[+]@[]T`), `pntr(T, mutable)`, the slot a `[n]@T` element is; it borrows and is laid out as
+    `[+]@[]T`, `[+]@[+]T`, `[+]@[""]T`), `pntr(T, mutable)`, the slot a `[n]@T` element is; it borrows and is laid out as
     an `int64`, so its shape key is `varr_int64`. A row of pointer slots (`[+][n]@T`) is laid out as
     a row of `int64` the same way (`varr_Pint64`). Below, `T` stands for `E` and `varr_T` for the shape key, made from
     `E`'s layout.
@@ -618,10 +641,53 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     (E_TransferFromNonOwner, E_TransferToNonOwnedField), as the header of a `$[+]U` variable.
     `$[n]$[+]U` is E_EmbedOwningType.
 
+  **`[""]T` (dictionary):** The variable is one word pointing at a header std/rt allocates
+  (the dict `alloc-shapes` entry). It follows `[+]T` above where nothing else is said.
+  - `var-type`: `pntr(strdict(E))`; `strdict` (`{"type-kind":"strdict","base-type":E}`, with
+    `embedded` for `[""]$T`) appears only as this pointer's base, its kind other than the written
+    `dict` so that an analyzed type is not read as a written one. `E` is any element of a `[+]T`,
+    as `varr`'s is (a dictionary's being its `pntr(strdict(…))`); `[""]$T` of a type owning
+    storage is E_EmbedOwningType.
+  - A dictionary as a field or an element (`[n][""]T`, `[+][""]T`, another dictionary's value) is
+    an owned slot of elem kind `"dict"`, starting empty, as a `[+]T`'s is; a struct literal and a
+    field initializer give it a dictionary literal. Laid out in place (`$[""]T` as a field,
+    `[n]$[""]T`, `[+]$[""]T`, `[""]$[""]T`) it is E_EmbedOwningType, as a variable E_FrameVarType,
+    since std/rt allocates the header.
+  - `init`: `__pln_alloc_dict_T()`; scope-exit free: `__pln_free_dict_T(<name>)`.
+  - Copying takes a `[""]T` or `@[""]T`/`@![""]T` of the same `E` (`__pln_copy_dict_T(w, v)`);
+    anything else is E_CopyShapeMismatch. `->>`, returns, owned parameters (symbol `PD` +
+    element), `@v`/`@!v` (`pntr(strdict(E))` with `mutable`; without `@`,
+    E_DictBorrowNeedsAddrOf) and `@[""]T`/`@![""]T` types are as for `[+]T`.
+  - `d[k]` is an `arr-index` by `lit-int` 0 whose `array` is a call of `__pln_at_dict_T(d, k)`,
+    typed `pntr(E)` as a `[+]T`'s data pointer is (read-only through `@[""]T`), so the element
+    is read, written into, borrowed and given away as a `[+]T`'s is. `k` is checked as an
+    argument to `@[]uint8`, but an array is given by name (`d[buf]`).
+  - A whole store (`x -> d[k]`, `x ->> d[k]`, a literal included) is emitted as: the value, when
+    it has a call, into a `pinned` temp (`__pin_N`); then `__pin_M` initialized to
+    `__pln_put_dict_T(d, k)`; then the store into `__pin_M[0]`. A literal is first put into a
+    temp (`__lit_N`), which is then stored so. Through `@[""]T` it is E_WriteThroughReadOnlyPtr.
+    A constant key (`d[K]`) is its string.
+  - A literal `{"a": v, K: w}` initializing `d` is emitted as `d`'s declaration, then for each
+    key in order `__pin_N` initialized to `__pln_put_dict_T(d, key)` and the value stored into
+    `__pin_N[0]` as an array literal's element is; a value that is itself a dictionary literal is
+    written so into the value its key's adding builds, after `__pln_clear_dict_T` on it. The
+    values' rows are checked as an array literal's. The key is a `lit-str`, written or a string
+    constant's (otherwise E_DictLitKeyNotConst); a repeated key is E_DictLitDupKey. The values
+    are analyzed before `d` is declared. Elsewhere (`->`, a return, an argument) the literal
+    initializes a temp `__lit_N`/`__ret_N` that is used in its place, as a `[+]T` literal is; an
+    argument to `@[""]T` is written `@{..}`. A literal whose keys are all strings or string
+    constants fits a dictionary parameter, and one with a string key fits no struct parameter.
+  - Builtins, as `[+]T`'s are: `len(@d)` (inline, the header's first word), `has(@d, k)`,
+    `remove(@!d, k)` and `clear(@!d)`, calling the generated functions above. A function with
+    the parameter types of one is E_DuplicateFuncDef.
+  - In a `for` loop's checks (E_ChangeForRange), `d["a"]` and `d["b"]` with constant keys are
+    different values, as `v[0]` and `v[1]` are.
+
   **`[]$[m]T` (unsized embedded array parameter):** Normalized by SA to the same
   `pntr(pntr(T, arr-size:m), embedded:true, stride:m*sizeof(T))` type as the sized form. The inner dimension `m`
-  must be a compile-time constant literal; `[]$[]T` or `[]$[var]T` in a parameter is a
-  compile error (`E_EmbeddedArrUnsizedInner`).
+  must be a compile-time constant (`E_UnsizedArrRowSizeNotConst`). Without it there is no stride, so
+  `[]$[]T` is `E_EmbeddedArrUnsizedInner` wherever the type is written (a parameter, `@[]$[]T`, an
+  element `[+]@[]$[]T`); a declaration's initializer literal gives the lengths first.
 
   **`arr-index` on embedded array (row access):** When the array expression has an embedded
   pntr type (`embedded:true`), `arr[i]` is treated as a row access:
@@ -663,19 +729,24 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   is any pointer type (`@!@T`, `@func(...)`), each level keeping its own `mutable`; a name
   other than a primitive's under it is `struct(T)`, its layout not needed. A `pntr` with
   `mutable` and none of `arr-size`, `embedded` and `unsized` is a `@T`/`@!T` pointer, never an
-  array level. `@name` of an array whose size is known only at run time marks each such level
-  `"unsized": true` beside its `mutable`, so it stays an array level.
+  array level. A borrowed level without `arr-size` has `"unsized": true` beside its `mutable`, so
+  that it stays an array level: `@name` of an array whose size is known only at run time, and the
+  rows of a read-only `@[][]T`.
   Without the outer size, `@[]T` / `@![]T` becomes the element type of a `[n]@[]T` / `[n]@![]T`
   slot, `pntr(T, mutable)` (a row keeping `mutable: false` on each level when read-only), so it
   is the same type as `@T` / `@!T`. Every other size must be constant
   (`E_ArrBorrowSizeNotConst`) and `T` primitive, struct or a pointer to one, with neither a
-  struct nor a pointer inside a `$[m]` row (`E_ArrBorrowUnsupportedElem`). A
-  return type of this form stays rejected (`E_UnsupportedParamType`). At a call argument, a
+  struct nor a pointer inside a `$[m]` row (`E_ArrBorrowUnsupportedElem`). An `@[n]T` with a
+  size, as an element or what a pointer points to (`[2]@[3]T`, `@@[3]T`), is E_NestedArrBorrow: as
+  an element it would be typed as a borrowed array's row is. At a call argument, a
   local's initializer, or an assignment to such a destination, the source must be written as
   `@x`/`@!x` (`E_ArrBorrowNeedsAddrOf`) and its value-type must match depth, `embedded`,
   every `arr-size`, whether the element is a stored struct or a pointer, and a
-  pointer element's `mutable`, which a read-only borrow may narrow from `true` to `false`
-  (`E_ArrBorrowShapeMismatch`). A row read through an
+  pointer element's `mutable`, which a read-only borrow may narrow from `true` to `false`, and the
+  shape of what that element points to (`E_ArrBorrowShapeMismatch`). A destination without a size
+  (`@[][]T`, `@@T`, a `[k]@[]T` slot) takes a source whose outermost level agrees in `embedded`
+  when its elements are rows or pointers, and whose elements match in the same way
+  (`E_ArrElemShapeMismatch`). A row read through an
   embedded borrow inherits its `mutable`.
 
   Scope-exit cleanup:
@@ -721,9 +792,21 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
   method-form push/pop/resize, or a `@!` borrow passed on or bound as is). Indices on the path
   are not compared, so any index counts as the iterated one.
 
+  Over a dictionary `d` (`for copy v, k in d`), the block is the same with these differences.
+  The hidden index starts at `__pln_dict_next(__for_N, 0)` and steps to
+  `__pln_dict_next(__for_N, index + 1)` (std/rt's first live position from there on, or the
+  number of positions used); `k`, when written, is a read-only `@uint8` declared from
+  `__pln_dict_key(__for_N, index)` and set again after each step, and is read-only as an index
+  is. The length is the header's number of positions used (offset 8), and the elements are
+  those of a hidden `__for_vals_N`, the values' data pointer (offset 64), indexed as above. A
+  type on `k` is E_ForDictKeyTyped. A store `x -> d[k]` into the range is E_ChangeForRange too,
+  as it may add a key; one into a value's field is not.
+
   Over a struct `s` (`for copy c, i in s`), SA lowers it to a `block` holding, in order:
   - the iterator `__pin_N` that the call `iter(@s)` (or `iter(@!s)`) returns. When `s` is a value
     a call returns, it is first held in a `__pin_N` of its own, which the block frees if it owns it.
+    The `release` of each `temp` the call was given moves to the end of the block as well, as it does
+    for an array a call returns; a `temp` that is the call itself has its `body` laid in the block.
     `iter` and `next` are those visible under any alias whose shape fits
     (`iter(@T s) -> I` or `iter(@!T s) -> I`, with `I` a struct; `next(@!I it) -> bool ok, E`);
     none is E_ForIterShape or E_ForNextShape, both `iter(@T)` and `iter(@!T)` E_ForIterAmbiguous.
@@ -776,6 +859,9 @@ Additional statement kinds emitted by SA:
   other than the variable itself (E_TransferToSelf) whose shape matches it as for a row
   (E_TransferShapeMismatch). It emits the same three statements with an `assign`; the free is the
   variable's own scope-exit release, which knows its sizes.
+
+  In all three, a value a call computes is first evaluated into a `__pin_N` by a `var-decl`
+  (category `expiring`), since it may read what the target holds (`f(v) ->> v`).
 
 - **Chained and once-evaluated stores** - an assignment whose `value` is another assignment
   (`v -> t1 -> t2`, or a `chain-call` starting from one) runs that assignment first and reads its
@@ -920,7 +1006,9 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     A function type's parameter and return types take the form a Palan function's do (`sigType`),
     wherever the type is written, so an owned struct is `pntr(struct)` without `mutable`. A
     binding between function pointer types also requires each parameter and the return to agree
-    in being owned (`isOwnedBlock`), which the type registry does not tell apart.
+    in what the type registry does not tell apart (`sigShapeOk`): an owned block (`isOwnedBlock`)
+    has the same type on both sides, and a borrowed array a shape that fits, in the direction the
+    value flows.
   - addr-of: SA dispatches on the AST node's `object` (see ASTSpec.md) and emits one of three
     shapes — the `addr-of` expr-type only ever appears for the plain-variable case; a struct-field
     or array-element target lowers to an ordinary `field-access`/`arr-index` node instead:
@@ -999,7 +1087,7 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
         "value-type": {"type-kind":"pntr","mutable":true,"base-type":{"type-kind":"prim","type-name":"int64"}}
       }
       ```
-    - Any other operand shape (a call result, a parenthesized tuple, …) is a compile error
+    - Any other operand shape (a call result, `@(a + b)`, …) is a compile error
       (E_AddrOfNotAddressable) — address-of is not general in this version.
     `mutable` is always present on the resulting `value-type` regardless of which shape was
     emitted.
@@ -1104,7 +1192,11 @@ SA-only expression kinds (not present in AST JSON):
 
 - static-alloc - The storage of a `$T` or fixed-size array `global` variable, in place of its
   `frame-alloc`: a block in `.bss`, so it outlives the top level. Its value is the block's
-  address. Same fields as `frame-alloc`, plus `label` (the variable's label + `.data`).
+  address. Same fields as `frame-alloc`, plus `label` (the variable's label + `.data`), and
+  `data` when the variable's array literal is all constants of a `prim` leaf: `type` (the leaf)
+  and `values` (each element's `value` text, as its `lit-int`/`lit-uint`/`lit-flo` gives it, rows
+  in order). The block then holds those values from the start, in `.data`, and the var-decl is
+  followed by no `arr-assign` of them.
 - frame-alloc - A block in the function's stack frame; its value is the block's address. Appears
   only as the `init` of a stack variable's var-decl (see Stack variable declarations) or of
   `args`'s (see Root `statements`).
@@ -1379,25 +1471,29 @@ not fit it. With several, each argument is analyzed once without a parameter typ
   variadic function; from the parameters without defaults to all of them for a function with
   defaults) and every argument passes the parameter's checks; an argument matches
   exactly when its type is the parameter's, including `mutable` on every pointer level (through
-  pointers and a `[+]T`'s elements).
+  pointers and the elements of a `[+]T` or `[""]T`).
 - An argument whose type comes only from its parameter is matched by what it can become: an
   untyped literal (or one the parameter's type reaches through `-`, `~`, a shift or arithmetic)
   fits any primitive and matches exactly its default type (int64, uint64, flo64; for an
   expression of literals and variables, the type it has with no parameter); an aggregate literal
   fits a pointer or struct and never matches exactly; a function name matches a function pointer
-  parameter of one of its functions' types. It is analyzed with the chosen parameter's type.
+  parameter one of its functions fits (`ptrPermission`). It is analyzed with the chosen parameter's type.
 - A chained value fits as `@v` where the parameter would take it so, and as `v` otherwise.
 - The one fitting candidate is chosen; of several, the one every argument matches exactly
   (and no variadic argument is passed), or else the one every argument matches exactly but for
-  a writable outermost pointer given to a read-only parameter. When one of several fitting
+  a writable outermost pointer given to a read-only parameter. Of several ranking so, the one
+  whose parameter types are the arguments' also in what the type registry leaves out (lengths,
+  rows, elements' owners, functions' signatures; permissions aside) is chosen. When one of several fitting
   candidates needs a default to fit, none is preferred. Otherwise E_NoMatchingFunc (the argument
   types and the candidates) or E_AmbiguousCall (the candidates that fit, a default shown as
   `int32 = 0`).
 - Receiving several values (`(a, b) = f(x)`) considers only the candidates returning that many,
   which must agree on what they return, since the receivers are declared before the arguments
   choose one (E_AmbiguousCall).
-- A function name used as a value takes the function whose `@func` type is the expected one (a
-  variable's, field's or parameter's): none is E_FuncNameNeedsType, several E_AmbiguousCall.
+- A function name used as a value takes the function fitting the `@func` type it is given to (a
+  variable's, field's or parameter's), or of several the one whose own type it is: none is
+  E_FuncNameNeedsType (a single one differing only in permission, owner or shape is bound, and
+  its mismatch reported), several E_AmbiguousCall.
 
 ### Default arguments
 
@@ -1617,13 +1713,6 @@ a named `strct`/`union`→`struct`) and then check every type against `unreprese
   and parameters, so a C function pointer has the same shape as a native `@func(...)`. A C
   typedef of a function type (not a pointer, e.g. `cookie_read_function_t`) is expanded by
   c2ast where it is referenced, so `cookie_read_function_t *` arrives as a `pntr` to a `func`.
-
-This differs from a native Palan signature's check (`validateNativeSig`): a native signature only
-rejects a structural type-kind `PlnTypeRegistry::fromJson` can never build (currently just a bare
-`arr`), and defers a not-yet-registered struct name to the more specific E_UnknownType /
-E_IncompleteStructType diagnosed at the point of use — a cinclude'd C signature has no such later
-resolution step to defer to, since c2ast's typedef registration has already resolved anything
-resolvable before the signature is emitted.
 
 **Deferred to reference time, not rejected at cinclude time**: a hit does not fail the `cinclude`
 statement itself. It is recorded on the entry (`_unsupported-sig` for a function,

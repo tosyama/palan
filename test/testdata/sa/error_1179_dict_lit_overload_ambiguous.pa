@@ -1,0 +1,5 @@
+type P { int32 x; };
+const x = "x";
+func f(@[""]int32 d) { }
+func f(@P p) { }
+f(@{x: 1});

@@ -1,0 +1,30 @@
+cinclude <stdio.h>;
+type Q { @[3]int32 b; };
+
+func any(@void v) -> int32 { return (v as @[3]int32)[2]; }
+func sized(@[3]int32 v) -> int32 { return v[1]; }
+func same(@[3]int32 v) -> @[3]int32 { return v; }
+func none() -> @[3]int32 { return NULL; }
+func copied(@[""]int32 d) -> [""]int32 { return d; }
+
+func main2() {
+	[3]int32 a = [1, 2, 3];
+	@func(@[3]int32) -> int32 viaArr = any;
+	@func(@void) -> int32 viaVoid = sized;
+	@func(@[3]int32) -> @[3]int32 g = same;
+	@[3]int32 r = g(@a);
+	printf("%d %d %d\n", viaArr(@a), viaVoid(@a), r[0]);
+	none() -> r;
+	printf("%d\n", r == NULL);
+	Q q;
+	@a -> q.b;
+	q.b -> r;
+	printf("%d\n", r[1]);
+	[2][""]int32 s = [{"x": 1}, {}];
+	[2][""]int32 t;
+	s -> t;
+	2 -> s[0]["x"];
+	[""]int32 c = copied(@t[0]);
+	printf("%d %d %d\n", s[0]["x"], t[0]["x"], c["x"]);
+}
+main2();

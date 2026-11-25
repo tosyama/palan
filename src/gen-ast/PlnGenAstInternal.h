@@ -53,11 +53,9 @@ inline json storeLocToExpr(const json& loc)
 	} else if (kind == "arr-index") {
 		e = {{"expr-type", "arr-index"},
 		     {"array", loc["array"]}, {"index", loc["index"]}}; // LCOV_EXCL_BR_LINE
-	} else if (kind == "field") {
+	} else {
 		e = {{"expr-type", "field-access"},
 		     {"object", storeLocToExpr(loc["base"])}, {"field", loc["field"]}}; // LCOV_EXCL_BR_LINE
-	} else {
-		e = {{"expr-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
 	}
 	if (loc.contains("loc")) e["loc"] = loc["loc"];
 	return e;
@@ -68,19 +66,10 @@ inline bool isStoreStmt(const json& e)
 	return e.contains("stmt-type");
 }
 
-// Multiple values stored by a tapple have no single target to read back.
-inline bool chainsThroughTapple(const json& value)
-{
-	string t = value.value("stmt-type", "");
-	return t == "tapple-assign" || t == "not-impl";
-}
-
 // `value -> loc` (`->>` when transfer) as its statement. In a chain the value
 // is itself a store statement, whose target SA reads back.
 inline json storeStmt(json loc, json value, bool transfer)
 {
-	if (chainsThroughTapple(value))
-		return {{"stmt-type", "not-impl"}}; // LCOV_EXCL_BR_LINE
 	string kind = loc["kind"];
 	json s;
 	if (kind == "var") {
@@ -129,7 +118,7 @@ inline json fptrSigType(json t)
 } // LCOV_EXCL_BR_LINE
 
 // Whether a type_expr result has no array level other than a plain '[n]'/'[]'
-// one ('[#n]'/'[+n]' are not implemented).
+// one ('[+n]' is not implemented).
 inline bool isImplementedTypeExpr(const json& t)
 {
 	if (t.value("type-kind", "") == "arr" && t.value("specifier", "") != "raw")
@@ -141,6 +130,19 @@ inline bool isImplementedTypeExpr(const json& t)
 inline json varrTypeExpr(json sizeExpr, json base)
 {
 	json t = {{"type-kind","arr"},{"specifier","variable"},{"size-expr",std::move(sizeExpr)}}; // LCOV_EXCL_BR_LINE
+	if (base.value("type-kind", "") == "embed") {
+		t["embedded"] = true;
+		t["base-type"] = std::move(base["base-type"]);
+	} else {
+		t["base-type"] = std::move(base);
+	}
+	return t;
+} // LCOV_EXCL_BR_LINE
+
+// `[""]$T` keeps its values in place, marked like `[+]$T`.
+inline json dictTypeExpr(json base)
+{
+	json t = {{"type-kind","dict"}}; // LCOV_EXCL_BR_LINE
 	if (base.value("type-kind", "") == "embed") {
 		t["embedded"] = true;
 		t["base-type"] = std::move(base["base-type"]);
@@ -167,7 +169,7 @@ inline bool isDeclarableVarType(const json& t)
 	string tk = t.value("type-kind", "");
 	if (tk == "prim" || tk == "pntr")
 		return true;
-	if (isVarrType(t))
+	if (isVarrType(t) || tk == "dict")
 		return t["base-type"].value("type-kind", "") == "prim" || isDeclarableVarType(t["base-type"]);
 	if (tk != "arr" || t.value("specifier", "") != "raw")
 		return false;
@@ -177,21 +179,10 @@ inline bool isDeclarableVarType(const json& t)
 	string btk = bt.value("type-kind", "");
 	if (btk == "prim")
 		return true;  // fixed-size array of prim
-	if (isVarrType(bt))
-		return isDeclarableVarType(bt);  // fixed-size array of [+]T
-	if (btk == "pntr" && bt.contains("base-type")) {
-		const json& ibt = bt["base-type"];
-		if (ibt.value("type-kind", "") == "arr" && ibt.value("specifier", "") == "raw"
-			&& ibt.contains("size-expr") && ibt["size-expr"].is_null())
-			return true;  // array of @/@! slots into an unsized array
-	}
-	if (btk == "pntr") {
-		const json* pointee = &bt["base-type"];
-		while (pointee->value("type-kind", "") == "pntr") pointee = &(*pointee)["base-type"];
-		string pk = pointee->value("type-kind", "");
-		if (pk == "prim" || pk == "func")
-			return true;  // array of pointers (@T, @!@T, @func(...) elements)
-	}
+	if (isVarrType(bt) || btk == "dict")
+		return isDeclarableVarType(bt);  // fixed-size array of [+]T or [""]T
+	if (btk == "pntr")
+		return true;  // array of pointers; SA decides what they may point to
 	if (btk == "arr" && bt.value("specifier", "") == "raw" && !bt["size-expr"].is_null())
 		return isDeclarableVarType(bt);  // fixed-size multidim array (also covers embedded-struct arrays)
 	return false;

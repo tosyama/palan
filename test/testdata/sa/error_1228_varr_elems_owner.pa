@@ -1,0 +1,2 @@
+type P { int32 x; };
+func f(@![+]@P w) { @![+]P v = w; }

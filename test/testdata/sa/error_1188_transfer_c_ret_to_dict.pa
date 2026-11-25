@@ -1,0 +1,3 @@
+cinclude <stdio.h>;
+[""]FILE d;
+fopen("/dev/null", "r") ->> d["a"];

@@ -1,6 +1,6 @@
 # Palan Language Reference
 
-**Version:** v0.2.6
+**Version:** v0.2.7
 
 Palan is a compiled systems programming language designed as a simpler, safer, and more enjoyable alternative to C. It targets developers who want low-level control and direct access to C libraries, without the sharp edges of C syntax. Palan code compiles to native x86-64 binaries via AT&T assembly, with no runtime overhead.
 
@@ -429,8 +429,9 @@ int32 a = 5, b = 10;   // type inheritance: b is also int32
 and is currently a compile error. It is not an assignment — assignment is written `10 -> x;`.
 
 **Stack storage:** A struct or array variable is allocated on the heap; with `$` in front of its
-type (`$Point p;`, `$[4]int32 a;`) it is placed in the function's stack frame instead. See
-[Stack Arrays](#stack-arrays-nt) and [Stack Structs](#stack-structs-t).
+type (`$Point p;`, `$[4]int32 a;`) it is placed in the function's stack frame instead. A
+parameter or return value cannot have `$`. See [Stack Arrays](#stack-arrays-nt) and
+[Stack Structs](#stack-structs-t).
 
 **Initial contents:** A new struct or array starts undefined, as memory from C's `malloc` does:
 its primitive fields and elements, and its pointers (`@T`), hold whatever was there before, so
@@ -606,7 +607,7 @@ jpeg_CreateCompress(@!cinfo, JPEG_LIB_VERSION, sizeof(jpeg_compress_struct));
 ```palan
 int64 x = 10;              // variable declaration
 x + 1 -> x;               // assignment statement
-printf("%ld\n", x);        // expression statement (function call)
+printf("%ld\n", x);        // expression statement: only a call can be one
 return;                    // return from function (no value)
 return expr;               // return with single value
 (int64 a, b) = foo();      // tapple declaration (receive multiple return values)
@@ -707,13 +708,14 @@ printf("\n");                          // 0:20 1:40 2:60
 - `arr` can be any array `len` gives the length of (see [Variable-Length
   Arrays](#variable-length-arrays-t)): a fixed-size or variable-length array, a borrowed one, a
   struct's array field or a row. It is evaluated once, before the first iteration; an array
-  returned by a function call is freed after the loop.
+  returned by a function call is freed after the loop, as are the structs and literals given to
+  that call as arguments.
 - The loop variable has no type written, but one of `copy`, `@` or `@!` is required. `copy a` is
   a copy of the element (an owned struct or array is copied deeply and freed at the end of each
   iteration). `@a` and `@!a` are the element itself, read-only and writable: `a` stands for
   `arr[i]` wherever it is written (`0 -> a`, `a.x`, `a[j]`, `a.push(1)`), so it is given to a
   function as an element is (`f(@!a)`, `len(@a)`). `copy` is not a reserved word; it can still
-  name a variable or field.
+  name a variable or field. `in` is a reserved word, but it can still name a field.
 - `i` cannot be assigned to.
 - A type can be written before `i`: `for @c, int32 x in row` gives `x` as an `int32`, so it is
   passed to an `int32` parameter without a cast. It must be an integer type, and for an array of
@@ -762,7 +764,8 @@ for copy c, i in g { printf("%ld:%d ", i, c); }    // 0:10 1:20
   itself, as for an array.
 - `i` counts the iterations from 0. A type may be written for it, which is not checked to fit,
   as for an array whose length is known only at run time.
-- `s` is evaluated once; a struct returned by a call is freed after the loop. The body cannot
+- `s` is evaluated once; a struct returned by a call is freed after the loop, as are the structs
+  and literals given to that call as arguments, which what it returned may borrow. The body cannot
   change `s` itself: `->` or `->>` into or out of it, and passing `@!s` (also `s.f()` and
   `s << x`), are compile errors. Reading `s` and writing its fields are fine.
 
@@ -1113,10 +1116,11 @@ printf("%d\n", o.op(4));           // 8
 - It is read-only like `@T`: code is never written through it, so `@!func(...)` is an error.
   The variable itself can be given another function with `->`.
 - A parameter or return type is a primitive, a borrowed pointer (`@T`/`@!T`, including another
-  function pointer), or an owned struct or array (`T`, `[n]T` with a constant `n`, `[+]T`), which
-  is passed and returned as a function passes it: the called function owns an owned argument and
-  frees it, and the caller owns an owned return value. A `$T` or `[]T` is not allowed. The last
-  parameter can be [variadic](#variadic-arguments) (`[...]T`).
+  function pointer), a borrowed array or dictionary (`@[n]T`, `@[]T`, `@[+]T`, `@[""]T`, or with
+  `@!`), or an owned struct, array or dictionary (`T`, `[n]T` with a constant `n`, `[+]T`,
+  `[""]T`), which is passed and returned as a function passes it: the called function owns an
+  owned argument and frees it, and the caller owns an owned return value. A `$T` or `[]T` is not
+  allowed. The last parameter can be [variadic](#variadic-arguments) (`[...]T`).
 - A function becomes a function pointer by writing its name where a value is expected. This works
   for a Palan function returning nothing or one value (a single named return counts as one), an
   imported function, and a C function that is not variadic. A function with several return
@@ -1128,7 +1132,8 @@ printf("%d\n", o.op(4));           // 8
   permissions flow the right way: a function taking `@!T` does not fit a pointer that passes
   `@T`, while a function taking `@T` fits one that passes `@!T`. Ownership must match too: a
   function owning a parameter (`T`) does not fit a pointer that lends it (`@!T`), nor the
-  reverse. A `@void` parameter or return matches any pointer, as it does elsewhere.
+  reverse, and so must an array's shape: its size (`[3]T` does not fit `[4]T`) and whether it
+  owns its elements (`[+]T` does not fit `[+]@T`). A `@void` parameter or return matches any pointer, as it does elsewhere.
 - A function pointer is a pointer otherwise: it can be `NULL` and compared with `==`/`!=`, a
   `@void` converts to it, and `as` converts it to `@void` or `int64`/`uint64` and back. Calling a
   `NULL` function pointer is not checked.
@@ -1160,9 +1165,11 @@ show(2.5);          // float 2.5
   `cinclude <stdlib.h>;`, `func abs(flo64 x) -> flo64` adds a float version of C's `abs(int)`.
 - If one function fits the arguments, it is called. If several fit, the one every argument
   matches exactly (same type, and for a pointer the same `@`/`@!`, down to the elements of a
-  borrowed array) is called. Failing that, the one that differs only by taking a `@!` argument as
+  borrowed array or dictionary) is called. Failing that, the one that differs only by taking a `@!` argument as
   `@`, at its outermost level, is called: given `@!s` of a `[2]@!P s`, `f(@[2]@!P)` is chosen
-  over `f(@[2]@P)`. Otherwise the call is ambiguous and a compile error. With `f(int32)` and `f(int64)`, an `int16` argument is
+  over `f(@[2]@P)`. Where several remain that differ only in an array's shape, the one whose shapes
+  (lengths, rows and who owns the elements) are also the arguments' is called: given `@a` of a
+  `[3]int32 a`, `f(@[3]int32)` is chosen over `f(@[]int32)`. Otherwise the call is ambiguous and a compile error. With `f(int32)` and `f(int64)`, an `int16` argument is
   ambiguous: write `f(int32(x))`.
 - A literal matches exactly only its default type: `int64` for an integer, `uint64` with `u`,
   `flo64` for a decimal. With `f(int32)` and `f(int64)`, `f(1)` calls `f(int64)`.
@@ -1175,7 +1182,8 @@ show(2.5);          // float 2.5
   `g` is chosen.
 - A method-form call `x.f()` considers only the functions whose first parameter is `@!`. In a
   chained call `v -> f()`, `v` fits a `@T` parameter as `@v`.
-- A function name used as a value takes the function of the pointer type it is given to:
+- A function name used as a value takes the function that [fits](#function-pointers) the pointer
+  type it is given to, and of several, the one of exactly that type:
   `@func(int32) -> int32 g = show;` is an error here (no `show` returns `int32`), and one
   written where no function pointer type is expected is a compile error.
 - Receiving several return values (`(a, b) = f(x)`) needs the functions returning that many to
@@ -1442,7 +1450,10 @@ array. `[][m]T` takes the rows of a `[n][m]T` array (and `[][m]$T` those of a `[
 array); `m` must be a constant, and an array whose rows have another size is a compile error.
 `[]@![]T` takes the slots of a `[n]@![]T` array.
 
-Only the outermost size may be left out: the elements must match exactly. An element owned by
+Only the outermost size may be left out: the elements must match exactly, including what a pointer
+element points to. The rows of a `[n]$[m]T` array are in one block, so it is taken as `[]$[m]T`
+and never as `[][]T` or `[][m]T`, whose elements are pointers to rows, or the other way around. An
+element owned by
 the array (a row, or a struct of `[n]T`) cannot be given as a `@!T` pointer slot, or the
 other way around, since one side would free or overwrite what the other one owns. For example,
 a `[n]@![]int32` array is returned as `[]@![]int32`, not as `[][]int32`, and a `[n]P` array
@@ -1451,6 +1462,8 @@ This does not depend on whether the sizes are known at compile time.
 
 An owned element can be lent as a read-only `@T` slot when the slots are read-only too
 (`@[n]@P`, or a C `const T * const *`): the callee can neither replace it nor free a borrow.
+For the same reason a `@T` element can be read as an owned one (`[n]@P` given to `@[n]P`). A
+`[+]T` and a `[""]T` follow the same rules: a `[+]@P` can be given to `@[+]P` but not to `@![+]P`.
 A C function that declares `T **` without `const` but does not write the slots takes the owned
 rows through a cast, which states that the C declaration is looser than its use:
 
@@ -1537,7 +1550,8 @@ func fill(@![H][W]int32 g, int32 x) {
   when `g` is itself a borrowed array.
 - An array field is borrowed the same way: `@s.v` / `@!s.v` gives a `[n]T`, `$[n]$T` or `$[n]@T`
   field as `@[n]T`, `@[n]$T` or `@[n]@T`.
-- A borrowed array can also be a local variable (`@[4]int64 p = @v;`).
+- A borrowed array can also be a local variable (`@[4]int64 p = @v;`) or a struct field (see
+  [Array Fields](#array-fields)).
 - A borrowed array is already a borrow, like a `@T`/`@!T` pointer: pass it on, bind it, and
   rebind it by name (`sum(g)`, `len(g)`, `@[4]int64 q = p;`, `q -> p`). `@g` on it is a compile
   error. A `@!` borrow may be given where `@` is expected. A row (`g[i]`) is part of the borrowed
@@ -1570,6 +1584,10 @@ memory from C `malloc`, or an array as `@!arr`) and free that memory yourself. `
 `[n]@[]T` declares read-only slots the same way: they take `@arr` as well as `@!arr`, and
 nothing can be written through them. Slots can be the elements of rows as other elements can
 (`[n][m]@T`, `[n]$[m]@T`, `[+][m]@T`, a `[n][m]@T` field, a `[][m]@T` parameter).
+`[n]@[+]T` and `[n]@[""]T` hold borrows of variable-length arrays and dictionaries: a slot takes
+`@v` / `@!v`, and `a[i]` is used as a borrow variable is (`len(a[i])`, `a[i][j]`). A slot cannot
+borrow an array of a given length (`[n]@[3]T`), nor can a pointer point to such a borrow
+(`@@[3]T`); both are compile errors in this version, as is `$` under `@` (`@$T`).
 
 ```palan
 int64 rows = 4;
@@ -1848,8 +1866,8 @@ func row_sum([]$[4]int32 mat, int64 r) -> int32 {
 }
 ```
 
-**Function parameters:** Declare as `[]$[m]T` with a fixed inner dimension `m`. The compiler
-rejects calls where the argument's inner dimension is variable or does not match `m`.
+**Function parameters:** Declare as `[]$[m]T` with a constant inner dimension `m`, which a
+borrow (`@[]$[m]T`) needs too: without it the rows cannot be located. The compiler rejects calls where the argument's inner dimension is variable or does not match `m`.
 
 **Memory management:** A single `malloc` is called at declaration and a single `free` is
 inserted at scope exit. No helper functions are generated.
@@ -2021,8 +2039,91 @@ printf("%d\n", two[1][0]);   // 4
 - `[+]@T` / `[+]@!T` holds pointer slots, as `[n]@T` does (see [Array of Pointer
   Slots](#array-of-pointer-slots-nt)): each element borrows what it points to, so it takes
   `@x` / `@!x` (`ps.push(@!p)`, `@!q -> ps[0]`) and nothing it points to is freed. `[+]@[]T`
-  holds pointers to arrays of any length; the program's arguments, `args`, are a
+  holds pointers to arrays of any length, `[+]@[+]T` and `[+]@[""]T` borrows of those; the program's arguments, `args`, are a
   `@[+]@[]uint8` (see [Program Structure](#program-structure)).
+
+### Dictionaries (`[""]T`)
+
+`[""]T` is a dictionary: it maps C strings, its keys, to values of type `T`. It starts empty.
+
+```palan
+cinclude <stdio.h>;
+
+[""]int32 stock = {"apple": 3, "pear": 5};
+7 -> stock["fig"];                  // adds a key
+stock["apple"] + 1 -> stock["apple"];
+printf("%d %ld\n", stock["apple"], len(@stock));    // 4 3
+if stock.remove("pear") && !has(@stock, "pear") { printf("sold out\n"); }
+
+for copy n, k in stock { printf("%s=%d ", k, n); }  // apple=4 fig=7
+printf("\n");
+```
+
+| Function | Meaning |
+|----------|---------|
+| `len(@d)` | the number of keys, an `int64` |
+| `has(@d, k)` | whether `k` is there, a `bool` |
+| `remove(@!d, k)` | removes `k` and its value; `false` if it was not there |
+| `clear(@!d)` | removes every key, keeping the room |
+
+They are ordinary functions, so those taking `@!d` can be called in method form (`d.remove(k)`) and
+all of them after `->`. A function with the same parameter types as one of them is a compile error.
+
+- A key is the bytes up to the first NUL. The dictionary keeps a copy of them, so what `k` was read
+  from may change or be freed afterwards.
+- `k` is what a `@[]uint8` parameter takes: a string literal, a string constant, `args[i]`, a C
+  function's string. In `d[k]` an array is written by name (`d[buf]`), since it is only read; given
+  to a function it is `@buf`, as always (`has(@d, @buf)`).
+- Only `x -> d[k]` (and `x ->> d[k]`) adds a key, or replaces the value of one that is there. Every
+  other use of `d[k]` (reading it, `1 -> d[k].x`, `@!d[k]`) stops the program with a run-time error
+  if `k` is not there, also in a release build; ask with `has` first. `x` is evaluated before `k` is
+  added: `len(@d) -> d["n"]` stores the count without `"n"`.
+- Adding or removing a key can move or free the values, so a borrow of one (`@!d[k]`) must not be
+  kept across it. This is not checked.
+
+**Literals.** `{"a": 1, K: 2}` gives keys and values. A key is a string literal or a string
+[constant](#constant-declarations), whose value is the key; any other key is added with `x -> d[k]`.
+A repeated key is a compile error. `{}` is the empty dictionary. It is written only where a value goes
+(an initializer, an argument, a return value, an item of a literal), since at the start of a
+statement it is an empty block: an existing dictionary is emptied with `clear`. `{..} -> d` replaces
+what `d` holds. An argument to a `@[""]T` is written `@{..}`.
+
+**Iteration.** `for copy v, k in d` visits the keys in the order they were added (replacing a value
+keeps its key's place). `v` is `copy`, `@` or `@!`, as for an array, and `k`, which may be left out, is
+the dictionary's own copy of the key: a read-only `@[]uint8`, valid only for the iteration and
+written without a type. The body cannot add or remove a key of `d`, nor store whole into it
+(`x -> d[k]`, as it may add a key): that is a compile error, checked as for a `[+]T`'s length.
+Writing through `@!v` or into a field (`1 -> d[k].x`) is fine.
+
+**Ownership and values.** A dictionary is owned, copied, moved with `->>`, passed, returned and
+borrowed (`@[""]T`, `@![""]T`) as a `[+]T` is. A value can be anything a `[+]T`'s element can, and a
+dictionary can be a struct's field or another array's or dictionary's element:
+
+```palan
+cinclude <stdio.h>;
+
+type Point { int64 x; int64 y; };
+type Map { [""]Point places; };
+
+func add(@![""][+]int64 groups, @[]uint8 k, int64 x)
+{
+    if !has(groups, k) { [] -> groups[k]; }
+    groups[k].push(x);
+}
+
+Map m = {places: {"home": {x: 1, y: 2}}};
+[3, 4] -> m.places["work"];
+5 -> m.places["home"].y;
+[""]Point c = m.places;             // a copy
+printf("%ld %ld\n", c["home"].y, c["work"].x);      // 5 3
+
+[""][+]int64 g;
+add(@!g, "a", 1); add(@!g, "a", 2); add(@!g, "b", 3);
+printf("%ld %ld\n", len(@g), len(@g["a"]));         // 2 2
+```
+
+- `[""]$T` lays its values out next to each other, as `[+]$T` does; `T` cannot own storage.
+- `$` cannot lay out a dictionary itself: `$[""]T` is a compile error.
 
 ### Array Literals
 
@@ -2361,6 +2462,7 @@ An array field takes the type an array variable can, with the same meaning. Wher
 | `$[n]T field` (struct `T`), `$[n][m]T field`, `$[n][+]T field`, ... | Array laid out in the struct, holding elements that own storage | parent's block (slots); elements cascade with parent's alloc/free |
 | `$[+]T field` | Variable-length array whose header is laid out in the struct | parent's block (header); elements cascade with parent's alloc/free |
 | `$[n]@T field` / `$[n]@!T field` | Non-owning pointer slots laid out in the struct | parent's block (slots only) |
+| `@[n]T field`, `@[]T field`, `@[+]T field`, `@[""]T field`, ... (or `@!`) | Non-owning borrow of an array or a dictionary | none |
 
 `n` (and each `m`) must be a compile-time integer: a literal, a [const](#constant-declarations),
 or `sizeof(T)`. An owned array field is allocated, copied and freed with its struct; its
@@ -2371,6 +2473,11 @@ with it, as those of an array variable in the stack frame are with the variable;
 with such a field owns storage itself. `$` on an element that owns storage is rejected as for
 a variable. A `$[+]T` field starts empty and is used as a `[+]T` field is, but, like a `$[+]T`
 variable, it cannot be given away or taken over with `->>`.
+A borrow field is used as a borrow variable of its type is: `@!v -> s.f` binds it, it is passed on
+and measured by name (`len(s.f)`), and copying the struct copies the borrow. Any borrow can be
+`NULL`: given to a variable, a field or an argument, or returned. It is not an empty array or
+dictionary, and using one (`len`, `for`, an index) is not checked, as reading through a `NULL`
+`@T` is not; compare it with `NULL` first.
 `field[i]` accesses an element; for struct-leaf forms, `field[i].sub` continues the field
 chain.
 
@@ -2569,7 +2676,9 @@ type Pos { flo64 x; flo64 y; };
 
 A type must not contain itself. Embedding or owning in a cycle (`type A { $B b; };` with
 `type B { $A a; };`, possibly across files that import each other) or an alias cycle is a
-compile error. A pointer field (`@T`/`@!T`) may close a cycle.
+compile error. A pointer (`@T`/`@!T`) may close a cycle, as a field, as an element of an array or
+a dictionary, or in the signature of a function pointer (`[2]@T`, `@func(@T)`). The type itself in
+a signature, or a borrow of an array or a dictionary of the type, may not.
 
 ### Restrictions
 
@@ -2729,7 +2838,7 @@ to its storage, so `@s`/`@!s` and `@arr`/`@!arr` borrow it as it is (see
   (`@T`/`@!T`) or an array field is rejected.
 - Not usable on a 2D array row (`@mat[i]`) or a pointer-slot array element (`[n]@T`/`[n]@!T`) —
   only a primitive-typed or struct array element.
-- Not usable on a general expression (a parenthesized tuple, etc.) — only a local variable, a
+- Not usable on a general expression (`@(a + b)`, etc.) — only a local variable, a
   field reached from one, or an array element reached from one. A call returning a struct is the
   exception, as a call argument only (`f(@g())`); see
   [Struct types in function signatures](#struct-types-in-function-signatures).

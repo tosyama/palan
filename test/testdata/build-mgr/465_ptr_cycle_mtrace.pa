@@ -1,0 +1,46 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+import "lib_ptr_cycle.pa";
+export type Back { int32 z; @func(@Peer) -> int32 h; [+]@Back all; };
+type Fn = @func(@A, @!B);
+type A { int32 x; $[2]@!B bs; };
+type B { int32 y; Fn f; @@A pa; };
+func val(@Node n) -> int32 { return n.v; }
+func both(@Node n, @Peer p) -> int32 { return n.v + p.w; }
+func back(@Peer p) -> int32 { return p.back[1].z; }
+func count(@![+]@Node v) -> int64 { return len(v); }
+func add(@A a, @!B b) { a.x + b.y -> b.y; }
+func f() {
+	Node a; Node b; Peer p; Back k;
+	7 -> b.v; 1 -> a.v; 5 -> p.w; 4 -> k.z;
+	@b -> a.kids[0];
+	val -> a.f;
+	count -> a.n;
+	a.peers.push(@p);
+	@a -> p.by["a"];
+	both -> p.g;
+	@k -> p.back[1];
+	@a.peers -> p.near;
+	back -> k.h;
+	k.all.push(@k);
+	[+]@Node ns;
+	ns.push(@a);
+	ns.push(@b);
+	printf("%d %d %d %d %d\n", a.kids[0].v, a.f(@b), a.peers[0].w, p.by["a"].kids[0].v, p.g(@b, @p));
+	printf("%d %ld %ld %d\n", k.all[0].h(@p), a.n(@!ns), len(p.near), p.near[0].w);
+	Node c = a;
+	printf("%d %d\n", c.kids[0].v, c.f(@c));
+	A s; B t;
+	3 -> s.x; 2 -> t.y;
+	add -> t.f;
+	@!t -> s.bs[1];
+	s.bs[1].f(@s, @!t);
+	printf("%d\n", t.y);
+	type L { int32 v; [2]@L k; @func(@L) -> int32 g; };
+	L l;
+	9 -> l.v;
+	@l -> l.k[1];
+	printf("%d\n", l.k[1].v);
+}
+mtrace();
+f();

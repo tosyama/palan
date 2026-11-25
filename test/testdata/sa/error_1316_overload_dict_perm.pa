@@ -1,0 +1,4 @@
+type P { int32 x; };
+func k(@[""]@P v, int32 n) { } func k(@[""]@P v, int64 n) { }
+[""]@!P d; int32 i = 1;
+k(@d, i);

@@ -1,0 +1,4 @@
+cinclude <stdio.h>;
+type W { FILE f; };
+W w;
+fopen("/dev/null", "r") ->> w.f;

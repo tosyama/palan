@@ -676,30 +676,30 @@ TEST(sa, usual_arith_conv)
 
 	// uint32 & int32 -> uint32 (equal rank, mixed sign: unsigned wins), and the
 	// result type is order-independent regardless of which side is converted.
-	const auto& m_and_n = stmts[4]["body"];
+	const auto& m_and_n = stmts[4]["vars"][0]["init"];
 	ASSERT_EQ(m_and_n["value-type"]["type-name"], "uint32");
 	ASSERT_EQ(m_and_n["left"]["expr-type"],       "id");
 	ASSERT_EQ(m_and_n["right"]["expr-type"],      "convert");
 	ASSERT_EQ(m_and_n["right"]["value-type"]["type-name"], "uint32");
 
-	const auto& n_and_m = stmts[5]["body"];
+	const auto& n_and_m = stmts[5]["vars"][0]["init"];
 	ASSERT_EQ(n_and_m["value-type"]["type-name"], "uint32");
 	ASSERT_EQ(n_and_m["left"]["expr-type"],       "convert");
 	ASSERT_EQ(n_and_m["right"]["expr-type"],      "id");
 
 	// int64 & uint32 -> int64 (mixed sign, signed rank(4) > unsigned rank(3):
 	// signed wins), order-independent.
-	const auto& big_and_mode = stmts[6]["body"];
+	const auto& big_and_mode = stmts[6]["vars"][0]["init"];
 	ASSERT_EQ(big_and_mode["value-type"]["type-name"], "int64");
 	ASSERT_EQ(big_and_mode["right"]["expr-type"],      "convert");
 
-	const auto& mode_and_big = stmts[7]["body"];
+	const auto& mode_and_big = stmts[7]["vars"][0]["init"];
 	ASSERT_EQ(mode_and_big["value-type"]["type-name"], "int64");
 	ASSERT_EQ(mode_and_big["left"]["expr-type"],       "convert");
 
 	// n < m (int32 < uint32) -> both promote to uint32; cmp's own value-type
 	// (the boolean result) stays bool regardless of the operand promotion.
-	const auto& cmp = stmts[8]["body"];
+	const auto& cmp = stmts[8]["vars"][0]["init"];
 	ASSERT_EQ(cmp["value-type"]["type-name"], "bool");
 	ASSERT_EQ(cmp["left"]["expr-type"],       "convert");
 	ASSERT_EQ(cmp["left"]["value-type"]["type-name"], "uint32");

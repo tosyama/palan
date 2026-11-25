@@ -1,0 +1,9 @@
+func f(@![""]int32 d, @[]uint8 k) -> int32 {
+	1 -> d["a"];
+	int32(len(d)) -> d[k];
+	[4]uint8 b;
+	return d[b];
+}
+func g(@[""]int32 d) -> bool {
+	return has(d, "a") && d -> has("b");
+}

@@ -64,6 +64,7 @@ for copy path, i in args {
 ```
 
 Other features include variable-length arrays (`[+]T` with `len`/`push`/`resize`/`pop`),
+dictionaries keyed by C strings (`[""]T`, `{"a": 1}`, `for copy v, k in d`),
 function overloading, default and variadic arguments, multiple named return values, function
 pointers, enums, field initializers, Unicode character literals, modules (`import`/`export`, with
 module state in `global` variables), libraries (`palan --lib`, `import <...>`) publishing `opaque`
@@ -154,7 +155,7 @@ of the `release` workflow's run (and attached to the GitHub Release when one is 
 level is the installed layout, so it unpacks into a prefix as `cmake --install` would:
 
 ```bash
-tar -xzf palan-0.2.6-x86_64-linux-gnu.tar.gz -C ~/.local
+tar -xzf palan-0.2.7-x86_64-linux-gnu.tar.gz -C ~/.local
 ~/.local/bin/palan hello.pa
 ```
 
@@ -184,4 +185,4 @@ Palan compiles through a pipeline of independent tools that pass JSON between th
 
 ## License
 
-MIT License — see [LICENSE](LICENSE). The bundled [nlohmann/json](lib/json) is distributed under its own MIT license (`lib/json/LICENSE.MIT`).
+MIT License — see [LICENSE](LICENSE). The bundled [nlohmann/json](lib/json) is distributed under its own MIT license (`lib/json/LICENSE.MIT`). The grapheme property table and the conformance test data made from the Unicode Character Database (`src/std/graphemeprops.pa`, `test/testdata/std/GraphemeBreakTest.txt`) are under the [Unicode License v3](src/std/LICENSE-Unicode.txt).

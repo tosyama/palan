@@ -1,6 +1,6 @@
 # Palan Standard Library Reference
 
-**Version:** v0.2.6
+**Version:** v0.2.7
 
 The standard library is the library `std`, found with the compiler: `import <std/utf8>;` needs no
 `libpath` (see [Using a Library](PalanReference.md#using-a-library) in the
@@ -39,7 +39,8 @@ if t -> startsWith("h\u{E9}", "H\u{E9}") && t != s { t.replace("&", "+").trim();
 Bytes given as a literal or a `@[]uint8` are read up to their first NUL, so they must end with one:
 `"ab\0cd"` is the text `"ab"`. A `utf8` never holds a NUL.
 
-A character is a Unicode code point: `"🇯🇵"` has 2. Positions (`find`, `slice`, `insert`,
+A character is a Unicode code point: `"🇯🇵"` has 2, though one grapheme cluster, what a reader
+sees as one character (see [Grapheme clusters](#grapheme-clusters)). Positions (`find`, `slice`, `insert`,
 `remove`) count characters, an invalid part counting as one, so reaching one scans the text from
 the start (O(n)). A position out of range is brought within it: a negative one is 0, beyond the
 end is the end, and a start at or after the end gives nothing.
@@ -90,6 +91,8 @@ or `@[]uint8` operand as its bytes.
 | `byteLen(@utf8 s) -> int64` | the number of bytes, without the NUL |
 | `charCount(@utf8 s) -> int64` | the number of characters |
 | `for copy c, i in s` | each character `c` as an `int32` code point, `-1` for an invalid part; `i` counts the characters from 0 |
+| `graphemes(@utf8 s) -> utf8graphemes` | the grapheme clusters of `s`, for `for` (see [Grapheme clusters](#grapheme-clusters)) |
+| `graphemeCount(@utf8 s) -> int64` | the number of grapheme clusters |
 | `a == b`, `a < b` (and `!=`, `>`, `<=`, `>=`) | by bytes, which is code point order; either one may be a literal or `@[]uint8` |
 | `a + b` | `a` then `b`, either one a literal or `@[]uint8` |
 | `s << x` | adds `x` (`@utf8`, a literal or `@[]uint8`) and gives `s` back: `s << a << b` |
@@ -109,3 +112,16 @@ The functions changing `s` return it, so they chain: `s.replace("\t", " ").trim(
 and `s << s` work.
 
 To clear a text write `"" -> s;`; to test for empty text, `s -> byteLen() == 0` or `s == ""`.
+
+### Grapheme clusters
+
+```palan
+utf8 s = "e\u{301}\u{1F1EF}\u{1F1F5}!";
+for copy g, i in s -> graphemes() { printf("%ld:%s ", i, g -> cstr()); }   // 0:é 1:🇯🇵 2:!
+printf("%ld %ld\n", s -> charCount(), s -> graphemeCount());               // 5 3
+```
+
+The clusters are the extended grapheme clusters of UAX #29 in Unicode 18.0.0. Each `g` is a `utf8` of
+its own, with `s`'s mode and `hadInvalid` as `slice` gives; `i` counts the clusters from 0. An invalid
+part is a cluster of its own. `graphemes` borrows `s`, so what it returns must not outlive `s` or be
+used after `s` is changed. Positions (`find`, `slice` and the others) count code points, not clusters.

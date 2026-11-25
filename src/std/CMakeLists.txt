@@ -29,4 +29,4 @@ add_custom_target(palan-std ALL DEPENDS ${std_outputs})
 
 install(FILES ${std_outputs} DESTINATION ${PALAN_INSTALL_LIB_DIR}/${PALAN_TARGET}/std COMPONENT tools)
 install(DIRECTORY ./ DESTINATION ${PALAN_INSTALL_LIB_DIR}/src/std COMPONENT tools
-	FILES_MATCHING PATTERN "*.pa")
+	FILES_MATCHING PATTERN "*.pa" PATTERN "LICENSE-Unicode.txt")

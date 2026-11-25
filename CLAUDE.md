@@ -139,6 +139,8 @@ src/
 │   └── PlnCodeGen.h     Abstract base class
 ├── common/          Shared utilities (PlnProcess — argv-based child process spawning; PlnInterface — writes a module's interface; PlnStrLit — the text a string literal's value travels as)
 └── std/             The standard library, in Palan (CMakeLists.txt lists its public mains)
+tools/
+└── gen-grapheme-data.py  Generates std's grapheme property table and its conformance test data from the Unicode data
 test/
 ├── testdata/        Test input files (numbered sequentially per tool)
 ├── test-base/       Shared test helpers (execTestCommand, cleanTestEnv)

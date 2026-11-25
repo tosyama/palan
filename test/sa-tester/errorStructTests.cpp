@@ -204,15 +204,13 @@ TEST(sa_error, field_assign_on_arr_index_non_struct)
 	ASSERT_NE(sa.find("field access on non-struct variable"), string::npos);
 }
 
-TEST(sa_error, field_access_on_tuple_base)
+TEST(sa_error, field_access_on_not_impl_base)
 {
-	// type Point{...}; type Line{$Point a; $Point b;}; int64 v = (1,2).a.x; --
-	// a multi-expression tuple grouping normalizes to "not-impl" (see term's
-	// '(' tapple_inner ')' rule), reached as the base of a field-access chain.
+	// An unsupported expression reached as the base of a field-access chain.
 	cleanTestEnv();
 	string ast_out = "out/test.ast.json";
 	ASSERT_EQ(execTestCommand(
-		"palan-gen-ast ../test/testdata/sa/error_116_field_access_on_tuple_base.pa -o " + ast_out), "");
+		"palan-gen-ast ../test/testdata/sa/error_116_field_access_on_not_impl_base.pa -o " + ast_out), "");
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
 	ASSERT_NE(sa.find("this expression is not supported in this version."), string::npos);
@@ -749,9 +747,10 @@ TEST(sa_error, struct_arr_lit)
 		{"error_266_struct_lit_unknown_field.pa", ":2:21: error: struct 'Point' has no field 'z'."},
 		{"error_267_struct_lit_ptr_field.pa", ":2:15: error: cannot convert 'int64' to '@!int32'."},
 		{"error_268_struct_lit_narrowing.pa", ":3:17: error: Implicit conversion from 'int64' to 'int32' is not allowed"},
-		{"error_693_dict_lit_prim_var.pa", ":1:11: error: a '{name: value}' literal can only be used as a struct value"},
-		{"error_269_dict_lit_prim_elem.pa", ":1:15: error: a '{name: value}' literal can only be used as a struct value: a struct variable's initializer, the source of '->' to a struct, an element of an array literal, or an argument for a struct parameter."},
-		{"error_270_dict_lit_context.pa", ":3:5: error: parameter 'p' of type 'int32' cannot take a '{name: value}' literal: only a struct parameter can."},
+		{"error_693_dict_lit_prim_var.pa", ":1:11: error: a '{name: value}' literal can only be used as a struct or dictionary value"},
+		{"error_269_dict_lit_prim_elem.pa", ":1:15: error: a '{name: value}' literal can only be used as a struct or dictionary value: a variable's initializer, the source of '->', a returned value, an element of an array literal, or an argument."},
+		{"error_270_dict_lit_context.pa", ":3:5: error: parameter 'p' of type 'int32' cannot take a '{name: value}' literal: only a struct or dictionary parameter can."},
+		{"error_1155_struct_lit_string_key.pa", ":2:18: error: a value of struct 'Point' names its fields; a string key is for a dictionary."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -999,6 +998,20 @@ TEST(sa_error, func_ptr)
 		{"error_687_method_on_non_func_ptr_field.pa", ":3:11: error: Undefined function 'n'."},
 		{"error_694_func_ptr_param_count.pa",
 		 ":3:1: error: cannot convert '@func(int32) -> int32' to '@func(int32, int32) -> int32'."},
+		{"error_1214_func_ptr_arr_size.pa", ":2:1: error: cannot convert '@func([4]int32)' to '@func([3]int32)'."},
+		{"error_1215_func_ptr_ret_arr_size.pa", ":2:1: error: cannot convert '@func() -> [3]int32' to '@func() -> [4]int32'."},
+		{"error_1216_func_ptr_borrowed_elems.pa", ":3:1: error: cannot convert '@func([+]P)' to '@func([+]@P)'."},
+		{"error_1217_func_ptr_dict_borrowed_elems.pa", ":3:1: error: cannot convert '@func(@![\"\"]P)' to '@func(@![\"\"]@P)'."},
+		{"error_1218_func_ptr_arr_for_ptr.pa", ":2:1: error: cannot convert '@func(@[3]int32)' to '@func(@int32)'."},
+		{"error_1219_func_ptr_nested_arr_size.pa", ":2:1: error: cannot convert '@func(@func([4]int32))' to '@func(@func([3]int32))'."},
+		{"error_1220_func_ptr_field_arr_size.pa", ":3:22: error: cannot convert '@func([4]int32)' to '@func([3]int32)'."},
+		{"error_1221_func_ptr_arr_borrow_permission.pa", ":2:1: error: cannot convert '@func(@![3]int32)' to '@func(@[3]int32)'."},
+		{"error_1222_func_ptr_arr_borrow_size.pa", ":2:1: error: cannot convert '@func(@[4]int32)' to '@func(@[3]int32)'."},
+		{"error_1223_func_ptr_arr_borrow_ret_size.pa", ":2:1: error: cannot convert '@func(@[3]int32) -> @[3]int32' to '@func(@[3]int32) -> @[4]int32'."},
+		{"error_1224_func_ptr_rows.pa", ":2:1: error: cannot convert '@func(@@[3]int32)' to '@func(@@[4]int32)'."},
+		{"error_1225_func_ptr_varr_borrow_permission.pa", ":2:1: error: cannot convert '@func(@![+]int32)' to '@func(@[+]int32)'."},
+		{"error_1226_func_ptr_dict_permission.pa", ":2:1: error: cannot convert '@func(@[\"\"]int32) -> @[\"\"]int32' to '@func(@[\"\"]int32) -> @![\"\"]int32'."},
+		{"error_1227_func_ptr_owned_dict.pa", ":2:1: error: cannot convert '@func(@![\"\"]int32)' to '@func([\"\"]int32)'."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -1021,9 +1034,6 @@ TEST(sa_error, frame_var)
 		{"error_624_transfer_frame_struct.pa", ":5:1: error: '->>' needs a source that owns its value"},
 		{"error_625_transfer_frame_arr.pa", ":4:1: error: '->>' needs a source that owns its value"},
 		{"error_626_frame_embed_owning.pa", ":3:1: error: cannot embed 'Q' with '$': it owns storage of its own; use 'Q' without '$'."},
-		{"error_627_frame_param.pa", ":2:1: error: this parameter is not supported in this version."},
-		{"error_628_frame_named_ret.pa", ":2:1: error: this return value is not supported in this version."},
-		{"error_629_frame_ret_type.pa", ":2:13: error: this return value is not supported in this version."},
 		{"error_663_tapple_frame_prim.pa", ":2:1: error: '$' on a variable applies only to a struct or an array, not 'int32'."},
 		{"error_664_tapple_frame_arr.pa", ":3:1: error: cannot copy '[?]int32' into '[3]int32'"},
 	};

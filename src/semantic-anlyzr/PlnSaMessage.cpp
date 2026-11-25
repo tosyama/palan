@@ -176,7 +176,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "Logical operator operand must be an integer type.";
 
 		case E_EmbeddedArrUnsizedInner:
-			return "Embedded array parameter must have a fixed inner dimension (use []$[n]T).";
+			return "an array laid out in place without a length ('[]$..') needs rows of a constant length ('[]$[m]T') or a struct element ('[]$T').";
 
 		case E_EmbeddedArrInnerSizeMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -288,12 +288,6 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			       "this version); it can only be used through a pointer ('@" + arg1 + "' / '@!"
 			       + arg1 + "').";
 
-		case E_UnsupportedParamType:
-			BOOST_ASSERT(arg1 != "\x01");
-			BOOST_ASSERT(arg2 != "\x01");
-			return "function '" + arg1 + "' has a parameter or return type this version cannot "
-			       "represent: '" + arg2 + "'.";
-
 		case E_UnsupportedCFuncSignature:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
@@ -337,7 +331,8 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_FuncPtrSigType:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' cannot be a parameter or return type of a function pointer; "
-			       "use a primitive type, a pointer, or an owned struct or array ('T', '[n]T', '[+]T').";
+			       "use a primitive type, a pointer, a borrow, or an owned struct, array or dictionary "
+			       "('T', '[n]T', '[+]T', '[\"\"]T').";
 
 		case E_CallNonFuncPtr:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -435,6 +430,11 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "the array literal's dimensions do not match array '" + arg1 + "'.";
 
+		case E_DictArrLit:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "dictionary '" + arg1 + "' cannot be given an array literal: write '{\"key\": value}', "
+			       "or '{}' for an empty one.";
+
 		case E_ArrLitElemType:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "array '" + arg1 + "' cannot be given an array literal: only numeric and struct element types are supported.";
@@ -450,6 +450,13 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_ArrBorrowUnsupportedElem:
 			return "a borrowed array type ('@[n]T'/'@![n]T') supports only primitive, struct and '@T'/'@!T' pointer elements in this version.";
+
+		case E_NestedArrBorrow:
+			return "a borrow of a sized array ('@[n]T'/'@![n]T') cannot be an array's or a dictionary's element, "
+			       "nor what a pointer points to, in this version; '@[]T' can.";
+
+		case E_EmbedUnderPointer:
+			return "'$' cannot be what '@' or '@!' points to.";
 
 		case E_ArrBorrowNeedsAddrOf:
 			return "an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as '@name' or '@!name' "
@@ -498,7 +505,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "'len' cannot tell this array's length: an array declared with its size, or a variable-length array, keeps one, but a '[]T' does not.";
 
 		case E_ForRangeNotArray:
-			return "'for' takes an array, or a struct whose type has 'iter' and 'next', to iterate over.";
+			return "'for' takes an array, a dictionary, or a struct whose type has 'iter' and 'next', to iterate over.";
 
 		case E_GlobalNotReplaceable:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -536,7 +543,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_AssignToForIndex:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "cannot assign to '" + arg1 + "': the index of a 'for' loop is read-only.";
+			return "cannot assign to '" + arg1 + "': the index or key of a 'for' loop is read-only.";
 
 		case E_ChangeForRange:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -555,7 +562,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_LenNotArray:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "'len' takes an array; this value is '" + arg1 + "'.";
+			return "'len' takes an array or a dictionary; this value is '" + arg1 + "'.";
 
 		case E_StructLitFieldCount:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -576,10 +583,33 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "a value of struct '" + arg1 + "' must be written as '[...]' or '{name: value, ...}'.";
 
+		case E_StructLitStringKey:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "a value of struct '" + arg1 + "' names its fields; a string key is for a dictionary.";
+
+		case E_ForDictKeyTyped:
+			return "the key of a 'for' loop over a dictionary is '@[]uint8', which is not written.";
+
+		case E_DictBorrowNeedsAddrOf:
+			return "a dictionary given to '@[\"\"]T'/'@![\"\"]T' must be written as '@name' or '@!name' "
+			       "('@{..}' or '@!{..}' for a literal).";
+
 		case E_DictLitContext:
-			return "a '{name: value}' literal can only be used as a struct value: a struct variable's "
-			       "initializer, the source of '->' to a struct, an element of an array literal, or an "
-			       "argument for a struct parameter.";
+			return "a '{name: value}' literal can only be used as a struct or dictionary value: a "
+			       "variable's initializer, the source of '->', a returned value, an element of an array "
+			       "literal, or an argument.";
+
+		case E_ExprStmtNotCall:
+			return "the value of this statement is not used: an expression is a statement only when it is a call.";
+
+		case E_DictLitKeyNotConst:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' is not a string constant: a key of a dictionary literal is a string "
+			       "or a string constant.";
+
+		case E_DictLitDupKey:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "key \"" + arg1 + "\" appears more than once in the dictionary literal.";
 
 		case E_ArrLitArgType:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -591,7 +621,7 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
 			return "parameter '" + arg1 + "' of type '" + arg2 + "' cannot take a '{name: value}' literal: "
-			       "only a struct parameter can.";
+			       "only a struct or dictionary parameter can.";
 
 		case E_CMacroFuncLike:
 			BOOST_ASSERT(arg1 != "\x01");

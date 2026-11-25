@@ -1,0 +1,58 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int32 x; [+]int32 v; };
+func mkp(int32 x) -> P p { x -> p.x; }
+type B {
+	@![+]int32 v;
+	@[""]int32 d;
+	@![3]int32 a;
+	@[]uint8 s;
+	@[2]P ps;
+	@![2]$[2]int32 m;
+	@![+]P vp;
+	@![""]P dp;
+	@@[]uint8 pp;
+};
+func f() {
+	[+]int32 v = [1, 2];
+	[""]int32 d = {"k": 7};
+	[3]int32 a = [4, 5, 6];
+	[2]P ps;
+	3 -> ps[1].x;
+	[2]$[2]int32 m = [[1, 2], [3, 4]];
+	[+]P vp;
+	vp.resize(1);
+	9 -> vp[0].x;
+	[""]P dp;
+	mkp(8) -> dp["q"];
+	B b;
+	@!v -> b.v;
+	@d -> b.d;
+	@!a -> b.a;
+	"text" -> b.s;
+	@ps -> b.ps;
+	@!m -> b.m;
+	@!vp -> b.vp;
+	@!dp -> b.dp;
+	b.v.push(3);
+	10 -> b.v[0];
+	40 -> b.a[0];
+	30 -> b.m[1][0];
+	11 -> b.vp[0].x;
+	b.vp[0].v.push(1);
+	mkp(12) -> b.dp["r"];
+	printf("%d %ld %d %d %c\n", v[0], len(b.v), b.d["k"], a[0], b.s[1]);
+	printf("%d %d %d %d %ld %ld\n", b.ps[1].x, m[1][0], vp[0].x, dp["r"].x, len(b.d), len(b.a));
+	for copy x in b.v { printf("%d ", x); }
+	for copy x, k in b.d { printf("%s=%d ", k, x); }
+	for copy x in b.a { printf("%d ", x); }
+	printf("\n");
+	@![+]int32 w = b.v;
+	w.push(4);
+	B c = b;
+	c.v.push(5);
+	b -> c;
+	printf("%ld %ld\n", len(@v), len(c.v));
+}
+mtrace();
+f();

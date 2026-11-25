@@ -147,12 +147,12 @@ TEST(sa, arr_index_elem_type) {
 	json jout = run_sa("../test/testdata/sa/048_arr_index_elem_type.pa");
 	ASSERT_TRUE(jout.is_object());
 
-	// statements: [0] var-decl a (malloc), [1] var-decl i, [2] expr(a[i])
+	// statements: [0] var-decl a (malloc), [1] var-decl i, [2] var-decl x (a[i])
 	ASSERT_GE(jout["statements"].size(), 3u);
-	const auto& expr_stmt = jout["statements"][2];
-	ASSERT_EQ(expr_stmt["stmt-type"], "expr");
+	const auto& decl = jout["statements"][2];
+	ASSERT_EQ(decl["stmt-type"], "var-decl");
 
-	const auto& body = expr_stmt["body"];
+	const auto& body = decl["vars"][0]["init"];
 	ASSERT_EQ(body["expr-type"],                    "arr-index");
 	ASSERT_EQ(body["value-type"]["type-name"],       "int32");
 	ASSERT_EQ(body["elem-size"]["expr-type"],        "lit-uint");
@@ -291,9 +291,9 @@ TEST(sa, pntr_arr_decl) {
 	ASSERT_EQ(var["init"]["args"][0]["left"]["value"], "5");
 	ASSERT_EQ(var["init"]["args"][0]["right"]["value"], "8");
 
-	// body[1]: expr ptrs[i] — arr-index with elem-size=8, value-type=pntr(int32)
-	ASSERT_EQ(body[1]["stmt-type"], "expr");
-	const auto& idx = body[1]["body"];
+	// body[1]: ptrs[i] — arr-index with elem-size=8, value-type=pntr(int32)
+	ASSERT_EQ(body[1]["stmt-type"], "var-decl");
+	const auto& idx = body[1]["vars"][0]["init"];
 	ASSERT_EQ(idx["expr-type"], "arr-index");
 	ASSERT_EQ(idx["elem-size"]["value"], "8");
 	ASSERT_EQ(idx["value-type"]["type-kind"], "pntr");
@@ -1361,4 +1361,147 @@ TEST(sa, arr_borrow_return)
 	ASSERT_EQ(funcs.at("ar")["ret-type"]["arr-size"], 4);
 	ASSERT_EQ(funcs.at("ar")["ret-type"]["mutable"], true);
 	ASSERT_EQ(funcs.at("vb")["ret-type"]["base-type"]["type-kind"], "varr");
+}
+
+// A dictionary is one word pointing at the header std/rt keeps; its values'
+// `[+]T` shape is recorded with its own, as the generated functions use it.
+TEST(sa, dict_var)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/357_dict_var.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& f = jout["functions"][0];
+	const auto& d = f["parameters"][0]["var-type"];
+	ASSERT_EQ(d["base-type"]["type-kind"], "strdict");
+	ASSERT_EQ(d["mutable"], false);
+	ASSERT_FALSE(f["parameters"][1]["var-type"].contains("mutable"));
+
+	const auto& body = f["body"];
+	ASSERT_EQ(funcName(body[0]["vars"][0]["init"]["name"]), "__pln_alloc_dict_int32");
+	ASSERT_EQ(funcName(body[1]["body"]["name"]), "__pln_copy_dict_int32");
+	ASSERT_EQ(body[1]["body"]["args"][1]["name"], "d");
+	ASSERT_EQ(funcName(body[2]["body"]["name"]), "__pln_copy_dict_int32");
+	ASSERT_EQ(funcName(body[7]["body"]["name"]), "__pln_free_dict_P24__pln_L13_357_dict_var_P");
+	ASSERT_EQ(body[7]["body"]["args"][0]["name"], "q");
+
+	map<string, json> shapes;
+	for (auto& s : jout["alloc-shapes"]) shapes[s.value("shape-key", s.value("shape-name", ""))] = s;
+	ASSERT_EQ(shapes["dict_int32"]["shape-kind"], "dict");
+	ASSERT_EQ(shapes["dict_int32"]["values"], "varr_int32");
+	ASSERT_EQ(shapes["varr_int32"]["shape-kind"], "varr");
+	ASSERT_EQ(shapes["dict_P24__pln_L13_357_dict_var_P"]["values"], "varr_P24__pln_L13_357_dict_var_P");
+}
+
+// `d[k]` indexes by 0 the value's address that a generated function returns;
+// a whole store evaluates its value before the key is added.
+TEST(sa, dict_index)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/358_dict_index.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& body = jout["functions"][0]["body"];
+	ASSERT_EQ(funcName(body[0]["vars"][0]["init"]["name"]), "__pln_put_dict_int32");
+	ASSERT_EQ(body[1]["target"]["array"]["name"], body[0]["vars"][0]["name"]);
+	ASSERT_EQ(body[1]["target"]["index"]["value"], "0");
+	ASSERT_EQ(body[2]["vars"][0]["init"]["src"]["expr-type"], "field-access");
+	ASSERT_EQ(funcName(body[3]["vars"][0]["init"]["name"]), "__pln_put_dict_int32");
+	ASSERT_EQ(body[4]["value"]["name"], body[2]["vars"][0]["name"]);
+	const auto& read = body[6]["vars"][0]["init"];
+	ASSERT_EQ(funcName(read["array"]["name"]), "__pln_at_dict_int32");
+	ASSERT_EQ(read["array"]["args"][1]["name"], "b");
+	ASSERT_EQ(read["index"]["value"], "0");
+
+	const auto& g = jout["functions"][1]["body"][0]["values"][0];
+	ASSERT_EQ(funcName(g["left"]["name"]), "__pln_has_dict_int32");
+	ASSERT_EQ(funcName(g["right"]["name"]), "__pln_has_dict_int32");
+}
+
+// A 'for' over a dictionary runs over the positions std/rt finds live, with the
+// key at each, and indexes the values' data as an array.
+TEST(sa, dict_for)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/359_dict_for.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& block = jout["functions"][0]["body"][0]["body"];
+	ASSERT_EQ(block[1]["vars"][0]["init"]["name"], "__pln_dict_next");
+	ASSERT_EQ(block[2]["vars"][0]["name"], "k");
+	ASSERT_EQ(block[2]["vars"][0]["init"]["name"], "__pln_dict_key");
+	ASSERT_EQ(block[3]["vars"][0]["init"]["offset"], 8);
+	ASSERT_EQ(block[4]["vars"][0]["init"]["offset"], 64);
+	const auto& loop = block[5]["body"];
+	ASSERT_EQ(loop[loop.size() - 2]["value"]["name"], "__pln_dict_next");
+	ASSERT_EQ(loop[loop.size() - 1]["name"], "k");
+	const auto& writes = jout["functions"][1]["body"][0]["body"];
+	ASSERT_EQ(writes[3]["vars"][0]["var-type"]["mutable"], true);
+}
+
+// A string constant as the key is its string, not a variable.
+TEST(sa, dict_const_key)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/360_dict_const_key.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& at = jout["functions"][0]["body"][0]["values"][0]["array"];
+	ASSERT_EQ(at["args"][1]["expr-type"], "lit-str");
+}
+
+// A literal declares the dictionary, then adds each key and writes its value
+// at the address the adding returns.
+TEST(sa, dict_lit)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/361_dict_lit.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& body = jout["functions"][0]["body"];
+	ASSERT_EQ(funcName(body[0]["vars"][0]["init"]["name"]), "__pln_alloc_dict_int32");
+	for (int i : {1, 3}) {
+		ASSERT_EQ(funcName(body[i]["vars"][0]["init"]["name"]), "__pln_put_dict_int32");
+		ASSERT_EQ(body[i]["vars"][0]["init"]["args"][1]["expr-type"], "lit-str");
+		ASSERT_EQ(body[i + 1]["target"]["array"]["name"], body[i]["vars"][0]["name"]);
+	}
+}
+
+// A dictionary's values are any element of a `[+]T`: its functions take the
+// lengths the values' do, `[""]$T` has functions of its own, and a dictionary
+// of dictionaries keeps a dictionary in each value's slot.
+TEST(sa, dict_value_types)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/362_dict_value_types.pa");
+	ASSERT_TRUE(jout.is_object());
+	const auto& body = jout["statements"][0]["body"];
+	const auto& rowsAlloc = body[0]["vars"][0]["init"];
+	ASSERT_EQ(funcName(rowsAlloc["name"]), "__pln_alloc_dict_Pint32");
+	ASSERT_EQ(rowsAlloc["args"][0]["value"], "3");
+	ASSERT_EQ(funcName(body[2]["vars"][0]["init"]["name"]), "__pln_alloc_edict_8__pln_B8");
+	ASSERT_EQ(body[2]["vars"][0]["var-type"]["base-type"]["embedded"], true);
+	const auto& rowsFree = body[9]["body"];
+	ASSERT_EQ(funcName(rowsFree["name"]), "__pln_free_dict_Pint32");
+	ASSERT_EQ(rowsFree["args"][1]["value"], "3");
+	const json* values = nullptr;
+	for (auto& s : jout["alloc-shapes"])
+		if (s["shape-key"] == "varr_PDint32") values = &s;
+	ASSERT_NE(values, nullptr);
+	ASSERT_EQ((*values)["elem"]["kind"], "dict");
+	ASSERT_EQ((*values)["elem"]["shape-key"], "dict_int32");
+}
+
+// A dictionary held as a field or an element is a slot of elem kind "dict",
+// built, freed and copied by the dictionary's own functions.
+TEST(sa, dict_holders)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/363_dict_holders.pa");
+	ASSERT_TRUE(jout.is_object());
+	map<string, const json*> shapes;
+	for (auto& s : jout["alloc-shapes"])
+		shapes[s.contains("shape-key") ? s["shape-key"].get<string>() : s["shape-name"].get<string>()] = &s;
+	const json& field = (*shapes.at("__pln_L17_363_dict_holders_S"))["owned-fields"][0];
+	ASSERT_EQ(field["name"], "d");
+	ASSERT_EQ(field["elem"]["kind"], "dict");
+	ASSERT_EQ(field["elem"]["shape-key"], "dict_int32");
+	ASSERT_TRUE(shapes.at("__pln_L17_363_dict_holders_S")->contains("init-func"));
+	for (const char* key : {"arr_PDint32", "varr_PDint32"})
+		ASSERT_EQ((*shapes.at(key))["elem"]["kind"], "dict");
 }

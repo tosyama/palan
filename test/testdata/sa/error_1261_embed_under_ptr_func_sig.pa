@@ -1,0 +1,1 @@
+func f(@func(@$int32) g) { }

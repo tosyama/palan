@@ -1,0 +1,2 @@
+cinclude <stddef.h>;
+@@[3]int32 p = NULL;

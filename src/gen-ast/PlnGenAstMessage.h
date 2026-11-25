@@ -21,7 +21,6 @@ enum PlnMessageCode {
 	E_InvalidCharLiteral,		// literal text
 	E_InvalidNumberLiteral,		// literal text
 	E_SyscallNamedReturn,
-	E_ExpectedInKeyword,		// identifier
 	E_ForElemNoMode,		// loop variable name
 	E_ExpectedCopyKeyword,	// identifier
 	E_InterfaceOnly,		// what was written
@@ -39,6 +38,12 @@ enum PlnMessageCode {
 	E_InvalidCodePointEscape,	// the escape as written
 	E_VariadicNotLast,
 	E_UnknownFieldMarker,	// the word before the field's type
+	E_ReceiveFromNonCall,
+	E_ReceiveTarget,
+	E_ChainAfterReceive,
+	E_ConversionAsStoreLoc,	// the type name
+	E_FrameParamOrRet,
+	E_DictKeyTypeNotEmpty,
 };
 
 class PlnGenAstMessage

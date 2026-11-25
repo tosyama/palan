@@ -1,0 +1,2 @@
+func a(@![+]int32 v) { }
+@func(@[+]int32) g = a;

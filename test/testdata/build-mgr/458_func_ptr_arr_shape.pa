@@ -1,0 +1,17 @@
+cinclude <stdio.h>;
+type P { int32 x; };
+func sum([3]int32 v) -> int32 { return v[0] + v[1] + v[2]; }
+func twice([+]P v) -> [+]P { 2 * v[0].x -> v[0].x; return v; }
+func any(@void p) -> int32 { if p == NULL { return 0; } return 1; }
+func f() {
+	@func([3]int32) -> int32 s = sum;
+	@func([+]P) -> [+]P t = twice;
+	@func(@int32) -> int32 a = any;
+	[3]int32 v = [1, 2, 3];
+	[+]P p;
+	p.resize(1);
+	4 -> p[0].x;
+	[+]P q = t(p>>);
+	printf("%d %d %d\n", s(v), q[0].x, a(@v));
+}
+f();

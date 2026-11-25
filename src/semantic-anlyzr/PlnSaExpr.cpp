@@ -69,11 +69,11 @@ FieldChain PlnSemanticAnalyzer::resolveObjectChain(const json& obj, bool forWrit
 		cerr << locPrefix(obj) << PlnSaMessage::getMessage(E_FieldAccessOnNonStruct) << endl;
 		exit(1);
 	}
-	if (forWrite && it->typeKind == "raw-ptr" && !it->isMutable) {
+	if (forWrite && it->typeKind == "raw-ptr" && !isWritableThrough(it->type)) {
 		cerr << locPrefix(obj) << PlnSaMessage::getMessage(E_WriteToImmutablePtrField) << endl;
 		exit(1);
 	}
-	if (it->typeKind == "raw-ptr" && (it->elemKind != "struct" || !it->innerPtrMutable.empty())) {
+	if (it->typeKind == "raw-ptr" && !isStructPntr(it->type)) {
 		// A pointer-to-primitive (e.g. `@!int64 p;`) or pointer-to-pointer field
 		// has nothing further to chain into -- this hop must be the chain's
 		// terminal, typed by the caller via fieldValueType, not
@@ -87,9 +87,7 @@ FieldChain PlnSemanticAnalyzer::resolveObjectChain(const json& obj, bool forWrit
 		return base;
 	}
 	// LCOV_EXCL_BR_START
-	json pntr_type = it->typeKind == "owned" ? it->type
-		: json{{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",it->typeName}}}};
-	if (it->typeKind == "raw-ptr") pntr_type["mutable"] = it->isMutable;
+	json pntr_type = fieldValueType(*it);
 	string structName = pntr_type["base-type"]["type-name"];
 	json ptrNode;
 	if (!base.isPointerBased)
@@ -291,7 +289,7 @@ void PlnSemanticAnalyzer::requireSupportedCGlobal(const json& entry, const strin
 // taking the address of its slot. Null for any other variable.
 json PlnSemanticAnalyzer::storageBorrowType(const string& name, const json& varType, bool isMutable) const
 {
-	if (isStructStorage(varType) || isVarrStorage(varType)) {
+	if (isStructStorage(varType) || isVarrStorage(varType) || isDictStorage(varType)) {
 		json vt = varType;
 		vt["mutable"] = isMutable;
 		return vt;
@@ -545,6 +543,10 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 	};
 	// A borrowed array variable is passed by name, as to a function's parameter.
 	auto namesArrBorrow = [&](const json& e) {
+		if (e.value("expr-type", "") == "field-access") {
+			json vt = knownValueType(e);
+			return vt.is_object() && isArrBorrowVar(vt);
+		}
 		if (e.value("expr-type", "") != "id") return false;
 		const json* vt = findVar(e["name"].get<string>());
 		return vt && isArrBorrowVar(*vt);
@@ -564,7 +566,7 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 		const json& addrOf = *arr;
 		arr = &addrOf["object"];
 		if (namesArrBorrow(*arr)) {
-			cerr << locPrefix(addrOf) << PlnSaMessage::getMessage(E_AddrOfBorrowed, (*arr)["name"].get<string>()) << endl;
+			cerr << locPrefix(addrOf) << PlnSaMessage::getMessage(E_AddrOfBorrowed, (*arr)[arr->contains("field") ? "field" : "name"].get<string>()) << endl;
 			exit(1);
 		}
 	}
@@ -592,7 +594,7 @@ const json* PlnSemanticAnalyzer::lenOperand(const json& expr)
 		checkRootNotGiven(*arr);
 		return arr;
 	}
-	if (isArrLevel(vt) || isVarrPntr(vt) || userLenExists()) return nullptr;
+	if (isArrLevel(vt) || isVarrPntr(vt) || isDictPntr(vt) || userLenExists()) return nullptr;
 	cerr << locPrefix(given) << PlnSaMessage::getMessage(E_LenNotArray, typeDisplayName(vt)) << endl;
 	exit(1);
 }
@@ -628,7 +630,8 @@ int64_t PlnSemanticAnalyzer::constArrSizeOrExit(const json& arrType, const json&
 json PlnSemanticAnalyzer::arrLenOf(const json& saArr, const json& locNode)
 {
 	const json& vt = saArr["value-type"];
-	if (isVarrPntr(vt)) return varrLen(saArr);
+	// A dictionary's header starts with its live count, as a `[+]T`'s with its len.
+	if (isVarrPntr(vt) || isDictPntr(vt)) return varrLen(saArr);
 	if (vt.value("run-size", false)) {
 		const json& location = saArr["expr-type"] == "addr-of" ? saArr["object"] : saArr;
 		auto [root, depth] = arrRoot(location);
@@ -786,6 +789,12 @@ json PlnSemanticAnalyzer::sa_expression(const json &rawExpr, const PlnType* expe
 	return sa;
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
+json PlnSemanticAnalyzer::sa_expression_for(const json& expr, const json& toType)
+{
+	if (isFuncPtr(toType) && namesOverloadedFunc(expr)) return sa_func_ref(expr, &toType);
+	return sa_expression(expr, registry_.fromJson(toType));
+}
+
 // '->' binds tighter than a comparison or a logical operator, so code written
 // to store such a result (`x < y -> b`) now nests an assignment in it.
 void PlnSemanticAnalyzer::rejectArrowOperand(const json& expr, const string& op) const
@@ -887,7 +896,7 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 			if (isOwnedVar(expr["name"].get<string>()))
 				sa_expr["category"] = "owned";
 		} else {
-			json ref = sa_func_ref(expr, expectedType);
+			json ref = sa_func_ref(expr);
 			if (!ref.is_null()) return ref;
 			undefinedNameError(expr, expr, E_UndefinedVariable);
 		}
@@ -1359,6 +1368,10 @@ void PlnSemanticAnalyzer::checkBorrowSource(const json& locNode, const json& saV
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_VarrBorrowNeedsAddrOf) << endl;
 		exit(1);
 	}
+	if (isDictPntr(dstType) && isPtrBorrow(dstType) && isDictStorage(saValue["value-type"])) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_DictBorrowNeedsAddrOf) << endl;
+		exit(1);
+	}
 	if (isPtrBorrow(dstType) && namesArrStorage(saValue)) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ArrBorrowNeedsAddrOf) << endl;
 		exit(1);
@@ -1708,16 +1721,67 @@ json PlnSemanticAnalyzer::makeFieldAccess(const FieldChain& chain, const FieldLa
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
-json PlnSemanticAnalyzer::sa_expr_arr_index(const json& expr, bool forWrite)
+// What `arr[i]` indexes, as a write through it needs it.
+json PlnSemanticAnalyzer::sa_index_base(const json& arr, bool forWrite)
 {
-	json sa_expr = expr;
-	const json& arr = expr["array"];
 	string arr_kind = arr.value("expr-type", "");
 	json sa_array = !forWrite ? sa_expression(arr)
 		: arr_kind == "field-access" ? sa_expr_field_access(arr, true)
 		: arr_kind == "arr-index"    ? sa_expr_arr_index(arr, true)
 		: sa_expression(arr);
 	requireOwnedBase(sa_array, arr);
+	return sa_array;
+}
+
+// `d[k]` as the address of k's value that the generated function `op` ("at",
+// or "put" that adds k if it is not there) returns, typed as the values' data
+// pointer is so that indexing it by 0 makes it an element as `[+]T`'s are.
+json PlnSemanticAnalyzer::dictValueAddr(json saDict, const json& dictAst, const json& keyAst,
+                                        const string& op, const json& locNode)
+{
+	// LCOV_EXCL_BR_START
+	json vt = saDict["value-type"];
+	const json& elem = vt["base-type"]["base-type"];
+	bool isPut = op == "put";
+	json self = dictPntrType(elem, isVarrEmbedded(vt));
+	self["mutable"] = isPut;
+	json argAst = dictAst;
+	if (isDictStorage(vt)) {
+		saDict["value-type"]["mutable"] = isPut;
+		argAst = {{"expr-type","addr-of"},{"object",dictAst},{"mutable",isPut}};
+	}
+	json key = {{"name","k"},{"var-type",{{"type-kind","pntr"},{"mutable",false},{"base-type",{{"type-kind","prim"},{"type-name","uint8"}}}}}};
+	AllocShapeRef shape = dictShape(vt);
+	json def = {{"name",op},{"func-type","palan"},{"symbol",allocHelperSymbol(shape, op)},
+	            {"parameters",json::array({{{"name","d"},{"var-type",move(self)}}, move(key)})},
+	            {"len-args",helperLens(shape.elem)}};
+	vector<CallArg> args;
+	args.push_back(CallArg{argAst, false, move(saDict)});
+	// The key is only read, as an index is, so an array is given by name.
+	json keyArg = foldConstExpr(keyAst);
+	if (isLocationExpr(keyArg)) {
+		json kt = operandValueType(keyArg);
+		if ((isArrLevel(kt) || isVarrPntr(kt)) && !isArrBorrowVar(kt))
+			keyArg = {{"expr-type","addr-of"},{"object",keyAst},{"mutable",false},{"loc",keyAst.value("loc", json::array())}};
+	}
+	for (auto& a : analyzeCallArgs(json::array({keyArg}))) args.push_back(move(a));
+	json callAst = {{"expr-type","call"},{"loc",locNode.value("loc", json::array())}};
+	json call = makeCallNode(callAst, Callee{&def, false}, "[]", &args);
+	call["value-type"] = valuesDataType(vt, false);
+	return call;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+json PlnSemanticAnalyzer::sa_expr_arr_index(const json& expr, bool forWrite, json saBase)
+{
+	json sa_expr = expr;
+	const json& arr = expr["array"];
+	json sa_array = saBase.is_null() ? sa_index_base(arr, forWrite) : move(saBase);
+	json sa_index;
+	if (isDictPntr(sa_array["value-type"])) {
+		sa_array = dictValueAddr(move(sa_array), arr, expr["index"], "at", expr);
+		sa_index = lenLit(0);
+	}
 	if (isVarrPntr(sa_array["value-type"]))
 		sa_array = varrData(move(sa_array));
 	const json& array_type = sa_array["value-type"];
@@ -1727,7 +1791,7 @@ json PlnSemanticAnalyzer::sa_expr_arr_index(const json& expr, bool forWrite)
 	}
 	const json& elem_type = array_type["base-type"];
 
-	json sa_index = sa_expression(expr["index"]);
+	if (sa_index.is_null()) sa_index = sa_expression(expr["index"]);
 	const PlnType* idxType = registry_.fromJson(sa_index["value-type"]);
 	if (isFloatPrim(idxType)) {
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ArrayIndexNotInteger) << endl;

@@ -95,6 +95,103 @@ TEST(gen_ast_error, variadic_not_last) {
 	}
 }
 
+// Forms with no plan in the language are not parsed at all.
+TEST(gen_ast_error, unplanned_forms) {
+	struct { string source, expected; } cases[] = {
+		{"interface I { func f(); };\n", "m.pa:1:13: error: syntax error"},
+		{"type T : I as A { int32 x; };\n", "m.pa:1:8: error: syntax error"},
+		{"type T { int32 x; func A.f() { } };\n", "m.pa:1:19: error: syntax error"},
+		{"construct T(int32 x) { }\n", "m.pa:1:12: error: syntax error"},
+		{"f = func (int32 x) { };\n", "m.pa:1:5: error: syntax error"},
+		{"x++;\n", "m.pa:1:3: error: syntax error"},
+		{"type X;\n", "m.pa:1:7: error: syntax error"},
+		{"int32 >>b;\n", "m.pa:1:9: error: syntax error"},
+		{"func f(int32 >>b) { }\n", "m.pa:1:14: error: syntax error"},
+		{"(int32 a, b) = (3, 5);\n", "m.pa:1:18: error: syntax error"},
+		{"(3, 5) -> (a, b);\n", "m.pa:1:3: error: syntax error"},
+		{"f() -> (a, -);\n", "m.pa:1:13: error: syntax error"},
+		{"f() ->> (a, b);\n", "m.pa:1:11: error: syntax error"},
+		{"[#]int32 a = [1];\n", "m.pa:1:2: error: Unexpected character '#'."},
+		{"[#3]int32 a;\n", "m.pa:1:2: error: Unexpected character '#'."},
+		{"k(@int32(1));\n", "m.pa:1:4: error: 'int32(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'."},
+		{"k(@int32(1).f());\n", "m.pa:1:4: error: 'int32(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'."},
+		{"x -> int32();\n", "m.pa:1:6: error: 'int32(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'."},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.expected), string::npos) << c.source << out;
+	}
+
+	// The words those forms used are names again.
+	cleanTestEnv();
+	ofstream("out/m.pa") << "int32 interface = 1, construct = 2;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	ASSERT_EQ(out.find("error"), string::npos) << out;
+}
+
+// Several values come only from a call, into places that store them, and go no further.
+TEST(gen_ast_error, receive_misuse) {
+	struct { string source, expected; } cases[] = {
+		{"(int32 a, b) = x;\n", "m.pa:1:16: error: several values are received only from a call."},
+		{"x -> (a, b);\n", "m.pa:1:1: error: several values are received only from a call."},
+		{"f() -> (a, b + 1);\n", "m.pa:1:12: error: a received value is stored only into a variable, an element or a field."},
+		{"f() -> (a, b) -> g();\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) -> c;\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) ->> c;\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) ->> c as [+]int32;\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+		{"f() -> (a, b) -> (c, d);\n",
+		 "m.pa:1:15: error: values received into several targets cannot be passed on with '->' or '->>'."},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.expected), string::npos) << c.source << out;
+	}
+}
+
+// '$' is a property of a local declaration: a parameter or return value is never in the caller's frame.
+TEST(gen_ast_error, frame_param_or_ret) {
+	const string message = "error: '$' places a local variable in the stack frame; a parameter or return value cannot have it.";
+	struct { string source, location; } cases[] = {
+		{"func f($int32 x) { }\n", "m.pa:1:1: "},
+		{"type P { int32 x; };\nfunc f(int32 a, $P p) { }\n", "m.pa:2:1: "},
+		{"type P { int32 x; };\nfunc f($P a, b) { }\n", "m.pa:2:1: "},
+		{"func f($[4]int32 a) { }\n", "m.pa:1:1: "},
+		{"type P { int32 x; };\nfunc f() -> $P r { }\n", "m.pa:2:1: "},
+		{"type P { int32 x; };\nfunc f() -> $P { }\n", "m.pa:2:13: "},
+		{"func outer() {\n\tfunc inner($int32 x) { }\n}\n", "m.pa:2:2: "},
+		{"syscall s($int32 a) -> int64 = 1;\n", "m.pa:1:1: "},
+		{"syscall s(int64 a) -> $int64 = 1;\n", "m.pa:1:23: "},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.location + message), string::npos) << c.source << out;
+	}
+}
+
+TEST(gen_ast_error, dict_key_type) {
+	const string message = "error: a dictionary type is written '[\"\"]T': its key is a C string, which has no type name to write.";
+	struct { string source, location; } cases[] = {
+		{"[\"a\"]int32 d;\n", "m.pa:1:2: "},
+		{"type P { [\"key\"]int32 m; };\n", "m.pa:1:11: "},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.location + message), string::npos) << c.source << out;
+	}
+}
+
 TEST(gen_ast_error, interface_version) {
 	cleanTestEnv();
 	ofstream("out/old.pai") << "built \"0.0.0\";\ntarget \"" PALAN_TARGET "\";\nexport func f();\n";
@@ -138,8 +235,8 @@ TEST(gen_ast_error, cinclude_export_not_top_level) {
 
 TEST(gen_ast_error, interface_cannot_state) {
 	struct { string source, expected; } cases[] = {
-		{"export func f($int32 a) { }\n", "error: an interface cannot state this parameter or return."},
-		{"export func f() -> $int32 { }\n", "error: an interface cannot state this type."},
+		{"export func f([3][]int32 a) { }\n", "error: an interface cannot state this parameter or return."},
+		{"export func f() -> [3][]int32 { }\n", "error: an interface cannot state this type."},
 		{"const N = {x: 1};\n", "error: an interface cannot state this expression."},
 	};
 	for (auto& c : cases) {
@@ -343,7 +440,23 @@ TEST(gen_ast_error, for_expected_in) {
 	cleanTestEnv();
 	string out = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/error_021_for_expected_in.pa");
 	EXPECT_EQ(out.rfind("return1::", 0), 0u) << out;
-	EXPECT_NE(out.find(":1:12: error: Expected 'in' after the loop variable, but found 'on'."), string::npos) << out;
+	EXPECT_NE(out.find(":1:12: error: syntax error, unexpected identifier, expecting in or ','"), string::npos) << out;
+}
+
+// 'in' is reserved so a 'for' range never reads as a typed index.
+TEST(gen_ast_error, in_reserved) {
+	cleanTestEnv();
+	ofstream("out/m.pa") << "int32 in = 1;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	EXPECT_NE(out.find("m.pa:1:7: error: syntax error, unexpected in"), string::npos) << out;
+}
+
+// '{}' at the start of a statement is an empty block, so it is never the source of '->'.
+TEST(gen_ast_error, empty_braces_statement) {
+	cleanTestEnv();
+	ofstream("out/m.pa") << "[\"\"]int32 d;\n{} -> d;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	EXPECT_NE(out.find("m.pa:2:4: error: syntax error, unexpected ->"), string::npos) << out;
 }
 
 TEST(gen_ast_error, for_elem_mode) {

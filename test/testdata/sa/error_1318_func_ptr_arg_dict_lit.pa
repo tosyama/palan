@@ -1,0 +1,3 @@
+func h(flo64 a, int32 v) { }
+@func(flo64, int32) g = h;
+g(1.0, {"a": 1});

@@ -1,0 +1,2 @@
+export type Pub { int32 y; };
+export type S { @![+]int32 v; @[""]$Pub d; @[2]$Pub a; private @![2]int32 in; readonly @![+]int32 ro; };

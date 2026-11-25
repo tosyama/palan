@@ -1,0 +1,4 @@
+func f(@[""]int32 d) -> int64 { return 1; }
+func f(@[2]int32 d) -> int64 { return 2; }
+func f(@[3]int32 d) -> int64 { return 2; }
+f(@["a", "b"]);

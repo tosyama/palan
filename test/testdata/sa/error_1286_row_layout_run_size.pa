@@ -1,0 +1,4 @@
+func g(@[][]int32 x) {}
+int64 n = 3;
+[2]$[n]int32 e;
+g(@e);

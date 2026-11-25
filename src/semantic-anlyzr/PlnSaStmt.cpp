@@ -399,8 +399,12 @@ bool PlnSemanticAnalyzer::locationPath(const json& e, vector<string>& path)
 		return true;
 	}
 	if (et == "arr-index" && locationPath(e["array"], path)) {
+		// A dictionary's values at different constant keys are different too.
+		json key = foldConstExpr(e["index"]);
 		optional<ConstVal> idx = evalConst(e["index"]);
-		if (idx && idx->kind == ConstVal::Kind::Int)
+		if (key.value("expr-type", "") == "lit-str")
+			path.push_back("[\"" + key["value"].get<string>() + "\"]");
+		else if (idx && idx->kind == ConstVal::Kind::Int)
 			path.push_back("[" + to_string(idx->i) + "]");
 		else if (idx && idx->kind == ConstVal::Kind::Uint)
 			path.push_back("[" + to_string(idx->u) + "]");
@@ -475,7 +479,9 @@ static void aliasLoopElem(json& node, const string& name, const json& elem)
 }
 
 // `for a, i in arr { }` becomes a while over i, in a block of its own that
-// holds arr, evaluated once, and its length.
+// holds arr, evaluated once, and its length. Over a dictionary `for a, k in d`,
+// i runs over the values' positions that std/rt finds live, and k is the key
+// at i.
 json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 {
 	// LCOV_EXCL_BR_START
@@ -497,12 +503,19 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	json block = json::array();
 
 	json arrType = range["value-type"];
+	bool isDict = isDictPntr(arrType);
+	bool typedIdx = stmt.contains("index-type");
+	if (isDict && typedIdx) {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ForDictKeyTyped) << endl;
+		exit(1);
+	}
 	bool rangeBorrow = arrType.contains("mutable");
 	string arr = "__for_" + to_string(tempVarCounter_++);
 	// The range is moved into `arr` below; a length known only at run time is
 	// kept by the location it names, which the copy's rows then index by.
 	json runLens = bindRunLens(arr, range);
 	if (isExpiringOwned(range)) {
+		holdCallTemps(range);
 		declareVar(arr, arrType);
 		addOwnedScopeVar(arr, makeOwnedFreeStmt(arr, arrType));
 	} else {
@@ -522,24 +535,57 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	// A typed index is a conversion of a hidden int64 counter, so an index type
 	// too narrow for a run-time length wraps like `int32(i)` instead of
 	// looping forever, and the elements are still reached through the counter.
-	bool typedIdx = stmt.contains("index-type");
-	string idx = typedIdx || !stmt.contains("index") ? "__for_i_" + to_string(tempVarCounter_++) : stmt["index"].get<string>();
-	for (auto& s : sa_var_decl(varDecl(idx, i64, {{"expr-type","lit-int"},{"value","0"},{"loc",loc}}, loc)))
-		block.push_back(move(s));
-	string len = "__for_len_" + to_string(tempVarCounter_++);
+	string idx = typedIdx || isDict || !stmt.contains("index") ? "__for_i_" + to_string(tempVarCounter_++) : stmt["index"].get<string>();
 	json saArr = {{"expr-type","id"},{"name",arr},{"var-type",arrType},{"value-type",arrType}};
-	json lenVal = arrLenOf(saArr, stmt["range"]);
+	json idxPlus1 = {{"expr-type","add"},{"left",id(idx)},{"loc",loc},
+	                 {"right",{{"expr-type","lit-int"},{"value","1"},{"loc",loc}}}};
+	auto rtCall = [&](const string& name, json pos, json ret) {
+		return json{{"expr-type","call"},{"name",name},{"func-type","c"},
+		            {"args",json::array({saArr, move(pos)})},{"value-type",move(ret)}};
+	};
+	json step = json::array();
+	if (isDict) {
+		declareVar(idx, i64);
+		block.push_back({{"stmt-type","var-decl"},
+		                 {"vars",json::array({{{"name",idx},{"var-type",i64},{"init",rtCall("__pln_dict_next", lenLit(0), i64)}}})}});
+		step.push_back({{"stmt-type","assign"},{"name",idx},{"value",rtCall("__pln_dict_next", sa_expression(idxPlus1), i64)}});
+		if (stmt.contains("index")) {
+			const string& key = stmt["index"];
+			json keyType = {{"type-kind","pntr"},{"mutable",false},{"base-type",{{"type-kind","prim"},{"type-name","uint8"}}}};
+			declareVar(key, keyType);
+			block.push_back({{"stmt-type","var-decl"},
+			                 {"vars",json::array({{{"name",key},{"var-type",keyType},{"init",rtCall("__pln_dict_key", id(idx), keyType)}}})}});
+			step.push_back({{"stmt-type","assign"},{"name",key},{"value",rtCall("__pln_dict_key", sa_expression(id(idx)), keyType)}});
+		}
+	} else {
+		for (auto& s : sa_var_decl(varDecl(idx, i64, {{"expr-type","lit-int"},{"value","0"},{"loc",loc}}, loc)))
+			block.push_back(move(s));
+		step.push_back({{"stmt-type","assign"},{"name",idx},{"value",sa_expression(idxPlus1)}});
+	}
+	string len = "__for_len_" + to_string(tempVarCounter_++);
+	json lenVal = isDict ? json{{"expr-type","field-access"},{"ptr-expr",saArr},{"offset",DictUsedOffset},{"value-type",i64}}
+	                     : arrLenOf(saArr, stmt["range"]);
 	declareVar(len, i64);
 	block.push_back({{"stmt-type","var-decl"},
 	                 {"vars",json::array({{{"name",len},{"var-type",i64},{"init",move(lenVal)}}})}});
 
 	json cond = sa_expression({{"expr-type","cmp"},{"op","<"},{"left",id(idx)},{"right",id(len)},{"loc",loc}});
-	json step = json::array({{{"stmt-type","assign"},{"name",idx},
-		{"value",sa_expression({{"expr-type","add"},{"left",id(idx)},{"loc",loc},
-		                        {"right",{{"expr-type","lit-int"},{"value","1"},{"loc",loc}}}})}}});
+
+	// The values do not move, as the body cannot add a key; they are indexed as
+	// an array is.
+	if (isDict) {
+		arr = "__for_vals_" + to_string(tempVarCounter_++);
+		json data = varrData(saArr);
+		arrType = data["value-type"];
+		arrType["mutable"] = isWritableThrough(arrType);
+		declareVar(arr, arrType);
+		block.push_back({{"stmt-type","var-decl"},
+		                 {"vars",json::array({{{"name",arr},{"var-type",arrType},{"init",move(data)}}})}});
+		saArr = {{"expr-type","id"},{"name",arr},{"var-type",arrType},{"value-type",arrType}};
+	}
 
 	const json& elemType = isVarrPntr(arrType) ? arrType["base-type"]["base-type"] : arrType["base-type"];
-	json declType = astTypeOf(elemType);
+	json declType = astElemTypeOf(elemType);
 	if (declType.is_null()) declType = elemType;
 	json heads = json::array();
 	if (typedIdx) heads.push_back(forIndexHead(stmt, idx, &arrType));
@@ -574,7 +620,7 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	bool viaAddrOf = rangeAst.value("expr-type", "") == "addr-of";
 	vector<string> path;
 	bool pinned = locationPath(viaAddrOf ? rangeAst["object"] : rangeAst, path);
-	if (pinned) pinnedRanges_.push_back({move(path), isVarrPntr(arrType), !viaAddrOf && rangeBorrow});
+	if (pinned) pinnedRanges_.push_back({move(path), isDict || isVarrPntr(arrType), !viaAddrOf && rangeBorrow});
 	string idxName = stmt.value("index", idx);
 	forIndexVars_.insert(idxName);
 	enterGivenLoop();
@@ -588,6 +634,36 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 	for (auto& s : collectFreeStmts(scope, scope + 1)) block.push_back(move(s));
 	leaveScope();
 	return {{"stmt-type","block"},{"body",move(block)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The temps the calls in `node` were given are released with the current scope
+// rather than after the expression, since a value a call returns may hold a
+// borrow of one. Those a condition or a '&&'/'||' operand ends stay there.
+void PlnSemanticAnalyzer::holdCallTemps(json& node)
+{
+	// LCOV_EXCL_BR_START
+	if (node.is_array()) {
+		for (auto& n : node) holdCallTemps(n);
+		return;
+	}
+	if (!node.is_object()) return;
+	string et = node.value("expr-type", "");
+	if (et == "logical-and" || et == "logical-or") return;
+	string st = node.value("stmt-type", "");
+	if (st == "if" || st == "while" || st == "block") return;
+	if (et != "temp") {
+		for (auto& [key, child] : node.items())
+			if (child.is_structured()) holdCallTemps(child);
+		return;
+	}
+	holdCallTemps(node["body"]);
+	holdCallTemps(node["value"]);
+	// Scope releases run last first.
+	json& release = node["release"];
+	for (auto r = release.rbegin(); r != release.rend(); ++r)
+		arrayScopeVars_.back().push_back({"__held_" + to_string(tempVarCounter_++), move(*r), false});
+	release = json::array();
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
@@ -614,7 +690,7 @@ json PlnSemanticAnalyzer::sa_for_stmt(const json& stmt)
 		json t = vt;
 		return sa_for_struct(stmt, t, &rangeSa);
 	}
-	if (!isVarrPntr(vt) && !isArrLevel(vt)) {
+	if (!isVarrPntr(vt) && !isArrLevel(vt) && !isDictPntr(vt)) {
 		cerr << locPrefix(range) << PlnSaMessage::getMessage(E_ForRangeNotArray) << endl;
 		exit(1);
 	}
@@ -696,6 +772,13 @@ json PlnSemanticAnalyzer::sa_for_struct(const json& stmt, const json& rangeVT, j
 	json block = json::array();
 	json rangeArg;
 	if (rangeSa) {
+		holdCallTemps(*rangeSa);
+		// Receiving the struct would put a temp's body in a block of its own.
+		if (rangeSa->value("expr-type", "") == "temp") {
+			for (auto& b : (*rangeSa)["body"]) block.push_back(move(b));
+			json value = move((*rangeSa)["value"]);
+			*rangeSa = move(value);
+		}
 		bool owned = isExpiringOwned(*rangeSa);
 		string held = pinTemp(move(*rangeSa), rangeAst, block);
 		if (owned) addOwnedScopeVar(held, makeOwnedFreeStmt(held, storageVT));
@@ -944,8 +1027,6 @@ void PlnSemanticAnalyzer::sa_function(const json& funcDef, bool topLevel)
 	saFunc["name"] = (*currentFunc_)["symbol"];
 	if (currentFunc_->value("export", false)) saFunc["export"] = true;
 	normalizeSig(saFunc);
-	validateEmbeddedParams(saFunc);
-	validateNativeSig(saFunc);
 	if (!variadic.empty()) {
 		saFunc["parameters"].back()["var-type"] = variadicType;
 		saFunc["parameters"].push_back({{"name","__" + variadic + "_d0"},{"var-type",u64}}); // LCOV_EXCL_BR_LINE
@@ -1045,14 +1126,14 @@ json PlnSemanticAnalyzer::sa_assign_stmt(const json& stmt)
 		exit(1);
 	}
 	requireAssignable(name, stmt);
-	if (isAggregateLit(stmt["value"]) && (isVarrStorage(*varType) || assignsByFunc(*varType)))
+	if (isAggregateLit(stmt["value"]) && (isVarrStorage(*varType) || isDictStorage(*varType) || assignsByFunc(*varType)))
 		return sa_lit_assign_via_temp(stmt, *varType);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(*varType) || isArrLevel(*varType)))
 		return json::array({sa_aggregate_lit_assign(stmt, {{"expr-type", "id"}, {"name", name}}, *varType)}); // LCOV_EXCL_BR_LINE
 	const PlnType* toType = registry_.fromJson(*varType);
 	if (stmt.value("ownership-transfer", false))
 		return sa_transfer_to_var(stmt, name, *varType, toType);
-	json value = sa_expression(literalConversion(stmt["value"], *varType), toType);
+	json value = typedNull(sa_expression_for(literalConversion(stmt["value"], *varType), *varType), *varType);
 	// A borrowed array variable ("mutable" on its levels) is rebound to what
 	// '@x' names.
 	if (isCopiedByValue(*varType) && !varType->contains("mutable")) {
@@ -1062,6 +1143,7 @@ json PlnSemanticAnalyzer::sa_assign_stmt(const json& stmt)
 	if (varType->contains("arr-size") && !isOwnedVar(name))
 		checkArrBorrowBinding(stmt, stmt["value"], value, *varType);
 	value = convertForBinding(stmt, value, toType, registry_.toJson(toType));
+	checkElemShape(stmt, value, *varType);
 	checkBorrowSource(stmt, value, *varType);
 	checkPtrPermission(stmt, value["value-type"], *varType);
 	checkRangeBorrowBinding(stmt, stmt["value"], *varType);
@@ -1107,13 +1189,15 @@ json PlnSemanticAnalyzer::sa_lit_assign_via_temp(const json& stmt, const json& v
 	json loc = stmt.value("loc", json::array());
 	string temp = "__lit_" + to_string(tempVarCounter_++);
 	json arr = astTypeOf(varType);
-	if (!isStructPntr(varType) && !stmt["value"]["items"].empty()) arr["specifier"] = "raw";
+	bool isDict = isDictPntr(varType);
+	if (!isStructPntr(varType) && !isDict && !stmt["value"]["items"].empty()) arr["specifier"] = "raw";
 	string target = arrLitTargetName(targetAst);
 	json decl = {{"stmt-type","var-decl"},{"loc",loc},
 		{"vars",json::array({{{"name",temp},{"lit-name",target},{"var-type",move(arr)},{"init",stmt["value"]}}})}};
 	store["value"] = {{"expr-type","id"},{"name",temp},{"loc",loc}};
 	enterScope();
-	json body = sa_resolved_var_decl(decl, {VarStorage::Frame});
+	// std/rt allocates a dictionary, so it cannot be laid out in the frame.
+	json body = sa_resolved_var_decl(decl, {isDict ? VarStorage::Heap : VarStorage::Frame});
 	for (auto& st : sa_store_stmt(store)) body.push_back(move(st));
 	size_t idx = arrayScopeVars_.size() - 1;
 	for (auto& st : collectFreeStmts(idx, idx + 1)) body.push_back(move(st));
@@ -1402,7 +1486,7 @@ bool PlnSemanticAnalyzer::valueFirst(json& s, json& pre, json& post, set<string>
 		if (!isLocationExpr(value) && !cast) {
 			if (!hasCall(value))
 				return false;
-			value = pinValue(sa_expression(value, registry_.fromJson(toType)), value, pre);
+			value = pinValue(sa_expression_for(value, toType), value, pre);
 			return true;
 		}
 		// What it gives away moves out now: the pointer is read and the
@@ -1425,7 +1509,7 @@ bool PlnSemanticAnalyzer::valueFirst(json& s, json& pre, json& post, set<string>
 		value = snapshotCopy(saSrc, value, pre, post);
 		return true;
 	}
-	json saValue = sa_expression(value, registry_.fromJson(toType));
+	json saValue = sa_expression_for(value, toType);
 	if (!hasCall(value)) {
 		bool known = storageRoots(saValue, roots, false);
 		if (known && roots.empty())
@@ -1453,7 +1537,7 @@ json PlnSemanticAnalyzer::snapshotCopy(const json& saSrc, const json& locNode, j
 	const json& vt = saSrc["value-type"];
 	bool isStruct = isStructPntr(vt);
 	json declType = isStruct ? json{{"type-kind", "prim"}, {"type-name", vt["base-type"]["type-name"]}}
-	              : isVarrPntr(vt) || vt.contains("arr-size") ? astTypeOf(vt) : json();
+	              : isVarrPntr(vt) || isDictPntr(vt) || vt.contains("arr-size") ? astTypeOf(vt) : json();
 	if (declType.is_null())
 		return locNode;
 	string name = "__snap_" + to_string(tempVarCounter_++);
@@ -1647,15 +1731,49 @@ json PlnSemanticAnalyzer::pinValue(json saValue, const json& astValue, json& bod
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
+// `x -> d[k]` adds k if it is not there, which may move the values, so x is
+// evaluated first (`len(@d) -> d["n"]` counts without "n") and stored at the
+// address the adding returns.
+json PlnSemanticAnalyzer::sa_dict_store_stmt(const json& stmt, json saDict, json* litAddr)
+{
+	checkRangeChange(stmt, stmt["target"]["array"], RangeChange::Borrow);
+	if (!isWritableThrough(saDict["value-type"])) {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
+		exit(1);
+	}
+	const json& value = stmt["value"];
+	const json elem = saDict["value-type"]["base-type"]["base-type"];
+	if (isAggregateLit(value) && (isStructPntr(elem) || isCopiedByValue(elem) || elem["type-kind"] == "struct"))
+		return sa_lit_assign_via_temp(stmt, elem, litAddr);
+	// LCOV_EXCL_BR_START
+	const json& target = stmt["target"];
+	json body = json::array();
+	json store = stmt;
+	if (hasCall(value)) {
+		json saValue = stmt.value("ownership-transfer", false) ? sa_move_source(value) : sa_expression(value);
+		store["value"] = pinValue(move(saValue), value, body);
+	}
+	json addr = dictValueAddr(move(saDict), target["array"], target["index"], "put", stmt);
+	store["target"] = {{"expr-type","arr-index"},{"array",pinValue(move(addr), target, body)},
+	                   {"index",{{"expr-type","lit-int"},{"value","0"}}},{"loc",target.value("loc", json::array())}};
+	for (auto& s : sa_arr_assign_stmt(store)) body.push_back(move(s));
+	return body;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 {
-	json sa_target = sa_expr_arr_index(stmt["target"], /*forWrite=*/true);
+	json sa_base = sa_index_base(stmt["target"]["array"], /*forWrite=*/true);
+	if (isDictPntr(sa_base["value-type"]))
+		return sa_dict_store_stmt(stmt, move(sa_base), litAddr);
+	json sa_target = sa_expr_arr_index(stmt["target"], /*forWrite=*/true, move(sa_base));
 	bool transfer = stmt.value("ownership-transfer", false);
 	if (!isWritableThrough(sa_target["array"]["value-type"])) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
 		exit(1);
 	}
-	if (isAggregateLit(stmt["value"]) && (isVarrStorage(sa_target["value-type"]) || assignsByFunc(withoutArrPermission(sa_target["value-type"])))) // LCOV_EXCL_BR_LINE
+	if (isAggregateLit(stmt["value"]) && (isVarrStorage(sa_target["value-type"]) || isDictStorage(sa_target["value-type"]) // LCOV_EXCL_BR_LINE
+	    || assignsByFunc(withoutArrPermission(sa_target["value-type"])))) // LCOV_EXCL_BR_LINE
 		return sa_lit_assign_via_temp(stmt, sa_target["value-type"], litAddr);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(sa_target["value-type"]) || isArrLevel(sa_target["value-type"]))) {
 		json lit = sa_aggregate_lit_assign(stmt, stmt["target"], sa_target["value-type"], litAddr);
@@ -1678,7 +1796,7 @@ json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 	}
 	const PlnType* toType = registry_.fromJson(targetType);
 	json sa_value = transfer ? sa_move_source(stmt["value"], toType)
-	                         : sa_expression(literalConversion(stmt["value"], targetType), toType); // LCOV_EXCL_BR_LINE
+	                         : typedNull(sa_expression_for(literalConversion(stmt["value"], targetType), targetType), targetType); // LCOV_EXCL_BR_LINE
 	sa_value = convertForBinding(stmt, sa_value, toType, registry_.toJson(toType));
 	checkElemShape(stmt, sa_value, targetType);
 	checkBorrowSource(stmt, sa_value, targetType);
@@ -1720,8 +1838,9 @@ json PlnSemanticAnalyzer::sa_aggregate_lit_assign(const json& stmt, const json& 
 	} else {
 		string name = arrLitTargetName(targetAst);
 		// A row reached through a borrowed array has the same type, but it is
-		// the borrowed storage itself, so only the variable is a borrow.
-		if (targetAst.value("expr-type", "") == "id" && isArrBorrowVar(targetType)) {
+		// the borrowed storage itself, so only the variable or field is a borrow.
+		string tet = targetAst.value("expr-type", "");
+		if ((tet == "id" || tet == "field-access") && isArrBorrowVar(targetType)) {
 			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ArrLitTarget, name) << endl;
 			exit(1);
 		}
@@ -1773,6 +1892,10 @@ json PlnSemanticAnalyzer::sa_aggregate_lit_assign(const json& stmt, const json& 
 				bindLeaves(v);
 				continue;
 			}
+			if (isDictLitValues(v)) {
+				bindLeaves(v["values"]);
+				continue;
+			}
 			string name = isStructPntr(v["value-type"]) ? bindStructTemp(move(v)) : bindTemp(move(v));
 			const json type = *findVar(name);
 			v = {{"expr-type", "id"}, {"name", name}, {"var-type", type}, {"value-type", type}};
@@ -1807,6 +1930,18 @@ json PlnSemanticAnalyzer::transferStmts(const json& stmt, json targetRelease, js
 	json result = json::array();
 	if (isStructRetCall(value))
 		store["value"] = heapStructRet(store["value"], result);
+	// A computed value may read what the target holds (`f(v) ->> v`), so it is
+	// evaluated before the target releases that.
+	else if (value.value("category", "") == "expiring" && !isLocationExpr(value)) {
+		// LCOV_EXCL_BR_START
+		json type = value["value-type"];
+		string name = "__pin_" + to_string(tempVarCounter_++);
+		declareVar(name, type);
+		result.push_back({{"stmt-type", "var-decl"},
+		                  {"vars", json::array({{{"name", name}, {"var-type", type}, {"init", move(store["value"])}}})}});
+		store["value"] = {{"expr-type", "id"}, {"name", name}, {"var-type", type}, {"value-type", type}, {"category", "expiring"}};
+		// LCOV_EXCL_BR_STOP
+	}
 	result.push_back(move(targetRelease));
 	result.push_back(move(store));
 	appendTransferSourceReset(result, stmt, value);
@@ -1833,7 +1968,7 @@ json PlnSemanticAnalyzer::heapStructRet(json value, json& pre)
 // accept NULL. A call result has no owner to reset.
 void PlnSemanticAnalyzer::appendTransferSourceReset(json& stmts, const json& stmt, const json& saValue, const string& op)
 {
-	if (saValue.value("category", "") == "expiring")
+	if (isExpiringOwned(saValue))
 		return;
 	if (saValue.value("category", "") == "opaque-convert" || saValue.value("category", "") == "resized") {
 		json converted = stmt;
@@ -1968,7 +2103,7 @@ json PlnSemanticAnalyzer::sa_return_stmt(const json& stmt)
 		const PlnType* toType = registry_.fromJson(retType);
 		const json& valueAst = stmt["values"][0];
 		json value = valueAst.value("expr-type", "") == "cast" && isArrLevel(retType) ? sa_move_source(valueAst)
-		           : sa_expression(literalConversion(valueAst, retType), toType); // LCOV_EXCL_BR_LINE
+		           : typedNull(sa_expression_for(literalConversion(valueAst, retType), retType), retType); // LCOV_EXCL_BR_LINE
 		// A borrow is returned as a copy (copyReturnBlock), which checks its shape.
 		if (isOwnedBlock(retType) && isPtrBorrow(value["value-type"]))
 			return {{"stmt-type", "return"}, {"values", json::array({value})}}; // LCOV_EXCL_BR_LINE
@@ -2024,8 +2159,8 @@ json PlnSemanticAnalyzer::bindReturnValueToTemp(const json& stmt, json& ret)
 // ret-type, which is the block's storage pointer.
 json PlnSemanticAnalyzer::bindReturnLit(json& stmt)
 {
-	if (!currentFunc_->contains("ret-type") || !isOwnedBlock((*currentFunc_)["ret-type"])
-			|| !stmt.contains("values") || stmt["values"].size() != 1
+	if (currentFunc_->contains("rets") || !currentFunc_->contains("ret-type")
+			|| !isOwnedBlock((*currentFunc_)["ret-type"]) || !stmt.contains("values") || stmt["values"].size() != 1
 			|| !isAggregateLit(stmt["values"][0]))
 		return json::array();
 	if (!retSlot_.empty()) {
@@ -2092,7 +2227,7 @@ json PlnSemanticAnalyzer::copyReturnBlock(const json& stmt, json& ret)
 	json& value = ret["values"][0];
 	if (!value.contains("value-type") || isExpiringOwned(value)
 			|| !(isStructPntr(value["value-type"]) || isVarrPntr(value["value-type"])
-			     || isArrLevel(value["value-type"])))
+			     || isDictPntr(value["value-type"]) || isArrLevel(value["value-type"])))
 		return json::array();
 	string name = "__ret_" + to_string(tempVarCounter_++);
 	json decl = {{"stmt-type", "var-decl"}, {"loc", stmt.value("loc", json::array())}, // LCOV_EXCL_BR_LINE
@@ -2166,7 +2301,7 @@ json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector
 		bool movesIntoFrame = storage == VarStorage::Frame && isOwnedBlock(retType) && !isStructValue(retType);
 		// A length known only at run time is no signature's, so such an array
 		// copies from the returned one.
-		json declared = varType.value("type-kind","") == "arr" ? takeOverType(stmt, varType)
+		json declared = varType.value("type-kind","") == "arr" || isDictAstType(varType) ? takeOverType(stmt, varType)
 		              : sigType(stmt, varType);
 		if (isStructValue(retType) && declared == retType) {
 			declareVar(name, retType);
@@ -2249,7 +2384,7 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 	}
 	json fieldType = fieldValueType(*it);
 	if (isAggregateLit(stmt["value"]) && !transfer
-	    && (isVarrStorage(fieldType) || assignsByFunc(withoutArrPermission(fieldType))))
+	    && (isVarrStorage(fieldType) || isDictStorage(fieldType) || assignsByFunc(withoutArrPermission(fieldType))))
 		return sa_lit_assign_via_temp(stmt, fieldType, litAddr);
 	if (isAggregateLit(stmt["value"]) && (isStructPntr(fieldType) || isArrLevel(fieldType))) {
 		json fieldAst = {{"expr-type", "field-access"}, {"object", stmt["object"]}, {"field", fn}}; // LCOV_EXCL_BR_LINE
@@ -2258,10 +2393,13 @@ json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 	}
 	const PlnType* toType = registry_.fromJson(fieldType);
 	json value = transfer ? sa_move_source(stmt["value"], toType)
-	                      : sa_expression(literalConversion(stmt["value"], fieldType), toType); // LCOV_EXCL_BR_LINE
-	if (!transfer && isCopiedByValue(fieldType))
+	                      : typedNull(sa_expression_for(literalConversion(stmt["value"], fieldType), fieldType), fieldType); // LCOV_EXCL_BR_LINE
+	if (!transfer && it->typeKind != "raw-ptr" && isCopiedByValue(fieldType))
 		return json::array({makeCopyStmt(stmt, makeFieldAccess(chain, *it), value, CopyInto::Existing)}); // LCOV_EXCL_BR_LINE
+	if (it->typeKind == "raw-ptr" && fieldType.contains("arr-size"))
+		checkArrBorrowBinding(stmt, stmt["value"], value, fieldType);
 	value = convertForBinding(stmt, value, toType, fieldType);
+	checkElemShape(stmt, value, fieldType);
 	checkBorrowSource(stmt, value, fieldType);
 	checkPtrPermission(stmt, value["value-type"], fieldType);
 	checkRangeBorrowBinding(stmt, stmt["value"], fieldType);

@@ -220,30 +220,24 @@ RegAllocResult allocateRegisters(const VFunc& func, const PhysRegs& phys)
         return (v + align - 1) / align * align;
     };
 
+    // size → stackOffset → the latest live_end of the VRegs placed there. A slot may
+    // be shared by several VRegs, so all of them must have expired before reuse.
+    map<int, map<int, int>> slotEnds;
+
     auto allocStackSlot = [&](VReg vreg, VRegType type) {
         int size    = sizeOfType(type);
         stack_bytes = alignUp(stack_bytes, size) + size;
         result[vreg] = PhysLoc{"", type, -stack_bytes}; // LCOV_EXCL_BR_LINE
+        slotEnds[size][-stack_bytes] = meta[vreg].live_end;
     };
 
     // For temporary VRegs (non-variable, non-return-value, no call args): reuse an expired
     // stack slot of the same size if one exists, otherwise allocate a fresh slot.
     auto allocTempStackSlot = [&](VReg vreg, VRegType type, int def_idx) {
-        int sz = sizeOfType(type);
-        // Build the maximum lifetime-end per local stack slot of matching size.
-        // A slot may be shared by multiple VRegs (due to earlier reuse), so we
-        // must ensure ALL current occupants have expired before reusing the slot.
-        map<int, int> slot_end;  // stackOffset → max vr_end of all VRegs at that offset
-        for (auto& [vr, loc] : result) {
-            if (!loc.isStack() || loc.stackOffset >= 0) continue;  // skip non-local
-            if (sizeOfType(meta[vr].type) != sz) continue;
-            int e = meta[vr].live_end;
-            auto [it, inserted] = slot_end.emplace(loc.stackOffset, e);
-            if (!inserted) it->second = std::max(it->second, e);
-        }
-        for (auto& [offset, max_end] : slot_end) {
+        for (auto& [offset, max_end] : slotEnds[sizeOfType(type)]) {
             if (max_end < def_idx) {
                 result[vreg] = PhysLoc{"", type, offset}; // LCOV_EXCL_BR_LINE
+                max_end = std::max(max_end, meta[vreg].live_end);
                 return;
             }
         }

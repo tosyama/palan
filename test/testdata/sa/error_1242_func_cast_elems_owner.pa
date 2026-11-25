@@ -1,0 +1,3 @@
+type P { int32 x; };
+func a([3]@P v) { }
+func f() { @func([3]P) g = a as @func([3]P); }

@@ -1,0 +1,81 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+
+type P { int32 x; };
+type S { @[2]int32 a = NULL; @![+]P v = NULL; @[""]int32 d = NULL; @[]$[3]int32 m = NULL; int32 n; };
+
+@[+]int32 g = NULL;
+
+func sum(@[+]int32 v = NULL) -> int32 {
+    if v == NULL { return -1; }
+    int32 s = 0;
+    for copy x in v { s + x -> s; }
+    return s;
+}
+func first(@[2]int32 a) -> int32 {
+    if a == NULL { return -2; }
+    return a[0];
+}
+func count(@![""]P d) -> int64 {
+    if d == NULL { return -3; }
+    return len(d);
+}
+func rows(@[]$[3]int32 m) -> int32 {
+    if m == NULL { return -4; }
+    return m[0][1];
+}
+func pick(@[+]int32 v, bool yes) -> @[+]int32 {
+    if yes { return v; }
+    return NULL;
+}
+func pickd(@[""]int32 d, bool yes) -> @[""]int32 {
+    if yes { return d; }
+    return NULL;
+}
+
+func f() {
+    [+]int32 v = [1, 2, 3];
+    [2]int32 a = [7, 8];
+    [""]P d = {"k": {x: 4}};
+    printf("%d %d %ld\n", sum(@v), first(@a), count(@!d));
+    printf("%d %d\n", sum(pick(@v, true)), pick(@v, false) == NULL);
+
+    @[2]int32 ba = NULL;
+    @![+]int32 bv = NULL;
+    @[""]P bd = NULL;
+    printf("%d %d %d\n", ba == NULL, bv == NULL, bd == NULL);
+    @a -> ba;
+    @!v -> bv;
+    @d -> bd;
+    printf("%d %ld %d\n", ba[1], len(bv), bd["k"].x);
+    NULL -> ba;
+    NULL -> bv;
+    NULL -> bd;
+    printf("%d %d %d\n", ba == NULL, bv == NULL, bd == NULL);
+
+    S s = {n: 1};
+    printf("%d %d %d %d\n", s.a == NULL, s.v == NULL, s.d == NULL, s.m == NULL);
+    [+]P vp;
+    vp.push({x: 5});
+    [""]int32 di = {"z": 9};
+    @a -> s.a;
+    @!vp -> s.v;
+    @di -> s.d;
+    S t = s;
+    NULL -> s.a;
+    NULL -> s.v;
+    NULL -> s.d;
+    NULL -> s.m;
+    printf("%d %d %d %d\n", s.a == NULL, s.v == NULL, s.d == NULL, s.m == NULL);
+    printf("%d %d %d\n", t.a[0], t.v[0].x, t.d["z"]);
+    S u = {a: NULL, v: NULL, d: NULL, n: 2};
+    printf("%d %d\n", u.a == NULL, pickd(@di, false) == NULL);
+
+    @func(@[+]int32) -> int32 fp = sum;
+    printf("%d %d\n", fp(NULL), fp(@v));
+}
+
+mtrace();
+printf("%d %d %ld %d\n", sum(NULL), first(NULL), count(NULL), rows(NULL));
+printf("%d %d\n", sum(), g == NULL);
+f();

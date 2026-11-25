@@ -1,0 +1,7 @@
+func f(@[""]int32 d) -> int32 t {
+	for copy v, k in d { if has(d, k) { t + v -> t; } }
+	for @v in d { t + v -> t; }
+}
+func g(@![""]int32 d) {
+	for @!v in d { v + 1 -> v; }
+}

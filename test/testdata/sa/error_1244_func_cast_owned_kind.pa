@@ -1,0 +1,4 @@
+type P { int32 x; };
+type Q { [+]int32 v; };
+func a(Q v) { }
+func f() { @func(P) g = a as @func(P); }

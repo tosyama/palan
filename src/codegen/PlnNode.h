@@ -70,6 +70,8 @@ struct StaticAllocExpr : Expr {
     string label;
     int    size  = 0;
     int    align = 1;
+    VRegType       dataType = VRegType::Uint8;
+    vector<string> data;  // initial element values; empty for a zeroed block
 };
 
 // A function's address, as a function pointer value. Functions are emitted

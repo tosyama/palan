@@ -233,8 +233,8 @@ TEST(sa, cast_identical_returns_src) {
 
 	bool found = false;
 	for (auto& stmt : jout["statements"]) {
-		if (stmt["stmt-type"] != "expr") continue;
-		auto& expr = stmt["body"];
+		if (stmt["stmt-type"] != "var-decl" || stmt["vars"][0]["name"] != "y") continue;
+		auto& expr = stmt["vars"][0]["init"];
 		// cast disappears; id node comes through directly
 		ASSERT_EQ(expr["expr-type"], "id");
 		ASSERT_EQ(expr["name"],      "x");
@@ -443,32 +443,32 @@ TEST(sa, logical_ops) {
 	ASSERT_GE(stmts.size(), 8u);
 
 	// a && b  →  value-type bool
-	const auto& land = stmts[3]["body"];
+	const auto& land = stmts[3]["vars"][0]["init"];
 	ASSERT_EQ(land["expr-type"],               "logical-and");
 	ASSERT_EQ(land["value-type"]["type-name"], "bool");
 	ASSERT_EQ(land["left"]["name"],            "a");
 	ASSERT_EQ(land["right"]["name"],           "b");
 
 	// a || b  →  value-type bool
-	const auto& lor = stmts[4]["body"];
+	const auto& lor = stmts[4]["vars"][0]["init"];
 	ASSERT_EQ(lor["expr-type"],               "logical-or");
 	ASSERT_EQ(lor["value-type"]["type-name"], "bool");
 
 	// !a  →  value-type bool
-	const auto& lnot = stmts[5]["body"];
+	const auto& lnot = stmts[5]["vars"][0]["init"];
 	ASSERT_EQ(lnot["expr-type"],               "logical-not");
 	ASSERT_EQ(lnot["value-type"]["type-name"], "bool");
 	ASSERT_EQ(lnot["operand"]["name"],         "a");
 
 	// a && b || !a  →  (a&&b) || (!a)
-	const auto& mixed = stmts[6]["body"];
+	const auto& mixed = stmts[6]["vars"][0]["init"];
 	ASSERT_EQ(mixed["expr-type"],                  "logical-or");
 	ASSERT_EQ(mixed["value-type"]["type-name"],    "bool");
 	ASSERT_EQ(mixed["left"]["expr-type"],          "logical-and");
 	ASSERT_EQ(mixed["right"]["expr-type"],         "logical-not");
 
 	// a && int32(c)  →  convert wraps c, value-type bool
-	const auto& with_cast = stmts[7]["body"];
+	const auto& with_cast = stmts[7]["vars"][0]["init"];
 	ASSERT_EQ(with_cast["expr-type"],               "logical-and");
 	ASSERT_EQ(with_cast["value-type"]["type-name"], "bool");
 }
@@ -483,36 +483,36 @@ TEST(sa, bitwise_ops) {
 	ASSERT_GE(stmts.size(), 9u);
 
 	// a & b  →  value-type int64 (both operands already int64)
-	const auto& band = stmts[3]["body"];
+	const auto& band = stmts[3]["vars"][0]["init"];
 	ASSERT_EQ(band["expr-type"],               "bitand");
 	ASSERT_EQ(band["value-type"]["type-name"], "int64");
 	ASSERT_EQ(band["left"]["name"],             "a");
 	ASSERT_EQ(band["right"]["name"],            "b");
 
 	// a | b  →  value-type int64
-	const auto& bor = stmts[4]["body"];
+	const auto& bor = stmts[4]["vars"][0]["init"];
 	ASSERT_EQ(bor["expr-type"],               "bitor");
 	ASSERT_EQ(bor["value-type"]["type-name"], "int64");
 
 	// a ^ b  →  value-type int64
-	const auto& bxor = stmts[5]["body"];
+	const auto& bxor = stmts[5]["vars"][0]["init"];
 	ASSERT_EQ(bxor["expr-type"],               "bitxor");
 	ASSERT_EQ(bxor["value-type"]["type-name"], "int64");
 
 	// ~a  →  value-type int64 (preserves operand width, unlike logical-not which
 	// always collapses to int32)
-	const auto& bnot64 = stmts[6]["body"];
+	const auto& bnot64 = stmts[6]["vars"][0]["init"];
 	ASSERT_EQ(bnot64["expr-type"],               "bitnot");
 	ASSERT_EQ(bnot64["value-type"]["type-name"], "int64");
 	ASSERT_EQ(bnot64["operand"]["name"],         "a");
 
 	// ~c  →  value-type int32 (preserves the narrower operand's own width)
-	const auto& bnot32 = stmts[7]["body"];
+	const auto& bnot32 = stmts[7]["vars"][0]["init"];
 	ASSERT_EQ(bnot32["expr-type"],               "bitnot");
 	ASSERT_EQ(bnot32["value-type"]["type-name"], "int32");
 
 	// a & int32(c)  →  int64 & int32: right side widened to int64 via a convert node
-	const auto& mixed = stmts[8]["body"];
+	const auto& mixed = stmts[8]["vars"][0]["init"];
 	ASSERT_EQ(mixed["expr-type"],               "bitand");
 	ASSERT_EQ(mixed["value-type"]["type-name"], "int64");
 	ASSERT_EQ(mixed["right"]["expr-type"],      "convert");
@@ -1115,6 +1115,35 @@ TEST(sa, global_var)
 	// report: an array global seen as a '@' borrow.
 	ASSERT_EQ(fs[2]["globals"][0]["name"], "arr");
 	ASSERT_EQ(fs[2]["globals"][0]["var-type"]["mutable"], false);
+}
+
+// An array of constants is the initial data of a global's static storage; one
+// with any other element, or with rows of its own, is stored in ..init.
+TEST(sa, static_global_data)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/364_static_global_data.pa");
+	ASSERT_TRUE(jout.is_object());
+	map<string, json> data;
+	map<string, int> stores;
+	for (auto& s : jout["functions"].back()["body"]) {
+		if (s["stmt-type"] == "var-decl") {
+			const json& v = s["vars"][0];
+			if (v["init"].contains("data")) data[v["name"]] = v["init"]["data"];
+		} else if (s["stmt-type"] == "arr-assign") {
+			const json* a = &s["target"];
+			while (a->contains("array")) a = &(*a)["array"];
+			stores[a->value("name", "")]++;
+		}
+	}
+	ASSERT_EQ(data.size(), 2);
+	ASSERT_EQ(data["m"]["type"]["type-name"], "int16");
+	ASSERT_EQ(data["m"]["values"], json({"1", "-2", "4", "5"}));
+	ASSERT_EQ(data["u"]["values"], json({"1.5", "2"}));
+	ASSERT_EQ(stores["m"], 0);
+	ASSERT_EQ(stores["u"], 0);
+	ASSERT_EQ(stores["n"], 2);
+	ASSERT_EQ(stores["o"], 2);
 }
 
 // A character literal of 128 or more takes an integer type of 32 bits or

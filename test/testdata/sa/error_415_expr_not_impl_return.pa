@@ -1,4 +1,4 @@
 func f(int32 a) -> int32
 {
-	return (a, 1);
+	return int32(a, 1);
 }

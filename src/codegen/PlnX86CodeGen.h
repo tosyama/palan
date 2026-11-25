@@ -16,6 +16,7 @@ class PlnX86CodeGen : public PlnCodeGen {
     void emitGlobal(const string& name);
     void emitLabel(const string& name);
     void emitStringLiteral(const string& label, const string& value);
+    void emitStaticData(const StaticBlock& b);
     void emitNoteGnuStack();
     void emitLeaLabel(const string& reg, const string& label);
     void emitMovImm(const string& dst, bool dst_is_mem, VRegType type, long long value);

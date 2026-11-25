@@ -1,69 +1,57 @@
-import "example1.pa" as ex;	// import all from example1.pa.
-import x, a from "example2.pa";
+import "lib_basic.pa" as lib;
+import twice from "lib_basic.pa";
 cinclude <stdio.h>;
 
-const N = 10;
+const N = 4;
 
-int64 x = 10, y = x+3;
-int32 a=10, (int32 a1, a2) = myFunc(x-3);
+export type Point { int32 x; int32 y; };
+type Color enum { RED, GREEN = 5, BLUE };
+type Count = int64;
+export type Handle = opaque Point;
 
-(int32 b1, b2) = (3, 5);
-(var z, zz) = myFunc(x);
-(int32 z1, int64 z2) = myFunc(x);
-(void, int64 zzz) = myFunc(x);
+global int64 calls = 0 for norm1!;
 
-myFunc(x) -> (z,-);
-
-export type MyType {
- 	int64 y;
- 	@MyType next;
-};
-
-export interface IMyObjStorage {
-	func size(@IMyObjStorage self) -> int32 {
-		return 0;
-	}
-
-	func add_item(@!IMyObjStorage self, Item >>item);
-};
-
-type MyTypeStorage : MyObjStorage as A {
-	[+]MyType storage;
-
-	func A.size(@MyTypeStorage self) -> int32 {
-		return self.storage.size();
-	}
-
-	func A.add_item(@!MyTypeStrage self, MyType >>item) {
-		self.storage.add(item>>);
-	}
-};
-
-type myInt = int64;
-type XType;
-
-([x]MyType t, [x]MyType z) = myFuncZ();
-
-func myFunc(int32 size)
- 	-> int32 z, int64 zz
-{
- 	[size+1]flo64 my_arr;
- 	[]$flo32 farr = [12,34][56,78];
- 	MyType mt = {y:2, next:null};
- 	[]$[]$MyType mt2=[[{y:2, next:null}]];
-	@[]MyType mt3 = [{y: 3, next:{y:4, next: null}}];
-
-	return 3, 4;
+func norm1(@Point p) -> int32 {
+	calls + 1 -> calls;
+	return p.x + p.y;
 }
 
-export func myFuncZ(int64 x=3, []int32 z=[3,2])
-{
+func divmod(int32 a, b) -> int32 q, int32 r {
+	a / b -> q;
+	a % b -> r;
 }
 
-callback = func (int32 x) {
-		return x+1;
-	};
-
-construct int64(@MyType t) {
-	return t.y;
+export func scale(@![N]int32 v, int32 k = 2) {
+	for @!e in v { e * k -> e; }
 }
+
+cexport func grow([+]int32 v) -> [+]int32 {
+	v.push(int32(len(@v)));
+	return v;
+}
+
+int64 x = 10, y = x + 3;
+Count c = y;
+Color col = Color.GREEN;
+[N]int32 a = [1, 2, 3, 4];
+[+]int32 v = [5, 6];
+$Point p = {x: 1, y: 2};
+Point q;
+[""]int32 stock = {"apple": 3, N: 4};
+p -> q;
+(int32 qq, rr) = divmod(17, 5);
+divmod(9, 4) -> (qq, a[0]);
+scale(@!a, 3);
+@!a -> scale();
+v ->> grow() ->> v;
+if x > y {
+	printf("big\n");
+} else {
+	printf("small\n");
+}
+while x > 0 {
+	x - 1 -> x;
+	if x == 5 { break; }
+}
+for copy e, i in v { printf("%ld:%d ", i, e); }
+printf("%d %ld %ld %ld\n", norm1(@q), lib.half(c), twice(x), calls);

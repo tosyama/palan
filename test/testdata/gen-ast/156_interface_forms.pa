@@ -23,7 +23,7 @@ export type Forms {
 	[+]int32 b;
 	[+4]$Forms c;
 	[3]@!int32 d;
-	[#3]int32 e;
+	[3]int32 e;
 	@void f;
 	@!void g;
 	@func(int32, @int8) -> int64 h;

@@ -1,0 +1,2 @@
+cinclude <stddef.h>;
+func f([+]int32 v) { } f(NULL);

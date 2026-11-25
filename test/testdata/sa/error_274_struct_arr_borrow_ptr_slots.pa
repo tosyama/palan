@@ -1,4 +1,4 @@
 type P { int32 x; };
-func f(@[2]P g) { }
+func f(@![2]P g) { }
 [2]@P a;
-f(@a);
+f(@!a);

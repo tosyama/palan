@@ -1,0 +1,2 @@
+type S { @![3]int32 a; };
+func f(@![4]int32 a) { S s; a -> s.a; }

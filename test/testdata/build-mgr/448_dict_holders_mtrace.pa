@@ -1,0 +1,56 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type S { int32 n; [""]int32 d; };
+type T { [""][+]int32 m = {"z": [1]}; };
+func mkd(int32 v) -> [""]int32 d { v -> d["v"]; }
+func f() {
+	S s = {n: 1, d: {"a": 1, "b": 2}};
+	S c = s;
+	5 -> c.d["a"];
+	s.d.remove("b");
+	int32 t = 0;
+	for copy v, k in c.d { v + t -> t; }
+	printf("%ld %d %d %d\n", len(@s.d), c.d["a"], c.d["b"], t);
+	[""]int32 out;
+	s.d ->> out;
+	printf("%d %d\n", out["a"], s.d == NULL);
+	{"q": 9} -> c.d;
+	printf("%d %ld\n", c.d["q"], len(@c.d));
+	T u;
+	u.m["z"].push(2);
+	printf("%ld\n", len(@u.m["z"]));
+
+	[2][""]int32 a;
+	1 -> a[0]["x"];
+	[2][""]int32 a2 = a;
+	a[0].remove("x");
+	printf("%ld %d
+", len(@a[0]), a2[0]["x"]);
+	[+][""]int32 v;
+	v.push(mkd(4));
+	v.push({"w": 6});
+	[+][""]int32 v2 = v;
+	[""]int32 p = v.pop();
+	printf("%ld %d %d %ld
+", len(@v), p["w"], v2[0]["v"], len(@v2));
+	[+][""]int32 lit = [{"a": 1}, {"b": 2, "c": 3}];
+	printf("%ld
+", len(@lit[1]));
+	[2][""]int32 al = [{"a": 1}, {"z": 0, "y": 1}];
+	printf("%ld
+", len(@al[1]));
+	[2]S ss;
+	{n: 2, d: {"k": 3}} -> ss[1];
+	ss[1] -> ss[0];
+	ss[1].d.remove("k");
+	[+]S vs;
+	vs.push(ss[0]);
+	printf("%d %ld %d\n", ss[0].d["k"], len(@ss[1].d), vs[0].d["k"]);
+	{n: 3, d: {"m": 1}} -> ss[0];
+	printf("%ld %d\n", len(@ss[0].d), ss[0].d["m"]);
+	int32 sum = 0;
+	for copy x in a2[0] { sum + x -> sum; 2 -> a2[1]["y"]; }
+	printf("%d %d\n", sum, a2[1]["y"]);
+}
+mtrace();
+f();

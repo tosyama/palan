@@ -1,0 +1,1 @@
+type P { @func(@[2]P) g; };

@@ -273,7 +273,7 @@ static bool sameParamTypes(const json& a, const json& b)
 	return true;
 }
 
-// The builtins exist for every T, whether or not a `[+]T` has made them
+// The builtins exist for every T, whether or not a `[+]T` or `[""]T` has made them
 // candidates yet, so declaration order does not matter. A `len` of a borrowed
 // constant-size array would never be called: such a len is folded first.
 static bool definesBuiltin(const string& name, const json& def)
@@ -283,8 +283,9 @@ static bool definesBuiltin(const string& name, const json& def)
 	const json& first = params[0]["var-type"];
 	if (name == "len" && params.size() == 1 && first.contains("arr-size") && first.contains("mutable"))
 		return true;
-	if (!isVarrPntr(first)) return false;
-	for (auto& builtin : varrBuiltinDefs(first["base-type"]))
+	json builtins = isVarrPntr(first) ? varrBuiltinDefs(first["base-type"])
+	              : isDictPntr(first) ? dictBuiltinDefs(first["base-type"]) : json::array();
+	for (auto& builtin : builtins)
 		if (builtin["name"] == name && sameParamTypes(builtin, def)) return true;
 	return false;
 }
@@ -316,20 +317,6 @@ void PlnSemanticAnalyzer::registerPlnFunc(const string& name, const json& def, c
 	plnFuncScopes.back()[name].push_back(def);
 }
 
-void PlnSemanticAnalyzer::validateEmbeddedParams(const json& funcDef)
-{
-	if (!funcDef.contains("parameters")) return;
-	for (auto& p : funcDef["parameters"]) {
-		if (!p.contains("var-type")) continue;
-		const auto& vt = p["var-type"];
-		if (vt.value("embedded", false) && !vt.contains("stride")) {
-			cerr << locPrefix(funcDef)
-			     << PlnSaMessage::getMessage(E_EmbeddedArrUnsizedInner) << endl;
-			exit(1);
-		}
-	}
-}
-
 bool PlnSemanticAnalyzer::isStructType(const json& type) const
 {
 	// LCOV_EXCL_BR_START
@@ -347,14 +334,15 @@ bool PlnSemanticAnalyzer::isKnownPointeeTypeName(const string& name) const
 {
 	// `void` is pointee-only (PlnType.h PrimType::Name::Void): @void/@!void are
 	// C's void*, while a standalone `void x;` stays rejected by isKnownTypeName.
-	return isPrimPointeeName(name) || isKnownTypeName(name);
+	// A declared struct may be pointed to before its layout is resolved.
+	return isPrimPointeeName(name) || isKnownTypeName(name) || declaredStructs_.count(name);
 }
 
 void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json& type) const
 {
 	const json* t = &type;
 	bool isPointee = false;
-	while (t->value("type-kind","") == "arr" || t->value("type-kind","") == "pntr") {
+	while (t->value("type-kind","") == "arr" || t->value("type-kind","") == "pntr" || isDictAstType(*t)) {
 		isPointee = t->value("type-kind","") == "pntr";
 		if (isFuncPtr(*t) && t->value("mutable", false)) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_FuncPtrMutable) << endl;
@@ -368,12 +356,16 @@ void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json&
 				cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownType, ename) << endl;
 				exit(1);
 			}
-			if ((ek == "prim" && !structDefs_.count(ename)) || (ek != "prim" && ek != "arr")) {
+			if ((ek == "prim" && !structDefs_.count(ename)) || (ek != "prim" && ek != "arr" && ek != "dict")) {
 				cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedElemNotStruct, typeDisplayName(elem)) << endl;
 				exit(1);
 			}
 		}
 		t = &(*t)["base-type"];
+	}
+	if (isPointee && t->value("type-kind","") == "embed") {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_EmbedUnderPointer) << endl;
+		exit(1);
 	}
 	if (t->value("type-kind","") == "func") {
 		requireFuncSigTypes(locNode, *t);
@@ -399,8 +391,7 @@ void PlnSemanticAnalyzer::requireFuncSigTypes(const json& locNode, const json& f
 		bool ownedArr = tk == "arr" && !t.value("embedded", false)
 		             && (isVarrAstType(t) || !t["size-expr"].is_null());
 		bool ok = tk == "prim" ? isRet || t.value("type-name","") != "void"
-		        : tk == "pntr" ? t["base-type"].value("type-kind","") != "arr"
-		        : ownedArr;
+		        : tk == "pntr" || tk == "dict" || ownedArr;
 		if (!ok) {
 			cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_FuncPtrSigType, typeDisplayName(t)) << endl;
 			exit(1);
@@ -426,49 +417,10 @@ json PlnSemanticAnalyzer::deepNormalizePrimToStruct(const json& locNode, const j
 		t["ret-type"] = sigType(locNode, t["ret-type"]);
 		return t;
 	}
-	if (isStructType(resolved))
+	if (isStructType(resolved) || declaredStructs_.count(resolved.value("type-name","")))
 		return {{"type-kind","struct"},{"type-name",resolved["type-name"]}}; // LCOV_EXCL_BR_LINE
 	return resolved;
 } // LCOV_EXCL_BR_LINE
-
-// Structural-only counterpart to unrepresentableTypeName for native Palan
-// signatures: names were already checked by preregisterFunc, so only a
-// type-kind that can never build is reported: "arr", left by sigType only
-// under a pointer to a borrowed array (`@@[]T`). A function type's own parameters were
-// checked by requireFuncSigTypes.
-static string unsupportedNativeSigTypeKind(const json& vt)
-{
-	string k = vt.value("type-kind", "");
-	if (k == "pntr")
-		return vt.contains("base-type") ? unsupportedNativeSigTypeKind(vt["base-type"]) : "";
-	if (k == "prim" || k == "struct" || k == "func" || k == "varr" || k.empty())
-		return "";
-	return k == "arr" ? "array" : k;
-}
-
-void PlnSemanticAnalyzer::validateNativeSig(const json& funcDef)
-{
-	string bad;
-	if (funcDef.contains("parameters"))
-		for (auto& p : funcDef["parameters"]) {
-			if (!p.contains("var-type")) continue;
-			bad = unsupportedNativeSigTypeKind(p["var-type"]);
-			if (!bad.empty()) break;
-		}
-	if (bad.empty() && funcDef.contains("ret-type"))
-		bad = unsupportedNativeSigTypeKind(funcDef["ret-type"]);
-	if (bad.empty() && funcDef.contains("rets"))
-		for (auto& r : funcDef["rets"]) {
-			if (!r.contains("var-type")) continue;
-			bad = unsupportedNativeSigTypeKind(r["var-type"]);
-			if (!bad.empty()) break;
-		}
-	if (!bad.empty()) {
-		cerr << locPrefix(funcDef)
-		     << PlnSaMessage::getMessage(E_UnsupportedParamType, funcDef["name"].get<string>(), bad) << endl;
-		exit(1);
-	}
-}
 
 void PlnSemanticAnalyzer::validateVariadicSig(const json& funcDef)
 {
@@ -689,22 +641,34 @@ void PlnSemanticAnalyzer::validateOperatorSig(const json& funcDef)
 }
 
 // The header's data pointer: what `v[i]` indexes and a C function or a `[]T`
-// receives. Through a read-only borrow the elements are read-only too.
+// receives. Through a read-only borrow the elements are read-only too. A
+// dictionary's values are a `[+]T` header embedded at the end of its own.
 json PlnSemanticAnalyzer::varrData(json varr)
 {
 	// LCOV_EXCL_BR_START
 	const json& vt = varr["value-type"];
+	json elems = valuesDataType(vt, varr.value("expr-type","") == "arr-index" && !isWritableElem(varr));
+	int offset = isDictPntr(vt) ? DictValuesOffset + 16 : 16;
+	return {{"expr-type","field-access"},{"ptr-expr",move(varr)},{"offset",offset},{"value-type",move(elems)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The type of the data pointer of vt's values, readOnly also when vt is
+// reached through what cannot be written.
+json PlnSemanticAnalyzer::valuesDataType(const json& vt, bool readOnly)
+{
+	// LCOV_EXCL_BR_START
 	json elems = {{"type-kind","pntr"},{"base-type",vt["base-type"]["base-type"]}};
 	if (isVarrEmbedded(vt)) {
 		elems["embedded"] = true;
 		elems["stride"] = inPlaceSize(vt["base-type"]["base-type"]);
 	}
 	// A row carries the permission on each of its levels, as in a borrowed `[m][n]T`.
-	if (!isWritableThrough(vt) || (varr.value("expr-type","") == "arr-index" && !isWritableElem(varr))) {
+	if (readOnly || !isWritableThrough(vt)) {
 		elems["mutable"] = false;
 		elems["base-type"] = withArrPermission(elems["base-type"], false);
 	}
-	return {{"expr-type","field-access"},{"ptr-expr",move(varr)},{"offset",16},{"value-type",move(elems)}};
+	return elems;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
@@ -713,10 +677,11 @@ optional<SaDiag> PlnSemanticAnalyzer::arrBorrowBindingMismatch(const json& srcAs
 {
 	string et = saValue.value("expr-type","");
 	bool namesBorrow = (et == "id" && saValue.contains("var-type") && isArrBorrowVar(saValue["var-type"]))
-	                   || ((et == "call" || et == "call-ptr") && isArrBorrowVar(saValue["value-type"]));
+	                   || ((et == "call" || et == "call-ptr" || et == "field-access") && isArrBorrowVar(saValue["value-type"]));
 	// Only an explicit cast converts into a borrowed array type.
 	bool castBorrow = et == "convert";
-	if (srcAst.value("expr-type","") != "addr-of" && !namesBorrow && !castBorrow)
+	bool null = isNullPtrLit(saValue) && isArrBorrowVar(saValue["value-type"]);
+	if (srcAst.value("expr-type","") != "addr-of" && !namesBorrow && !castBorrow && !null)
 		return SaDiag{E_ArrBorrowNeedsAddrOf}; // LCOV_EXCL_BR_LINE
 	if (!arrShapeMatch(saValue["value-type"], dstType)) {
 		// Shown as the owned type, without the permission the borrow added.
@@ -860,7 +825,7 @@ void PlnSemanticAnalyzer::normalizeParamDefaults(json& funcEntry)
 			probe["value-type"] = strLitType();
 			if (auto d = callArgMismatch(init, probe, p, i, false, funcName)) reportDiag(init, *d);
 		} else {
-			value = sa_expression(folded, registry_.fromJson(vt));
+			value = typedNull(sa_expression_for(folded, vt), vt);
 			if (auto d = callArgMismatch(init, value, p, i, false, funcName)) reportDiag(init, *d);
 			value = convertCallArg(move(value), vt);
 			const json& lit = value.value("expr-type", "") == "convert" ? value["src"] : value; // LCOV_EXCL_BR_LINE
@@ -921,10 +886,8 @@ json PlnSemanticAnalyzer::normalizeFuncSig(const json& f, const string& scope)
 		written.push_back(writeType(p["var-type"]));
 	funcEntry["_written-params"] = written;
 	normalizeSig(funcEntry);
-	validateEmbeddedParams(funcEntry);
 	if (!funcEntry.contains("ret-type") && funcEntry.contains("rets") && funcEntry["rets"].size() == 1)
 		funcEntry["ret-type"] = funcEntry["rets"][0]["var-type"];
-	validateNativeSig(funcEntry);
 	validateVariadicSig(funcEntry);
 	validateOperatorSig(funcEntry);
 	normalizeParamDefaults(funcEntry);
@@ -1139,7 +1102,8 @@ void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
 	if (!node.is_object()) return;
 	string tk = node.value("type-kind", "");
 	if (!tk.empty()) {
-		viaPointer = viaPointer || tk == "pntr";
+		// A borrowed array or dictionary is typed by its elements' layout.
+		viaPointer = tk != "arr" && tk != "dict" && (viaPointer || tk == "pntr");
 		if (node.contains("type-name") && node["type-name"].is_string())
 			ensureTypeName(node["type-name"].get<string>(), viaPointer);
 		// A size expression (`[N]@T`) is evaluated whatever the element is.
@@ -1179,8 +1143,6 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	if (d.state == TopDecl::Done) return;
 	auto& resolving = program_->resolving;
 	if (d.state == TopDecl::Resolving) {
-		// A struct embedding itself is E_RecursiveStruct's to report.
-		if (resolving.back().module == this && resolving.back().name == name) return;
 		string path;
 		bool inCycle = false;
 		for (auto& r : resolving) {
@@ -1195,8 +1157,9 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	d.state = TopDecl::Resolving;
 	resolving.push_back({this, name, d.stmt});
 	const json& stmt = *d.stmt;
-	ensureTypeRefs(stmt);
 	string t = stmt["stmt-type"].get<string>();
+	if (t == "struct-def") rejectSelfEmbedding(stmt);
+	ensureTypeRefs(stmt);
 	bool resolved = true;
 	if (t != "const-decl") rejectDeferredConstRefs(stmt, stmt);
 	if      (t == "struct-def") sa_struct_def(stmt);
@@ -1286,7 +1249,10 @@ json PlnSemanticAnalyzer::exportedGlobalType(const json& stmt)
 	takeVarStorage(vt);
 	program_->resolving.push_back({this, name, &stmt});
 	string spec = vt.value("specifier", "");
-	if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")) {
+	if (isDictAstType(vt)) {
+		ensureTypeRefs(vt);
+		vt = arrVarStorage(stmt, resolveKnownType(stmt, vt)).type;
+	} else if (vt.value("type-kind", "") == "arr" && (spec == "variable" || spec == "raw")) {
 		if (!fixArrDeclSizes(stmt, var, vt)) {
 			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ExportedGlobalSizeNotConst, name) << endl;
 			exit(1);

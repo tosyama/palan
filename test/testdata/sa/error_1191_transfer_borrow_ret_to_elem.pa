@@ -1,0 +1,4 @@
+type P { int32 x; };
+func ref(@!P p) -> @!P { return p; }
+P t; [2]P s;
+ref(@!t) ->> s[0];

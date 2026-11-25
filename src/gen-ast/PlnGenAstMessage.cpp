@@ -106,10 +106,6 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 			return "a syscall must declare its return with '-> type'; named and multiple "
 			       "return values are not supported.";
 
-		case E_ExpectedInKeyword:
-			BOOST_ASSERT(arg1 != "\x01");
-			return "Expected 'in' after the loop variable, but found '" + arg1 + "'.";
-
 		case E_ForElemNoMode:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "The loop variable '" + arg1 + "' needs 'copy', '@' or '@!': 'copy " + arg1
@@ -135,6 +131,25 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
 			return "'" + arg1 + "' cannot be defined: it is derived from '" + arg2 + "'.";
+
+		case E_ReceiveFromNonCall:
+			return "several values are received only from a call.";
+
+		case E_ReceiveTarget:
+			return "a received value is stored only into a variable, an element or a field.";
+
+		case E_ChainAfterReceive:
+			return "values received into several targets cannot be passed on with '->' or '->>'.";
+
+		case E_ConversionAsStoreLoc:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "(...)' is a conversion, which cannot follow '@', '@!', '->' or '->>'.";
+
+		case E_FrameParamOrRet:
+			return "'$' places a local variable in the stack frame; a parameter or return value cannot have it.";
+
+		case E_DictKeyTypeNotEmpty:
+			return "a dictionary type is written '[\"\"]T': its key is a C string, which has no type name to write.";
 
 		default:
 			BOOST_ASSERT(false);

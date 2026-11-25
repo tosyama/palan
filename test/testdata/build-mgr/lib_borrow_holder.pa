@@ -1,0 +1,2 @@
+import "lib_borrow_fields.pa";
+export func count(@S s) -> int64 { return len(s.v); }

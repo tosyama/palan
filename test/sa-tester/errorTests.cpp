@@ -484,13 +484,7 @@ TEST(sa_error, stmt_not_implemented)
 		"palan-gen-ast ../test/testdata/sa/error_191_stmt_not_implemented.pa -o " + ast_out), "");
 	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 	ASSERT_NE(sa, "");
-	ASSERT_NE(sa.find(":2:1: error: this statement is not supported"), string::npos);
-
-	cleanTestEnv();
-	ASSERT_EQ(execTestCommand(
-		"palan-gen-ast ../test/testdata/sa/error_522_chain_tapple_then_assign.pa -o " + ast_out), "");
-	sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
-	ASSERT_NE(sa.find(":3:1: error: this statement is not supported"), string::npos);
+	ASSERT_NE(sa.find(":1:1: error: this statement is not supported"), string::npos);
 }
 
 TEST(sa_error, int_literal_out_of_range)
@@ -593,6 +587,11 @@ TEST(sa_error, unknown_type_name)
 		{"error_352_transfer_from_borrow_to_elem.pa", ":3:1: error: '->>' needs a source that owns its value"},
 		{"error_353_transfer_from_param.pa", ":4:2: error: '->>' needs a source that owns its value"},
 		{"error_354_transfer_from_ptr_field.pa", ":5:1: error: '->>' needs a source that owns its value"},
+		{"error_1187_transfer_c_ret_to_elem.pa", ":3:1: error: '->>' needs a source that owns its value"},
+		{"error_1188_transfer_c_ret_to_dict.pa", ":3:1: error: '->>' needs a source that owns its value"},
+		{"error_1189_transfer_c_ret_to_field.pa", ":4:1: error: '->>' needs a source that owns its value"},
+		{"error_1190_transfer_c_ret_to_var.pa", ":3:1: error: '->>' needs a source that owns its value"},
+		{"error_1191_transfer_borrow_ret_to_elem.pa", ":4:1: error: '->>' needs a source that owns its value"},
 		{"error_355_transfer_from_readonly_elem.pa", ":4:2: error: cannot write through read-only pointer"},
 		{"error_356_transfer_to_ptr_slot.pa", ":3:1: error: '->>' cannot give ownership to a borrowed pointer slot"},
 		{"error_357_transfer_to_arr_slot.pa", ":3:1: error: '->>' cannot give ownership to a borrowed pointer slot"},
@@ -626,16 +625,6 @@ TEST(sa_error, unknown_type_name)
 		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
-}
-
-TEST(sa_error, assign_chain_through_tapple)
-{
-	cleanTestEnv();
-	string ast_out = "out/test.ast.json";
-	ASSERT_EQ(execTestCommand(
-		"palan-gen-ast ../test/testdata/sa/error_381_assign_chain_through_tapple.pa -o " + ast_out), "");
-	string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
-	ASSERT_NE(sa.find(":3:1: error: this statement is not supported"), string::npos);
 }
 
 TEST(sa_error, pln_call_too_few_args)
@@ -872,7 +861,6 @@ TEST(sa_error, expr_not_implemented)
 		{"error_415_expr_not_impl_return.pa", ":3:9: error: this expression is not supported"},
 		{"error_416_expr_not_impl_assign.pa", ":2:1: error: this expression is not supported"},
 		{"error_417_expr_not_impl_stmt.pa", ":1:1: error: this expression is not supported"},
-		{"error_521_chain_tapple_value.pa", ":4:1: error: this expression is not supported"},
 		{"error_523_expr_not_impl_sizeof_nested.pa", ":1:12: error: this expression is not supported"},
 	};
 	for (auto& [file, expected] : cases) {
@@ -891,13 +879,12 @@ TEST(sa_error, sig_not_implemented)
 	const string untyped = "is declared without a type; type inference is not supported yet";
 	const pair<string, string> cases[] = {
 		{"error_544_param_untyped_default.pa", ":1:8: error: variable 'x' " + untyped},
-		{"error_547_param_move_owner.pa", ":1:8: error: this parameter is not supported in this version."},
+		{"error_547_param_undeclarable.pa", ":1:8: error: this parameter is not supported in this version."},
 		{"error_549_syscall_param_default.pa", ":1:11: error: variable 'x' " + untyped},
 		{"error_550_inner_func_param.pa", ":2:13: error: this parameter is not supported in this version."},
 		{"error_552_ret_untyped.pa", ":1:13: error: this return value is not supported in this version."},
 		{"error_941_take_undeclarable.pa", ":2:1: error: this statement is not supported in this version."},
 		{"error_942_transfer_to_expr.pa", ":3:1: error: this expression is not supported in this version."},
-		{"error_943_tapple_call.pa", ":3:1: error: this expression is not supported in this version."},
 		{"error_944_unknown_field_overload_arg.pa", ":5:3: error: struct 'P' has no field 'nofield'."},
 		{"error_555_import_not_impl_sig.pa", "lib_sa_not_impl_sig.pa:1:15: error: this parameter is not supported in this version."},
 	};
@@ -1097,6 +1084,24 @@ TEST(sa_error, named_ret_single_return_value)
 	ASSERT_NE(sa.find(":2:2: error: Function with named return values requires bare 'return;' statement."), string::npos) << sa;
 }
 
+TEST(sa_error, named_ret_lit_return_value)
+{
+	const char* files[] = {
+		"error_1195_named_ret_varr_lit.pa",
+		"error_1196_named_ret_dict_lit.pa",
+		"error_1197_named_ret_empty_dict.pa",
+		"error_1198_named_ret_fixed_arr_lit.pa",
+	};
+	for (auto file : files) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			string("palan-gen-ast ../test/testdata/sa/") + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(":3:2: error: Function with named return values requires bare 'return;' statement."), string::npos) << file << ": " << sa;
+	}
+}
+
 TEST(sa_error, lit_arg)
 {
 	const pair<string, string> cases[] = {
@@ -1104,7 +1109,7 @@ TEST(sa_error, lit_arg)
 		{"error_496_arr_lit_arg_needs_at.pa", ":2:1: error: an array given to a borrowed array ('@[n]T'/'@![n]T') or a '@T'/'@!T' pointer must be written as '@name' or '@!name' ('@[..]' or '@![..]' for a literal)."},
 		{"error_497_lit_arg_count.pa", ":2:5: error: array 'a' has size 3 but its array literal has 2 elements."},
 		{"error_498_lit_arg_field_count.pa", ":3:5: error: struct 'P' has 2 fields but its literal has 1 values."},
-		{"error_499_dict_lit_arr_arg.pa", ":2:5: error: parameter 'a' of type '@[3]int32' cannot take a '{name: value}' literal: only a struct parameter can."},
+		{"error_499_dict_lit_arr_arg.pa", ":2:5: error: parameter 'a' of type '@[3]int32' cannot take a '{name: value}' literal: only a struct or dictionary parameter can."},
 		{"error_500_lit_arg_c_func.pa", ":2:10: error: a literal cannot be passed to C function 'memset': only a by-value struct parameter takes one."},
 		{"error_501_lit_arg_unsized.pa", ":2:5: error: parameter 'a' of type '[?]int32' cannot take an array literal: only a struct or fixed-size array parameter can."},
 		{"error_502_lit_arg_ptr_slot.pa", ":4:5: error: array 'a' cannot be given an array literal: only numeric and struct element types are supported."},
@@ -1301,9 +1306,9 @@ TEST(sa_error, implicit_args)
 TEST(sa_error, for_loop)
 {
 	const pair<string, string> cases[] = {
-		{"error_838_for_not_array.pa", ":1:28: error: 'for' takes an array, or a struct whose type has 'iter' and 'next', to iterate over."},
-		{"error_839_for_index_assign.pa", ":1:34: error: cannot assign to 'i': the index of a 'for' loop is read-only."},
-		{"error_840_for_index_addr_of.pa", ":1:46: error: cannot assign to 'i': the index of a 'for' loop is read-only."},
+		{"error_838_for_not_array.pa", ":1:28: error: 'for' takes an array, a dictionary, or a struct whose type has 'iter' and 'next', to iterate over."},
+		{"error_839_for_index_assign.pa", ":1:34: error: cannot assign to 'i': the index or key of a 'for' loop is read-only."},
+		{"error_840_for_index_addr_of.pa", ":1:46: error: cannot assign to 'i': the index or key of a 'for' loop is read-only."},
 		{"error_841_for_unsized.pa", ":1:35: error: 'len' cannot tell this array's length: an array declared with its size, or a variable-length array, keeps one, but a '[]T' does not."},
 		{"error_843_for_ro_write.pa", ":1:27: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
 		{"error_845_for_dup_name.pa", ":1:17: error: Variable 'a' is already declared."},
@@ -1328,7 +1333,7 @@ TEST(sa_error, for_loop)
 		{"error_874_for_ro_row_write_borrow.pa", ":1:43: error: cannot write through read-only pointer '@T'"},
 		{"error_875_for_index_not_integer.pa", ":2:1: error: the index of a 'for' loop must be of an integer type, not 'flo64'."},
 		{"error_876_for_index_too_narrow.pa", ":2:1: error: the index type 'int8' cannot hold every index of an array of length 129."},
-		{"error_877_for_typed_index_assign.pa", ":2:28: error: cannot assign to 'i': the index of a 'for' loop is read-only."},
+		{"error_877_for_typed_index_assign.pa", ":2:28: error: cannot assign to 'i': the index or key of a 'for' loop is read-only."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();
@@ -1609,6 +1614,28 @@ TEST(sa_error, give_and_take)
 		 ":4:15: error: cannot cast '@func(P)' to '@func(@P)': only a C function can be cast to take or give ownership."},
 		{"error_936_func_cast_nested_ownership.pa",
 		 ":4:2: error: cannot cast '@func(@func(P))' to '@func(@func(@P))': only a C function can be cast to take or give ownership."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, expr_stmt_not_call) {
+	const vector<pair<string, string>> cases = {
+		{"error_1341_expr_stmt_arith.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1342_expr_stmt_id.pa", ":2:13: error: the value of this statement is not used"},
+		{"error_1343_expr_stmt_elem.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1344_expr_stmt_field.pa", ":3:5: error: the value of this statement is not used"},
+		{"error_1345_expr_stmt_dict.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1346_expr_stmt_call_operand.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1347_expr_stmt_call_cast.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1348_expr_stmt_call_operand_stmts.pa", ":3:1: error: the value of this statement is not used"},
+		{"error_1349_expr_stmt_folded.pa", ":2:1: error: the value of this statement is not used"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

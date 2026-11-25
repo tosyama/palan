@@ -1,0 +1,2 @@
+type A { @[+]B b; };
+type B { @[+]A a; };

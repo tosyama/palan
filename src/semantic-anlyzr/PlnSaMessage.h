@@ -39,7 +39,7 @@ enum PlnSaMessageCode {
 	E_NotArrayType,
 	E_UnsizedArrVarDecl,
 	E_LogicalOpNotInteger,
-	E_EmbeddedArrUnsizedInner,		// []$[]T in parameter: inner dimension must be fixed
+	E_EmbeddedArrUnsizedInner,		// []$[]T: no row length to locate the rows by
 	E_EmbeddedArrInnerSizeMismatch,	// arg1: expected inner-size, arg2: actual
 	E_AmbiguousCall,			// arg1: function name
 	E_UnknownAlias,				// arg1: alias name
@@ -65,7 +65,6 @@ enum PlnSaMessageCode {
 	E_AddrOfNotPrimitiveElem,
 	E_BitwiseOpNotInteger,
 	E_IncompleteStructType,		// arg1: struct name, arg2: incomplete reason ("unsupported-field" or "forward-declared")
-	E_UnsupportedParamType,		// arg1: function name, arg2: unsupported type display name
 	E_UnsupportedCFuncSignature,	// arg1: C function name, arg2: unsupported type display name
 	E_GlobalNotWritable,		// arg1: variable name
 	E_GlobalNotReplaceable,		// arg1: variable name
@@ -97,10 +96,13 @@ enum PlnSaMessageCode {
 	E_ArrLitCountMismatch,	// arg1: variable name, arg2: declared size, arg3: literal element count
 	E_ArrLitSizeNotConst,	// arg1: variable name
 	E_ArrLitDimMismatch,	// arg1: variable name
+	E_DictArrLit,		// arg1: dictionary name
 	E_ArrLitElemType,	// arg1: variable name
 	E_ArrLitRowSizeMismatch,	// arg1: variable name, arg2: row size, arg3: the row's element count
 	E_ArrBorrowSizeNotConst,
 	E_ArrBorrowUnsupportedElem,
+	E_NestedArrBorrow,
+	E_EmbedUnderPointer,
 	E_ArrBorrowNeedsAddrOf,
 	E_ArrBorrowShapeMismatch,	// arg1: expected shape, arg2: actual shape
 	E_StructBorrowNeedsAddrOf,
@@ -246,6 +248,12 @@ enum PlnSaMessageCode {
 	E_SpreadElemMismatch,	// arg1: parameter type, arg2: value type
 	E_AddrOfBitField,	// arg1: field name
 	E_BitFieldLiteralOutOfRange,	// arg1: the literal as written, arg2: field name, arg3: width
+	E_DictBorrowNeedsAddrOf,
+	E_StructLitStringKey,	// arg1: struct name
+	E_ForDictKeyTyped,
+	E_ExprStmtNotCall,
+	E_DictLitKeyNotConst,	// arg1: name
+	E_DictLitDupKey,	// arg1: the key as written in sa.json
 };
 
 class PlnSaMessage

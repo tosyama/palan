@@ -42,13 +42,12 @@ enum {
 	KW_ENUM =	PlnParser::token::KW_ENUM,
 	KW_OPAQUE =	PlnParser::token::KW_OPAQUE,
 	KW_RELEASE =	PlnParser::token::KW_RELEASE,
-	KW_CONSTRUCT =	PlnParser::token::KW_CONSTRUCT,
-	KW_INTERFACE =	PlnParser::token::KW_INTERFACE,
 	KW_CONST =	PlnParser::token::KW_CONST,
 	KW_GLOBAL =	PlnParser::token::KW_GLOBAL,
 	KW_VOID =	PlnParser::token::KW_VOID,
 	KW_RETURN = PlnParser::token::KW_RETURN,
 	KW_FOR =	PlnParser::token::KW_FOR,
+	KW_IN =	PlnParser::token::KW_IN,
 	KW_WHILE =	PlnParser::token::KW_WHILE,
 	KW_IF = PlnParser::token::KW_IF,
 	KW_ELSE = PlnParser::token::KW_ELSE,
@@ -69,7 +68,6 @@ enum {
 	DBL_ARROW =	PlnParser::token::DBL_ARROW,
 	OPE_TAKE =	PlnParser::token::OPE_TAKE,
 	AT_EXCL =	PlnParser::token::AT_EXCL,
-	DBL_PLUS =	PlnParser::token::DBL_PLUS,
 	OPE_EQ =	PlnParser::token::OPE_EQ,
 	OPE_NE =	PlnParser::token::OPE_NE,
 	OPE_AND =	PlnParser::token::OPE_AND,
@@ -101,7 +99,7 @@ UDIGIT	[0-9]+"u"
 FLOAT	[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+
 BADNUM	[0-9]+(\.[0-9]+)?[a-zA-Z_][0-9a-zA-Z_]*
 ID	[a-zA-Z_][0-9a-zA-Z_]*
-DEMILITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."|"$"|"#"|"|"|"^"|"~"
+DEMILITER	"{"|"}"|"("|")"|"["|"]"|","|";"|":"|"="|"+"|"-"|"*"|"/"|"%"|"<"|">"|"!"|"?"|"&"|"@"|"."|"$"|"|"|"^"|"~"
 STRING	"\""(\\.|\\\n|[^\\\"])*"\""
 CHAR	"'"(\\.|[^\\'\n])*"'"
 PATH	"\""[^\"\n]*"\""
@@ -161,13 +159,12 @@ COMMENT1	\/\/[^\n]*\n
 <*>"enum" { return KW_ENUM; }
 <*>"opaque" { return KW_OPAQUE; }
 <*>"release" { return KW_RELEASE; }
-<*>"construct" { return KW_CONSTRUCT; }
-<*>"interface" { return KW_INTERFACE; }
 <*>"const" { return KW_CONST; }
 <*>"global" { return KW_GLOBAL; }
 <*>"void" { return KW_VOID; }
 <*>"return" { return KW_RETURN; }
 <*>"for" { return KW_FOR; }
+<*>"in" { return KW_IN; }
 <*>"while" { return KW_WHILE; }
 <*>"if" { return KW_IF; }
 <*>"else" { return KW_ELSE; }
@@ -212,7 +209,6 @@ COMMENT1	\/\/[^\n]*\n
 <*>"->>"	{ return DBL_ARROW; }
 <*>"<<="	{ return OPE_TAKE; }
 <*>"@!"	{ return AT_EXCL; }
-<*>"++"	{ return DBL_PLUS; }
 <*>"=="	{ return OPE_EQ; }
 <*>"!="	{ return OPE_NE; }
 <*>"&&"	{ return OPE_AND; }

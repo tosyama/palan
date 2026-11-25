@@ -1,0 +1,64 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+import "opaque_mod.pa";
+type P { int32 x; int32 y; };
+type Q { int32 x; [+]int32 v; };
+func mkq(int32 x) -> Q q { x -> q.x; q.v.push(x); }
+func sum(@[""][3]int32 d) -> int32 t { for copy r, k in d { r[0] + r[2] + t -> t; } }
+func grow(@![""][+]int32 d) { d["y"].push(1); [5] -> d["new"]; }
+func make() -> [""]$P d { {x: 1, y: 2} -> d["one"]; }
+func f() {
+	[""][+]int32 a = {"x": [1, 2], "y": []};
+	a["x"].push(3);
+	for copy v in a["x"] { a["y"].push(v * 10); }
+	[""][+]int32 b = a;
+	a.remove("x");
+	printf("%ld %ld %d %d\n", len(@a), len(@b["x"]), b["x"][2], a["y"][2]);
+	[+]int32 moved = [8, 9];
+	moved ->> a["m"];
+	[+]int32 back;
+	a["m"] ->> back;
+	grow(@!a);
+	printf("%d %ld %d\n", back[1], len(@a["y"]), a["new"][0]);
+
+	[""][3]int32 r = {"u": [1, 2, 3], "v": [4, 5, 6]};
+	r["u"][1] + 10 -> r["u"][1];
+	r.remove("v");
+	printf("%d %d\n", sum(@r), r["u"][1]);
+	[""]$[2]Q rq;
+	[mkq(1), mkq(2)] -> rq["a"];
+	[mkq(3), mkq(4)] -> rq["b"];
+	[""]$[2]Q rq2 = rq;
+	rq.remove("a");
+	rq["b"][1].v.push(9);
+	printf("%d %d %ld\n", rq2["a"][0].v[0], rq2["b"][1].x, len(@rq["b"][1].v));
+
+	[""][""]int32 dd = {"o": {"q": 1}};
+	5 -> dd["o"]["w"];
+	[""][""]int32 dd2 = dd;
+	dd.remove("o");
+	printf("%d %ld %ld\n", dd2["o"]["w"], len(@dd2["o"]), len(@dd));
+
+	[""]$P e = make();
+	{x: 3, y: 4} -> e["b"];
+	for @!p in e { p.x + 100 -> p.x; }
+	for copy p, k in e { printf("%s %d %d\n", k, p.x, p.y); }
+
+	P p1 = {x: 1, y: 2};
+	[""]@!P ps;
+	@!p1 -> ps["a"];
+	ps["a"].x + 10 -> ps["a"].x;
+	[""]@!P own;
+	P heap = {x: 7, y: 8};
+	heap ->> own["h"] as P;
+	P got <<= own["h"] as P;
+	printf("%d %d\n", p1.x, got.y);
+
+	[""]Handle h;
+	mk(1) ->> h["a"];
+	mk(2) ->> h["b"];
+	h.remove("a");
+	printf("%ld %d\n", len(@h), x(@h["b"]));
+}
+mtrace();
+f();

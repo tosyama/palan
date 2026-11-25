@@ -1,0 +1,2 @@
+type P { int32 x; };
+sizeof(P);
