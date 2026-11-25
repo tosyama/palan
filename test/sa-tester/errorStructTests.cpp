@@ -1023,6 +1023,32 @@ TEST(sa_error, func_ptr)
 	}
 }
 
+// Storage of the function's own, reached through owners alone.
+TEST(sa_error, return_own_borrow)
+{
+	const pair<string, string> cases[] = {
+		{"error_1350_return_own_struct.pa", ":3:23: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1351_return_own_field_elem.pa", ":3:28: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1352_return_own_frame_embed.pa", ":3:24: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1353_return_own_dict_elem.pa", ":3:23: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1354_return_own_prim.pa", ":3:35: error: a borrow of the storage of 'a' cannot be returned; it ends with the function."},
+		{"error_1355_return_own_param.pa", ":3:21: error: a borrow of the storage of 'p' cannot be returned; it ends with the function."},
+		{"error_1356_return_own_cast.pa", ":3:26: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1357_return_own_varr_elem.pa", ":3:26: error: a borrow of the storage of 'v' cannot be returned; it ends with the function."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("palan-gen-ast ../test/testdata/sa/1358_return_reached_borrow.pa -o out/test.ast.json"), "");
+	ASSERT_EQ(execTestCommand("palan-sa out/test.ast.json -o out/test.sa.json"), "");
+}
+
 TEST(sa_error, frame_var)
 {
 	const pair<string, string> cases[] = {

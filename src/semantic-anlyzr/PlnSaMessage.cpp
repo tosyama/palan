@@ -923,6 +923,9 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ReturnFrameArr:
 			return "stack array '" + arg1 + "' cannot be returned; its storage ends with the function.";
 
+		case E_ReturnOwnBorrow:
+			return "a borrow of the storage of '" + arg1 + "' cannot be returned; it ends with the function.";
+
 		case E_NoMatchingFunc:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");

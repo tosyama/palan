@@ -2075,6 +2075,28 @@ json PlnSemanticAnalyzer::giveValue(const json& srcAst, const json& locNode, con
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
+void PlnSemanticAnalyzer::checkReturnedBorrow(const json& stmt, const json& valueAst)
+{
+	const json* at = &valueAst;
+	while (at->value("expr-type", "") == "cast") at = &(*at)["src"];
+	if (at->value("expr-type", "") != "addr-of") return;
+	at = &(*at)["object"];
+	while (at->value("expr-type", "") != "id") {
+		string et = at->value("expr-type", "");
+		if (et != "field-access" && et != "arr-index") return;
+		at = &(*at)[et == "arr-index" ? "array" : "object"];
+		// Storage reached through a borrow or a raw pointer is not its variable's.
+		json vt = operandValueType(*at);
+		if (!isOwnedBlock(vt) || vt.contains("mutable")) return;
+	}
+	string name = (*at)["name"];
+	// isLocalVar leaves out the parameters; an owned one is the function's too.
+	const json* vt = findVar(name);
+	if (!vt || (!isLocalVar(name) && !isOwnedBlock(*vt))) return;
+	cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ReturnOwnBorrow, name) << endl;
+	exit(1);
+}
+
 json PlnSemanticAnalyzer::sa_return_stmt(const json& stmt)
 {
 	if (currentFunc_ == nullptr) {
@@ -2122,6 +2144,7 @@ json PlnSemanticAnalyzer::sa_return_stmt(const json& stmt)
 			}
 			return {{"stmt-type", "return"}, {"values", json::array({value})}}; // LCOV_EXCL_BR_LINE
 		}
+		checkReturnedBorrow(stmt, valueAst);
 		value = convertForBinding(stmt, value, toType, registry_.toJson(toType));
 		checkElemShape(stmt, value, (*currentFunc_)["ret-type"]);
 		checkBorrowSource(stmt, value, (*currentFunc_)["ret-type"]);

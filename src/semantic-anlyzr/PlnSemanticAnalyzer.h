@@ -895,6 +895,8 @@ class PlnSemanticAnalyzer {
 	json takeOverInit(const json& stmt, json& var, VarStorage storage, json& pre);
 	// `value ->> target`: releases what target holds, stores, and resets the source.
 	json transferStmts(const json& stmt, json targetRelease, json store, const json& value);
+	// Rejects a returned `@x` of storage reached from a local variable through owners alone.
+	void checkReturnedBorrow(const json& stmt, const json& valueAst);
 	json sa_return_stmt(const json& stmt);
 	json bindReturnValueToTemp(const json& stmt, json& ret);
 	json bindReturnLit(json& stmt);

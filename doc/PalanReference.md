@@ -2842,6 +2842,10 @@ to its storage, so `@s`/`@!s` and `@arr`/`@!arr` borrow it as it is (see
   field reached from one, or an array element reached from one. A call returning a struct is the
   exception, as a call argument only (`f(@g())`); see
   [Struct types in function signatures](#struct-types-in-function-signatures).
+- `return @x` (or `@x.f`, `@x[i]`) of a function's own variable or by-value parameter is a compile error,
+  as what it points to ends with the function. One reached through a borrow (`@p.f` for `@T p`, a
+  `@T` field) or of a `global` is fine. Returning a borrow variable bound to the function's own is not
+  checked.
 
 ---
 
