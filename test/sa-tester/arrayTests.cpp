@@ -147,12 +147,12 @@ TEST(sa, arr_index_elem_type) {
 	json jout = run_sa("../test/testdata/sa/048_arr_index_elem_type.pa");
 	ASSERT_TRUE(jout.is_object());
 
-	// statements: [0] var-decl a (malloc), [1] var-decl i, [2] expr(a[i])
+	// statements: [0] var-decl a (malloc), [1] var-decl i, [2] var-decl x (a[i])
 	ASSERT_GE(jout["statements"].size(), 3u);
-	const auto& expr_stmt = jout["statements"][2];
-	ASSERT_EQ(expr_stmt["stmt-type"], "expr");
+	const auto& decl = jout["statements"][2];
+	ASSERT_EQ(decl["stmt-type"], "var-decl");
 
-	const auto& body = expr_stmt["body"];
+	const auto& body = decl["vars"][0]["init"];
 	ASSERT_EQ(body["expr-type"],                    "arr-index");
 	ASSERT_EQ(body["value-type"]["type-name"],       "int32");
 	ASSERT_EQ(body["elem-size"]["expr-type"],        "lit-uint");
@@ -291,9 +291,9 @@ TEST(sa, pntr_arr_decl) {
 	ASSERT_EQ(var["init"]["args"][0]["left"]["value"], "5");
 	ASSERT_EQ(var["init"]["args"][0]["right"]["value"], "8");
 
-	// body[1]: expr ptrs[i] — arr-index with elem-size=8, value-type=pntr(int32)
-	ASSERT_EQ(body[1]["stmt-type"], "expr");
-	const auto& idx = body[1]["body"];
+	// body[1]: ptrs[i] — arr-index with elem-size=8, value-type=pntr(int32)
+	ASSERT_EQ(body[1]["stmt-type"], "var-decl");
+	const auto& idx = body[1]["vars"][0]["init"];
 	ASSERT_EQ(idx["expr-type"], "arr-index");
 	ASSERT_EQ(idx["elem-size"]["value"], "8");
 	ASSERT_EQ(idx["value-type"]["type-kind"], "pntr");

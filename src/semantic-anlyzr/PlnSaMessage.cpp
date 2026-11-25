@@ -599,6 +599,9 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			       "variable's initializer, the source of '->', a returned value, an element of an array "
 			       "literal, or an argument.";
 
+		case E_ExprStmtNotCall:
+			return "the value of this statement is not used: an expression is a statement only when it is a call.";
+
 		case E_DictLitKeyNotConst:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' is not a string constant: a key of a dictionary literal is a string "

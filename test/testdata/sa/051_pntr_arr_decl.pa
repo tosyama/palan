@@ -1,5 +1,5 @@
 func testPntrArr(int64 i) {
     [5]@![]int32 ptrs;
-    ptrs[i];
+    @![]int32 p = ptrs[i];
     return;
 }

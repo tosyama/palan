@@ -1,0 +1,3 @@
+func g() -> [+]int32 { return [1]; }
+func len2(@[+]int32 v) -> int64 { return 1; }
+len2(@g()) + 1;

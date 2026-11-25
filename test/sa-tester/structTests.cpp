@@ -334,8 +334,8 @@ TEST(sa, embed_struct_arr_decl)
 	ASSERT_EQ(init["args"][0]["right"]["expr-type"], "lit-uint");
 	ASSERT_EQ(init["args"][0]["right"]["value"],     "16");
 
-	// body[1]: expr pts[0] — arr-index, value-type pntr(struct(Point)), elem-size 16
-	const auto& idx = body[1]["body"];
+	// body[1]: pts[0] of pts[0].x — arr-index, value-type pntr(struct(Point)), elem-size 16
+	const auto& idx = body[1]["vars"][0]["init"]["ptr-expr"];
 	ASSERT_EQ(idx["expr-type"], "arr-index");
 	ASSERT_EQ(idx["value-type"]["type-kind"], "pntr");
 	ASSERT_EQ(idx["value-type"]["base-type"]["type-kind"], "struct");
@@ -393,8 +393,8 @@ TEST(sa, owned_struct_arr_decl)
 	ASSERT_EQ(init["func-type"], "palan");
 	ASSERT_EQ(init["args"][0]["value"], "2");
 
-	// body[1]: expr pts[0] — arr-index, value-type pntr(struct(Point)), elem-size 8
-	const auto& idx = body[1]["body"];
+	// body[1]: pts[0] of pts[0].x — arr-index, value-type pntr(struct(Point)), elem-size 8
+	const auto& idx = body[1]["vars"][0]["init"]["ptr-expr"];
 	ASSERT_EQ(idx["expr-type"], "arr-index");
 	ASSERT_EQ(idx["value-type"]["type-kind"], "pntr");
 	ASSERT_EQ(idx["value-type"]["base-type"]["type-kind"], "struct");
@@ -443,8 +443,8 @@ TEST(sa, at_struct_arr_decl)
 	ASSERT_EQ(init["args"][0]["right"]["expr-type"], "lit-uint");
 	ASSERT_EQ(init["args"][0]["right"]["value"],     "8");
 
-	// body[1]: expr rpts[0] — arr-index, value-type pntr(struct(Point), mutable:false), elem-size 8
-	const auto& idx = body[1]["body"];
+	// body[1]: rpts[0] of rpts[0].x — arr-index, value-type pntr(struct(Point), mutable:false), elem-size 8
+	const auto& idx = body[1]["vars"][0]["init"]["ptr-expr"];
 	ASSERT_EQ(idx["expr-type"], "arr-index");
 	ASSERT_EQ(idx["value-type"]["type-kind"], "pntr");
 	ASSERT_EQ(idx["value-type"]["base-type"]["type-kind"], "struct");
@@ -483,8 +483,8 @@ TEST(sa, at_bang_struct_arr_decl)
 	ASSERT_EQ(elem_vt["base-type"]["type-kind"], "struct");
 	ASSERT_EQ(elem_vt["base-type"]["type-name"], "Point");
 
-	// body[1]: expr wpts[0] — arr-index, value-type pntr(struct(Point), mutable:true), elem-size 8
-	const auto& idx = body[1]["body"];
+	// body[1]: wpts[0] of wpts[0].x — arr-index, value-type pntr(struct(Point), mutable:true), elem-size 8
+	const auto& idx = body[1]["vars"][0]["init"]["ptr-expr"];
 	ASSERT_EQ(idx["expr-type"], "arr-index");
 	ASSERT_EQ(idx["value-type"]["type-kind"], "pntr");
 	ASSERT_EQ(idx["value-type"]["base-type"]["type-kind"], "struct");

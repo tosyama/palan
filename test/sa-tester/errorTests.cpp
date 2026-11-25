@@ -1624,3 +1624,25 @@ TEST(sa_error, give_and_take)
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, expr_stmt_not_call) {
+	const vector<pair<string, string>> cases = {
+		{"error_1341_expr_stmt_arith.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1342_expr_stmt_id.pa", ":2:13: error: the value of this statement is not used"},
+		{"error_1343_expr_stmt_elem.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1344_expr_stmt_field.pa", ":3:5: error: the value of this statement is not used"},
+		{"error_1345_expr_stmt_dict.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1346_expr_stmt_call_operand.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1347_expr_stmt_call_cast.pa", ":2:1: error: the value of this statement is not used"},
+		{"error_1348_expr_stmt_call_operand_stmts.pa", ":3:1: error: the value of this statement is not used"},
+		{"error_1349_expr_stmt_folded.pa", ":2:1: error: the value of this statement is not used"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

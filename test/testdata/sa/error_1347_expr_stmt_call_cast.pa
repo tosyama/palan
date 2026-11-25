@@ -1,0 +1,2 @@
+func g() -> int32 { return 1; }
+g() as int64;

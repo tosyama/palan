@@ -2,7 +2,7 @@ cinclude <stdlib.h>;
 type Point { int64 x; int64 y; };
 func test() {
     [4]@Point rpts;
-    rpts[0];
+    int64 x = rpts[0].x;
     return;
 }
 test();

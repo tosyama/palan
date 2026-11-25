@@ -607,7 +607,7 @@ jpeg_CreateCompress(@!cinfo, JPEG_LIB_VERSION, sizeof(jpeg_compress_struct));
 ```palan
 int64 x = 10;              // variable declaration
 x + 1 -> x;               // assignment statement
-printf("%ld\n", x);        // expression statement (function call)
+printf("%ld\n", x);        // expression statement: only a call can be one
 return;                    // return from function (no value)
 return expr;               // return with single value
 (int64 a, b) = foo();      // tapple declaration (receive multiple return values)

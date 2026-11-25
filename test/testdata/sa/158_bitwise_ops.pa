@@ -1,9 +1,9 @@
 int64 a = 12;
 int64 b = 10;
 int32 c = 1;
-a & b;
-a | b;
-a ^ b;
-~a;
-~c;
-a & int32(c);
+int64 r1 = a & b;
+int64 r2 = a | b;
+int64 r3 = a ^ b;
+int64 r4 = ~a;
+int32 r5 = ~c;
+int64 r6 = a & int32(c);

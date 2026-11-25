@@ -384,6 +384,11 @@ json PlnSemanticAnalyzer::discardedValueStmt(const json& stmt, json body)
 		return {{"stmt-type","block"},{"body",json::array({decl, makeOwnedFreeStmt(temp, st)})}};
 		// LCOV_EXCL_BR_STOP
 	}
+	string et = body.value("expr-type", "");
+	if (et != "call" && et != "call-ptr") {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ExprStmtNotCall) << endl;
+		exit(1);
+	}
 	return {
 		{"stmt-type", "expr"},
 		{"body", body}
