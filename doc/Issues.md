@@ -26,7 +26,7 @@ A variable-length array (v0.2.1) adds a shorter-lived case: `push` and `resize` 
 
 A struct a call returns may hold a borrow of a temporary given to the call (`I x = it(@mk());` where `it` keeps its argument in a `@T` field): the temporary is freed with the statement and the field dangles. A call returning a borrow itself is rejected there, and the call of a `for`'s range has its temporaries held until the loop ends (v0.2.7), but a struct is not followed to what its fields borrow.
 
-A pointer viewed as an owner (`T b <<= p as T;`) is not reset as a variable given away is, so `p` dangles once `b` is freed.
+A pointer viewed as an owner (`T b <<= p as T;`) stays a borrow, usable while `b` lives, and dangles once `b` is freed.
 
 ---
 

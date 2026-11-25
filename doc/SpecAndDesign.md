@@ -15,8 +15,8 @@ version: 0.2.8 — tagged unions, and std/json on them
 - Literals of bool, arrays and dictionaries convert to a union, and bool to a struct (3.11).
 - `std/json` parses, holds and writes JSON (3.12).
 - A type defines `[]` (3.11).
-- The open issues with a small fix: returning a borrow of the function's own storage, and a pointer
-  viewed as an owner staying set (both of doc/Issues.md #1). Hexadecimal literals.
+- Returning a borrow of the function's own storage is an error (of doc/Issues.md #1). Hexadecimal
+  literals.
 
 Out of scope: interfaces; an owned field that may be NULL (`node next`); `is {}` on an enum or a
 number, guards and nested patterns; `is {}` as an expression.
