@@ -7,7 +7,7 @@
 
 #include <string>
 
-#define PALAN_VERSION "0.2.7"
+#define PALAN_VERSION "0.2.8"
 #define PALAN_TARGET "x86_64-linux-gnu"
 
 inline bool isSupportedTarget(const std::string& target)

@@ -51,3 +51,9 @@ A pointer viewed as an owner (`T b <<= p as T;`) is not reset as a variable give
 ## 5. A Borrow of a Sized Array as an Element or Pointee
 
 **Summary:** `[2]@[3]int32`, `[+]@[3]int32` and `@@[3]int32` are compile errors, while `@[]T`, `@[+]T` and `@[""]T` can be an element or what a pointer points to. palan-sa types a row of a borrowed array (`@[2][3]T`) and a borrow held as an element (`@[2]@[3]T`) the same way, so it would copy the contents where the element should be bound again, and replace the element's own permission by the outer borrow's. Supporting it needs the two told apart in the type, and every place that takes a level of an array for owned rows to be revisited.
+
+---
+
+## 6. A Loop over a Dictionary's Keys Alone
+
+**Summary:** `for` over a dictionary always takes the value, the key being its second variable, so a loop needing only the keys names a value it does not use (`for @v, k in d`; with `copy` it also copies each value). A form for the keys alone, `for k in keys(@d) { }` (also `for k in d -> keys()`), would be the range of a `for` only and allocate nothing: `k`, without `copy` or `@`, would be what the second variable is now, the dictionary's own copy valid for the iteration, and the body could not add or remove a key of `d`.

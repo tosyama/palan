@@ -6,16 +6,20 @@ This document specifies the goals, scope, architecture, and requirements for the
 ## 2. Goals
 - Palan aims to be a simpler, safer, and more enjoyable programming language alternative to C.
 
-### 2.1 Iteration Goal (2026-11-20)
-version: 0.2.7 — dictionaries, and the grammar holding only the language
+### 2.1 Iteration Goal (2026-11-25)
+version: 0.2.8 — tagged unions, and std/json on them
 
-- A dictionary `[""]T` maps C strings to values of `T` and is used as `[+]T` is (3.10).
-- The grammar drops the forms the language has no plan for (3.2), and the gen-ast tests check
-  what the parser builds for the language as it is.
-- `std/utf8` iterates and counts grapheme clusters (3.9; doc/Issues.md #4 of 0.2.6).
+- A type may contain itself through the elements of a `[+]T` or `[""]T` (3.11).
+- A tagged union `type U union {...}` holds one of its variants, owned, copied and released by the
+  tag the compiler keeps; `is` tests it and binds its contents (3.11).
+- Literals of bool, arrays and dictionaries convert to a union, and bool to a struct (3.11).
+- `std/json` parses, holds and writes JSON (3.12).
+- A type defines `[]` (3.11).
+- The open issues with a small fix: returning a borrow of the function's own storage, and a pointer
+  viewed as an owner staying set (both of doc/Issues.md #1). Hexadecimal literals.
 
-Out of scope: keys other than C strings; a function returning a default for a missing key; case
-mapping and normalization.
+Out of scope: interfaces; an owned field that may be NULL (`node next`); `is {}` on an enum or a
+number, guards and nested patterns; `is {}` as an expression.
 
 ## 3. Command-line Tools' Responsibilities and Design
 
@@ -645,6 +649,73 @@ depend on `T`, so it is written once in `std/rt` rather than generated, as `__pl
 functions: compacting moves the values as bytes of the element's size, as the removed ones are
 already released. The values' header is an ordinary `[+]T` one, so the generated functions build,
 release and copy the values with `[+]T`'s.
+
+### 3.11 Tagged Unions
+
+```
+type json union { Null; bool b; int64 i; utf8 s; [+]json items; [""]json members; };
+if j is @s { ... }                       // a test binding the contents
+if j is { Null { } copy i { } @t = s { } else { } }
+5 -> j.i;   json.Null -> j;   json k = json.i(5);
+```
+
+- **Why a union.** A struct holding every kind's fields allocates them all for each value. An
+  interface suits kinds that are open and operations that are fixed; JSON is the reverse. C's
+  untagged union cannot own anything, as nothing tells what to release. A C union stays the separate
+  thing it is, its layout being C's.
+- **Variants** are written as fields are, so every field type can be a variant's. One without contents
+  is a bare name. Names, not types, tell variants apart. A declared union is its first variant, with
+  the value a variable of that type has when declared. Exported variants are all public (no
+  `private`/`readonly`): branching on them is what a union is for, and `opaque` hides one.
+- **Recursion.** Only a `[+]T` or `[""]T` closes a cycle, across types too: it is empty when declared,
+  so allocation ends. A cycle of owned or embedded values stays an error.
+- **`j.s`** reads, writes a part of, or borrows the contents; another variant is a runtime error, kept
+  in a release build as `d[k]`'s is. Allowing it only where a test precedes was not taken: whether
+  the value changed in between cannot be followed through an index or a borrow.
+- **Whole assignment** (`x -> j.s`, `->>`) makes `j` that variant, as `x -> d[k]` adds a key; the value is
+  evaluated before the old contents are released. `j.s ->> v` leaves `j` its first variant, so no
+  variant is left with NULL contents.
+- **`j is s`** is a `bool`. `j is @s`, `@!s`, `copy s`, and `s>>` (moves the contents out and leaves the
+  first variant) bind a variable named as the variant, or `@t = s`, with `for`'s meanings, visible in
+  the body of the `if` or `while` and to the right in `&&`. A binding elsewhere (under `||` or `!`, or
+  outside a condition) is an error. The body may not change `j`'s variant through the name given, as
+  `for`'s may not change its array; through another borrow it is undetected (doc/Issues.md #1). A
+  temporary tested lives to the end of the body.
+- **`if j is { }`** is the whole condition, needs every variant or an `else` inside the braces, runs one
+  arm, and leaves `break`/`continue` to the enclosing loop. An arm without binding may list variants
+  (`i, f { }`). A missing or repeated variant, and an `else` nothing reaches, are errors. No keyword but
+  `is` is taken: `match` is a name libraries want, and `switch` promises C's fall-through and `break`.
+- **Making one.** `json.i(5)` takes its argument as a `T` parameter does; `json.Null` is a value. Literals
+  convert by functions named as the type, as now (3.8), extended to bool, and to array and
+  dictionary literals where a union is expected; their elements convert by the parameter's type. A
+  struct already gives those literals a meaning. The author of the type, not the compiler, decides
+  which variant `1` is. Variables do not convert.
+- **Layout.** The tag, then space for the largest contents; an owned value is a pointer, as in a struct,
+  unless written `$T`. Allocation, release and copy are functions generated per type (3.6) that branch
+  on the tag and treat each variant as they treat a struct's field.
+- `func ->` may be defined as for a struct; comparisons are not generated. A union may appear wherever
+  a struct may.
+
+**Type-defined `[]`.** `func [](@T, K) -> @E` (or `E` by value) reads, `func [](@!T, K) -> @!E` is used where the
+element is changed or borrowed `@!`, and `func []->(V, @!T, K)` is `x -> t[k]`, with `x` evaluated before
+`k`. For structs and unions only, with one key.
+
+### 3.12 std/json
+
+`json` is a union of `Null`, `b`, `i`, `f`, `s`, `items` and `members`, with no accessor functions, as `is` and
+`j.i` are them. `parseJson` returns `jsonresult`, a union of the value and the error, rather than two
+values: a failure has no value to be mistaken for `null`.
+
+- Parsing is RFC 8259's, with no extension but a leading BOM skipped. A literal without a fraction or
+  exponent that fits `int64` is `i`, any other (and `-0`) `f`; one beyond `flo64` is an error. A repeated
+  key takes the last value, in the first's place. `maxDepth` (512) bounds the nesting, since parsing, copying
+  and releasing recurse; a tree a program builds is not bounded. Error positions count characters.
+- `\u0000` is an error: `utf8` and dictionary keys hold no NUL, and replacing it would silently change
+  the text and could merge keys. A lone surrogate or invalid byte is an error too.
+- Writing keeps the order of keys, escapes only what must be, writes an `f` so that it reads back as the
+  same `f`, and replaces invalid bytes with U+FFFD. NaN and infinity are a runtime error: writing `null`
+  would lose the value silently. Neither direction depends on the C locale.
+- JSONTestSuite is run as test data, the `y_` cases holding `\u0000` listed as exceptions.
 
 ## 4. Expression Value Categories
 
