@@ -1,0 +1,1 @@
+type J { int32 v; [+]J items; [""]J members; }; J j;

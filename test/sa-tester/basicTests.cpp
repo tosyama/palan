@@ -729,6 +729,20 @@ TEST(sa, int_literal_range)
 	ASSERT_EQ(g["left"]["value-type"]["type-name"], "int64");
 }
 
+TEST(sa, recursive_type)
+{
+	cleanTestEnv();
+	for (string file : {"1211_borrow_field_cycle", "1297_self_borrow_varr", "1298_self_borrow_dict",
+	                    "1301_self_row_borrow", "1305_self_local"})
+		ASSERT_TRUE(run_sa("../test/testdata/sa/" + file + ".pa").is_object()) << file;
+	json jout = run_sa("../test/testdata/sa/1374_recursive_type.pa");
+	ASSERT_TRUE(jout.is_object());
+	set<string> keys;
+	for (auto& s : jout["alloc-shapes"])
+		EXPECT_TRUE(keys.insert(s.contains("shape-key") ? s["shape-key"] : s["shape-name"]).second) << s;
+	EXPECT_EQ(keys.size(), 3u);
+}
+
 TEST(sa, bool_type)
 {
 	cleanTestEnv();

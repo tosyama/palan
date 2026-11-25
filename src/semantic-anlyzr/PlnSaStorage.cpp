@@ -200,6 +200,10 @@ json PlnSemanticAnalyzer::sizedArrLevel(const json& locNode, const json& arr, op
 	}
 	string tname = leaf.value("type-name","");
 	bool isStruct = structDefs_.count(tname) > 0;
+	if (awaitsLayout(tname)) {
+		out["base-type"] = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",tname}}}}; // LCOV_EXCL_BR_LINE
+		return out;
+	}
 	if (leaf.value("type-kind","") != "prim") {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ArrBorrowUnsupportedElem) << endl;
 		exit(1);
@@ -308,6 +312,8 @@ json PlnSemanticAnalyzer::valueElemType(const json& locNode, const json& holder)
 		elem = ptrSlotElemType(locNode, base);
 	} else if (!embedded && elemSizeBytes(name) >= 0) {
 		elem = base;
+	} else if (!embedded && awaitsLayout(name)) {
+		elem = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",name}}}}; // LCOV_EXCL_BR_LINE
 	} else if (structDefs_.count(name)) {
 		const StructDef& def = !embedded && structDefs_.at(name).isOpaque ? structDefs_.at(name)
 		                     : requireCompleteStruct(name, locNode); // LCOV_EXCL_BR_LINE
@@ -883,8 +889,7 @@ AllocShapeRef PlnSemanticAnalyzer::dictShape(const json& vt)
 void PlnSemanticAnalyzer::recordElemShape(const AllocShapeRef& shape)
 {
 	string shape_key = allocShapeKey(shape);
-	for (auto& s : sa["alloc-shapes"])
-		if (s.value("shape-key","") == shape_key) return;
+	if (!elemShapeKeys_.insert(shape_key).second) return;
 	// A dictionary's values are a `[+]T`, built and copied by its functions.
 	if (isDictFamily(shape.family)) {
 		AllocShapeRef values{shape.family == AllocFamily::EDict ? AllocFamily::EVarr : AllocFamily::Varr, shape.elem};
@@ -909,19 +914,23 @@ void PlnSemanticAnalyzer::recordArrShape(const json& elem)
 void PlnSemanticAnalyzer::recordVarrShape(const json& vt)
 {
 	if (!builtinTypes_.insert(symbolType(vt)).second) return;
-	AllocShapeRef shape = varrShape(vt);
-	for (auto& def : varrBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
-		builtins_[def["name"].get<string>()].push_back(def);
-	recordElemShape(shape);
+	whenShapesKnown([this, vt] { // LCOV_EXCL_BR_LINE
+		AllocShapeRef shape = varrShape(vt);
+		for (auto& def : varrBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
+			builtins_[def["name"].get<string>()].push_back(def);
+		recordElemShape(shape);
+	});
 }
 
 void PlnSemanticAnalyzer::recordDictShape(const json& vt)
 {
 	if (!builtinTypes_.insert(symbolType(vt)).second) return;
-	AllocShapeRef shape = dictShape(vt);
-	for (auto& def : dictBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
-		builtins_[def["name"].get<string>()].push_back(def);
-	recordElemShape(shape);
+	whenShapesKnown([this, vt] { // LCOV_EXCL_BR_LINE
+		AllocShapeRef shape = dictShape(vt);
+		for (auto& def : dictBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
+			builtins_[def["name"].get<string>()].push_back(def);
+		recordElemShape(shape);
+	});
 }
 
 // push takes an element by value and pop returns one; a struct or a row goes

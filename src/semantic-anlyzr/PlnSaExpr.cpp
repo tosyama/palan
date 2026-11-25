@@ -241,21 +241,28 @@ bool PlnSemanticAnalyzer::opaqueContentsVisible(const StructDef& def) const
 
 bool PlnSemanticAnalyzer::holdsOpaque(const json& vt) const
 {
+	set<string> seen;
+	return holdsOpaque(vt, seen);
+}
+
+bool PlnSemanticAnalyzer::holdsOpaque(const json& vt, set<string>& seen) const
+{
 	if (!vt.is_object()) return false;
 	if (vt.value("type-kind", "") == "struct") {
 		auto it = structDefs_.find(vt["type-name"].get<string>());
 		if (it == structDefs_.end()) return false;
 		if (it->second.isOpaque) return true;
+		if (!seen.insert(it->first).second) return false;
 		for (auto& f : it->second.fields) {
-			if (f.typeKind == "embed" && holdsOpaque({{"type-kind", "struct"}, {"type-name", f.typeName}}))
+			if (f.typeKind == "embed" && holdsOpaque({{"type-kind", "struct"}, {"type-name", f.typeName}}, seen))
 				return true;
-			if (f.typeKind != "raw-ptr" && holdsOpaque(f.type)) return true;
+			if (f.typeKind != "raw-ptr" && holdsOpaque(f.type, seen)) return true;
 		}
 		return false;
 	}
 	// A pointer to what it does not own holds nothing.
 	if (isPtrBorrow(vt) && !vt.contains("arr-size")) return false;
-	return vt.contains("base-type") && holdsOpaque(vt["base-type"]);
+	return vt.contains("base-type") && holdsOpaque(vt["base-type"], seen);
 } // LCOV_EXCL_BR_LINE
 
 // The same pointer, seen as the contents' owner or, from a borrow, a borrow of them.

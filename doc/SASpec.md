@@ -404,7 +404,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     `E_CircularTypeDecl` at the declaration that reached it, except that a struct
     embedding itself (`$T`, `$[n]T`) is `E_RecursiveStruct`. A struct named through a
     pointer only has to be declared; it is resolved once no declaration is being
-    resolved, so a pointer may close a cycle.
+    resolved, so a pointer may close a cycle. So is one held by a `[+]T` or `[""]T` without `$`,
+    unless the field's initializer has elements; allocator shapes are recorded only after that.
   - A struct comes with every struct and enum its fields use, and a signature with every
     type it names. A Palan type source may write is bound to the name it is written as
     (`T`, or `V.T` under an alias); one not selected or not exported is registered but

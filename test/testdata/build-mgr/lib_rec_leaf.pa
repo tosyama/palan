@@ -1,0 +1,3 @@
+import Tree from "lib_rec_tree.pa";
+export type Leaf { int32 v; Tree owner; };
+export type Fwd { int32 v; [+]Fwd rest; };

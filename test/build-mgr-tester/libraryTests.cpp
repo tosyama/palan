@@ -186,6 +186,29 @@ K.bits();
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "1 42 1 dflt\n2 7 0 dflt\n-2 -65536\n");
 }
 
+TEST(build_mgr, library_recursive_type) {
+	cleanTestEnv();
+	writeFile("out/src/tree.pa", R"(library kit;
+export type Tree { int32 v; [+]Tree kids; [""]Link links; };
+export type Link { Tree to; };
+export func first(@Tree t) -> int32 { return t.kids[0].v; }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/tree.pa"), "");
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/tree> as K;
+cinclude <stdio.h>;
+K.Tree t; K.Tree k; K.Link l;
+4 -> k.v;
+t.kids.push(k);
+9 -> l.to.v;
+l -> t.links["x"];
+K.Tree c = t;
+printf("%d %d\n", K.first(@c), c.links["x"].to.v);
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "4 9\n");
+}
+
 // A variadic parameter crosses the interface as written, also inside a
 // function pointer type, and is called through an alias.
 TEST(build_mgr, library_variadic) {

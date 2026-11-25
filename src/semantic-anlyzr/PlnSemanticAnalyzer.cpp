@@ -22,7 +22,24 @@ struct PlnSemanticAnalyzer::TypeProgram {
 	vector<unique_ptr<PlnSemanticAnalyzer>> imported;
 	struct Resolving { PlnSemanticAnalyzer* module; string name; const json* stmt; };
 	vector<Resolving> resolving;
+	int adopting = 0;  // types being copied between modules, or a settled task running
 	deque<function<void()>> settled;
+	deque<function<void()>> shapes;
+	bool busy() const { return !resolving.empty() || adopting > 0; }
+	// An allocator's shape is told by every type reached from it, so shapes
+	// wait until no task is left that may bring one in.
+	void settle()
+	{
+		while (!busy() && !(settled.empty() && shapes.empty())) {
+			bool isShape = settled.empty();
+			auto& queue = isShape ? shapes : settled;
+			auto f = move(queue.front());
+			queue.pop_front();
+			adopting += !isShape;
+			f();
+			adopting -= !isShape;
+		}
+	}
 	optional<string> workRoot;  // none: the AST is outside the work tree layout
 	map<string, string> libraries;
 };
@@ -373,6 +390,7 @@ void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json&
 	}
 	if (t->value("type-kind","") != "prim") return;
 	string tname = t->value("type-name","");
+	if (awaitsLayout(tname)) return;
 	if (isPointee ? isKnownPointeeTypeName(tname) : isKnownTypeName(tname)) return;
 	cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownType, tname) << endl;
 	exit(1);
@@ -1093,22 +1111,27 @@ void PlnSemanticAnalyzer::ensureTypeName(const string& name, bool viaPointer)
 	adoptImportedType(t->second);
 } // LCOV_EXCL_BR_LINE
 
-void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
+void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, TypeReach reach)
 {
 	if (node.is_array()) {
-		for (auto& e : node) ensureTypeRefs(e, viaPointer);
+		for (auto& e : node) ensureTypeRefs(e, reach);
 		return;
 	}
 	if (!node.is_object()) return;
 	string tk = node.value("type-kind", "");
 	if (!tk.empty()) {
-		// A borrowed array or dictionary is typed by its elements' layout.
-		viaPointer = tk != "arr" && tk != "dict" && (viaPointer || tk == "pntr");
+		bool inPlace = node.value("embedded", false) || tk == "embed";
+		if (inPlace) reach = TypeReach::Layout;
+		else if (tk == "pntr") reach = TypeReach::Pointer;
+		// What it holds is allocated only as it grows.
+		else if (tk == "dict" || isVarrAstType(node)) reach = TypeReach::Holder;
+		// A borrowed array is typed by its elements' layout.
+		else if (tk == "arr" && reach == TypeReach::Pointer) reach = TypeReach::Layout;
 		if (node.contains("type-name") && node["type-name"].is_string())
-			ensureTypeName(node["type-name"].get<string>(), viaPointer);
+			ensureTypeName(node["type-name"].get<string>(), reach != TypeReach::Layout);
 		// A size expression (`[N]@T`) is evaluated whatever the element is.
 		for (auto& [k, v] : node.items())
-			ensureTypeRefs(v, k == "base-type" && viaPointer);
+			ensureTypeRefs(v, k == "base-type" ? reach : TypeReach::Layout);
 		return;
 	}
 	string et = node.value("expr-type", "");
@@ -1121,7 +1144,18 @@ void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
 		if (obj.value("expr-type", "") == "id")
 			ensureTypeName(obj["name"].get<string>() + "." + node["field"].get<string>(), false);
 	}
-	for (auto& [k, v] : node.items()) ensureTypeRefs(v, false);
+	for (auto& [k, v] : node.items()) ensureTypeRefs(v, TypeReach::Layout);
+}
+
+// An initializer with elements is analyzed with the field, by their layout.
+void PlnSemanticAnalyzer::ensureInitElems(const json& structDef)
+{
+	for (auto& f : structDef["fields"]) {
+		if (!f.contains("init") || f["init"].value("items", json::array()).empty()) continue;
+		const json* leaf = &f["var-type"];
+		while (leaf->contains("base-type") && (*leaf)["type-kind"] != "pntr") leaf = &(*leaf)["base-type"];
+		if (leaf->value("type-kind", "") == "prim") ensureTypeName((*leaf)["type-name"], false);
+	}
 }
 
 void PlnSemanticAnalyzer::ensureStructDef(const string& name)
@@ -1160,6 +1194,7 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	string t = stmt["stmt-type"].get<string>();
 	if (t == "struct-def") rejectSelfEmbedding(stmt);
 	ensureTypeRefs(stmt);
+	if (t == "struct-def") ensureInitElems(stmt);
 	bool resolved = true;
 	if (t != "const-decl") rejectDeferredConstRefs(stmt, stmt);
 	if      (t == "struct-def") sa_struct_def(stmt);
@@ -1170,11 +1205,7 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	if (resolved) prescannedDecls_.insert(&stmt);
 	resolving.pop_back();
 	d.state = TopDecl::Done;
-	while (resolving.empty() && !program_->settled.empty()) {
-		auto f = move(program_->settled.front());
-		program_->settled.pop_front();
-		f();
-	}
+	program_->settle();
 } // LCOV_EXCL_BR_LINE
 
 // A const naming variables is evaluated now only when each is already in
@@ -1223,6 +1254,7 @@ const json* PlnSemanticAnalyzer::topVarType(const string& name)
 		v.type = arrVarStorage(*v.stmt, vt).type;
 	program_->resolving.pop_back();
 	v.state = TopDecl::Done;
+	program_->settle();
 	return v.type.is_null() ? nullptr : &v.type;
 } // LCOV_EXCL_BR_LINE
 
@@ -1267,6 +1299,7 @@ json PlnSemanticAnalyzer::exportedGlobalType(const json& stmt)
 			vt = deepNormalizePrimToStruct(stmt, normalizeArrBorrowType(stmt, vt));
 	}
 	program_->resolving.pop_back();
+	program_->settle();
 	return vt;
 } // LCOV_EXCL_BR_LINE
 
@@ -1293,8 +1326,25 @@ void PlnSemanticAnalyzer::adoptImportedType(ImportedType& t)
 
 void PlnSemanticAnalyzer::whenSettled(function<void()> f)
 {
-	if (program_->resolving.empty()) f();
-	else program_->settled.push_back(move(f));
+	program_->settled.push_back(move(f));
+	program_->settle();
+}
+
+void PlnSemanticAnalyzer::whenShapesKnown(function<void()> f)
+{
+	program_->shapes.push_back(move(f));
+	program_->settle();
+}
+
+PlnSemanticAnalyzer::Adopting::Adopting(PlnSemanticAnalyzer& sa) : program(*sa.program_)
+{
+	program.adopting++;
+}
+
+PlnSemanticAnalyzer::Adopting::~Adopting()
+{
+	program.adopting--;
+	program.settle();
 }
 
 // Work files mirror their sources' absolute paths, so where this AST is tells

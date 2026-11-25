@@ -2692,7 +2692,17 @@ A type must not contain itself. Embedding or owning in a cycle (`type A { $B b; 
 `type B { $A a; };`, possibly across files that import each other) or an alias cycle is a
 compile error. A pointer (`@T`/`@!T`) may close a cycle, as a field, as an element of an array or
 a dictionary, or in the signature of a function pointer (`[2]@T`, `@func(@T)`). The type itself in
-a signature, or a borrow of an array or a dictionary of the type, may not.
+a signature, or a borrow of a sized array of the type (`@[3]T`), may not.
+
+What a `[+]T` or `[""]T` holds may close a cycle too, as both start empty, but not `[+]$T`, nor one
+with an initializer that has elements:
+
+```palan
+type Tree { int32 v; [+]Tree kids; [""]Tree named; };
+```
+
+Copying or releasing such a value calls itself for each level of nesting, so a very deep one
+overflows the stack.
 
 ### Restrictions
 

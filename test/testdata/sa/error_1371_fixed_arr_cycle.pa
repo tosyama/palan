@@ -1,0 +1,1 @@
+type A { [2]B b; }; type B { [2]A a; };

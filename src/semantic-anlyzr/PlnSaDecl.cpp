@@ -757,6 +757,9 @@ PlnSemanticAnalyzer::ArrLitShape PlnSemanticAnalyzer::arrLitShape(const json& lo
 	const json& leaf = *t;
 	string leafKind = leaf.value("type-kind", "");
 	shape.leaf = leaf;
+	// Only an empty initializer comes before its elements' layout.
+	if (isStructStorage(leaf) && awaitsLayout(leaf["base-type"]["type-name"]))
+		return shape;
 	if (isStructStorage(leaf))
 		shape.structDef = &requireCompleteStruct(leaf["base-type"]["type-name"].get<string>(), locNode);
 	else if (leafKind == "struct")
@@ -1633,6 +1636,7 @@ void PlnSemanticAnalyzer::adoptExportedTypes(const json& stmt, const json& impAs
 
 void PlnSemanticAnalyzer::adoptExportedType(const json& stmt, const json& decl, PlnSemanticAnalyzer& sub)
 {
+	Adopting adopting(*this);
 	string alias = stmt.value("alias", "");
 	string name = decl["name"].get<string>();
 	sub.ensureTypeName(name, false);
@@ -1667,6 +1671,7 @@ void PlnSemanticAnalyzer::adoptStruct(PlnSemanticAnalyzer& sub, const string& na
 	auto origin = sub.typeOrigins_.find(name);
 	// This module's own struct, which it resolves itself.
 	if (origin != sub.typeOrigins_.end() && origin->second == moduleId_) return;
+	Adopting adopting(*this);
 	const StructDef& def = sub.structDefs_.at(name);
 	bool adopted;
 	if (origin == sub.typeOrigins_.end()) {
@@ -1685,28 +1690,33 @@ void PlnSemanticAnalyzer::adoptStruct(PlnSemanticAnalyzer& sub, const string& na
 	for (auto& f : def.fields) {
 		if (f.typeKind == "owned" || f.typeKind == "embed-arr" || f.typeKind == "embed-varr") {
 			adoptVarTypeDeps(sub, f.type, locNode);
+			adoptLaterPointee(sub, f.type, locNode);
 			continue;
 		}
 		if (f.typeKind == "raw-ptr") {
 			if (!f.unsupported.empty()) continue;
 			adoptVarTypeDeps(sub, f.type, locNode);
-			const json* leaf = &f.type;
-			while (leaf->contains("base-type")) leaf = &(*leaf)["base-type"];
-			string pointee = leaf->value("type-name", "");
-			if (!sub.structDefs_.count(pointee) && sub.declaredStructs_.count(pointee)) {
-				// A pointee the exporting module has yet to resolve.
-				const json* loc = &locNode;
-				whenSettled([this, &sub, pointee, loc] { // LCOV_EXCL_BR_LINE
-					sub.ensureStructDef(pointee);
-					adoptStruct(sub, pointee, "", "", *loc);
-				});
-			}
+			adoptLaterPointee(sub, f.type, locNode);
 			continue;
 		}
 		if (sub.structDefs_.count(f.typeName)) adoptStruct(sub, f.typeName, "", "", locNode);
 		if (!f.enumName.empty()) adoptEnum(sub, f.enumName, "", "", locNode);
 	}
 } // LCOV_EXCL_BR_LINE
+
+// A struct the type reaches that the exporting module has yet to resolve.
+void PlnSemanticAnalyzer::adoptLaterPointee(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)
+{
+	const json* leaf = &type;
+	while (leaf->contains("base-type")) leaf = &(*leaf)["base-type"];
+	string pointee = leaf->value("type-name", "");
+	if (!sub.awaitsLayout(pointee)) return;
+	const json* loc = &locNode;
+	whenSettled([this, &sub, pointee, loc] { // LCOV_EXCL_BR_LINE
+		sub.ensureStructDef(pointee);
+		adoptStruct(sub, pointee, "", "", *loc);
+	});
+}
 
 void PlnSemanticAnalyzer::adoptEnum(const PlnSemanticAnalyzer& sub, const string& name, const string& written,
 		const string& alias, const json& locNode)
@@ -1731,6 +1741,7 @@ void PlnSemanticAnalyzer::adoptEnum(const PlnSemanticAnalyzer& sub, const string
 // varrStorageType; an access here needs them too.
 void PlnSemanticAnalyzer::adoptVarTypeDeps(PlnSemanticAnalyzer& sub, const json& type, const json& locNode)
 {
+	Adopting adopting(*this);
 	adoptTypeDeps(sub, type, locNode);
 	for (const json* t = &type; t->contains("base-type"); t = &(*t)["base-type"]) {
 		json storage = *t;

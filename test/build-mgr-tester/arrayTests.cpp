@@ -874,6 +874,17 @@ TEST(build_mgr, ptr_cycle_mtrace) {
 	expectMtraceRun("465_ptr_cycle_mtrace", "7 7 5 7 12\n4 2 1 5\n7 1\n5\n9\n", 27);
 }
 
+// A type holding itself through a '[+]T' or a dictionary.
+TEST(build_mgr, recursive_type_mtrace) {
+	expectMtraceRun("470_recursive_type_mtrace",
+		"13 4 2\n3 50\n2 1\n13\n7\n3 3\n9 5\n3\n8 6 8 8\n102 1\n4 3\n4\n", 341);
+}
+
+// Across importing files, through an alias, in a block and in an opaque type.
+TEST(build_mgr, recursive_modules_mtrace) {
+	expectMtraceRun("471_recursive_modules_mtrace", "3 2 3\n4\n3\n5 1\n", 79);
+}
+
 // Overloads differing only in lengths, rows, elements' owners or permissions.
 TEST(build_mgr, overload_shape) {
 	cleanTestEnv();

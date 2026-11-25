@@ -1,0 +1,3 @@
+export type Pa { [+]Pb bs; [+]Pc cs; };
+export type Pb { int32 v; [+]Pa pas; Pc c; };
+export type Pc { int32 w; [""]Pb bs; };

@@ -289,6 +289,7 @@ class PlnSemanticAnalyzer {
 	map<string, StructDef> structDefs_;
 	// C struct tag -> the typedef name messages call it by (from c2ast).
 	map<string, string>    cStructDisplayNames_;
+	set<string>            elemShapeKeys_;    // the same for element alloc-shapes
 	set<string>            allocShapeNames_;  // dedup guard for struct alloc-shapes
 	// __pln_B<n> -> n: the struct an element struct owning nothing is laid out as.
 	map<string, int>       byteTypes_;
@@ -475,9 +476,13 @@ class PlnSemanticAnalyzer {
 	// Through a pointer, a struct only has to exist.
 	void ensureTypeName(const string& name, bool viaPointer);
 	// ensureTypeName for every type and const name `node` refers to.
-	void ensureTypeRefs(const json& node, bool viaPointer = false);
+	// How a type reaches a struct it names: by its layout, or only by its name,
+	// through a pointer or as what a `[+]T` or `[""]T` holds.
+	enum class TypeReach { Layout, Pointer, Holder };
+	void ensureTypeRefs(const json& node, TypeReach reach = TypeReach::Layout);
 	// ensureTypeName for a struct by its program-wide name.
 	void ensureStructDef(const string& name);
+	void ensureInitElems(const json& structDef);
 	void resolveTopDecl(const string& name, TopDecl& d);
 	bool resolveTopConst(TopDecl& d);
 	// The type the declaration of the top-level variable `name` gives it,
@@ -491,6 +496,17 @@ class PlnSemanticAnalyzer {
 	// Runs `f` once no declaration is being resolved: resolving a pointee
 	// earlier could report a cycle a pointer breaks.
 	void whenSettled(function<void()> f);
+	// Runs `f` once every type an allocator's shape may depend on is resolved.
+	void whenShapesKnown(function<void()> f);
+	// While one lives, types are being copied from another module.
+	struct Adopting {
+		TypeProgram& program;
+		explicit Adopting(PlnSemanticAnalyzer& sa);
+		~Adopting();
+	};
+	void adoptLaterPointee(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
+	// A struct that may be named before its layout is resolved.
+	bool awaitsLayout(const string& name) const { return declaredStructs_.count(name) && !structDefs_.count(name); }
 	void adoptExportedTypes(const json& stmt, const json& impAst, PlnSemanticAnalyzer& sub);
 	void adoptExportedType(const json& stmt, const json& decl, PlnSemanticAnalyzer& sub);
 	void adoptStruct(PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
@@ -841,6 +857,7 @@ class PlnSemanticAnalyzer {
 	bool opaqueContentsVisible(const StructDef& def) const;
 	json asOpaqueContents(json value, const StructDef& def) const;
 	bool holdsOpaque(const json& vt) const;
+	bool holdsOpaque(const json& vt, set<string>& seen) const;
 	json opaqueConversion(const json& expr, const json& src, const json& written);
 	json sa_opaque_var_decl(const json& stmt, VarStorage storage);
 	// `entry` must be a cinclude'd C function entry already processed by

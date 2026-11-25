@@ -972,6 +972,10 @@ TEST(sa_error, circular_type_decl)
 		// Reported where the cycle closes: A, reached from the import of B.
 		{"error_433_import_mutual_embed.pa", "error_433_import_mutual_embed.pa:2:1: error: type 'B' depends on itself: B -> A -> B."},
 		{"error_434_owned_cycle.pa", ":2:1: error: type 'P' depends on itself: P -> Q -> P."},
+		{"error_1370_embed_varr_cycle.pa", ":1:1: error: type 'A' depends on itself: A -> A."},
+		{"error_1371_fixed_arr_cycle.pa", ":1:21: error: type 'A' depends on itself: A -> B -> A."},
+		{"error_1372_init_elem_cycle.pa", ":1:1: error: type 'A' depends on itself: A -> A."},
+		{"error_1373_arr_borrow_cycle.pa", ":1:1: error: type 'A' depends on itself: A -> A."},
 		{"error_435_alias_cycle.pa", ":2:1: error: type 'X' depends on itself: X -> Y -> X."},
 		{"error_879_top_const_var_cycle.pa", ":1:1: error: type 'N' depends on itself: N -> a -> N."},
 	};

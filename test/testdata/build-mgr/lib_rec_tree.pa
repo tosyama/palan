@@ -1,0 +1,2 @@
+import "lib_rec_leaf.pa";
+export type Tree { int32 id; [+]Leaf leaves; [""]Leaf named; };
