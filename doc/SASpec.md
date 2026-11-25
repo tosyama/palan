@@ -964,6 +964,8 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     is rejected with `E_IntLiteralOutOfRange`. A literal operand of a binary operator is typed only
     once -- from the other operand's type when that has one, else from the expected type -- so the
     check never runs against a provisional type. For `bool` the range is 0..1.
+  - A literal array size is a uint64 that must also fit int64, the type `len` gives
+    (`E_IntLiteralOutOfRange`).
   - Hexadecimal literal (`hex`): one taking a signed integer type and fitting its width is emitted
     with the negative number those bits are, when its top bit is set. In a comparison it takes the
     other operand's type if that is a float, or an integer it fits the width of; a folded constant

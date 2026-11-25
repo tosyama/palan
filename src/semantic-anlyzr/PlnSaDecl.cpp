@@ -600,6 +600,13 @@ json PlnSemanticAnalyzer::sa_arr_size_expr(const json& stmt, const json& sizeExp
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_ArraySizeNotInteger) << endl;
 		exit(1);
 	}
+	// A constant length is an int64, as `len` gives it.
+	string et = sz["expr-type"];
+	if ((et == "lit-int" || et == "lit-uint") && !intLiteralFits(sz["value"], PrimType::Name::Int64)) {
+		cerr << locPrefix(sz) << PlnSaMessage::getMessage(E_IntLiteralOutOfRange,
+			sz["value"].get<string>(), "int64") << endl;
+		exit(1);
+	}
 	// Every user of the size (a uint64 length variable, the byte-count
 	// math) reads it as 8 bytes, so a narrower value -- a variable, an
 	// expression, or a macro-folded lit-int that keeps its C-declared type --
