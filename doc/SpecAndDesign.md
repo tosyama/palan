@@ -673,18 +673,20 @@ if j is { Null { } copy i { } @t = s { } else { } }
   `private`/`readonly`): branching on them is what a union is for, and `opaque` hides one.
 - **Recursion.** Only a `[+]T` or `[""]T` closes a cycle, across types too: it is empty when declared,
   so allocation ends. A cycle of owned or embedded values stays an error.
-- **`j.s`** reads, writes a part of, or borrows the contents; another variant is a runtime error, kept
-  in a release build as `d[k]`'s is. Allowing it only where a test precedes was not taken: whether
-  the value changed in between cannot be followed through an index or a borrow.
+- **`j.s`** reads, writes a part of, or borrows the contents; another variant is the writer's error,
+  checked in a debug build as `pop`'s is. Unlike `d[k]`'s, the check is not free, and a test guards
+  it. Allowing it only where a test precedes was not taken: whether the value changed in between
+  cannot be followed through an index or a borrow.
 - **Whole assignment** (`x -> j.s`, `->>`) makes `j` that variant, as `x -> d[k]` adds a key; the value is
   evaluated before the old contents are released. `j.s ->> v` leaves `j` its first variant, so no
   variant is left with NULL contents.
-- **`j is s`** is a `bool`. `j is @s`, `@!s`, `copy s`, and `s>>` (moves the contents out and leaves the
-  first variant) bind a variable named as the variant, or `@t = s`, with `for`'s meanings, visible in
+- **`j is s`** is a `bool`. `j is @s`, `@!s` and `copy s` bind a variable named as the variant, or
+  `@t = s`, `@!t = s`, `copy t = s`, with `for`'s meanings, visible in
   the body of the `if` or `while` and to the right in `&&`. A binding elsewhere (under `||` or `!`, or
   outside a condition) is an error. The body may not change `j`'s variant through the name given, as
   `for`'s may not change its array; through another borrow it is undetected (doc/Issues.md #1). A
-  temporary tested lives to the end of the body.
+  temporary tested lives to the end of the body. A binding moving the contents out was not taken:
+  most uses read them, and `j.s ->> v` after a test moves them.
 - **`if j is { }`** is the whole condition, needs every variant or an `else` inside the braces, runs one
   arm, and leaves `break`/`continue` to the enclosing loop. An arm without binding may list variants
   (`i, f { }`). A missing or repeated variant, and an `else` nothing reaches, are errors. No keyword but

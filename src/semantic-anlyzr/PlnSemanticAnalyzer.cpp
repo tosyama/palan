@@ -1048,6 +1048,9 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 			string name = stmt["name"].get<string>();
 			topDecls_.emplace(name, TopDecl{&stmt, TopDecl::Pending, (int)pos});
 			if (declaresStructType(t)) declaredStructs_.insert(topTypeIdentity(name));
+		} else if (t == "union-def") {
+			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_StmtNotImplemented) << endl;
+			exit(1);
 		} else if (t == "cinclude") {
 			registerCIncludeTypes(stmt);
 		} else if (t == "import") {

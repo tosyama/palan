@@ -45,6 +45,7 @@ enum PlnMessageCode {
 	E_ConversionAsStoreLoc,	// the type name
 	E_FrameParamOrRet,
 	E_DictKeyTypeNotEmpty,
+	E_ExpectedIsBinding,	// the variant, the word before it
 };
 
 class PlnGenAstMessage

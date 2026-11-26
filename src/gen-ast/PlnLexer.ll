@@ -43,6 +43,8 @@ enum {
 	KW_TYPE =	PlnParser::token::KW_TYPE,
 	KW_ENUM =	PlnParser::token::KW_ENUM,
 	KW_OPAQUE =	PlnParser::token::KW_OPAQUE,
+	KW_UNION =	PlnParser::token::KW_UNION,
+	KW_IS =	PlnParser::token::KW_IS,
 	KW_RELEASE =	PlnParser::token::KW_RELEASE,
 	KW_CONST =	PlnParser::token::KW_CONST,
 	KW_GLOBAL =	PlnParser::token::KW_GLOBAL,
@@ -173,6 +175,8 @@ COMMENT1	\/\/[^\n]*\n
 <*>"type" { return KW_TYPE; }
 <*>"enum" { return KW_ENUM; }
 <*>"opaque" { return KW_OPAQUE; }
+<*>"union" { return KW_UNION; }
+<*>"is" { return KW_IS; }
 <*>"release" { return KW_RELEASE; }
 <*>"const" { return KW_CONST; }
 <*>"global" { return KW_GLOBAL; }

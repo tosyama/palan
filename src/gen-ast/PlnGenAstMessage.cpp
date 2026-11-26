@@ -153,6 +153,11 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 		case E_DictKeyTypeNotEmpty:
 			return "a dictionary type is written '[\"\"]T': its key is a C string, which has no type name to write.";
 
+		case E_ExpectedIsBinding:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "Expected 'copy', '@' or '@!' before '" + arg1 + "', but found '" + arg2 + "'.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

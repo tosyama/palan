@@ -515,3 +515,23 @@ TEST(gen_ast_error, nesting_too_deep) {
 	EXPECT_EQ(out.rfind("return1::", 0), 0u) << out.substr(0, 200);
 	EXPECT_NE(out.find("error: memory exhausted"), string::npos) << out.substr(0, 200);
 }
+
+TEST(gen_ast_error, union_syntax) {
+	const pair<string, string> cases[] = {
+		{"int32 union = 1;\n", ":1:7: error: syntax error, unexpected union"},
+		{"int32 is = 1;\n", ":1:10: error: syntax error, unexpected '=', expecting identifier or @! or '@'"},
+		{"type U union { };\n", ":1:16: error: syntax error, unexpected '}'"},
+		{"type U union { int32 i = 1; };\n", ":1:24: error: syntax error, unexpected '='"},
+		{"type U union { private int32 i; };\n", ":1:30: error: syntax error, unexpected identifier, expecting ';'"},
+		{"int32 j;\nbool b = j is cpy i;\n", ":2:15: error: Expected 'copy', '@' or '@!' before 'i', but found 'cpy'."},
+		{"int32 j;\nif j is { else { } i { } }\n", ":2:11: error: syntax error, unexpected else"},
+		{"int32 j;\nif j is { i { } } else { }\n", ":2:19: error: syntax error, unexpected else"},
+		{"int32 j;\nwhile j is { i { } }\n", ":2:12: error: syntax error, unexpected '{'"},
+	};
+	for (auto& [src, expected] : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << src;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		EXPECT_NE(out.find("m.pa" + expected), string::npos) << src << out;
+	}
+}

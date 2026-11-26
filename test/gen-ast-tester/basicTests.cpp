@@ -1627,3 +1627,75 @@ TEST(gen_ast, hidden_fields)
 	ASSERT_EQ(f[3]["var-type"]["type-name"], "readonly");
 	ASSERT_FALSE(f[3].contains("access"));
 }
+
+TEST(gen_ast, union)
+{
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/172_union.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const json& s = jout["ast"]["statements"];
+
+	ASSERT_EQ(s[0]["stmt-type"], "union-def");
+	const json& v = s[0]["variants"];
+	ASSERT_EQ(v.size(), 6u);
+	ASSERT_EQ(v[0]["name"], "Null");
+	ASSERT_FALSE(v[0].contains("var-type"));
+	ASSERT_EQ(v[4]["name"], "items");
+	ASSERT_EQ(v[4]["var-type"]["base-type"]["type-name"], "json");
+	ASSERT_FALSE(s[0].contains("export"));
+	ASSERT_EQ(s[1]["stmt-type"], "union-def");
+	ASSERT_EQ(s[1]["export"], true);
+	ASSERT_EQ(s[2]["fields"][0]["name"], "is");
+	ASSERT_EQ(s[2]["fields"][1]["name"], "union");
+
+	const json& test = s[5]["vars"][0]["init"];
+	ASSERT_EQ(test["expr-type"], "is");
+	ASSERT_EQ(test["value"]["name"], "j");
+	ASSERT_EQ(test["variants"], json::array({"i"}));
+	ASSERT_FALSE(test.contains("bind"));
+
+	const json& both = s[6]["cond"];
+	ASSERT_EQ(both["expr-type"], "logical-and");
+	ASSERT_EQ(both["left"]["bind"], json({{"name", "s"}, {"borrow", true}, {"mutable", false}, {"loc", {8, 9, 8, 11}}}));
+	ASSERT_EQ(both["right"]["bind"]["mutable"], true);
+	ASSERT_EQ(both["right"]["variants"], json::array({"items"}));
+	ASSERT_EQ(s[7]["cond"]["bind"], json({{"name", "i"}, {"borrow", false}, {"loc", {9, 9, 9, 15}}}));
+
+	auto aliased = [&](int i, const char* variant, bool borrow) {
+		const json& c = s[i]["cond"];
+		EXPECT_EQ(c["variants"], json::array({variant})) << i;
+		EXPECT_EQ(c["bind"]["name"], "t") << i;
+		EXPECT_EQ(c["bind"]["borrow"], borrow) << i;
+	};
+	aliased(8, "s", true);
+	aliased(9, "items", true);
+	aliased(10, "i", false);
+	ASSERT_EQ(s[9]["cond"]["bind"]["mutable"], true);
+
+	const json& ifis = s[11];
+	ASSERT_EQ(ifis["stmt-type"], "if-is");
+	ASSERT_EQ(ifis["value"]["name"], "j");
+	const json& arms = ifis["arms"];
+	ASSERT_EQ(arms.size(), 4u);
+	ASSERT_EQ(arms[0]["variants"], json::array({"Null"}));
+	ASSERT_EQ(arms[1]["variants"], json::array({"i", "f"}));
+	ASSERT_FALSE(arms[1].contains("bind"));
+	ASSERT_EQ(arms[2]["bind"]["mutable"], true);
+	ASSERT_EQ(arms[3]["variants"], json::array({"b"}));
+	ASSERT_EQ(arms[3]["bind"]["name"], "t");
+	ASSERT_EQ(arms[0]["body"], json::array());
+	ASSERT_EQ(ifis["else"]["stmt-type"], "block");
+
+	ASSERT_EQ(s[12]["stmt-type"], "if");
+	ASSERT_EQ(s[12]["else"]["stmt-type"], "if-is");
+	ASSERT_EQ(s[12]["else"]["arms"][0]["bind"]["name"], "s");
+
+	ASSERT_EQ(s[13]["stmt-type"], "field-assign");
+	ASSERT_EQ(s[13]["value"]["field"], "is");
+	ASSERT_EQ(s[14]["value"]["expr-type"], "field-access");
+	ASSERT_EQ(s[15]["vars"][0]["init"]["expr-type"], "member-call");
+
+	const json& cmp = s[16]["vars"][0]["init"];
+	ASSERT_EQ(cmp["expr-type"], "cmp");
+	ASSERT_EQ(cmp["left"]["expr-type"], "is");
+}

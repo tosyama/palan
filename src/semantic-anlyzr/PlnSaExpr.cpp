@@ -863,7 +863,7 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
 		exit(1);
 	}
-	if (expr_type == "not-impl") {
+	if (expr_type == "not-impl" || expr_type == "is") {
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ExprNotImplemented) << endl;
 		exit(1);
 	}

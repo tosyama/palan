@@ -1661,3 +1661,21 @@ TEST(sa_error, expr_stmt_not_call) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+// Until unions are analyzed, what the parser reads of them stops here.
+TEST(sa_error, union_not_implemented) {
+	const vector<pair<string, string>> cases = {
+		{"error_1376_union_not_impl.pa", ":1:1: error: this statement is not supported"},
+		{"error_1377_union_block_not_impl.pa", ":3:2: error: this statement is not supported"},
+		{"error_1378_is_not_impl.pa", ":2:10: error: this expression is not supported"},
+		{"error_1379_if_is_not_impl.pa", ":2:1: error: this statement is not supported"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

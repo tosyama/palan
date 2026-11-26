@@ -109,7 +109,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 			if (!given_.loops.empty()) mergeGivenFlow(given_.loops.back().back, given_.flow);
 			given_.flow.reachable = false;
 		}
-		else if (t == "not-impl") {
+		else if (t == "not-impl" || t == "union-def" || t == "if-is") {
 			if (stmt.contains("untyped-var"))
 				cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_VarTypeInferenceNotImpl, stmt["untyped-var"]) << endl;
 			else

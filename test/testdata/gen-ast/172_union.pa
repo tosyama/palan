@@ -1,0 +1,24 @@
+type json union { Null; bool b; int64 i; flo64 f; [+]json items; [""]json members; };
+export type pair union { int32 x; int32 y; };
+type has { int32 is; int32 union; };
+
+json j;
+has h;
+bool t = j is i;
+if j is @s && j is @!items { }
+if j is copy i { }
+if j is @t = s { }
+if j is @!t = items { }
+if j is copy t = i { }
+if j is {
+	Null { }
+	i, f { }
+	@!items { }
+	copy t = b { }
+	else { }
+}
+if t { } else if j is { @s { } }
+h.is -> h.union;
+json.Null -> j;
+json k = json.i(5);
+bool e = j is i == true;
