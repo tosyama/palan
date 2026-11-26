@@ -2752,6 +2752,22 @@ contain itself through a `[+]T` or `[""]T` as a struct may.
   contents away; storing to the same variant is allowed. Through another borrow it is not
   detected. A copy is made each time the test holds, so a `while` body may give it away. A
   union a call returns is kept until the statement ends.
+- **`if j is { }`** runs the one arm for the variant `j` holds. An arm binds as above, or lists
+  variants without binding (`b, f`); `else` takes the variants no arm lists.
+
+  ```palan
+  if j is {
+      Null { printf("null"); }
+      b, f { printf("other"); }
+      copy i { printf("%d", i); }
+      @xs = items { printf("%d items", len(@xs)); }
+      else { printf("members"); }
+  }
+  ```
+
+  Every variant needs an arm unless there is an `else`; a variant in two arms, and an `else` no
+  variant is left for, are errors. `j` is evaluated once, before the arms. Only one arm runs, and
+  `break` and `continue` in it act on the enclosing loop.
 - **`json.i(5)`** is a value holding a variant, its argument given as to a `T` parameter;
   `json.Null` is the value of a variant without contents.
 - Copying, `->`, `->>` and release work as for a struct, on the variant held. `func ->` may be

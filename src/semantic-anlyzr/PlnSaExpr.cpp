@@ -192,19 +192,11 @@ json PlnSemanticAnalyzer::unionAddr(const FieldChain& chain) const
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
-// `x is s`: whether the union x is that variant. One binding the contents is
-// lowered by isBindingTest.
-json PlnSemanticAnalyzer::sa_expr_is(const json& expr)
+// The union `is` tests, analyzed to be written through when a binding is `@!`.
+const StructDef& PlnSemanticAnalyzer::testedUnion(const json& x, bool writes, json& saX)
 {
-	bool binds = expr.contains("bind");
-	if (binds && !expr.contains("ptr-var")) {
-		cerr << locPrefix(expr["bind"]) << PlnSaMessage::getMessage(E_IsBindingPlace, expr["bind"]["name"].get<string>()) << endl;
-		exit(1);
-	}
-	const json& x = expr["value"];
 	string xt = x.value("expr-type", "");
-	bool writes = binds && expr["bind"]["borrow"] && expr["bind"]["mutable"];
-	json saX = !writes ? sa_expression(x)
+	saX = !writes ? sa_expression(x)
 		: xt == "field-access" ? sa_expr_field_access(x, true)
 		: xt == "arr-index"    ? sa_expr_arr_index(x, true)
 		: sa_expression(x);
@@ -214,23 +206,90 @@ json PlnSemanticAnalyzer::sa_expr_is(const json& expr)
 		cerr << locPrefix(x) << PlnSaMessage::getMessage(E_IsNotUnion, typeDisplayName(vt)) << endl;
 		exit(1);
 	}
-	const string& variant = expr["variants"][0].get_ref<const string&>();
-	if (find(def->variants.begin(), def->variants.end(), variant) == def->variants.end()) {
-		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_UnknownVariant, variant,
-			PlnSaMessage::writtenTypeName(def->name)) << endl;
+	return *def;
+}
+
+void PlnSemanticAnalyzer::requireVariant(const StructDef& def, const string& variant, const json& locNode) const
+{
+	if (find(def.variants.begin(), def.variants.end(), variant) == def.variants.end()) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownVariant, variant,
+			PlnSaMessage::writtenTypeName(def.name)) << endl;
 		exit(1);
 	}
+}
+
+// The contents a binding names; a variant without them has none to bind.
+const FieldLayout& PlnSemanticAnalyzer::boundContents(const StructDef& def, const string& variant, const json& bind) const
+{
+	auto field = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == variant; });
+	if (field == def.fields.end()) {
+		cerr << locPrefix(bind) << PlnSaMessage::getMessage(E_VariantWithoutContents, variant,
+			PlnSaMessage::writtenTypeName(def.name)) << endl;
+		exit(1);
+	}
+	return *field;
+}
+
+// Whether the union at `at` holds the variant.
+json variantTest(const StructDef& def, const string& variant, json at)
+{
 	// LCOV_EXCL_BR_START
-	auto test = [&](json at) {
-		json tag = {{"expr-type","field-access"},{"ptr-expr",move(at)},{"offset",0},{"addr-only",false},
-		            {"value-type",{{"type-kind","prim"},{"type-name","uint32"}}}};
-		return json{{"expr-type","cmp"},{"op","=="},{"left",move(tag)},{"right",variantTag(*def, variant)},
-		            {"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
-	};
+	json tag = {{"expr-type","field-access"},{"ptr-expr",move(at)},{"offset",0},{"addr-only",false},
+	            {"value-type",{{"type-kind","prim"},{"type-name","uint32"}}}};
+	return {{"expr-type","cmp"},{"op","=="},{"left",move(tag)},{"right",variantTag(def, variant)},
+	        {"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
 	// LCOV_EXCL_BR_STOP
-	if (!binds) return test(move(saX));
-	return isBindingTest(expr, *def, move(saX), test(json()));
 } // LCOV_EXCL_BR_LINE
+
+// A union a call returns is kept in a hidden `$U`, declared into `decls` and
+// stored by `stores`, so that a binding can borrow it until the statement
+// ends; the union as that variable. Any other value is a location already.
+json PlnSemanticAnalyzer::holdTestedUnion(json saX, const json& x, json& decls, json& stores)
+{
+	// LCOV_EXCL_BR_START
+	if (isExpiringOwned(saX)) {
+		string held = "__is_t_" + to_string(tempVarCounter_++);
+		auto stmts = [&](const json& astStmt, json& into) {
+			for (auto& s : sa_statements(json::array({astStmt}))) into.push_back(move(s));
+		};
+		stmts({{"stmt-type","var-decl"},{"vars",json::array({{{"name",held},
+		       {"var-type",{{"type-kind","embed"},{"base-type",astTypeOf(saX["value-type"])}}}}})}}, decls);
+		stmts({{"stmt-type","assign"},{"name",held},{"value",{{"expr-type","pinned"},{"sa",move(saX)}}}}, stores);
+		return sa_expression({{"expr-type","id"},{"name",held}});
+	}
+	// LCOV_EXCL_BR_STOP
+	if (holdsCallTemps(saX)) {
+		cerr << locPrefix(x) << PlnSaMessage::getMessage(E_BorrowOfTempEscapes) << endl;
+		exit(1);
+	}
+	return saX;
+} // LCOV_EXCL_BR_LINE
+
+// While a borrow of a variant's contents is bound, the union and the pointer
+// the name reads through are pinned to that variant.
+void PlnSemanticAnalyzer::pinBoundVariant(const json& x, const string& ptr, const string& variant, const string& name)
+{
+	vector<string> path;
+	if (locationPath(x, path)) pinnedRanges_.push_back({move(path), false, false, variant});
+	pinnedRanges_.push_back({{ptr}, false, false, variant, name});
+}
+
+// `x is s`: whether the union x is that variant. One binding the contents is
+// lowered by isBindingTest.
+json PlnSemanticAnalyzer::sa_expr_is(const json& expr)
+{
+	bool binds = expr.contains("bind");
+	if (binds && !expr.contains("ptr-var")) {
+		cerr << locPrefix(expr["bind"]) << PlnSaMessage::getMessage(E_IsBindingPlace, expr["bind"]["name"].get<string>()) << endl;
+		exit(1);
+	}
+	json saX;
+	const StructDef& def = testedUnion(expr["value"], binds && expr["bind"]["borrow"] && expr["bind"]["mutable"], saX);
+	const string& variant = expr["variants"][0].get_ref<const string&>();
+	requireVariant(def, variant, expr);
+	if (!binds) return variantTest(def, variant, move(saX));
+	return isBindingTest(expr, def, move(saX));
+}
 
 // `x is @s`, `@!s` or `copy s` in a condition: x's address is kept in a hidden
 // pointer the bound name reads through, so changing what located x (an index)
@@ -238,17 +297,12 @@ json PlnSemanticAnalyzer::sa_expr_is(const json& expr)
 // variable until the statement ends; a copy is made once the test holds. The
 // hidden variables are declared ahead of the statement (isScope_), as the
 // test may run more than once (`while`) or not at all (`&&`).
-json PlnSemanticAnalyzer::isBindingTest(const json& expr, const StructDef& def, json saX, json test)
+json PlnSemanticAnalyzer::isBindingTest(const json& expr, const StructDef& def, json saX)
 {
 	// LCOV_EXCL_BR_START
 	const json& bind = expr["bind"];
 	const string& variant = expr["variants"][0].get_ref<const string&>();
-	auto field = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == variant; });
-	if (field == def.fields.end()) {
-		cerr << locPrefix(bind) << PlnSaMessage::getMessage(E_VariantWithoutContents, variant,
-			PlnSaMessage::writtenTypeName(def.name)) << endl;
-		exit(1);
-	}
+	const FieldLayout& field = boundContents(def, variant, bind);
 	bool borrow = bind["borrow"];
 	bool mut = borrow && bind["mutable"];
 	const json& x = expr["value"];
@@ -263,16 +317,7 @@ json PlnSemanticAnalyzer::isBindingTest(const json& expr, const StructDef& def, 
 		for (auto& s : sa_statements(json::array({astStmt}))) into.push_back(move(s));
 	};
 	auto id = [](const string& name) { return json{{"expr-type","id"},{"name",name}}; };
-	if (isExpiringOwned(saX)) {
-		string held = "__is_t_" + to_string(tempVarCounter_++);
-		stmts({{"stmt-type","var-decl"},{"vars",json::array({{{"name",held},
-		       {"var-type",{{"type-kind","embed"},{"base-type",astTypeOf(saX["value-type"])}}}}})}}, isScope_->prefix);
-		stmts({{"stmt-type","assign"},{"name",held},{"value",{{"expr-type","pinned"},{"sa",move(saX)}}}}, body);
-		saX = sa_expression(id(held));
-	} else if (holdsCallTemps(saX)) {
-		cerr << locPrefix(x) << PlnSaMessage::getMessage(E_BorrowOfTempEscapes) << endl;
-		exit(1);
-	}
+	saX = holdTestedUnion(move(saX), x, isScope_->prefix, body);
 
 	string ptr = expr["ptr-var"];
 	json ptrType = {{"type-kind","pntr"},{"mutable",mut},{"base-type",saX["value-type"]["base-type"]}};
@@ -281,14 +326,11 @@ json PlnSemanticAnalyzer::isBindingTest(const json& expr, const StructDef& def, 
 		{"init",{{"expr-type","lit-int"},{"value","0"},{"value-type",ptrType}}}}})}});
 	body.push_back({{"stmt-type","assign"},{"name",ptr},{"value",move(saX)}});
 	knownVariants_[ptr] = variant;
-	json ptrVal = {{"expr-type","id"},{"name",ptr},{"var-type",ptrType},{"value-type",ptrType}};
-	test["left"]["ptr-expr"] = ptrVal;
+	json test = variantTest(def, variant, {{"expr-type","id"},{"name",ptr},{"var-type",ptrType},{"value-type",ptrType}});
 
-	json contentsType = fieldValueType(*field);
+	json contentsType = fieldValueType(field);
 	if (borrow) {
-		vector<string> path;
-		if (locationPath(x, path)) pinnedRanges_.push_back({move(path), false, false, variant});
-		pinnedRanges_.push_back({{ptr}, false, false, variant, bind["name"]});
+		pinBoundVariant(x, ptr, variant, bind["name"]);
 		isScope_->bound.push_back({bind["name"], {{"type-kind","pntr"},{"mutable",mut},{"base-type",contentsType}}, bind});
 	} else {
 		// What the copy owns may have been given away by the body, so each

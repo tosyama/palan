@@ -263,6 +263,9 @@ enum PlnSaMessageCode {
 	E_IsNotUnion,	// arg1: type display name
 	E_IsBindingPlace,	// arg1: the variable bound
 	E_ChangeTestedUnion,	// arg1: the union tested
+	E_IsArmRepeated,	// arg1: variant name
+	E_IsArmMissing,	// arg1: the variants not handled, quoted and comma-separated, arg2: union type name
+	E_IsElseUnreachable,	// arg1: union type name
 };
 
 class PlnSaMessage

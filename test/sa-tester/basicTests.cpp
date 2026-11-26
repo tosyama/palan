@@ -1275,3 +1275,28 @@ TEST(sa, union_is)
 	EXPECT_EQ(test["value"]["right"]["value"], "1");
 	EXPECT_EQ(body[1].dump().find("__pln_variant"), string::npos);
 }
+
+// `if x is { }` tests the tag once per arm, `i, f` as one test; the last arm
+// is the chain's `else`, and a binding arm reads through a pointer of its own.
+TEST(sa, union_if_is)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1400_union_if_is.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json* block = nullptr;
+	for (auto& s : jout["statements"])
+		if (s.value("stmt-type", "") == "block") block = &s;
+	ASSERT_NE(block, nullptr);
+	const json& body = (*block)["body"];
+	ASSERT_EQ(body.size(), 3u);
+	EXPECT_EQ(body[0]["stmt-type"], "var-decl");
+	EXPECT_EQ(body[1]["vars"][0]["init"]["name"], body[0]["vars"][0]["name"]);
+	const json& chain = body[2];
+	ASSERT_EQ(chain["stmt-type"], "if");
+	EXPECT_EQ(chain["cond"]["right"]["value"], "0");
+	const json& second = chain["else"];
+	ASSERT_EQ(second["stmt-type"], "if");
+	EXPECT_EQ(second["cond"]["expr-type"], "logical-or");
+	EXPECT_EQ(second["else"]["stmt-type"], "block");
+	EXPECT_EQ(chain.dump().find("__pln_variant"), string::npos);
+}

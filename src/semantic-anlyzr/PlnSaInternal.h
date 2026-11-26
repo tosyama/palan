@@ -150,6 +150,7 @@ json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl = nullptr, cons
 json dictBuiltinDefs(const json& dict, const AllocShapeRef* impl = nullptr, const string& allocators = "");
 // The tag of a union's variant, as a uint32 literal.
 json variantTag(const StructDef& def, const string& variant);
+json variantTest(const StructDef& def, const string& variant, json at);
 
 enum class PtrPermission { Ok, Upgrade, InnerNarrowing, FuncSigMismatch };
 

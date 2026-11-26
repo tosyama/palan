@@ -864,7 +864,13 @@ class PlnSemanticAnalyzer {
 	void checkVariant(FieldChain& chain, const FieldLayout& fld);
 	json unionAddr(const FieldChain& chain) const;
 	json sa_expr_is(const json& expr);
-	json isBindingTest(const json& expr, const StructDef& def, json saX, json test);
+	json isBindingTest(const json& expr, const StructDef& def, json saX);
+	const StructDef& testedUnion(const json& x, bool writes, json& saX);
+	void requireVariant(const StructDef& def, const string& variant, const json& locNode) const;
+	const FieldLayout& boundContents(const StructDef& def, const string& variant, const json& bind) const;
+	json holdTestedUnion(json saX, const json& x, json& decls, json& stores);
+	void pinBoundVariant(const json& x, const string& ptr, const string& variant, const string& name);
+	json sa_if_is_stmt(const json& stmt);
 	const StructDef* unionNamed(const json& obj, string& written) const;
 	json variantValue(const json& expr, bool isCall);
 	json variantMakerDef(const StructDef& def, const string& variant) const;

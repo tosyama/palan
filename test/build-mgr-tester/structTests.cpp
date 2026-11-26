@@ -1518,3 +1518,10 @@ TEST(build_mgr, union_is_mtrace) {
 TEST(build_mgr, union_is_kinds_mtrace) {
 	expectMtraceRun("476_union_is_kinds_mtrace", "2.5\n3 3 2\n3 3 2\n7 3\nq 3\nq 3\nd 4\n", 46);
 }
+
+// `if x is { }` runs one arm: listed variants, bindings, a union a call
+// returns, and `break`, `continue` and `return` out of an arm.
+TEST(build_mgr, union_if_is_mtrace) {
+	expectMtraceRun("477_union_if_is_mtrace",
+		"null\nb or f\ni 3\nitems 2\nitems 3\nh 3\nk 1\n3\n", 67);
+}

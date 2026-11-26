@@ -1684,9 +1684,14 @@ TEST(sa_error, union) {
 		{"error_1397_is_bind_else.pa", ":4:23: error: Undefined variable 'i'."},
 		{"error_1398_is_borrow_whole.pa", ":5:4: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
 		{"error_1399_is_bind_taken.pa", ":4:9: error: Variable 'i' is already declared."},
-		// Not yet: a literal for a union, `if x is { }`.
+		{"error_1379_if_is_not_union.pa", ":2:4: error: 'is' tests a union's variant, not a value of type 'int32'."},
+		{"error_1401_if_is_missing.pa", ":3:1: error: 'if ... is { }' does not handle 'a' of union 'U': add an arm or 'else'."},
+		{"error_1402_if_is_else_unreachable.pa", ":3:1: error: 'else' is never reached: every variant of union 'U' has an arm."},
+		{"error_1403_if_is_repeated.pa", ":3:20: error: variant 'Null' is already handled by another arm of this 'if ... is { }'."},
+		{"error_1404_if_is_change_variant.pa", ":5:7: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
+		{"error_1405_if_is_bind_other_arm.pa", ":5:9: error: Undefined variable or module alias 'a'."},
+		// Not yet: a literal for a union.
 		{"error_1380_union_lit_not_impl.pa", ":2:7: error: this expression is not supported"},
-		{"error_1379_if_is_not_impl.pa", ":2:1: error: this statement is not supported"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

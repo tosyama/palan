@@ -110,7 +110,8 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 			if (!given_.loops.empty()) mergeGivenFlow(given_.loops.back().back, given_.flow);
 			given_.flow.reachable = false;
 		}
-		else if (t == "not-impl" || t == "if-is") {
+		else if (t == "if-is")    result.push_back(sa_if_is_stmt(stmt));
+		else if (t == "not-impl") {
 			if (stmt.contains("untyped-var"))
 				cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_VarTypeInferenceNotImpl, stmt["untyped-var"]) << endl;
 			else
@@ -361,6 +362,132 @@ json PlnSemanticAnalyzer::sa_if_stmt(const json& stmt)
 		result["loc"] = stmt["loc"];
 	return binds ? closeIsScope(scope, outer, move(result)) : result;
 }
+
+// `if x is { ... }`: x is evaluated once, kept in a hidden pointer, and one
+// arm runs by its tag. The last arm takes what the others did not (an `else`,
+// or the last variant listed), so that no path skips every arm. An arm binding
+// the contents reads them through a pointer of its own, which knows the variant.
+json PlnSemanticAnalyzer::sa_if_is_stmt(const json& stmt)
+{
+	const json& arms = stmt["arms"];
+	const json& x = stmt["value"];
+	bool writes = false;
+	for (auto& a : arms)
+		if (a.contains("bind") && a["bind"]["borrow"] && a["bind"]["mutable"]) writes = true;
+	json saX;
+	const StructDef& def = testedUnion(x, writes, saX);
+
+	set<string> handled;
+	for (auto& a : arms) {
+		for (auto& v : a["variants"]) {
+			requireVariant(def, v, a);
+			if (!handled.insert(v.get<string>()).second) {
+				cerr << locPrefix(a) << PlnSaMessage::getMessage(E_IsArmRepeated, v.get<string>()) << endl;
+				exit(1);
+			}
+		}
+		if (a.contains("bind")) {
+			boundContents(def, a["variants"][0], a["bind"]);
+			if (a["bind"]["borrow"] && a["bind"]["mutable"] && !isWritableThrough(saX["value-type"])) {
+				cerr << locPrefix(a["bind"]) << PlnSaMessage::getMessage(E_PtrMutabilityUpgrade) << endl;
+				exit(1);
+			}
+		}
+	}
+	string missing;
+	for (auto& v : def.variants)
+		if (!handled.count(v)) missing += (missing.empty() ? "'" : ", '") + v + "'";
+	string unionName = PlnSaMessage::writtenTypeName(def.name);
+	if (!stmt.contains("else") && !missing.empty()) {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_IsArmMissing, missing, unionName) << endl;
+		exit(1);
+	}
+	if (stmt.contains("else") && missing.empty()) {
+		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_IsElseUnreachable, unionName) << endl;
+		exit(1);
+	}
+	if (writes) checkRangeChange(stmt, x, RangeChange::Borrow);
+
+	// LCOV_EXCL_BR_START
+	enterScope();
+	json block = json::array();
+	saX = holdTestedUnion(move(saX), x, block, block);
+	applyPendingGiven();
+	auto ptrDecl = [&](const string& name, bool mut, json init) {
+		json type = {{"type-kind","pntr"},{"mutable",mut},{"base-type",saX["value-type"]["base-type"]}};
+		declareVar(name, type);
+		block.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",name},{"var-type",type},{"init",move(init)}}})}});
+		return json{{"expr-type","id"},{"name",name},{"var-type",type},{"value-type",type}};
+	};
+	json base = ptrDecl("__is_" + to_string(tempVarCounter_++), writes, saX);
+
+	GivenFlow before = given_.flow;
+	GivenFlow after{{}, false};
+	vector<pair<json, json>> branches;  // the test (null for the last) and the arm
+	auto analyzeArm = [&](const json& astBlock) {
+		given_.flow = before;
+		json out = sa_block(astBlock);
+		mergeGivenFlow(after, given_.flow);
+		return out;
+	};
+	for (size_t i = 0; i < arms.size(); i++) {
+		const json& arm = arms[i];
+		json test;
+		for (auto& v : arm["variants"]) {
+			json t = variantTest(def, v, base);
+			json type = t["value-type"];
+			test = test.is_null() ? move(t) : json{{"expr-type","logical-or"},{"left",move(test)},{"right",move(t)},
+			                                      {"value-type",move(type)}};
+		}
+		json astBlock = {{"stmt-type","block"},{"body",arm["body"]}};
+		if (!arm.contains("bind")) {
+			branches.push_back({move(test), analyzeArm(astBlock)});
+			continue;
+		}
+		const json& bind = arm["bind"];
+		const string& variant = arm["variants"][0].get_ref<const string&>();
+		bool borrow = bind["borrow"];
+		bool mut = borrow && bind["mutable"];
+		string ptr = "__is_" + to_string(tempVarCounter_++);
+		ptrDecl(ptr, mut, base);
+		knownVariants_[ptr] = variant;
+		json contents = {{"expr-type","field-access"},{"object",{{"expr-type","id"},{"name",ptr}}},{"field",variant}};
+		size_t pins = pinnedRanges_.size();
+		json armOut;
+		if (borrow) {
+			aliasName(astBlock["body"], bind["name"], contents);
+			pinBoundVariant(x, ptr, variant, bind["name"]);
+			enterScope();
+			declareVar(bind["name"], {{"type-kind","pntr"},{"mutable",mut},
+				{"base-type",fieldValueType(boundContents(def, variant, bind))}}, &bind);
+			armOut = analyzeArm(astBlock);
+			leaveScope();
+		} else {
+			json decl = {{"stmt-type","var-decl"},{"loc",bind["loc"]},{"vars",json::array({{{"name",bind["name"]},
+				{"var-type",astTypeOf(fieldValueType(boundContents(def, variant, bind)))},{"init",contents}}})}};
+			astBlock["body"].insert(astBlock["body"].begin(), move(decl));
+			armOut = analyzeArm(astBlock);
+		}
+		pinnedRanges_.erase(pinnedRanges_.begin() + pins, pinnedRanges_.end());
+		branches.push_back({move(test), move(armOut)});
+	}
+	if (stmt.contains("else"))
+		branches.push_back({json(), analyzeArm(stmt["else"])});
+	given_.flow = after;
+
+	json chain = move(branches.back().second);
+	for (size_t i = branches.size() - 1; i > 0; i--) {
+		json st = {{"stmt-type","if"},{"cond",move(branches[i-1].first)},{"then",move(branches[i-1].second)},{"else",move(chain)}};
+		if (stmt.contains("loc")) st["loc"] = stmt["loc"];
+		chain = move(st);
+	}
+	block.push_back(move(chain));
+	size_t idx = arrayScopeVars_.size() - 1;
+	for (auto& s : collectFreeStmts(idx, idx + 1)) block.push_back(move(s));
+	leaveScope();
+	return {{"stmt-type","block"},{"body",move(block)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
 
 json PlnSemanticAnalyzer::sa_while_stmt(const json& stmt)
 {

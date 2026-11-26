@@ -1,0 +1,7 @@
+type U union { Null; int64 i; [+]int32 a; };
+U j;
+if j is {
+	copy i { }
+	@a { 3 -> j.i; }
+	else { }
+}

@@ -1165,6 +1165,19 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "cannot change the variant of a union whose contents 'is' binds ('" + arg1 + "').";
 
+		case E_IsArmRepeated:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "variant '" + arg1 + "' is already handled by another arm of this 'if ... is { }'.";
+
+		case E_IsArmMissing:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "'if ... is { }' does not handle " + arg1 + " of union '" + arg2 + "': add an arm or 'else'.";
+
+		case E_IsElseUnreachable:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'else' is never reached: every variant of union '" + arg1 + "' has an arm.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

@@ -256,6 +256,10 @@ Root
     `__is_c_N`, the copy, which the test (a `logical-and` of the comparison and a `temp`) releases
     and replaces with a new copy. The block then releases what it declared. The name bound reads
     `__is_N`'s variant, without `__pln_variant`, or `__is_c_N`.
+  - `if x is { }` is a `block` declaring `__is_N` (and `__is_t_N`), a `__is_K` copying it for each
+    arm that binds, and a chain of `if`s testing the tag, an arm listing variants as a
+    `logical-or`; the last arm, or `else`, is the chain's last `else`. A `copy` is a variable the
+    arm declares.
 
   Non-owned fields are deliberately not described: build-mgr re-declares the struct in the
   generated allocator module with only the owned fields at their offsets and opaque padding
