@@ -47,7 +47,7 @@ enum PlnSaMessageCode {
 	E_UnknownType,				// arg1: type name
 	E_UnknownField,				// arg1: struct name, arg2: field name
 	E_UnsupportedStructFieldType,
-	E_RecursiveStruct,			// arg1: struct name
+	E_RecursiveStruct,			// arg1: struct name, arg2: "struct" or "union"
 	E_FieldAccessOnNonStruct,
 	E_WriteToImmutablePtrField,
 	E_EmbedOwningType,			// arg1: type display name
@@ -255,6 +255,7 @@ enum PlnSaMessageCode {
 	E_ExprStmtNotCall,
 	E_DictLitKeyNotConst,	// arg1: name
 	E_DictLitDupKey,	// arg1: the key as written in sa.json
+	E_DuplicateVariant,	// arg1: variant name, arg2: union type name
 };
 
 class PlnSaMessage

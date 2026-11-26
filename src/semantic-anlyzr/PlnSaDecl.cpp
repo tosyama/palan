@@ -973,6 +973,10 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 		} // LCOV_EXCL_LINE -- only cleanup skipped by exit(1) is attributed here
 		return value;
 	}
+	if (def.isTagged) {
+		cerr << locPrefix(item) << PlnSaMessage::getMessage(E_ExprNotImplemented) << endl;
+		exit(1);
+	}
 	const json& items = item["items"];
 	vector<const json*> given(def.fields.size(), nullptr);
 	bool outside = outsideTypeModule(def.name);
@@ -1174,12 +1178,13 @@ bool PlnSemanticAnalyzer::isWrittenNameTaken(const string& name) const
 
 void PlnSemanticAnalyzer::rejectSelfEmbedding(const json& structDef) const
 {
-	for (auto& f : structDef["fields"]) {
-		if (f["var-type"].value("type-kind", "") != "embed") continue;
+	for (auto& f : structDef.contains("fields") ? structDef["fields"] : structDef["variants"]) {
+		if (f.value("var-type", json::object()).value("type-kind", "") != "embed") continue;
 		const json* t = &f["var-type"]["base-type"];
 		while (t->value("type-kind", "") == "arr" && !isVarrAstType(*t)) t = &(*t)["base-type"];
 		if (t->value("type-kind", "") != "prim" || (*t)["type-name"] != structDef["name"]) continue;
-		cerr << locPrefix(structDef) << PlnSaMessage::getMessage(E_RecursiveStruct, structDef["name"]) << endl;
+		cerr << locPrefix(structDef) << PlnSaMessage::getMessage(E_RecursiveStruct, structDef["name"],
+			structDef.contains("variants") ? "union" : "struct") << endl;
 		exit(1);
 	}
 }
@@ -1192,6 +1197,25 @@ json PlnSemanticAnalyzer::sa_struct_def(const json& stmt)
 	// A local struct was bound to its program-wide name when declared.
 	typeAliases_.emplace(written, json{{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
 	json fields = stmt["fields"];
+	resolveFieldTypes(stmt, fields);
+	StructDef def = buildStructDef(name, fields, stmt);
+	if (copyFuncStructs_.count(&stmt)) def.copyFunc = copyFuncSymbol(name);
+	for (auto& f : fields) {
+		if (!f.contains("access")) continue;
+		if (!stmt.value("export", false)) {
+			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_FieldAccessNotExported,
+				f["access"].get<string>(), f["name"].get<string>()) << endl;
+			exit(1);
+		}
+		for (auto& fl : def.fields)
+			if (fl.name == f["name"].get<string>()) fl.access = f["access"].get<string>();
+	}
+	structDefs_[name] = move(def);
+	return json::array();
+} // LCOV_EXCL_BR_LINE
+
+void PlnSemanticAnalyzer::resolveFieldTypes(const json& stmt, json& fields)
+{
 	for (auto& f : fields) {
 		f["var-type"] = resolveWrittenType(stmt, f["var-type"]);
 		// Every other field type is checked by buildStructDef.
@@ -1205,18 +1229,44 @@ json PlnSemanticAnalyzer::sa_struct_def(const json& stmt)
 		while (leaf->value("type-kind", "") == "pntr") leaf = &(*leaf)["base-type"];
 		if (leaf->value("type-kind", "") == "func") *leaf = deepNormalizePrimToStruct(stmt, *leaf);
 	}
-	StructDef def = buildStructDef(name, fields, stmt);
-	if (copyFuncStructs_.count(&stmt)) def.copyFunc = copyFuncSymbol(name);
-	for (auto& f : fields) {
-		if (!f.contains("access")) continue;
-		if (!stmt.value("export", false)) {
-			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_FieldAccessNotExported,
-				f["access"].get<string>(), f["name"].get<string>()) << endl;
+}
+
+json PlnSemanticAnalyzer::sa_union_def(const json& stmt)
+{
+	string written = stmt["name"].get<string>();
+	string name = declaredTypeName(written);
+	claimTypeName(name, moduleId_);
+	typeAliases_.emplace(written, json{{"type-kind", "prim"}, {"type-name", name}}); // LCOV_EXCL_BR_LINE
+	StructDef def;
+	def.name = name;
+	def.isTagged = true;
+	json contents = json::array();
+	for (auto& v : stmt["variants"]) {
+		string vn = v["name"].get<string>();
+		if (find(def.variants.begin(), def.variants.end(), vn) != def.variants.end()) {
+			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_DuplicateVariant, vn, written) << endl;
 			exit(1);
 		}
-		for (auto& fl : def.fields)
-			if (fl.name == f["name"].get<string>()) fl.access = f["access"].get<string>();
+		def.variants.push_back(vn);
+		if (v.contains("var-type"))
+			contents.push_back({{"name", vn}, {"var-type", v["var-type"]}}); // LCOV_EXCL_BR_LINE
 	}
+	resolveFieldTypes(stmt, contents);
+	StructDef overlay = buildStructDef(name, contents, stmt, /*isUnion=*/true);
+	def.maxAlign = max(4, overlay.maxAlign);
+	int at = alignUp(4, overlay.maxAlign);
+	def.fields.push_back({.name="", .typeKind="prim", .typeName="uint32", .offset=0, .size=4});
+	for (FieldLayout f : overlay.fields) {
+		f.offset += at;
+		def.fields.push_back(move(f));
+	}
+	def.totalSize = alignUp(at + overlay.totalSize, def.maxAlign);
+	def.ownsFields = overlay.ownsFields;
+	def.hasUnalignedField = overlay.hasUnalignedField;
+	// The tag is written wherever one comes to exist.
+	def.hasInits = true;
+	def.isComplete = true;
+	if (copyFuncStructs_.count(&stmt)) def.copyFunc = copyFuncSymbol(name);
 	structDefs_[name] = move(def);
 	return json::array();
 } // LCOV_EXCL_BR_LINE

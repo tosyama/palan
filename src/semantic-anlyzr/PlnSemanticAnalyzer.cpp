@@ -560,7 +560,8 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 {
 	// LCOV_EXCL_BR_START
 	for (auto& [name, def] : structDefs_) {
-		if (!def.hasInits) continue;
+		// A union's tag is written by its generated functions.
+		if (!def.hasInits || def.isTagged) continue;
 		auto origin = typeOrigins_.find(name);
 		if (origin == typeOrigins_.end() || origin->second != moduleId_) continue;
 		auto ptrTo = [](const string& s) {
@@ -578,9 +579,6 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 		sa_function(funcDef);
 		json& func = sa["functions"].back();
 		func["export"] = true;
-		auto builtWhole = [&](const string& sub) {
-			return assignsByFunc(json{{"type-kind","struct"},{"type-name",sub}});
-		};
 		json nested = json::array();
 		for (auto& f : def.fields) {
 			if (!f.initAst.is_null()) continue;
@@ -1027,7 +1025,7 @@ void PlnSemanticAnalyzer::indexCopyFuncs(const json& funcs)
 			auto d = topDecls_.find((*written)["type-name"].get<string>());
 			if (d == topDecls_.end()) break;
 			const json& decl = *d->second.stmt;
-			if (decl["stmt-type"] == "struct-def") { copyFuncStructs_.insert(&decl); break; }
+			if (decl["stmt-type"] == "struct-def" || decl["stmt-type"] == "union-def") { copyFuncStructs_.insert(&decl); break; }
 			if (decl["stmt-type"] != "type-alias") break;
 			written = &decl["type"];
 		}
@@ -1048,9 +1046,6 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 			string name = stmt["name"].get<string>();
 			topDecls_.emplace(name, TopDecl{&stmt, TopDecl::Pending, (int)pos});
 			if (declaresStructType(t)) declaredStructs_.insert(topTypeIdentity(name));
-		} else if (t == "union-def") {
-			cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_StmtNotImplemented) << endl;
-			exit(1);
 		} else if (t == "cinclude") {
 			registerCIncludeTypes(stmt);
 		} else if (t == "import") {
@@ -1195,12 +1190,13 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	resolving.push_back({this, name, d.stmt});
 	const json& stmt = *d.stmt;
 	string t = stmt["stmt-type"].get<string>();
-	if (t == "struct-def") rejectSelfEmbedding(stmt);
+	if (t == "struct-def" || t == "union-def") rejectSelfEmbedding(stmt);
 	ensureTypeRefs(stmt);
 	if (t == "struct-def") ensureInitElems(stmt);
 	bool resolved = true;
 	if (t != "const-decl") rejectDeferredConstRefs(stmt, stmt);
 	if      (t == "struct-def") sa_struct_def(stmt);
+	else if (t == "union-def")  sa_union_def(stmt);
 	else if (t == "enum-def")   sa_enum_def(stmt);
 	else if (t == "type-alias") sa_type_alias(stmt);
 	else if (t == "opaque-def") sa_opaque_def(stmt);

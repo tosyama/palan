@@ -1191,3 +1191,23 @@ TEST(sa, runtime_len)
 	ASSERT_EQ(init["r"]["expr-type"], "lit-int");
 	ASSERT_EQ(init["r"]["value"], "2");
 }
+
+// A union's tag is at 0 and every variant's contents after it, at one offset.
+TEST(sa, union_shape)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1383_recursive_union.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json* j = nullptr;
+	for (auto& s : jout["alloc-shapes"])
+		if (s.value("shape-name", "").find("_J") != string::npos) j = &s;
+	ASSERT_NE(j, nullptr);
+	EXPECT_EQ((*j)["total-size"], 16);
+	EXPECT_EQ((*j)["tag-size"], 4);
+	const json& v = (*j)["variants"];
+	ASSERT_EQ(v.size(), 4u);
+	EXPECT_TRUE(v[0]["owned-fields"].empty());
+	EXPECT_EQ(v[1]["owned-fields"][0]["offset"], 8);
+	EXPECT_EQ(v[2]["owned-fields"][0]["offset"], 8);
+	EXPECT_TRUE(v[3]["owned-fields"].empty());
+}

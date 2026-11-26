@@ -109,7 +109,14 @@ struct StructDef {
 	// A field (or one nested in an embedded struct) sits off its type's own
 	// alignment, as only a C packed struct allows; passed by value as MEMORY class.
 	bool   hasUnalignedField = false;
-	const char* keyword() const { return isUnion ? "union" : "struct"; }
+	// A Palan union: a uint32 tag at offset 0 (an unnamed field) and each
+	// variant's contents, overlaid as a C union's fields are, so that what reads
+	// the layout sees every byte any variant may hold. What builds, releases or
+	// copies one acts on the variant the tag names. `variants` lists every
+	// variant in tag order, those without contents too.
+	bool   isTagged = false;
+	vector<string> variants;
+	const char* keyword() const { return isUnion || isTagged ? "union" : "struct"; }
 };
 
 struct FieldChain {
@@ -701,6 +708,9 @@ class PlnSemanticAnalyzer {
 	// Reported before its field types are resolved, where it would be a cycle.
 	void rejectSelfEmbedding(const json& structDef) const;
 	json sa_struct_def(const json& stmt);         // consume struct-def, register in structDefs_
+	json sa_union_def(const json& stmt);
+	bool builtWhole(const string& structName) const;
+	void resolveFieldTypes(const json& stmt, json& fields);
 	void setFieldInits(StructDef& def, const json& fields);
 	json initRunCall(const string& structName, json run, json count);
 	StructDef buildStructDef(const string& name, const json& fields, const json& locNode,

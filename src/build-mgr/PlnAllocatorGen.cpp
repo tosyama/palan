@@ -69,9 +69,37 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	}
 }
 
+static string variantTypeName(const json& unionShape, size_t k)
+{
+	return "__pln_v" + to_string(k) + "_" + unionShape["shape-name"].get<string>();
+}
+
+static bool variantOwns(const json& unionShape, size_t k)
+{
+	const json& v = unionShape["variants"][k];
+	return !v["owned-fields"].empty() || !v["runs"].empty();
+}
+
 void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const string& library, bool checks)
 {
-	const vector<json>& struct_shapes = shapes.structs;
+	// A union's variants that own something are each laid out as a struct
+	// of its own, its contents at their place and the rest bytes, which the
+	// union's functions view it as for the variant its tag names.
+	vector<json> struct_shapes;
+	for (auto& shape : shapes.structs) {
+		if (shape.contains("variants")) {
+			const json& variants = shape["variants"];
+			for (size_t k = 0; k < variants.size(); k++) {
+				if (variants[k]["owned-fields"].empty() && variants[k]["runs"].empty()) continue;
+				json v = {{"shape-kind", "struct"}, {"shape-name", variantTypeName(shape, k)},
+				          {"total-size", shape["total-size"]}, {"owned-fields", variants[k]["owned-fields"]}};
+				if (!variants[k]["runs"].empty()) v["runs"] = variants[k]["runs"];
+				v["assigns"] = true;
+				struct_shapes.push_back(move(v));
+			}
+		}
+		struct_shapes.push_back(shape);
+	}
 	const vector<json>& elem_arr_shapes = shapes.arrays;
 	if (!library.empty()) out << "library " << library << ";\n";
 	out << "cinclude \"" PALAN_ALLOCATORS_MODULE ".h\";\n";
@@ -94,6 +122,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 
 	// Writes src into the existing dst, both borrows: by the type's '->', or
 	// by the function that writes the parts of a struct holding types having one.
+	// One with neither, laid out in a union's variant, is released and copied.
 	auto structAssigns = [&](const string& name) {
 		auto it = struct_by_name.find(name);
 		return it != struct_by_name.end() && it->second->value("assigns", false);
@@ -102,6 +131,8 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		const json& shape = *struct_by_name.at(name);
 		if (shape.contains("copy-func"))
 			return shape["copy-func"].get<string>() + "(" + src + ", " + dst + ");";
+		if (!shape.value("assigns", false) && !shape.contains("variants"))
+			return "__pln_fini_" + name + "(" + dst + "); __pln_copy_" + name + "(" + dst + ", " + src + ");";
 		return "__pln_assign_" + name + "(" + dst + ", " + src + ");";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
@@ -484,6 +515,13 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 	map<string, vector<pair<string, int64_t>>> struct_pads;
 	for (auto& shape : struct_shapes) {
 		string name = shape["shape-name"];
+		if (shape.contains("variants")) {
+			int64_t rest = shape["total-size"].get<int64_t>() - shape["tag-size"].get<int64_t>();
+			out << "\nexport type " << name << " { uint32 __pln_tag;";
+			if (rest > 0) out << " $[" << rest << "]uint8 __pln_pad0;";
+			out << " };\n";
+			continue;
+		}
 		// An owned field is declared as the slot its build fills, so
 		// this module neither copies nor frees what it is given.
 		// A row laid out in place is a run of its elements' slots, which its
@@ -553,9 +591,70 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		return s;
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
+	// A union's functions act on the variant its tag names, as the struct it
+	// is laid out as when it owns something, and as bytes otherwise.
+	auto emitUnion = [&](const json& shape) {
+		string name = shape["shape-name"];
+		string size = to_string(shape["total-size"].get<int64_t>());
+		size_t n = shape["variants"].size();
+		auto eachOwning = [&](const string& tagOf, const function<string(const string&)>& stmt) {
+			string s;
+			for (size_t k = 0; k < n; k++)
+				if (variantOwns(shape, k))
+					s += "    if " + tagOf + ".__pln_tag == " + to_string(k) + " { " + stmt(variantTypeName(shape, k)) + " return; }\n";
+			return s;
+		}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+		out << "\nexport func __pln_alloc_" << name << "() -> @!" << name << " p {\n"
+		    << "    __pln_malloc(" << size << ") -> p;\n"
+		    << "    __pln_init_" << name << "(p);\n"
+		    << "}\n"
+		    << "export func __pln_init_" << name << "(@!" << name << " p) {\n"
+		    << "    0 -> p.__pln_tag;\n";
+		if (variantOwns(shape, 0))
+			out << "    __pln_init_" << variantTypeName(shape, 0) << "(p as @!" << variantTypeName(shape, 0) << ");\n";
+		out << "}\n"
+		    << "export func __pln_fini_" << name << "(@!" << name << " p) {\n"
+		    << eachOwning("p", [](const string& v) { return "__pln_fini_" + v + "(p as @!" + v + ");"; })
+		    << "}\n"
+		    << "export func __pln_free_" << name << "(@!" << name << " p) {\n"
+		    << "    if (p == NULL) { return; }\n"
+		    << "    __pln_fini_" << name << "(p);\n"
+		    << "    free(p);\n"
+		    << "    return;\n"
+		    << "}\n"
+		    << "export func __pln_copy_" << name << "(@!" << name << " dst, @" << name << " src) {\n"
+		    << eachOwning("src", [](const string& v) { return "__pln_copy_" + v + "(dst as @!" + v + ", src as @" + v + ");"; })
+		    << "    memcpy(dst, src, " << size << ");\n"
+		    << "}\n";
+		// Into an existing value: another variant's contents are released first.
+		// A struct laying a union out in place writes it so whenever it is
+		// written part by part.
+		if (!shape.contains("copy-func"))
+			out << "export func __pln_assign_" << name << "(@!" << name << " dst, @" << name << " src) {\n"
+			    << "    if dst.__pln_tag != src.__pln_tag {\n"
+			    << "        __pln_fini_" << name << "(dst);\n"
+			    << "        __pln_copy_" << name << "(dst, src);\n"
+			    << "        return;\n"
+			    << "    }\n"
+			    << eachOwning("src", [](const string& v) { return "__pln_assign_" + v + "(dst as @!" + v + ", src as @" + v + ");"; })
+			    << "    memcpy(dst, src, " << size << ");\n"
+			    << "}\n";
+		out << "export func __pln_initrun_" << name << "(@!" << name << " run, int64 from, int64 to) {\n"
+		    << "    int64 i = from;\n"
+		    << "    while i < to {\n"
+		    << "        __pln_init_" << name << "(@!run[i]);\n"
+		    << "        i + 1 -> i;\n"
+		    << "    }\n"
+		    << "}\n";
+	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
 	// Struct allocator/free functions, for structs owning fields
 	for (auto& shape : struct_shapes) {
 		if (shape["shape-kind"] == "bytes" || shape["shape-kind"] == "opaque") continue;
+		if (shape.contains("variants")) {
+			emitUnion(shape);
+			continue;
+		}
 		string name = shape["shape-name"];
 		struct OwnedField { string slot; ElemOps e; vector<string> lens; };
 		vector<OwnedField> owned;

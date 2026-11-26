@@ -209,6 +209,34 @@ printf("%d %d\n", K.first(@c), c.links["x"].to.v);
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "4 9\n");
 }
 
+// A union crosses the interface with its variants, and as an opaque type's contents.
+TEST(build_mgr, library_union) {
+	cleanTestEnv();
+	writeFile("out/src/val.pa", R"(library kit;
+export type Val union { Null; int64 i; [+]Val items; Box box; };
+export type Box { int32 v; };
+type Inner union { [+]int32 xs; Null; };
+export type Hidden = opaque Inner;
+export func make() -> Hidden { Inner x; return x as Hidden; }
+export func size(@Val v) -> int64 { return sizeof(Val); }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/val.pa"), "");
+	string pai = execTestCommand("cat out/libs/kit/val.pai");
+	EXPECT_NE(pai.find("export type Val union {\n\tNull;\n\tint64 i;\n\t[+]Val items;\n\tBox box;\n};"), string::npos) << pai;
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/val> as K;
+cinclude <stdio.h>;
+K.Val v;
+K.Val c = v;
+[+]K.Val vs = [];
+vs.push(c);
+K.Hidden h = K.make();
+printf("%ld %ld\n", K.size(@vs[0]), len(@vs));
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "16 1\n");
+}
+
 // A variadic parameter crosses the interface as written, also inside a
 // function pointer type, and is called through an alias.
 TEST(build_mgr, library_variadic) {

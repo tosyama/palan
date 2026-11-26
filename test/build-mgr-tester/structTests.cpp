@@ -1494,3 +1494,8 @@ TEST(build_mgr, field_init_values_mtrace) {
 	string r = "1 9 2 3 4 1 9\n5 9 7 8 9 9\n3 4 2 3 3 6 1\n";
 	expectMtraceRun("435_field_init_values_mtrace", r + r + r + "3 3 7 1 5\n2 9 3\n3 3 9 1 8\n", 103);
 }
+
+// A union lives as a struct does, its first variant when declared.
+TEST(build_mgr, union_mtrace) {
+	expectMtraceRun("472_union_mtrace", "1\ncopy C\n16 16 56 24 1\n", 60);
+}

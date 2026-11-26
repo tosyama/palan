@@ -131,6 +131,10 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 		exit(1);
 	}
 	const StructDef& def = requireCompleteStruct(structName, locNode);
+	if (def.isTagged) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ExprNotImplemented) << endl;
+		exit(1);
+	}
 	auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fieldName; });
 	if (it == def.fields.end()) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownField, structDisplayName(structName), fieldName, def.keyword()) << endl;

@@ -217,6 +217,23 @@ Root
 
   `__pln_copy_T` and `__pln_assign_T` treat an owned field that is NULL as the arr entry's do an element.
 
+  A union (`type U union { ... }`) is a struct entry with `owned-fields` empty and:
+  - tag-size\* - 4: its tag, a `uint32` at offset 0, the index of the variant it holds in the
+    order they are declared. Every variant's contents lie at one offset after it, the tag
+    aligned up to the contents' largest alignment; `total-size` is that offset and the largest
+    contents, aligned up.
+  - variants\* - One entry per variant, in tag order, each the `owned-fields` and `runs` its
+    contents give (both empty for one owning nothing). A struct laid out in a variant
+    (`$T`, `$[n]$T`) that is built at all is a run, since a union has no `init-func`.
+
+  build-mgr lays each variant owning something out as a struct of its own,
+  `__pln_v<k>_U`, generated as a struct entry with those fields, and generates `U`'s functions
+  over them: `__pln_init_U` writes tag 0 and builds the first variant, `__pln_fini_U`,
+  `__pln_copy_U` and `__pln_assign_U` act on the variant the tag names (`__pln_assign_U`
+  releases `dst`'s and copies when the tags differ), and `__pln_initrun_U` is generated for every
+  union. A union is built wherever it comes to exist, as a struct with initializers is, and a
+  union laid out in a struct is one of its `runs`.
+
   Non-owned fields are deliberately not described: build-mgr re-declares the struct in the
   generated allocator module with only the owned fields at their offsets and opaque padding
   elsewhere, because the full layout cannot always be re-expressed as Palan source (C unions,

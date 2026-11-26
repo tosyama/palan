@@ -211,7 +211,8 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_RecursiveStruct:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "struct '" + arg1 + "' recursively contains itself.";
+			BOOST_ASSERT(arg2 != "\x01");
+			return arg2 + " '" + arg1 + "' recursively contains itself.";
 
 		case E_FieldAccessOnNonStruct:
 			return "field access on non-struct variable.";
@@ -1128,6 +1129,11 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ResizeNotMoved:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "an array cast to '" + arg1 + "' can only be given away: '<<=', '->>', '>>' or 'return'.";
+
+		case E_DuplicateVariant:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "variant '" + arg1 + "' is already defined in union '" + arg2 + "'.";
 
 		default:
 			BOOST_ASSERT(false);

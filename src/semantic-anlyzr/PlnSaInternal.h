@@ -23,7 +23,7 @@ using namespace std;
 // opaque type, which is one whose layout is its contents'.
 inline bool declaresStructType(const string& stmtType)
 {
-	return stmtType == "struct-def" || stmtType == "opaque-def";
+	return stmtType == "struct-def" || stmtType == "union-def" || stmtType == "opaque-def";
 }
 inline bool isTypeDecl(const string& stmtType)
 {

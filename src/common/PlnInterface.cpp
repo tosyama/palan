@@ -188,6 +188,12 @@ string Writer::statement(const json& s) const
 		}
 		return out + "};\n";
 	}
+	if (kind == "union-def") {
+		string out = exported + "type " + name + " union {\n";
+		for (auto& v : s["variants"])
+			out += "\t" + (v.contains("var-type") ? type(v["var-type"]) + " " : "") + v["name"].get<string>() + ";\n";
+		return out + "};\n";
+	}
 	if (kind == "struct-def") {
 		string out = exported + "type " + name + " {\n";
 		for (auto& f : s["fields"])
@@ -338,7 +344,7 @@ string Writer::write()
 			}
 		} else if (kind == "const-decl") {
 			if (consts.count(s["name"])) out += statement(s);
-		} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
+		} else if (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
 				|| (kind == "cinclude" && s.contains("export-types"))) {
 			out += statement(s);
 		}
@@ -398,7 +404,7 @@ Merger::Merger(const json& main, const vector<json>& internals)
 		const json& list = (*modules_[m])["ast"].contains("statements") ? stmts(m) : noStmts;
 		for (auto& s : list) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			if (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
 			    || kind == "const-decl")
 				decls_[m][s["name"]] = {&s, nullptr};
 			else if (kind == "var-decl")
@@ -454,7 +460,7 @@ void Merger::ref(json& nameNode, int m, bool rename)
 		}
 		string kind = (*decls_[key->first].at(key->second).stmt)["stmt-type"];
 		// A type is identified by its module, which the .pai, read as the main's, would change.
-		if (key->first != 0 && (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def")) {
+		if (key->first != 0 && (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def")) {
 			string at = (*modules_[fromModule_])["original"].get<string>();
 			if (from_ && from_->contains("loc"))
 				at += ":" + to_string((*from_)["loc"][0].get<int>()) + ":" + to_string((*from_)["loc"][1].get<int>());
@@ -541,7 +547,7 @@ json Merger::merged()
 	const json& mainStmts = main["ast"].contains("statements") ? stmts(0) : noStmts;
 	for (auto& s : mainStmts) {
 		string kind = s.value("stmt-type", "");
-		bool isDecl = kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
+		bool isDecl = kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
 		if (kind == "var-decl" && s.value("global", false) && s.value("export", false))
 			mark({0, s["vars"][0]["name"]});
@@ -604,7 +610,7 @@ json Merger::merged()
 					decl.erase("export");
 				}
 				if (!decl["vars"].empty()) out.push_back(move(decl));
-			} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			} else if (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
 			           || kind == "const-decl") {
 				Key key{m, s["name"]};
 				if (!reached_.count(key)) continue;

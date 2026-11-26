@@ -1,0 +1,3 @@
+type U union { int32 i; Null; };
+U u;
+int32 x = u.i;

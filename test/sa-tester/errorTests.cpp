@@ -1662,11 +1662,14 @@ TEST(sa_error, expr_stmt_not_call) {
 	}
 }
 
-// Until unions are analyzed, what the parser reads of them stops here.
-TEST(sa_error, union_not_implemented) {
+TEST(sa_error, union) {
 	const vector<pair<string, string>> cases = {
-		{"error_1376_union_not_impl.pa", ":1:1: error: this statement is not supported"},
-		{"error_1377_union_block_not_impl.pa", ":3:2: error: this statement is not supported"},
+		{"error_1376_union_dup_variant.pa", ":1:31: error: variant 'i' is already defined in union 'U'."},
+		{"error_1381_union_self_embed.pa", ":3:2: error: union 'U' recursively contains itself."},
+		{"error_1382_union_owned_cycle.pa", ":2:1: error: type 'U' depends on itself: U -> V -> U."},
+		// Not yet: reading a variant, a literal for a union, `is`.
+		{"error_1377_union_variant_not_impl.pa", ":3:11: error: this expression is not supported"},
+		{"error_1380_union_lit_not_impl.pa", ":2:7: error: this expression is not supported"},
 		{"error_1378_is_not_impl.pa", ":2:10: error: this expression is not supported"},
 		{"error_1379_if_is_not_impl.pa", ":2:1: error: this statement is not supported"},
 	};

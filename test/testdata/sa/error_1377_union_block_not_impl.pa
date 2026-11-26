@@ -1,4 +1,0 @@
-int32 n = 1;
-{
-	type U union { Null; };
-}

@@ -30,6 +30,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 		else if (isStoreStmt(stmt)) { for (auto& s : sa_store_scope(stmt)) result.push_back(s); }
 		else if (prescannedDecls_.count(&rawStmt)) continue;
 		else if (t == "struct-def")   sa_struct_def(stmt);
+		else if (t == "union-def")    sa_union_def(stmt);
 		else if (t == "opaque-def")   sa_opaque_def(stmt);
 		else if (t == "type-alias")   sa_type_alias(stmt);
 		else if (t == "const-decl")   sa_const_decl(stmt);
@@ -109,7 +110,7 @@ json PlnSemanticAnalyzer::sa_statements(const json& stmts)
 			if (!given_.loops.empty()) mergeGivenFlow(given_.loops.back().back, given_.flow);
 			given_.flow.reachable = false;
 		}
-		else if (t == "not-impl" || t == "union-def" || t == "if-is") {
+		else if (t == "not-impl" || t == "if-is") {
 			if (stmt.contains("untyped-var"))
 				cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_VarTypeInferenceNotImpl, stmt["untyped-var"]) << endl;
 			else
