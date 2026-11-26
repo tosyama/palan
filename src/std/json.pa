@@ -1,0 +1,574 @@
+library std;
+
+// utf8 is another public module of std: imported as its users import it, the types it publishes
+// stay its own in json.pai.
+import <std/utf8>;
+import "utf8scan.pa";
+cinclude <stdlib.h>;
+cinclude <string.h>;
+cinclude <locale.h>;
+
+// A JSON value.
+export type json union {
+	Null;
+	bool b;
+	int64 i;
+	flo64 f;
+	utf8 s;
+	[+]json items;
+	[""]json members;
+};
+
+// Why parsing failed. pos counts characters from 0, line and col from 1.
+export type jsonerror {
+	utf8 message;
+	int64 pos;
+	int64 line;
+	int64 col;
+};
+
+export type jsonresult union {
+	json value;
+	jsonerror error;
+};
+
+export func json(bool v) -> json { return json.b(v); }
+export func json(int64 v) -> json { return json.i(v); }
+export func json(flo64 v) -> json { return json.f(v); }
+export func json(@[]uint8 cs) -> json { return json.s(utf8(cs)); }
+export func json(@utf8 s) -> json r { s -> r.s; }
+export func json([+]json v) -> json { return json.items(v>>); }
+export func json([""]json v) -> json { return json.members(v>>); }
+
+// strtod reads the decimal point of the C locale a program may have set.
+global locale_t cNumeric = newlocale(LC_NUMERIC_MASK, "C", 0 as locale_t) for toFlo;
+
+type parser {
+	@[]uint8 b;
+	int64 n;
+	int64 maxDepth;
+	int64 i = 0;
+	bool failed = false;
+	int64 errAt = 0;        // a byte position, made a character position once parsing ends
+	[+]uint8 message = [0];
+};
+
+// Records the first error, at byte position at.
+func failAt(@!parser p, @[]uint8 what, int64 at)
+{
+	if p.failed { return; }
+	true -> p.failed;
+	at -> p.errAt;
+	int64 k = 0;
+	p.message.resize(0);
+	while what[k] != 0 { p.message.push(what[k]); k + 1 -> k; }
+	p.message.push(0);
+}
+
+func fail(@!parser p, @[]uint8 what) { failAt(p, what, p.i); }
+
+func unexpected(@!parser p)
+{
+	if p.i >= p.n { fail(p, "unexpected end of text"); }
+	else { fail(p, "unexpected character"); }
+}
+
+func at(@parser p, uint8 c) -> bool { return p.i < p.n && p.b[p.i] == c; }
+
+func skipSpace(@!parser p)
+{
+	while p.i < p.n {
+		uint8 c = p.b[p.i];
+		if c != ' ' && c != '\t' && c != '\n' && c != '\r' { return; }
+		p.i + 1 -> p.i;
+	}
+}
+
+func expectWord(@!parser p, @[]uint8 word) -> bool
+{
+	int64 k = 0;
+	while word[k] != 0 {
+		if !at(p, word[k]) { unexpected(p); return false; }
+		p.i + 1 -> p.i;
+		k + 1 -> k;
+	}
+	return true;
+}
+
+func hexDigit(int32 c) -> int32
+{
+	if c >= '0' && c <= '9' { return c - '0'; }
+	if c >= 'a' && c <= 'f' { return c - 'a' + 10; }
+	if c >= 'A' && c <= 'F' { return c - 'A' + 10; }
+	return -1;
+}
+
+// The four hex digits at p.i.
+func hex4(@!parser p) -> int32 v
+{
+	int64 k = 0;
+	while k < 4 {
+		int32 d = -1;
+		if p.i < p.n { hexDigit(int32(p.b[p.i])) -> d; }
+		if d < 0 { unexpected(p); return; }
+		v * 16 + d -> v;
+		p.i + 1 -> p.i;
+		k + 1 -> k;
+	}
+}
+
+func pushUtf8(@![+]uint8 buf, int32 c)
+{
+	if c < 128 {
+		buf.push(uint8(c));
+	} else if c < 2048 {
+		buf.push(uint8(192 | (c >>> 6)));
+		buf.push(uint8(128 | (c & 63)));
+	} else if c < 65536 {
+		buf.push(uint8(224 | (c >>> 12)));
+		buf.push(uint8(128 | ((c >>> 6) & 63)));
+		buf.push(uint8(128 | (c & 63)));
+	} else {
+		buf.push(uint8(240 | (c >>> 18)));
+		buf.push(uint8(128 | ((c >>> 12) & 63)));
+		buf.push(uint8(128 | ((c >>> 6) & 63)));
+		buf.push(uint8(128 | (c & 63)));
+	}
+}
+
+// The code point of the escape at p.i, after its backslash; -1 when it failed.
+func escape(@!parser p) -> int32
+{
+	int64 from = p.i - 1;
+	if p.i >= p.n { fail(p, "unterminated string"); return -1; }
+	uint8 e = p.b[p.i];
+	p.i + 1 -> p.i;
+	if e == '"' || e == '\\' || e == '/' { return int32(e); }
+	if e == 'b' { return 8; }
+	if e == 'f' { return 12; }
+	if e == 'n' { return 10; }
+	if e == 'r' { return 13; }
+	if e == 't' { return 9; }
+	if e != 'u' { failAt(p, "invalid escape", from); return -1; }
+	int32 u = hex4(p);
+	if p.failed { return -1; }
+	if u >= 0xDC00 && u <= 0xDFFF { failAt(p, "lone surrogate", from); return -1; }
+	if u >= 0xD800 && u <= 0xDBFF {
+		if !at(p, '\\') || p.i + 1 >= p.n || p.b[p.i + 1] != 'u' { failAt(p, "lone surrogate", from); return -1; }
+		p.i + 2 -> p.i;
+		int32 lo = hex4(p);
+		if p.failed { return -1; }
+		if lo < 0xDC00 || lo > 0xDFFF { failAt(p, "lone surrogate", from); return -1; }
+		0x10000 + (u - 0xD800) * 1024 + (lo - 0xDC00) -> u;
+	}
+	if u == 0 { failAt(p, "\\u0000 is not allowed", from); return -1; }
+	return u;
+}
+
+// The string starting at the current '"'.
+func parseString(@!parser p) -> utf8 s
+{
+	[+]uint8 buf = [];
+	p.i + 1 -> p.i;
+	while true {
+		int64 from = p.i;
+		while p.i < p.n {
+			uint8 c = p.b[p.i];
+			if c == '"' || c == '\\' || c < 32 { break; }
+			if c < 128 {
+				p.i + 1 -> p.i;
+				continue;
+			}
+			int64 k = scan(p.b, p.i, p.n);
+			if k < 0 { fail(p, "invalid UTF-8"); return; }
+			p.i + k -> p.i;
+		}
+		if p.i > from {
+			int64 len = len(@buf);
+			buf.resize(len + p.i - from);
+			memcpy(@!buf[len], @p.b[from], p.i - from);
+		}
+		if p.i >= p.n { fail(p, "unterminated string"); return; }
+		uint8 c = p.b[p.i];
+		if c == '"' { p.i + 1 -> p.i; break; }
+		if c < 32 { fail(p, "control character in string"); return; }
+		p.i + 1 -> p.i;
+		int32 u = escape(p);
+		if u < 0 { return; }
+		pushUtf8(@!buf, u);
+	}
+	buf.push(0);
+	utf8(@buf) -> s;
+}
+
+func toFlo(@[]uint8 text) -> flo64 v
+{
+	locale_t old = uselocale(cNumeric);
+	strtod(text, NULL) -> v;
+	uselocale(old);
+}
+
+func isDigit(@parser p) -> bool { return p.i < p.n && p.b[p.i] >= '0' && p.b[p.i] <= '9'; }
+
+func skipDigits(@!parser p) { while isDigit(p) { p.i + 1 -> p.i; } }
+
+// The number at p.i, starting with '-' or a digit.
+func parseNumber(@!parser p) -> json r
+{
+	int64 from = p.i;
+	bool neg = at(p, '-');
+	if neg { p.i + 1 -> p.i; }
+	if !isDigit(p) { unexpected(p); return; }
+	int64 digits = p.i;
+	if at(p, '0') { p.i + 1 -> p.i; }
+	else { skipDigits(p); }
+	int64 end = p.i;
+	bool whole = true;
+	if at(p, '.') {
+		false -> whole;
+		p.i + 1 -> p.i;
+		if !isDigit(p) { unexpected(p); return; }
+		skipDigits(p);
+	}
+	if at(p, 'e') || at(p, 'E') {
+		false -> whole;
+		p.i + 1 -> p.i;
+		if at(p, '+') || at(p, '-') { p.i + 1 -> p.i; }
+		if !isDigit(p) { unexpected(p); return; }
+		skipDigits(p);
+	}
+	if whole {
+		// Summed as a negative number, which reaches int64's minimum.
+		int64 v = 0;
+		bool fits = true;
+		int64 k = digits;
+		while k < end {
+			int64 d = int64(p.b[k]) - '0';
+			if v < -922337203685477580 || (v == -922337203685477580 && d > 8) { false -> fits; break; }
+			v * 10 - d -> v;
+			k + 1 -> k;
+		}
+		if fits && !neg && v == -9223372036854775807 - 1 { false -> fits; }
+		if fits && !(neg && v == 0) {
+			if !neg { 0 - v -> v; }
+			v -> r.i;
+			return;
+		}
+	}
+	// What precedes p.i is a JSON number, which strtod reads the same and stops after.
+	flo64 f = toFlo(@p.b[from]);
+	if f > 1.7976931348623157e308 || f < -1.7976931348623157e308 {
+		failAt(p, "number out of range", from);
+		return;
+	}
+	f -> r.f;
+}
+
+func parseValue(@!parser p, int64 depth) -> json r
+{
+	skipSpace(p);
+	if p.i >= p.n { unexpected(p); return; }
+	uint8 c = p.b[p.i];
+	if (c == '{' || c == '[') && depth >= p.maxDepth { fail(p, "nesting too deep"); return; }
+	if c == '{' {
+		[""]json m = {};
+		p.i + 1 -> p.i;
+		skipSpace(p);
+		if at(p, '}') { p.i + 1 -> p.i; m ->> r.members; return; }
+		while true {
+			skipSpace(p);
+			if !at(p, '"') { unexpected(p); return; }
+			utf8 key = parseString(p);
+			if p.failed { return; }
+			skipSpace(p);
+			if !at(p, ':') { unexpected(p); return; }
+			p.i + 1 -> p.i;
+			json v = parseValue(p, depth + 1);
+			if p.failed { return; }
+			v ->> m[key -> cstr()];
+			skipSpace(p);
+			if at(p, ',') { p.i + 1 -> p.i; continue; }
+			if at(p, '}') { p.i + 1 -> p.i; break; }
+			unexpected(p);
+			return;
+		}
+		m ->> r.members;
+	} else if c == '[' {
+		[+]json items = [];
+		p.i + 1 -> p.i;
+		skipSpace(p);
+		if at(p, ']') { p.i + 1 -> p.i; items ->> r.items; return; }
+		while true {
+			json v = parseValue(p, depth + 1);
+			if p.failed { return; }
+			items.push(v>>);
+			skipSpace(p);
+			if at(p, ',') { p.i + 1 -> p.i; continue; }
+			if at(p, ']') { p.i + 1 -> p.i; break; }
+			unexpected(p);
+			return;
+		}
+		items ->> r.items;
+	} else if c == '"' {
+		utf8 s = parseString(p);
+		if p.failed { return; }
+		s ->> r.s;
+	} else if c == '-' || (c >= '0' && c <= '9') {
+		parseNumber(p) -> r;
+	} else if c == 't' {
+		if expectWord(p, "true") { true -> r.b; }
+	} else if c == 'f' {
+		if expectWord(p, "false") { false -> r.b; }
+	} else if c == 'n' {
+		expectWord(p, "null");
+	} else {
+		unexpected(p);
+	}
+}
+
+// Parses s as RFC 8259 JSON, skipping a leading BOM. Arrays and objects nested deeper than
+// maxDepth are an error, since parsing, copying and releasing a value recurse.
+export func parseJson(@utf8 s, int64 maxDepth = 512) -> jsonresult r
+{
+	parser p = [cstr(s), byteLen(s), maxDepth, 0, false, 0, [0]];
+	bool bom = p.n >= 3 && p.b[0] == 0xEF && p.b[1] == 0xBB && p.b[2] == 0xBF;
+	if bom { 3 -> p.i; }
+	json v = parseValue(@!p, 0);
+	if !p.failed {
+		skipSpace(@!p);
+		if p.i < p.n { unexpected(@!p); }
+	}
+	if !p.failed {
+		v ->> r.value;
+		return;
+	}
+	// The position in characters, counted only now that parsing has failed; an invalid part
+	// counts as one. An editor shows no column for a BOM.
+	jsonerror e;
+	utf8(@p.message) -> e.message;
+	int64 i = 0;
+	1 -> e.line;
+	1 -> e.col;
+	if bom { 3 -> i; 1 -> e.pos; }
+	while i < p.errAt {
+		int64 k = scan(p.b, i, p.n);
+		if k < 0 { 0 - k -> k; }
+		if p.b[i] == '\n' { e.line + 1 -> e.line; 1 -> e.col; }
+		else { e.col + 1 -> e.col; }
+		e.pos + 1 -> e.pos;
+		i + k -> i;
+	}
+	e ->> r.error;
+}
+
+// ---- Top-level tests ----
+
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+
+func fail(@[]uint8 what)
+{
+	printf("json test failed: %s\n", what);
+	exit(1);
+}
+
+// A compact text of j for comparing; an f is marked to tell it from an i.
+func show(@json j, @!utf8 out)
+{
+	$[40]uint8 num;
+	if j is {
+		Null { out << "null"; }
+		copy b { if b { out << "true"; } else { out << "false"; } }
+		copy i { snprintf(@!num, 40, "%ld", i); out << @num; }
+		copy f { snprintf(@!num, 40, "f%.17g", f); out << @num; }
+		@s { out << "\"" << s << "\""; }
+		@items {
+			out << "[";
+			for @e, k in items { if k > 0 { out << ","; } show(@e, out); }
+			out << "]";
+		}
+		@members {
+			out << "{";
+			int64 k = 0;
+			for @v, key in members {
+				if k > 0 { out << ","; }
+				out << key << ":";
+				show(@v, out);
+				k + 1 -> k;
+			}
+			out << "}";
+		}
+	}
+}
+
+func expectJson(@utf8 text, @[]uint8 expected)
+{
+	jsonresult r = parseJson(text);
+	if r is @e = error {
+		printf("%s: %s at %ld\n", text -> cstr(), e.message -> cstr(), e.pos);
+		fail(expected);
+	}
+	utf8 out;
+	show(@r.value, @!out);
+	if out != expected {
+		printf("%s -> %s\n", text -> cstr(), out -> cstr());
+		fail(expected);
+	}
+}
+
+func expectError(@utf8 text, @[]uint8 message, int64 pos, int64 line, int64 col, int64 maxDepth = 512)
+{
+	jsonresult r = parseJson(text, maxDepth);
+	if r is @e = error {
+		if e.message == message && e.pos == pos && e.line == line && e.col == col { return; }
+		printf("%s: %s at %ld %ld:%ld\n", text -> cstr(), e.message -> cstr(), e.pos, e.line, e.col);
+	} else {
+		printf("%s: parsed\n", text -> cstr());
+	}
+	fail(message);
+}
+
+func testValues()
+{
+	expectJson("null", "null");
+	expectJson(" \t\r\ntrue ", "true");
+	expectJson("false", "false");
+	expectJson("0", "0");
+	expectJson("-12", "-12");
+	expectJson("9223372036854775807", "9223372036854775807");
+	expectJson("-9223372036854775808", "-9223372036854775808");
+	expectJson("9223372036854775808", "f9.2233720368547758e+18");
+	expectJson("-9223372036854775809", "f-9.2233720368547758e+18");
+	expectJson("-0", "f-0");
+	expectJson("1.5", "f1.5");
+	expectJson("1E2", "f100");
+	expectJson("-2.5e-3", "f-0.0025000000000000001");
+	expectJson("1e+2", "f100");
+	expectJson("1e-400", "f0");
+	expectJson("[]", "[]");
+	expectJson("{}", "{}");
+	expectJson("[1, [2, []], {\"a\": null}]", "[1,[2,[]],{a:null}]");
+	expectJson("{\"b\": 1, \"a\": [true], \"c\": {}}", "{b:1,a:[true],c:{}}");
+	// A repeated key takes the last value in the first's place.
+	expectJson("{\"a\": 1, \"b\": 2, \"a\": 3}", "{a:3,b:2}");
+}
+
+func testStrings()
+{
+	expectJson("\"\"", "\"\"");
+	expectJson("\"h\u{E9}\u{1F600}\"", "\"h\u{E9}\u{1F600}\"");
+	expectJson("\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"", "\"\"\\/\x08\x0C\n\r\t\"");
+	expectJson("\"\\u0041\\u00e9\\u20AC\\ud83d\\ude00\"", "\"A\u{E9}\u{20AC}\u{1F600}\"");
+	expectJson("{\"k\\u00e9\": \"v\"}", "{k\u{E9}:\"v\"}");
+	expectJson("\u{FEFF}[1]", "[1]");
+}
+
+func testErrors()
+{
+	expectError("", "unexpected end of text", 0, 1, 1);
+	expectError("[1,", "unexpected end of text", 3, 1, 4);
+	expectError("[1,\n x]", "unexpected character", 5, 2, 2);
+	expectError("[1,]", "unexpected character", 3, 1, 4);
+	expectError("{\"a\" 1}", "unexpected character", 5, 1, 6);
+	expectError("{1: 2}", "unexpected character", 1, 1, 2);
+	expectError("[1] 2", "unexpected character", 4, 1, 5);
+	expectError("tru", "unexpected end of text", 3, 1, 4);
+	expectError("nul1", "unexpected character", 3, 1, 4);
+	expectError("01", "unexpected character", 1, 1, 2);
+	expectError("1.", "unexpected end of text", 2, 1, 3);
+	expectError(".5", "unexpected character", 0, 1, 1);
+	expectError("+1", "unexpected character", 0, 1, 1);
+	expectError("1e", "unexpected end of text", 2, 1, 3);
+	expectError("-", "unexpected end of text", 1, 1, 2);
+	expectError("[1e999]", "number out of range", 1, 1, 2);
+	expectError("[-1e999]", "number out of range", 1, 1, 2);
+	expectError("\"\u{E9}\u{E9}", "unterminated string", 3, 1, 4);
+	expectError("\"a\\", "unterminated string", 3, 1, 4);
+	expectError("\"a\tb\"", "control character in string", 2, 1, 3);
+	expectError("\"\u{E9}\\x\"", "invalid escape", 2, 1, 3);
+	expectError("\"\\u12g4\"", "unexpected character", 5, 1, 6);
+	expectError("\"\\u0000\"", "\\u0000 is not allowed", 1, 1, 2);
+	expectError("\"a\\ud800\"", "lone surrogate", 2, 1, 3);
+	expectError("\"\\ud800\\u0041\"", "lone surrogate", 1, 1, 2);
+	expectError("\"\\udc00\"", "lone surrogate", 1, 1, 2);
+	expectError("\u{FEFF}\n\u{E9}", "unexpected character", 2, 2, 1);
+	expectError("\u{FEFF}x", "unexpected character", 1, 1, 1);
+	expectError("\u{E9}", "unexpected character", 0, 1, 1);
+	utf8 bad = utf8("[\"\u{E9}\xFF\xFFa\", x]", utf8mode.KEEP_INVALID);
+	expectError(@bad, "invalid UTF-8", 3, 1, 4);
+	utf8 badKey = utf8("{\"\xC3\": 1}", utf8mode.KEEP_INVALID);
+	expectError(@badKey, "invalid UTF-8", 2, 1, 3);
+	// The character count after an invalid part, which counts as one.
+	utf8 after = utf8("[\xFF]", utf8mode.KEEP_INVALID);
+	expectError(@after, "unexpected character", 1, 1, 2);
+}
+
+func nested(int64 depth) -> utf8 s
+{
+	int64 k = 0;
+	while k < depth { s << "["; k + 1 -> k; }
+	0 -> k;
+	while k < depth { s << "]"; k + 1 -> k; }
+}
+
+func testDepth()
+{
+	utf8 ok = nested(512);
+	jsonresult r = parseJson(@ok);
+	if !(r is value) { fail("depth 512"); }
+	utf8 deep = nested(513);
+	expectError(@deep, "nesting too deep", 512, 1, 513);
+	expectError("[[1]]", "nesting too deep", 1, 1, 2, 1);
+	expectJson("[1]", "[1]");
+	jsonresult r1 = parseJson("[[1]]", 2);
+	if !(r1 is value) { fail("maxDepth 2"); }
+	expectError("{\"a\": {}}", "nesting too deep", 6, 1, 7, 1);
+}
+
+func testMake()
+{
+	json a = [1, 2.5, "x", true, {"k": []}, {}];
+	utf8 out;
+	show(@a, @!out);
+	if out != "[1,f2.5,\"x\",true,{k:[]},{}]" { fail("json literal"); }
+	utf8 t = "u";
+	json s = json(@t);
+	json n = json(int64(3));
+	json f = json(0.5);
+	json b = json(false);
+	[+]json xs = [s, n];
+	json items = json(xs>>);
+	[""]json d = {};
+	f -> d["f"];
+	b -> d["b"];
+	json members = json(d>>);
+	utf8 o2;
+	show(@items, @!o2);
+	show(@members, @!o2);
+	if o2 != "[\"u\",3]{f:f0.5,b:false}" { fail("json functions"); }
+	json nul;
+	if !(nul is Null) { fail("declared json"); }
+}
+
+func testTake()
+{
+	jsonresult r = parseJson("{\"name\": \"a\", \"tags\": [1, 2]}");
+	json config;
+	if r is value { r.value ->> config; }
+	if !(r is value) || !(r.value is Null) { fail("given value"); }
+	if config is @m = members {
+		if m["name"] is @s { if s != "a" { fail("name"); } } else { fail("name kind"); }
+		if m["tags"] is @t = items { if len(@t) != 2 { fail("tags"); } } else { fail("tags kind"); }
+	} else {
+		fail("members");
+	}
+}
+
+mtrace();
+testValues();
+testStrings();
+testErrors();
+testDepth();
+testMake();
+testTake();
+muntrace();

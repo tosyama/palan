@@ -1,6 +1,7 @@
 library std;
 
 import "graphemeprops.pa";
+import "utf8scan.pa";
 cinclude <string.h>;
 
 // What a utf8 does with bytes that are not valid UTF-8, when it is made or added to.
@@ -30,33 +31,6 @@ export type utf8graphemes {
 	private @utf8 s;
 	private int64 pos = 0;
 };
-
-// The length of the valid UTF-8 sequence at b[i], or minus the length of the invalid part there:
-// the longest start of a valid sequence, or one byte (the Unicode "maximal subpart").
-func scan(@[]uint8 b, int64 i, int64 n) -> int64
-{
-	uint8 c = b[i];
-	if c < 128 { return 1; }
-	int64 need = 0;
-	uint8 lo = 128;
-	uint8 hi = 191;
-	if c >= 194 && c <= 223 { 1 -> need; }
-	else if c == 224 { 2 -> need; 160 -> lo; }
-	else if c == 237 { 2 -> need; 159 -> hi; }
-	else if c >= 225 && c <= 239 { 2 -> need; }
-	else if c == 240 { 3 -> need; 144 -> lo; }
-	else if c == 244 { 3 -> need; 143 -> hi; }
-	else if c >= 241 && c <= 243 { 3 -> need; }
-	else { return -1; }
-	int64 k = 1;
-	while k <= need {
-		if i + k >= n || b[i + k] < lo || b[i + k] > hi { return -k; }
-		128 -> lo;
-		191 -> hi;
-		k + 1 -> k;
-	}
-	return k;
-}
 
 func looser(utf8mode a, utf8mode b) -> utf8mode
 {

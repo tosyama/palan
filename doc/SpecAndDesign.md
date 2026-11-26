@@ -364,7 +364,9 @@ never published:
   they stand for.
 - A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
   declarations need it or not, since its archive is linked). A C type comes through
-  `cinclude ... export`. An `import "..."` of an internal module disappears.
+  `cinclude ... export`. An `import "..."` of an internal module disappears. Another main of the
+  same library is imported as its users do (std's json imports `<std/utf8>`), so its types stay
+  its own; imported as a source, it would be an internal module, whose types cannot be published.
 - A struct or enum of an internal module is not written in the main's `.pai`: its reader would identify
   it by the main's module, unlike the objects. Not taken: stating each such type's module in the
   `.pai` (`export type Kept from std.kept {...}`, or a statement switching the module of the

@@ -1,0 +1,42 @@
+/// std/json tests
+///
+/// @file jsonTests.cpp
+/// @copyright 2026 YAMAGUCHI Toshinobu
+
+#include <gtest/gtest.h>
+#include <fstream>
+#include "../test-base/testBase.h"
+
+using namespace std;
+
+// The tests in json.pa cover parsing; run under mtrace, they also show that neither a parsed
+// value nor a failed parse leaks.
+TEST(std_json, top_level_tests) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("bin/palan -o out/json_tests ../src/std/json.pa"), "");
+	ASSERT_EQ(execTestCommand("env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
+		"MALLOC_TRACE=out/json_tests.log out/json_tests"), "");
+	ifstream log("out/json_tests.log");
+	int allocs = 0, frees = 0;
+	for (string line; getline(log, line);) {
+		if (line.find(" + ") != string::npos) allocs++;
+		else if (line.find(" - ") != string::npos) frees++;
+	}
+	EXPECT_GT(allocs, 0);
+	EXPECT_EQ(allocs, frees);
+}
+
+TEST(std_json, imported_from_the_build_tree) {
+	cleanTestEnv();
+	ofstream("out/uses.pa") << "import <std/json>;\nimport <std/utf8>;\ncinclude <stdio.h>;\n"
+		"jsonresult r = parseJson(\"{\\\"a\\\": [1, 2.5, \\\"x\\\"]}\");\n"
+		"if r is @v = value && v is @m = members && m[\"a\"] is @xs = items {\n"
+		"\tif xs[0] is copy i && xs[1] is copy f && xs[2] is @s { printf(\"%ld %g %s\\n\", i, f, s -> cstr()); }\n"
+		"}\n"
+		"jsonresult e = parseJson(\"[1,\\n tru]\");\n"
+		"if e is @err = error { printf(\"%s %ld %ld:%ld\\n\", err.message -> cstr(), err.pos, err.line, err.col); }\n"
+		"json j = [true, {\"k\": 3}];\n"
+		"if j is @t = items && t[1] is @d = members && d[\"k\"] is copy n = i { printf(\"%ld\\n\", n); }\n";
+	ASSERT_EQ(execTestCommand("bin/palan out/uses.pa"),
+		"1 2.5 x\nunexpected character 8 2:5\n3\n");
+}
