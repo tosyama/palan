@@ -40,3 +40,20 @@ TEST(std_json, imported_from_the_build_tree) {
 	ASSERT_EQ(execTestCommand("bin/palan out/uses.pa"),
 		"1 2.5 x\nunexpected character 8 2:5\n3\n");
 }
+
+TEST(std_json, runtime_errors) {
+	struct { const char* code; const char* error; } cases[] = {
+		{"flo64 z = 0.0;\njson j = json(z / z);\nutf8 t = toUtf8(@j);\n", "json number is NaN or infinite"},
+		{"flo64 f = 1e308;\njson j = json(f * 10.0);\nutf8 t = toUtf8(@j);\n", "json number is NaN or infinite"},
+		{"json j = \"1\";\nflo64 f = num(@j);\n", "num of a json that is not a number"},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/fails.pa") << "import <std/json>;\nimport <std/utf8>;\n" << c.code;
+		ASSERT_EQ(execTestCommand("bin/palan -o out/fails_bin out/fails.pa"), "") << c.code;
+		// ulimit -c 0 keeps the program's core dump out of build/.
+		string out = execTestCommand("ulimit -c 0; out/fails_bin 2>out/stderr; echo status $?; cat out/stderr");
+		string expected = string("status 134\nruntime error: ") + c.error + "\n";
+		EXPECT_EQ(out.substr(0, expected.size()), expected) << c.code;
+	}
+}

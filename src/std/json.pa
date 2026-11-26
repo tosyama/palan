@@ -7,6 +7,8 @@ import "utf8scan.pa";
 cinclude <stdlib.h>;
 cinclude <string.h>;
 cinclude <locale.h>;
+cinclude <stdio.h>;
+cinclude <unistd.h>;
 
 // A JSON value.
 export type json union {
@@ -41,7 +43,7 @@ export func json([+]json v) -> json { return json.items(v>>); }
 export func json([""]json v) -> json { return json.members(v>>); }
 
 // strtod reads the decimal point of the C locale a program may have set.
-global locale_t cNumeric = newlocale(LC_NUMERIC_MASK, "C", 0 as locale_t) for toFlo;
+global locale_t cNumeric = newlocale(LC_NUMERIC_MASK, "C", 0 as locale_t) for toFlo, emitFlo;
 
 type parser {
 	@[]uint8 b;
@@ -361,9 +363,249 @@ export func parseJson(@utf8 s, int64 maxDepth = 512) -> jsonresult r
 	e ->> r.error;
 }
 
+
+// Stops the program as palan's own checks do.
+func runtimeError(@[]uint8 msg)
+{
+	write(2, "runtime error: ", 15);
+	write(2, msg, strlen(msg));
+	write(2, "\n", 1);
+	abort();
+}
+
+func pushText(@![+]uint8 buf, @[]uint8 cs)
+{
+	int64 k = 0;
+	while cs[k] != 0 { buf.push(cs[k]); k + 1 -> k; }
+}
+
+func pushHex(@![+]uint8 buf, uint8 v)
+{
+	if v < 10 { buf.push(v + '0'); } else { buf.push(v - 10 + 'a'); }
+}
+
+// b[0] to b[n - 1] as a JSON string, escaping only what must be; an invalid part is U+FFFD.
+func emitString(@![+]uint8 buf, @[]uint8 b, int64 n)
+{
+	buf.push('"');
+	int64 i = 0;
+	while i < n {
+		uint8 c = b[i];
+		if c >= 128 {
+			int64 k = scan(b, i, n);
+			if k < 0 {
+				buf.push(0xEF);
+				buf.push(0xBF);
+				buf.push(0xBD);
+				i - k -> i;
+				continue;
+			}
+			while k > 0 { buf.push(b[i]); i + 1 -> i; k - 1 -> k; }
+			continue;
+		}
+		if c == '"' || c == '\\' {
+			buf.push('\\');
+			buf.push(c);
+		} else if c >= 32 {
+			buf.push(c);
+		} else if c == 8 { pushText(buf, "\\b"); }
+		else if c == 12 { pushText(buf, "\\f"); }
+		else if c == '\n' { pushText(buf, "\\n"); }
+		else if c == '\r' { pushText(buf, "\\r"); }
+		else if c == '\t' { pushText(buf, "\\t"); }
+		else {
+			pushText(buf, "\\u00");
+			pushHex(buf, c >>> 4);
+			pushHex(buf, c & 15);
+		}
+		i + 1 -> i;
+	}
+	buf.push('"');
+}
+
+// The fewest digits that read back as f, laid out as JSON.stringify does, and ".0" when nothing
+// else would make it read back as an f rather than an i.
+func emitFlo(@![+]uint8 buf, flo64 f)
+{
+	if f != f || f > 1.7976931348623157e308 || f < -1.7976931348623157e308 {
+		runtimeError("json number is NaN or infinite");
+	}
+	$[32]uint8 t;
+	locale_t old = uselocale(cNumeric);
+	int32 p = 1;
+	while p < 17 {
+		snprintf(@!t, 32, "%.*e", p - 1, f);
+		if strtod(@t, NULL) == f { break; }
+		p + 1 -> p;
+	}
+	snprintf(@!t, 32, "%.*e", p - 1, f);
+	uselocale(old);
+
+	// t is [-]d[.ddd]e(+|-)x: take the digits d and n, where f is 0.d times 10 to the n.
+	$[20]uint8 d;
+	int64 k = 0;
+	int64 i = 0;
+	if t[0] == '-' { buf.push('-'); 1 -> i; }
+	while t[i] != 'e' {
+		if t[i] != '.' { t[i] -> d[k]; k + 1 -> k; }
+		i + 1 -> i;
+	}
+	while k > 1 && d[k - 1] == '0' { k - 1 -> k; }
+	bool minus = t[i + 1] == '-';
+	int64 x = 0;
+	i + 2 -> i;
+	while t[i] != 0 { x * 10 + int64(t[i]) - 48 -> x; i + 1 -> i; }
+	if minus { 0 - x -> x; }
+	int64 n = x + 1;
+
+	if k <= n && n <= 21 {
+		0 -> i;
+		while i < k { buf.push(d[i]); i + 1 -> i; }
+		while i < n { buf.push('0'); i + 1 -> i; }
+		pushText(buf, ".0");
+	} else if 0 < n && n <= 21 {
+		0 -> i;
+		while i < k {
+			if i == n { buf.push('.'); }
+			buf.push(d[i]);
+			i + 1 -> i;
+		}
+	} else if -6 < n && n <= 0 {
+		pushText(buf, "0.");
+		while n < 0 { buf.push('0'); n + 1 -> n; }
+		0 -> i;
+		while i < k { buf.push(d[i]); i + 1 -> i; }
+	} else {
+		buf.push(d[0]);
+		if k > 1 { buf.push('.'); }
+		1 -> i;
+		while i < k { buf.push(d[i]); i + 1 -> i; }
+		buf.push('e');
+		if n < 1 { buf.push('-'); } else { buf.push('+'); }
+		if n < 1 { 1 - n -> x; } else { n - 1 -> x; }
+		snprintf(@!t, 32, "%ld", x);
+		pushText(buf, @t);
+	}
+}
+
+func newline(@![+]uint8 buf, int64 indent, int64 level)
+{
+	if indent <= 0 { return; }
+	buf.push('\n');
+	int64 k = 0;
+	while k < indent * level { buf.push(' '); k + 1 -> k; }
+}
+
+func emit(@json j, @![+]uint8 buf, int64 indent, int64 level)
+{
+	if j is {
+		Null { pushText(buf, "null"); }
+		copy b { if b { pushText(buf, "true"); } else { pushText(buf, "false"); } }
+		copy i {
+			$[24]uint8 t;
+			snprintf(@!t, 24, "%ld", i);
+			pushText(buf, @t);
+		}
+		copy f { emitFlo(buf, f); }
+		@s { emitString(buf, cstr(@s), byteLen(@s)); }
+		@items {
+			buf.push('[');
+			for @e, k in items {
+				if k > 0 { buf.push(','); }
+				newline(buf, indent, level + 1);
+				emit(@e, buf, indent, level + 1);
+			}
+			if len(@items) > 0 { newline(buf, indent, level); }
+			buf.push(']');
+		}
+		@members {
+			buf.push('{');
+			int64 k = 0;
+			for @v, key in members {
+				if k > 0 { buf.push(','); }
+				newline(buf, indent, level + 1);
+				emitString(buf, key, int64(strlen(key)));
+				buf.push(':');
+				if indent > 0 { buf.push(' '); }
+				emit(@v, buf, indent, level + 1);
+				k + 1 -> k;
+			}
+			if k > 0 { newline(buf, indent, level); }
+			buf.push('}');
+		}
+	}
+}
+
+// j as JSON text: on one line without spaces, or with indent > 0, an element a line indented by
+// indent spaces a level.
+export func toUtf8(@json j, int32 indent = 0) -> utf8 r
+{
+	[+]uint8 buf = [];
+	emit(j, @!buf, indent, 0);
+	buf.push(0);
+	utf8(@buf) -> r;
+}
+
+export func <<(@!utf8 s, @json j) -> @!utf8
+{
+	utf8 t = toUtf8(j);
+	append(s, @t);
+	return s;
+}
+
+// An i or f as a flo64, as JSON does not tell 1 from 1.0.
+export func num(@json j) -> flo64
+{
+	if j is copy i { return flo64(i); }
+	if j is copy f { return f; }
+	runtimeError("num of a json that is not a number");
+	return 0.0;
+}
+
+// Whether i and f are one number. Converting i to flo64 would round past 2^53, so f is converted
+// instead when it is whole and within int64.
+func sameNum(int64 i, flo64 f) -> bool
+{
+	if !(f >= -9223372036854775808.0 && f < 9223372036854775808.0) { return false; }
+	int64 k = int64(f);
+	return k == i && flo64(k) == f;
+}
+
+// The same variant and contents; an i and an f equal as numbers, and members in any order.
+export func ==(@json p, @json q) -> bool
+{
+	if p is {
+		Null { return q is Null; }
+		copy b { if q is copy c = b { return b == c; } }
+		copy i {
+			if q is copy k = i { return i == k; }
+			if q is copy f { return sameNum(i, f); }
+		}
+		copy f {
+			if q is copy g = f { return f == g; }
+			if q is copy i { return sameNum(i, f); }
+		}
+		@s { if q is @t = s { return s == t; } }
+		@items {
+			if q is @v = items {
+				if len(@items) != len(@v) { return false; }
+				for @e, k in items { if e != v[k] { return false; } }
+				return true;
+			}
+		}
+		@members {
+			if q is @m = members {
+				if len(@members) != len(@m) { return false; }
+				for @e, key in members { if !has(@m, key) || e != m[key] { return false; } }
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 // ---- Top-level tests ----
 
-cinclude <stdio.h>;
 cinclude <mcheck.h>;
 
 func fail(@[]uint8 what)
@@ -564,6 +806,110 @@ func testTake()
 	}
 }
 
+func expectText(@json j, int32 indent, @[]uint8 expected)
+{
+	utf8 out = toUtf8(j, indent);
+	if out != expected {
+		printf("[%s]\n", out -> cstr());
+		fail(expected);
+	}
+}
+
+func testWrite()
+{
+	expectText(@null_(), 0, "null");
+	expectText(true, 0, "true");
+	expectText(-12, 0, "-12");
+	expectText(@json(int64(-9223372036854775807 - 1)), 0, "-9223372036854775808");
+	expectText(0.1, 0, "0.1");
+	expectText(100.0, 0, "100.0");
+	expectText(1e21, 0, "1e+21");
+	expectText(1.5e-7, 0, "1.5e-7");
+	expectText(1e-6, 0, "0.000001");
+	expectText(123.25, 0, "123.25");
+	expectText(1e20, 0, "100000000000000000000.0");
+	expectText(5e-324, 0, "5e-324");
+	expectText(-1.7976931348623157e308, 0, "-1.7976931348623157e+308");
+	flo64 third = 1.0;
+	third / 3.0 -> third;
+	expectText(@json(third), 0, "0.3333333333333333");
+	flo64 nz = -1.0;
+	nz * 0.0 -> nz;
+	expectText(@json(nz), 0, "-0.0");
+	expectText("a\"b\\c/\u{E9}", 0, "\"a\\\"b\\\\c/\u{E9}\"");
+	expectText("\x08\x0C\n\r\t\x01\x1F\x7F", 0, "\"\\b\\f\\n\\r\\t\\u0001\\u001f\x7F\"");
+	utf8 bad = utf8("a\xFF\xE2\x82b", utf8mode.KEEP_INVALID);
+	expectText(@json(@bad), 0, "\"a\u{FFFD}\u{FFFD}b\"");
+	[""]json d = {};
+	1 -> d["k\xFF"];
+	expectText(@json(d>>), 0, "{\"k\u{FFFD}\":1}");
+
+	json v = {"b": [1, [], {}], "a": {"x": null_()}, "c": "s"};
+	expectText(@v, 0, "{\"b\":[1,[],{}],\"a\":{\"x\":null},\"c\":\"s\"}");
+	expectText(@v, 2, "{\n  \"b\": [\n    1,\n    [],\n    {}\n  ],\n  \"a\": {\n    \"x\": null\n  },\n  \"c\": \"s\"\n}");
+	expectText([[1]], 4, "[\n    [\n        1\n    ]\n]");
+	expectText([], 2, "[]");
+	expectText({}, 2, "{}");
+
+	utf8 s = "v=";
+	s << v << "!";
+	if s != "v={\"b\":[1,[],{}],\"a\":{\"x\":null},\"c\":\"s\"}!" { fail("<<"); }
+}
+
+func null_() -> json { return json.Null; }
+
+func expectRoundTrip(@utf8 text)
+{
+	jsonresult r = parseJson(text);
+	if !(r is value) { fail(text -> cstr()); }
+	utf8 once = toUtf8(@r.value);
+	utf8 pretty = toUtf8(@r.value, 2);
+	jsonresult r2 = parseJson(@once);
+	jsonresult r3 = parseJson(@pretty);
+	if r2 is @a = value && r3 is @b = value {
+		if a != r.value || b != r.value { fail(text -> cstr()); }
+		utf8 twice = toUtf8(@a);
+		if twice != once { fail(text -> cstr()); }
+	} else {
+		fail(text -> cstr());
+	}
+}
+
+func testRoundTrip()
+{
+	expectRoundTrip("[0.1, 1e300, -2.5e-308, 5e-324, 1.7976931348623157e308, 123456789.123456789, -0.0, 3.0]");
+	expectRoundTrip("{\"a\": [1, -9223372036854775808, 9223372036854775807], \"\\u0001\\\"\": {\"\": true}}");
+	expectRoundTrip("\"\\ud83d\\ude00 \\u20ac \\t\"");
+	// Each f reads back with the same bits.
+	jsonresult r = parseJson("[0.1, 2.2250738585072014e-308, 0.30000000000000004]");
+	if r is @v = value {
+		utf8 text = toUtf8(@v);
+		if text != "[0.1,2.2250738585072014e-308,0.30000000000000004]" { printf("%s\n", text -> cstr()); fail("f digits"); }
+	}
+}
+
+func testNum()
+{
+	if num(3) != 3.0 || num(2.5) != 2.5 { fail("num"); }
+	json big = json(int64(9007199254740993));
+	if num(@big) != 9007199254740992.0 { fail("num big"); }
+}
+
+func testEquals()
+{
+	json a = {"x": [1, 2.0, "s", true, null_()], "y": {}};
+	json b = {"y": {}, "x": [1.0, 2, "s", true, null_()]};
+	if a != b { fail("== members in any order"); }
+	if json(int64(9007199254740993)) == json(9007199254740992.0) { fail("== 2^53+1"); }
+	if json(int64(9007199254740992)) != json(9007199254740992.0) { fail("== 2^53"); }
+	if json(1.5) == 1 || json(1e19) == json(int64(9223372036854775807)) { fail("== not whole or beyond int64"); }
+	if json(-9223372036854775808.0) != json(int64(-9223372036854775807 - 1)) { fail("== int64 minimum"); }
+	if json(true) == 1 || json.Null == false || json("1") == 1 { fail("== kinds"); }
+	if json([1]) == json([1, 2]) || json([1, 2]) == json([2, 1]) { fail("== items"); }
+	if json({"a": 1}) == json({"a": 1, "b": 2}) || json({"a": 1}) == json({"b": 1}) || json({"a": 1}) == json({"a": 2}) { fail("== members"); }
+	if json("x") != "x" || null_() != json.Null { fail("== same"); }
+}
+
 mtrace();
 testValues();
 testStrings();
@@ -571,4 +917,8 @@ testErrors();
 testDepth();
 testMake();
 testTake();
+testWrite();
+testRoundTrip();
+testNum();
+testEquals();
 muntrace();
