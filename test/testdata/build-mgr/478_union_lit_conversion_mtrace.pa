@@ -1,0 +1,40 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type J union { Null; bool b; int64 i; flo64 f; [+]uint8 s; [+]J items; [""]J members; };
+func J(bool v) -> J { return J.b(v); }
+func J(int64 v) -> J { return J.i(v); }
+func J(flo64 v) -> J { return J.f(v); }
+func J(@[]uint8 cs) -> J r { [+]uint8 b = []; int64 k = 0; while cs[k] != 0 { cs[k] -> b.push(); k + 1 -> k; } 0 -> b.push(); b ->> r.s; }
+func J([+]J v) -> J { return J.items(v>>); }
+func J([""]J v) -> J { return J.members(v>>); }
+func show(@J j) {
+	if j is {
+		Null { printf("null"); }
+		copy b { if b { printf("true"); } else { printf("false"); } }
+		copy i { printf("%ld", i); }
+		copy f { printf("%g", f); }
+		@s { printf("\"%s\"", s); }
+		@items { printf("["); int64 k = 0; for @e in items { if k > 0 { printf(","); } show(@e); k + 1 -> k; } printf("]"); }
+		@members { printf("{"); int64 k = 0; for @v, k2 in members { if k > 0 { printf(","); } printf("%s:", k2); show(@v); k + 1 -> k; } printf("}"); }
+	}
+}
+func mk() -> J { return [1, "r", {"z": false}]; }
+type pair { J a; int32 n; };
+func pick(@[]uint8 s) { printf("text "); }
+func pick([+]int64 v) { printf("ints %ld ", len(@v)); }
+mtrace();
+{
+	J a = true; show(@a); printf("\n");
+	J b = [1, 2.5, "x", [true, []], {"k": [3]}, {}]; show(@b); printf("\n");
+	[2, 3] -> a; show(@a); printf("\n");
+	show([7]); printf("\n");
+	show(@J([1, 2])); printf("\n");
+	J m = mk(); show(@m); printf("\n");
+	pair p = [[1], 2]; show(@p.a); printf("\n");
+	{"q": 1} -> p.a; show(@p.a); printf("\n");
+	[2]J arr = [[1], {"x": 2}]; show(@arr[1]); printf("\n");
+	[false] -> arr[0]; show(@arr[0]); printf("\n");
+	[""]J d = {"x": [1]}; [2] -> d["y"]; show(@d["y"]); printf("\n");
+	J e = {}; show(@e); printf("\n");
+	pick("t"); pick([1, 2]); printf("\n");
+}

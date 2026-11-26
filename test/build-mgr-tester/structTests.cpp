@@ -1525,3 +1525,11 @@ TEST(build_mgr, union_if_is_mtrace) {
 	expectMtraceRun("477_union_if_is_mtrace",
 		"null\nb or f\ni 3\nitems 2\nitems 3\nh 3\nk 1\n3\n", 67);
 }
+
+// Literals converted to a union along every path a value takes, nested
+// ones too; an array literal picks pick([+]int64), not the borrowed bytes.
+TEST(build_mgr, union_lit_conversion_mtrace) {
+	expectMtraceRun("478_union_lit_conversion_mtrace",
+		"true\n[1,2.5,\"x\",[true,[]],{k:[3]},{}]\n[2,3]\n[7]\n[1,2]\n[1,\"r\",{z:false}]\n[1]\n{q:1}\n{x:2}\n"
+		"[false]\n[2]\n{}\ntext ints 2 \n", 153);
+}

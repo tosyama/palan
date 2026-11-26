@@ -1211,6 +1211,9 @@ show(2.5);          // float 2.5
   fits without the conversion, so `f(@[]uint8)` is chosen over `f(@name)` for `f("Ann")`, and
   `f(int64)` over `f(big)` for `f(12)`.
   Among those needing it, the rules above apply, a converted argument counting as exact.
+- An array literal fits only a struct, sized array or `[+]T` parameter, and a dictionary literal only
+  a struct or `[""]T` one. Its elements are not looked at, so with `f(@[]uint8)` and `f([+]int64)`, `f([1, 2])` calls the second, while with
+  `f([+]int64)` and `f([+]uint8)` it is ambiguous.
 
 ### Operator Functions
 
@@ -2633,8 +2636,9 @@ a copy of it (including what it owns), which the caller owns.
 
 A function named like a struct type, returning it and callable with a literal alone (its other
 parameters have [defaults](#default-arguments) or are [variadic](#variadic-arguments)), converts a
-string, integer or floating-point literal to that type wherever a value of the type, or a `@T` of
-it, is expected:
+string, integer, floating-point or `bool` literal to that type wherever a value of the type, or a
+`@T` of it, is expected. For a [union](#tagged-unions), it converts an array or dictionary literal
+too:
 
 ```palan
 type name { [+]uint8 bytes; };
@@ -2651,6 +2655,14 @@ func big(flo64 f) -> big b { ... }
 
 big x = 12;              // big x = big(12);
 big y = 1.5;             // big y = big(1.5);
+
+type json union { Null; bool b; int64 i; [+]json items; [""]json members; };
+func json(bool v) -> json { return json.b(v); }
+func json(int64 v) -> json { return json.i(v); }
+func json([+]json v) -> json { return json.items(v>>); }
+func json([""]json v) -> json { return json.members(v>>); }
+
+json j = [1, true, {"k": []}];   // json([json(1), json(true), json({"k": json([])})])
 ```
 
 - It happens in a variable's initializer, the source of `->`, an argument (a variadic one too),
@@ -2663,8 +2675,13 @@ big y = 1.5;             // big y = big(1.5);
 - A [const](#constant-declarations) or a constant expression converts as the literal it folds to,
   computed in the literal's default type (`int64`, `uint64` or `flo64`): `big x = 12 * 3;` is
   `big(36)`. Any other value is converted by calling the function (`name(getenv("HOME"))`,
-  `big(n * 3)`), and so is `true`, an enum value or a character literal, which have types of their
-  own. Nothing converts for a `@!T`, and `"Ann" as name` is a compile error.
+  `big(n * 3)`), and so is an enum value or a character literal, which have types of their own.
+  `true` and `false` convert only by a function taking `bool`: with `big(int64)` alone,
+  `big x = true;` is a compile error. Nothing converts for a `@!T`, and `"Ann" as name` is a compile
+  error.
+- An array or dictionary literal converts only to a union: for a struct it gives the fields. Its
+  elements convert by the parameter's type, so nested literals convert too. With no function to
+  convert it, it is a compile error.
 - The functions are those of the name visible at the literal, including those of a module
   imported with an alias (`import "names.pa" as N;` converts for `N.name`). Among those callable
   with the literal alone, one is chosen as for an [overloaded](#overloading) call: `big(int64)` for
@@ -2769,7 +2786,8 @@ contain itself through a `[+]T` or `[""]T` as a struct may.
   variant is left for, are errors. `j` is evaluated once, before the arms. Only one arm runs, and
   `break` and `continue` in it act on the enclosing loop.
 - **`json.i(5)`** is a value holding a variant, its argument given as to a `T` parameter;
-  `json.Null` is the value of a variant without contents.
+  `json.Null` is the value of a variant without contents. Literals, arrays and dictionaries too,
+  [convert](#conversion-from-a-literal) by functions named like the union.
 - Copying, `->`, `->>` and release work as for a struct, on the variant held. `func ->` may be
   defined as for a struct; comparisons are not generated.
 - **Layout**: a `uint32` tag (the variant's index in declaration order), then the contents of every

@@ -1178,6 +1178,12 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'else' is never reached: every variant of union '" + arg1 + "' has an arm.";
 
+		case E_UnionLitNoConversion:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "a '" + arg1 + "' literal does not convert to union '" + arg2 + "': no function '" + arg2
+				+ "' takes it alone.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

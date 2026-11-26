@@ -889,7 +889,7 @@ json PlnSemanticAnalyzer::sa_struct_lit_var_decl(const json& stmt, VarStorage st
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_StructLitTarget) << endl;
 		exit(1);
 	}
-	if (!isStructName(vtype))
+	if (!isStructName(vtype) || structDefs_.at(vtype["type-name"].get<string>()).isTagged)
 		return sa_var_decl_group(stmt, storage);
 
 	const StructDef& def = requireCompleteStruct(vtype["type-name"].get<string>(), stmt);
@@ -974,8 +974,8 @@ json PlnSemanticAnalyzer::sa_struct_lit(const json& item, const StructDef& def)
 		return value;
 	}
 	if (def.isTagged) {
-		cerr << locPrefix(item) << PlnSaMessage::getMessage(E_ExprNotImplemented) << endl;
-		exit(1);
+		json unionVT = {{"type-kind", "pntr"}, {"base-type", {{"type-kind", "struct"}, {"type-name", def.name}}}}; // LCOV_EXCL_BR_LINE
+		return sa_expression_for(literalConversion(item, unionVT), unionVT);
 	}
 	const json& items = item["items"];
 	vector<const json*> given(def.fields.size(), nullptr);
@@ -1881,7 +1881,7 @@ json PlnSemanticAnalyzer::sa_struct_var_decl(const json& stmt, VarStorage storag
 		if (var.contains("init")) {
 			// Evaluate before declareVar: the initializer must not see the
 			// variable it is initializing (same rule as sa_var_decl).
-			json userInit = sa_expression(literalConversion(var["init"], pntr_type));
+			json userInit = sa_expression_for(literalConversion(var["init"], pntr_type), pntr_type);
 			bool sameStruct = userInit.contains("value-type")
 				&& userInit["value-type"].value("base-type", json()) == pntr_type["base-type"];
 			if (isStructRetCall(userInit) && sameStruct) {

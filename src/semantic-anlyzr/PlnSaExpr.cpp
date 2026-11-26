@@ -1053,6 +1053,12 @@ json PlnSemanticAnalyzer::sa_expression(const json &rawExpr, const PlnType* expe
 
 json PlnSemanticAnalyzer::sa_expression_for(const json& expr, const json& toType)
 {
+	if (isAggregateLit(expr) && isUnionPntr(toType)) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_UnionLitNoConversion,
+			expr["expr-type"] == "arr-lit" ? "[..]" : "{..}",
+			PlnSaMessage::writtenTypeName(toType["base-type"]["type-name"].get<string>())) << endl;
+		exit(1);
+	}
 	if (isFuncPtr(toType) && namesOverloadedFunc(expr)) return sa_func_ref(expr, &toType);
 	return sa_expression(expr, registry_.fromJson(toType));
 }

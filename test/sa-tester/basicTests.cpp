@@ -1300,3 +1300,16 @@ TEST(sa, union_if_is)
 	EXPECT_EQ(second["else"]["stmt-type"], "block");
 	EXPECT_EQ(chain.dump().find("__pln_variant"), string::npos);
 }
+
+// `true` converts by J(bool), and an array literal by J([+]J), which
+// J(@[]uint8) does not compete with: an array literal cannot be borrowed unsized.
+TEST(sa, union_lit_conversion)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1407_union_lit_conversion.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	ASSERT_EQ(stmts.size(), 4u);
+	EXPECT_EQ(stmts[1]["body"]["name"], "_1407_union_lit_conversion..J.bool");
+	EXPECT_EQ(stmts[3]["body"]["name"], "_1407_union_lit_conversion..J.PVP37__pln_L26_1407_union_lit_conversion_J");
+}

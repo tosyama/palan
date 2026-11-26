@@ -266,6 +266,7 @@ enum PlnSaMessageCode {
 	E_IsArmRepeated,	// arg1: variant name
 	E_IsArmMissing,	// arg1: the variants not handled, quoted and comma-separated, arg2: union type name
 	E_IsElseUnreachable,	// arg1: union type name
+	E_UnionLitNoConversion,	// arg1: "[..]" or "{..}", arg2: union type name
 };
 
 class PlnSaMessage

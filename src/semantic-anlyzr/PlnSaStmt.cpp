@@ -1365,9 +1365,10 @@ json PlnSemanticAnalyzer::sa_assign_stmt(const json& stmt)
 		exit(1);
 	}
 	requireAssignable(name, stmt);
-	if (isAggregateLit(stmt["value"]) && (isVarrStorage(*varType) || isDictStorage(*varType) || assignsByFunc(*varType)))
+	bool lit = isAggregateLit(stmt["value"]) && !isUnionPntr(*varType);
+	if (lit && (isVarrStorage(*varType) || isDictStorage(*varType) || assignsByFunc(*varType)))
 		return sa_lit_assign_via_temp(stmt, *varType);
-	if (isAggregateLit(stmt["value"]) && (isStructPntr(*varType) || isArrLevel(*varType)))
+	if (lit && (isStructPntr(*varType) || isArrLevel(*varType)))
 		return json::array({sa_aggregate_lit_assign(stmt, {{"expr-type", "id"}, {"name", name}}, *varType)}); // LCOV_EXCL_BR_LINE
 	const PlnType* toType = registry_.fromJson(*varType);
 	if (stmt.value("ownership-transfer", false))
@@ -2022,7 +2023,7 @@ json PlnSemanticAnalyzer::sa_dict_store_stmt(const json& stmt, json saDict, json
 	}
 	const json& value = stmt["value"];
 	const json elem = saDict["value-type"]["base-type"]["base-type"];
-	if (isAggregateLit(value) && (isStructPntr(elem) || isCopiedByValue(elem) || elem["type-kind"] == "struct"))
+	if (isAggregateLit(value) && !isUnionPntr(elem) && (isStructPntr(elem) || isCopiedByValue(elem) || elem["type-kind"] == "struct"))
 		return sa_lit_assign_via_temp(stmt, elem, litAddr);
 	// LCOV_EXCL_BR_START
 	const json& target = stmt["target"];
@@ -2051,10 +2052,11 @@ json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
 		exit(1);
 	}
-	if (isAggregateLit(stmt["value"]) && (isVarrStorage(sa_target["value-type"]) || isDictStorage(sa_target["value-type"]) // LCOV_EXCL_BR_LINE
+	bool lit = isAggregateLit(stmt["value"]) && !isUnionPntr(sa_target["value-type"]);
+	if (lit && (isVarrStorage(sa_target["value-type"]) || isDictStorage(sa_target["value-type"]) // LCOV_EXCL_BR_LINE
 	    || assignsByFunc(withoutArrPermission(sa_target["value-type"])))) // LCOV_EXCL_BR_LINE
 		return sa_lit_assign_via_temp(stmt, sa_target["value-type"], litAddr);
-	if (isAggregateLit(stmt["value"]) && (isStructPntr(sa_target["value-type"]) || isArrLevel(sa_target["value-type"]))) {
+	if (lit && (isStructPntr(sa_target["value-type"]) || isArrLevel(sa_target["value-type"]))) {
 		json lit = sa_aggregate_lit_assign(stmt, stmt["target"], sa_target["value-type"], litAddr);
 		return litAddr ? lit : json::array({move(lit)}); // LCOV_EXCL_BR_LINE
 	}
@@ -2474,7 +2476,7 @@ json PlnSemanticAnalyzer::bindReturnLit(json& stmt)
 {
 	if (currentFunc_->contains("rets") || !currentFunc_->contains("ret-type")
 			|| !isOwnedBlock((*currentFunc_)["ret-type"]) || !stmt.contains("values") || stmt["values"].size() != 1
-			|| !isAggregateLit(stmt["values"][0]))
+			|| !isAggregateLit(stmt["values"][0]) || isUnionPntr((*currentFunc_)["ret-type"]))
 		return json::array();
 	if (!retSlot_.empty()) {
 		// LCOV_EXCL_BR_START
@@ -2753,10 +2755,11 @@ json PlnSemanticAnalyzer::sa_field_store(const json& stmt, const FieldChain& cha
 		exit(1);
 	}
 	json fieldType = fieldValueType(*it);
-	if (isAggregateLit(stmt["value"]) && !transfer
+	bool lit = isAggregateLit(stmt["value"]) && !isUnionPntr(fieldType);
+	if (lit && !transfer
 	    && (isVarrStorage(fieldType) || isDictStorage(fieldType) || assignsByFunc(withoutArrPermission(fieldType))))
 		return sa_lit_assign_via_temp(stmt, fieldType, litAddr);
-	if (isAggregateLit(stmt["value"]) && (isStructPntr(fieldType) || isArrLevel(fieldType))) {
+	if (lit && (isStructPntr(fieldType) || isArrLevel(fieldType))) {
 		json fieldAst = {{"expr-type", "field-access"}, {"object", stmt["object"]}, {"field", fn}}; // LCOV_EXCL_BR_LINE
 		json lit = sa_aggregate_lit_assign(stmt, fieldAst, fieldType, litAddr);
 		return litAddr ? lit : json::array({move(lit)}); // LCOV_EXCL_BR_LINE

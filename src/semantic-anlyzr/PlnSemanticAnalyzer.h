@@ -476,7 +476,8 @@ class PlnSemanticAnalyzer {
 	json   makeCall(const json& expr, const vector<Callee>& cands, const string& writtenName);
 	vector<Callee> findCalleesUnderAnyAlias(const string& name) const;
 	vector<Callee> forProtocolCallees(const string& name, const json& structVT) const;
-	json   convertibleLiteral(const json& ast);
+	json   convertibleLiteral(const json& ast, bool toUnion);
+	bool   isUnionPntr(const json& vt) const;
 	vector<Callee> literalConversions(const json& structVT, const json& lit);
 	json   literalConversion(const json& ast, const json& toVT);
 	vector<Callee> usableCallees(const json& expr, const vector<Callee>& cands) const;

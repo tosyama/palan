@@ -49,6 +49,9 @@ inline json wrapConvert(const json& expr, const json& to_type) {
 }
 // LCOV_EXCL_BR_STOP
 
+inline json boolType() {
+	return {{"type-kind", "prim"}, {"type-name", "bool"}}; // LCOV_EXCL_BR_LINE
+} // LCOV_EXCL_BR_LINE
 inline json strLitType() {
 	return {{"type-kind", "pntr"}, {"base-type", {{"type-kind", "prim"}, {"type-name", "uint8"}}}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE

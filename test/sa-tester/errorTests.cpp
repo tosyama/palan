@@ -1690,8 +1690,10 @@ TEST(sa_error, union) {
 		{"error_1403_if_is_repeated.pa", ":3:20: error: variant 'Null' is already handled by another arm of this 'if ... is { }'."},
 		{"error_1404_if_is_change_variant.pa", ":5:7: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
 		{"error_1405_if_is_bind_other_arm.pa", ":5:9: error: Undefined variable or module alias 'a'."},
-		// Not yet: a literal for a union.
-		{"error_1380_union_lit_not_impl.pa", ":2:7: error: this expression is not supported"},
+		{"error_1406_union_lit_no_conversion.pa", ":2:7: error: a '{..}' literal does not convert to union 'U': no function 'U' takes it alone."},
+		{"error_1407_union_lit_ambiguous.pa", ":4:7: error: Ambiguous function call 'J': it can mean J([+]J), J([+]int64)."},
+		// Only a function taking bool converts true: a bool widens to any number.
+		{"error_1408_bool_conv_needs_bool.pa", ":3:1: error: cannot copy 'bool' into 'big'"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -486,14 +486,21 @@ added.
 - Only a value that folds to a literal converts implicitly (a literal, a const, a constant
   expression), so an allocation and a copy are never hidden behind a byte array that was not meant
   to become text. A constant expression is a literal wherever it is written, so it is folded in its
-  default type first (`big n = 12 * 3;` is `big(36)`). A literal with a type of its own (`true`, an
-  enum value, a character, `NULL`) does not convert.
+  default type first (`big n = 12 * 3;` is `big(36)`). A literal with a type of its own (an enum
+  value, a character, `NULL`) does not convert. `true` and `false` convert only by a function taking
+  `bool`: as `bool` widens to any number, `big(int64)` would otherwise make `true` a 1.
 - The conversion is chosen among the functions callable with the literal alone as any overloaded
   call is: one taking the literal's default type exactly wins.
 - The function is chosen by visibility, as an operator function is: a module may add one for a type
   it imports, and an alias does not hide it, since a conversion is never written qualified.
 - A candidate needing a conversion is considered only when none fits without one, so adding a
-  conversion function never changes which function an existing call chooses.
+  conversion function never changes a call that resolves without one. A call that converts may
+  change, as any overloaded call may when a function is added.
+- An array or dictionary literal fits only a parameter it can be made into (a struct, a sized array,
+  a block the callee owns), its elements not looked at, so `json([1, 2])` does not compete with the
+  `json(@[]uint8)` taking text. Ranking by the elements was not taken, as it would pick the bytes,
+  nor were priorities written on functions, which would need a rule between modules adding
+  conversions.
 - Not for `@!T`, since writing into a temporary is lost. `as` never calls a function.
 
 **Comparison functions.** Only `==` and `<` are defined; the other four are derived, so they agree
