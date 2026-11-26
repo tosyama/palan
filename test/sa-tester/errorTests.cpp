@@ -1694,6 +1694,8 @@ TEST(sa_error, union) {
 		{"error_1407_union_lit_ambiguous.pa", ":4:7: error: Ambiguous function call 'J': it can mean J([+]J), J([+]int64)."},
 		// Only a function taking bool converts true: a bool widens to any number.
 		{"error_1408_bool_conv_needs_bool.pa", ":3:1: error: cannot copy 'bool' into 'big'"},
+		// A bare literal is not a '@S': no overload takes it.
+		{"error_1409_lit_arg_fits_no_overload.pa", ":4:11: error: No function 'g' takes (literal); there are g(@S), g(int64)."},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

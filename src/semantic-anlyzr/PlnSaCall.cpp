@@ -202,6 +202,19 @@ ArgFit PlnSemanticAnalyzer::typeFit(const json& argVT, const json& paramVT)
 	}
 }
 
+// Whether sa_struct_lit accepts the literal for a struct parameter: an array
+// literal only with a value for each field, none hidden from here.
+bool PlnSemanticAnalyzer::structLitFits(const json& lit, const json& paramVT)
+{
+	if (lit["expr-type"] != "arr-lit") return true;
+	auto it = structDefs_.find(paramVT["base-type"]["type-name"].get<string>());
+	if (it == structDefs_.end()) return true;
+	const StructDef& def = it->second;
+	if (def.isTagged || lit["items"].size() != def.fields.size()) return false;
+	bool hidden = any_of(def.fields.begin(), def.fields.end(), [](const FieldLayout& f) { return !f.access.empty(); });
+	return !(hidden && outsideTypeModule(def.name));
+}
+
 // How an argument fits a parameter. A pending argument is judged by what it
 // can become once the parameter is known: a literal fits any primitive and is
 // exact only for its default type, an aggregate literal fits a parameter it
@@ -236,7 +249,10 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 			return ArgFit::None;
 		// What sa_lit_arg and ownedBlockArg make the literal into: a struct, a
 		// sized array or a block the callee owns, never an unsized borrow.
-		bool takes = !isCFunc && (isStructPntr(paramVT) || paramVT.contains("arr-size") || isOwnedBlock(paramVT));
+		// A borrowed parameter takes it only as '@[..]', an owned one only bare.
+		bool takes = !isCFunc && (isStructPntr(paramVT) || paramVT.contains("arr-size") || isOwnedBlock(paramVT))
+		             && (arg.ast.value("expr-type", "") == "addr-of") != isOwnedBlock(paramVT)
+		             && (!isStructPntr(paramVT) || structLitFits(lit, paramVT));
 		return takes ? ArgFit::Viable : ArgFit::None;
 	}
 	if (namesOverloadedFunc(arg.ast)) {

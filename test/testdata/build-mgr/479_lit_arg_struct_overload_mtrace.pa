@@ -1,0 +1,22 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type S { int64 a; int64 b; };
+type U union { Null; int64 i; [+]U items; };
+func U(int64 v) -> U { return U.i(v); }
+func U(@S s) -> U { return U.i(s.a); }
+func V(S s) -> U { return U.i(s.b); }
+func U([+]U v) -> U { return U.items(v>>); }
+func V([+]U v) -> U { return U.items(v>>); }
+func show(@U u) { if u is { copy i { printf("%ld ", i); } @items { printf("%ld items ", len(@items)); } Null { printf("null "); } } }
+mtrace();
+{
+	// A bare literal is not a '@S', so [1] can only be the [+]U.
+	U x = U([1]);
+	show(@x);
+	U y = U(@[3, 4]);
+	show(@y);
+	// One value does not make an S.
+	U w = V([7]);
+	show(@w);
+	printf("\n");
+}

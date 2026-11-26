@@ -468,6 +468,7 @@ class PlnSemanticAnalyzer {
 	Callee selectCallee(const json& locNode, const string& name, const vector<Callee>& cands,
 	                    const vector<CallArg>& args);
 	ArgFit argFit(const CallArg& arg, const json& param, size_t argIdx, bool isCFunc, const string& funcName);
+	bool structLitFits(const json& lit, const json& paramVT);
 	ArgFit typeFit(const json& argVT, const json& paramVT);
 	bool   sameShape(const CallArg& arg, const json& paramVT, bool isCFunc);
 	string argTypesText(const vector<CallArg>& args);

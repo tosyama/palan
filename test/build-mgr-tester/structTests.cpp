@@ -1526,6 +1526,12 @@ TEST(build_mgr, union_if_is_mtrace) {
 		"null\nb or f\ni 3\nitems 2\nitems 3\nh 3\nk 1\n3\n", 67);
 }
 
+// An aggregate literal fits only the struct parameters that take it: a borrowed
+// one as '@[..]', and as many values as fields.
+TEST(build_mgr, lit_arg_struct_overload_mtrace) {
+	expectMtraceRun("479_lit_arg_struct_overload_mtrace", "1 items 3 1 items \n", 10);
+}
+
 // Literals converted to a union along every path a value takes, nested
 // ones too; an array literal picks pick([+]int64), not the borrowed bytes.
 TEST(build_mgr, union_lit_conversion_mtrace) {
