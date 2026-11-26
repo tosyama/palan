@@ -2714,6 +2714,36 @@ overflows the stack.
   array-of-struct element (`arr[i]`/`p[i]` subscripting). It is usable only through a pointer
   (`@T`/`@!T`) — as a local variable, function parameter, or return type.
 
+### Tagged Unions
+
+A union holds one of its variants at a time, and knows which:
+
+```palan
+type json union { Null; bool b; int64 i; flo64 f; [+]json items; [""]json members; };
+```
+
+A variant is written as a field is, with any field type; one without contents is a bare name.
+Variants are told apart by name, not type. A union may appear wherever a struct may, and may
+contain itself through a `[+]T` or `[""]T` as a struct may.
+
+- **Declared**, a union holds its first variant, with the value a variable of that type has when
+  declared (`json j;` is `Null`).
+- **`j.i`** reads, borrows (`@!j.items`), or writes a part of (`3 -> j.p.x`) the contents. Naming a
+  variant the union does not hold is the writer's error: a debug build stops with
+  `runtime error: a union read as a variant it does not hold`; a release build does not check.
+- **`x -> j.i`** (or `x ->> j.items`) makes `j` that variant, releasing what another variant held.
+  The value is evaluated first, so `j.items[0] -> j` and `len(@j.items) -> j.i` read `j` before it
+  changes.
+- **`j.items ->> v`** gives the contents away and leaves `j` its first variant.
+- **`json.i(5)`** is a value holding a variant, its argument given as to a `T` parameter;
+  `json.Null` is the value of a variant without contents.
+- Copying, `->`, `->>` and release work as for a struct, on the variant held. `func ->` may be
+  defined as for a struct; comparisons are not generated.
+- **Layout**: a `uint32` tag (the variant's index in declaration order), then the contents of every
+  variant at one offset, aligned to the largest of them; owned contents are a pointer, as in a
+  struct. `json` is 16 bytes.
+- An exported union's variants are all public; `opaque` hides them.
+
 ---
 
 ## 10. Address-Of Operator

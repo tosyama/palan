@@ -1667,8 +1667,12 @@ TEST(sa_error, union) {
 		{"error_1376_union_dup_variant.pa", ":1:31: error: variant 'i' is already defined in union 'U'."},
 		{"error_1381_union_self_embed.pa", ":3:2: error: union 'U' recursively contains itself."},
 		{"error_1382_union_owned_cycle.pa", ":2:1: error: type 'U' depends on itself: U -> V -> U."},
-		// Not yet: reading a variant, a literal for a union, `is`.
-		{"error_1377_union_variant_not_impl.pa", ":3:11: error: this expression is not supported"},
+		{"error_1377_union_no_contents.pa", ":3:11: error: variant 'Null' of union 'U' has no contents to access."},
+		{"error_1384_union_unknown_variant.pa", ":2:7: error: union 'U' has no variant 'k'."},
+		{"error_1385_union_variant_needs_value.pa", ":2:7: error: 'U.i' has contents, which are given as 'U.i(value)'."},
+		{"error_1386_union_variant_no_value.pa", ":2:7: error: 'U.Null' has no contents: it is written 'U.Null', without '()'."},
+		{"error_1387_union_unknown_field.pa", ":3:11: error: union 'U' has no variant 'k'."},
+		// Not yet: a literal for a union, `is`.
 		{"error_1380_union_lit_not_impl.pa", ":2:7: error: this expression is not supported"},
 		{"error_1378_is_not_impl.pa", ":2:10: error: this expression is not supported"},
 		{"error_1379_if_is_not_impl.pa", ":2:1: error: this statement is not supported"},

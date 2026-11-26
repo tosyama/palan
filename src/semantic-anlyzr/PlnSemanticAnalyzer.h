@@ -845,7 +845,16 @@ class PlnSemanticAnalyzer {
 	json  makeCallNode(const json& expr, const Callee& callee, const string& writtenName,
 	                   vector<CallArg>* analyzedArgs = nullptr);
 	json sa_field_assign(const json& stmt, json* litAddr = nullptr);  // returns json::array()
+	json sa_field_store(const json& stmt, const FieldChain& chain, const FieldLayout& field, json* litAddr);
+	json sa_variant_assign(const json& stmt, const FieldChain& chain, json* litAddr);
+	void takeValueFirst(json& s, const json& toType, bool borrows, json& body, json& post);
 	FieldChain resolveObjectChain(const json& obj, bool forWrite);
+	void checkVariant(FieldChain& chain, const FieldLayout& fld);
+	json unionAddr(const FieldChain& chain) const;
+	const StructDef* unionNamed(const json& obj, string& written) const;
+	json variantValue(const json& expr, bool isCall);
+	json variantMakerDef(const StructDef& def, const string& variant) const;
+	void emitVariantMakers();
 	void requireOwnedBase(const json& saBase, const json& locNode);
 	json makeFieldAssign(const FieldChain& chain, const FieldLayout& field, json value);
 	json makeFieldAccess(const FieldChain& chain, const FieldLayout& field);

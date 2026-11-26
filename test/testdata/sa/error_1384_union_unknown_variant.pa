@@ -1,0 +1,2 @@
+type U union { int32 i; Null; };
+U u = U.k(1);

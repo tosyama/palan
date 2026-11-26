@@ -43,6 +43,7 @@ void writeAllocatorsHeader(ostream& hdr, const PlnAllocShapes& shapes)
 	    << "void free(void *ptr);\n"
 	    << "void *memcpy(void *dest, const void *src, unsigned long n);\n"
 	    << "void *memmove(void *dest, const void *src, unsigned long n);\n"
+	    << "void *memset(void *s, int c, unsigned long n);\n"
 	    << "void abort(void);\n";
 	bool hasDict = any_of(shapes.arrays.begin(), shapes.arrays.end(),
 	                      [](const json& s) { return s["shape-kind"] == "dict"; });
@@ -623,22 +624,38 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		    << "    return;\n"
 		    << "}\n"
 		    << "export func __pln_copy_" << name << "(@!" << name << " dst, @" << name << " src) {\n"
+		    // A variant's copy reuses what dst's contents own, as a struct's does.
+		    << "    if dst.__pln_tag != src.__pln_tag {\n"
+		    << "        __pln_fini_" << name << "(dst);\n"
+		    << "        memset(dst, 0, " << size << ");\n"
+		    << "    }\n"
 		    << eachOwning("src", [](const string& v) { return "__pln_copy_" + v + "(dst as @!" + v + ", src as @" + v + ");"; })
 		    << "    memcpy(dst, src, " << size << ");\n"
 		    << "}\n";
-		// Into an existing value: another variant's contents are released first.
-		// A struct laying a union out in place writes it so whenever it is
-		// written part by part.
+		// Into an existing value, as copy is, but a variant's own assign writes
+		// the same variant. A struct laying a union out in place writes it so
+		// whenever it is written part by part.
 		if (!shape.contains("copy-func"))
 			out << "export func __pln_assign_" << name << "(@!" << name << " dst, @" << name << " src) {\n"
 			    << "    if dst.__pln_tag != src.__pln_tag {\n"
-			    << "        __pln_fini_" << name << "(dst);\n"
 			    << "        __pln_copy_" << name << "(dst, src);\n"
 			    << "        return;\n"
 			    << "    }\n"
 			    << eachOwning("src", [](const string& v) { return "__pln_assign_" + v + "(dst as @!" + v + ", src as @" + v + ");"; })
 			    << "    memcpy(dst, src, " << size << ");\n"
 			    << "}\n";
+		// Made another variant, as a store to it does: its contents are built
+		// for a copy into them, and left NULL for one given to them.
+		out << "export func __pln_become_" << name << "(@!" << name << " p, uint32 k, bool build) {\n"
+		    << "    if p.__pln_tag == k { return; }\n"
+		    << "    __pln_fini_" << name << "(p);\n"
+		    << "    memset(p, 0, " << size << ");\n"
+		    << "    k -> p.__pln_tag;\n";
+		for (size_t k = 0; k < n; k++)
+			if (variantOwns(shape, k))
+				out << "    if build && k == " << k << " { __pln_init_" << variantTypeName(shape, k)
+				    << "(p as @!" << variantTypeName(shape, k) << "); }\n";
+		out << "}\n";
 		out << "export func __pln_initrun_" << name << "(@!" << name << " run, int64 from, int64 to) {\n"
 		    << "    int64 i = from;\n"
 		    << "    while i < to {\n"

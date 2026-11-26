@@ -1499,3 +1499,9 @@ TEST(build_mgr, field_init_values_mtrace) {
 TEST(build_mgr, union_mtrace) {
 	expectMtraceRun("472_union_mtrace", "1\ncopy C\n16 16 56 24 1\n", 60);
 }
+
+// Variants other than the first: stores that change the variant, values read
+// from the union being written, and copies, writes and releases of each.
+TEST(build_mgr, union_variant_mtrace) {
+	expectMtraceRun("473_union_variant_mtrace", "6\n2 7\nitems 2\n8\n7\n2.5\n1\n2 3\n4\n1 1\n", 78);
+}

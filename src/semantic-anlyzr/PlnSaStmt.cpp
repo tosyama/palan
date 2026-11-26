@@ -1369,6 +1369,29 @@ json PlnSemanticAnalyzer::sa_store_scope(const json& stmt)
 	return json::array({{{"stmt-type", "block"}, {"body", move(body)}}}); // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
+// The variable an expression's storage is reached from, as written.
+static string astRoot(const json& ast)
+{
+	string et = ast.value("expr-type", "");
+	if (et == "id") return ast["name"];
+	if (et == "field-access") return astRoot(ast["object"]);
+	if (et == "arr-index") return astRoot(ast["array"]);
+	return "";
+}
+
+static bool astMentions(const json& ast, const string& name)
+{
+	if (ast.is_object()) {
+		if (ast.value("expr-type", "") == "id" && ast["name"] == name) return true;
+		for (auto& [k, v] : ast.items())
+			if (astMentions(v, name)) return true;
+	} else if (ast.is_array()) {
+		for (auto& v : ast)
+			if (astMentions(v, name)) return true;
+	}
+	return false;
+}
+
 json PlnSemanticAnalyzer::sa_store_stmt(const json& stmt, json* litAddr)
 {
 	string t = stmt["stmt-type"];
@@ -1380,6 +1403,23 @@ json PlnSemanticAnalyzer::sa_store_stmt(const json& stmt, json* litAddr)
 	checkRangeChange(stmt, target, stmt.value("ownership-transfer", false) ? RangeChange::Transfer : RangeChange::Copy);
 	if (stmt.contains("owner-view-type"))
 		return sa_transfer_to_owner_view(stmt, target);
+	// A whole union written from its own parts: the generated store releases
+	// another variant's contents before copying.
+	string root = astRoot(target);
+	if (!isAggregateLit(stmt["value"]) && !root.empty() && astMentions(stmt["value"], root)) {
+		const json* vt = t == "assign" ? lookupVar(stmt["name"].get<string>(), stmt) : nullptr;
+		json toType = vt ? *vt : t == "assign" ? json() : storeTargetType(stmt);
+		if (isStructPntr(toType) && structDefs_.count(toType["base-type"]["type-name"].get<string>())
+		    && structDefs_.at(toType["base-type"]["type-name"].get<string>()).isTagged) {
+			// LCOV_EXCL_BR_START
+			json s = stmt, body = json::array(), post = json::array();
+			takeValueFirst(s, toType, false, body, post);
+			for (auto& st : sa_store_stmt(s, litAddr)) body.push_back(move(st));
+			for (auto& p : post) body.push_back(move(p));
+			return body;
+			// LCOV_EXCL_BR_STOP
+		}
+	}
 	if (t == "assign")
 		return sa_assign_stmt(stmt);
 	if (t == "arr-assign")
@@ -2002,6 +2042,17 @@ void PlnSemanticAnalyzer::appendTransferSourceReset(json& stmts, const json& stm
 		json loc = et == "field-access" ? sa_expr_field_access(src, /*forWrite=*/true)
 		                                : sa_expr_arr_index(src, /*forWrite=*/true);
 		if (!loc.value("addr-only", false) && isCopiedByValue(loc["value-type"])) {
+			// A union given its contents away is its first variant, so no
+			// variant is left with NULL contents.
+			if (et == "field-access") {
+				FieldChain chain = resolveObjectChain(src["object"], /*forWrite=*/true);
+				if (structDefs_.at(chain.structName).isTagged) {
+					recordAllocShape(chain.structName);
+					stmts.push_back({{"stmt-type", "expr"}, {"body", allocHelperCall(structShape(chain.structName), // LCOV_EXCL_BR_LINE
+						"init", json::array({unionAddr(chain)}))}});
+					return;
+				}
+			}
 			if (et == "arr-index") {
 				if (!isWritableThrough(loc["array"]["value-type"])) {
 					cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
@@ -2396,11 +2447,68 @@ json PlnSemanticAnalyzer::sa_tapple_assign(const json& stmt)
 	return sa_block({{"stmt-type", "block"}, {"body", body}}); // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
+// A store to a variant makes the union that variant. The value is evaluated
+// first when it reads the union's variable, as making it another variant
+// releases what it held; a value reached through another pointer is not
+// followed.
+json PlnSemanticAnalyzer::sa_variant_assign(const json& stmt, const FieldChain& chain, json* litAddr)
+{
+	bool transfer = stmt.value("ownership-transfer", false);
+	const FieldLayout& fld = findFieldOrExit(chain.structName, stmt["field"].get<string>(), stmt, true);
+	json fieldType = fieldValueType(fld);
+	const json& value = stmt["value"];
+	if (isAggregateLit(value))
+		return sa_lit_assign_via_temp(stmt, fieldType, litAddr);
+	// LCOV_EXCL_BR_START
+	json body = json::array(), post = json::array();
+	json s = stmt;
+	string root = astRoot(stmt["object"]);
+	if (root.empty() || astMentions(value, root))
+		takeValueFirst(s, fieldType, fld.typeKind == "raw-ptr", body, post);
+	const StructDef& def = structDefs_.at(chain.structName);
+	recordAllocShape(chain.structName);
+	json args = json::array({unionAddr(chain), variantTag(def, fld.name),
+		{{"expr-type","lit-int"},{"value",transfer ? "0" : "1"},{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}}});
+	body.push_back({{"stmt-type","expr"},{"body",allocHelperCall(structShape(chain.structName), "become", move(args))}});
+	for (auto& st : sa_field_store(s, chain, fld, litAddr)) body.push_back(move(st));
+	for (auto& p : post) body.push_back(move(p));
+	return body;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// s's value evaluated into body as a temp it is replaced by: a copy, which post
+// releases, or what '->>' gives, its owner reset.
+void PlnSemanticAnalyzer::takeValueFirst(json& s, const json& toType, bool borrows, json& body, json& post)
+{
+	// LCOV_EXCL_BR_START
+	const json value = s["value"];
+	if (s.value("ownership-transfer", false)) {
+		json reset = json::array();
+		json given = giveValue(value, s, "->>", body, reset);
+		for (auto& r : reset) body.push_back(move(r));
+		s["value"] = {{"expr-type","pinned"},{"sa",move(given)}};
+		return;
+	}
+	json saValue = sa_expression_for(literalConversion(value, toType), toType);
+	s["value"] = !borrows && isCopiedByValue(toType) && !isExpiringOwned(saValue)
+		? snapshotCopy(saValue, value, body, post) : pinValue(move(saValue), value, body);
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 json PlnSemanticAnalyzer::sa_field_assign(const json& stmt, json* litAddr)
 {
 	FieldChain chain = resolveObjectChain(stmt["object"], /*forWrite=*/true);
+	if (structDefs_.at(chain.structName).isTagged)
+		return sa_variant_assign(stmt, chain, litAddr);
+	const FieldLayout& fld = findFieldOrExit(chain.structName, stmt["field"].get<string>(), stmt, true);
+	return sa_field_store(stmt, chain, fld, litAddr);
+}
+
+json PlnSemanticAnalyzer::sa_field_store(const json& stmt, const FieldChain& chain, const FieldLayout& field,
+                                         json* litAddr)
+{
 	string fn = stmt["field"].get<string>();
-	const FieldLayout* it = &findFieldOrExit(chain.structName, fn, stmt, true);
+	const FieldLayout* it = &field;
 	bool transfer = stmt.value("ownership-transfer", false);
 	if (transfer && it->typeKind != "owned") {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TransferToNonOwnedField, fn) << endl;

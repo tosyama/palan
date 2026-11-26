@@ -65,6 +65,7 @@ FieldChain PlnSemanticAnalyzer::resolveObjectChain(const json& obj, bool forWrit
 	FieldChain base = resolveObjectChain(obj["object"], forWrite);
 	string fn = obj["field"].get<string>();
 	const FieldLayout* it = &findFieldOrExit(base.structName, fn, obj, forWrite);
+	checkVariant(base, *it);
 	if (it->typeKind == "prim" || it->typeKind == "embed-varr" || (it->typeKind == "owned" && !isStructPntr(it->type))) {
 		cerr << locPrefix(obj) << PlnSaMessage::getMessage(E_FieldAccessOnNonStruct) << endl;
 		exit(1);
@@ -131,11 +132,18 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 		exit(1);
 	}
 	const StructDef& def = requireCompleteStruct(structName, locNode);
-	if (def.isTagged) {
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ExprNotImplemented) << endl;
+	auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fieldName; });
+	if (it == def.fields.end() && def.isTagged
+	    && find(def.variants.begin(), def.variants.end(), fieldName) != def.variants.end()) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_VariantWithoutContents, fieldName,
+			PlnSaMessage::writtenTypeName(structName)) << endl;
 		exit(1);
 	}
-	auto it = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == fieldName; });
+	if (it == def.fields.end() && def.isTagged) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownVariant, fieldName,
+			PlnSaMessage::writtenTypeName(structName)) << endl;
+		exit(1);
+	}
 	if (it == def.fields.end()) {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownField, structDisplayName(structName), fieldName, def.keyword()) << endl;
 		exit(1);
@@ -150,6 +158,40 @@ const FieldLayout& PlnSemanticAnalyzer::findFieldOrExit(const string& structName
 		exit(1);
 	}
 	return *it;
+} // LCOV_EXCL_BR_LINE
+
+// The address of a union whose contents are reached as `fld`, a variant, is in
+// a debug build what std/rt's check returns once the tag is that variant's. It
+// is checked inside the expression, so a test before it under `&&` guards it.
+void PlnSemanticAnalyzer::checkVariant(FieldChain& chain, const FieldLayout& fld)
+{
+	const StructDef& def = structDefs_.at(chain.structName);
+	if (!def.isTagged || !checks_) return;
+	// LCOV_EXCL_BR_START
+	json at = unionAddr(chain);
+	json self = at["value-type"];
+	json call = {{"expr-type","call"},{"name","__pln_variant"},{"func-type","c"},
+		{"args",json::array({move(at), variantTag(def, fld.name)})},{"value-type",move(self)}};
+	chain = {true, "", 0, move(call), chain.structName};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The address of the union a chain has reached.
+json PlnSemanticAnalyzer::unionAddr(const FieldChain& chain) const
+{
+	// LCOV_EXCL_BR_START
+	json self = {{"type-kind","pntr"},{"mutable",true},{"base-type",{{"type-kind","struct"},{"type-name",chain.structName}}}};
+	if (chain.isPointerBased && chain.offset == 0) return chain.ptrExpr;
+	return chain.isPointerBased
+		? json{{"expr-type","field-access"},{"ptr-expr",chain.ptrExpr},{"offset",chain.offset},{"addr-only",true},{"value-type",move(self)}}
+		: json{{"expr-type","field-access"},{"var",chain.varName},{"offset",chain.offset},{"addr-only",true},{"value-type",move(self)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+json variantTag(const StructDef& def, const string& variant)
+{
+	size_t k = find(def.variants.begin(), def.variants.end(), variant) - def.variants.begin();
+	return {{"expr-type","lit-int"},{"value",to_string(k)},{"value-type",{{"type-kind","prim"},{"type-name","uint32"}}}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
 // `name` must already be a key in structDefs_ (checked by the caller, e.g. via
@@ -362,6 +404,7 @@ json PlnSemanticAnalyzer::sa_expr_addr_of(const json& expr)
 		FieldChain chain = resolveObjectChain(obj["object"], /*forWrite=*/isMutable);
 		string fn = obj["field"].get<string>();
 		const FieldLayout& fld = findFieldOrExit(chain.structName, fn, obj, isMutable);
+		checkVariant(chain, fld);
 		if (fld.bitWidth) {
 			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_AddrOfBitField, fn) << endl;
 			exit(1);
@@ -1027,6 +1070,8 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		return sa_expr_call(expr);
 
 	} else if (expr_type == "member-call") {
+		json variant = variantValue(expr, true);
+		if (!variant.is_null()) return variant;
 		string qualified = typeNameWritten(expr["object"]);
 		if (!qualified.empty()) {
 			json cast = aliasCast(expr, qualified + "." + expr["method"].get<string>());
@@ -1067,6 +1112,8 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		exit(1);
 
 	} else if (expr_type == "field-access") {
+		json variant = variantValue(expr, false);
+		if (!variant.is_null()) return variant;
 		json enumerator = resolveEnumerator(expr);
 		if (!enumerator.is_null()) return enumerator;
 		return sa_expr_field_access(expr, /*forWrite=*/false);
@@ -1709,6 +1756,60 @@ json PlnSemanticAnalyzer::sa_expr_cast(const json& expr, bool moving)
 	incompatible(resolved);
 } // LCOV_EXCL_BR_LINE
 
+// The union a type name written as `expr`'s object names; null if none.
+const StructDef* PlnSemanticAnalyzer::unionNamed(const json& obj, string& written) const
+{
+	written = typeNameWritten(obj);
+	if (written.empty()) return nullptr;
+	const json* t = findTypeBinding(written);
+	if (!t || !t->contains("type-name")) return nullptr;
+	auto def = structDefs_.find((*t)["type-name"].get<string>());
+	return def != structDefs_.end() && def->second.isTagged ? &def->second : nullptr;
+}
+
+// `U.v(x)` or `U.Null`: a call of the function the module defining U makes
+// for the variant (emitVariantMakers), so x is given as to a `T` parameter and
+// the union returned as any struct is.
+json PlnSemanticAnalyzer::variantValue(const json& expr, bool isCall)
+{
+	string written;
+	const StructDef* def = unionNamed(expr["object"], written);
+	if (!def) return json();
+	string variant = expr[isCall ? "method" : "field"].get<string>();
+	string shown = written + "." + variant;
+	if (find(def->variants.begin(), def->variants.end(), variant) == def->variants.end()) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_UnknownVariant, variant, written) << endl;
+		exit(1);
+	}
+	json maker = variantMakerDef(*def, variant);
+	bool hasContents = !maker["parameters"].empty();
+	if (hasContents != isCall) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(isCall ? E_VariantTakesNoValue : E_VariantNeedsValue, shown) << endl;
+		exit(1);
+	}
+	// LCOV_EXCL_BR_START
+	json call = {{"expr-type","call"},{"name",maker["symbol"]},{"args",isCall ? expr["args"] : json::array()}};
+	if (expr.contains("loc")) call["loc"] = expr["loc"];
+	return makeCallNode(call, Callee{&maker, false}, shown);
+	// LCOV_EXCL_BR_STOP
+}
+
+// The signature of the function making `variant` of def, as SA types: it takes
+// the contents as a `T` parameter, a struct laid out in place included.
+json PlnSemanticAnalyzer::variantMakerDef(const StructDef& def, const string& variant) const
+{
+	// LCOV_EXCL_BR_START
+	size_t k = find(def.variants.begin(), def.variants.end(), variant) - def.variants.begin();
+	json self = {{"type-kind","struct"},{"type-name",def.name}};
+	string symbol = "__pln_mk" + to_string(k) + "_" + symbolType(self);
+	json params = json::array();
+	for (auto& f : def.fields)
+		if (f.name == variant) params.push_back({{"name","x"},{"var-type",fieldValueType(f)}});
+	return {{"name",symbol},{"func-type","palan"},{"symbol",symbol},{"parameters",move(params)},
+	        {"ret-type",{{"type-kind","pntr"},{"base-type",move(self)}}}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 json PlnSemanticAnalyzer::resolveEnumerator(const json& expr)
 {
 	string typeName = typeNameWritten(expr["object"]);
@@ -1755,6 +1856,7 @@ json PlnSemanticAnalyzer::sa_expr_field_access(const json& expr, bool forWrite)
 	FieldChain chain = resolveObjectChain(expr["object"], forWrite);
 	string fn = expr["field"].get<string>();
 	const FieldLayout& fld = findFieldOrExit(chain.structName, fn, expr, forWrite);
+	checkVariant(chain, fld);
 	json out = makeFieldAccess(chain, fld);
 	// A read-only field's pointer, read outside, must not lend its pointee for writing.
 	if (fld.access == "readonly" && fld.typeKind == "raw-ptr" && outsideTypeModule(chain.structName))

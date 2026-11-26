@@ -3,6 +3,7 @@
 /// @file basicTests.cpp
 /// @copyright 2026 YAMAGUCHI Toshinobu
 
+#include <fstream>
 #include <gtest/gtest.h>
 #include "../test-base/testBase.h"
 #include "saTestUtil.h"
@@ -1210,4 +1211,34 @@ TEST(sa, union_shape)
 	EXPECT_EQ(v[1]["owned-fields"][0]["offset"], 8);
 	EXPECT_EQ(v[2]["owned-fields"][0]["offset"], 8);
 	EXPECT_TRUE(v[3]["owned-fields"].empty());
+}
+
+// A variant's contents follow the tag; a debug build reaches them through the
+// check of the tag, and the union's module makes each variant's maker.
+TEST(sa, union_variant)
+{
+	string pa = "../test/testdata/sa/1388_union_variant.pa";
+	auto xInit = [](const json& jout) {
+		for (auto& s : jout["statements"])
+			if (s.value("stmt-type", "") == "var-decl" && s["vars"][0]["name"] == "x") return s["vars"][0]["init"];
+		return json();
+	};
+	cleanTestEnv();
+	json jout = run_sa(pa);
+	ASSERT_TRUE(jout.is_object());
+	json init = xInit(jout);
+	EXPECT_EQ(init["offset"], 8);
+	EXPECT_EQ(init["ptr-expr"]["name"], "__pln_variant");
+	EXPECT_EQ(init["ptr-expr"]["args"][1]["value"], "1");
+	int makers = 0;
+	for (auto& f : jout["functions"])
+		if (f["name"].get<string>().rfind("__pln_mk", 0) == 0) makers++;
+	EXPECT_EQ(makers, 3);
+
+	cleanTestEnv();
+	genModuleAst(pa);
+	ASSERT_EQ(execTestCommand("palan-sa --release " + moduleAstPath(pa) + " -o out/test.sa.json"), "");
+	init = xInit(json::parse(ifstream("out/test.sa.json")));
+	EXPECT_EQ(init["offset"], 8);
+	EXPECT_EQ(init["var"], "j");
 }

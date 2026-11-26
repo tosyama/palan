@@ -634,6 +634,8 @@ static string allocSymbolIn(const string& allocators, const AllocShapeRef& shape
 		// A run of structs laid out in place comes as a pointer to its first.
 		if (op == "initrun") params = {permPtrTo(shape.elem, true), i64, i64};
 		else if (op == "copy" || op == "assign") params = {permPtrTo(shape.elem, true), permPtrTo(shape.elem, false)};
+		else if (op == "become") params = {permPtrTo(shape.elem, true), {{"type-kind","prim"},{"type-name","uint32"}},
+		                                   {{"type-kind","prim"},{"type-name","bool"}}};
 		else if (op != "alloc") params.push_back(permPtrTo(shape.elem, true));
 	} else if (isDictFamily(shape.family)) {
 		json header = {{"type-kind","struct"},{"type-name","__pln_" + allocShapeKey(shape)}};

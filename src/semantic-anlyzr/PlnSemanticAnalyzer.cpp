@@ -602,6 +602,46 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
+// Each variant's maker (variantMakerDef), exported by the module defining the
+// union for every module that names the variant. Its contents are stored as a
+// store to the variant does; one without contents only has its tag written.
+void PlnSemanticAnalyzer::emitVariantMakers()
+{
+	// LCOV_EXCL_BR_START
+	for (auto& [name, def] : structDefs_) {
+		if (!def.isTagged) continue;
+		auto origin = typeOrigins_.find(name);
+		if (origin == typeOrigins_.end() || origin->second != moduleId_) continue;
+		for (auto& variant : def.variants) {
+			json sig = variantMakerDef(def, variant);
+			json r = {{"expr-type","id"},{"name","r"}};
+			json body = json::array();
+			json params = json::array();
+			for (auto& f : def.fields) {
+				if (f.name != variant) continue;
+				params.push_back({{"name","x"},{"var-type",astTypeOf(sig["parameters"][0]["var-type"])}});
+				body.push_back({{"stmt-type","field-assign"},{"object",r},{"field",variant},
+					{"value",{{"expr-type","id"},{"name","x"}}},{"ownership-transfer",f.typeKind == "owned"}});
+			}
+			json funcDef = {{"name",sig["name"]},{"func-type","palan"},{"symbol",sig["symbol"]},{"parameters",move(params)},
+				{"rets",json::array({{{"name","r"},{"var-type",{{"type-kind","prim"},{"type-name",name}}}}})},
+				{"block",{{"body",move(body)}}}};
+			preregisterFunc(funcDef, moduleId_);
+			sa_function(funcDef);
+			json& func = sa["functions"].back();
+			func["export"] = true;
+			if (func["parameters"].empty()) {
+				recordAllocShape(name);
+				json args = json::array({unionAddr({false, "r", 0, {}, name}), variantTag(def, variant),
+					{{"expr-type","lit-int"},{"value","0"},{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}}});
+				json become = {{"stmt-type","expr"},{"body",allocHelperCall(structShape(name), "become", move(args))}};
+				func["body"].push_back(move(become));
+			}
+		}
+	}
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // An operator function is called only where an operand is a struct, and an
 // operand is never written with '@!' (see sa_operator_call), but for the one
 // '<<' appends to.
@@ -1397,6 +1437,7 @@ void PlnSemanticAnalyzer::analysis(const json &ast, const string& astPath)
 		sa_functions(ast["ast"]["functions"]);
 	emitReleaseFuncs();
 	emitFieldInitFuncs();
+	emitVariantMakers();
 	emitInitFunc();
 	if (!staticBindings_.empty())
 		sa["main"]["globals"] = staticBindings_;

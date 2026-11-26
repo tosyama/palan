@@ -1135,6 +1135,24 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg2 != "\x01");
 			return "variant '" + arg1 + "' is already defined in union '" + arg2 + "'.";
 
+		case E_VariantWithoutContents:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "variant '" + arg1 + "' of union '" + arg2 + "' has no contents to access.";
+
+		case E_UnknownVariant:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "union '" + arg2 + "' has no variant '" + arg1 + "'.";
+
+		case E_VariantNeedsValue:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' has contents, which are given as '" + arg1 + "(value)'.";
+
+		case E_VariantTakesNoValue:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' has no contents: it is written '" + arg1 + "', without '()'.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

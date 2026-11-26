@@ -229,10 +229,25 @@ Root
   build-mgr lays each variant owning something out as a struct of its own,
   `__pln_v<k>_U`, generated as a struct entry with those fields, and generates `U`'s functions
   over them: `__pln_init_U` writes tag 0 and builds the first variant, `__pln_fini_U`,
-  `__pln_copy_U` and `__pln_assign_U` act on the variant the tag names (`__pln_assign_U`
-  releases `dst`'s and copies when the tags differ), and `__pln_initrun_U` is generated for every
-  union. A union is built wherever it comes to exist, as a struct with initializers is, and a
-  union laid out in a struct is one of its `runs`.
+  `__pln_copy_U` and `__pln_assign_U` act on the variant the tag names (when the tags differ,
+  `dst`'s contents are released and zeroed first), and `__pln_initrun_U` is generated for every
+  union. `__pln_become_U(p, k, build)` makes `p` variant `k` if it holds another: it releases
+  the contents, zeroes them, writes the tag and, with `build`, builds the new contents. A union
+  is built wherever it comes to exist, as a struct with initializers is, and a union laid out in
+  a struct is one of its `runs`.
+
+  A variant is a field of the union (`field-access`, `field-assign`) at the contents' offset:
+  - In a debug build, a field reached through a variant (`j.s`, `j.s.x`, `@!j.s`) takes the
+    union's address from `__pln_variant(addr, k)` (a C call to `std/rt` returning `addr` when the
+    tag is `k`, failing otherwise) as its `ptr-expr`, so the check is part of the expression.
+  - A store to the variant itself is a call of `__pln_become_U(@!U, k, build)` followed by the
+    store as to a struct's field: `build` is 1 for `->`, which copies into the built contents, and
+    0 for `->>`, whose release of the contents is then a no-op. A value whose expression names the
+    union's variable is evaluated into a temp first (a copy for a copied type), as is one stored
+    to a whole union from such an expression (`j.items[0] -> j`).
+  - The owner given away by `j.s ->> v` is reset by `__pln_init_U` instead of NULL.
+  - `U.v(x)` and `U.v` are calls of `__pln_mk<k>_U`, exported by the module defining `U`, taking
+    the contents as a `T` parameter (none for a variant without them) and returning `U`.
 
   Non-owned fields are deliberately not described: build-mgr re-declares the struct in the
   generated allocator module with only the owned fields at their offsets and opaque padding

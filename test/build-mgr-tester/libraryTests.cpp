@@ -233,8 +233,15 @@ K.Val c = v;
 vs.push(c);
 K.Hidden h = K.make();
 printf("%ld %ld\n", K.size(@vs[0]), len(@vs));
+K.Val.items(vs) -> v;
+K.Val.i(5) -> v.items[0];
+K.Box b;
+7 -> b.v;
+b -> v.items[0].box;
+K.Val.Null -> c;
+printf("%d %d\n", v.items[0].box.v, len(@v.items));
 )");
-	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "16 1\n");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "16 1\n7 1\n");
 }
 
 // A variadic parameter crosses the interface as written, also inside a

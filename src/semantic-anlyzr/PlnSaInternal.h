@@ -148,6 +148,8 @@ inline AllocShapeRef structShape(const string& name)
 json varrBuiltinDefs(const json& varr, const AllocShapeRef* impl = nullptr, const string& allocators = "");
 // len, has, remove and clear of the `[""]T` whose header type is dict, as varrBuiltinDefs.
 json dictBuiltinDefs(const json& dict, const AllocShapeRef* impl = nullptr, const string& allocators = "");
+// The tag of a union's variant, as a uint32 literal.
+json variantTag(const StructDef& def, const string& variant);
 
 enum class PtrPermission { Ok, Upgrade, InnerNarrowing, FuncSigMismatch };
 

@@ -256,6 +256,10 @@ enum PlnSaMessageCode {
 	E_DictLitKeyNotConst,	// arg1: name
 	E_DictLitDupKey,	// arg1: the key as written in sa.json
 	E_DuplicateVariant,	// arg1: variant name, arg2: union type name
+	E_VariantWithoutContents,	// arg1: variant name, arg2: union type name
+	E_UnknownVariant,	// arg1: variant name, arg2: union type name
+	E_VariantNeedsValue,	// arg1: the variant as written (U.v)
+	E_VariantTakesNoValue,	// arg1: the variant as written (U.v)
 };
 
 class PlnSaMessage

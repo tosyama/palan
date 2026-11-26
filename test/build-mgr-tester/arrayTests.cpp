@@ -519,6 +519,7 @@ TEST(build_mgr, runtime_errors) {
 		{"437_array_out_of_memory", "--release", "out of memory"},
 		{"444_dict_missing_key", "--debug", "key \"b\" is not in the dictionary"},
 		{"444_dict_missing_key", "--release", "key \"b\" is not in the dictionary"},
+		{"474_union_wrong_variant", "--debug", "a union read as a variant it does not hold"},
 	};
 	for (auto& c : cases) {
 		cleanTestEnv();
@@ -530,6 +531,15 @@ TEST(build_mgr, runtime_errors) {
 		string expected = string("status 134\nruntime error: ") + c.error + "\n";
 		EXPECT_EQ(out.substr(0, expected.size()), expected) << c.file << " " << c.mode;
 	}
+}
+
+// Unchecked, the contents are read as the other variant's: making the union
+// a variant zeroes them, so `true` reads as 1.
+TEST(build_mgr, union_wrong_variant_release) {
+	cleanTestEnv();
+	string bin = "/tmp/palan_474_union_wrong_variant";
+	ASSERT_EQ(execTestCommand("bin/palan --release -o " + bin + " ../test/testdata/build-mgr/474_union_wrong_variant.pa"), "");
+	EXPECT_EQ(execTestCommand(bin), "1\n");
 }
 
 TEST(build_mgr, nested_varr_mtrace) {
