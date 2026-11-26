@@ -248,6 +248,14 @@ Root
   - The owner given away by `j.s ->> v` is reset by `__pln_init_U` instead of NULL.
   - `U.v(x)` and `U.v` are calls of `__pln_mk<k>_U`, exported by the module defining `U`, taking
     the contents as a `T` parameter (none for a variant without them) and returning `U`.
+  - `x is v` is a `cmp` (`==`) of the tag (`field-access`, offset 0, `uint32`, with `x` as
+    `ptr-expr`) and `k`. A binding (`@v`, `@!v`, `copy v`, in an `if` or `while` condition or a `&&`
+    operand there) makes the statement a `block` that first declares, as NULL or as declared:
+    `__is_N`, a `@U` (`@!U` for `@!v`) the test assigns `x`'s address to in a `temp`'s `body`;
+    `__is_t_N`, a `$U` the test copies a union returned by a call into, when `x` is one;
+    `__is_c_N`, the copy, which the test (a `logical-and` of the comparison and a `temp`) releases
+    and replaces with a new copy. The block then releases what it declared. The name bound reads
+    `__is_N`'s variant, without `__pln_variant`, or `__is_c_N`.
 
   Non-owned fields are deliberately not described: build-mgr re-declares the struct in the
   generated allocator module with only the owned fields at their offsets and opaque padding

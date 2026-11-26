@@ -1505,3 +1505,16 @@ TEST(build_mgr, union_mtrace) {
 TEST(build_mgr, union_variant_mtrace) {
 	expectMtraceRun("473_union_variant_mtrace", "6\n2 7\nitems 2\n8\n7\n2.5\n1\n2 3\n4\n1 1\n", 78);
 }
+
+// `is` and its bindings: through a borrow, a copy (made again on each test, as
+// the body may give it away), a union a call returns, and an element.
+TEST(build_mgr, union_is_mtrace) {
+	expectMtraceRun("475_union_is_mtrace",
+		"null\ni 5\ncopy 0 7\nj 8\ntemp 3 3\nheld 3\nheld 2\nheld 1\nbox 3 9 9\nat 3\n", 94);
+}
+
+// A binding of each kind of contents: a float, a struct laid out in place or
+// owned, a dictionary.
+TEST(build_mgr, union_is_kinds_mtrace) {
+	expectMtraceRun("476_union_is_kinds_mtrace", "2.5\n3 3 2\n3 3 2\n7 3\nq 3\nq 3\nd 4\n", 46);
+}

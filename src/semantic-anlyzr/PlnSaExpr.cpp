@@ -167,6 +167,10 @@ void PlnSemanticAnalyzer::checkVariant(FieldChain& chain, const FieldLayout& fld
 {
 	const StructDef& def = structDefs_.at(chain.structName);
 	if (!def.isTagged || !checks_) return;
+	if (!chain.isPointerBased && chain.offset == 0) {
+		auto known = knownVariants_.find(chain.varName);
+		if (known != knownVariants_.end() && known->second == fld.name) return;
+	}
 	// LCOV_EXCL_BR_START
 	json at = unionAddr(chain);
 	json self = at["value-type"];
@@ -185,6 +189,140 @@ json PlnSemanticAnalyzer::unionAddr(const FieldChain& chain) const
 	return chain.isPointerBased
 		? json{{"expr-type","field-access"},{"ptr-expr",chain.ptrExpr},{"offset",chain.offset},{"addr-only",true},{"value-type",move(self)}}
 		: json{{"expr-type","field-access"},{"var",chain.varName},{"offset",chain.offset},{"addr-only",true},{"value-type",move(self)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// `x is s`: whether the union x is that variant. One binding the contents is
+// lowered by isBindingTest.
+json PlnSemanticAnalyzer::sa_expr_is(const json& expr)
+{
+	bool binds = expr.contains("bind");
+	if (binds && !expr.contains("ptr-var")) {
+		cerr << locPrefix(expr["bind"]) << PlnSaMessage::getMessage(E_IsBindingPlace, expr["bind"]["name"].get<string>()) << endl;
+		exit(1);
+	}
+	const json& x = expr["value"];
+	string xt = x.value("expr-type", "");
+	bool writes = binds && expr["bind"]["borrow"] && expr["bind"]["mutable"];
+	json saX = !writes ? sa_expression(x)
+		: xt == "field-access" ? sa_expr_field_access(x, true)
+		: xt == "arr-index"    ? sa_expr_arr_index(x, true)
+		: sa_expression(x);
+	const json& vt = saX["value-type"];
+	const StructDef* def = isStructPntr(vt) ? &structDefs_.at(vt["base-type"]["type-name"].get<string>()) : nullptr;
+	if (!def || !def->isTagged) {
+		cerr << locPrefix(x) << PlnSaMessage::getMessage(E_IsNotUnion, typeDisplayName(vt)) << endl;
+		exit(1);
+	}
+	const string& variant = expr["variants"][0].get_ref<const string&>();
+	if (find(def->variants.begin(), def->variants.end(), variant) == def->variants.end()) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_UnknownVariant, variant,
+			PlnSaMessage::writtenTypeName(def->name)) << endl;
+		exit(1);
+	}
+	// LCOV_EXCL_BR_START
+	auto test = [&](json at) {
+		json tag = {{"expr-type","field-access"},{"ptr-expr",move(at)},{"offset",0},{"addr-only",false},
+		            {"value-type",{{"type-kind","prim"},{"type-name","uint32"}}}};
+		return json{{"expr-type","cmp"},{"op","=="},{"left",move(tag)},{"right",variantTag(*def, variant)},
+		            {"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+	};
+	// LCOV_EXCL_BR_STOP
+	if (!binds) return test(move(saX));
+	return isBindingTest(expr, *def, move(saX), test(json()));
+} // LCOV_EXCL_BR_LINE
+
+// `x is @s`, `@!s` or `copy s` in a condition: x's address is kept in a hidden
+// pointer the bound name reads through, so changing what located x (an index)
+// does not move the binding; a union a call returns is kept in a hidden
+// variable until the statement ends; a copy is made once the test holds. The
+// hidden variables are declared ahead of the statement (isScope_), as the
+// test may run more than once (`while`) or not at all (`&&`).
+json PlnSemanticAnalyzer::isBindingTest(const json& expr, const StructDef& def, json saX, json test)
+{
+	// LCOV_EXCL_BR_START
+	const json& bind = expr["bind"];
+	const string& variant = expr["variants"][0].get_ref<const string&>();
+	auto field = find_if(def.fields.begin(), def.fields.end(), [&](const FieldLayout& f){ return f.name == variant; });
+	if (field == def.fields.end()) {
+		cerr << locPrefix(bind) << PlnSaMessage::getMessage(E_VariantWithoutContents, variant,
+			PlnSaMessage::writtenTypeName(def.name)) << endl;
+		exit(1);
+	}
+	bool borrow = bind["borrow"];
+	bool mut = borrow && bind["mutable"];
+	const json& x = expr["value"];
+	if (mut && !isWritableThrough(saX["value-type"])) {
+		cerr << locPrefix(bind) << PlnSaMessage::getMessage(E_PtrMutabilityUpgrade) << endl;
+		exit(1);
+	}
+	if (mut) checkRangeChange(expr, x, RangeChange::Borrow);
+
+	json body = json::array();
+	auto stmts = [&](const json& astStmt, json& into) {
+		for (auto& s : sa_statements(json::array({astStmt}))) into.push_back(move(s));
+	};
+	auto id = [](const string& name) { return json{{"expr-type","id"},{"name",name}}; };
+	if (isExpiringOwned(saX)) {
+		string held = "__is_t_" + to_string(tempVarCounter_++);
+		stmts({{"stmt-type","var-decl"},{"vars",json::array({{{"name",held},
+		       {"var-type",{{"type-kind","embed"},{"base-type",astTypeOf(saX["value-type"])}}}}})}}, isScope_->prefix);
+		stmts({{"stmt-type","assign"},{"name",held},{"value",{{"expr-type","pinned"},{"sa",move(saX)}}}}, body);
+		saX = sa_expression(id(held));
+	} else if (holdsCallTemps(saX)) {
+		cerr << locPrefix(x) << PlnSaMessage::getMessage(E_BorrowOfTempEscapes) << endl;
+		exit(1);
+	}
+
+	string ptr = expr["ptr-var"];
+	json ptrType = {{"type-kind","pntr"},{"mutable",mut},{"base-type",saX["value-type"]["base-type"]}};
+	declareVar(ptr, ptrType);
+	isScope_->prefix.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",ptr},{"var-type",ptrType},
+		{"init",{{"expr-type","lit-int"},{"value","0"},{"value-type",ptrType}}}}})}});
+	body.push_back({{"stmt-type","assign"},{"name",ptr},{"value",move(saX)}});
+	knownVariants_[ptr] = variant;
+	json ptrVal = {{"expr-type","id"},{"name",ptr},{"var-type",ptrType},{"value-type",ptrType}};
+	test["left"]["ptr-expr"] = ptrVal;
+
+	json contentsType = fieldValueType(*field);
+	if (borrow) {
+		vector<string> path;
+		if (locationPath(x, path)) pinnedRanges_.push_back({move(path), false, false, variant});
+		pinnedRanges_.push_back({{ptr}, false, false, variant, bind["name"]});
+		isScope_->bound.push_back({bind["name"], {{"type-kind","pntr"},{"mutable",mut},{"base-type",contentsType}}, bind});
+	} else {
+		// What the copy owns may have been given away by the body, so each
+		// copy is a new one, given to the variable after its old value is
+		// released.
+		string copy = expr["copy-var"];
+		json src = sa_expression({{"expr-type","field-access"},{"object",id(ptr)},{"field",variant}});
+		json copied = json::array(), unused = json::array();
+		json snap = snapshotCopy(src, bind, copied, unused);
+		json copyType;
+		if (snap.value("expr-type", "") == "pinned") {
+			copyType = snap["sa"]["var-type"];
+			declareVar(copy, copyType);
+			isScope_->prefix.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",copy},{"var-type",copyType},
+				{"init",{{"expr-type","lit-int"},{"value","0"},{"value-type",copyType}}}}})}});
+			addOwnedScopeVar(copy, makeOwnedFreeStmt(copy, copyType));
+			copied.push_back(makeOwnedFreeStmt(copy, copyType));
+			copied.push_back({{"stmt-type","assign"},{"name",copy},{"value",move(snap["sa"])}});
+		} else {
+			stmts({{"stmt-type","var-decl"},{"vars",json::array({{{"name",copy},{"var-type",astTypeOf(contentsType)}}})}}, isScope_->prefix);
+			copyType = *findVar(copy);
+			copied.push_back({{"stmt-type","assign"},{"name",copy},{"value",move(src)}});
+		}
+		given_.pending.push_back({copy, false});
+		json yes = {{"expr-type","lit-int"},{"value","1"},{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}};
+		json made = {{"expr-type","temp"},{"body",move(copied)},{"release",json::array()},
+		             {"value-type",yes["value-type"]},{"value",yes}};
+		test = {{"expr-type","logical-and"},{"left",move(test)},{"right",move(made)},{"value-type",yes["value-type"]}};
+		isScope_->bound.push_back({bind["name"], copyType, bind});
+	}
+	json out = {{"expr-type","temp"},{"body",move(body)},{"release",json::array()},
+	            {"value-type",test["value-type"]},{"value",move(test)}};
+	if (expr.contains("loc")) out["loc"] = expr["loc"];
+	return out;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
@@ -910,7 +1048,9 @@ json PlnSemanticAnalyzer::sa_expr_maybe_void(const json &rawExpr, const PlnType*
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
 		exit(1);
 	}
-	if (expr_type == "not-impl" || expr_type == "is") {
+	if (expr_type == "is")
+		return sa_expr_is(expr);
+	if (expr_type == "not-impl") {
 		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_ExprNotImplemented) << endl;
 		exit(1);
 	}

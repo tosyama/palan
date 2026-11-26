@@ -1153,6 +1153,18 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "'" + arg1 + "' has no contents: it is written '" + arg1 + "', without '()'.";
 
+		case E_IsNotUnion:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'is' tests a union's variant, not a value of type '" + arg1 + "'.";
+
+		case E_IsBindingPlace:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' can be bound only in the condition of an 'if' or 'while', or on the left of '&&' there.";
+
+		case E_ChangeTestedUnion:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "cannot change the variant of a union whose contents 'is' binds ('" + arg1 + "').";
+
 		default:
 			BOOST_ASSERT(false);
 	}

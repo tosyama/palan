@@ -2735,6 +2735,23 @@ contain itself through a `[+]T` or `[""]T` as a struct may.
   The value is evaluated first, so `j.items[0] -> j` and `len(@j.items) -> j.i` read `j` before it
   changes.
 - **`j.items ->> v`** gives the contents away and leaves `j` its first variant.
+- **`j is i`** is `true` when `j` holds `i`. In the condition of an `if` or `while` it may bind the
+  contents, as a `for` binds an element: `j is @items` borrows them, `@!items` borrows them for
+  writing, `copy i` copies them, and `@t = items` (`@!t = items`, `copy t = i`) names them
+  otherwise. The name is visible in the body, and to the right of a `&&` the test is an operand of;
+  binding anywhere else (under `||` or `!`, outside a condition) is an error.
+
+  ```palan
+  if j is @items && len(@items) > 0 && items[0] is copy i { printf("%d\n", i); }
+  while k < len(@xs) && xs[k] is @!t = items { t.push(json.Null); k + 1 -> k; }
+  ```
+
+  The union is located once, when tested: changing an index used to reach it does not move the
+  binding. While its contents are borrowed, the body may not change its variant through the union
+  or what holds it (`x -> j`, `x -> j.f`, `j.items ->> v`, `@!j`), nor give the binding's
+  contents away; storing to the same variant is allowed. Through another borrow it is not
+  detected. A copy is made each time the test holds, so a `while` body may give it away. A
+  union a call returns is kept until the statement ends.
 - **`json.i(5)`** is a value holding a variant, its argument given as to a `T` parameter;
   `json.Null` is the value of a variant without contents.
 - Copying, `->`, `->>` and release work as for a struct, on the variant held. `func ->` may be

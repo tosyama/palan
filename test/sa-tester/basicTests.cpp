@@ -1242,3 +1242,36 @@ TEST(sa, union_variant)
 	EXPECT_EQ(init["offset"], 8);
 	EXPECT_EQ(init["var"], "j");
 }
+
+// `is` compares the tag. A binding keeps the union's address in a hidden
+// pointer declared ahead of the statement, and reads through it unchecked.
+TEST(sa, union_is)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1389_union_is.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	const json* b = nullptr;
+	const json* block = nullptr;
+	for (auto& s : stmts) {
+		if (s.value("stmt-type", "") == "var-decl" && s["vars"][0]["name"] == "b") b = &s["vars"][0]["init"];
+		if (s.value("stmt-type", "") == "block") block = &s;
+	}
+	ASSERT_NE(b, nullptr);
+	EXPECT_EQ((*b)["expr-type"], "cmp");
+	EXPECT_EQ((*b)["left"]["offset"], 0);
+	EXPECT_EQ((*b)["left"]["ptr-expr"]["name"], "j");
+	EXPECT_EQ((*b)["right"]["value"], "2");
+
+	ASSERT_NE(block, nullptr);
+	const json& body = (*block)["body"];
+	ASSERT_EQ(body[0]["stmt-type"], "var-decl");
+	string ptr = body[0]["vars"][0]["name"];
+	ASSERT_EQ(body[1]["stmt-type"], "if");
+	const json& test = body[1]["cond"]["left"];
+	EXPECT_EQ(test["expr-type"], "temp");
+	EXPECT_EQ(test["body"][0]["name"], ptr);
+	EXPECT_EQ(test["value"]["left"]["ptr-expr"]["name"], ptr);
+	EXPECT_EQ(test["value"]["right"]["value"], "1");
+	EXPECT_EQ(body[1].dump().find("__pln_variant"), string::npos);
+}

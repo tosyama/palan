@@ -1,0 +1,23 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type pt { int32 x; [+]int32 v; };
+type held union { flo64 f; $pt p; pt q; [""]int32 d; };
+func f() {
+	held h;
+	2.5 -> h.f;
+	if h is copy f { printf("%.1f\n", f); }
+	pt a; 3 -> a.x; [1,2] -> a.v;
+	a -> h.p;
+	int64 n = 2;
+	while n > 0 && h is copy p { p.v.push(9); pt g = p; printf("%d %d %d\n", p.x, len(@p.v), len(@h.p.v)); n - 1 -> n; }
+	if h is @!p { 7 -> p.x; p.v.push(5); }
+	printf("%d %d\n", h.p.x, len(@h.p.v));
+	a -> h.q;
+	2 -> n;
+	while n > 0 && h is copy q { pt t; q ->> t; printf("q %d\n", t.x); n - 1 -> n; }
+	[""]int32 dd; 4 -> dd["k"];
+	dd -> h.d;
+	if h is copy d && d["k"] == 4 { printf("d %d\n", d["k"]); }
+}
+mtrace();
+f();

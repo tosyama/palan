@@ -255,9 +255,21 @@ class PlnSemanticAnalyzer {
 	// The location each enclosing 'for' iterates over, as a path from its
 	// variable: "." + field, or "[]" for any index. Its storage and length are
 	// held for the whole loop.
-	struct PinnedRange { vector<string> path; bool resizable; bool borrow; };
+	// A union whose contents an `is` binds is pinned too, with the variant
+	// bound: its variant must not change. `shown` names a hidden location.
+	struct PinnedRange { vector<string> path; bool resizable; bool borrow; string variant = ""; string shown = ""; };
 	vector<PinnedRange> pinnedRanges_;
-	enum class RangeChange { Borrow, Copy, Transfer };
+	// Transfer is into the location, Give out of it.
+	enum class RangeChange { Borrow, Copy, Transfer, Give };
+	// The pointer an `is` binding reads a union through, and the variant the
+	// test found, so reading it needs no check.
+	map<string, string> knownVariants_;
+	// What the `is` bindings of the condition being analyzed need: hidden
+	// variables declared ahead of the statement, in a scope of their own, and
+	// the names bound, declared for the body.
+	struct IsBound { string name; json type; json loc; };
+	struct IsScope { json prefix = json::array(); vector<IsBound> bound; };
+	IsScope* isScope_ = nullptr;
 	// Counter for generating unique temporary variable names
 	int tempVarCounter_ = 0;
 	// The top level names the implicit `args`; its header is built only then.
@@ -851,6 +863,8 @@ class PlnSemanticAnalyzer {
 	FieldChain resolveObjectChain(const json& obj, bool forWrite);
 	void checkVariant(FieldChain& chain, const FieldLayout& fld);
 	json unionAddr(const FieldChain& chain) const;
+	json sa_expr_is(const json& expr);
+	json isBindingTest(const json& expr, const StructDef& def, json saX, json test);
 	const StructDef* unionNamed(const json& obj, string& written) const;
 	json variantValue(const json& expr, bool isCall);
 	json variantMakerDef(const StructDef& def, const string& variant) const;
@@ -945,6 +959,9 @@ class PlnSemanticAnalyzer {
 	json sa_tapple_assign(const json& stmt);
 	json sa_block(const json& stmt);
 	json sa_if_stmt(const json& stmt);
+	void markIsBindings(json& cond, vector<pair<string, json>>& aliases);
+	json closeIsScope(IsScope& scope, IsScope* outer, json stmt);
+	void declareIsBound(const IsScope& scope);
 	json sa_while_stmt(const json& stmt);
 	json sa_loop_body(const json& astBody, const json& heads, json step);
 	json sa_for_stmt(const json& stmt);

@@ -1,0 +1,5 @@
+type J union { Null; int64 i; [+]J items; };
+J j;
+bool b = j is items;
+int64 x = 0;
+if j is @i && i > 0 { i -> x; }

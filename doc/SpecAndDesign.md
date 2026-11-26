@@ -683,8 +683,8 @@ if j is { Null { } copy i { } @t = s { } else { } }
 - **`j is s`** is a `bool`. `j is @s`, `@!s` and `copy s` bind a variable named as the variant, or
   `@t = s`, `@!t = s`, `copy t = s`, with `for`'s meanings, visible in
   the body of the `if` or `while` and to the right in `&&`. A binding elsewhere (under `||` or `!`, or
-  outside a condition) is an error. The body may not change `j`'s variant through the name given, as
-  `for`'s may not change its array; through another borrow it is undetected (doc/Issues.md #1). A
+  outside a condition) is an error. While it borrows the contents, the body may not change `j`'s
+  variant through the name given, as `for`'s may not change its array; through another borrow it is undetected (doc/Issues.md #1). A
   temporary tested lives to the end of the body. A binding moving the contents out was not taken:
   most uses read them, and `j.s ->> v` after a test moves them.
 - **`if j is { }`** is the whole condition, needs every variant or an `else` inside the braces, runs one

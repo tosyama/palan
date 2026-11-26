@@ -232,14 +232,121 @@ json PlnSemanticAnalyzer::sa_block(const json& stmt)
 	return {{"stmt-type", "block"}, {"body", move(body)}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
+// Each use of `name` in a body becomes `elem` (a variable, a field or an
+// element), keeping its loc; an assignment to it becomes one to `elem`. A
+// nested function can't see the body's variables, so its body is left alone.
+static void aliasName(json& node, const string& name, const json& elem)
+{
+	if (node.is_array()) {
+		for (auto& n : node) aliasName(n, name, elem);
+		return;
+	}
+	if (!node.is_object()) return;
+	if (node.value("expr-type", "") == "id" && node["name"] == name) {
+		json e = elem;
+		if (node.contains("loc")) e["loc"] = node["loc"];
+		node = move(e);
+		return;
+	}
+	if (node.value("stmt-type", "") == "assign" && node["name"] == name) {
+		string et = elem["expr-type"];
+		if (et == "id") {
+			node["name"] = elem["name"];
+		} else if (et == "field-access") {
+			node["stmt-type"] = "field-assign";
+			node["object"] = elem["object"];
+			node["field"] = elem["field"];
+			node.erase("name");
+		} else {
+			node["stmt-type"] = "arr-assign";
+			node["target"] = elem;
+			if (node.contains("loc")) node["target"]["loc"] = node["loc"];
+			node.erase("name");
+		}
+	}
+	for (auto& [k, v] : node.items())
+		if (k != "functions") aliasName(v, name, elem);
+}
+
+// Gives each `is` that may bind in `cond` (the whole condition, or an operand
+// of `&&` in it) the names of its hidden variables, and makes each name bound
+// on the left of a `&&` read what it binds on its right. `aliases` gets what
+// each name bound becomes in the body.
+void PlnSemanticAnalyzer::markIsBindings(json& cond, vector<pair<string, json>>& aliases)
+{
+	// LCOV_EXCL_BR_START
+	string et = cond.value("expr-type", "");
+	if (et == "logical-and") {
+		markIsBindings(cond["left"], aliases);
+		for (auto& [name, alias] : aliases) aliasName(cond["right"], name, alias);
+		markIsBindings(cond["right"], aliases);
+		return;
+	}
+	if (et != "is" || !cond.contains("bind")) return;
+	string ptr = "__is_" + to_string(tempVarCounter_++);
+	cond["ptr-var"] = ptr;
+	json alias;
+	if (cond["bind"]["borrow"]) {
+		alias = {{"expr-type","field-access"},{"object",{{"expr-type","id"},{"name",ptr}}},{"field",cond["variants"][0]}};
+	} else {
+		string copy = "__is_c_" + to_string(tempVarCounter_++);
+		cond["copy-var"] = copy;
+		alias = {{"expr-type","id"},{"name",copy}};
+	}
+	aliases.push_back({cond["bind"]["name"], move(alias)});
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// The names bound, declared in a scope of their own around the body, so the
+// body cannot declare them again and what follows it does not see them.
+void PlnSemanticAnalyzer::declareIsBound(const IsScope& scope)
+{
+	for (auto& b : scope.bound) declareVar(b.name, b.type, &b.loc);
+}
+
+// The statement, after the hidden variables its `is` bindings declared, in a
+// block that releases them.
+json PlnSemanticAnalyzer::closeIsScope(IsScope& scope, IsScope* outer, json stmt)
+{
+	// LCOV_EXCL_BR_START
+	isScope_ = outer;
+	json body = move(scope.prefix);
+	body.push_back(move(stmt));
+	size_t idx = arrayScopeVars_.size() - 1;
+	for (auto& s : collectFreeStmts(idx, idx + 1)) body.push_back(move(s));
+	leaveScope();
+	return {{"stmt-type","block"},{"body",move(body)}};
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 json PlnSemanticAnalyzer::sa_if_stmt(const json& stmt)
 {
+	json cond = stmt["cond"];
+	json then = stmt["then"];
+	vector<pair<string, json>> aliases;
+	markIsBindings(cond, aliases);
+	for (auto& [name, alias] : aliases) aliasName(then, name, alias);
+	IsScope scope;
+	IsScope* outer = isScope_;
+	bool binds = !aliases.empty();
+	if (binds) {
+		enterScope();
+		isScope_ = &scope;
+	}
+	size_t pins = pinnedRanges_.size();
+
 	json result;
 	result["stmt-type"] = "if";
-	result["cond"] = sa_expression(stmt["cond"]);
+	result["cond"] = sa_expression(cond);
 	applyPendingGiven();
 	GivenFlow before = given_.flow;
-	result["then"] = sa_block(stmt["then"]);
+	if (binds) {
+		enterScope();
+		declareIsBound(scope);
+	}
+	result["then"] = sa_block(then);
+	if (binds) leaveScope();
+	pinnedRanges_.erase(pinnedRanges_.begin() + pins, pinnedRanges_.end());
 	GivenFlow afterThen = move(given_.flow);
 	given_.flow = move(before);
 	if (stmt.contains("else")) {
@@ -252,21 +359,41 @@ json PlnSemanticAnalyzer::sa_if_stmt(const json& stmt)
 	mergeGivenFlow(given_.flow, afterThen);
 	if (stmt.contains("loc"))
 		result["loc"] = stmt["loc"];
-	return result;
+	return binds ? closeIsScope(scope, outer, move(result)) : result;
 }
 
 json PlnSemanticAnalyzer::sa_while_stmt(const json& stmt)
 {
+	json cond = stmt["cond"];
+	json body = stmt["body"];
+	vector<pair<string, json>> aliases;
+	markIsBindings(cond, aliases);
+	for (auto& [name, alias] : aliases) aliasName(body, name, alias);
+	IsScope scope;
+	IsScope* outer = isScope_;
+	bool binds = !aliases.empty();
+	if (binds) {
+		enterScope();
+		isScope_ = &scope;
+	}
+	size_t pins = pinnedRanges_.size();
+
 	json result;
 	result["stmt-type"] = "while";
 	enterGivenLoop();
-	result["cond"] = sa_expression(stmt["cond"]);
+	result["cond"] = sa_expression(cond);
 	applyPendingGiven();
-	result["body"] = sa_loop_body(stmt["body"], json::array(), json::array());
+	if (binds) {
+		enterScope();
+		declareIsBound(scope);
+	}
+	result["body"] = sa_loop_body(body, json::array(), json::array());
+	if (binds) leaveScope();
+	pinnedRanges_.erase(pinnedRanges_.begin() + pins, pinnedRanges_.end());
 	leaveGivenLoop();
 	if (stmt.contains("loc"))
 		result["loc"] = stmt["loc"];
-	return result;
+	return binds ? closeIsScope(scope, outer, move(result)) : result;
 }
 
 // heads: statements ahead of the body in the loop's scope, their types
@@ -433,15 +560,24 @@ void PlnSemanticAnalyzer::checkRangeChange(const json& locNode, const json& locA
 	if (pinnedRanges_.empty() || !locationPath(locAst, path))
 		return;
 	for (auto& r : pinnedRanges_) {
-		if (path.size() > r.path.size() || !equal(path.begin(), path.end(), r.path.begin(), samePathStep))
+		bool isUnion = !r.variant.empty();
+		size_t common = min(path.size(), r.path.size());
+		if (path.size() > r.path.size() + (isUnion ? 1 : 0)
+		    || !equal(path.begin(), path.begin() + common, r.path.begin(), samePathStep))
 			continue;
-		if (path.size() == r.path.size()) {
+		if (isUnion && path.size() > r.path.size()) {
+			// Giving the contents away leaves the first variant; storing
+			// another variant's makes that one.
+			bool bound = path.back() == "." + r.variant;
+			if (bound ? change != RangeChange::Give : change == RangeChange::Borrow) continue;
+		} else if (!isUnion && path.size() == r.path.size()) {
 			if (r.borrow && change != RangeChange::Borrow) continue;
-			if (!r.resizable && change != RangeChange::Transfer) continue;
+			if (!r.resizable && change != RangeChange::Transfer && change != RangeChange::Give) continue;
 		}
-		string name;
-		for (auto& p : r.path) name += p;
-		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ChangeForRange, name) << endl;
+		string name = r.shown;
+		if (name.empty())
+			for (auto& p : r.path) name += p;
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(isUnion ? E_ChangeTestedUnion : E_ChangeForRange, name) << endl;
 		exit(1);
 	}
 }
@@ -453,31 +589,6 @@ void PlnSemanticAnalyzer::checkRangeBorrowBinding(const json& locNode, const jso
 		checkRangeChange(locNode, srcAst, RangeChange::Borrow);
 }
 
-// Each use of `name` in a loop body becomes `elem`, keeping its loc; an
-// assignment to it becomes one to the element. A nested function can't see
-// the loop's variables, so its body is left alone.
-static void aliasLoopElem(json& node, const string& name, const json& elem)
-{
-	if (node.is_array()) {
-		for (auto& n : node) aliasLoopElem(n, name, elem);
-		return;
-	}
-	if (!node.is_object()) return;
-	if (node.value("expr-type", "") == "id" && node["name"] == name) {
-		json e = elem;
-		if (node.contains("loc")) e["loc"] = node["loc"];
-		node = move(e);
-		return;
-	}
-	if (node.value("stmt-type", "") == "assign" && node["name"] == name) {
-		node["stmt-type"] = "arr-assign";
-		node["target"] = elem;
-		if (node.contains("loc")) node["target"]["loc"] = node["loc"];
-		node.erase("name");
-	}
-	for (auto& [k, v] : node.items())
-		if (k != "functions") aliasLoopElem(v, name, elem);
-}
 
 // `for a, i in arr { }` becomes a while over i, in a block of its own that
 // holds arr, evaluated once, and its length. Over a dictionary `for a, k in d`,
@@ -611,7 +722,7 @@ json PlnSemanticAnalyzer::sa_for_array(const json& stmt, json range)
 		}
 		// The name stays declared so the body can't declare it again.
 		declareVar(elem["name"], {{"type-kind","pntr"},{"mutable",mut},{"base-type",move(declType)}});
-		aliasLoopElem(astBody, elem["name"], {{"expr-type","arr-index"},{"array",id(view)},{"index",id(idx)}});
+		aliasName(astBody, elem["name"], {{"expr-type","arr-index"},{"array",id(view)},{"index",id(idx)}});
 	} else {
 		json init = {{"expr-type","arr-index"},{"array",id(arr)},{"index",id(idx)},{"loc",elem["loc"]}};
 		heads.push_back(varDecl(elem["name"], declType, move(init), elem["loc"]));
@@ -831,7 +942,7 @@ json PlnSemanticAnalyzer::sa_for_struct(const json& stmt, const json& rangeVT, j
 	json astBody = stmt["body"];
 	if (elem["borrow"]) {
 		declareVar(elem["name"], recvType);
-		aliasLoopElem(astBody, elem["name"], through);
+		aliasName(astBody, elem["name"], through);
 	} else if (!direct) {
 		json copyType = eType;
 		copyType.erase("mutable");
@@ -2026,7 +2137,7 @@ void PlnSemanticAnalyzer::appendTransferSourceReset(json& stmts, const json& stm
 		return;
 	}
 	const json& src = stmt["value"];
-	checkRangeChange(stmt, src, RangeChange::Transfer);
+	checkRangeChange(stmt, src, RangeChange::Give);
 	string et = src.value("expr-type", "");
 	auto nullOf = [](const json& vt) -> json {
 		return {{"expr-type","lit-int"},{"value","0"},{"value-type",vt}}; // LCOV_EXCL_BR_LINE

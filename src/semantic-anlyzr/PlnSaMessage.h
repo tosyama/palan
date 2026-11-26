@@ -260,6 +260,9 @@ enum PlnSaMessageCode {
 	E_UnknownVariant,	// arg1: variant name, arg2: union type name
 	E_VariantNeedsValue,	// arg1: the variant as written (U.v)
 	E_VariantTakesNoValue,	// arg1: the variant as written (U.v)
+	E_IsNotUnion,	// arg1: type display name
+	E_IsBindingPlace,	// arg1: the variable bound
+	E_ChangeTestedUnion,	// arg1: the union tested
 };
 
 class PlnSaMessage

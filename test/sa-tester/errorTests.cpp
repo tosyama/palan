@@ -1672,9 +1672,20 @@ TEST(sa_error, union) {
 		{"error_1385_union_variant_needs_value.pa", ":2:7: error: 'U.i' has contents, which are given as 'U.i(value)'."},
 		{"error_1386_union_variant_no_value.pa", ":2:7: error: 'U.Null' has no contents: it is written 'U.Null', without '()'."},
 		{"error_1387_union_unknown_field.pa", ":3:11: error: union 'U' has no variant 'k'."},
-		// Not yet: a literal for a union, `is`.
+		{"error_1378_is_not_union.pa", ":2:10: error: 'is' tests a union's variant, not a value of type 'int32'."},
+		{"error_1390_is_bind_place.pa", ":3:9: error: 'i' can be bound only in the condition of an 'if' or 'while', or on the left of '&&' there."},
+		{"error_1391_is_bind_not_cond.pa", ":3:15: error: 'i' can be bound only in the condition"},
+		{"error_1392_is_bind_no_contents.pa", ":3:9: error: variant 'Null' of union 'U' has no contents to access."},
+		{"error_1393_is_bind_readonly.pa", ":3:10: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1394_is_change_variant.pa", ":5:2: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
+		// The index is not known, so any element may be the one tested.
+		{"error_1395_is_change_container.pa", ":5:3: error: cannot change the variant of a union whose contents 'is' binds ('s.us[]')."},
+		{"error_1396_is_give_binding.pa", ":5:2: error: cannot change the variant of a union whose contents 'is' binds ('a')."},
+		{"error_1397_is_bind_else.pa", ":4:23: error: Undefined variable 'i'."},
+		{"error_1398_is_borrow_whole.pa", ":5:4: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
+		{"error_1399_is_bind_taken.pa", ":4:9: error: Variable 'i' is already declared."},
+		// Not yet: a literal for a union, `if x is { }`.
 		{"error_1380_union_lit_not_impl.pa", ":2:7: error: this expression is not supported"},
-		{"error_1378_is_not_impl.pa", ":2:10: error: this expression is not supported"},
 		{"error_1379_if_is_not_impl.pa", ":2:1: error: this statement is not supported"},
 	};
 	for (auto& [file, expected] : cases) {
