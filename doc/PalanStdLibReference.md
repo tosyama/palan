@@ -134,7 +134,6 @@ used after `s` is changed. Positions (`find`, `slice` and the others) count code
 ```palan
 cinclude <stdio.h>;
 import <std/json>;
-import <std/utf8>;
 
 jsonresult r = parseJson("{\"name\": \"palan\", \"tags\": [1, 2.5]}");
 if r is @err = error { printf("%s at %ld:%ld\n", err.message -> cstr(), err.line, err.col); }
@@ -151,6 +150,8 @@ printf("%s\n", toUtf8(@j) -> cstr());
 ```
 
 `json` is a [union](PalanReference.md#tagged-unions) of a JSON value's kinds. A declared `json` is `Null`.
+std/json [re-exports](PalanReference.md#re-exporting) [std/utf8](#stdutf8), so its text is used without
+importing that too.
 
 ```palan
 export type json union { Null; bool b; int64 i; flo64 f; utf8 s; [+]json items; [""]json members; };

@@ -233,6 +233,25 @@ TEST(gen_ast_error, cinclude_export_not_top_level) {
 	}
 }
 
+TEST(gen_ast_error, export_import_not_top_level) {
+	const string message = "error: 'export import' is accepted only at the top level.";
+	struct { string source, location; } cases[] = {
+		{"{\n\texport import \"x.pa\";\n}\n", "m.pa:2:2: "},
+		{"func f() {\n\texport import <std/utf8>;\n}\n", "m.pa:2:2: "},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.location + message), string::npos) << c.source << out;
+	}
+	cleanTestEnv();
+	ofstream("out/m.pa") << "export import \"x.pa\" as X;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	ASSERT_NE(out.find("m.pa:1:1: error: 'export import' cannot take an alias: the alias is a name of this file only."),
+		string::npos) << out;
+}
+
 TEST(gen_ast_error, interface_cannot_state) {
 	struct { string source, expected; } cases[] = {
 		{"export func f([3][]int32 a) { }\n", "error: an interface cannot state this parameter or return."},

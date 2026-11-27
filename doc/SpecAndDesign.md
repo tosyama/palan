@@ -17,6 +17,7 @@ version: 0.2.8 — tagged unions, and std/json on them
 - A type defines `[]` (3.11).
 - Returning a borrow of the function's own storage is an error (of doc/Issues.md #1). Hexadecimal
   literals.
+- `export import` publishes an imported module's declarations as the importer's own (3.7).
 
 Out of scope: interfaces; an owned field that may be NULL (`node next`); `is {}` on an enum or a
 number, guards and nested patterns; `is {}` as an expression.
@@ -365,7 +366,7 @@ never published:
 - A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
   declarations need it or not, since its archive is linked). A C type comes through
   `cinclude ... export`. An `import "..."` of an internal module disappears. Another main of the
-  same library is imported as its users do (std's json imports `<std/utf8>`), so its types stay
+  same library is imported as its users do (std's json re-exports `<std/utf8>`), so its types stay
   its own; imported as a source, it would be an internal module, whose types cannot be published.
 - A struct or enum of an internal module is not written in the main's `.pai`: its reader would identify
   it by the main's module, unlike the objects. Not taken: stating each such type's module in the
@@ -438,6 +439,24 @@ function is. Its symbol is its label, `<module>.<name>`.
 - `M.count` reaches palan-sa as a field access on `M`; it becomes the id `M.count` as each
   statement is entered, not in palan-gen-ast, since whether `M` is an alias depends on the scope (a
   variable `M` hides it).
+
+**Re-exporting (`export import`).** `export import <std/utf8>;` publishes what the imported module
+publishes as the importing module's own, and `export import cstr, utf8 from <std/utf8>;` the names
+listed, so std/json's users need not import std/utf8 too. The library's author decides it: finding a
+type's functions through the type, wherever it came from, was not taken, as a reader could no
+longer tell where a function comes from.
+
+- An importer sees what is re-exported as it sees the module's own exports: bare, as `J.cstr` under an
+  alias, and listable in a selective import. A declaration keeps its identity and symbols; nothing is
+  copied. A chain of `export import`s passes it on.
+- The exports of a module are its own and what its `export import`s give, gathered once where palan-sa
+  reads an imported module, so taking its types, functions and globals sees one list. The same
+  declaration reached twice (std/json and std/utf8 both imported) is one, not a clash.
+- An alias is the importing file's own name, so `export import ... as U;` is an error, as is an
+  `export import` in a block, where `export` cannot be written.
+- A `.pai` keeps the `export import <...>`. A library's main cannot re-export one of its internal
+  modules (`export import "x.pa"`): that would publish types the `.pai` cannot state; another main is
+  re-exported as `<...>`.
 
 **C-named functions.** `cexport func add(...)` gives the function the symbol `add`. There is one
 symbol, not an alias beside the usual one: Palan calls it by `add` too, and a `.pai` writes

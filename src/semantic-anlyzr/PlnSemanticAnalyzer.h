@@ -365,6 +365,19 @@ class PlnSemanticAnalyzer {
 		bool                 adopted = false;
 	};
 	map<string, ImportedType> importedTypes_;
+	// A declaration a module publishes: its own, or one an `export import`
+	// passes on, with the module that declares it.
+	struct ModuleExport {
+		enum Kind { Type, Func, Global };
+		Kind                 kind;
+		PlnSemanticAnalyzer* module;
+		const json*          decl;
+		string name() const;
+	};
+	optional<vector<ModuleExport>> exports_;
+	// Every importer reads what this module publishes through this one list.
+	const vector<ModuleExport>& exports();
+	void collectExports(vector<ModuleExport>& out, set<const json*>& seen, set<string>& visiting);
 	// Struct names declared at the top level here or imported, resolved or
 	// not: a pointer may name one before its layout is known.
 	set<string>            declaredStructs_;
@@ -529,7 +542,7 @@ class PlnSemanticAnalyzer {
 	void adoptLaterPointee(PlnSemanticAnalyzer& sub, const json& type, const json& locNode);
 	// A struct that may be named before its layout is resolved.
 	bool awaitsLayout(const string& name) const { return declaredStructs_.count(name) && !structDefs_.count(name); }
-	void adoptExportedTypes(const json& stmt, const json& impAst, PlnSemanticAnalyzer& sub);
+	void adoptExportedTypes(const json& stmt, PlnSemanticAnalyzer& sub);
 	void adoptExportedType(const json& stmt, const json& decl, PlnSemanticAnalyzer& sub);
 	void adoptStruct(PlnSemanticAnalyzer& sub, const string& name, const string& written, const string& alias,
 	                 const json& locNode);

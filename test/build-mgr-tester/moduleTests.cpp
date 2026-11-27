@@ -142,6 +142,13 @@ TEST(build_mgr, selective_alias_import) {
 	ASSERT_EQ(output, "25\n");
 }
 
+// A chain of re-exports, d and e re-exporting each other, reached bare, by alias and selectively.
+TEST(build_mgr, reexport) {
+	cleanTestEnv();
+	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/482_reexport.pa");
+	ASSERT_EQ(output, "1 2 6 7 4 5 3\n10 7\n11\n");
+}
+
 TEST(build_mgr, link_import) {
 	// This file has no `link` clause -- imported lib_sqrt.pa is the one
 	// requesting libm, proving the "libs" union is whole-program, not per-file.
@@ -1042,5 +1049,8 @@ TEST(build_mgr, lib_errors) {
 		"return1::" + lib_build + "err_internal_field.pa:3:1: error: a library's public declaration cannot use the type 'K.Kept' of the internal module '" + lib_build + "kept.pa" + internal);
 	EXPECT_EQ(execTestCommand(libBuild("err_private_alias.pa")),
 		"return1::" + lib_build + "private_alias.pa:3:1: error: a library's public declaration cannot use the type 'Hidden' of the internal module '" + lib_build + "private_alias.pa" + internal);
+	EXPECT_EQ(execTestCommand(libBuild("err_reexport_internal.pa")),
+		"return1::" + lib_build + "err_reexport_internal.pa:2:1: error: a library cannot re-export its internal module '"
+		+ lib_build + "kept.pa': import another main of the library as '<...>'.\n");
 	EXPECT_FALSE(fs::exists("out/lib"));
 }

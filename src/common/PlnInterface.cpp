@@ -215,7 +215,7 @@ string Writer::statement(const json& s) const
 	};
 	if (kind == "cinclude") return "cinclude " + path + alias + " export " + names(s["export-types"]) + ";\n";
 	string targets = s.contains("targets") ? names(s["targets"]) + " from " : "";
-	return "import " + targets + path + alias + ";\n";
+	return string(s.value("export", false) ? "export " : "") + "import " + targets + path + alias + ";\n";
 }
 
 // Every library any `cinclude` of the module links, in source order, however deep in a body.
@@ -547,6 +547,13 @@ json Merger::merged()
 	const json& mainStmts = main["ast"].contains("statements") ? stmts(0) : noStmts;
 	for (auto& s : mainStmts) {
 		string kind = s.value("stmt-type", "");
+		// The .pai cannot state an internal module's types, so it cannot publish them.
+		if (kind == "import" && s.value("export", false) && s["path-type"] == "src") {
+			string at = main["original"].get<string>() + ":" + to_string(s["loc"][0].get<int>()) + ":"
+				+ to_string(s["loc"][1].get<int>());
+			throw runtime_error(at + ": error: a library cannot re-export its internal module '"
+				+ s["path"].get<string>() + "': import another main of the library as '<...>'.");
+		}
 		bool isDecl = kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
 		if (kind == "var-decl" && s.value("global", false) && s.value("export", false))
@@ -574,13 +581,17 @@ json Merger::merged()
 	walk(funcs, 0, true);
 
 	json out = json::array();
-	// A library imported by any module stays: its archive is linked.
+	// A library imported by any module stays: its archive is linked. Only the main's
+	// `export import` publishes; an internal module's re-exports only to the main.
 	set<string> imported;
 	for (int m = 0; m < modules_.size(); m++) {
 		if (!(*modules_[m])["ast"].contains("statements")) continue;
 		for (auto& s : stmts(m)) {
 			if (s.value("stmt-type", "") != "import" || s["path-type"] == "src") continue;
-			if (imported.insert(s["path"].get<string>() + " " + s.value("alias", "")).second) out.push_back(s);
+			json imp = s;
+			imp.erase("loc");
+			if (m != 0) imp.erase("export");
+			if (imported.insert(imp.dump()).second) out.push_back(move(imp));
 		}
 	}
 	for (auto& id : cOrder_) {

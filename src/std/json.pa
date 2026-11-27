@@ -1,8 +1,8 @@
 library std;
 
 // utf8 is another public module of std: imported as its users import it, the types it publishes
-// stay its own in json.pai.
-import <std/utf8>;
+// stay its own in json.pai. Re-exported, as a json's text is used through it.
+export import <std/utf8>;
 import "utf8scan.pa";
 cinclude <stdlib.h>;
 cinclude <string.h>;

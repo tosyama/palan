@@ -1,0 +1,2 @@
+export import Cv, cval, +, cCount from "reexport_c.pa";
+export func bval() -> int64 { return 2; }

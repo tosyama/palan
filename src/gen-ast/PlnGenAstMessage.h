@@ -30,6 +30,8 @@ enum PlnMessageCode {
 	E_InterfaceOtherTarget,	// the target it records
 	E_InterfaceNoTarget,
 	E_NestedCIncludeExport,
+	E_NestedImportExport,
+	E_ExportImportAlias,
 	E_UnexpectedString,		// the identifier before it
 	E_LibpathInInterface,
 	E_BadLibraryImport,		// the path as written

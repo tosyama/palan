@@ -80,6 +80,13 @@ TEST(build_mgr_error, allocators_identity) {
 	ASSERT_NE(out.find("has the same module identity '__allocators' as '"), string::npos) << out;
 }
 
+// A selective `export import` passes on only the names it lists.
+TEST(build_mgr_error, reexport_unlisted) {
+	cleanTestEnv();
+	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_066_reexport_unlisted.pa");
+	ASSERT_NE(out.find("error_066_reexport_unlisted.pa:2:11: error: Undefined function 'hiddenC'."), string::npos) << out;
+}
+
 TEST(build_mgr_error, unqualified_alias_call) {
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_046_unqualified_alias.pa");

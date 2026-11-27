@@ -57,6 +57,12 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 		case E_NestedCIncludeExport:
 			return "an 'export' clause is accepted only on a top-level cinclude.";
 
+		case E_NestedImportExport:
+			return "'export import' is accepted only at the top level.";
+
+		case E_ExportImportAlias:
+			return "'export import' cannot take an alias: the alias is a name of this file only.";
+
 		case E_UnexpectedString:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "syntax error, unexpected string after '" + arg1 + "'.";

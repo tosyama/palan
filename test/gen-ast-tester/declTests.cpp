@@ -1219,6 +1219,17 @@ static json withoutLoc(json j) {
 }
 
 // A library's users see the AST of the text, so it must say what the source said.
+TEST(gen_ast, interface_keeps_export_import) {
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("palan-gen-ast ../test/testdata/gen-ast/174_export_import.pa"
+		" -o out/m.json --interface out/m.pai"), "");
+	string abs = fs::weakly_canonical("../test/testdata/gen-ast").string();
+	string text = readText("out/m.pai");
+	ASSERT_NE(text.find("export import \"" + abs + "/other.pa\";\n"
+		"export import a, b from <std/utf8>;\n"
+		"import \"" + abs + "/plain.pa\";\n"), string::npos) << text;
+}
+
 TEST(gen_ast, interface_reads_back_as_the_source) {
 	for (string file : {"155_interface.pa", "156_interface_forms.pa"}) {
 		cleanTestEnv();

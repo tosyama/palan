@@ -64,6 +64,15 @@ TEST(std_json, imported_from_the_build_tree) {
 		"1 2.5 x\nunexpected character 8 2:5\n3\n5\n");
 }
 
+// std/json re-exports std/utf8, so a json's text needs no import of its own.
+TEST(std_json, reexports_std_utf8) {
+	cleanTestEnv();
+	ofstream("out/uses.pa") << "import <std/json>;\ncinclude <stdio.h>;\n"
+		"json j = {\"s\": \"h\\u{E9}\"};\n"
+		"if j[\"s\"] is @s { printf(\"%s %ld\\n\", s -> cstr(), s -> charCount()); }\n";
+	ASSERT_EQ(execTestCommand("bin/palan out/uses.pa"), "h\xC3\xA9 2\n");
+}
+
 TEST(std_json, runtime_errors) {
 	struct { const char* code; const char* error; } cases[] = {
 		{"flo64 z = 0.0;\njson j = json(z / z);\nutf8 t = toUtf8(@j);\n", "json number is NaN or infinite"},

@@ -1119,17 +1119,16 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 			json impAst = loadImportAst(stmt);
 			if (impAst.is_null()) continue;
 			PlnSemanticAnalyzer& mod = importTypeContext(move(impAst));
-			if (!(*mod.moduleAstRoot_)["ast"].contains("statements")) continue;
 			string alias = stmt.value("alias", "");
 			set<string> targets;
 			if (stmt.contains("targets"))
 				for (auto& tg : stmt["targets"]) targets.insert(tg.get<string>());
-			for (auto& d : (*mod.moduleAstRoot_)["ast"]["statements"]) {
-				if (!d.value("export", false) || !isTypeDecl(d["stmt-type"])) continue;
-				string name = d["name"].get<string>();
+			for (auto& e : mod.exports()) {
+				if (e.kind != ModuleExport::Type) continue;
+				string name = e.name();
 				if (stmt.contains("targets") && !targets.count(name)) continue;
-				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, &mod, &d});
-				if (declaresStructType(d["stmt-type"])) declaredStructs_.insert(mod.topTypeIdentity(name));
+				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, e.module, e.decl});
+				if (declaresStructType((*e.decl)["stmt-type"])) declaredStructs_.insert(e.module->topTypeIdentity(name));
 			}
 		}
 	}
@@ -1690,6 +1689,57 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importTypeContext(json impAst)
 	return mod;
 }
 
+string PlnSemanticAnalyzer::ModuleExport::name() const
+{
+	return kind == Global ? (*decl)["vars"][0]["name"] : (*decl)["name"];
+}
+
+const vector<PlnSemanticAnalyzer::ModuleExport>& PlnSemanticAnalyzer::exports()
+{
+	if (!exports_) {
+		vector<ModuleExport> out;
+		set<const json*> seen;
+		set<string> visiting;
+		collectExports(out, seen, visiting);
+		exports_ = move(out);
+	}
+	return *exports_;
+}
+
+// Two modules may re-export each other; `visiting` stops the cycle.
+void PlnSemanticAnalyzer::collectExports(vector<ModuleExport>& out, set<const json*>& seen, set<string>& visiting)
+{
+	if (!visiting.insert(moduleId_).second) return;
+	// Pointers into the module's own AST, which lives as long as the module.
+	static const json none = json::array();
+	const json& root = *moduleAstRoot_;
+	auto add = [&](ModuleExport e) { if (seen.insert(e.decl).second) out.push_back(e); };
+	const json& stmts = root["ast"].contains("statements") ? root["ast"]["statements"] : none; // LCOV_EXCL_BR_LINE
+	for (auto& d : stmts) {
+		if (!d.value("export", false)) continue;
+		if (isTypeDecl(d["stmt-type"])) add({ModuleExport::Type, this, &d});
+		else if (d.value("global", false)) add({ModuleExport::Global, this, &d});
+	}
+	for (auto& f : root.contains("export") ? root["export"] : none)
+		add({ModuleExport::Func, this, &f});
+	for (auto& s : stmts) {
+		if (s.value("stmt-type", "") != "import" || !s.value("export", false)) continue;
+		json impAst = loadImportAst(s);
+		if (impAst.is_null()) continue;
+		PlnSemanticAnalyzer& inner = importTypeContext(move(impAst));
+		vector<ModuleExport> passed;
+		inner.collectExports(passed, seen, visiting);
+		for (auto& e : passed) {
+			if (s.contains("targets")) {
+				const json& tg = s["targets"];
+				if (find(tg.begin(), tg.end(), e.name()) == tg.end()) { seen.erase(e.decl); continue; }
+			}
+			out.push_back(e);
+		}
+	}
+	visiting.erase(moduleId_);
+}
+
 // The interface is imported by a module of nothing else, so it meets whatever
 // a first user of the library would, private declarations included.
 json PlnSemanticAnalyzer::interfaceSymbols(const json& ast)
@@ -1732,10 +1782,8 @@ void PlnSemanticAnalyzer::sa_import(const json& stmt)
 PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const json& imp_ast)
 {
 	PlnSemanticAnalyzer& sub = importTypeContext(imp_ast);
-	adoptExportedTypes(stmt, imp_ast, sub);
+	adoptExportedTypes(stmt, sub);
 	importGlobals(stmt, sub);
-
-	if (!imp_ast.contains("export")) return sub;
 
 	string alias = stmt.value("alias", "");
 	bool hasAlias = !alias.empty();
@@ -1748,19 +1796,21 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const j
 
 	auto& currentScope = importScopes.back();
 
-	for (auto& f : imp_ast["export"]) {
-		string fname = f["name"].get<string>();
+	for (auto& e : sub.exports()) {
+		if (e.kind != ModuleExport::Func) continue;
+		string fname = e.name();
 		if (selective && !targets.count(fname)) continue;
 
-		// Resolved in the exporting module, where the type names it uses mean
+		// Resolved in the declaring module, where the type names it uses mean
 		// what its author meant.
-		json funcEntry = sub.normalizeFuncSig(f, sub.moduleId_);
-		funcEntry["_module"] = sub.moduleId_;
+		PlnSemanticAnalyzer& owner = *e.module;
+		json funcEntry = owner.normalizeFuncSig(*e.decl, owner.moduleId_);
+		funcEntry["_module"] = owner.moduleId_;
 		for (auto& p : funcEntry.value("parameters", json::array()))
-			adoptTypeDeps(sub, p["var-type"], stmt);
+			adoptTypeDeps(owner, p["var-type"], stmt);
 		for (auto& r : funcEntry.value("rets", json::array()))
-			adoptTypeDeps(sub, r["var-type"], stmt);
-		if (funcEntry.contains("ret-type")) adoptTypeDeps(sub, funcEntry["ret-type"], stmt);
+			adoptTypeDeps(owner, r["var-type"], stmt);
+		if (funcEntry.contains("ret-type")) adoptTypeDeps(owner, funcEntry["ret-type"], stmt);
 
 		// An operator cannot be written qualified, so an alias does not hide it.
 		currentScope[operatorFuncNames().count(fname) ? "" : alias][fname].push_back(funcEntry);
@@ -1773,7 +1823,7 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const j
 void PlnSemanticAnalyzer::importGlobals(const json& stmt, PlnSemanticAnalyzer& sub)
 {
 	// LCOV_EXCL_BR_START
-	if (sub.moduleId_ == moduleId_ || !(*sub.moduleAstRoot_)["ast"].contains("statements")) return;
+	if (sub.moduleId_ == moduleId_) return;
 	string alias = stmt.value("alias", "");
 	set<string> targets;
 	bool selective = stmt.contains("targets");
@@ -1781,19 +1831,21 @@ void PlnSemanticAnalyzer::importGlobals(const json& stmt, PlnSemanticAnalyzer& s
 		for (auto& t : stmt["targets"]) targets.insert(t.get<string>());
 	bool topLevel = !currentFunc_ && varScopes.size() == 1;
 
-	for (auto& d : (*sub.moduleAstRoot_)["ast"]["statements"]) {
-		if (!d.value("global", false) || !d.value("export", false)) continue;
-		string name = d["vars"][0]["name"];
+	for (auto& e : sub.exports()) {
+		if (e.kind != ModuleExport::Global) continue;
+		PlnSemanticAnalyzer& owner = *e.module;
+		const json& d = *e.decl;
+		string name = e.name();
 		if (selective && !targets.count(name)) continue;
 		string written = alias.empty() ? name : alias + "." + name;
-		string label = sub.moduleId_ + "." + name;
+		string label = owner.moduleId_ + "." + name;
 		// The same module imported again into this scope.
 		if (varScopes.back().count(written) && any_of(staticBindings_.begin(), staticBindings_.end(),
 				[&](const json& b) { return b["name"] == written && b["label"] == label; }))
 			continue;
 
-		json type = sub.exportedGlobalType(d);
-		adoptVarTypeDeps(sub, type, stmt);
+		json type = owner.exportedGlobalType(d);
+		adoptVarTypeDeps(owner, type, stmt);
 		optional<ScopeVar> scopeVar;
 		if (isOwnedBlock(type)) {
 			json astType = d["vars"][0]["var-type"];

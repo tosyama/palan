@@ -1,0 +1,18 @@
+cinclude <stdio.h>;
+import "reexport_a.pa";
+// b's and c's declarations reached again are the same ones, not a clash.
+import "reexport_b.pa";
+
+Cv x = {v: 3};
+Cv y = x + x;
+printf("%ld %ld %ld %ld %ld %ld %ld\n", aval(), bval(), cval(@y), cCount, dval(), eval(), x -> cval());
+{
+	import "reexport_a.pa" as A;
+	A.Cv z = {v: 10};
+	printf("%ld %ld\n", A.cval(@z), A.cCount);
+}
+{
+	import cval, Cv from "reexport_a.pa";
+	Cv w = {v: 11};
+	printf("%ld\n", cval(@w));
+}

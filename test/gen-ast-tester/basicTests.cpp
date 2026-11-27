@@ -1700,6 +1700,19 @@ TEST(gen_ast, union)
 	ASSERT_EQ(cmp["left"]["expr-type"], "is");
 }
 
+TEST(gen_ast, export_import)
+{
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/174_export_import.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const json& s = jout["ast"]["statements"];
+	ASSERT_EQ(s[0]["stmt-type"], "import");
+	ASSERT_EQ(s[0]["export"], true);
+	ASSERT_EQ(s[1]["export"], true);
+	ASSERT_EQ(s[1]["targets"], json::array({"a", "b"}));
+	ASSERT_FALSE(s[2].contains("export"));
+}
+
 TEST(gen_ast, subscript_func)
 {
 	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/173_subscript_func.pa");

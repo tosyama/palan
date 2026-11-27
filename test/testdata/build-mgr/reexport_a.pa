@@ -1,0 +1,5 @@
+export import "reexport_b.pa";
+export import "reexport_d.pa";
+// Cv again, also reached through b.
+export import Cv from "reexport_c.pa";
+export func aval() -> int64 { return 1; }

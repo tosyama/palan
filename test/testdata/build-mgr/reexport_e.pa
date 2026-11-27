@@ -1,0 +1,2 @@
+export import "reexport_d.pa";
+export func eval() -> int64 { return 5; }

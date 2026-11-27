@@ -1663,9 +1663,8 @@ void PlnSemanticAnalyzer::setTypeNameable(const string& name, bool nameable, con
 }
 
 // Registers the types `stmt` imports, as the exporting module resolved them.
-void PlnSemanticAnalyzer::adoptExportedTypes(const json& stmt, const json& impAst, PlnSemanticAnalyzer& sub)
+void PlnSemanticAnalyzer::adoptExportedTypes(const json& stmt, PlnSemanticAnalyzer& sub)
 {
-	if (!impAst["ast"].contains("statements")) return;
 	set<string> targets;
 	bool selective = stmt.contains("targets");
 	if (selective)
@@ -1673,13 +1672,13 @@ void PlnSemanticAnalyzer::adoptExportedTypes(const json& stmt, const json& impAs
 			targets.insert(t.get<string>());
 
 	string alias = stmt.value("alias", "");
-	for (auto& d : impAst["ast"]["statements"]) {
-		if (!d.value("export", false) || !isTypeDecl(d["stmt-type"])) continue;
-		string name = d["name"].get<string>();
+	for (auto& e : sub.exports()) {
+		if (e.kind != ModuleExport::Type) continue;
+		string name = e.name();
 		if (selective && !targets.count(name)) continue;
 		string written = alias.empty() ? name : alias + "." + name;
 		bool wasWritable = typeAliases_.count(written);
-		adoptExportedType(stmt, d, sub);
+		adoptExportedType(stmt, *e.decl, *e.module);
 		if (!blockImportedTypes_.empty() && !wasWritable) blockImportedTypes_.back().push_back(written);
 	}
 }

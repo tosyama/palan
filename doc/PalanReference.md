@@ -3126,6 +3126,32 @@ flo32 l = len2(@p);
 - Two files may import each other and use each other's types anywhere, including in type
   declarations, as long as no type contains itself (see [Declaration order](#declaration-order)).
 
+### Re-exporting
+
+`export import` imports a module and publishes what it publishes as this file's own, so a file
+importing this one gets both:
+
+```palan
+// shapes.pa
+export import "vec3.pa";
+export func dot(@vec3 a, @vec3 b) -> flo32 { return a.x * b.x + a.y * b.y + a.z * b.z; }
+
+// main.pa
+import "shapes.pa";
+vec3 p;                     // vec3 and len2 come from vec3.pa through shapes.pa
+flo32 l = len2(@p);
+```
+
+- `export import f, T from "m.pa";` publishes only the names listed. A library's module is
+  re-exported the same way (`export import <std/utf8>;`).
+- An importer sees them as the file's own exports: bare, as `S.len2` under an alias
+  (`import "shapes.pa" as S;`), or listed in a selective import. They keep their own module, so
+  reaching one through two imports is not a clash. A chain of re-exports passes them on.
+- `export import` is written at the top level only, and without an alias, which is a name of the
+  importing file alone. Either is a compile error.
+- A library's main cannot re-export one of its internal modules: `--lib` reports it, since the
+  `.pai` could not state their types (see [Building a Library](#building-a-library)).
+
 ### Hidden and Read-only Fields
 
 A field of an exported struct may start with `private` (not visible outside the file declaring the

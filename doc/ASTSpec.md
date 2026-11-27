@@ -458,6 +458,7 @@ Statement model
     - path\* - Path string, as in the import file list
     - targets - Import target name string list (a function name, a type name or an operator), null - all
     - alias - Alias name string
+    - export - true for `export import`: what the module publishes is published as this module's own
   2. cinclude - C header include statement (expands in place, scope-aware)
     - path-type\* - Path type string: "src" "inc"
     - path\* - Path string
