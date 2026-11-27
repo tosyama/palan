@@ -1706,3 +1706,39 @@ TEST(sa_error, union) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, subscript_func) {
+	const string sig = "error: '[]' must be 'func [](@T t, K k) -> @E' (or 'E') to read, or 'func [](@!T t, K k) -> @!E' to write";
+	const string putSig = "error: '->[]' must be 'func ->[](V v, @!T t, K k)'";
+	const string tested = "error: cannot change the variant of a union whose contents 'is' binds ('u').";
+	const vector<pair<string, string>> cases = {
+		{"error_1410_subscript_arity.pa", ":2:1: " + sig},
+		{"error_1411_subscript_write_ret.pa", ":2:1: " + sig},
+		{"error_1412_subscript_by_value.pa", ":2:1: " + sig},
+		{"error_1413_put_readonly.pa", ":2:1: " + putSig},
+		{"error_1414_put_ret.pa", ":2:1: " + putSig},
+		// A read never needs t writable, so it takes only a '[]' of '@T'.
+		{"error_1415_subscript_read_needs_ro.pa", ":4:11: error: No operator function '[]' takes (@T, int64)."},
+		{"error_1416_subscript_write_readonly.pa", ":4:21: error: cannot write through read-only pointer '@T'"},
+		// Not the pointer's subscript, though p is a borrow.
+		{"error_1417_subscript_no_fit.pa", ":3:32: error: No function '[]' takes (@T, int64); there are [](@T, @[]uint8)."},
+		// A type with '->[]' stores only through it, not through '[]'.
+		{"error_1418_put_no_fit.pa", ":5:1: error: No function '->[]' takes (int64, @!T, int64); there are ->[](int64, @!T, @[]uint8)."},
+		{"error_1419_subscript_default.pa", ":2:25: error: parameter 'i' of operator function '[]' cannot have a default value"},
+		{"error_1420_subscript_move_whole.pa", ":6:1: error: cannot assign to a struct element as a whole"},
+		{"error_1421_put_tested_union.pa", ":4:14: " + tested},
+		{"error_1422_subscript_temp_base.pa", ":4:13: error: a struct or array returned by a call has no owner to access it through"},
+		{"error_1423_subscript_tested_union.pa", ":4:28: " + tested},
+		// A '[]' returning by value returns a temp, as any call does.
+		{"error_1424_subscript_value_field.pa", ":5:11: error: a struct or array returned by a call has no owner"},
+		{"error_1425_subscript_value_borrow.pa", ":6:4: error: a struct or array returned by a call has no owner"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

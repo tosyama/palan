@@ -1,0 +1,6 @@
+type P { [+]int64 v; };
+type T { P p; };
+func [](@!T t, int64 i) -> @!P { return @!t.p; }
+T t;
+P q;
+q ->> t[0];

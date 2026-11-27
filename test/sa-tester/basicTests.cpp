@@ -1313,3 +1313,20 @@ TEST(sa, union_lit_conversion)
 	EXPECT_EQ(stmts[1]["body"]["name"], "_1407_union_lit_conversion..J.bool");
 	EXPECT_EQ(stmts[3]["body"]["name"], "_1407_union_lit_conversion..J.PVP37__pln_L26_1407_union_lit_conversion_J");
 }
+
+// A read calls the '[]' taking '@T', a store the one taking '@!T'; a type
+// without '[]' keeps the pointer's subscript.
+TEST(sa, subscript_func)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1410_subscript_func.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	EXPECT_EQ(stmts[1]["vars"][0]["init"]["name"], "_1410_subscript_func..0idx.R31__pln_L20_1410_subscript_func_T.int64");
+	const json& target = stmts[2]["target"];
+	EXPECT_EQ(target["array"]["name"], "_1410_subscript_func..0idx.W31__pln_L20_1410_subscript_func_T.int64");
+	EXPECT_EQ(target["index"]["value"], "0");
+	const json& ret = jout["functions"][2]["body"][0]["values"][0];
+	EXPECT_EQ(ret["ptr-expr"]["expr-type"], "arr-index");
+	EXPECT_EQ(ret["ptr-expr"]["array"]["name"], "p");
+}

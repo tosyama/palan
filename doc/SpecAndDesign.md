@@ -712,8 +712,12 @@ if j is { Null { } copy i { } @t = s { } else { } }
   a struct may.
 
 **Type-defined `[]`.** `func [](@T, K) -> @E` (or `E` by value) reads, `func [](@!T, K) -> @!E` is used where the
-element is changed or borrowed `@!`, and `func []->(V, @!T, K)` is `x -> t[k]`, with `x` evaluated before
-`k`. For structs and unions only, with one key.
+element is changed or borrowed `@!`, and `func ->[](V, @!T, K)` is `x -> t[k]`, with `x` evaluated before
+`k`. For structs and unions only, with one key. A type with a `[]` is indexed only through it, also through
+`@T p`: falling back to the pointer's subscript where no key fits would read past `p` silently. A type with a
+`->[]` stores only through it; without one, `x -> t[k]` stores into `[](@!T, K)`'s element, as an array-like
+type only replaces. Choosing per call whether a `->[]` fits was not taken: it depends on `x`, which would be
+analyzed twice.
 
 ### 3.12 std/json
 

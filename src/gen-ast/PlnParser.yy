@@ -1474,6 +1474,8 @@ op_func_name: '+' { $$ = "+"; }
 	| '<' { $$ = "<"; }
 	| OPE_APPEND { $$ = "<<"; }
 	| ARROW { $$ = "->"; }
+	| '[' ']' { $$ = "[]"; }
+	| ARROW '[' ']' { $$ = "->[]"; }
 	| OPE_NE { derivedCompare(lexer, @$, "!=", "=="); }
 	| '>' { derivedCompare(lexer, @$, ">", "<"); }
 	| OPE_LE { derivedCompare(lexer, @$, "<=", "<"); }

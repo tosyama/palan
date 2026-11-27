@@ -49,7 +49,7 @@ AST model
 Function definition model
 -------------------------
 - name\* - Function name string; an operator function's is its operator: "+" "-" "*" "/" "%" "==" "<"
-  "<<"; a type's own copy is "->" (SpecAndDesign.md 3.8)
+  "<<" "[]" "->[]"; a type's own copy is "->" (SpecAndDesign.md 3.8)
 - func-type\* - Function type string: "palan" "c" "syscall"
 - loc\* - Location Array (palan, syscall only)
 

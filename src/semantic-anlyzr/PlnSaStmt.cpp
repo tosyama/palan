@@ -2046,6 +2046,10 @@ json PlnSemanticAnalyzer::sa_arr_assign_stmt(const json& stmt, json* litAddr)
 	json sa_base = sa_index_base(stmt["target"]["array"], /*forWrite=*/true);
 	if (isDictPntr(sa_base["value-type"]))
 		return sa_dict_store_stmt(stmt, move(sa_base), litAddr);
+	if (isStructPntr(sa_base["value-type"])) {
+		vector<Callee> puts = subscriptCallees("->[]", sa_base["value-type"]);
+		if (!puts.empty()) return json::array({sa_subscript_put_stmt(stmt, move(sa_base), puts)});
+	}
 	json sa_target = sa_expr_arr_index(stmt["target"], /*forWrite=*/true, move(sa_base));
 	bool transfer = stmt.value("ownership-transfer", false);
 	if (!isWritableThrough(sa_target["array"]["value-type"])) {

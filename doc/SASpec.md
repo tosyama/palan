@@ -338,8 +338,8 @@ owned type (`h`): it does nothing when `h` is NULL, and otherwise calls the func
 the function marked `release` releases its own parameter as the contents.
 
 - `<name>`: the function's name; an operator function's is a word that starts with a digit, so that
-  no written name can be it: `0add` `0sub` `0mul` `0div` `0mod` `0eq` `0lt` `0app` for
-  `+ - * / % == < <<` (`vecmath..0sub.R4vec3.R4vec3`).
+  no written name can be it: `0add` `0sub` `0mul` `0div` `0mod` `0eq` `0lt` `0app` `0idx` `0put` for
+  `+ - * / % == < << [] ->[]` (`vecmath..0sub.R4vec3.R4vec3`).
 - `<module>`: the `module` of ast.json: the source file's name without `.pa`, with each byte outside
   `[A-Za-z0-9_]` and each `_` followed by two lowercase hex digits written `_` and two lowercase hex
   digits, and `_` in front of a leading digit (`001_hello.pa` → `_001_hello`), after the name of the
@@ -714,6 +714,16 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     `__pln_put_dict_T(d, k)`; then the store into `__pin_M[0]`. A literal is first put into a
     temp (`__lit_N`), which is then stored so. Through `@[""]T` it is E_WriteThroughReadOnlyPtr.
     A constant key (`d[K]`) is its string.
+- **A type's `[]`** — `t[k]` whose `t` is a struct or union (its storage, `@T` or `@!T`) with a
+  function `[]` taking it is a `call` of `0idx`, never the pointer's subscript below: of a `[]`
+  taking `@!T` where the element is written or borrowed `@!` (the `forWrite` uses: a store, a field
+  store, `@!t[k]`, a writable chain), of one taking `@T` elsewhere; none fitting is
+  E_NoOperatorFunc or E_NoMatchingFunc. `t` is given as a `@!t` is (`addr-of` with `mutable` for its
+  storage), so a `for` range or an `is` binding of `t` forbids the `@!` ones; `k` as an operand, an
+  array by name. A returned borrow is then indexed by `lit-int` 0 as `p[0]` is, unless it is an
+  array's; a value returned is the call itself, a temp (E_UnownedCallResult under `.f` or `@`).
+  A store `x -> t[k]` (`->>` as `x>>`) of a type with a `->[]` is an `expr` statement calling
+  `0put(x, t, k)`; of a type without one, a store into `0idx`'s place.
   - A literal `{"a": v, K: w}` initializing `d` is emitted as `d`'s declaration, then for each
     key in order `__pin_N` initialized to `__pln_put_dict_T(d, key)` and the value stored into
     `__pin_N[0]` as an array literal's element is; a value that is itself a dictionary literal is

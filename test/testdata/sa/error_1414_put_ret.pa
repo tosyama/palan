@@ -1,0 +1,2 @@
+type T { int64 x; };
+func ->[](int64 v, @!T t, int64 i) -> int64 { return v; }

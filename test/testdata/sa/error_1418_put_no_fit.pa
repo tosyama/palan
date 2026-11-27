@@ -1,0 +1,5 @@
+type T { int64 x; };
+func [](@!T t, int64 i) -> @!int64 { return @!t.x; }
+func ->[](int64 v, @!T t, @[]uint8 k) { }
+T t;
+1 -> t[0];

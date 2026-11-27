@@ -477,6 +477,7 @@ class PlnSemanticAnalyzer {
 	json   makeCall(const json& expr, const vector<Callee>& cands, const string& writtenName);
 	vector<Callee> findCalleesUnderAnyAlias(const string& name) const;
 	vector<Callee> forProtocolCallees(const string& name, const json& structVT) const;
+	vector<Callee> subscriptCallees(const string& op, const json& structVT) const;
 	json   convertibleLiteral(const json& ast, bool toUnion);
 	bool   isUnionPntr(const json& vt) const;
 	vector<Callee> literalConversions(const json& structVT, const json& lit);
@@ -563,6 +564,9 @@ class PlnSemanticAnalyzer {
 	// Also gives back a void call or a multi-value call, which has no value-type.
 	json sa_expr_maybe_void(const json &expr, const PlnType* expectedType = nullptr);
 	json sa_expr_arith(const json& expr, const PlnType* expectedType);
+	json keyByName(const json& keyAst);
+	CallArg subscriptContainer(const json& locNode, const json& ast, json saBase, bool forWrite);
+	json sa_subscript_call(const json& expr, json saBase, const vector<Callee>& all, bool forWrite);
 	json sa_operator_call(const json& expr, const string& op,
 	                      const vector<const json*>& operands, vector<json> probes);
 	json sa_expr_shift(const json& expr, const PlnType* expectedType);
@@ -802,6 +806,7 @@ class PlnSemanticAnalyzer {
 	json  sigType(const json& locNode, const json& type);
 	void  normalizeSig(json& funcDef);
 	void  validateOperatorSig(const json& funcDef);
+	void  validateSubscriptSig(const json& funcDef);
 	void  registerCopyFunc(json& funcEntry, const string& scope);
 	void  registerReleaseFunc(const json& funcEntry, const string& scope);
 	void  emitReleaseFuncs();
@@ -936,6 +941,7 @@ class PlnSemanticAnalyzer {
 	json elemsFiniStmt(const string& name, const json& arrType);
 	json makeCopyStmt(const json& locNode, const json& dst, const json& src, CopyInto into);
 	bool assignsByFunc(const json& t) const;
+	json sa_subscript_put_stmt(const json& stmt, json saBase, const vector<Callee>& puts);
 	json sa_arr_assign_stmt(const json& stmt, json* litAddr = nullptr);  // returns json::array()
 	json sa_dict_store_stmt(const json& stmt, json saDict, json* litAddr);
 	// `[...] -> target` / `{...} -> target` for a struct or array target; returns a block.

@@ -1,0 +1,2 @@
+type T { int64 x; };
+func [](T t, int64 i) -> int64 { return t.x; }

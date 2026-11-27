@@ -497,6 +497,84 @@ json PlnSemanticAnalyzer::sa_operator_call(const json& expr, const string& op,
 	return makeCallNode(call, callee, op, &args);
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
+// The '[]' or '->[]' functions whose container is the struct or union
+// `structVT` points to. A type with any of them is indexed only through them:
+// falling back to a pointer's subscript where none fits would read past it.
+vector<Callee> PlnSemanticAnalyzer::subscriptCallees(const string& op, const json& structVT) const
+{
+	size_t at = op == "[]" ? 0 : 1;
+	vector<Callee> fit;
+	for (auto& c : findCallees(op)) {
+		const json& params = (*c.def)["parameters"];
+		if (params.size() > at && isStructBorrow(params[at]["var-type"])
+		    && params[at]["var-type"]["base-type"] == structVT["base-type"])
+			fit.push_back(c);
+	}
+	return fit;
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// `t[k]` through the '[]' functions in `all`: those taking '@!T' where the
+// element is written or borrowed '@!', those taking '@T' elsewhere, so that a
+// read never needs t writable. t, already analyzed, is given as a borrow; k as
+// an operand is.
+// t, already analyzed, as the borrow a '[]' or '->[]' function takes.
+CallArg PlnSemanticAnalyzer::subscriptContainer(const json& locNode, const json& ast, json saBase, bool forWrite)
+{
+	const json& vt = saBase["value-type"];
+	if (forWrite && isStructBorrow(vt) && !vt["mutable"].get<bool>()) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
+		exit(1);
+	}
+	// The function may change any of t, as one given `@!t` may.
+	if (forWrite) checkRangeChange(locNode, ast, RangeChange::Borrow);
+	json recv = ast;
+	if (isStructStorage(vt)) {
+		saBase["value-type"]["mutable"] = forWrite;
+		recv = {{"expr-type","addr-of"},{"object",move(recv)},{"mutable",forWrite}}; // LCOV_EXCL_BR_LINE
+	}
+	return CallArg{move(recv), false, move(saBase)};
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+json PlnSemanticAnalyzer::sa_subscript_call(const json& expr, json saBase, const vector<Callee>& all, bool forWrite)
+{
+	vector<CallArg> args;
+	args.push_back(subscriptContainer(expr, expr["array"], move(saBase), forWrite));
+	for (auto& a : analyzeCallArgs(json::array({chainedValue(keyByName(expr["index"]))}))) args.push_back(move(a));
+	json call = {{"expr-type","call"},{"name","[]"},{"args",json::array()}}; // LCOV_EXCL_BR_LINE
+	if (expr.contains("loc")) call["loc"] = expr["loc"];
+	vector<Callee> cands;
+	for (auto& c : all)
+		if (firstParamMutable(*c.def) == forWrite) cands.push_back(c);
+	if (cands.empty()) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_NoOperatorFunc, "[]", argTypesText(args)) << endl;
+		exit(1);
+	}
+	Callee callee = selectCallee(call, "[]", cands, args);
+	return makeCallNode(call, callee, "[]", &args);
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// `x -> t[k]` of a type defining '->[]': the call `->[](x, @!t, k)`, whose
+// arguments are evaluated in order, so x before k. A type with any '->[]'
+// stores only through them: which one fits depends on x, and analyzing x to
+// find out, then again for '[]', would evaluate its calls twice.
+json PlnSemanticAnalyzer::sa_subscript_put_stmt(const json& stmt, json saBase, const vector<Callee>& puts)
+{
+	// LCOV_EXCL_BR_START
+	const json& target = stmt["target"];
+	json loc = stmt.value("loc", json::array());
+	json value = stmt["value"];
+	if (stmt.value("ownership-transfer", false))
+		value = {{"expr-type","transfer"},{"value",move(value)},{"loc",loc}};
+	vector<CallArg> args = analyzeCallArgs(json::array({move(value)}));
+	args.push_back(subscriptContainer(stmt, target["array"], move(saBase), true));
+	for (auto& a : analyzeCallArgs(json::array({chainedValue(keyByName(target["index"]))}))) args.push_back(move(a));
+	json call = {{"expr-type","call"},{"name","->[]"},{"args",json::array()},{"loc",loc}};
+	Callee callee = selectCallee(stmt, "->[]", puts, args);
+	json exprStmt = {{"stmt-type","expr"},{"loc",loc}};
+	return discardedValueStmt(exprStmt, makeCallNode(call, callee, "->[]", &args));
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // `s << x`: a call of the '<<' functions, given the left operand as a
 // method-form receiver is, or a '@!T' a call returns, so that `s << a << b`
 // chains. The left operand is analyzed once here: analyzing a nested '<<'

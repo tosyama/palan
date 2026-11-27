@@ -1539,3 +1539,10 @@ TEST(build_mgr, union_lit_conversion_mtrace) {
 		"true\n[1,2.5,\"x\",[true,[]],{k:[3]},{}]\n[2,3]\n[7]\n[1,2]\n[1,\"r\",{z:false}]\n[1]\n{q:1}\n{x:2}\n"
 		"[false]\n[2]\n{}\ntext ints 2 \n", 153);
 }
+
+// '[]' read through '@T' and written through '@!T', chained and borrowed; '->[]'
+// evaluates the value before the key, and makes a Null union an object.
+TEST(build_mgr, subscript_func_mtrace) {
+	expectMtraceRun("481_subscript_func_mtrace",
+		"5 7 7\n3 1 9\n5 10 7\n5\nnum key put a put b put c put b \n5 6 3\n", 76);
+}

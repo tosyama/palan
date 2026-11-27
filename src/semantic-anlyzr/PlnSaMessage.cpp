@@ -1184,6 +1184,14 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			return "a '" + arg1 + "' literal does not convert to union '" + arg2 + "': no function '" + arg2
 				+ "' takes it alone.";
 
+		case E_SubscriptFuncSig:
+			return "'[]' must be 'func [](@T t, K k) -> @E' (or 'E') to read, or 'func [](@!T t, K k) -> @!E' "
+			       "to write, of a struct or union T, with 'k' not '@!'.";
+
+		case E_PutFuncSig:
+			return "'->[]' must be 'func ->[](V v, @!T t, K k)' of a struct or union T, with 'v' and 'k' not '@!' "
+			       "and no return value.";
+
 		default:
 			BOOST_ASSERT(false);
 	}

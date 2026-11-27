@@ -650,18 +650,22 @@ void PlnSemanticAnalyzer::validateOperatorSig(const json& funcDef)
 	const string& name = funcDef["name"].get<string>();
 	if (!operatorFuncNames().count(name)) return;
 	const json& params = funcDef["parameters"];
-	size_t n = params.size();
-	if (n != 2 && !(name == "-" && n == 1)) {
-		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_OperatorFuncArity, name,
-			name == "-" ? "one or two parameters" : "two parameters") << endl;
-		exit(1);
-	}
 	for (auto& p : params)
 		if (p.contains("init")) {
 			cerr << locPrefix(p["init"]) << PlnSaMessage::getMessage(
 				E_OperatorFuncDefault, name, p["name"].get<string>()) << endl;
 			exit(1);
 		}
+	if (name == "[]" || name == "->[]") {
+		validateSubscriptSig(funcDef);
+		return;
+	}
+	size_t n = params.size();
+	if (n != 2 && !(name == "-" && n == 1)) {
+		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_OperatorFuncArity, name,
+			name == "-" ? "one or two parameters" : "two parameters") << endl;
+		exit(1);
+	}
 	// '<<' writes into its left operand, which sa_expr_append gives as '@!'.
 	if (name == "<<") {
 		const json& first = params[0]["var-type"];
@@ -692,6 +696,29 @@ void PlnSemanticAnalyzer::validateOperatorSig(const json& funcDef)
 	if ((name == "==" || name == "<")
 	    && !(funcDef.contains("ret-type") && isBoolPrim(registry_.fromJson(funcDef["ret-type"])))) {
 		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_CompareFuncRet, name) << endl;
+		exit(1);
+	}
+}
+
+// The container is borrowed, '@!' only where the element is written, so that
+// a read through '@T' finds a function.
+void PlnSemanticAnalyzer::validateSubscriptSig(const json& funcDef)
+{
+	const json& params = funcDef["parameters"];
+	bool put = funcDef["name"] == "->[]";
+	auto writable = [](const json& vt) { return vt.value("mutable", false); };
+	auto isBorrow = [](const json& vt) { return vt.value("type-kind", "") == "pntr" && vt.contains("mutable"); };
+	const json* ret = funcDef.contains("ret-type") ? &funcDef["ret-type"] : nullptr;
+	bool ok;
+	if (put) {
+		ok = params.size() == 3 && !ret && isStructBorrow(params[1]["var-type"]) && writable(params[1]["var-type"])
+		     && !writable(params[0]["var-type"]) && !writable(params[2]["var-type"]);
+	} else {
+		ok = params.size() == 2 && ret && isStructBorrow(params[0]["var-type"]) && !writable(params[1]["var-type"]);
+		if (ok) ok = writable(params[0]["var-type"]) ? isBorrow(*ret) && writable(*ret) : !writable(*ret);
+	}
+	if (!ok) {
+		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(put ? E_PutFuncSig : E_SubscriptFuncSig) << endl;
 		exit(1);
 	}
 }

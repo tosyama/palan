@@ -1317,6 +1317,42 @@ printf("%ld %d\n", t.sum, t.count);   // 12 2
 - `[+]T` has no `<<`; it uses `push`. For a `[+]uint8`, `v << "abc"` would not say whether it
   adds the bytes or one element.
 
+#### Subscript
+
+A type defines `[]` to be indexed, and `->[]` to store with `x -> t[k]`:
+
+```palan
+cinclude <stdio.h>;
+
+type vec { [+]flo64 v; };
+
+func [](@vec a, int64 i) -> flo64 { return a.v[i]; }
+func [](@!vec a, int64 i) -> @!flo64 { return @!a.v[i]; }
+
+vec a = {v: [1.0, 2.0]};
+5.0 -> a[0];                // through [](@!vec, int64)
+a[0] + 1.0 -> a[1];
+printf("%g %g\n", a[0], a[1]);   // 5 6
+```
+
+- `[]` is `func [](@T t, K k) -> @E` (or `E` by value), or `func [](@!T t, K k) -> @!E`, of a
+  struct or union `T`; `->[]` is `func ->[](V v, @!T t, K k)`, returning nothing. `k` and `v` cannot
+  be `@!`, and nothing has a default. Another shape is a compile error.
+- Where the element is written or borrowed `@!` (`x -> t[k]`, `1 -> t[k].f`, `@!t[k]`,
+  `t[k].push(x)`), `t[k]` calls a `[]` taking `@!T`; elsewhere one taking `@T`, so a read never needs
+  `t` writable. Among those, the key chooses as an [overloaded](#overloading) call's arguments do.
+  `k` is passed as an operand of `+` is; an array key is written by name (`t[buf]`).
+- `x -> t[k]` and `x ->> t[k]` call `->[](x, @!t, k)` when `T` has any `->[]`, so a type adding keys,
+  as a dictionary does, decides how. `x` is evaluated before `k`. Without a `->[]`, `x` is stored
+  into the element `[](@!T, K)` returns.
+- With a `[]` for `T`, `t[k]` always calls one, also through a borrow `@T p`: `p[i]` is then never
+  a [pointer's subscript](#10-address-of-operator), and a key no `[]` takes is a compile error.
+- A borrow returned is the element itself, as an array's is. A struct returned by value is a
+  temporary: it can be received or passed, but `t[k].f` and `@t[k]` on it are compile errors, as
+  for a call.
+- While `t` is a `for` range or a union an `is` binds, `[]` taking `@!T` and `->[]` cannot be
+  used on it, as `@!t` cannot.
+
 ---
 
 ## 8. Arrays
@@ -2885,8 +2921,8 @@ int64 x = 42;
   `@!@int32` — through the latter, a read-only pointer could be stored where the original still
   treats it as mutable. This matches C, where `int **` converts to `const int * const *` but not
   to `const int **`.
-- It can also be dereferenced from Palan code itself, using `p[i]` — subscript notation, not a
-  separate operator, since Palan already represents an array as a pointer plus attributes and a
+- It can also be dereferenced from Palan code itself, using `p[i]` (unless its type defines
+  [`[]`](#subscript)) — subscript notation, not a separate operator, since Palan already represents an array as a pointer plus attributes and a
   plain pointer as a bare pointer. `p[0]` reads or writes the pointee; `@T` (read-only) allows only
   the read, `@!T` (mutable) allows both — the same rule as writing a struct field through a
   pointer. `p[i]` for `i != 0` is ordinary C-style pointer arithmetic (the element at `i` element-

@@ -1699,3 +1699,14 @@ TEST(gen_ast, union)
 	ASSERT_EQ(cmp["expr-type"], "cmp");
 	ASSERT_EQ(cmp["left"]["expr-type"], "is");
 }
+
+TEST(gen_ast, subscript_func)
+{
+	string output = execTestCommand("palan-gen-ast ../test/testdata/gen-ast/173_subscript_func.pa");
+	ASSERT_TRUE(checkerr(output));
+	json jout = json::parse(output);
+	const json& f = jout["ast"]["functions"];
+	ASSERT_EQ(f[0]["name"], "[]");
+	ASSERT_EQ(f[1]["name"], "->[]");
+	ASSERT_EQ(f[1]["parameters"].size(), 3u);
+}

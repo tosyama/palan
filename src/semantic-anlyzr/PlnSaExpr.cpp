@@ -31,6 +31,7 @@ FieldChain PlnSemanticAnalyzer::resolveObjectChain(const json& obj, bool forWrit
 	}
 	if (obj.value("expr-type","") == "arr-index") {
 		json sa_idx = sa_expr_arr_index(obj, forWrite);
+		requireOwnedBase(sa_idx, obj);
 		const json& vt = sa_idx["value-type"];
 		if (vt.value("type-kind","") != "pntr" || vt["base-type"].value("type-kind","") != "struct") {
 			cerr << locPrefix(obj) << PlnSaMessage::getMessage(E_FieldAccessOnNonStruct) << endl;
@@ -626,6 +627,7 @@ json PlnSemanticAnalyzer::sa_expr_addr_of(const json& expr)
 
 	if (obj_type == "arr-index") {
 		json sa_idx = sa_expr_arr_index(obj, isMutable);
+		requireOwnedBase(sa_idx, obj);
 		// A struct or `[+]T` element or a row is already a pointer to its storage,
 		// so '@' only marks it as a borrow, as for a whole array variable. Any other
 		// element that is already an address computation or a pointer
@@ -2082,6 +2084,20 @@ json PlnSemanticAnalyzer::sa_index_base(const json& arr, bool forWrite)
 	return sa_array;
 }
 
+// A key is only read, as an index is, so an array is given by name.
+json PlnSemanticAnalyzer::keyByName(const json& keyAst)
+{
+	// LCOV_EXCL_BR_START
+	json keyArg = foldConstExpr(keyAst);
+	if (isLocationExpr(keyArg)) {
+		json kt = operandValueType(keyArg);
+		if ((isArrLevel(kt) || isVarrPntr(kt)) && !isArrBorrowVar(kt))
+			keyArg = {{"expr-type","addr-of"},{"object",keyAst},{"mutable",false},{"loc",keyAst.value("loc", json::array())}};
+	}
+	return keyArg;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // `d[k]` as the address of k's value that the generated function `op` ("at",
 // or "put" that adds k if it is not there) returns, typed as the values' data
 // pointer is so that indexing it by 0 makes it an element as `[+]T`'s are.
@@ -2106,14 +2122,7 @@ json PlnSemanticAnalyzer::dictValueAddr(json saDict, const json& dictAst, const 
 	            {"len-args",helperLens(shape.elem)}};
 	vector<CallArg> args;
 	args.push_back(CallArg{argAst, false, move(saDict)});
-	// The key is only read, as an index is, so an array is given by name.
-	json keyArg = foldConstExpr(keyAst);
-	if (isLocationExpr(keyArg)) {
-		json kt = operandValueType(keyArg);
-		if ((isArrLevel(kt) || isVarrPntr(kt)) && !isArrBorrowVar(kt))
-			keyArg = {{"expr-type","addr-of"},{"object",keyAst},{"mutable",false},{"loc",keyAst.value("loc", json::array())}};
-	}
-	for (auto& a : analyzeCallArgs(json::array({keyArg}))) args.push_back(move(a));
+	for (auto& a : analyzeCallArgs(json::array({keyByName(keyAst)}))) args.push_back(move(a));
 	json callAst = {{"expr-type","call"},{"loc",locNode.value("loc", json::array())}};
 	json call = makeCallNode(callAst, Callee{&def, false}, "[]", &args);
 	call["value-type"] = valuesDataType(vt, false);
@@ -2130,6 +2139,16 @@ json PlnSemanticAnalyzer::sa_expr_arr_index(const json& expr, bool forWrite, jso
 	if (isDictPntr(sa_array["value-type"])) {
 		sa_array = dictValueAddr(move(sa_array), arr, expr["index"], "at", expr);
 		sa_index = lenLit(0);
+	} else if (isStructPntr(sa_array["value-type"])) {
+		vector<Callee> subs = subscriptCallees("[]", sa_array["value-type"]);
+		if (!subs.empty()) {
+			json call = sa_subscript_call(expr, move(sa_array), subs, forWrite);
+			const json& rt = call["value-type"];
+			// A borrowed element is the element once indexed by 0, as `p[0]` is.
+			if (!isPtrBorrow(rt) || isVarrPntr(rt) || isDictPntr(rt)) return call;
+			sa_array = move(call);
+			sa_index = lenLit(0);
+		}
 	}
 	if (isVarrPntr(sa_array["value-type"]))
 		sa_array = varrData(move(sa_array));
