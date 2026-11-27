@@ -135,11 +135,7 @@ used after `s` is changed. Positions (`find`, `slice` and the others) count code
 cinclude <stdio.h>;
 import <std/json>;
 
-jsonresult r = parseJson("{\"name\": \"palan\", \"tags\": [1, 2.5]}");
-if r is @err = error { printf("%s at %ld:%ld\n", err.message -> cstr(), err.line, err.col); }
-json j;
-if r is value { r.value ->> j; }
-
+json j = {"name": "palan", "tags": [1, 2.5]};
 if j["name"] is @s { printf("%s\n", s -> cstr()); }     // palan
 printf("%g\n", num(@j["tags"][1]));                       // 2.5
 true -> j["ok"];
@@ -147,6 +143,12 @@ true -> j["ok"];
 "lang" -> j["tags"][0];
 printf("%s\n", toUtf8(@j) -> cstr());
 // {"name":"palan","tags":["lang",2.5],"ok":true,"more":[null,{"k":"v"}]}
+
+jsonresult r = parseJson("{\"n\": [1, 2]}");
+if r is @err = error { printf("%s at %ld:%ld\n", err.message -> cstr(), err.line, err.col); }
+json p;
+if r is value { r.value ->> p; }
+printf("%s\n", toUtf8(@p) -> cstr());                    // {"n":[1,2]}
 ```
 
 `json` is a [union](PalanReference.md#tagged-unions) of a JSON value's kinds. A declared `json` is `Null`.
