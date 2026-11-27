@@ -4,10 +4,24 @@
 /// @copyright 2026 YAMAGUCHI Toshinobu
 
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
+#include <vector>
 #include "../test-base/testBase.h"
 
 using namespace std;
+
+static void expectBalanced(const string& log_path) {
+	ifstream log(log_path);
+	int allocs = 0, frees = 0;
+	for (string line; getline(log, line);) {
+		if (line.find(" + ") != string::npos) allocs++;
+		else if (line.find(" - ") != string::npos) frees++;
+	}
+	EXPECT_GT(allocs, 0);
+	EXPECT_EQ(allocs, frees);
+}
 
 // The tests in json.pa cover parsing; run under mtrace, they also show that neither a parsed
 // value nor a failed parse leaks.
@@ -16,14 +30,21 @@ TEST(std_json, top_level_tests) {
 	ASSERT_EQ(execTestCommand("bin/palan -o out/json_tests ../src/std/json.pa"), "");
 	ASSERT_EQ(execTestCommand("env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
 		"MALLOC_TRACE=out/json_tests.log out/json_tests"), "");
-	ifstream log("out/json_tests.log");
-	int allocs = 0, frees = 0;
-	for (string line; getline(log, line);) {
-		if (line.find(" + ") != string::npos) allocs++;
-		else if (line.find(" - ") != string::npos) frees++;
-	}
-	EXPECT_GT(allocs, 0);
-	EXPECT_EQ(allocs, frees);
+	expectBalanced("out/json_tests.log");
+}
+
+TEST(std_json, json_test_suite) {
+	cleanTestEnv();
+	const string dir = "../test/testdata/std/JSONTestSuite/test_parsing";
+	vector<string> paths;
+	for (auto& e : filesystem::directory_iterator(dir)) paths.push_back(e.path().string());
+	sort(paths.begin(), paths.end());
+	string files;
+	for (auto& p : paths) files += " " + p;
+	ASSERT_EQ(execTestCommand("bin/palan -o out/json_suite ../test/testdata/std/json_suite.pa"), "");
+	ASSERT_EQ(execTestCommand("env LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libc_malloc_debug.so "
+		"MALLOC_TRACE=out/json_suite.log out/json_suite" + files), "318 cases, 0 failed\n");
+	expectBalanced("out/json_suite.log");
 }
 
 TEST(std_json, imported_from_the_build_tree) {
