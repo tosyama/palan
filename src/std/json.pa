@@ -604,6 +604,38 @@ export func ==(@json p, @json q) -> bool
 	return false;
 }
 
+// j.members and j.items are checked only in a debug build; indexing a json checks in either.
+func checkKey(@json j)
+{
+	if !(j is members) { runtimeError("json indexed by a key is not members"); }
+}
+
+func checkPos(@json j, int64 i)
+{
+	if !(j is items) { runtimeError("json indexed by a position is not items"); }
+	if i < 0 || i >= len(@j.items) { runtimeError("json position out of range"); }
+}
+
+// A missing key stops the program as a dictionary's does.
+export func [](@json j, @[]uint8 k) -> @json { checkKey(j); return @j.members[k]; }
+export func [](@!json j, @[]uint8 k) -> @!json { checkKey(j); return @!j.members[k]; }
+export func [](@json j, int64 i) -> @json { checkPos(j, i); return @j.items[i]; }
+export func [](@!json j, int64 i) -> @!json { checkPos(j, i); return @!j.items[i]; }
+
+// Adds k or replaces its value; a Null becomes members first.
+export func ->[](json v, @!json j, @[]uint8 k)
+{
+	if j is Null { [""]json m = {}; m ->> j.members; }
+	checkKey(j);
+	v ->> j.members[k];
+}
+
+export func ->[](json v, @!json j, int64 i)
+{
+	checkPos(j, i);
+	v ->> j.items[i];
+}
+
 // ---- Top-level tests ----
 
 cinclude <mcheck.h>;
@@ -910,6 +942,32 @@ func testEquals()
 	if json("x") != "x" || null_() != json.Null { fail("== same"); }
 }
 
+func testSubscript()
+{
+	json j = {"a": [1, "x", {"b": true}], "n": null_()};
+	if j["a"][0] != 1 || j["a"][1] != "x" || j["a"][2]["b"] != true { fail("[] read"); }
+	if !(j["n"] is Null) { fail("[] Null"); }
+	if j["a"][1] is @s { if s != "x" { fail("[] is"); } } else { fail("[] is kind"); }
+	[3]uint8 key = ['a', 0, 0];
+	if len(@j[key].items) != 3 { fail("[] by an array"); }
+
+	@!json a = @!j["a"];
+	"y" -> a[1];
+	2.5 -> j["a"][0];
+	false -> j["a"][2]["b"];
+	7 -> j["a"][2]["c"];
+	json v = [true];
+	v ->> j["n"];
+	json e;
+	3 -> e["k"];
+	4 -> e["k"];
+	"z" -> e["m"];
+	j -> e["copy"];
+	1 -> j["a"][2]["b"];
+	if j != json({"a": [2.5, "y", {"b": 1, "c": 7}], "n": [true]}) { fail("[] write"); }
+	if e != json({"k": 4, "m": "z", "copy": {"a": [2.5, "y", {"b": false, "c": 7}], "n": [true]}}) { fail("->[] add"); }
+}
+
 mtrace();
 testValues();
 testStrings();
@@ -921,4 +979,5 @@ testWrite();
 testRoundTrip();
 testNum();
 testEquals();
+testSubscript();
 muntrace();
