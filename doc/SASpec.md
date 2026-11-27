@@ -1541,9 +1541,8 @@ not fit it. With several, each argument is analyzed once without a parameter typ
   candidates needs a default to fit, none is preferred. Otherwise E_NoMatchingFunc (the argument
   types and the candidates) or E_AmbiguousCall (the candidates that fit, a default shown as
   `int32 = 0`).
-- Receiving several values (`(a, b) = f(x)`) considers only the candidates returning that many,
-  which must agree on what they return, since the receivers are declared before the arguments
-  choose one (E_AmbiguousCall).
+- Receiving several values (`(a, b) = f(x)`) considers only the candidates returning that many;
+  the chosen candidate's return types are the receivers'.
 - A function name used as a value takes the function fitting the `@func` type it is given to (a
   variable's, field's or parameter's), or of several the one whose own type it is: none is
   E_FuncNameNeedsType (a single one differing only in permission, owner or shape is bound, and

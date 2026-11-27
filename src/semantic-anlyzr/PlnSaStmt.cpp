@@ -2564,6 +2564,11 @@ json PlnSemanticAnalyzer::sa_tapple_decl(const json& stmt)
 	json stmt2 = stmt;
 	vector<VarStorage> storage;
 	for (auto& v : stmt2["vars"]) {
+		// A variable without a type is a temp taking the return value's.
+		if (!v.contains("var-type")) {
+			storage.push_back(VarStorage::Heap);
+			continue;
+		}
 		storage.push_back(takeVarStorage(v["var-type"]));
 		v["var-type"] = resolveKnownType(stmt2, v["var-type"]);
 	}
@@ -2573,17 +2578,10 @@ json PlnSemanticAnalyzer::sa_tapple_decl(const json& stmt)
 json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector<VarStorage>& storages)
 {
 	json callExpr = tappleCallExpr(stmt);
-	const json& rets = findMultiRetFunc(stmt, callExpr, stmt["vars"].size())["rets"];
-	callExpr["multi-ret"] = rets.size();
-
-	// Process the call expression via sa_expression (resolves func-type, annotates args)
+	checkMultiRetCall(stmt, callExpr, stmt["vars"].size());
+	callExpr["multi-ret"] = stmt["vars"].size();
 	json saCall = sa_expr_maybe_void(callExpr);
-
-	// Add multi-return value-types from the function's rets
-	json valueTypes = json::array();
-	for (auto& r : rets)
-		valueTypes.push_back(r["var-type"]);
-	saCall["value-types"] = valueTypes;
+	const json rets = saCall["value-types"];
 	if (holdsCallTemps(saCall)) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_BorrowOfTempEscapes) << endl;
 		exit(1);
@@ -2606,8 +2604,8 @@ json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector
 	}; // LCOV_EXCL_BR_LINE
 	for (size_t i = 0; i < stmt["vars"].size(); i++) {
 		const json& v = stmt["vars"][i];
-		const json& retType = rets[i]["var-type"];
-		json varType = v["var-type"];
+		const json& retType = rets[i];
+		json varType = v.value("var-type", retType);
 		VarStorage storage = storages[i];
 		string name = v["var-name"];
 		// A frame variable can't take a returned array block over, so it is
@@ -2616,7 +2614,8 @@ json PlnSemanticAnalyzer::sa_resolved_tapple_decl(const json& stmt, const vector
 		bool movesIntoFrame = storage == VarStorage::Frame && isOwnedBlock(retType) && !isStructValue(retType);
 		// A length known only at run time is no signature's, so such an array
 		// copies from the returned one.
-		json declared = varType.value("type-kind","") == "arr" || isDictAstType(varType) ? takeOverType(stmt, varType)
+		json declared = !v.contains("var-type") ? retType
+		              : varType.value("type-kind","") == "arr" || isDictAstType(varType) ? takeOverType(stmt, varType)
 		              : sigType(stmt, varType);
 		if (isStructValue(retType) && declared == retType) {
 			declareVar(name, retType);
@@ -2661,14 +2660,14 @@ json PlnSemanticAnalyzer::sa_tapple_assign(const json& stmt)
 {
 	const json& targets = stmt["targets"];
 	json callExpr = tappleCallExpr(stmt);
-	const json& rets = findMultiRetFunc(stmt, callExpr, targets.size())["rets"];
+	checkMultiRetCall(stmt, callExpr, targets.size());
 
 	json decl = {{"stmt-type", "tapple-decl"}, {"vars", json::array()}, {"value", callExpr},
 	             {"loc", stmt["loc"]}}; // LCOV_EXCL_BR_LINE
 	vector<string> temps;
-	for (auto& r : rets) {
+	for (size_t i = 0; i < targets.size(); i++) {
 		temps.push_back("__tap_" + to_string(tempVarCounter_++));
-		decl["vars"].push_back({{"var-name", temps.back()}, {"var-type", r["var-type"]}}); // LCOV_EXCL_BR_LINE
+		decl["vars"].push_back({{"var-name", temps.back()}}); // LCOV_EXCL_BR_LINE
 	}
 	json body = json::array({decl}); // LCOV_EXCL_BR_LINE
 

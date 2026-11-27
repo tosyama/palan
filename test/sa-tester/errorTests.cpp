@@ -1269,7 +1269,7 @@ TEST(sa_error, overload)
 		{"error_707_overload_method_no_mutable.pa", ":5:1: error: 'm' cannot be called as a method: its first parameter must be a writable borrow ('@!')."},
 		{"error_708_overload_func_name_type.pa", ":3:25: error: 'f' names f(int32), f(int64); it must be given where a function pointer type chooses one."},
 		// The receivers are declared before the arguments choose a function.
-		{"error_709_overload_multi_ret_differ.pa", ":3:1: error: Ambiguous function call 'dm': it can mean dm(int32), dm(int64)."},
+		{"error_709_overload_multi_ret_differ.pa", ":4:22: error: Ambiguous function call 'dm': it can mean dm(int32), dm(int64)."},
 		// An argument that fits no function is shown as what it would match.
 		{"error_710_overload_no_match_literal.pa", ":3:1: error: No function 'pp' takes (int64); there are pp(@int32), pp(@int64)."},
 		{"error_711_overload_no_match_func_name.pa", ":5:1: error: No function 'f' takes (function); there are f(int32), f(int64)."},

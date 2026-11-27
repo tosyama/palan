@@ -712,6 +712,11 @@ json PlnSemanticAnalyzer::makeCallNode(const json& expr, const Callee& callee, c
 	sa_expr.erase("method");
 	sa_expr.erase("method-form");
 	sa_expr.erase("multi-ret");
+	if (expr.contains("multi-ret")) {
+		json types = json::array();
+		for (auto& r : def["rets"]) types.push_back(r["var-type"]);
+		sa_expr["value-types"] = move(types);
+	}
 	if (callee.isC) {
 		requireSupportedCFuncSig(def, writtenName, expr);
 		sa_expr["func-type"] = "c";
@@ -1922,7 +1927,8 @@ json PlnSemanticAnalyzer::sa_expr_member_call(const json& expr)
 	return makeCall(expr, usableCallees(expr, cands), method);
 } // LCOV_EXCL_BR_LINE
 
-const json& PlnSemanticAnalyzer::findMultiRetFunc(const json& stmt, const json& callExpr, size_t recvCount)
+// The errors of a call receiving recvCount values that no candidate can return.
+void PlnSemanticAnalyzer::checkMultiRetCall(const json& stmt, const json& callExpr, size_t recvCount)
 {
 	vector<Callee> cands;
 	string fname;
@@ -1939,32 +1945,15 @@ const json& PlnSemanticAnalyzer::findMultiRetFunc(const json& stmt, const json& 
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleUndefinedFunction, fname) << endl;
 		exit(1);
 	}
-	const json* pFunc = cands[0].def;
-	if (cands.size() > 1) {
-		// The receivers are declared before the arguments choose a function, so
-		// those returning recvCount values must agree on what they return.
-		vector<Callee> multi;
-		for (auto& c : cands)
-			if ((*c.def).value("rets", json::array()).size() == recvCount) multi.push_back(c);
-		if (!multi.empty()) {
-			pFunc = multi[0].def;
-			for (auto& c : multi)
-				if ((*c.def)["rets"] != (*pFunc)["rets"]) {
-					cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_AmbiguousCall,
-						fname, calleesText(fname, multi)) << endl;
-					exit(1);
-				}
-		}
-	}
-	if (!pFunc->contains("rets") || (*pFunc)["rets"].size() < 2) {
+	for (auto& c : cands)
+		if ((*c.def).value("rets", json::array()).size() == recvCount) return;
+	const json& def = *cands[0].def;
+	if (!def.contains("rets") || def["rets"].size() < 2) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleNeedsMultiRet, fname) << endl;
 		exit(1);
 	}
-	if (recvCount != (*pFunc)["rets"].size()) {
-		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleVarCountMismatch, fname) << endl;
-		exit(1);
-	}
-	return *pFunc;
+	cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleVarCountMismatch, fname) << endl;
+	exit(1);
 }
 
 // The call whose return values a multiple-return declaration or assignment

@@ -504,6 +504,13 @@ TEST(build_mgr, tapple_decl_convert) {
 	ASSERT_EQ(output, "4 2.0\n");
 }
 
+// The arguments choose among functions returning different types, which also lets
+// `next` be called without `for` when another type has one.
+TEST(build_mgr, tapple_overload_by_args_mtrace) {
+	expectMtraceRun("480_tapple_overload_by_args_mtrace",
+		"4 2 5 5 1\n4 2.0\n2 2 7 7\n1 10\n3 4 w0 w1 \n", 23);
+}
+
 TEST(build_mgr, bool_cmp_result) {
 	cleanTestEnv();
 	string output = execTestCommand("bin/palan ../test/testdata/build-mgr/242_bool_cmp_result.pa");

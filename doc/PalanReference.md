@@ -1200,8 +1200,8 @@ show(2.5);          // float 2.5
   type it is given to, and of several, the one of exactly that type:
   `@func(int32) -> int32 g = show;` is an error here (no `show` returns `int32`), and one
   written where no function pointer type is expected is a compile error.
-- Receiving several return values (`(a, b) = f(x)`) needs the functions returning that many to
-  return the same types.
+- Receiving several return values (`(a, b) = f(x)`) considers only the functions returning that
+  many, and of them the arguments choose one as in any call.
 - If one of several functions fitting the arguments fits only by using its
   [defaults](#default-arguments) or its [variadic parameter](#variadic-arguments), the call is
   ambiguous: with `f(int32)` and

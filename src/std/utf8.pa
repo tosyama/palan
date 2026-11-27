@@ -837,6 +837,25 @@ func testGraphemes()
 	if n != 9 { fail("graphemes of a temporary"); }
 }
 
+// next is called as any function too, the arguments choosing which.
+func testNext()
+{
+	utf8 s = "e\u{301}x";
+	utf8iter it = iter(@s);
+	(bool ok, int32 c) = next(@!it);
+	if !ok || c != 'e' { fail("next char"); }
+	next(@!it) -> (ok, c);
+	next(@!it) -> (ok, c);
+	if !ok || c != 'x' { fail("next char again"); }
+	next(@!it) -> (ok, c);
+	if ok { fail("next char at the end"); }
+
+	utf8graphemes gs = graphemes(@s);
+	utf8graphemes git = iter(@gs);
+	(bool gok, utf8 g) = next(@!git);
+	if !gok || g != "e\u{301}" { fail("next grapheme"); }
+}
+
 testMake();
 testRead();
 testCopy();
@@ -846,3 +865,4 @@ testSearch();
 testChange();
 testMakeFrom();
 testGraphemes();
+testNext();
