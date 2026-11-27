@@ -1510,7 +1510,7 @@ TEST(build_mgr, union_variant_mtrace) {
 // the body may give it away), a union a call returns, and an element.
 TEST(build_mgr, union_is_mtrace) {
 	expectMtraceRun("475_union_is_mtrace",
-		"null\ni 5\ncopy 0 7\nj 8\ntemp 3 3\nheld 3\nheld 2\nheld 1\nbox 3 9 9\nat 3\n", 94);
+		"null\ni 5\ncopy 0 7\nj 8\ntemp 3 3\nheld 3\nheld 2\nheld 1\nbox 3 9 9\nat 3\npair 2 3\n", 103);
 }
 
 // A binding of each kind of contents: a float, a struct laid out in place or

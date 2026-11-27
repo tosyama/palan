@@ -1696,6 +1696,10 @@ TEST(sa_error, union) {
 		{"error_1408_bool_conv_needs_bool.pa", ":3:1: error: cannot copy 'bool' into 'big'"},
 		// A bare literal is not a '@S': no overload takes it.
 		{"error_1409_lit_arg_fits_no_overload.pa", ":4:11: error: No function 'g' takes (literal); there are g(@S), g(int64)."},
+		{"error_1426_is_unknown_variant.pa", ":3:4: error: union 'U' has no variant 'k'."},
+		{"error_1427_if_is_bind_readonly.pa", ":2:35: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		// The union tested is reached through a borrow the temporary may hold.
+		{"error_1428_is_temp_escapes.pa", ":6:4: error: a borrow returned by a call given a temporary struct may point to that struct"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

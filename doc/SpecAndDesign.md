@@ -665,75 +665,50 @@ release and copy the values with `[+]T`'s.
 
 ### 3.11 Tagged Unions
 
-```
-type json union { Null; bool b; int64 i; utf8 s; [+]json items; [""]json members; };
-if j is @s { ... }                       // a test binding the contents
-if j is { Null { } copy i { } @t = s { } else { } }
-5 -> j.i;   json.Null -> j;   json k = json.i(5);
-```
+PalanReference.md states what a union does; this section keeps why.
 
 - **Why a union.** A struct holding every kind's fields allocates them all for each value. An
   interface suits kinds that are open and operations that are fixed; JSON is the reverse. C's
   untagged union cannot own anything, as nothing tells what to release. A C union stays the separate
   thing it is, its layout being C's.
-- **Variants** are written as fields are, so every field type can be a variant's. One without contents
-  is a bare name. Names, not types, tell variants apart. A declared union is its first variant, with
-  the value a variable of that type has when declared. Exported variants are all public (no
-  `private`/`readonly`): branching on them is what a union is for, and `opaque` hides one.
+- **Variants** are written as fields are, so any field type can be one; names, not types, tell them
+  apart. Exported variants are all public: branching on them is what a union is for, and `opaque`
+  hides one.
 - **Recursion.** Only a `[+]T` or `[""]T` closes a cycle, across types too: it is empty when declared,
   so allocation ends. A cycle of owned or embedded values stays an error.
-- **`j.s`** reads, writes a part of, or borrows the contents; another variant is the writer's error,
-  checked in a debug build as `pop`'s is. Unlike `d[k]`'s, the check is not free, and a test guards
-  it. Allowing it only where a test precedes was not taken: whether the value changed in between
-  cannot be followed through an index or a borrow.
-- **Whole assignment** (`x -> j.s`, `->>`) makes `j` that variant, as `x -> d[k]` adds a key; the value is
-  evaluated before the old contents are released. `j.s ->> v` leaves `j` its first variant, so no
-  variant is left with NULL contents.
-- **`j is s`** is a `bool`. `j is @s`, `@!s` and `copy s` bind a variable named as the variant, or
-  `@t = s`, `@!t = s`, `copy t = s`, with `for`'s meanings, visible in
-  the body of the `if` or `while` and to the right in `&&`. A binding elsewhere (under `||` or `!`, or
-  outside a condition) is an error. While it borrows the contents, the body may not change `j`'s
-  variant through the name given, as `for`'s may not change its array; through another borrow it is undetected (doc/Issues.md #1). A
-  temporary tested lives to the end of the body. A binding moving the contents out was not taken:
-  most uses read them, and `j.s ->> v` after a test moves them.
-- **`if j is { }`** is the whole condition, needs every variant or an `else` inside the braces, runs one
-  arm, and leaves `break`/`continue` to the enclosing loop. An arm without binding may list variants
-  (`i, f { }`). A missing or repeated variant, and an `else` nothing reaches, are errors. No keyword but
-  `is` is taken: `match` is a name libraries want, and `switch` promises C's fall-through and `break`.
-- **Making one.** `json.i(5)` takes its argument as a `T` parameter does; `json.Null` is a value. Literals
-  convert by functions named as the type, as now (3.8), extended to bool, and to array and
-  dictionary literals where a union is expected; their elements convert by the parameter's type. A
-  struct already gives those literals a meaning. The author of the type, not the compiler, decides
-  which variant `1` is. Variables do not convert.
+- **`j.s`** on another variant is the writer's error, checked in a debug build as `pop`'s is. Unlike
+  `d[k]`'s, the check is not free, and a test guards it. Allowing it only where a test precedes was
+  not taken: whether the value changed in between cannot be followed through an index or a borrow.
+- **Whole assignment** changes the variant, as `x -> d[k]` adds a key. `j.s ->> v` leaves `j` its first
+  variant, so no variant is left with NULL contents.
+- **`is`** binds only where the test is known true. A binding moving the contents out was not taken:
+  most uses read them, and `j.s ->> v` after a test moves them. In `if j is { }`, no keyword but `is`
+  is taken: `match` is a name libraries want, and `switch` promises C's fall-through and `break`.
+- **Making one.** Literals convert by functions named as the type (3.8), extended to bool, and to array
+  and dictionary literals where a union is expected, since a struct already gives those literals a
+  meaning. The author of the type, not the compiler, decides which variant `1` is. Variables do not
+  convert.
 - **Layout.** The tag, then space for the largest contents; an owned value is a pointer, as in a struct,
   unless written `$T`. Allocation, release and copy are functions generated per type (3.6) that branch
-  on the tag and treat each variant as they treat a struct's field.
-- `func ->` may be defined as for a struct; comparisons are not generated. A union may appear wherever
-  a struct may.
+  on the tag and treat each variant as they treat a struct's field. Comparisons are not generated.
 
-**Type-defined `[]`.** `func [](@T, K) -> @E` (or `E` by value) reads, `func [](@!T, K) -> @!E` is used where the
-element is changed or borrowed `@!`, and `func ->[](V, @!T, K)` is `x -> t[k]`, with `x` evaluated before
-`k`. For structs and unions only, with one key. A type with a `[]` is indexed only through it, also through
-`@T p`: falling back to the pointer's subscript where no key fits would read past `p` silently. A type with a
-`->[]` stores only through it; without one, `x -> t[k]` stores into `[](@!T, K)`'s element, as an array-like
-type only replaces. Choosing per call whether a `->[]` fits was not taken: it depends on `x`, which would be
-analyzed twice.
+**Type-defined `[]`.** For structs and unions only, with one key. A type with a `[]` is indexed only
+through it, also through `@T p`: falling back to the pointer's subscript where no key fits would read
+past `p` silently. A type with a `->[]` stores only through it; without one, `x -> t[k]` stores into
+`[](@!T, K)`'s element, as an array-like type only replaces. Choosing per call whether a `->[]` fits
+was not taken: it depends on `x`, which would be analyzed twice.
 
 ### 3.12 std/json
 
-`json` is a union of `Null`, `b`, `i`, `f`, `s`, `items` and `members`, with no accessor functions, as `is` and
-`j.i` are them. `parseJson` returns `jsonresult`, a union of the value and the error, rather than two
-values: a failure has no value to be mistaken for `null`.
+PalanStdLibReference.md states what it does; this section keeps why.
 
-- Parsing is RFC 8259's, with no extension but a leading BOM skipped. A literal without a fraction or
-  exponent that fits `int64` is `i`, any other (and `-0`) `f`; one beyond `flo64` is an error. A repeated
-  key takes the last value, in the first's place. `maxDepth` (512) bounds the nesting, since parsing, copying
-  and releasing recurse; a tree a program builds is not bounded. Error positions count characters.
+- `json` has no accessor functions, as `is`, `j.i` and `j[k]` are them. `parseJson` returns a union of
+  the value and the error rather than two values: a failure has no value to be mistaken for `null`.
+- `maxDepth` bounds parsing, since parsing, copying and releasing recurse; a tree a program builds is
+  not bounded.
 - `\u0000` is an error: `utf8` and dictionary keys hold no NUL, and replacing it would silently change
-  the text and could merge keys. A lone surrogate or invalid byte is an error too.
-- Writing keeps the order of keys, escapes only what must be, writes an `f` so that it reads back as the
-  same `f`, and replaces invalid bytes with U+FFFD. NaN and infinity are a runtime error: writing `null`
-  would lose the value silently. Neither direction depends on the C locale.
+  the text and could merge keys.
+- NaN and infinity are a runtime error when written: writing `null` would lose the value silently.
 - JSONTestSuite is run as test data, the `y_` cases holding `\u0000` listed as exceptions.
 
 ## 4. Expression Value Categories

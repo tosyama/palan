@@ -2,6 +2,9 @@ cinclude <stdio.h>;
 cinclude <mcheck.h>;
 type json union { Null; bool b; int64 i; [+]json items; };
 type box { [+]json js; };
+// The union is not at the start of what the pointer (the field p) points to.
+type pair { int64 n; $json v; };
+type outer { pair p; };
 
 func items(int64 n) -> json r {
 	[+]json xs = [];
@@ -11,6 +14,11 @@ func items(int64 n) -> json r {
 
 func firstInt(@json j) -> int64 {
 	if j is @items && len(@items) > 0 && items[0] is copy i { return i; }
+	return -1;
+}
+
+func pairLen(@pair p) -> int64 {
+	if p.v is @items { return len(@items); }
 	return -1;
 }
 
@@ -52,6 +60,13 @@ func f() {
 		if items(at) is copy xs = items && len(@xs) < 3 { continue; }
 		printf("at %d\n", at);
 	}
+
+	pair pr;
+	[json.i(1), json.Null] -> pr.v.items;
+	printf("pair %d", pairLen(@pr));
+	outer o;
+	3 -> o.p.v.i;
+	printf(" %d\n", o.p.v.i);
 }
 
 mtrace();

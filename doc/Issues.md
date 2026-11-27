@@ -24,6 +24,8 @@ Reading through `p` after the block exits reads freed memory — undefined behav
 
 A variable-length array (v0.2.1) adds a shorter-lived case: `push` and `resize` can move its elements, so a borrow of an element (`@!v[i]`) or the elements given to a `[]T` parameter dangles after the length changes, within the same block. A `for` loop holds its array's storage and length until it ends, and its body may not change them through the name the loop was given (v0.2.2); a borrow made before the loop (`@![+]int64 q = @!v;` and then `q.push(1)` in `for copy a in v { }`) or a pointer stored elsewhere changes the array unnoticed, and the loop then reads freed or moved elements. A dictionary (v0.2.7) is the same: adding or removing a key can move or free the values and the keys, so a borrow of either (`@!d[k]`, a `for`'s `k` kept after its iteration) dangles.
 
+A tagged union (v0.2.8) is the same: while `is` borrows a variant's contents (`if j is @s { }`), its body may not change `j`'s variant through `j`, but a change through another borrow releases the contents unnoticed and the binding dangles.
+
 A struct a call returns may hold a borrow of a temporary given to the call (`I x = it(@mk());` where `it` keeps its argument in a `@T` field): the temporary is freed with the statement and the field dangles. A call returning a borrow itself is rejected there, and the call of a `for`'s range has its temporaries held until the loop ends (v0.2.7), but a struct is not followed to what its fields borrow.
 
 A pointer viewed as an owner (`T b <<= p as T;`) stays a borrow, usable while `b` lives, and dangles once `b` is freed.

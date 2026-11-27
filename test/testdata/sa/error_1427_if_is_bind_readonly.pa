@@ -1,0 +1,2 @@
+type U union { Null; int64 i; };
+func g(@U u) { if u is { Null { } @!i { } } }
