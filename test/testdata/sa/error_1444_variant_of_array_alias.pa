@@ -1,0 +1,2 @@
+type A = [3]int64;
+int64 q = A.x;

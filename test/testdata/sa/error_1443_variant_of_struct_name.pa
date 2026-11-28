@@ -1,0 +1,2 @@
+type Q { int64 x; };
+Q q = Q.x;

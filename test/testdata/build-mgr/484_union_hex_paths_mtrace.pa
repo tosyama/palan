@@ -1,0 +1,51 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+cinclude "356_c_bitfield.h";
+type U union { Null; int64 i; flo64 f; };
+type P { int64 n; U u; };
+type S { int64 a; int64 b; };
+type V union { Null; $S s; [+]int64 v; };
+type W { [+][""]int64 ds; };
+func [](@W w, int64 i) -> @[""]int64 { return @w.ds[i]; }
+type X { [+][+]int64 rows; };
+func [](@X x, int64 i) -> @[+]int64 { return @x.rows[i]; }
+
+mtrace();
+{
+	// A mutable binding of a union reached through a field.
+	P p;
+	3 -> p.u.i;
+	if p.u is @!i { i + 2 -> i; }
+	printf("%ld\n", p.u.i);
+
+	// A union laid out with a struct of numbers in place, copied.
+	S x = [1, 2];
+	V v = V.s(x);
+	V c = v;
+	if c is @s { printf("%ld %ld\n", s.a, s.b); }
+
+	// '[]' giving a borrowed dictionary.
+	W w;
+	[""]int64 d = {"a": 7};
+	w.ds.push(d);
+	@[""]int64 r = w[0];
+	printf("%ld\n", r["a"]);
+	X xs;
+	[+]int64 row = [4, 5];
+	xs.rows.push(row);
+	@[+]int64 rw = xs[0];
+	printf("%ld\n", len(rw));
+
+	// A hexadecimal literal is a bit-field's bits.
+	Bf bf;
+	0xF -> bf.a;
+	printf("%d\n", bf.a);
+
+	// A hexadecimal literal compared with a bool, a pointer and another literal.
+	bool b = true;
+	if b == 0x1 { printf("bool\n"); }
+	int64 n = 0;
+	@int64 q = @n;
+	if q == 0x0 { printf("null\n"); }
+	if 0x10 == 16 { printf("hex\n"); }
+}

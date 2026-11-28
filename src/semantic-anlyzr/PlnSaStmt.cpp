@@ -450,7 +450,7 @@ json PlnSemanticAnalyzer::sa_if_is_stmt(const json& stmt)
 		bool mut = borrow && bind["mutable"];
 		string ptr = "__is_" + to_string(tempVarCounter_++);
 		ptrDecl(ptr, mut, base);
-		knownVariants_[ptr] = variant;
+		knownVariants_.insert(ptr);
 		json contents = {{"expr-type","field-access"},{"object",{{"expr-type","id"},{"name",ptr}}},{"field",variant}};
 		size_t pins = pinnedRanges_.size();
 		json armOut;

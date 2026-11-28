@@ -87,6 +87,13 @@ TEST(build_mgr_error, reexport_unlisted) {
 	ASSERT_NE(out.find("error_066_reexport_unlisted.pa:2:11: error: Undefined function 'hiddenC'."), string::npos) << out;
 }
 
+// A hexadecimal literal for a bit-field gives its bits, so it must fit them.
+TEST(build_mgr_error, bitfield_hex_too_large) {
+	cleanTestEnv();
+	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_067_bitfield_hex_too_large.pa");
+	ASSERT_NE(out.find("error_067_bitfield_hex_too_large.pa:3:1: error: Integer literal '31' does not fit the 4-bit bit-field 'a'."), string::npos) << out;
+}
+
 TEST(build_mgr_error, unqualified_alias_call) {
 	cleanTestEnv();
 	string out = execTestCommand("bin/palan ../test/testdata/build-mgr/error_046_unqualified_alias.pa");

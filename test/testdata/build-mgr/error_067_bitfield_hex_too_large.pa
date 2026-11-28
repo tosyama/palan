@@ -1,0 +1,3 @@
+cinclude "356_c_bitfield.h";
+Bf b;
+0x1F -> b.a;

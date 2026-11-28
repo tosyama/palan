@@ -261,9 +261,9 @@ class PlnSemanticAnalyzer {
 	vector<PinnedRange> pinnedRanges_;
 	// Transfer is into the location, Give out of it.
 	enum class RangeChange { Borrow, Copy, Transfer, Give };
-	// The pointer an `is` binding reads a union through, and the variant the
-	// test found, so reading it needs no check.
-	map<string, string> knownVariants_;
+	// The pointers `is` bindings read a union through, each only as the variant
+	// its test found, so reading one needs no check.
+	set<string> knownVariants_;
 	// What the `is` bindings of the condition being analyzed need: hidden
 	// variables declared ahead of the statement, in a scope of their own, and
 	// the names bound, declared for the body.

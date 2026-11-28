@@ -1546,3 +1546,9 @@ TEST(build_mgr, subscript_func_mtrace) {
 	expectMtraceRun("481_subscript_func_mtrace",
 		"5 7 7\n3 1 9\n5 10 7\n5\nnum key put a put b put c put b \n5 6 3\n", 76);
 }
+
+// A mutable binding through a field, a union with a struct of numbers in place,
+// '[]' giving a borrowed dictionary, and hexadecimal literals compared.
+TEST(build_mgr, union_hex_paths_mtrace) {
+	expectMtraceRun("484_union_hex_paths_mtrace", "5\n1 2\n7\n2\n15\nbool\nhex\n", 27);
+}

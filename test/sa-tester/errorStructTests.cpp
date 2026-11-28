@@ -1250,6 +1250,8 @@ TEST(sa_error, opaque_type)
 		 "its contents is given by a move: '<<=', '->>', '>>' or 'return'."},
 		{"error_1065_opaque_held_copy.pa", ":4:1: error: 'W' holds an opaque value, and copying one held in "
 		 "another value is not supported in this version."},
+		// Held by a struct laid out in place.
+		{"error_1441_opaque_held_in_place_copy.pa", ":5:1: error: 'V' holds an opaque value"},
 		{"error_1066_release_sig.pa", ":3:1: error: a 'release' function takes one owned opaque type of its "
 		 "module and returns nothing."},
 		{"error_1067_release_place.pa", ":2:1: error: a 'release' function is defined at the top level of the "

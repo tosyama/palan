@@ -1150,7 +1150,7 @@ bool PlnSemanticAnalyzer::builtWhole(const string& structName) const
 {
 	return structDefs_.at(structName).isTagged
 	    || assignsByFunc(json{{"type-kind", "struct"}, {"type-name", structName}}); // LCOV_EXCL_BR_LINE
-}
+} // LCOV_EXCL_BR_LINE
 
 // A borrow is copied as the pointer it is, so what it points to is not.
 static bool assignsByFunc(const map<string, StructDef>& defs, const json& t, set<string>& seen)

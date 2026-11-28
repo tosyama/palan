@@ -1,0 +1,5 @@
+import "lib_sa_opaque.pa";
+type W { Handle h; };
+type V { $W w; };
+V a;
+V b = a;

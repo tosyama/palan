@@ -1691,6 +1691,12 @@ TEST(sa_error, union) {
 		{"error_1404_if_is_change_variant.pa", ":5:7: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
 		{"error_1405_if_is_bind_other_arm.pa", ":5:9: error: Undefined variable or module alias 'a'."},
 		{"error_1406_union_lit_no_conversion.pa", ":2:7: error: a '{..}' literal does not convert to union 'U': no function 'U' takes it alone."},
+		{"error_1440_union_arr_lit_no_conversion.pa", ":2:7: error: a '[..]' literal does not convert to union 'U': no function 'U' takes it alone."},
+		{"error_1442_is_on_struct.pa", ":3:4: error: 'is' tests a union's variant, not a value of type 'Q'."},
+		// A name of a struct or an array type is not a union's to make a variant of.
+		{"error_1443_variant_of_struct_name.pa", ":2:7: error: Undefined variable 'Q'."},
+		{"error_1444_variant_of_array_alias.pa", ":2:11: error: Undefined variable 'A'."},
+		{"error_1445_owned_array_as_owner.pa", ":3:10: error: cannot cast to 'text': only a pointer ('@!X') can be viewed as an owner"},
 		{"error_1407_union_lit_ambiguous.pa", ":4:7: error: Ambiguous function call 'J': it can mean J([+]J), J([+]int64)."},
 		// Only a function taking bool converts true: a bool widens to any number.
 		{"error_1408_bool_conv_needs_bool.pa", ":3:1: error: cannot copy 'bool' into 'big'"},

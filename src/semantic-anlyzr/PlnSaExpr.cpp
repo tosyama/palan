@@ -168,10 +168,8 @@ void PlnSemanticAnalyzer::checkVariant(FieldChain& chain, const FieldLayout& fld
 {
 	const StructDef& def = structDefs_.at(chain.structName);
 	if (!def.isTagged || !checks_) return;
-	if (!chain.isPointerBased && chain.offset == 0) {
-		auto known = knownVariants_.find(chain.varName);
-		if (known != knownVariants_.end() && known->second == fld.name) return;
-	}
+	// A binding's pointer is read only as the variant it was bound to.
+	if (!chain.isPointerBased && knownVariants_.count(chain.varName)) return;
 	// LCOV_EXCL_BR_START
 	json at = unionAddr(chain);
 	json self = at["value-type"];
@@ -197,12 +195,12 @@ json PlnSemanticAnalyzer::unionAddr(const FieldChain& chain) const
 const StructDef& PlnSemanticAnalyzer::testedUnion(const json& x, bool writes, json& saX)
 {
 	string xt = x.value("expr-type", "");
-	saX = !writes ? sa_expression(x)
+	saX = !writes ? sa_expression(x) // LCOV_EXCL_BR_LINE
 		: xt == "field-access" ? sa_expr_field_access(x, true)
 		: xt == "arr-index"    ? sa_expr_arr_index(x, true)
 		: sa_expression(x);
 	const json& vt = saX["value-type"];
-	const StructDef* def = isStructPntr(vt) ? &structDefs_.at(vt["base-type"]["type-name"].get<string>()) : nullptr;
+	const StructDef* def = isStructPntr(vt) ? &structDefs_.at(vt["base-type"]["type-name"].get<string>()) : nullptr; // LCOV_EXCL_BR_LINE
 	if (!def || !def->isTagged) {
 		cerr << locPrefix(x) << PlnSaMessage::getMessage(E_IsNotUnion, typeDisplayName(vt)) << endl;
 		exit(1);
@@ -273,7 +271,7 @@ void PlnSemanticAnalyzer::pinBoundVariant(const json& x, const string& ptr, cons
 	vector<string> path;
 	if (locationPath(x, path)) pinnedRanges_.push_back({move(path), false, false, variant});
 	pinnedRanges_.push_back({{ptr}, false, false, variant, name});
-}
+} // LCOV_EXCL_BR_LINE
 
 // `x is s`: whether the union x is that variant. One binding the contents is
 // lowered by isBindingTest.
@@ -326,7 +324,7 @@ json PlnSemanticAnalyzer::isBindingTest(const json& expr, const StructDef& def, 
 	isScope_->prefix.push_back({{"stmt-type","var-decl"},{"vars",json::array({{{"name",ptr},{"var-type",ptrType},
 		{"init",{{"expr-type","lit-int"},{"value","0"},{"value-type",ptrType}}}}})}});
 	body.push_back({{"stmt-type","assign"},{"name",ptr},{"value",move(saX)}});
-	knownVariants_[ptr] = variant;
+	knownVariants_.insert(ptr);
 	json test = variantTest(def, variant, {{"expr-type","id"},{"name",ptr},{"var-type",ptrType},{"value-type",ptrType}});
 
 	json contentsType = fieldValueType(field);
@@ -481,7 +479,7 @@ bool PlnSemanticAnalyzer::holdsOpaque(const json& vt, set<string>& seen) const
 		if (it->second.isOpaque) return true;
 		if (!seen.insert(it->first).second) return false;
 		for (auto& f : it->second.fields) {
-			if (f.typeKind == "embed" && holdsOpaque({{"type-kind", "struct"}, {"type-name", f.typeName}}, seen))
+			if (f.typeKind == "embed" && holdsOpaque({{"type-kind", "struct"}, {"type-name", f.typeName}}, seen)) // LCOV_EXCL_BR_LINE
 				return true;
 			if (f.typeKind != "raw-ptr" && holdsOpaque(f.type, seen)) return true;
 		}
@@ -676,7 +674,6 @@ void PlnSemanticAnalyzer::readHexLit(json& lit)
 {
 	if (!lit.value("hex", false)) return;
 	const PlnType* t = registry_.fromJson(lit["value-type"]);
-	if (!isIntegerPrim(t)) return;
 	auto pn = static_cast<const PrimType*>(t)->name;
 	string value = lit["value"];
 	int bits = intTypeBits(pn);
@@ -1475,7 +1472,7 @@ json PlnSemanticAnalyzer::sa_expr_cmp(const json& expr)
 		if (isUntypedHexLit(folded[i])) {
 			const PlnType* t = registry_.fromJson(promoteOperand(other)["value-type"]);
 			if (isFloatPrim(t) || (isIntegerPrim(t)
-			    && intLiteralFitsBits(folded[i]["value"], intTypeBits(static_cast<const PrimType*>(t)->name), false)))
+			    && intLiteralFitsBits(folded[i]["value"], intTypeBits(static_cast<const PrimType*>(t)->name), false))) // LCOV_EXCL_BR_LINE
 				type = t;
 		}
 		return sa_expression(expr[i ? "right" : "left"], type);
@@ -1874,7 +1871,7 @@ json PlnSemanticAnalyzer::sa_expr_cast(const json& expr, bool moving)
 	}
 	if (!owned.is_null()) {
 		// A string literal is a value, not a location holding one.
-		if (from.value("type-kind", "") != "pntr" || !from.contains("mutable") || src.value("expr-type", "") == "lit-str") {
+		if (from.value("type-kind", "") != "pntr" || !from.contains("mutable") || src.value("expr-type", "") == "lit-str") { // LCOV_EXCL_BR_LINE
 			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_OwnerViewNeedsPtr, typeDisplayName(written)) << endl;
 			exit(1);
 		}
@@ -1983,7 +1980,7 @@ json PlnSemanticAnalyzer::variantValue(const json& expr, bool isCall)
 	if (expr.contains("loc")) call["loc"] = expr["loc"];
 	return makeCallNode(call, Callee{&maker, false}, shown);
 	// LCOV_EXCL_BR_STOP
-}
+} // LCOV_EXCL_BR_LINE
 
 // The signature of the function making `variant` of def, as SA types: it takes
 // the contents as a `T` parameter, a struct laid out in place included.
