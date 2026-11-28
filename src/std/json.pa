@@ -349,6 +349,7 @@ export func parseJson(@utf8 s, int64 maxDepth = 512) -> jsonresult r
 	jsonerror e;
 	utf8(@p.message) -> e.message;
 	int64 i = 0;
+	0 -> e.pos;
 	1 -> e.line;
 	1 -> e.col;
 	if bom { 3 -> i; 1 -> e.pos; }
