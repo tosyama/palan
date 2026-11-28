@@ -1584,7 +1584,7 @@ TEST(sa_error, give_and_take)
 		{"error_968_default_too_few.pa", ":2:1: error: function 'f' takes 1 to 2 argument(s), but 0 given."},
 		{"error_969_default_too_many.pa", ":2:1: error: function 'f' takes 1 to 2 argument(s), but 3 given."},
 		{"error_970_default_out_of_range.pa", ":1:17: error: Integer literal '300' is out of range for type 'int8'."},
-		{"error_971_default_type.pa", ":1:18: error: cannot convert '[?]uint8' to 'int32'."},
+		{"error_971_default_type.pa", ":1:18: error: cannot convert '@uint8' to 'int32'."},
 		// A function pointer's type has no defaults.
 		{"error_972_default_func_ptr.pa", ":3:1: error: function 'fp' takes 2 argument(s), but 1 given."},
 		{"error_973_default_narrowing.pa", ":1:18: error: Implicit conversion from 'flo64' to 'int32' is not allowed"},

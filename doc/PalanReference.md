@@ -139,7 +139,8 @@ point (`'a'` is 97, `'é'` is 233, `'😀'` is 128512), written as is or as `\u{
 | `\u{X}` | the UTF-8 bytes of code point `X` (1 to 6 hex digits; `"\u{20AC}"` is `E2 82 AC`) |
 
 A string literal holds bytes, not checked as UTF-8: `\xHH` may give any byte, and a byte written
-in the source is taken as it is. `\u{X}` (in a character literal too) must name a code point up to
+in the source is taken as it is. Its bytes are read-only: it is given as a `@[]uint8`, never to a
+`@![]uint8` or a C `char *` parameter that is not `const`. `\u{X}` (in a character literal too) must name a code point up to
 `10FFFF` that is not a surrogate (`D800` to `DFFF`).
 
 A string literal, or a string constant, initializes a `uint8` array as the array literal of its
@@ -273,7 +274,8 @@ cinclude <stdlib.h>;
 - From a pointer (`@!X`) to an owned struct or array (`T`, `[n]T`, `[+]T`), which views what it
   points to as that type's owner, as C hands such a thing back. It is copied like an owned
   variable when assigned or passed, and moved by `<<=`, `->>` or `>>`; a move leaves the pointer
-  as it is. A `@X` pointer can be viewed this way only to copy from it. A `@!X` location is
+  as it is. A `@X` pointer can be viewed this way only to copy from it, and a string literal not
+  at all: it is a value, not a location (`T("...")` converts one). A `@!X` location is
   viewed this way to be given a value: `v ->> loc as T` (see
   [Ownership Across C Functions](#ownership-across-c-functions)).
 - From an owned array to the same array of other sizes (`a as [m]T`), only where it is given

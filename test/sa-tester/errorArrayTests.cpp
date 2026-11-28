@@ -890,3 +890,23 @@ TEST(sa_error, str_lit_bytes) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+// A string's bytes are read-only, so it cannot be given where they could be written.
+TEST(sa_error, str_lit_read_only) {
+	const vector<pair<string, string>> cases = {
+		{"error_1434_str_lit_to_mutable_arg.pa", ":2:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1435_str_const_to_mutable_arg.pa", ":3:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1436_str_lit_mutable_init.pa", ":1:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1437_str_lit_mutable_rebind.pa", ":3:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1438_str_lit_non_const_c_param.pa", ":2:1: error: cannot pass read-only pointer '@T' to non-const parameter '__s' of C function 'strtok'"},
+		{"error_1439_str_const_as_struct.pa", ":3:10: error: cannot cast to 'text'"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

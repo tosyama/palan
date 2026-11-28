@@ -1873,7 +1873,8 @@ json PlnSemanticAnalyzer::sa_expr_cast(const json& expr, bool moving)
 		return castLens(expr, written, move(view));
 	}
 	if (!owned.is_null()) {
-		if (from.value("type-kind", "") != "pntr" || !from.contains("mutable")) {
+		// A string literal is a value, not a location holding one.
+		if (from.value("type-kind", "") != "pntr" || !from.contains("mutable") || src.value("expr-type", "") == "lit-str") {
 			cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_OwnerViewNeedsPtr, typeDisplayName(written)) << endl;
 			exit(1);
 		}

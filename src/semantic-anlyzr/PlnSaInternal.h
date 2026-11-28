@@ -52,8 +52,9 @@ inline json wrapConvert(const json& expr, const json& to_type) {
 inline json boolType() {
 	return {{"type-kind", "prim"}, {"type-name", "bool"}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
+// The bytes are in .rodata, so only a read-only borrow takes them.
 inline json strLitType() {
-	return {{"type-kind", "pntr"}, {"base-type", {{"type-kind", "prim"}, {"type-name", "uint8"}}}}; // LCOV_EXCL_BR_LINE
+	return {{"type-kind", "pntr"}, {"mutable", false}, {"base-type", {{"type-kind", "prim"}, {"type-name", "uint8"}}}}; // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
 // True if `t` is a non-float primitive type (int8..uint64). Shared by every

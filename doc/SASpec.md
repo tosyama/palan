@@ -1032,7 +1032,8 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     literal by the other operand). `char` stays on the node in sa.json; codegen ignores it.
   - lit-flo: adopts the float type of a float-typed context (e.g. `flo32 y = 1.5;` → flo32);
     defaults to flo64 when no expected float type is available
-  - lit-str: {"type-kind": "pntr", "base-type": {"type-kind": "prim", "type-name": "uint8"}}
+  - lit-str: {"type-kind": "pntr", "mutable": false, "base-type": {"type-kind": "prim", "type-name": "uint8"}}:
+    its bytes are in `.rodata`, so it binds only a read-only pointer
   - id: same object as var-type
   - add: promoted type of left and right operands (see Promotion rules);
     the narrower operand is wrapped in a convert node if types differ

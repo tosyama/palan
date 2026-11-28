@@ -1,0 +1,2 @@
+cinclude <string.h>;
+strtok("a,b", ",");
