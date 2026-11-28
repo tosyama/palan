@@ -1,6 +1,6 @@
 # Palan Language Reference
 
-**Version:** v0.2.7
+**Version:** v0.2.8
 
 Palan is a compiled systems programming language designed as a simpler, safer, and more enjoyable alternative to C. It targets developers who want low-level control and direct access to C libraries, without the sharp edges of C syntax. Palan code compiles to native x86-64 binaries via AT&T assembly, with no runtime overhead.
 
@@ -92,12 +92,26 @@ from a cincluded C header may start with `__` and is used as it is.
 **Integer literals:**
 - Signed: `[0-9]+` (e.g., `42`, `1000`)
 - Unsigned: `[0-9]+u` (e.g., `42u`)
+- Hexadecimal: `0x` or `0X`, then `[0-9a-fA-F]+`, up to 64 bits (e.g., `0x1F`); with `u`, unsigned
 
 A literal must fit the type it adopts from its context (the declared variable, parameter, or the
 other operand); otherwise it is a compile error — `int8 x = 300;` and `uint8 y = -1;` are both
 rejected. A minus sign directly on an integer literal is part of the value, so `int8 x = -128;`
 is accepted. A constant expression (see [Constant Declarations](#constant-declarations)) is
 folded first, so its result is what must fit: `int8 x = 100 + 100;` is rejected.
+
+A hexadecimal literal without `u` is the bits of the integer type it adopts, so it must fit that
+type's width: `int32 x = 0xFFFFFFFF;` and `int8 y = 0xFF;` are -1, `int64 z = 0xFFFFFFFF;` is
+4294967295, and `int8 w = 0x1FF;` is rejected.
+
+- Compared with an integer whose width it fits, it adopts that integer's type, so
+  `x == 0xFFFFFFFF` is true for the `x` above.
+- Adopting the other operand's type, a mask does not widen: for an `int8 b` of -1, `b & 0xFF` is
+  still -1. Write `uint8(b)` for the value 255.
+- With a minus sign it is a number: `-0xFF` is -255.
+- A const names the literal as it is (`const M = 0xFF000000; int32 x = M;`), but a constant
+  expression is a number computed in `int64`: `int32 x = 0xFF000000 + 0xFF;` is rejected. Only
+  `|`, `&` and `^` of hexadecimal operands give bits again: `int32 x = 0xFF000000 | 0xFF;`.
 
 **Character literals:** `'a'` is an integer literal whose value is the character's Unicode code
 point (`'a'` is 97, `'é'` is 233, `'😀'` is 128512), written as is or as `\u{X}` (`'\u{20AC}'` is
@@ -125,8 +139,29 @@ point (`'a'` is 97, `'é'` is 233, `'😀'` is 128512), written as is or as `\u{
 | `\u{X}` | the UTF-8 bytes of code point `X` (1 to 6 hex digits; `"\u{20AC}"` is `E2 82 AC`) |
 
 A string literal holds bytes, not checked as UTF-8: `\xHH` may give any byte, and a byte written
-in the source is taken as it is. `\u{X}` (in a character literal too) must name a code point up to
+in the source is taken as it is. Its bytes are read-only: it is given as a `@[]uint8`, never to a
+`@![]uint8` or a C `char *` parameter that is not `const`. `\u{X}` (in a character literal too) must name a code point up to
 `10FFFF` that is not a surrogate (`D800` to `DFFF`).
+
+A string literal, or a string constant, initializes a `uint8` array as the array literal of its
+bytes, wherever an array literal can (a declaration, `->`, a struct literal's field, a row), sized
+as C sizes it:
+
+| Array | `"hello"` (5 bytes) gives |
+|-------|---------------------------|
+| `[]uint8`, `[+]uint8` | 6 elements, the NUL last |
+| `[6]uint8` | the bytes and the NUL |
+| `[5]uint8` | the bytes, without the NUL |
+| `[8]uint8` | the bytes, then zeros |
+| `[4]uint8` | a compile error |
+
+```palan
+[16]uint8 name = "palan";
+[2][4]uint8 rows = ["ab", "cde"];
+"pa" -> name;
+```
+
+A call argument is not converted: a `@[]uint8` parameter borrows the literal's bytes as they are.
 
 **Comments:** `// line comment`
 
@@ -239,7 +274,8 @@ cinclude <stdlib.h>;
 - From a pointer (`@!X`) to an owned struct or array (`T`, `[n]T`, `[+]T`), which views what it
   points to as that type's owner, as C hands such a thing back. It is copied like an owned
   variable when assigned or passed, and moved by `<<=`, `->>` or `>>`; a move leaves the pointer
-  as it is. A `@X` pointer can be viewed this way only to copy from it. A `@!X` location is
+  as it is. A `@X` pointer can be viewed this way only to copy from it, and a string literal not
+  at all: it is a value, not a location (`T("...")` converts one). A `@!X` location is
   viewed this way to be given a value: `v ->> loc as T` (see
   [Ownership Across C Functions](#ownership-across-c-functions)).
 - From an owned array to the same array of other sizes (`a as [m]T`), only where it is given
@@ -1186,8 +1222,8 @@ show(2.5);          // float 2.5
   type it is given to, and of several, the one of exactly that type:
   `@func(int32) -> int32 g = show;` is an error here (no `show` returns `int32`), and one
   written where no function pointer type is expected is a compile error.
-- Receiving several return values (`(a, b) = f(x)`) needs the functions returning that many to
-  return the same types.
+- Receiving several return values (`(a, b) = f(x)`) considers only the functions returning that
+  many, and of them the arguments choose one as in any call.
 - If one of several functions fitting the arguments fits only by using its
   [defaults](#default-arguments) or its [variadic parameter](#variadic-arguments), the call is
   ambiguous: with `f(int32)` and
@@ -1197,6 +1233,9 @@ show(2.5);          // float 2.5
   fits without the conversion, so `f(@[]uint8)` is chosen over `f(@name)` for `f("Ann")`, and
   `f(int64)` over `f(big)` for `f(12)`.
   Among those needing it, the rules above apply, a converted argument counting as exact.
+- An array literal fits only a struct, sized array or `[+]T` parameter, and a dictionary literal only
+  a struct or `[""]T` one. Its elements are not looked at, so with `f(@[]uint8)` and `f([+]int64)`, `f([1, 2])` calls the second, while with
+  `f([+]int64)` and `f([+]uint8)` it is ambiguous.
 
 ### Operator Functions
 
@@ -1299,6 +1338,42 @@ printf("%ld %d\n", t.sum, t.count);   // 12 2
 - `<<` binds as the shifts do: `s << a + b` appends `a + b`, and `s << x -> f()` is `f(s << x)`.
 - `[+]T` has no `<<`; it uses `push`. For a `[+]uint8`, `v << "abc"` would not say whether it
   adds the bytes or one element.
+
+#### Subscript
+
+A type defines `[]` to be indexed, and `->[]` to store with `x -> t[k]`:
+
+```palan
+cinclude <stdio.h>;
+
+type vec { [+]flo64 v; };
+
+func [](@vec a, int64 i) -> flo64 { return a.v[i]; }
+func [](@!vec a, int64 i) -> @!flo64 { return @!a.v[i]; }
+
+vec a = {v: [1.0, 2.0]};
+5.0 -> a[0];                // through [](@!vec, int64)
+a[0] + 1.0 -> a[1];
+printf("%g %g\n", a[0], a[1]);   // 5 6
+```
+
+- `[]` is `func [](@T t, K k) -> @E` (or `E` by value), or `func [](@!T t, K k) -> @!E`, of a
+  struct or union `T`; `->[]` is `func ->[](V v, @!T t, K k)`, returning nothing. `k` and `v` cannot
+  be `@!`, and nothing has a default. Another shape is a compile error.
+- Where the element is written or borrowed `@!` (`x -> t[k]`, `1 -> t[k].f`, `@!t[k]`,
+  `t[k].push(x)`), `t[k]` calls a `[]` taking `@!T`; elsewhere one taking `@T`, so a read never needs
+  `t` writable. Among those, the key chooses as an [overloaded](#overloading) call's arguments do.
+  `k` is passed as an operand of `+` is; an array key is written by name (`t[buf]`).
+- `x -> t[k]` and `x ->> t[k]` call `->[](x, @!t, k)` when `T` has any `->[]`, so a type adding keys,
+  as a dictionary does, decides how. `x` is evaluated before `k`. Without a `->[]`, `x` is stored
+  into the element `[](@!T, K)` returns.
+- With a `[]` for `T`, `t[k]` always calls one, also through a borrow `@T p`: `p[i]` is then never
+  a [pointer's subscript](#10-address-of-operator), and a key no `[]` takes is a compile error.
+- A borrow returned is the element itself, as an array's is. A struct returned by value is a
+  temporary: it can be received or passed, but `t[k].f` and `@t[k]` on it are compile errors, as
+  for a call.
+- While `t` is a `for` range or a union an `is` binds, `[]` taking `@!T` and `->[]` cannot be
+  used on it, as `@!t` cannot.
 
 ---
 
@@ -1618,8 +1693,8 @@ minos[0][3] -> mino[0];      // copy one struct element
   [up to the shorter one](#sizes-known-only-at-run-time).
 - What the destination owns is copied too: owned struct fields and arrays, and the structs of a
   `[n]T` array, get copies of the source's. A `@T`/`@!T` pointer is copied as a pointer.
-- An element taken out with `->>` is NULL, and stays NULL in the copy. An element copied into
-  a slot that is NULL is made there first, as a new value.
+- An element or a field taken out with `->>` is NULL, and stays NULL in the copy of what holds it. One
+  copied into a slot that is NULL with what holds it is made there first, as a new value.
 - A struct returned by a function is copied the same way, and then freed. A `[]T` return has
   no size known at compile time, so it cannot be copied into an array.
 
@@ -2209,6 +2284,7 @@ In a comma-separated declaration, each initializer belongs to its own variable:
   error, since `->` to a borrow rebinds it.
 - A given dimension, or every size of the target of `->`, must be a compile-time constant that
   matches the literal's element or row count, and every row of a 2D literal must have the same length.
+- A string can be given for a `uint8` array or row (see [String literals](#2-lexical-rules)).
 - Only numeric (integer and float) and struct element types are supported. Arrays of pointers
   and arrays of three or more dimensions cannot be initialized with a literal.
 - A `{name: value}` literal can only be used as a struct value (an element of an array literal, or
@@ -2619,8 +2695,9 @@ a copy of it (including what it owns), which the caller owns.
 
 A function named like a struct type, returning it and callable with a literal alone (its other
 parameters have [defaults](#default-arguments) or are [variadic](#variadic-arguments)), converts a
-string, integer or floating-point literal to that type wherever a value of the type, or a `@T` of
-it, is expected:
+string, integer, floating-point or `bool` literal to that type wherever a value of the type, or a
+`@T` of it, is expected. For a [union](#tagged-unions), it converts an array or dictionary literal
+too:
 
 ```palan
 type name { [+]uint8 bytes; };
@@ -2637,6 +2714,14 @@ func big(flo64 f) -> big b { ... }
 
 big x = 12;              // big x = big(12);
 big y = 1.5;             // big y = big(1.5);
+
+type json union { Null; bool b; int64 i; [+]json items; [""]json members; };
+func json(bool v) -> json { return json.b(v); }
+func json(int64 v) -> json { return json.i(v); }
+func json([+]json v) -> json { return json.items(v>>); }
+func json([""]json v) -> json { return json.members(v>>); }
+
+json j = [1, true, {"k": []}];   // json([json(1), json(true), json({"k": json([])})])
 ```
 
 - It happens in a variable's initializer, the source of `->`, an argument (a variadic one too),
@@ -2649,8 +2734,13 @@ big y = 1.5;             // big y = big(1.5);
 - A [const](#constant-declarations) or a constant expression converts as the literal it folds to,
   computed in the literal's default type (`int64`, `uint64` or `flo64`): `big x = 12 * 3;` is
   `big(36)`. Any other value is converted by calling the function (`name(getenv("HOME"))`,
-  `big(n * 3)`), and so is `true`, an enum value or a character literal, which have types of their
-  own. Nothing converts for a `@!T`, and `"Ann" as name` is a compile error.
+  `big(n * 3)`), and so is an enum value or a character literal, which have types of their own.
+  `true` and `false` convert only by a function taking `bool`: with `big(int64)` alone,
+  `big x = true;` is a compile error. Nothing converts for a `@!T`, and `"Ann" as name` is a compile
+  error.
+- An array or dictionary literal converts only to a union: for a struct it gives the fields. Its
+  elements convert by the parameter's type, so nested literals convert too. With no function to
+  convert it, it is a compile error.
 - The functions are those of the name visible at the literal, including those of a module
   imported with an alias (`import "names.pa" as N;` converts for `N.name`). Among those callable
   with the literal alone, one is chosen as for an [overloaded](#overloading) call: `big(int64)` for
@@ -2678,7 +2768,17 @@ A type must not contain itself. Embedding or owning in a cycle (`type A { $B b; 
 `type B { $A a; };`, possibly across files that import each other) or an alias cycle is a
 compile error. A pointer (`@T`/`@!T`) may close a cycle, as a field, as an element of an array or
 a dictionary, or in the signature of a function pointer (`[2]@T`, `@func(@T)`). The type itself in
-a signature, or a borrow of an array or a dictionary of the type, may not.
+a signature, or a borrow of a sized array of the type (`@[3]T`), may not.
+
+What a `[+]T` or `[""]T` holds may close a cycle too, as both start empty, but not `[+]$T`, nor one
+with an initializer that has elements:
+
+```palan
+type Tree { int32 v; [+]Tree kids; [""]Tree named; };
+```
+
+Copying or releasing such a value calls itself for each level of nesting, so a very deep one
+overflows the stack.
 
 ### Restrictions
 
@@ -2689,6 +2789,70 @@ a signature, or a borrow of an array or a dictionary of the type, may not.
   owned or embedded array (`[n]DIR`/`[n]$DIR`), an embedded field (`$DIR field;`), or an
   array-of-struct element (`arr[i]`/`p[i]` subscripting). It is usable only through a pointer
   (`@T`/`@!T`) — as a local variable, function parameter, or return type.
+
+### Tagged Unions
+
+A union holds one of its variants at a time, and knows which:
+
+```palan
+type json union { Null; bool b; int64 i; flo64 f; [+]json items; [""]json members; };
+```
+
+A variant is written as a field is, with any field type; one without contents is a bare name.
+Variants are told apart by name, not type. A union may appear wherever a struct may, and may
+contain itself through a `[+]T` or `[""]T` as a struct may.
+
+- **Declared**, a union holds its first variant, with the value a variable of that type has when
+  declared (`json j;` is `Null`).
+- **`j.i`** reads, borrows (`@!j.items`), or writes a part of (`3 -> j.p.x`) the contents. Naming a
+  variant the union does not hold is the writer's error: a debug build stops with
+  `runtime error: a union read as a variant it does not hold`; a release build does not check.
+- **`x -> j.i`** (or `x ->> j.items`) makes `j` that variant, releasing what another variant held.
+  The value is evaluated first, so `j.items[0] -> j` and `len(@j.items) -> j.i` read `j` before it
+  changes.
+- **`j.items ->> v`** gives the contents away and leaves `j` its first variant.
+- **`j is i`** is `true` when `j` holds `i`. In the condition of an `if` or `while` it may bind the
+  contents, as a `for` binds an element: `j is @items` borrows them, `@!items` borrows them for
+  writing, `copy i` copies them, and `@t = items` (`@!t = items`, `copy t = i`) names them
+  otherwise. The name is visible in the body, and to the right of a `&&` the test is an operand of;
+  binding anywhere else (under `||` or `!`, outside a condition) is an error.
+
+  ```palan
+  if j is @items && len(@items) > 0 && items[0] is copy i { printf("%d\n", i); }
+  while k < len(@xs) && xs[k] is @!t = items { t.push(json.Null); k + 1 -> k; }
+  ```
+
+  The union is located once, when tested: changing an index used to reach it does not move the
+  binding. While its contents are borrowed, the body may not change its variant through the union
+  or what holds it (`x -> j`, `x -> j.f`, `j.items ->> v`, `@!j`), nor give the binding's
+  contents away; storing to the same variant is allowed. Through another borrow it is not
+  detected. A copy is made each time the test holds, so a `while` body may give it away. A
+  union a call returns is kept until the statement ends.
+- **`if j is { }`** runs the one arm for the variant `j` holds. An arm binds as above, or lists
+  variants without binding (`b, f`); `else` takes the variants no arm lists.
+
+  ```palan
+  if j is {
+      Null { printf("null"); }
+      b, f { printf("other"); }
+      copy i { printf("%d", i); }
+      @xs = items { printf("%d items", len(@xs)); }
+      else { printf("members"); }
+  }
+  ```
+
+  Every variant needs an arm unless there is an `else`; a variant in two arms, and an `else` no
+  variant is left for, are errors. `j` is evaluated once, before the arms. Only one arm runs, and
+  `break` and `continue` in it act on the enclosing loop.
+- **`json.i(5)`** is a value holding a variant, its argument given as to a `T` parameter;
+  `json.Null` is the value of a variant without contents. Literals, arrays and dictionaries too,
+  [convert](#conversion-from-a-literal) by functions named like the union.
+- Copying, `->`, `->>` and release work as for a struct, on the variant held. `func ->` may be
+  defined as for a struct; comparisons are not generated.
+- **Layout**: a `uint32` tag (the variant's index in declaration order), then the contents of every
+  variant at one offset, aligned to the largest of them; owned contents are a pointer, as in a
+  struct. `json` is 16 bytes.
+- An exported union's variants are all public; `opaque` hides them.
 
 ---
 
@@ -2780,8 +2944,8 @@ int64 x = 42;
   `@!@int32` — through the latter, a read-only pointer could be stored where the original still
   treats it as mutable. This matches C, where `int **` converts to `const int * const *` but not
   to `const int **`.
-- It can also be dereferenced from Palan code itself, using `p[i]` — subscript notation, not a
-  separate operator, since Palan already represents an array as a pointer plus attributes and a
+- It can also be dereferenced from Palan code itself, using `p[i]` (unless its type defines
+  [`[]`](#subscript)) — subscript notation, not a separate operator, since Palan already represents an array as a pointer plus attributes and a
   plain pointer as a bare pointer. `p[0]` reads or writes the pointee; `@T` (read-only) allows only
   the read, `@!T` (mutable) allows both — the same rule as writing a struct field through a
   pointer. `p[i]` for `i != 0` is ordinary C-style pointer arithmetic (the element at `i` element-
@@ -2842,6 +3006,10 @@ to its storage, so `@s`/`@!s` and `@arr`/`@!arr` borrow it as it is (see
   field reached from one, or an array element reached from one. A call returning a struct is the
   exception, as a call argument only (`f(@g())`); see
   [Struct types in function signatures](#struct-types-in-function-signatures).
+- `return @x` (or `@x.f`, `@x[i]`) of a function's own variable or by-value parameter is a compile error,
+  as what it points to ends with the function. One reached through a borrow (`@p.f` for `@T p`, a
+  `@T` field) or of a `global` is fine. Returning a borrow variable bound to the function's own is not
+  checked.
 
 ---
 
@@ -2980,6 +3148,32 @@ flo32 l = len2(@p);
   with a name an import makes writable is a compile error.
 - Two files may import each other and use each other's types anywhere, including in type
   declarations, as long as no type contains itself (see [Declaration order](#declaration-order)).
+
+### Re-exporting
+
+`export import` imports a module and publishes what it publishes as this file's own, so a file
+importing this one gets both:
+
+```palan
+// shapes.pa
+export import "vec3.pa";
+export func dot(@vec3 a, @vec3 b) -> flo32 { return a.x * b.x + a.y * b.y + a.z * b.z; }
+
+// main.pa
+import "shapes.pa";
+vec3 p;                     // vec3 and len2 come from vec3.pa through shapes.pa
+flo32 l = len2(@p);
+```
+
+- `export import f, T from "m.pa";` publishes only the names listed. A library's module is
+  re-exported the same way (`export import <std/utf8>;`).
+- An importer sees them as the file's own exports: bare, as `S.len2` under an alias
+  (`import "shapes.pa" as S;`), or listed in a selective import. They keep their own module, so
+  reaching one through two imports is not a clash. A chain of re-exports passes them on.
+- `export import` is written at the top level only, and without an alias, which is a name of the
+  importing file alone. Either is a compile error.
+- A library's main cannot re-export one of its internal modules: `--lib` reports it, since the
+  `.pai` could not state their types (see [Building a Library](#building-a-library)).
 
 ### Hidden and Read-only Fields
 

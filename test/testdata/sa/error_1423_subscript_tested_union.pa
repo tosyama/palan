@@ -1,0 +1,4 @@
+type U union { Null; int64 i; };
+func [](@!U u, int64 k) -> @!int64 { return @!u.i; }
+U u;
+if u is @i { @!int64 p = @!u[0]; }

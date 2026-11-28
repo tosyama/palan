@@ -1,0 +1,108 @@
+import <std/json>;
+import <std/utf8>;
+cinclude <stdio.h>;
+cinclude <string.h>;
+cinclude <mcheck.h>;
+
+// Checks parseJson against JSONTestSuite's test_parsing cases, given as args.
+
+// The i_ cases RFC 8259 leaves to the parser that std/json accepts; it rejects the others.
+func acceptedI(@[]uint8 name) -> bool
+{
+	return strcmp(name, "i_number_double_huge_neg_exp.json") == 0
+		|| strcmp(name, "i_number_real_underflow.json") == 0
+		|| strcmp(name, "i_number_too_big_neg_int.json") == 0
+		|| strcmp(name, "i_number_too_big_pos_int.json") == 0
+		|| strcmp(name, "i_number_very_big_negative_int.json") == 0
+		|| strcmp(name, "i_structure_500_nested_arrays.json") == 0
+		|| strcmp(name, "i_structure_UTF-8_BOM_empty_object.json") == 0;
+}
+
+// y_ cases holding \u0000, which a utf8 cannot hold.
+func nulEscape(@[]uint8 name) -> bool
+{
+	return strcmp(name, "y_object_escaped_null_in_key.json") == 0
+		|| strcmp(name, "y_string_null_escape.json") == 0;
+}
+
+// The text written and read back is the same value, and writing it again gives the same text.
+func roundTrips(@json v) -> bool
+{
+	utf8 once = toUtf8(v);
+	jsonresult r = parseJson(@once);
+	if r is @w = value {
+		utf8 twice = toUtf8(@w);
+		return w == v && twice == once;
+	}
+	return false;
+}
+
+// Whether the case gave what it should; prints why not.
+func check(@[]uint8 path) -> bool
+{
+	int64 slash = 0;
+	int64 k = 0;
+	while path[k] != 0 {
+		if path[k] == '/' { k + 1 -> slash; }
+		k + 1 -> k;
+	}
+	@[]uint8 name = @path[slash];
+
+	@!FILE f = fopen(path, "rb");
+	if f == NULL {
+		printf("cannot open %s\n", path);
+		return false;
+	}
+	[+]uint8 buf = [0];
+	$[4096]uint8 chunk;
+	int64 n = 0;
+	while true {
+		int64 got = int64(fread(@!chunk, 1, 4096, f));
+		if got <= 0 { break; }
+		buf.resize(n + got + 1);
+		memcpy(@!buf[n], @chunk, uint64(got));
+		n + got -> n;
+		0 -> buf[n];
+	}
+	fclose(f);
+
+	bool accept = name[0] == 'y' || name[0] == 'i' && acceptedI(name);
+	if name[0] == 'y' && nulEscape(name) { false -> accept; }
+
+	// A utf8 holds no NUL, so such a text never reaches parseJson.
+	if int64(strlen(@buf)) != n {
+		if accept { printf("%s: holds a NUL\n", name); }
+		return !accept;
+	}
+	jsonresult r = parseJson(@utf8(@buf, utf8mode.KEEP_INVALID));
+	if r is {
+		@v = value {
+			if !accept {
+				printf("%s: accepted\n", name);
+				return false;
+			}
+			if !roundTrips(@v) {
+				printf("%s: does not round-trip\n", name);
+				return false;
+			}
+		}
+		@e = error {
+			if accept {
+				printf("%s: %s at %ld\n", name, e.message -> cstr(), e.pos);
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+int64 cases = 0, failed = 0;
+int64 a = 1;
+mtrace();
+while a < len(args) {
+	cases + 1 -> cases;
+	if !check(args[a]) { failed + 1 -> failed; }
+	a + 1 -> a;
+}
+muntrace();
+printf("%ld cases, %ld failed\n", cases, failed);

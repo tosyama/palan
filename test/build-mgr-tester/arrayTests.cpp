@@ -519,6 +519,7 @@ TEST(build_mgr, runtime_errors) {
 		{"437_array_out_of_memory", "--release", "out of memory"},
 		{"444_dict_missing_key", "--debug", "key \"b\" is not in the dictionary"},
 		{"444_dict_missing_key", "--release", "key \"b\" is not in the dictionary"},
+		{"474_union_wrong_variant", "--debug", "a union read as a variant it does not hold"},
 	};
 	for (auto& c : cases) {
 		cleanTestEnv();
@@ -530,6 +531,15 @@ TEST(build_mgr, runtime_errors) {
 		string expected = string("status 134\nruntime error: ") + c.error + "\n";
 		EXPECT_EQ(out.substr(0, expected.size()), expected) << c.file << " " << c.mode;
 	}
+}
+
+// Unchecked, the contents are read as the other variant's: making the union
+// a variant zeroes them, so `true` reads as 1.
+TEST(build_mgr, union_wrong_variant_release) {
+	cleanTestEnv();
+	string bin = "/tmp/palan_474_union_wrong_variant";
+	ASSERT_EQ(execTestCommand("bin/palan --release -o " + bin + " ../test/testdata/build-mgr/474_union_wrong_variant.pa"), "");
+	EXPECT_EQ(execTestCommand(bin), "1\n");
 }
 
 TEST(build_mgr, nested_varr_mtrace) {
@@ -874,6 +884,17 @@ TEST(build_mgr, ptr_cycle_mtrace) {
 	expectMtraceRun("465_ptr_cycle_mtrace", "7 7 5 7 12\n4 2 1 5\n7 1\n5\n9\n", 27);
 }
 
+// A type holding itself through a '[+]T' or a dictionary.
+TEST(build_mgr, recursive_type_mtrace) {
+	expectMtraceRun("470_recursive_type_mtrace",
+		"13 4 2\n3 50\n2 1\n13\n7\n3 3\n9 5\n3\n8 6 8 8\n102 1\n4 3\n4\n", 341);
+}
+
+// Across importing files, through an alias, in a block and in an opaque type.
+TEST(build_mgr, recursive_modules_mtrace) {
+	expectMtraceRun("471_recursive_modules_mtrace", "3 2 3\n4\n3\n5 1\n", 79);
+}
+
 // Overloads differing only in lengths, rows, elements' owners or permissions.
 TEST(build_mgr, overload_shape) {
 	cleanTestEnv();
@@ -886,4 +907,11 @@ TEST(build_mgr, borrow_bindings) {
 	cleanTestEnv();
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/467_borrow_bindings.pa"),
 		"3 2 1\n1\n2\n2 1 1\n");
+}
+
+// A string initializes a uint8 array, as C sizes it, through every way a value meets one.
+TEST(build_mgr, str_lit_bytes_mtrace) {
+	expectMtraceRun("483_str_lit_bytes_mtrace",
+		"hello 6 ho 5 abc 0 8\nxyz 4 plus 5 hi hello\nbye wxyz abcdef 7 row\nfield 3 one\nval other\n"
+		"6 128 195 169 0 122\nhex 6\nuni 4\n99\nglob 0\n", 32);
 }

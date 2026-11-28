@@ -1,0 +1,38 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type json union { Null; bool b; int64 i; flo64 f; [+]json items; };
+func items(int64 n) -> json r {
+	[+]json xs = [];
+	while n > 0 { xs.push(json.i(n)); n - 1 -> n; }
+	xs ->> r.items;
+}
+func show(@json j) {
+	if j is {
+		Null { printf("null\n"); }
+		b, f { printf("b or f\n"); }
+		copy i { printf("i %d\n", i); }
+		@xs = items { printf("items %d\n", len(@xs)); }
+	}
+}
+func f() -> int64 {
+	json j;
+	show(@j);
+	true -> j.b; show(@j);
+	3 -> j.i; show(@j);
+	items(2) -> j; show(@j);
+	if j is { @!items { items.push(json.f(1.5)); } else { } }
+	show(@j);
+	if items(3) is { copy items { [+]json h = []; items ->> h; printf("h %d\n", len(@h)); } else { } }
+	int64 k = 0;
+	while k < 4 {
+		k + 1 -> k;
+		if items(k) is {
+			copy items { if len(@items) == 2 { continue; } if len(@items) == 3 { break; } printf("k %d\n", k); }
+			else { }
+		}
+	}
+	if j is { copy items { return len(@items); } else { } }
+	return -1;
+}
+mtrace();
+printf("%d\n", f());

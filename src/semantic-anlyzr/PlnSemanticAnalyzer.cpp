@@ -22,7 +22,24 @@ struct PlnSemanticAnalyzer::TypeProgram {
 	vector<unique_ptr<PlnSemanticAnalyzer>> imported;
 	struct Resolving { PlnSemanticAnalyzer* module; string name; const json* stmt; };
 	vector<Resolving> resolving;
+	int adopting = 0;  // types being copied between modules, or a settled task running
 	deque<function<void()>> settled;
+	deque<function<void()>> shapes;
+	bool busy() const { return !resolving.empty() || adopting > 0; }
+	// An allocator's shape is told by every type reached from it, so shapes
+	// wait until no task is left that may bring one in.
+	void settle()
+	{
+		while (!busy() && !(settled.empty() && shapes.empty())) {
+			bool isShape = settled.empty();
+			auto& queue = isShape ? shapes : settled;
+			auto f = move(queue.front());
+			queue.pop_front();
+			adopting += !isShape;
+			f();
+			adopting -= !isShape;
+		}
+	}
 	optional<string> workRoot;  // none: the AST is outside the work tree layout
 	map<string, string> libraries;
 };
@@ -373,6 +390,7 @@ void PlnSemanticAnalyzer::requireKnownTypeNames(const json& locNode, const json&
 	}
 	if (t->value("type-kind","") != "prim") return;
 	string tname = t->value("type-name","");
+	if (awaitsLayout(tname)) return;
 	if (isPointee ? isKnownPointeeTypeName(tname) : isKnownTypeName(tname)) return;
 	cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_UnknownType, tname) << endl;
 	exit(1);
@@ -542,7 +560,8 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 {
 	// LCOV_EXCL_BR_START
 	for (auto& [name, def] : structDefs_) {
-		if (!def.hasInits) continue;
+		// A union's tag is written by its generated functions.
+		if (!def.hasInits || def.isTagged) continue;
 		auto origin = typeOrigins_.find(name);
 		if (origin == typeOrigins_.end() || origin->second != moduleId_) continue;
 		auto ptrTo = [](const string& s) {
@@ -560,9 +579,6 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 		sa_function(funcDef);
 		json& func = sa["functions"].back();
 		func["export"] = true;
-		auto builtWhole = [&](const string& sub) {
-			return assignsByFunc(json{{"type-kind","struct"},{"type-name",sub}});
-		};
 		json nested = json::array();
 		for (auto& f : def.fields) {
 			if (!f.initAst.is_null()) continue;
@@ -586,6 +602,46 @@ void PlnSemanticAnalyzer::emitFieldInitFuncs()
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
 
+// Each variant's maker (variantMakerDef), exported by the module defining the
+// union for every module that names the variant. Its contents are stored as a
+// store to the variant does; one without contents only has its tag written.
+void PlnSemanticAnalyzer::emitVariantMakers()
+{
+	// LCOV_EXCL_BR_START
+	for (auto& [name, def] : structDefs_) {
+		if (!def.isTagged) continue;
+		auto origin = typeOrigins_.find(name);
+		if (origin == typeOrigins_.end() || origin->second != moduleId_) continue;
+		for (auto& variant : def.variants) {
+			json sig = variantMakerDef(def, variant);
+			json r = {{"expr-type","id"},{"name","r"}};
+			json body = json::array();
+			json params = json::array();
+			for (auto& f : def.fields) {
+				if (f.name != variant) continue;
+				params.push_back({{"name","x"},{"var-type",astTypeOf(sig["parameters"][0]["var-type"])}});
+				body.push_back({{"stmt-type","field-assign"},{"object",r},{"field",variant},
+					{"value",{{"expr-type","id"},{"name","x"}}},{"ownership-transfer",f.typeKind == "owned"}});
+			}
+			json funcDef = {{"name",sig["name"]},{"func-type","palan"},{"symbol",sig["symbol"]},{"parameters",move(params)},
+				{"rets",json::array({{{"name","r"},{"var-type",{{"type-kind","prim"},{"type-name",name}}}}})},
+				{"block",{{"body",move(body)}}}};
+			preregisterFunc(funcDef, moduleId_);
+			sa_function(funcDef);
+			json& func = sa["functions"].back();
+			func["export"] = true;
+			if (func["parameters"].empty()) {
+				recordAllocShape(name);
+				json args = json::array({unionAddr({false, "r", 0, {}, name}), variantTag(def, variant),
+					{{"expr-type","lit-int"},{"value","0"},{"value-type",{{"type-kind","prim"},{"type-name","bool"}}}}});
+				json become = {{"stmt-type","expr"},{"body",allocHelperCall(structShape(name), "become", move(args))}};
+				func["body"].push_back(move(become));
+			}
+		}
+	}
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // An operator function is called only where an operand is a struct, and an
 // operand is never written with '@!' (see sa_operator_call), but for the one
 // '<<' appends to.
@@ -594,18 +650,22 @@ void PlnSemanticAnalyzer::validateOperatorSig(const json& funcDef)
 	const string& name = funcDef["name"].get<string>();
 	if (!operatorFuncNames().count(name)) return;
 	const json& params = funcDef["parameters"];
-	size_t n = params.size();
-	if (n != 2 && !(name == "-" && n == 1)) {
-		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_OperatorFuncArity, name,
-			name == "-" ? "one or two parameters" : "two parameters") << endl;
-		exit(1);
-	}
 	for (auto& p : params)
 		if (p.contains("init")) {
 			cerr << locPrefix(p["init"]) << PlnSaMessage::getMessage(
 				E_OperatorFuncDefault, name, p["name"].get<string>()) << endl;
 			exit(1);
 		}
+	if (name == "[]" || name == "->[]") {
+		validateSubscriptSig(funcDef);
+		return;
+	}
+	size_t n = params.size();
+	if (n != 2 && !(name == "-" && n == 1)) {
+		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_OperatorFuncArity, name,
+			name == "-" ? "one or two parameters" : "two parameters") << endl;
+		exit(1);
+	}
 	// '<<' writes into its left operand, which sa_expr_append gives as '@!'.
 	if (name == "<<") {
 		const json& first = params[0]["var-type"];
@@ -636,6 +696,29 @@ void PlnSemanticAnalyzer::validateOperatorSig(const json& funcDef)
 	if ((name == "==" || name == "<")
 	    && !(funcDef.contains("ret-type") && isBoolPrim(registry_.fromJson(funcDef["ret-type"])))) {
 		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(E_CompareFuncRet, name) << endl;
+		exit(1);
+	}
+}
+
+// The container is borrowed, '@!' only where the element is written, so that
+// a read through '@T' finds a function.
+void PlnSemanticAnalyzer::validateSubscriptSig(const json& funcDef)
+{
+	const json& params = funcDef["parameters"];
+	bool put = funcDef["name"] == "->[]";
+	auto writable = [](const json& vt) { return vt.value("mutable", false); };
+	auto isBorrow = [](const json& vt) { return vt.value("type-kind", "") == "pntr" && vt.contains("mutable"); };
+	const json* ret = funcDef.contains("ret-type") ? &funcDef["ret-type"] : nullptr;
+	bool ok;
+	if (put) {
+		ok = params.size() == 3 && !ret && isStructBorrow(params[1]["var-type"]) && writable(params[1]["var-type"])
+		     && !writable(params[0]["var-type"]) && !writable(params[2]["var-type"]);
+	} else {
+		ok = params.size() == 2 && ret && isStructBorrow(params[0]["var-type"]) && !writable(params[1]["var-type"]);
+		if (ok) ok = writable(params[0]["var-type"]) ? isBorrow(*ret) && writable(*ret) : !writable(*ret);
+	}
+	if (!ok) {
+		cerr << locPrefix(funcDef) << PlnSaMessage::getMessage(put ? E_PutFuncSig : E_SubscriptFuncSig) << endl;
 		exit(1);
 	}
 }
@@ -1009,7 +1092,7 @@ void PlnSemanticAnalyzer::indexCopyFuncs(const json& funcs)
 			auto d = topDecls_.find((*written)["type-name"].get<string>());
 			if (d == topDecls_.end()) break;
 			const json& decl = *d->second.stmt;
-			if (decl["stmt-type"] == "struct-def") { copyFuncStructs_.insert(&decl); break; }
+			if (decl["stmt-type"] == "struct-def" || decl["stmt-type"] == "union-def") { copyFuncStructs_.insert(&decl); break; }
 			if (decl["stmt-type"] != "type-alias") break;
 			written = &decl["type"];
 		}
@@ -1036,17 +1119,16 @@ void PlnSemanticAnalyzer::indexTopDecls(const json& stmts)
 			json impAst = loadImportAst(stmt);
 			if (impAst.is_null()) continue;
 			PlnSemanticAnalyzer& mod = importTypeContext(move(impAst));
-			if (!(*mod.moduleAstRoot_)["ast"].contains("statements")) continue;
 			string alias = stmt.value("alias", "");
 			set<string> targets;
 			if (stmt.contains("targets"))
 				for (auto& tg : stmt["targets"]) targets.insert(tg.get<string>());
-			for (auto& d : (*mod.moduleAstRoot_)["ast"]["statements"]) {
-				if (!d.value("export", false) || !isTypeDecl(d["stmt-type"])) continue;
-				string name = d["name"].get<string>();
+			for (auto& e : mod.exports()) {
+				if (e.kind != ModuleExport::Type) continue;
+				string name = e.name();
 				if (stmt.contains("targets") && !targets.count(name)) continue;
-				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, &mod, &d});
-				if (declaresStructType(d["stmt-type"])) declaredStructs_.insert(mod.topTypeIdentity(name));
+				importedTypes_.emplace(alias.empty() ? name : alias + "." + name, ImportedType{&stmt, e.module, e.decl});
+				if (declaresStructType((*e.decl)["stmt-type"])) declaredStructs_.insert(e.module->topTypeIdentity(name));
 			}
 		}
 	}
@@ -1093,22 +1175,27 @@ void PlnSemanticAnalyzer::ensureTypeName(const string& name, bool viaPointer)
 	adoptImportedType(t->second);
 } // LCOV_EXCL_BR_LINE
 
-void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
+void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, TypeReach reach)
 {
 	if (node.is_array()) {
-		for (auto& e : node) ensureTypeRefs(e, viaPointer);
+		for (auto& e : node) ensureTypeRefs(e, reach);
 		return;
 	}
 	if (!node.is_object()) return;
 	string tk = node.value("type-kind", "");
 	if (!tk.empty()) {
-		// A borrowed array or dictionary is typed by its elements' layout.
-		viaPointer = tk != "arr" && tk != "dict" && (viaPointer || tk == "pntr");
+		bool inPlace = node.value("embedded", false) || tk == "embed";
+		if (inPlace) reach = TypeReach::Layout;
+		else if (tk == "pntr") reach = TypeReach::Pointer;
+		// What it holds is allocated only as it grows.
+		else if (tk == "dict" || isVarrAstType(node)) reach = TypeReach::Holder;
+		// A borrowed array is typed by its elements' layout.
+		else if (tk == "arr" && reach == TypeReach::Pointer) reach = TypeReach::Layout;
 		if (node.contains("type-name") && node["type-name"].is_string())
-			ensureTypeName(node["type-name"].get<string>(), viaPointer);
+			ensureTypeName(node["type-name"].get<string>(), reach != TypeReach::Layout);
 		// A size expression (`[N]@T`) is evaluated whatever the element is.
 		for (auto& [k, v] : node.items())
-			ensureTypeRefs(v, k == "base-type" && viaPointer);
+			ensureTypeRefs(v, k == "base-type" ? reach : TypeReach::Layout);
 		return;
 	}
 	string et = node.value("expr-type", "");
@@ -1121,7 +1208,18 @@ void PlnSemanticAnalyzer::ensureTypeRefs(const json& node, bool viaPointer)
 		if (obj.value("expr-type", "") == "id")
 			ensureTypeName(obj["name"].get<string>() + "." + node["field"].get<string>(), false);
 	}
-	for (auto& [k, v] : node.items()) ensureTypeRefs(v, false);
+	for (auto& [k, v] : node.items()) ensureTypeRefs(v, TypeReach::Layout);
+}
+
+// An initializer with elements is analyzed with the field, by their layout.
+void PlnSemanticAnalyzer::ensureInitElems(const json& structDef)
+{
+	for (auto& f : structDef["fields"]) {
+		if (!f.contains("init") || f["init"].value("items", json::array()).empty()) continue;
+		const json* leaf = &f["var-type"];
+		while (leaf->contains("base-type") && (*leaf)["type-kind"] != "pntr") leaf = &(*leaf)["base-type"];
+		if (leaf->value("type-kind", "") == "prim") ensureTypeName((*leaf)["type-name"], false);
+	}
 }
 
 void PlnSemanticAnalyzer::ensureStructDef(const string& name)
@@ -1158,11 +1256,13 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	resolving.push_back({this, name, d.stmt});
 	const json& stmt = *d.stmt;
 	string t = stmt["stmt-type"].get<string>();
-	if (t == "struct-def") rejectSelfEmbedding(stmt);
+	if (t == "struct-def" || t == "union-def") rejectSelfEmbedding(stmt);
 	ensureTypeRefs(stmt);
+	if (t == "struct-def") ensureInitElems(stmt);
 	bool resolved = true;
 	if (t != "const-decl") rejectDeferredConstRefs(stmt, stmt);
 	if      (t == "struct-def") sa_struct_def(stmt);
+	else if (t == "union-def")  sa_union_def(stmt);
 	else if (t == "enum-def")   sa_enum_def(stmt);
 	else if (t == "type-alias") sa_type_alias(stmt);
 	else if (t == "opaque-def") sa_opaque_def(stmt);
@@ -1170,11 +1270,7 @@ void PlnSemanticAnalyzer::resolveTopDecl(const string& name, TopDecl& d)
 	if (resolved) prescannedDecls_.insert(&stmt);
 	resolving.pop_back();
 	d.state = TopDecl::Done;
-	while (resolving.empty() && !program_->settled.empty()) {
-		auto f = move(program_->settled.front());
-		program_->settled.pop_front();
-		f();
-	}
+	program_->settle();
 } // LCOV_EXCL_BR_LINE
 
 // A const naming variables is evaluated now only when each is already in
@@ -1223,6 +1319,7 @@ const json* PlnSemanticAnalyzer::topVarType(const string& name)
 		v.type = arrVarStorage(*v.stmt, vt).type;
 	program_->resolving.pop_back();
 	v.state = TopDecl::Done;
+	program_->settle();
 	return v.type.is_null() ? nullptr : &v.type;
 } // LCOV_EXCL_BR_LINE
 
@@ -1236,8 +1333,9 @@ bool PlnSemanticAnalyzer::fixArrDeclSizes(const json& stmt, const json& var, jso
 		const json& size = (*l)["size-expr"];
 		if (!size.is_null() && (hasCall(size) || firstNonConstName(size))) return false;
 	}
-	if (var.contains("init") && var["init"].value("expr-type", "") == "arr-lit")
-		fillArrLitSizes(stmt, var["name"], vt, var["init"]["items"]);
+	json init = var.contains("init") ? strLitAsBytes(var["init"], vt, var["name"]) : json::object(); // LCOV_EXCL_BR_LINE
+	if (init.value("expr-type", "") == "arr-lit")
+		fillArrLitSizes(stmt, var["name"], vt, init["items"]);
 	return true;
 } // LCOV_EXCL_BR_LINE
 
@@ -1267,6 +1365,7 @@ json PlnSemanticAnalyzer::exportedGlobalType(const json& stmt)
 			vt = deepNormalizePrimToStruct(stmt, normalizeArrBorrowType(stmt, vt));
 	}
 	program_->resolving.pop_back();
+	program_->settle();
 	return vt;
 } // LCOV_EXCL_BR_LINE
 
@@ -1293,8 +1392,25 @@ void PlnSemanticAnalyzer::adoptImportedType(ImportedType& t)
 
 void PlnSemanticAnalyzer::whenSettled(function<void()> f)
 {
-	if (program_->resolving.empty()) f();
-	else program_->settled.push_back(move(f));
+	program_->settled.push_back(move(f));
+	program_->settle();
+}
+
+void PlnSemanticAnalyzer::whenShapesKnown(function<void()> f)
+{
+	program_->shapes.push_back(move(f));
+	program_->settle();
+}
+
+PlnSemanticAnalyzer::Adopting::Adopting(PlnSemanticAnalyzer& sa) : program(*sa.program_)
+{
+	program.adopting++;
+}
+
+PlnSemanticAnalyzer::Adopting::~Adopting()
+{
+	program.adopting--;
+	program.settle();
 }
 
 // Work files mirror their sources' absolute paths, so where this AST is tells
@@ -1348,6 +1464,7 @@ void PlnSemanticAnalyzer::analysis(const json &ast, const string& astPath)
 		sa_functions(ast["ast"]["functions"]);
 	emitReleaseFuncs();
 	emitFieldInitFuncs();
+	emitVariantMakers();
 	emitInitFunc();
 	if (!staticBindings_.empty())
 		sa["main"]["globals"] = staticBindings_;
@@ -1573,6 +1690,57 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importTypeContext(json impAst)
 	return mod;
 }
 
+string PlnSemanticAnalyzer::ModuleExport::name() const
+{
+	return kind == Global ? (*decl)["vars"][0]["name"] : (*decl)["name"];
+}
+
+const vector<PlnSemanticAnalyzer::ModuleExport>& PlnSemanticAnalyzer::exports()
+{
+	if (!exports_) {
+		vector<ModuleExport> out;
+		set<const json*> seen;
+		set<string> visiting;
+		collectExports(out, seen, visiting);
+		exports_ = move(out);
+	}
+	return *exports_;
+}
+
+// Two modules may re-export each other; `visiting` stops the cycle.
+void PlnSemanticAnalyzer::collectExports(vector<ModuleExport>& out, set<const json*>& seen, set<string>& visiting)
+{
+	if (!visiting.insert(moduleId_).second) return;
+	// Pointers into the module's own AST, which lives as long as the module.
+	static const json none = json::array();
+	const json& root = *moduleAstRoot_;
+	auto add = [&](ModuleExport e) { if (seen.insert(e.decl).second) out.push_back(e); };
+	const json& stmts = root["ast"].contains("statements") ? root["ast"]["statements"] : none; // LCOV_EXCL_BR_LINE
+	for (auto& d : stmts) {
+		if (!d.value("export", false)) continue;
+		if (isTypeDecl(d["stmt-type"])) add({ModuleExport::Type, this, &d});
+		else if (d.value("global", false)) add({ModuleExport::Global, this, &d});
+	}
+	for (auto& f : root.contains("export") ? root["export"] : none)
+		add({ModuleExport::Func, this, &f});
+	for (auto& s : stmts) {
+		if (s.value("stmt-type", "") != "import" || !s.value("export", false)) continue;
+		json impAst = loadImportAst(s);
+		if (impAst.is_null()) continue;
+		PlnSemanticAnalyzer& inner = importTypeContext(move(impAst));
+		vector<ModuleExport> passed;
+		inner.collectExports(passed, seen, visiting);
+		for (auto& e : passed) {
+			if (s.contains("targets")) {
+				const json& tg = s["targets"];
+				if (find(tg.begin(), tg.end(), e.name()) == tg.end()) { seen.erase(e.decl); continue; }
+			}
+			out.push_back(e);
+		}
+	}
+	visiting.erase(moduleId_);
+}
+
 // The interface is imported by a module of nothing else, so it meets whatever
 // a first user of the library would, private declarations included.
 json PlnSemanticAnalyzer::interfaceSymbols(const json& ast)
@@ -1615,10 +1783,8 @@ void PlnSemanticAnalyzer::sa_import(const json& stmt)
 PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const json& imp_ast)
 {
 	PlnSemanticAnalyzer& sub = importTypeContext(imp_ast);
-	adoptExportedTypes(stmt, imp_ast, sub);
+	adoptExportedTypes(stmt, sub);
 	importGlobals(stmt, sub);
-
-	if (!imp_ast.contains("export")) return sub;
 
 	string alias = stmt.value("alias", "");
 	bool hasAlias = !alias.empty();
@@ -1631,19 +1797,21 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const j
 
 	auto& currentScope = importScopes.back();
 
-	for (auto& f : imp_ast["export"]) {
-		string fname = f["name"].get<string>();
+	for (auto& e : sub.exports()) {
+		if (e.kind != ModuleExport::Func) continue;
+		string fname = e.name();
 		if (selective && !targets.count(fname)) continue;
 
-		// Resolved in the exporting module, where the type names it uses mean
+		// Resolved in the declaring module, where the type names it uses mean
 		// what its author meant.
-		json funcEntry = sub.normalizeFuncSig(f, sub.moduleId_);
-		funcEntry["_module"] = sub.moduleId_;
+		PlnSemanticAnalyzer& owner = *e.module;
+		json funcEntry = owner.normalizeFuncSig(*e.decl, owner.moduleId_);
+		funcEntry["_module"] = owner.moduleId_;
 		for (auto& p : funcEntry.value("parameters", json::array()))
-			adoptTypeDeps(sub, p["var-type"], stmt);
+			adoptTypeDeps(owner, p["var-type"], stmt);
 		for (auto& r : funcEntry.value("rets", json::array()))
-			adoptTypeDeps(sub, r["var-type"], stmt);
-		if (funcEntry.contains("ret-type")) adoptTypeDeps(sub, funcEntry["ret-type"], stmt);
+			adoptTypeDeps(owner, r["var-type"], stmt);
+		if (funcEntry.contains("ret-type")) adoptTypeDeps(owner, funcEntry["ret-type"], stmt);
 
 		// An operator cannot be written qualified, so an alias does not hide it.
 		currentScope[operatorFuncNames().count(fname) ? "" : alias][fname].push_back(funcEntry);
@@ -1656,7 +1824,7 @@ PlnSemanticAnalyzer& PlnSemanticAnalyzer::importModule(const json& stmt, const j
 void PlnSemanticAnalyzer::importGlobals(const json& stmt, PlnSemanticAnalyzer& sub)
 {
 	// LCOV_EXCL_BR_START
-	if (sub.moduleId_ == moduleId_ || !(*sub.moduleAstRoot_)["ast"].contains("statements")) return;
+	if (sub.moduleId_ == moduleId_) return;
 	string alias = stmt.value("alias", "");
 	set<string> targets;
 	bool selective = stmt.contains("targets");
@@ -1664,19 +1832,21 @@ void PlnSemanticAnalyzer::importGlobals(const json& stmt, PlnSemanticAnalyzer& s
 		for (auto& t : stmt["targets"]) targets.insert(t.get<string>());
 	bool topLevel = !currentFunc_ && varScopes.size() == 1;
 
-	for (auto& d : (*sub.moduleAstRoot_)["ast"]["statements"]) {
-		if (!d.value("global", false) || !d.value("export", false)) continue;
-		string name = d["vars"][0]["name"];
+	for (auto& e : sub.exports()) {
+		if (e.kind != ModuleExport::Global) continue;
+		PlnSemanticAnalyzer& owner = *e.module;
+		const json& d = *e.decl;
+		string name = e.name();
 		if (selective && !targets.count(name)) continue;
 		string written = alias.empty() ? name : alias + "." + name;
-		string label = sub.moduleId_ + "." + name;
+		string label = owner.moduleId_ + "." + name;
 		// The same module imported again into this scope.
 		if (varScopes.back().count(written) && any_of(staticBindings_.begin(), staticBindings_.end(),
 				[&](const json& b) { return b["name"] == written && b["label"] == label; }))
 			continue;
 
-		json type = sub.exportedGlobalType(d);
-		adoptVarTypeDeps(sub, type, stmt);
+		json type = owner.exportedGlobalType(d);
+		adoptVarTypeDeps(owner, type, stmt);
 		optional<ScopeVar> scopeVar;
 		if (isOwnedBlock(type)) {
 			json astType = d["vars"][0]["var-type"];

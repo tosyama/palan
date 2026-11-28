@@ -1,0 +1,4 @@
+type U union { Null; int64 i; [+]int32 a; };
+func f(@U u) {
+	if u is @!a { }
+}

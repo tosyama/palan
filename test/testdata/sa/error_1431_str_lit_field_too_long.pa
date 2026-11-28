@@ -1,0 +1,2 @@
+type T { [2]uint8 n; };
+T t = ["abc"];

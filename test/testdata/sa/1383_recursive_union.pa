@@ -1,0 +1,5 @@
+type J union { Null; [+]J items; [""]J members; int64 i; };
+type K union { [+]L ls; Null; };
+type L { K k; };
+J j;
+L l;

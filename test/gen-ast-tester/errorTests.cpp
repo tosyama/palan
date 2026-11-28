@@ -233,6 +233,25 @@ TEST(gen_ast_error, cinclude_export_not_top_level) {
 	}
 }
 
+TEST(gen_ast_error, export_import_not_top_level) {
+	const string message = "error: 'export import' is accepted only at the top level.";
+	struct { string source, location; } cases[] = {
+		{"{\n\texport import \"x.pa\";\n}\n", "m.pa:2:2: "},
+		{"func f() {\n\texport import <std/utf8>;\n}\n", "m.pa:2:2: "},
+	};
+	for (auto& c : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << c.source;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		ASSERT_NE(out.find(c.location + message), string::npos) << c.source << out;
+	}
+	cleanTestEnv();
+	ofstream("out/m.pa") << "export import \"x.pa\" as X;\n";
+	string out = execTestCommand("palan-gen-ast out/m.pa");
+	ASSERT_NE(out.find("m.pa:1:1: error: 'export import' cannot take an alias: the alias is a name of this file only."),
+		string::npos) << out;
+}
+
 TEST(gen_ast_error, interface_cannot_state) {
 	struct { string source, expected; } cases[] = {
 		{"export func f([3][]int32 a) { }\n", "error: an interface cannot state this parameter or return."},
@@ -412,6 +431,10 @@ TEST(gen_ast_error, invalid_number_literal) {
 		{"error_015_number_literal_int_suffix.pa", ":2:12: error: Invalid number literal '100px'."},
 		{"error_016_number_literal_float_suffix.pa", ":2:12: error: Invalid number literal '1.5f'."},
 		{"error_017_number_literal_exponent_suffix.pa", ":2:12: error: Invalid number literal '1e10x'."},
+		{"error_036_hex_no_digits.pa", ":2:12: error: Invalid number literal '0x'."},
+		{"error_037_hex_bad_digit.pa", ":2:12: error: Invalid number literal '0xG'."},
+		{"error_038_hex_fraction.pa", ":2:12: error: Invalid number literal '0x1.5'."},
+		{"error_039_hex_too_large.pa", ":2:12: error: Hexadecimal literal '0x10000000000000000' does not fit in 64 bits."},
 	};
 	for (auto& c : cases) {
 		string out = execTestCommand(string("palan-gen-ast ../test/testdata/gen-ast/") + c[0]);
@@ -510,4 +533,24 @@ TEST(gen_ast_error, nesting_too_deep) {
 	string out = execTestCommand("palan-gen-ast out/nesting_too_deep.pa");
 	EXPECT_EQ(out.rfind("return1::", 0), 0u) << out.substr(0, 200);
 	EXPECT_NE(out.find("error: memory exhausted"), string::npos) << out.substr(0, 200);
+}
+
+TEST(gen_ast_error, union_syntax) {
+	const pair<string, string> cases[] = {
+		{"int32 union = 1;\n", ":1:7: error: syntax error, unexpected union"},
+		{"int32 is = 1;\n", ":1:10: error: syntax error, unexpected '=', expecting identifier or @! or '@'"},
+		{"type U union { };\n", ":1:16: error: syntax error, unexpected '}'"},
+		{"type U union { int32 i = 1; };\n", ":1:24: error: syntax error, unexpected '='"},
+		{"type U union { private int32 i; };\n", ":1:30: error: syntax error, unexpected identifier, expecting ';'"},
+		{"int32 j;\nbool b = j is cpy i;\n", ":2:15: error: Expected 'copy', '@' or '@!' before 'i', but found 'cpy'."},
+		{"int32 j;\nif j is { else { } i { } }\n", ":2:11: error: syntax error, unexpected else"},
+		{"int32 j;\nif j is { i { } } else { }\n", ":2:19: error: syntax error, unexpected else"},
+		{"int32 j;\nwhile j is { i { } }\n", ":2:12: error: syntax error, unexpected '{'"},
+	};
+	for (auto& [src, expected] : cases) {
+		cleanTestEnv();
+		ofstream("out/m.pa") << src;
+		string out = execTestCommand("palan-gen-ast out/m.pa");
+		EXPECT_NE(out.find("m.pa" + expected), string::npos) << src << out;
+	}
 }

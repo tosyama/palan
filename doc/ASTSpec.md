@@ -1,7 +1,7 @@
 Palan Abstract Syntax Tree Json Specification
 ============================================
 
-ver. 0.2.7
+ver. 0.2.8
 
 \* - Required
 
@@ -49,7 +49,7 @@ AST model
 Function definition model
 -------------------------
 - name\* - Function name string; an operator function's is its operator: "+" "-" "*" "/" "%" "==" "<"
-  "<<"; a type's own copy is "->" (SpecAndDesign.md 3.8)
+  "<<" "[]" "->[]"; a type's own copy is "->" (SpecAndDesign.md 3.8)
 - func-type\* - Function type string: "palan" "c" "syscall"
 - loc\* - Location Array (palan, syscall only)
 
@@ -451,13 +451,14 @@ Used in `func-def` bodies and standalone block statements.
 
 Statement model
 ---------------
-- stmt-type\* - Statement type: "import" "cinclude" "expr" "var-decl" "assign" "arr-assign" "struct-def" "type-alias" "const-decl" "field-assign" "return" "tapple-decl" "tapple-assign" "block" "if" "while" "for" "break" "continue" "not-impl" "enum-def" "global-permit" "opaque-def"
+- stmt-type\* - Statement type: "import" "cinclude" "expr" "var-decl" "assign" "arr-assign" "struct-def" "type-alias" "const-decl" "field-assign" "return" "tapple-decl" "tapple-assign" "block" "if" "while" "for" "break" "continue" "not-impl" "enum-def" "global-permit" "opaque-def" "union-def" "if-is"
 - loc\* - Location Array
   1. import - import module statement
     - path-type\* - Path type string: "src" "inc"
     - path\* - Path string, as in the import file list
     - targets - Import target name string list (a function name, a type name or an operator), null - all
     - alias - Alias name string
+    - export - true for `export import`: what the module publishes is published as this module's own
   2. cinclude - C header include statement (expands in place, scope-aware)
     - path-type\* - Path type string: "src" "inc"
     - path\* - Path string
@@ -598,10 +599,26 @@ Statement model
     - export - Boolean, true if declared with `export` (omitted when false)
     - contents - The type it holds (same Variable type object format); omitted in a `.pai`, which
       writes `type Name = opaque;`
+  24. union-def - tagged union definition (`type Name union { Null; int64 i; ... };`; consumed by SA,
+      not emitted to sa.json)
+    - name\* - Type name string
+    - export - Boolean, true if declared with `export` (omitted when false)
+    - variants\* - Variant list, in source order (at least one)
+      - name\* - Variant name string
+      - var-type - Its contents' type (same Variable type object format); omitted for a bare name
+      - loc\* - Location Array
+  25. if-is - `if j is { ... }`, branching on a union's variant
+    - value\* - Expression model of the union tested
+    - arms\* - Arm list, in source order; each has the `variants` and `bind` of an `is` expression
+      (Expression model §37), where `variants` may list several names when there is no `bind`
+      (`i, f { }`), and:
+      - body\* - Statement model list (raw array, no block wrapper)
+      - loc\* - Location Array
+    - else - Else-block object, the arm for the variants not listed (omitted when absent)
 
 Expression model
 ----------------
-- expr-type\* - Expression type string: "lit-str" "lit-int" "lit-uint" "lit-flo" "id" "add" "sub" "mul" "div" "mod" "neg" "cmp" "call" "cast" "arr-index" "field-access" "member-call" "logical-and" "logical-or" "logical-not" "addr-of" "not-impl" "bitand" "bitor" "bitxor" "shl" "shr" "append" "bitnot" "arr-lit" "dict-lit" "sizeof" "chain-call" "transfer" "call-ptr" "spread"
+- expr-type\* - Expression type string: "lit-str" "lit-int" "lit-uint" "lit-flo" "id" "add" "sub" "mul" "div" "mod" "neg" "cmp" "call" "cast" "arr-index" "field-access" "member-call" "logical-and" "logical-or" "logical-not" "addr-of" "not-impl" "bitand" "bitor" "bitxor" "shl" "shr" "append" "bitnot" "arr-lit" "dict-lit" "sizeof" "chain-call" "transfer" "call-ptr" "spread" "is"
 - loc\* - Location Array
   1. lit-str - String literal
     - value\* - The bytes as escaped text: printable ASCII and valid UTF-8 characters as they
@@ -612,8 +629,11 @@ Expression model
     `true`/`false` are emitted as a `bool`-typed `lit-int`
     - char - `true` for a character literal (omitted otherwise): one of 128 or more takes only
       an integer type of 32 bits or more, and one with no type to take is an `int32`
+    - hex - `true` for a hexadecimal literal without `u` or a minus sign (HEX token; omitted
+      otherwise): it is read as the bits of the integer type it takes
     - value\* - Decimal string, optionally with a leading `-` (e.g. "10", "-128"); a macro
-      substitute's value may exceed int64 when its `value-type` is `uint64`
+      substitute's value may exceed int64 when its `value-type` is `uint64`, and one with `hex` may
+      be up to 64 bits
     - value-type - Variable type; present only for `true`/`false` (value `"1"`/`"0"`, value-type
       `bool`) or when this node is gen-ast's in-place substitute
       for a reference to a cinclude'd macro constant that has a `value-type` (see Constant
@@ -769,6 +789,13 @@ Expression model
   36. spread - `...a`, an array passed as all of a variadic parameter's arguments; only as a call
       argument, which SA checks (see SASpec.md "Variadic arguments")
     - value\* - Expression model of the array; a `transfer` for `...a>>`
+  37. is - `j is s`, a test of a union's variant, binding its contents with `@s`, `@!s`, `copy s`
+      or, under another name, `@t = s`, `@!t = s`, `copy t = s`; precedence between `==` and `<`
+    - value\* - Expression model of the union tested
+    - variants\* - List of the one variant name tested
+    - bind - The variable bound, in the form of a `for` statement's `elem`: `name` (the variant's,
+      or the other name given), `borrow`, `mutable` (only when `borrow`) and `loc`; omitted when
+      nothing is bound
 
 Note: Unary minus on a `lit-int` without `value-type` is folded into a single `lit-int` with a negative
 `value` (`-42` → `"value":"-42"`), so SA range-checks it as one value. Any other operand (including a

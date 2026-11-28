@@ -494,6 +494,17 @@ TEST(sa_error, int_literal_out_of_range)
 	const pair<string, string> cases[] = {
 		{"error_200_int_lit_range_int8.pa", ":1:10: error: Integer literal '300' is out of range for type 'int8'."},
 		{"error_702_call_arg_lit_range.pa", ":2:5: error: Integer literal '300' is out of range for type 'int8'."},
+		{"error_1359_hex_range.pa", ":1:10: error: Integer literal '511' is out of range for type 'int8'."},
+		{"error_1360_hex_neg_range.pa", "'-255' is out of range for type 'int8'"},
+		{"error_1364_arr_size_range_var.pa", "error: Integer literal '18446744073709551615' is out of range for type 'int64'."},
+		{"error_1365_arr_size_range_uint.pa", "error: Integer literal '18446744073709551615' is out of range for type 'int64'."},
+		{"error_1366_arr_size_range_hex.pa", "error: Integer literal '18446744073709551615' is out of range for type 'int64'."},
+		{"error_1367_arr_size_range_field.pa", "error: Integer literal '18446744073709551615' is out of range for type 'int64'."},
+		{"error_1368_arr_size_range_param.pa", "error: Integer literal '18446744073709551615' is out of range for type 'int64'."},
+		{"error_1369_arr_size_range_sizeof.pa", "error: Integer literal '18446744073709551615' is out of range for type 'int64'."},
+		{"error_1362_hex_const_mixed.pa", "'4278190335' is out of range for type 'int32'"},
+		{"error_1363_hex_const_shift.pa", "'4278190080' is out of range for type 'int32'"},
+		{"error_1361_hex_const_expr.pa", "'4278190335' is out of range for type 'int32'"},
 		{"error_201_int_lit_range_uint32.pa", "'5000000000' is out of range for type 'uint32'"},
 		{"error_202_int_lit_range_int64.pa", "'99999999999999999999' is out of range for type 'int64'"},
 		{"error_203_int_lit_range_uint64.pa", "'18446744073709551616' is out of range for type 'uint64'"},
@@ -961,6 +972,10 @@ TEST(sa_error, circular_type_decl)
 		// Reported where the cycle closes: A, reached from the import of B.
 		{"error_433_import_mutual_embed.pa", "error_433_import_mutual_embed.pa:2:1: error: type 'B' depends on itself: B -> A -> B."},
 		{"error_434_owned_cycle.pa", ":2:1: error: type 'P' depends on itself: P -> Q -> P."},
+		{"error_1370_embed_varr_cycle.pa", ":1:1: error: type 'A' depends on itself: A -> A."},
+		{"error_1371_fixed_arr_cycle.pa", ":1:21: error: type 'A' depends on itself: A -> B -> A."},
+		{"error_1372_init_elem_cycle.pa", ":1:1: error: type 'A' depends on itself: A -> A."},
+		{"error_1373_arr_borrow_cycle.pa", ":1:1: error: type 'A' depends on itself: A -> A."},
 		{"error_435_alias_cycle.pa", ":2:1: error: type 'X' depends on itself: X -> Y -> X."},
 		{"error_879_top_const_var_cycle.pa", ":1:1: error: type 'N' depends on itself: N -> a -> N."},
 	};
@@ -1254,7 +1269,7 @@ TEST(sa_error, overload)
 		{"error_707_overload_method_no_mutable.pa", ":5:1: error: 'm' cannot be called as a method: its first parameter must be a writable borrow ('@!')."},
 		{"error_708_overload_func_name_type.pa", ":3:25: error: 'f' names f(int32), f(int64); it must be given where a function pointer type chooses one."},
 		// The receivers are declared before the arguments choose a function.
-		{"error_709_overload_multi_ret_differ.pa", ":3:1: error: Ambiguous function call 'dm': it can mean dm(int32), dm(int64)."},
+		{"error_709_overload_multi_ret_differ.pa", ":4:22: error: Ambiguous function call 'dm': it can mean dm(int32), dm(int64)."},
 		// An argument that fits no function is shown as what it would match.
 		{"error_710_overload_no_match_literal.pa", ":3:1: error: No function 'pp' takes (int64); there are pp(@int32), pp(@int64)."},
 		{"error_711_overload_no_match_func_name.pa", ":5:1: error: No function 'f' takes (function); there are f(int32), f(int64)."},
@@ -1569,7 +1584,7 @@ TEST(sa_error, give_and_take)
 		{"error_968_default_too_few.pa", ":2:1: error: function 'f' takes 1 to 2 argument(s), but 0 given."},
 		{"error_969_default_too_many.pa", ":2:1: error: function 'f' takes 1 to 2 argument(s), but 3 given."},
 		{"error_970_default_out_of_range.pa", ":1:17: error: Integer literal '300' is out of range for type 'int8'."},
-		{"error_971_default_type.pa", ":1:18: error: cannot convert '[?]uint8' to 'int32'."},
+		{"error_971_default_type.pa", ":1:18: error: cannot convert '@uint8' to 'int32'."},
 		// A function pointer's type has no defaults.
 		{"error_972_default_func_ptr.pa", ":3:1: error: function 'fp' takes 2 argument(s), but 1 given."},
 		{"error_973_default_narrowing.pa", ":1:18: error: Implicit conversion from 'flo64' to 'int32' is not allowed"},
@@ -1636,6 +1651,97 @@ TEST(sa_error, expr_stmt_not_call) {
 		{"error_1347_expr_stmt_call_cast.pa", ":2:1: error: the value of this statement is not used"},
 		{"error_1348_expr_stmt_call_operand_stmts.pa", ":3:1: error: the value of this statement is not used"},
 		{"error_1349_expr_stmt_folded.pa", ":2:1: error: the value of this statement is not used"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, union) {
+	const vector<pair<string, string>> cases = {
+		{"error_1376_union_dup_variant.pa", ":1:31: error: variant 'i' is already defined in union 'U'."},
+		{"error_1381_union_self_embed.pa", ":3:2: error: union 'U' recursively contains itself."},
+		{"error_1382_union_owned_cycle.pa", ":2:1: error: type 'U' depends on itself: U -> V -> U."},
+		{"error_1377_union_no_contents.pa", ":3:11: error: variant 'Null' of union 'U' has no contents to access."},
+		{"error_1384_union_unknown_variant.pa", ":2:7: error: union 'U' has no variant 'k'."},
+		{"error_1385_union_variant_needs_value.pa", ":2:7: error: 'U.i' has contents, which are given as 'U.i(value)'."},
+		{"error_1386_union_variant_no_value.pa", ":2:7: error: 'U.Null' has no contents: it is written 'U.Null', without '()'."},
+		{"error_1387_union_unknown_field.pa", ":3:11: error: union 'U' has no variant 'k'."},
+		{"error_1378_is_not_union.pa", ":2:10: error: 'is' tests a union's variant, not a value of type 'int32'."},
+		{"error_1390_is_bind_place.pa", ":3:9: error: 'i' can be bound only in the condition of an 'if' or 'while', or on the left of '&&' there."},
+		{"error_1391_is_bind_not_cond.pa", ":3:15: error: 'i' can be bound only in the condition"},
+		{"error_1392_is_bind_no_contents.pa", ":3:9: error: variant 'Null' of union 'U' has no contents to access."},
+		{"error_1393_is_bind_readonly.pa", ":3:10: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1394_is_change_variant.pa", ":5:2: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
+		// The index is not known, so any element may be the one tested.
+		{"error_1395_is_change_container.pa", ":5:3: error: cannot change the variant of a union whose contents 'is' binds ('s.us[]')."},
+		{"error_1396_is_give_binding.pa", ":5:2: error: cannot change the variant of a union whose contents 'is' binds ('a')."},
+		{"error_1397_is_bind_else.pa", ":4:23: error: Undefined variable 'i'."},
+		{"error_1398_is_borrow_whole.pa", ":5:4: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
+		{"error_1399_is_bind_taken.pa", ":4:9: error: Variable 'i' is already declared."},
+		{"error_1379_if_is_not_union.pa", ":2:4: error: 'is' tests a union's variant, not a value of type 'int32'."},
+		{"error_1401_if_is_missing.pa", ":3:1: error: 'if ... is { }' does not handle 'a' of union 'U': add an arm or 'else'."},
+		{"error_1402_if_is_else_unreachable.pa", ":3:1: error: 'else' is never reached: every variant of union 'U' has an arm."},
+		{"error_1403_if_is_repeated.pa", ":3:20: error: variant 'Null' is already handled by another arm of this 'if ... is { }'."},
+		{"error_1404_if_is_change_variant.pa", ":5:7: error: cannot change the variant of a union whose contents 'is' binds ('j')."},
+		{"error_1405_if_is_bind_other_arm.pa", ":5:9: error: Undefined variable or module alias 'a'."},
+		{"error_1406_union_lit_no_conversion.pa", ":2:7: error: a '{..}' literal does not convert to union 'U': no function 'U' takes it alone."},
+		{"error_1440_union_arr_lit_no_conversion.pa", ":2:7: error: a '[..]' literal does not convert to union 'U': no function 'U' takes it alone."},
+		{"error_1442_is_on_struct.pa", ":3:4: error: 'is' tests a union's variant, not a value of type 'Q'."},
+		// A name of a struct or an array type is not a union's to make a variant of.
+		{"error_1443_variant_of_struct_name.pa", ":2:7: error: Undefined variable 'Q'."},
+		{"error_1444_variant_of_array_alias.pa", ":2:11: error: Undefined variable 'A'."},
+		{"error_1445_owned_array_as_owner.pa", ":3:10: error: cannot cast to 'text': only a pointer ('@!X') can be viewed as an owner"},
+		{"error_1407_union_lit_ambiguous.pa", ":4:7: error: Ambiguous function call 'J': it can mean J([+]J), J([+]int64)."},
+		// Only a function taking bool converts true: a bool widens to any number.
+		{"error_1408_bool_conv_needs_bool.pa", ":3:1: error: cannot copy 'bool' into 'big'"},
+		// A bare literal is not a '@S': no overload takes it.
+		{"error_1409_lit_arg_fits_no_overload.pa", ":4:11: error: No function 'g' takes (literal); there are g(@S), g(int64)."},
+		{"error_1426_is_unknown_variant.pa", ":3:4: error: union 'U' has no variant 'k'."},
+		{"error_1427_if_is_bind_readonly.pa", ":2:35: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		// The union tested is reached through a borrow the temporary may hold.
+		{"error_1428_is_temp_escapes.pa", ":6:4: error: a borrow returned by a call given a temporary struct may point to that struct"},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, subscript_func) {
+	const string sig = "error: '[]' must be 'func [](@T t, K k) -> @E' (or 'E') to read, or 'func [](@!T t, K k) -> @!E' to write";
+	const string putSig = "error: '->[]' must be 'func ->[](V v, @!T t, K k)'";
+	const string tested = "error: cannot change the variant of a union whose contents 'is' binds ('u').";
+	const vector<pair<string, string>> cases = {
+		{"error_1410_subscript_arity.pa", ":2:1: " + sig},
+		{"error_1411_subscript_write_ret.pa", ":2:1: " + sig},
+		{"error_1412_subscript_by_value.pa", ":2:1: " + sig},
+		{"error_1413_put_readonly.pa", ":2:1: " + putSig},
+		{"error_1414_put_ret.pa", ":2:1: " + putSig},
+		// A read never needs t writable, so it takes only a '[]' of '@T'.
+		{"error_1415_subscript_read_needs_ro.pa", ":4:11: error: No operator function '[]' takes (@T, int64)."},
+		{"error_1416_subscript_write_readonly.pa", ":4:21: error: cannot write through read-only pointer '@T'"},
+		// Not the pointer's subscript, though p is a borrow.
+		{"error_1417_subscript_no_fit.pa", ":3:32: error: No function '[]' takes (@T, int64); there are [](@T, @[]uint8)."},
+		// A type with '->[]' stores only through it, not through '[]'.
+		{"error_1418_put_no_fit.pa", ":5:1: error: No function '->[]' takes (int64, @!T, int64); there are ->[](int64, @!T, @[]uint8)."},
+		{"error_1419_subscript_default.pa", ":2:25: error: parameter 'i' of operator function '[]' cannot have a default value"},
+		{"error_1420_subscript_move_whole.pa", ":6:1: error: cannot assign to a struct element as a whole"},
+		{"error_1421_put_tested_union.pa", ":4:14: " + tested},
+		{"error_1422_subscript_temp_base.pa", ":4:13: error: a struct or array returned by a call has no owner to access it through"},
+		{"error_1423_subscript_tested_union.pa", ":4:28: " + tested},
+		// A '[]' returning by value returns a temp, as any call does.
+		{"error_1424_subscript_value_field.pa", ":5:11: error: a struct or array returned by a call has no owner"},
+		{"error_1425_subscript_value_borrow.pa", ":6:4: error: a struct or array returned by a call has no owner"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

@@ -1,0 +1,4 @@
+type J union { Null; [+]J items; };
+func J([+]J v) -> J { return J.items(v>>); }
+func J([+]int64 v) -> J { return J.items([]); }
+J a = [1];

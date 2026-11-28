@@ -211,7 +211,8 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 
 		case E_RecursiveStruct:
 			BOOST_ASSERT(arg1 != "\x01");
-			return "struct '" + arg1 + "' recursively contains itself.";
+			BOOST_ASSERT(arg2 != "\x01");
+			return arg2 + " '" + arg1 + "' recursively contains itself.";
 
 		case E_FieldAccessOnNonStruct:
 			return "field access on non-struct variable.";
@@ -425,6 +426,12 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ArrLitSizeNotConst:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "array '" + arg1 + "' given an array literal must have a compile-time constant size.";
+
+		case E_StrLitTooLong:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			BOOST_ASSERT(arg3 != "\x01");
+			return "array '" + arg1 + "' has size " + arg2 + " but the string has " + arg3 + " bytes.";
 
 		case E_ArrLitDimMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
@@ -923,6 +930,9 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ReturnFrameArr:
 			return "stack array '" + arg1 + "' cannot be returned; its storage ends with the function.";
 
+		case E_ReturnOwnBorrow:
+			return "a borrow of the storage of '" + arg1 + "' cannot be returned; it ends with the function.";
+
 		case E_NoMatchingFunc:
 			BOOST_ASSERT(arg1 != "\x01");
 			BOOST_ASSERT(arg2 != "\x01");
@@ -1125,6 +1135,68 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 		case E_ResizeNotMoved:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "an array cast to '" + arg1 + "' can only be given away: '<<=', '->>', '>>' or 'return'.";
+
+		case E_DuplicateVariant:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "variant '" + arg1 + "' is already defined in union '" + arg2 + "'.";
+
+		case E_VariantWithoutContents:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "variant '" + arg1 + "' of union '" + arg2 + "' has no contents to access.";
+
+		case E_UnknownVariant:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "union '" + arg2 + "' has no variant '" + arg1 + "'.";
+
+		case E_VariantNeedsValue:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' has contents, which are given as '" + arg1 + "(value)'.";
+
+		case E_VariantTakesNoValue:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' has no contents: it is written '" + arg1 + "', without '()'.";
+
+		case E_IsNotUnion:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'is' tests a union's variant, not a value of type '" + arg1 + "'.";
+
+		case E_IsBindingPlace:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'" + arg1 + "' can be bound only in the condition of an 'if' or 'while', or on the left of '&&' there.";
+
+		case E_ChangeTestedUnion:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "cannot change the variant of a union whose contents 'is' binds ('" + arg1 + "').";
+
+		case E_IsArmRepeated:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "variant '" + arg1 + "' is already handled by another arm of this 'if ... is { }'.";
+
+		case E_IsArmMissing:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "'if ... is { }' does not handle " + arg1 + " of union '" + arg2 + "': add an arm or 'else'.";
+
+		case E_IsElseUnreachable:
+			BOOST_ASSERT(arg1 != "\x01");
+			return "'else' is never reached: every variant of union '" + arg1 + "' has an arm.";
+
+		case E_UnionLitNoConversion:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "a '" + arg1 + "' literal does not convert to union '" + arg2 + "': no function '" + arg2
+				+ "' takes it alone.";
+
+		case E_SubscriptFuncSig:
+			return "'[]' must be 'func [](@T t, K k) -> @E' (or 'E') to read, or 'func [](@!T t, K k) -> @!E' "
+			       "to write, of a struct or union T, with 'k' not '@!'.";
+
+		case E_PutFuncSig:
+			return "'->[]' must be 'func ->[](V v, @!T t, K k)' of a struct or union T, with 'v' and 'k' not '@!' "
+			       "and no return value.";
 
 		default:
 			BOOST_ASSERT(false);

@@ -1,0 +1,7 @@
+type Q { int32 y; };
+type P { [2]int32 a; @P n; $Q e; [""]Q d; };
+global [2]P G for g;
+func param(@P p) -> @Q { return @p.d["a"]; }
+func field() -> @int32 { P l; return @l.n.a[1]; }
+func g() -> @P { return @G[1]; }
+func slot() -> @int32 { [2]@![]int32 s; return @s[0][1]; }

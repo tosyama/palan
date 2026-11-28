@@ -1,0 +1,2 @@
+type U union { Null; int64 i; };
+U u = [1];

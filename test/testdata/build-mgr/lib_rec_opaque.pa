@@ -1,0 +1,12 @@
+type Node { int32 v; [+]Node kids; [+]Handle handles; };
+export type Handle = opaque Node;
+export func make(int32 n) -> Handle {
+	Node x;
+	if n > 1 { x.handles.push(make(n - 1)); }
+	return x as Handle;
+}
+export func depth(@Handle h) -> int32 {
+	@Node x = h as @Node;
+	if len(@x.handles) == 0 { return 1; }
+	return 1 + depth(@x.handles[0]);
+}

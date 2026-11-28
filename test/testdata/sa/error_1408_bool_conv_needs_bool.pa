@@ -1,0 +1,3 @@
+type big { [+]int64 d; };
+func big(int64 n) -> big b { n -> b.d.push(); }
+big x = true;

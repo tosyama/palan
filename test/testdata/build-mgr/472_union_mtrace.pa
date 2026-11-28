@@ -1,0 +1,50 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type json union { Null; bool b; int64 i; [+]json items; [""]json members; };
+type list union { [+]int32 v; json j; };
+type node union { [+]node kids; int32 n; };
+type inner { int32 w = 9; [+]int32 xs; };
+type held union { $inner x; int32 n; };
+type fi { int32 w = 9; };
+type flat union { $fi x; int32 n; };
+type S { int32 a; $json j; [2]list ls; $[2]$flat fs; held h; };
+type small union { int32 x; flo64 y; };
+type C union { [+]int32 v; Null; };
+func ->(@C src, @!C dst) { printf("copy C\n"); }
+
+func pass(list l) -> list { return l; }
+func borrow(@list l, @!S s) -> int32 { return 1; }
+func make() -> small { small s; return s; }
+
+func f() {
+	json a;
+	json b = a;
+	list l;
+	list l2 = pass(l);
+	list l3 <<= l2;
+	l3 ->> l;
+	S s;
+	S t = s;
+	t -> s;
+	printf("%d\n", borrow(@l, @!s));
+	[3]list arr;
+	[+]list v = [];
+	v.push(l);
+	[+]held hs = [];
+	held h;
+	hs.push(h);
+	[+]$flat fls = [];
+	flat fl1;
+	fls.push(fl1);
+	[""]list d;
+	l -> d["k"];
+	$list fl;
+	node n;
+	small m = make();
+	C c;
+	C c2 = c;
+	c -> c2;
+	printf("%d %d %d %d %d\n", sizeof(json), sizeof(small), sizeof(S), sizeof(held), len(@v));
+}
+mtrace();
+f();

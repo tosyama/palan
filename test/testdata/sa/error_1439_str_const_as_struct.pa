@@ -1,0 +1,3 @@
+type text { [+]uint8 b; };
+const S = "abc";
+text s = S as text;

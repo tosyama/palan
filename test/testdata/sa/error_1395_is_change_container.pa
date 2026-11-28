@@ -1,0 +1,7 @@
+type U union { Null; int64 i; [+]int32 a; };
+type S { [+]U us; };
+func f(@!S s, int64 n) {
+	while s.us[n] is @!i {
+		s.us.push(U.Null);
+	}
+}

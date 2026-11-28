@@ -1,0 +1,62 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type P { int64 x; [+]int64 v; };
+func f(int32 a) -> int32 q, int32 r { a / 3 -> q; a % 3 -> r; }
+func f(int64 a) -> int64 n, P p { a -> n; a -> p.x; p.v.push(a); }
+func f(@P p) -> int64 n, P q { len(@p.v) -> n; p.x * 2 -> q.x; }
+
+type ints { [+]int64 v; };
+type words { int64 n; };
+type intsIter { @ints s; int64 i = 0; };
+type wordsIter { int64 n; int64 i = 0; };
+func iter(@ints s) -> intsIter it { s -> it.s; }
+func next(@!intsIter it) -> bool ok, int64 x
+{
+	if it.i >= len(@it.s.v) { return; }
+	it.s.v[it.i] -> x;
+	it.i + 1 -> it.i;
+	true -> ok;
+}
+func iter(@words w) -> wordsIter it { w.n -> it.n; }
+func next(@!wordsIter it) -> bool ok, P p
+{
+	if it.i >= it.n { return; }
+	it.i -> p.x;
+	it.i + 1 -> it.i;
+	true -> ok;
+}
+
+mtrace();
+{
+	int32 i32 = 14;
+	(int32 q, int32 r) = f(i32);
+	(int64 n, P p) = f(5);
+	printf("%d %d %ld %ld %ld\n", q, r, n, p.x, len(@p.v));
+
+	// Converted into the declared type.
+	(int64 wq, flo64 wr) = f(i32);
+	printf("%ld %.1f\n", wq, wr);
+
+	int32 a = 0;
+	int32 b = 0;
+	f(int32(8)) -> (a, b);
+	P p2;
+	f(7) -> (n, p2);
+	printf("%d %d %ld %ld\n", a, b, n, p2.x);
+
+	(int64 m, P p3) = p -> f();
+	printf("%ld %ld\n", m, p3.x);
+
+	// next called without for, with another next returning other types.
+	ints s = [[3, 4]];
+	intsIter it = iter(@s);
+	(bool ok, int64 x) = next(@!it);
+	while ok {
+		printf("%ld ", x);
+		next(@!it) -> (ok, x);
+	}
+	words w = [2];
+	for copy e in w { printf("w%ld ", e.x); }
+	printf("\n");
+}
+muntrace();

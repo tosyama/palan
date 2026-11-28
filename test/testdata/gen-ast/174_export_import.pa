@@ -1,0 +1,3 @@
+export import "other.pa";
+export import a, b from <std/utf8>;
+import "plain.pa";

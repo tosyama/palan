@@ -47,7 +47,7 @@ enum PlnSaMessageCode {
 	E_UnknownType,				// arg1: type name
 	E_UnknownField,				// arg1: struct name, arg2: field name
 	E_UnsupportedStructFieldType,
-	E_RecursiveStruct,			// arg1: struct name
+	E_RecursiveStruct,			// arg1: struct name, arg2: "struct" or "union"
 	E_FieldAccessOnNonStruct,
 	E_WriteToImmutablePtrField,
 	E_EmbedOwningType,			// arg1: type display name
@@ -95,6 +95,7 @@ enum PlnSaMessageCode {
 	E_ArrLitContext,
 	E_ArrLitCountMismatch,	// arg1: variable name, arg2: declared size, arg3: literal element count
 	E_ArrLitSizeNotConst,	// arg1: variable name
+	E_StrLitTooLong,	// arg1: array name, arg2: array size, arg3: string's byte count
 	E_ArrLitDimMismatch,	// arg1: variable name
 	E_DictArrLit,		// arg1: dictionary name
 	E_ArrLitElemType,	// arg1: variable name
@@ -169,6 +170,7 @@ enum PlnSaMessageCode {
 	E_FrameVarType,	// arg1: type display name
 	E_FrameArrSizeNotConst,	// arg1: variable name
 	E_ReturnFrameArr,	// arg1: variable name
+	E_ReturnOwnBorrow,	// arg1: variable name
 	E_NoMatchingFunc,	// arg1: function name, arg2: argument types, arg3: candidates
 	E_FuncNameNeedsType,	// arg1: function name, arg2: candidates
 	E_VarrBorrowNeedsAddrOf,
@@ -254,6 +256,20 @@ enum PlnSaMessageCode {
 	E_ExprStmtNotCall,
 	E_DictLitKeyNotConst,	// arg1: name
 	E_DictLitDupKey,	// arg1: the key as written in sa.json
+	E_DuplicateVariant,	// arg1: variant name, arg2: union type name
+	E_VariantWithoutContents,	// arg1: variant name, arg2: union type name
+	E_UnknownVariant,	// arg1: variant name, arg2: union type name
+	E_VariantNeedsValue,	// arg1: the variant as written (U.v)
+	E_VariantTakesNoValue,	// arg1: the variant as written (U.v)
+	E_IsNotUnion,	// arg1: type display name
+	E_IsBindingPlace,	// arg1: the variable bound
+	E_ChangeTestedUnion,	// arg1: the union tested
+	E_IsArmRepeated,	// arg1: variant name
+	E_IsArmMissing,	// arg1: the variants not handled, quoted and comma-separated, arg2: union type name
+	E_IsElseUnreachable,	// arg1: union type name
+	E_UnionLitNoConversion,	// arg1: "[..]" or "{..}", arg2: union type name
+	E_SubscriptFuncSig,
+	E_PutFuncSig,
 };
 
 class PlnSaMessage

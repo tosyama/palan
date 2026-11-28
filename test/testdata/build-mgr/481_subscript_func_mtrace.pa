@@ -1,0 +1,66 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+
+type pt { int64 x; [+]int64 tags; };
+type vec { [+]flo64 v; [+]pt ps; };
+type grid { [+]vec rows; };
+
+func [](@vec a, int64 i) -> flo64 { return a.v[i]; }
+func [](@!vec a, int64 i) -> @!flo64 { return @!a.v[i]; }
+func [](@vec a, @[]uint8 k) -> @pt { return @a.ps[k[0] - 'a']; }
+func [](@!vec a, @[]uint8 k) -> @!pt { return @!a.ps[k[0] - 'a']; }
+func [](@grid g, @[]uint8 k) -> vec { return g.rows[0]; }
+func [](@grid g, int64 i) -> @vec { return @g.rows[i]; }
+func [](@!grid g, int64 i) -> @!vec { return @!g.rows[i]; }
+
+type val union { Null; int64 i; [""]val members; };
+func val(int64 v) -> val { return val.i(v); }
+func [](@val j, @[]uint8 k) -> @val { return @j.members[k]; }
+func [](@!val j, @[]uint8 k) -> @!val { return @!j.members[k]; }
+func ->[](val v, @!val j, @[]uint8 k)
+{
+	printf("put %s ", k);
+	if j is Null { [""]val e = {}; e ->> j.members; }
+	v ->> j.members[k];
+}
+
+func key(@[]uint8 k) -> @[]uint8 { printf("key "); return k; }
+func num(int64 n) -> int64 { printf("num "); return n; }
+func show(@vec a) { printf("%g %g %ld\n", a[0], a[1], a["b"].x); }
+func bump(@!flo64 f) { f[0] + 1.0 -> f[0]; }
+
+mtrace();
+{
+	vec a = {v: [1.0, 2.0], ps: [{x: 3, tags: [1]}, {x: 4, tags: []}]};
+	5.0 -> a[0];
+	a[0] + 1.0 -> a[1];
+	bump(@!a[1]);
+	7 -> a["b"].x;
+	a["b"].tags.push(9);
+	pt q = {x: 8, tags: [2, 3]};
+	q -> a["a"];
+	show(@a);
+	printf("%ld %ld %ld\n", a["a"].tags[1], len(@a["b"].tags), a["b"].tags[0]);
+
+	grid g = {rows: [a, a]};
+	10.0 -> g[1][0];
+	[2]uint8 buf = ['b', 0];
+	printf("%g %g %ld\n", g[0][0], g[1][0], g[1][buf].x);
+	vec c = g["first"];
+	g["first"] -> c;
+	printf("%g\n", c[0]);
+
+	val j;
+	val(num(1)) -> j[key("a")];
+	2 -> j["b"];
+	val w = 3;
+	w ->> j["c"];
+	5 -> j["a"].i;
+	@!val p = @!j;
+	6 -> p["b"];
+	printf("\n");
+	if j["a"] is copy i { printf("%ld ", i); }
+	if p["b"] is copy i { printf("%ld ", i); }
+	if j["c"] is copy i { printf("%ld\n", i); }
+}
+muntrace();

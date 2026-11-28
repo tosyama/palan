@@ -1,0 +1,3 @@
+const S = "s";
+func f(@![]uint8 a) { }
+f(S);

@@ -1,0 +1,5 @@
+type P { int64 x; };
+type T { P p; };
+func [](@T t, int64 i) -> P { return t.p; }
+T t;
+int64 a = t[0].x;

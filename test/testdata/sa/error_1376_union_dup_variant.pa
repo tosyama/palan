@@ -1,0 +1,1 @@
+type U union { Null; int32 i; flo64 i; };

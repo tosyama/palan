@@ -57,6 +57,12 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 		case E_NestedCIncludeExport:
 			return "an 'export' clause is accepted only on a top-level cinclude.";
 
+		case E_NestedImportExport:
+			return "'export import' is accepted only at the top level.";
+
+		case E_ExportImportAlias:
+			return "'export import' cannot take an alias: the alias is a name of this file only.";
+
 		case E_UnexpectedString:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "syntax error, unexpected string after '" + arg1 + "'.";
@@ -94,6 +100,8 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 		case E_InvalidNumberLiteral:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "Invalid number literal '" + arg1 + "'.";
+		case E_HexLiteralTooLarge:
+			return "Hexadecimal literal '" + arg1 + "' does not fit in 64 bits.";
 
 		case E_VariadicNotLast:
 			return "a variadic parameter ('[...]T') must be the last parameter.";
@@ -150,6 +158,11 @@ string PlnGenAstMessage::getMessage(PlnMessageCode msg_code, string arg1, string
 
 		case E_DictKeyTypeNotEmpty:
 			return "a dictionary type is written '[\"\"]T': its key is a C string, which has no type name to write.";
+
+		case E_ExpectedIsBinding:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			return "Expected 'copy', '@' or '@!' before '" + arg1 + "', but found '" + arg2 + "'.";
 
 		default:
 			BOOST_ASSERT(false);

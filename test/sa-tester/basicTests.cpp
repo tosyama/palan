@@ -3,6 +3,7 @@
 /// @file basicTests.cpp
 /// @copyright 2026 YAMAGUCHI Toshinobu
 
+#include <fstream>
 #include <gtest/gtest.h>
 #include "../test-base/testBase.h"
 #include "saTestUtil.h"
@@ -729,6 +730,20 @@ TEST(sa, int_literal_range)
 	ASSERT_EQ(g["left"]["value-type"]["type-name"], "int64");
 }
 
+TEST(sa, recursive_type)
+{
+	cleanTestEnv();
+	for (string file : {"1211_borrow_field_cycle", "1297_self_borrow_varr", "1298_self_borrow_dict",
+	                    "1301_self_row_borrow", "1305_self_local"})
+		ASSERT_TRUE(run_sa("../test/testdata/sa/" + file + ".pa").is_object()) << file;
+	json jout = run_sa("../test/testdata/sa/1374_recursive_type.pa");
+	ASSERT_TRUE(jout.is_object());
+	set<string> keys;
+	for (auto& s : jout["alloc-shapes"])
+		EXPECT_TRUE(keys.insert(s.contains("shape-key") ? s["shape-key"] : s["shape-name"]).second) << s;
+	EXPECT_EQ(keys.size(), 3u);
+}
+
 TEST(sa, bool_type)
 {
 	cleanTestEnv();
@@ -1176,4 +1191,142 @@ TEST(sa, runtime_len)
 	ASSERT_EQ(init["n"]["src"]["name"], "__a_d0");
 	ASSERT_EQ(init["r"]["expr-type"], "lit-int");
 	ASSERT_EQ(init["r"]["value"], "2");
+}
+
+// A union's tag is at 0 and every variant's contents after it, at one offset.
+TEST(sa, union_shape)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1383_recursive_union.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json* j = nullptr;
+	for (auto& s : jout["alloc-shapes"])
+		if (s.value("shape-name", "").find("_J") != string::npos) j = &s;
+	ASSERT_NE(j, nullptr);
+	EXPECT_EQ((*j)["total-size"], 16);
+	EXPECT_EQ((*j)["tag-size"], 4);
+	const json& v = (*j)["variants"];
+	ASSERT_EQ(v.size(), 4u);
+	EXPECT_TRUE(v[0]["owned-fields"].empty());
+	EXPECT_EQ(v[1]["owned-fields"][0]["offset"], 8);
+	EXPECT_EQ(v[2]["owned-fields"][0]["offset"], 8);
+	EXPECT_TRUE(v[3]["owned-fields"].empty());
+}
+
+// A variant's contents follow the tag; a debug build reaches them through the
+// check of the tag, and the union's module makes each variant's maker.
+TEST(sa, union_variant)
+{
+	string pa = "../test/testdata/sa/1388_union_variant.pa";
+	auto xInit = [](const json& jout) {
+		for (auto& s : jout["statements"])
+			if (s.value("stmt-type", "") == "var-decl" && s["vars"][0]["name"] == "x") return s["vars"][0]["init"];
+		return json();
+	};
+	cleanTestEnv();
+	json jout = run_sa(pa);
+	ASSERT_TRUE(jout.is_object());
+	json init = xInit(jout);
+	EXPECT_EQ(init["offset"], 8);
+	EXPECT_EQ(init["ptr-expr"]["name"], "__pln_variant");
+	EXPECT_EQ(init["ptr-expr"]["args"][1]["value"], "1");
+	int makers = 0;
+	for (auto& f : jout["functions"])
+		if (f["name"].get<string>().rfind("__pln_mk", 0) == 0) makers++;
+	EXPECT_EQ(makers, 3);
+
+	cleanTestEnv();
+	genModuleAst(pa);
+	ASSERT_EQ(execTestCommand("palan-sa --release " + moduleAstPath(pa) + " -o out/test.sa.json"), "");
+	init = xInit(json::parse(ifstream("out/test.sa.json")));
+	EXPECT_EQ(init["offset"], 8);
+	EXPECT_EQ(init["var"], "j");
+}
+
+// `is` compares the tag. A binding keeps the union's address in a hidden
+// pointer declared ahead of the statement, and reads through it unchecked.
+TEST(sa, union_is)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1389_union_is.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	const json* b = nullptr;
+	const json* block = nullptr;
+	for (auto& s : stmts) {
+		if (s.value("stmt-type", "") == "var-decl" && s["vars"][0]["name"] == "b") b = &s["vars"][0]["init"];
+		if (s.value("stmt-type", "") == "block") block = &s;
+	}
+	ASSERT_NE(b, nullptr);
+	EXPECT_EQ((*b)["expr-type"], "cmp");
+	EXPECT_EQ((*b)["left"]["offset"], 0);
+	EXPECT_EQ((*b)["left"]["ptr-expr"]["name"], "j");
+	EXPECT_EQ((*b)["right"]["value"], "2");
+
+	ASSERT_NE(block, nullptr);
+	const json& body = (*block)["body"];
+	ASSERT_EQ(body[0]["stmt-type"], "var-decl");
+	string ptr = body[0]["vars"][0]["name"];
+	ASSERT_EQ(body[1]["stmt-type"], "if");
+	const json& test = body[1]["cond"]["left"];
+	EXPECT_EQ(test["expr-type"], "temp");
+	EXPECT_EQ(test["body"][0]["name"], ptr);
+	EXPECT_EQ(test["value"]["left"]["ptr-expr"]["name"], ptr);
+	EXPECT_EQ(test["value"]["right"]["value"], "1");
+	EXPECT_EQ(body[1].dump().find("__pln_variant"), string::npos);
+}
+
+// `if x is { }` tests the tag once per arm, `i, f` as one test; the last arm
+// is the chain's `else`, and a binding arm reads through a pointer of its own.
+TEST(sa, union_if_is)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1400_union_if_is.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json* block = nullptr;
+	for (auto& s : jout["statements"])
+		if (s.value("stmt-type", "") == "block") block = &s;
+	ASSERT_NE(block, nullptr);
+	const json& body = (*block)["body"];
+	ASSERT_EQ(body.size(), 3u);
+	EXPECT_EQ(body[0]["stmt-type"], "var-decl");
+	EXPECT_EQ(body[1]["vars"][0]["init"]["name"], body[0]["vars"][0]["name"]);
+	const json& chain = body[2];
+	ASSERT_EQ(chain["stmt-type"], "if");
+	EXPECT_EQ(chain["cond"]["right"]["value"], "0");
+	const json& second = chain["else"];
+	ASSERT_EQ(second["stmt-type"], "if");
+	EXPECT_EQ(second["cond"]["expr-type"], "logical-or");
+	EXPECT_EQ(second["else"]["stmt-type"], "block");
+	EXPECT_EQ(chain.dump().find("__pln_variant"), string::npos);
+}
+
+// `true` converts by J(bool), and an array literal by J([+]J), which
+// J(@[]uint8) does not compete with: an array literal cannot be borrowed unsized.
+TEST(sa, union_lit_conversion)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1407_union_lit_conversion.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	ASSERT_EQ(stmts.size(), 4u);
+	EXPECT_EQ(stmts[1]["body"]["name"], "_1407_union_lit_conversion..J.bool");
+	EXPECT_EQ(stmts[3]["body"]["name"], "_1407_union_lit_conversion..J.PVP37__pln_L26_1407_union_lit_conversion_J");
+}
+
+// A read calls the '[]' taking '@T', a store the one taking '@!T'; a type
+// without '[]' keeps the pointer's subscript.
+TEST(sa, subscript_func)
+{
+	cleanTestEnv();
+	json jout = run_sa("../test/testdata/sa/1410_subscript_func.pa");
+	ASSERT_TRUE(jout.is_object());
+	const json& stmts = jout["statements"];
+	EXPECT_EQ(stmts[1]["vars"][0]["init"]["name"], "_1410_subscript_func..0idx.R31__pln_L20_1410_subscript_func_T.int64");
+	const json& target = stmts[2]["target"];
+	EXPECT_EQ(target["array"]["name"], "_1410_subscript_func..0idx.W31__pln_L20_1410_subscript_func_T.int64");
+	EXPECT_EQ(target["index"]["value"], "0");
+	const json& ret = jout["functions"][2]["body"][0]["values"][0];
+	EXPECT_EQ(ret["ptr-expr"]["expr-type"], "arr-index");
+	EXPECT_EQ(ret["ptr-expr"]["array"]["name"], "p");
 }

@@ -1,0 +1,2 @@
+import "reexport_a.pa";
+int64 h = hiddenC();

@@ -6,16 +6,22 @@ This document specifies the goals, scope, architecture, and requirements for the
 ## 2. Goals
 - Palan aims to be a simpler, safer, and more enjoyable programming language alternative to C.
 
-### 2.1 Iteration Goal (2026-11-20)
-version: 0.2.7 — dictionaries, and the grammar holding only the language
+### 2.1 Iteration Goal (2026-11-25)
+version: 0.2.8 — tagged unions, and std/json on them
 
-- A dictionary `[""]T` maps C strings to values of `T` and is used as `[+]T` is (3.10).
-- The grammar drops the forms the language has no plan for (3.2), and the gen-ast tests check
-  what the parser builds for the language as it is.
-- `std/utf8` iterates and counts grapheme clusters (3.9; doc/Issues.md #4 of 0.2.6).
+- A type may contain itself through the elements of a `[+]T` or `[""]T` (3.11).
+- A tagged union `type U union {...}` holds one of its variants, owned, copied and released by the
+  tag the compiler keeps; `is` tests it and binds its contents (3.11).
+- Literals of bool, arrays and dictionaries convert to a union, and bool to a struct (3.11).
+- `std/json` parses, holds and writes JSON (3.12).
+- A type defines `[]` (3.11).
+- Returning a borrow of the function's own storage is an error (of doc/Issues.md #1). Hexadecimal
+  literals.
+- `export import` publishes an imported module's declarations as the importer's own (3.7).
+- A string literal initializes a `uint8` array (3.4).
 
-Out of scope: keys other than C strings; a function returning a default for a missing key; case
-mapping and normalization.
+Out of scope: interfaces; an owned field that may be NULL (`node next`); `is {}` on an enum or a
+number, guards and nested patterns; `is {}` as an expression.
 
 ## 3. Command-line Tools' Responsibilities and Design
 
@@ -145,6 +151,12 @@ Design:
  back the unit, so the unit's address must be evaluated once, and Palan has no arithmetic shift to
  extend the sign. A bit-field a packed struct lays across two units is left unsupported, since
  none in the C library or Linux headers is laid so.
+ A string literal, or a string constant, where a `uint8` array is expected is replaced by the
+ array literal of its bytes where it meets its target: a declaration, `->`, a struct literal's
+ field or a row of an array literal. Its NUL is kept, dropped or followed by zeros as the size
+ asks, as C sizes it, and the rest of the analysis sees only array literals. A call argument is
+ left as it is, a borrow of the bytes: taking the literal as an array too would make it fit
+ other parameters and change which overload a call chooses.
  A float constant expression is folded in the widest float, flo80, before its context gives it a
  type, so a flo80 constant keeps its precision; a flo32 or flo64 context rounds the folded value
  again, as a C compiler evaluating in x87 does.
@@ -360,7 +372,9 @@ never published:
   they stand for.
 - A type of another library stays its own: the `.pai` keeps the `import <...>` (whether public
   declarations need it or not, since its archive is linked). A C type comes through
-  `cinclude ... export`. An `import "..."` of an internal module disappears.
+  `cinclude ... export`. An `import "..."` of an internal module disappears. Another main of the
+  same library is imported as its users do (std's json re-exports `<std/utf8>`), so its types stay
+  its own; imported as a source, it would be an internal module, whose types cannot be published.
 - A struct or enum of an internal module is not written in the main's `.pai`: its reader would identify
   it by the main's module, unlike the objects. Not taken: stating each such type's module in the
   `.pai` (`export type Kept from std.kept {...}`, or a statement switching the module of the
@@ -433,6 +447,24 @@ function is. Its symbol is its label, `<module>.<name>`.
   statement is entered, not in palan-gen-ast, since whether `M` is an alias depends on the scope (a
   variable `M` hides it).
 
+**Re-exporting (`export import`).** `export import <std/utf8>;` publishes what the imported module
+publishes as the importing module's own, and `export import cstr, utf8 from <std/utf8>;` the names
+listed, so std/json's users need not import std/utf8 too. The library's author decides it: finding a
+type's functions through the type, wherever it came from, was not taken, as a reader could no
+longer tell where a function comes from.
+
+- An importer sees what is re-exported as it sees the module's own exports: bare, as `J.cstr` under an
+  alias, and listable in a selective import. A declaration keeps its identity and symbols; nothing is
+  copied. A chain of `export import`s passes it on.
+- The exports of a module are its own and what its `export import`s give, gathered once where palan-sa
+  reads an imported module, so taking its types, functions and globals sees one list. The same
+  declaration reached twice (std/json and std/utf8 both imported) is one, not a clash.
+- An alias is the importing file's own name, so `export import ... as U;` is an error, as is an
+  `export import` in a block, where `export` cannot be written.
+- A `.pai` keeps the `export import <...>`. A library's main cannot re-export one of its internal
+  modules (`export import "x.pa"`): that would publish types the `.pai` cannot state; another main is
+  re-exported as `<...>`.
+
 **C-named functions.** `cexport func add(...)` gives the function the symbol `add`. There is one
 symbol, not an alias beside the usual one: Palan calls it by `add` too, and a `.pai` writes
 `cexport` so an importer gives it the same. It is written like `cinclude` rather than as C++'s
@@ -482,14 +514,21 @@ added.
 - Only a value that folds to a literal converts implicitly (a literal, a const, a constant
   expression), so an allocation and a copy are never hidden behind a byte array that was not meant
   to become text. A constant expression is a literal wherever it is written, so it is folded in its
-  default type first (`big n = 12 * 3;` is `big(36)`). A literal with a type of its own (`true`, an
-  enum value, a character, `NULL`) does not convert.
+  default type first (`big n = 12 * 3;` is `big(36)`). A literal with a type of its own (an enum
+  value, a character, `NULL`) does not convert. `true` and `false` convert only by a function taking
+  `bool`: as `bool` widens to any number, `big(int64)` would otherwise make `true` a 1.
 - The conversion is chosen among the functions callable with the literal alone as any overloaded
   call is: one taking the literal's default type exactly wins.
 - The function is chosen by visibility, as an operator function is: a module may add one for a type
   it imports, and an alias does not hide it, since a conversion is never written qualified.
 - A candidate needing a conversion is considered only when none fits without one, so adding a
-  conversion function never changes which function an existing call chooses.
+  conversion function never changes a call that resolves without one. A call that converts may
+  change, as any overloaded call may when a function is added.
+- An array or dictionary literal fits only a parameter it can be made into (a struct, a sized array,
+  a block the callee owns), its elements not looked at, so `json([1, 2])` does not compete with the
+  `json(@[]uint8)` taking text. Ranking by the elements was not taken, as it would pick the bytes,
+  nor were priorities written on functions, which would need a rule between modules adding
+  conversions.
 - Not for `@!T`, since writing into a temporary is lost. `as` never calls a function.
 
 **Comparison functions.** Only `==` and `<` are defined; the other four are derived, so they agree
@@ -564,6 +603,10 @@ types do not compete for one `next(@!int64)`. `iter` and `next` are found as ope
 are, an alias not hiding them, since `for` never writes their names. What the range's call was given
 is held until the loop ends, not only what it returned: an error, as for a call returning a
 borrow, would also reject a struct that borrows nothing.
+
+**Hexadecimal literals.** One is the bits of the type it adopts, as hexadecimal is written for a bit
+pattern and the type gives the width. A comparison types it by the other operand for the same
+reason, though it does not type a decimal one.
 
 **Character literals.** A literal is its code point. One of 128 or more adopts only an integer type
 of 32 bits or more: UTF-8 text never holds it as a byte, so `buf[i] == 'é'` on a `[]uint8` would be
@@ -645,6 +688,54 @@ depend on `T`, so it is written once in `std/rt` rather than generated, as `__pl
 functions: compacting moves the values as bytes of the element's size, as the removed ones are
 already released. The values' header is an ordinary `[+]T` one, so the generated functions build,
 release and copy the values with `[+]T`'s.
+
+### 3.11 Tagged Unions
+
+PalanReference.md states what a union does; this section keeps why.
+
+- **Why a union.** A struct holding every kind's fields allocates them all for each value. An
+  interface suits kinds that are open and operations that are fixed; JSON is the reverse. C's
+  untagged union cannot own anything, as nothing tells what to release. A C union stays the separate
+  thing it is, its layout being C's.
+- **Variants** are written as fields are, so any field type can be one; names, not types, tell them
+  apart. Exported variants are all public: branching on them is what a union is for, and `opaque`
+  hides one.
+- **Recursion.** Only a `[+]T` or `[""]T` closes a cycle, across types too: it is empty when declared,
+  so allocation ends. A cycle of owned or embedded values stays an error.
+- **`j.s`** on another variant is the writer's error, checked in a debug build as `pop`'s is. Unlike
+  `d[k]`'s, the check is not free, and a test guards it. Allowing it only where a test precedes was
+  not taken: whether the value changed in between cannot be followed through an index or a borrow.
+- **Whole assignment** changes the variant, as `x -> d[k]` adds a key. `j.s ->> v` leaves `j` its first
+  variant, so no variant is left with NULL contents.
+- **`is`** binds only where the test is known true. A binding moving the contents out was not taken:
+  most uses read them, and `j.s ->> v` after a test moves them. In `if j is { }`, no keyword but `is`
+  is taken: `match` is a name libraries want, and `switch` promises C's fall-through and `break`.
+- **Making one.** Literals convert by functions named as the type (3.8), extended to bool, and to array
+  and dictionary literals where a union is expected, since a struct already gives those literals a
+  meaning. The author of the type, not the compiler, decides which variant `1` is. Variables do not
+  convert.
+- **Layout.** The tag, then space for the largest contents; an owned value is a pointer, as in a struct,
+  unless written `$T`. Allocation, release and copy are functions generated per type (3.6) that branch
+  on the tag and treat each variant as they treat a struct's field. Comparisons are not generated.
+
+**Type-defined `[]`.** For structs and unions only, with one key. A type with a `[]` is indexed only
+through it, also through `@T p`: falling back to the pointer's subscript where no key fits would read
+past `p` silently. A type with a `->[]` stores only through it; without one, `x -> t[k]` stores into
+`[](@!T, K)`'s element, as an array-like type only replaces. Choosing per call whether a `->[]` fits
+was not taken: it depends on `x`, which would be analyzed twice.
+
+### 3.12 std/json
+
+PalanStdLibReference.md states what it does; this section keeps why.
+
+- `json` has no accessor functions, as `is`, `j.i` and `j[k]` are them. `parseJson` returns a union of
+  the value and the error rather than two values: a failure has no value to be mistaken for `null`.
+- `maxDepth` bounds parsing, since parsing, copying and releasing recurse; a tree a program builds is
+  not bounded.
+- `\u0000` is an error: `utf8` and dictionary keys hold no NUL, and replacing it would silently change
+  the text and could merge keys.
+- NaN and infinity are a runtime error when written: writing `null` would lose the value silently.
+- JSONTestSuite is run as test data, the `y_` cases holding `\u0000` listed as exceptions.
 
 ## 4. Expression Value Categories
 

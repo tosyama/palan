@@ -1,7 +1,7 @@
 Palan Semantic Analyzer JSON Specification
 ==========================================
 
-ver. 0.2.7
+ver. 0.2.8
 
 Output of palan-sa. Extends the AST JSON format (see ASTSpec.md) with resolved
 type information and pre-collected literal tables.
@@ -215,6 +215,52 @@ Root
     `__pln_copy_T`, but writing the parts of such types through their `->`. Such a struct is never
     reduced to a bytes entry.
 
+  `__pln_copy_T` and `__pln_assign_T` treat an owned field that is NULL as the arr entry's do an element.
+
+  A union (`type U union { ... }`) is a struct entry with `owned-fields` empty and:
+  - tag-size\* - 4: its tag, a `uint32` at offset 0, the index of the variant it holds in the
+    order they are declared. Every variant's contents lie at one offset after it, the tag
+    aligned up to the contents' largest alignment; `total-size` is that offset and the largest
+    contents, aligned up.
+  - variants\* - One entry per variant, in tag order, each the `owned-fields` and `runs` its
+    contents give (both empty for one owning nothing). A struct laid out in a variant
+    (`$T`, `$[n]$T`) that is built at all is a run, since a union has no `init-func`.
+
+  build-mgr lays each variant owning something out as a struct of its own,
+  `__pln_v<k>_U`, generated as a struct entry with those fields, and generates `U`'s functions
+  over them: `__pln_init_U` writes tag 0 and builds the first variant, `__pln_fini_U`,
+  `__pln_copy_U` and `__pln_assign_U` act on the variant the tag names (when the tags differ,
+  `dst`'s contents are released and zeroed first), and `__pln_initrun_U` is generated for every
+  union. `__pln_become_U(p, k, build)` makes `p` variant `k` if it holds another: it releases
+  the contents, zeroes them, writes the tag and, with `build`, builds the new contents. A union
+  is built wherever it comes to exist, as a struct with initializers is, and a union laid out in
+  a struct is one of its `runs`.
+
+  A variant is a field of the union (`field-access`, `field-assign`) at the contents' offset:
+  - In a debug build, a field reached through a variant (`j.s`, `j.s.x`, `@!j.s`) takes the
+    union's address from `__pln_variant(addr, k)` (a C call to `std/rt` returning `addr` when the
+    tag is `k`, failing otherwise) as its `ptr-expr`, so the check is part of the expression.
+  - A store to the variant itself is a call of `__pln_become_U(@!U, k, build)` followed by the
+    store as to a struct's field: `build` is 1 for `->`, which copies into the built contents, and
+    0 for `->>`, whose release of the contents is then a no-op. A value whose expression names the
+    union's variable is evaluated into a temp first (a copy for a copied type), as is one stored
+    to a whole union from such an expression (`j.items[0] -> j`).
+  - The owner given away by `j.s ->> v` is reset by `__pln_init_U` instead of NULL.
+  - `U.v(x)` and `U.v` are calls of `__pln_mk<k>_U`, exported by the module defining `U`, taking
+    the contents as a `T` parameter (none for a variant without them) and returning `U`.
+  - `x is v` is a `cmp` (`==`) of the tag (`field-access`, offset 0, `uint32`, with `x` as
+    `ptr-expr`) and `k`. A binding (`@v`, `@!v`, `copy v`, in an `if` or `while` condition or a `&&`
+    operand there) makes the statement a `block` that first declares, as NULL or as declared:
+    `__is_N`, a `@U` (`@!U` for `@!v`) the test assigns `x`'s address to in a `temp`'s `body`;
+    `__is_t_N`, a `$U` the test copies a union returned by a call into, when `x` is one;
+    `__is_c_N`, the copy, which the test (a `logical-and` of the comparison and a `temp`) releases
+    and replaces with a new copy. The block then releases what it declared. The name bound reads
+    `__is_N`'s variant, without `__pln_variant`, or `__is_c_N`.
+  - `if x is { }` is a `block` declaring `__is_N` (and `__is_t_N`), a `__is_K` copying it for each
+    arm that binds, and a chain of `if`s testing the tag, an arm listing variants as a
+    `logical-or`; the last arm, or `else`, is the chain's last `else`. A `copy` is a variable the
+    arm declares.
+
   Non-owned fields are deliberately not described: build-mgr re-declares the struct in the
   generated allocator module with only the owned fields at their offsets and opaque padding
   elsewhere, because the full layout cannot always be re-expressed as Palan source (C unions,
@@ -292,8 +338,8 @@ owned type (`h`): it does nothing when `h` is NULL, and otherwise calls the func
 the function marked `release` releases its own parameter as the contents.
 
 - `<name>`: the function's name; an operator function's is a word that starts with a digit, so that
-  no written name can be it: `0add` `0sub` `0mul` `0div` `0mod` `0eq` `0lt` `0app` for
-  `+ - * / % == < <<` (`vecmath..0sub.R4vec3.R4vec3`).
+  no written name can be it: `0add` `0sub` `0mul` `0div` `0mod` `0eq` `0lt` `0app` `0idx` `0put` for
+  `+ - * / % == < << [] ->[]` (`vecmath..0sub.R4vec3.R4vec3`).
 - `<module>`: the `module` of ast.json: the source file's name without `.pa`, with each byte outside
   `[A-Za-z0-9_]` and each `_` followed by two lowercase hex digits written `_` and two lowercase hex
   digits, and `_` in front of a leading digit (`001_hello.pa` → `_001_hello`), after the name of the
@@ -402,7 +448,8 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     `E_CircularTypeDecl` at the declaration that reached it, except that a struct
     embedding itself (`$T`, `$[n]T`) is `E_RecursiveStruct`. A struct named through a
     pointer only has to be declared; it is resolved once no declaration is being
-    resolved, so a pointer may close a cycle.
+    resolved, so a pointer may close a cycle. So is one held by a `[+]T` or `[""]T` without `$`,
+    unless the field's initializer has elements; allocator shapes are recorded only after that.
   - A struct comes with every struct and enum its fields use, and a signature with every
     type it names. A Palan type source may write is bound to the name it is written as
     (`T`, or `V.T` under an alias); one not selected or not exported is registered but
@@ -667,6 +714,16 @@ Same structure as AST statements (see ASTSpec.md) with the following differences
     `__pln_put_dict_T(d, k)`; then the store into `__pin_M[0]`. A literal is first put into a
     temp (`__lit_N`), which is then stored so. Through `@[""]T` it is E_WriteThroughReadOnlyPtr.
     A constant key (`d[K]`) is its string.
+- **A type's `[]`** — `t[k]` whose `t` is a struct or union (its storage, `@T` or `@!T`) with a
+  function `[]` taking it is a `call` of `0idx`, never the pointer's subscript below: of a `[]`
+  taking `@!T` where the element is written or borrowed `@!` (the `forWrite` uses: a store, a field
+  store, `@!t[k]`, a writable chain), of one taking `@T` elsewhere; none fitting is
+  E_NoOperatorFunc or E_NoMatchingFunc. `t` is given as a `@!t` is (`addr-of` with `mutable` for its
+  storage), so a `for` range or an `is` binding of `t` forbids the `@!` ones; `k` as an operand, an
+  array by name. A returned borrow is then indexed by `lit-int` 0 as `p[0]` is, unless it is an
+  array's; a value returned is the call itself, a temp (E_UnownedCallResult under `.f` or `@`).
+  A store `x -> t[k]` (`->>` as `x>>`) of a type with a `->[]` is an `expr` statement calling
+  `0put(x, t, k)`; of a type without one, a store into `0idx`'s place.
   - A literal `{"a": v, K: w}` initializing `d` is emitted as `d`'s declaration, then for each
     key in order `__pin_N` initialized to `__pln_put_dict_T(d, key)` and the value stored into
     `__pin_N[0]` as an array literal's element is; a value that is itself a dictionary literal is
@@ -962,13 +1019,21 @@ Same structure as AST expressions (see ASTSpec.md) with the following additions:
     is rejected with `E_IntLiteralOutOfRange`. A literal operand of a binary operator is typed only
     once -- from the other operand's type when that has one, else from the expected type -- so the
     check never runs against a provisional type. For `bool` the range is 0..1.
+  - A literal array size is a uint64 that must also fit int64, the type `len` gives
+    (`E_IntLiteralOutOfRange`).
+  - Hexadecimal literal (`hex`): one taking a signed integer type and fitting its width is emitted
+    with the negative number those bits are, when its top bit is set. In a comparison it takes the
+    other operand's type if that is a float, or an integer it fits the width of; a folded constant
+    expression reads it in int64, and its result has `hex` only for `bitand`, `bitor` and `bitxor`
+    of two operands that have it. `hex` stays on the node in sa.json; codegen ignores it.
   - Character literal of 128 or more (`char`): an integer type under 32 bits (`int8` `int16`
     `uint8` `uint16` `bool`) is rejected with `E_WideCharLitNarrowType`, both where the literal
     takes the type and where it is compared with an operand of that type (a comparison types no
     literal by the other operand). `char` stays on the node in sa.json; codegen ignores it.
   - lit-flo: adopts the float type of a float-typed context (e.g. `flo32 y = 1.5;` → flo32);
     defaults to flo64 when no expected float type is available
-  - lit-str: {"type-kind": "pntr", "base-type": {"type-kind": "prim", "type-name": "uint8"}}
+  - lit-str: {"type-kind": "pntr", "mutable": false, "base-type": {"type-kind": "prim", "type-name": "uint8"}}:
+    its bytes are in `.rodata`, so it binds only a read-only pointer
   - id: same object as var-type
   - add: promoted type of left and right operands (see Promotion rules);
     the narrower operand is wrapped in a convert node if types differ
@@ -1487,9 +1552,8 @@ not fit it. With several, each argument is analyzed once without a parameter typ
   candidates needs a default to fit, none is preferred. Otherwise E_NoMatchingFunc (the argument
   types and the candidates) or E_AmbiguousCall (the candidates that fit, a default shown as
   `int32 = 0`).
-- Receiving several values (`(a, b) = f(x)`) considers only the candidates returning that many,
-  which must agree on what they return, since the receivers are declared before the arguments
-  choose one (E_AmbiguousCall).
+- Receiving several values (`(a, b) = f(x)`) considers only the candidates returning that many;
+  the chosen candidate's return types are the receivers'.
 - A function name used as a value takes the function fitting the `@func` type it is given to (a
   variable's, field's or parameter's), or of several the one whose own type it is: none is
   E_FuncNameNeedsType (a single one differing only in permission, owner or shape is bound, and

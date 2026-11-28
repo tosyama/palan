@@ -1,0 +1,73 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type json union { Null; bool b; int64 i; [+]json items; };
+type box { [+]json js; };
+// The union is not at the start of what the pointer (the field p) points to.
+type pair { int64 n; $json v; };
+type outer { pair p; };
+
+func items(int64 n) -> json r {
+	[+]json xs = [];
+	while n > 0 { xs.push(json.i(n)); n - 1 -> n; }
+	xs ->> r.items;
+}
+
+func firstInt(@json j) -> int64 {
+	if j is @items && len(@items) > 0 && items[0] is copy i { return i; }
+	return -1;
+}
+
+func pairLen(@pair p) -> int64 {
+	if p.v is @items { return len(@items); }
+	return -1;
+}
+
+func f() {
+	json j;
+	if j is Null { printf("null\n"); }
+	5 -> j.i;
+	if j is @i && i > 3 { printf("i %d\n", i); }
+	if j is @!i { i + 2 -> i; }
+	if j is copy i { 0 -> i; printf("copy %d %d\n", i, j.i); }
+	if j is b { printf("b\n"); } else if j is @!n = i { 8 -> n; }
+	printf("j %d\n", j.i);
+
+	if items(3) is @xs = items { printf("temp %d %d\n", len(@xs), xs[0].i); }
+	int64 k = 3;
+	while k > 0 && items(k) is copy xs = items {
+		[+]json held = [];
+		xs ->> held;
+		printf("held %d\n", len(@held));
+		k - 1 -> k;
+	}
+
+	box bx;
+	bx.js.push(items(2));
+	bx.js.push(json.i(4));
+	int64 at = 0;
+	while at < 2 {
+		if bx.js[at] is @!items { items.push(json.b(true)); json.i(9) -> items[0]; }
+		at + 1 -> at;
+	}
+	printf("box %d %d %d\n", len(@bx.js[0].items), bx.js[0].items[0].i, firstInt(@bx.js[0]));
+
+	while bx.js[0] is copy items {
+		if len(@items) > 2 { break; }
+	}
+	0 -> at;
+	while at < 3 {
+		at + 1 -> at;
+		if items(at) is copy xs = items && len(@xs) < 3 { continue; }
+		printf("at %d\n", at);
+	}
+
+	pair pr;
+	[json.i(1), json.Null] -> pr.v.items;
+	printf("pair %d", pairLen(@pr));
+	outer o;
+	3 -> o.p.v.i;
+	printf(" %d\n", o.p.v.i);
+}
+
+mtrace();
+f();

@@ -103,6 +103,35 @@ printf("%.1f %.1f\n", norm(@a), G.norm(@b));
 	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "5.0 10.0\n");
 }
 
+// An internal module's re-export reaches only the main, so the .pai's import of it does not publish.
+TEST(build_mgr, library_reexport) {
+	buildGeoLibrary();
+	writeFile("out/src/wrap.pa", R"(library wrap;
+libpath "../libs";
+export import <geo/vec>;
+import "inner.pa";
+export func twice(@Vec v) -> Vec { return v + v; }
+)");
+	writeFile("out/src/inner.pa", R"(library wrap;
+libpath "../libs";
+export import vec from <geo/vec>;
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/wrap.pa"), "");
+	string pai = fileText("out/libs/wrap/wrap.pai");
+	EXPECT_NE(pai.find("export import <geo/vec>;\n"), string::npos) << pai;
+	EXPECT_NE(pai.find("\nimport vec from <geo/vec>;\n"), string::npos) << pai;
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <wrap/wrap>;
+import <wrap/wrap> as W;
+cinclude <stdio.h>;
+Vec a = twice(@vec(1.5, 2.0));
+W.Vec b = W.vec(6.0, 8.0);
+printf("%.1f %.1f\n", norm(@a), W.norm(@b));
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "5.0 10.0\n");
+}
+
 // The library's main initializes its internal module first, through the
 // import, so the program needs only what it imports.
 TEST(build_mgr, library_module_globals) {
@@ -172,6 +201,8 @@ const LIMIT = 40;
 export func run(int32 a, int32 lim = LIMIT + 2, Mode m = Mode.Slow, @[]uint8 tag = "dflt") {
 	printf("%d %d %d %s\n", a, lim, m, tag);
 }
+const MASK = 0xFFFF0000;
+export func bits(int32 a = 0xFFFFFFFE, int32 b = MASK) { printf("%d %d\n", a, b); }
 )");
 	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/opt.pa"), "");
 	fs::remove_all("out/src");
@@ -179,8 +210,67 @@ export func run(int32 a, int32 lim = LIMIT + 2, Mode m = Mode.Slow, @[]uint8 tag
 import <kit/opt> as K;
 K.run(1);
 K.run(2, 7, K.Mode.Fast);
+K.bits();
 )");
-	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "1 42 1 dflt\n2 7 0 dflt\n");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "1 42 1 dflt\n2 7 0 dflt\n-2 -65536\n");
+}
+
+TEST(build_mgr, library_recursive_type) {
+	cleanTestEnv();
+	writeFile("out/src/tree.pa", R"(library kit;
+export type Tree { int32 v; [+]Tree kids; [""]Link links; };
+export type Link { Tree to; };
+export func first(@Tree t) -> int32 { return t.kids[0].v; }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/tree.pa"), "");
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/tree> as K;
+cinclude <stdio.h>;
+K.Tree t; K.Tree k; K.Link l;
+4 -> k.v;
+t.kids.push(k);
+9 -> l.to.v;
+l -> t.links["x"];
+K.Tree c = t;
+printf("%d %d\n", K.first(@c), c.links["x"].to.v);
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "4 9\n");
+}
+
+// A union crosses the interface with its variants, and as an opaque type's contents.
+TEST(build_mgr, library_union) {
+	cleanTestEnv();
+	writeFile("out/src/val.pa", R"(library kit;
+export type Val union { Null; int64 i; [+]Val items; Box box; };
+export type Box { int32 v; };
+type Inner union { [+]int32 xs; Null; };
+export type Hidden = opaque Inner;
+export func make() -> Hidden { Inner x; return x as Hidden; }
+export func size(@Val v) -> int64 { return sizeof(Val); }
+)");
+	ASSERT_EQ(execTestCommand("bin/palan --lib -o out/libs out/src/val.pa"), "");
+	string pai = execTestCommand("cat out/libs/kit/val.pai");
+	EXPECT_NE(pai.find("export type Val union {\n\tNull;\n\tint64 i;\n\t[+]Val items;\n\tBox box;\n};"), string::npos) << pai;
+	fs::remove_all("out/src");
+	writeFile("out/app/main.pa", R"(libpath "../libs";
+import <kit/val> as K;
+cinclude <stdio.h>;
+K.Val v;
+K.Val c = v;
+[+]K.Val vs = [];
+vs.push(c);
+K.Hidden h = K.make();
+printf("%ld %ld\n", K.size(@vs[0]), len(@vs));
+K.Val.items(vs) -> v;
+K.Val.i(5) -> v.items[0];
+K.Box b;
+7 -> b.v;
+b -> v.items[0].box;
+K.Val.Null -> c;
+printf("%d %d\n", v.items[0].box.v, len(@v.items));
+)");
+	EXPECT_EQ(execTestCommand("bin/palan out/app/main.pa"), "16 1\n7 1\n");
 }
 
 // A variadic parameter crosses the interface as written, also inside a

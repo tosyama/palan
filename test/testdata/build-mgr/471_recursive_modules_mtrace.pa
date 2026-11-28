@@ -1,0 +1,31 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+import "lib_rec_tree.pa";
+import "lib_rec_leaf.pa";
+import "lib_rec_opaque.pa" as O;
+func f() {
+	Tree t; Leaf l;
+	3 -> l.v;
+	2 -> l.owner.id;
+	t.leaves.push(l);
+	l -> t.named["a"];
+	t.leaves[0].owner.leaves.push(l);
+	Tree c = t;
+	printf("%d %d %d\n", c.leaves[0].v, c.named["a"].owner.id, c.leaves[0].owner.leaves[0].v);
+	Fwd w; Fwd x;
+	4 -> x.v;
+	w.rest.push(x);
+	printf("%d\n", w.rest[0].v);
+	O.Handle h = O.make(3);
+	printf("%d\n", O.depth(@h));
+	{
+		import "lib_rec_block.pa";
+		Pa p; Pb q;
+		5 -> q.v;
+		p.bs.push(q);
+		p.cs.push(p.bs[0].c);
+		printf("%d %ld\n", p.bs[0].v, len(@p.cs));
+	}
+}
+mtrace();
+f();

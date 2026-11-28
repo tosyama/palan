@@ -1,0 +1,65 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type json union { Null; bool b; int64 i; flo64 f; [+]json items; [""]json members; };
+type pt { int32 x; [+]int32 v; };
+type held union { int32 n; $pt p; pt q; };
+type S { int32 a; json j; [+]held hs; };
+
+func show(@json j) {
+	if len(@j.items) > 0 { printf("items %d\n", len(@j.items)); }
+}
+
+func f() {
+	json j;
+	5 -> j.i;
+	j.i + 1 -> j.i;
+	printf("%d\n", j.i);
+	[+]json xs = [];
+	xs.push(json.i(7));
+	xs.push(json.Null);
+	xs ->> j.items;
+	printf("%d %d\n", len(@j.items), j.items[0].i);
+	show(@j);
+	json k = j;
+	k -> j;
+	json m;
+	[""]json d;
+	j -> d["a"];
+	d ->> m.members;
+	m.members["a"].items[0].i + 1 -> m.i;
+	printf("%d\n", m.i);
+	j.items[0] -> j;
+	printf("%d\n", j.i);
+	k.items[1] ->> k;
+	json.f(2.5) -> k;
+	printf("%.1f\n", k.f);
+	[+]json zs = [];
+	zs.push(json.b(true));
+	json.items(zs) -> j;
+	zs[0] -> j.items[0];
+	j.items ->> xs;
+	printf("%d\n", len(@xs));
+	true -> j.b;
+	held h;
+	pt p0;
+	[1, 2] -> p0.v;
+	p0 -> h.p;
+	3 -> h.p.x;
+	held h2 = h;
+	h2.p.v.push(3);
+	printf("%d %d\n", len(@h.p.v), len(@h2.p.v));
+	pt q;
+	[4] -> q.v;
+	q -> h.q;
+	held h3 = h;
+	h3 -> h2;
+	printf("%d\n", h2.q.v[0]);
+	S s;
+	json.items(xs) -> s.j;
+	s.hs.push(h3);
+	S t = s;
+	t -> s;
+	printf("%d %d\n", len(@t.j.items), len(@t.hs));
+}
+mtrace();
+f();

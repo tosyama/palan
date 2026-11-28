@@ -1,0 +1,4 @@
+type S { int64 a; int64 b; };
+func g(@S s) -> int64 { return s.a; }
+func g(int64 s) -> int64 { return s; }
+int64 x = g([1, 2]);

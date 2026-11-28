@@ -64,13 +64,14 @@ for copy path, i in args {
 ```
 
 Other features include variable-length arrays (`[+]T` with `len`/`push`/`resize`/`pop`),
-dictionaries keyed by C strings (`[""]T`, `{"a": 1}`, `for copy v, k in d`),
+dictionaries keyed by C strings (`[""]T`, `{"a": 1}`, `for copy v, k in d`), tagged unions
+(`type U union { ... }`, tested and bound with `if u is @s { }`),
 function overloading, default and variadic arguments, multiple named return values, function
-pointers, enums, field initializers, Unicode character literals, modules (`import`/`export`, with
-module state in `global` variables), libraries (`palan --lib`, `import <...>`) publishing `opaque`
+pointers, enums, field initializers, Unicode character literals, modules (`import`/`export`,
+`export import` passing a module on, with module state in `global` variables), libraries (`palan --lib`, `import <...>`) publishing `opaque`
 types, functions C calls by name (`cexport`), run-time checks left out of a release build, and raw
 Linux syscalls. A library
-type can be used like a built-in one: it defines operators (`+`, `==`, `<`, `<<`), its own copy
+type can be used like a built-in one: it defines operators (`+`, `==`, `<`, `<<`, `[]`), its own copy
 `->`, iteration with `for`, conversion from a string literal, and fields hidden or read only outside
 its module, as the standard library's `std/utf8` does:
 
@@ -84,7 +85,7 @@ for copy c in s { printf("U+%04X ", c) }
 if s -> startsWith("h\u{E9}", "H\u{E9}") { printf("\n%s\n", s -> cstr()) }
 ```
 See the [Palan Language Reference](doc/PalanReference.md) for the whole language, and the
-[Palan Standard Library Reference](doc/PalanStdLibReference.md) for `std`.
+[Palan Standard Library Reference](doc/PalanStdLibReference.md) for `std` (`std/utf8`, `std/json`).
 
 ## Quick Start
 
@@ -155,7 +156,7 @@ of the `release` workflow's run (and attached to the GitHub Release when one is 
 level is the installed layout, so it unpacks into a prefix as `cmake --install` would:
 
 ```bash
-tar -xzf palan-0.2.7-x86_64-linux-gnu.tar.gz -C ~/.local
+tar -xzf palan-0.2.8-x86_64-linux-gnu.tar.gz -C ~/.local
 ~/.local/bin/palan hello.pa
 ```
 
@@ -185,4 +186,4 @@ Palan compiles through a pipeline of independent tools that pass JSON between th
 
 ## License
 
-MIT License — see [LICENSE](LICENSE). The bundled [nlohmann/json](lib/json) is distributed under its own MIT license (`lib/json/LICENSE.MIT`). The grapheme property table and the conformance test data made from the Unicode Character Database (`src/std/graphemeprops.pa`, `test/testdata/std/GraphemeBreakTest.txt`) are under the [Unicode License v3](src/std/LICENSE-Unicode.txt).
+MIT License — see [LICENSE](LICENSE). The bundled [nlohmann/json](lib/json) is distributed under its own MIT license (`lib/json/LICENSE.MIT`). The grapheme property table and the conformance test data made from the Unicode Character Database (`src/std/graphemeprops.pa`, `test/testdata/std/GraphemeBreakTest.txt`) are under the [Unicode License v3](src/std/LICENSE-Unicode.txt). The JSONTestSuite cases in `test/testdata/std/JSONTestSuite` are under their own MIT license (`test/testdata/std/JSONTestSuite/LICENSE`).

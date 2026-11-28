@@ -12,6 +12,7 @@
 #include <vector>
 #include "PlnDefs.h"
 #include "PlnInterface.h"
+#include "PlnStrLit.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -115,6 +116,12 @@ string Writer::expr(const json& e) const
 			snprintf(esc, sizeof(esc), "'\\u{%lX}'", stol(e["value"].get<string>()));
 			return string(esc);
 		}
+		// Written in decimal, it would no longer be read as bits.
+		if (e.value("hex", false)) {
+			char hex[24];
+			snprintf(hex, sizeof(hex), "0x%llX", stoull(e["value"].get<string>()));
+			return string(hex);
+		}
 		return e["value"];
 	}
 	if (kind == "lit-uint") return e["value"].get<string>() + "u";
@@ -182,6 +189,12 @@ string Writer::statement(const json& s) const
 		}
 		return out + "};\n";
 	}
+	if (kind == "union-def") {
+		string out = exported + "type " + name + " union {\n";
+		for (auto& v : s["variants"])
+			out += "\t" + (v.contains("var-type") ? type(v["var-type"]) + " " : "") + v["name"].get<string>() + ";\n";
+		return out + "};\n";
+	}
 	if (kind == "struct-def") {
 		string out = exported + "type " + name + " {\n";
 		for (auto& f : s["fields"])
@@ -203,7 +216,7 @@ string Writer::statement(const json& s) const
 	};
 	if (kind == "cinclude") return "cinclude " + path + alias + " export " + names(s["export-types"]) + ";\n";
 	string targets = s.contains("targets") ? names(s["targets"]) + " from " : "";
-	return "import " + targets + path + alias + ";\n";
+	return string(s.value("export", false) ? "export " : "") + "import " + targets + path + alias + ";\n";
 }
 
 // Every library any `cinclude` of the module links, in source order, however deep in a body.
@@ -250,7 +263,11 @@ optional<json> sizedArrayType(const json& var, const set<string>& consts)
 	json result = var["var-type"];
 	static const json noRows = json::array();
 	bool hasLiteral = var.contains("init") && var["init"].value("expr-type", "") == "arr-lit";
-	const json* rows = hasLiteral ? &var["init"]["items"] : &noRows;
+	// A string gives a uint8 array its bytes and NUL; palan-sa checks the type.
+	json strRows;
+	if (var.contains("init") && var["init"].value("expr-type", "") == "lit-str") // LCOV_EXCL_BR_LINE
+		strRows = json::array_t(strLitBytes(var["init"]["value"].get<string>()).size() + 1, json::object());
+	const json* rows = hasLiteral ? &var["init"]["items"] : !strRows.is_null() ? &strRows : &noRows;
 	json* level = result["type-kind"] == "embed" ? &result["base-type"] : &result;
 	if (level->value("type-kind", "") != "arr") return nullopt;
 	for (bool top = true; level->value("type-kind", "") == "arr"; top = false) {
@@ -332,7 +349,7 @@ string Writer::write()
 			}
 		} else if (kind == "const-decl") {
 			if (consts.count(s["name"])) out += statement(s);
-		} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
+		} else if (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias" || kind == "import"
 				|| (kind == "cinclude" && s.contains("export-types"))) {
 			out += statement(s);
 		}
@@ -392,7 +409,7 @@ Merger::Merger(const json& main, const vector<json>& internals)
 		const json& list = (*modules_[m])["ast"].contains("statements") ? stmts(m) : noStmts;
 		for (auto& s : list) {
 			string kind = s.value("stmt-type", "");
-			if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			if (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
 			    || kind == "const-decl")
 				decls_[m][s["name"]] = {&s, nullptr};
 			else if (kind == "var-decl")
@@ -448,7 +465,7 @@ void Merger::ref(json& nameNode, int m, bool rename)
 		}
 		string kind = (*decls_[key->first].at(key->second).stmt)["stmt-type"];
 		// A type is identified by its module, which the .pai, read as the main's, would change.
-		if (key->first != 0 && (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def")) {
+		if (key->first != 0 && (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def")) {
 			string at = (*modules_[fromModule_])["original"].get<string>();
 			if (from_ && from_->contains("loc"))
 				at += ":" + to_string((*from_)["loc"][0].get<int>()) + ":" + to_string((*from_)["loc"][1].get<int>());
@@ -535,7 +552,14 @@ json Merger::merged()
 	const json& mainStmts = main["ast"].contains("statements") ? stmts(0) : noStmts;
 	for (auto& s : mainStmts) {
 		string kind = s.value("stmt-type", "");
-		bool isDecl = kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
+		// The .pai cannot state an internal module's types, so it cannot publish them.
+		if (kind == "import" && s.value("export", false) && s["path-type"] == "src") {
+			string at = main["original"].get<string>() + ":" + to_string(s["loc"][0].get<int>()) + ":"
+				+ to_string(s["loc"][1].get<int>());
+			throw runtime_error(at + ": error: a library cannot re-export its internal module '"
+				+ s["path"].get<string>() + "': import another main of the library as '<...>'.");
+		}
+		bool isDecl = kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias";
 		if (isDecl && s.value("export", false)) mark({0, s["name"]});
 		if (kind == "var-decl" && s.value("global", false) && s.value("export", false))
 			mark({0, s["vars"][0]["name"]});
@@ -562,13 +586,17 @@ json Merger::merged()
 	walk(funcs, 0, true);
 
 	json out = json::array();
-	// A library imported by any module stays: its archive is linked.
+	// A library imported by any module stays: its archive is linked. Only the main's
+	// `export import` publishes; an internal module's re-exports only to the main.
 	set<string> imported;
 	for (int m = 0; m < modules_.size(); m++) {
 		if (!(*modules_[m])["ast"].contains("statements")) continue;
 		for (auto& s : stmts(m)) {
 			if (s.value("stmt-type", "") != "import" || s["path-type"] == "src") continue;
-			if (imported.insert(s["path"].get<string>() + " " + s.value("alias", "")).second) out.push_back(s);
+			json imp = s;
+			imp.erase("loc");
+			if (m != 0) imp.erase("export");
+			if (imported.insert(imp.dump()).second) out.push_back(move(imp));
 		}
 	}
 	for (auto& id : cOrder_) {
@@ -598,7 +626,7 @@ json Merger::merged()
 					decl.erase("export");
 				}
 				if (!decl["vars"].empty()) out.push_back(move(decl));
-			} else if (kind == "struct-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
+			} else if (kind == "struct-def" || kind == "union-def" || kind == "opaque-def" || kind == "enum-def" || kind == "type-alias"
 			           || kind == "const-decl") {
 				Key key{m, s["name"]};
 				if (!reached_.count(key)) continue;

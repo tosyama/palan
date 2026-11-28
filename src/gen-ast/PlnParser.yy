@@ -197,8 +197,8 @@ struct BodyList {
 		return j;
 	} // LCOV_EXCL_BR_LINE
 
-	// Only a top-level cinclude is part of what a module publishes.
-	static void rejectCIncludeExport(const json& node, const string& file)
+	// Only a top-level cinclude or import is part of what a module publishes.
+	static void rejectNestedExport(const json& node, const string& file)
 	{
 		if (node.is_object() && node.value("stmt-type", "") == "cinclude") {
 			if (node.contains("export-types"))
@@ -206,8 +206,14 @@ struct BodyList {
 					PlnGenAstMessage::getMessage(E_NestedCIncludeExport)));
 			return;
 		}
+		if (node.is_object() && node.value("stmt-type", "") == "import") {
+			if (node.value("export", false))
+				throw runtime_error(PlnGenAstMessage::locatedError(file, node["loc"][0], node["loc"][1],
+					PlnGenAstMessage::getMessage(E_NestedImportExport)));
+			return;
+		}
 		if (node.is_structured())
-			for (auto& child : node) rejectCIncludeExport(child, file);
+			for (auto& child : node) rejectNestedExport(child, file);
 	}
 
 	// Defining one would let it disagree with the operator it is derived from.
@@ -299,6 +305,35 @@ struct BodyList {
 		return t;
 	} // LCOV_EXCL_BR_LINE
 
+	// `copy` stays an identifier elsewhere, as in a `for`.
+	static void requireCopyWord(const string& file, const string& word, const string& variant,
+	                            const palan::PlnParser::location_type& loc)
+	{
+		if (word != "copy")
+			throw runtime_error(PlnGenAstMessage::locatedError(file, loc.begin.line, loc.begin.column,
+				PlnGenAstMessage::getMessage(E_ExpectedIsBinding, variant, word)));
+	}
+
+	// The variable an `is` binds has the shape of a `for` loop variable.
+	static json isBinding(const string& variant, const string& name, bool borrow, bool mut,
+	                      const palan::PlnParser::location_type& loc)
+	{
+		json bind = {{"name", name}, {"borrow", borrow}}; // LCOV_EXCL_BR_LINE
+		if (borrow) bind["mutable"] = mut;
+		LOC(bind, loc); // LCOV_EXCL_BR_LINE
+		return {{"variants", json::array({variant})}, {"bind", move(bind)}}; // LCOV_EXCL_BR_LINE
+	} // LCOV_EXCL_BR_LINE
+
+	static NodeRef ifIsNode(const json& value, const PList<NodeRef>& arms, NodeRef elseBlock,
+	                        const palan::PlnParser::location_type& loc)
+	{
+		json i = {{"stmt-type", "if-is"}, {"value", value}}; // LCOV_EXCL_BR_LINE
+		LOC(i, loc); // LCOV_EXCL_BR_LINE
+		vector<std::pair<string, NodeRef>> nodes;
+		if (elseBlock) nodes.push_back({"else", elseBlock});
+		return std::make_shared<const LazyNode>(LazyNode{ move(i), move(nodes), {{"arms", arms}} }); // LCOV_EXCL_BR_LINE
+	} // LCOV_EXCL_BR_LINE
+
 	// A string key stays a literal expression, so palan-sa reads it as any other string literal.
 	static json strKeyItem(const string& bytes, const palan::PlnParser::location_type& keyLoc, const json& value,
 	                       const palan::PlnParser::location_type& begin, const palan::PlnParser::location_type& end)
@@ -358,6 +393,7 @@ struct BodyList {
 %define parse.error	verbose
 
 %token <string>	INT	"integer"
+%token <string>	HEX	"hexadecimal integer"
 %token <string>	CHAR_LIT	"character literal"
 %token <string>	UINT	"unsigned integer"
 %token <string>	FLO	"float"
@@ -376,6 +412,8 @@ struct BodyList {
 %token KW_TYPE	"type"
 %token KW_ENUM	"enum"
 %token KW_OPAQUE	"opaque"
+%token KW_UNION	"union"
+%token KW_IS	"is"
 %token KW_RELEASE	"release"
 %token KW_CONST	"const"
 %token KW_GLOBAL	"global"
@@ -442,6 +480,11 @@ struct BodyList {
 %type <json>		type_decl type_member const_decl
 %type <PList<json>>	type_members enumerators
 %type <json>	enumerator
+%type <json>	variant is_pattern bind_pattern
+%type <PList<json>>	variants
+%type <PList<string>>	arm_names
+%type <NodeRef>	is_arm
+%type <PList<NodeRef>>	is_arms
 
 // A function pointer type's return is taken greedily: `e as @func(T) -> X`
 // casts to a type returning X rather than chaining the cast into X.
@@ -449,6 +492,7 @@ struct BodyList {
 %left OPE_OR
 %left OPE_AND
 %left OPE_EQ OPE_NE
+%precedence KW_IS
 %left '<' '>' OPE_LE OPE_GE
 %left ARROW DBL_ARROW
 %left OPE_SHL OPE_SHR OPE_APPEND
@@ -468,9 +512,11 @@ module: library_decl statements
 		if (!ast["ast"].contains("functions"))
 			ast["ast"]["functions"] = json::array();
 		ast["ast"]["statements"] = LazyNode::toJsonArray($2);
-		for (auto& stmt : ast["ast"]["statements"])
-			if (stmt.value("stmt-type", "") != "cinclude") rejectCIncludeExport(stmt, lexer.inputFile);
-		rejectCIncludeExport(ast["ast"]["functions"], lexer.inputFile);
+		for (auto& stmt : ast["ast"]["statements"]) {
+			string kind = stmt.value("stmt-type", "");
+			if (kind != "cinclude" && kind != "import") rejectNestedExport(stmt, lexer.inputFile);
+		}
+		rejectNestedExport(ast["ast"]["functions"], lexer.inputFile);
 		if (isInterfaceFile(lexer.inputFile) && !ast.contains("built"))
 			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, 1, 1,
 				PlnGenAstMessage::getMessage(E_InterfaceNoVersion)));
@@ -516,6 +562,16 @@ expr_stmt: import
 	{
 		$$ = move($1);
 		$$["stmt-type"] = "import";
+		LOC($$, @$); // LCOV_EXCL_BR_LINE
+	}
+	| KW_EXPORT import
+	{
+		if ($2.contains("alias"))
+			throw runtime_error(PlnGenAstMessage::locatedError(lexer.inputFile, @$.begin.line, @$.begin.column,
+				PlnGenAstMessage::getMessage(E_ExportImportAlias)));
+		$$ = move($2);
+		$$["stmt-type"] = "import";
+		$$["export"] = true;
 		LOC($$, @$); // LCOV_EXCL_BR_LINE
 	}
 	| cinclude
@@ -617,6 +673,9 @@ expr_stmt: import
 		} else if ($1.contains("opaque")) {
 			$$ = {{"stmt-type", "opaque-def"}, {"name", $1["name"]}}; // LCOV_EXCL_BR_LINE
 			if (!$1["opaque"].is_null()) $$["contents"] = move($1["opaque"]);
+			LOC($$, @$); // LCOV_EXCL_BR_LINE
+		} else if ($1.contains("variants")) {
+			$$ = {{"stmt-type", "union-def"}, {"name", $1["name"]}, {"variants", move($1["variants"])}}; // LCOV_EXCL_BR_LINE
 			LOC($$, @$); // LCOV_EXCL_BR_LINE
 		} else if ($1.contains("enumerators")) {
 			$$ = {{"stmt-type", "enum-def"}, {"name", $1["name"]}, {"enumerators", move($1["enumerators"])}}; // LCOV_EXCL_BR_LINE
@@ -973,6 +1032,10 @@ type_decl: KW_TYPE ID '{' type_members '}'
 	{ $$ = {{"name", $2}, {"enumerators", $5.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_EXPORT KW_TYPE ID KW_ENUM '{' enumerators opt_comma '}'
 	{ $$ = {{"name", $3}, {"enumerators", $6.toVector()}, {"export", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| KW_TYPE ID KW_UNION '{' variants '}'
+	{ $$ = {{"name", $2}, {"variants", $5.toVector()}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| KW_EXPORT KW_TYPE ID KW_UNION '{' variants '}'
+	{ $$ = {{"name", $3}, {"variants", $6.toVector()}, {"export", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_TYPE ID '=' type_expr
 	{ $$ = {{"name", $2}, {"alias-of", move($4)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| KW_EXPORT KW_TYPE ID '=' type_expr
@@ -999,6 +1062,19 @@ enumerator: ID
 	{ $$ = {{"name", move($1)}, {"value", move($3)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	;
 
+// A variant's name also names the variable an `is` binds, so it is an identifier.
+variants: variant
+	{ $$ = PList<json>().push($1); }
+	| variants variant
+	{ $$ = $1.push($2); }
+	;
+
+variant: ID ';'
+	{ $$ = {{"name", move($1)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| type_expr ID ';'
+	{ $$ = {{"name", move($2)}, {"var-type", move($1)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	;
+
 opt_comma: /* empty */
 	| ','
 	;
@@ -1019,11 +1095,15 @@ type_member: type_expr field_name ';'
 	{ $$ = {{"name", move($3)}, {"var-type", move($2)}, {"init", move($5)}, {"access", fieldAccess(lexer.inputFile, $1, @1)}}; } // LCOV_EXCL_BR_LINE
 	;
 
-// 'in' is reserved for 'for', but fields, C structs' among them, are still named 'in'.
+// 'in', 'is' and 'union' are reserved, but fields, C structs' among them, are still named 'in'.
 field_name: ID
 	{ $$ = move($1); }
 	| KW_IN
 	{ $$ = "in"; } // LCOV_EXCL_BR_LINE
+	| KW_IS
+	{ $$ = "is"; } // LCOV_EXCL_BR_LINE
+	| KW_UNION
+	{ $$ = "union"; } // LCOV_EXCL_BR_LINE
 	;
 
 expression: term
@@ -1076,6 +1156,13 @@ expression: term
 	{ $$ = {{"expr-type", "logical-and"}, {"left", $1}, {"right", $3}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| expression OPE_OR expression
 	{ $$ = {{"expr-type", "logical-or"}, {"left", $1}, {"right", $3}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| expression KW_IS is_pattern
+	{
+		$$ = move($3);
+		$$["expr-type"] = "is";
+		$$["value"] = $1;
+		LOC($$, @$); // LCOV_EXCL_BR_LINE
+	}
 	| '!' expression
 	{ $$ = {{"expr-type", "logical-not"}, {"operand", $2}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| '@' store_loc %prec UNARY_MINUS
@@ -1168,6 +1255,8 @@ receive_target: expression
 
 term: INT
 	{ $$ = {{"expr-type", "lit-int"}, {"value", move($1)}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
+	| HEX
+	{ $$ = {{"expr-type", "lit-int"}, {"value", move($1)}, {"hex", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| CHAR_LIT
 	{ $$ = {{"expr-type", "lit-int"}, {"value", move($1)}, {"char", true}}; LOC($$, @$); } // LCOV_EXCL_BR_LINE
 	| UINT
@@ -1403,6 +1492,8 @@ op_func_name: '+' { $$ = "+"; }
 	| '<' { $$ = "<"; }
 	| OPE_APPEND { $$ = "<<"; }
 	| ARROW { $$ = "->"; }
+	| '[' ']' { $$ = "[]"; }
+	| ARROW '[' ']' { $$ = "->[]"; }
 	| OPE_NE { derivedCompare(lexer, @$, "!=", "=="); }
 	| '>' { derivedCompare(lexer, @$, ">", "<"); }
 	| OPE_LE { derivedCompare(lexer, @$, "<=", "<"); }
@@ -1552,6 +1643,56 @@ if_stmt: KW_IF expression block else_stmt
 		if ($4) children.push_back({"else", $4});
 		$$ = std::make_shared<const LazyNode>(LazyNode{ move(i), move(children), {} }); // LCOV_EXCL_BR_LINE
 	}
+	| KW_IF expression KW_IS '{' is_arms '}'
+	{ $$ = ifIsNode($2, $5, nullptr, @$); }
+	| KW_IF expression KW_IS '{' is_arms KW_ELSE block '}'
+	{ $$ = ifIsNode($2, $5, blockStmtNode($7), @$); }
+	;
+
+is_pattern: ID
+	{ $$ = {{"variants", json::array({$1})}}; } // LCOV_EXCL_BR_LINE
+	| bind_pattern
+	{ $$ = move($1); }
+	;
+
+bind_pattern: '@' ID
+	{ $$ = isBinding($2, $2, true, false, @$); }
+	| AT_EXCL ID
+	{ $$ = isBinding($2, $2, true, true, @$); }
+	| ID ID
+	{ requireCopyWord(lexer.inputFile, $1, $2, @1); $$ = isBinding($2, $2, false, false, @$); }
+	| '@' ID '=' ID
+	{ $$ = isBinding($4, $2, true, false, @$); }
+	| AT_EXCL ID '=' ID
+	{ $$ = isBinding($4, $2, true, true, @$); }
+	| ID ID '=' ID
+	{ requireCopyWord(lexer.inputFile, $1, $4, @1); $$ = isBinding($4, $2, false, false, @$); }
+	;
+
+is_arms: is_arm
+	{ $$ = PList<NodeRef>().push($1); }
+	| is_arms is_arm
+	{ $$ = $1.push($2); }
+	;
+
+is_arm: arm_names block
+	{
+		json arm = {{"variants", $1.toVector()}}; // LCOV_EXCL_BR_LINE
+		LOC(arm, @$); // LCOV_EXCL_BR_LINE
+		$$ = std::make_shared<const LazyNode>(LazyNode{ move(arm), {}, {{"body", $2}} }); // LCOV_EXCL_BR_LINE
+	}
+	| bind_pattern block
+	{
+		json arm = $1;
+		LOC(arm, @$); // LCOV_EXCL_BR_LINE
+		$$ = std::make_shared<const LazyNode>(LazyNode{ move(arm), {}, {{"body", $2}} }); // LCOV_EXCL_BR_LINE
+	}
+	;
+
+arm_names: ID
+	{ $$ = PList<string>().push($1); }
+	| arm_names ',' ID
+	{ $$ = $1.push($3); }
 	;
 
 else_stmt: /* empty */

@@ -1,0 +1,5 @@
+export type Cv { int64 v; };
+export func cval(@Cv c) -> int64 { return c.v; }
+export func +(@Cv a, @Cv b) -> Cv r { a.v + b.v -> r.v; }
+export func hiddenC() -> int64 { return 9; }
+export global int64 cCount = 7;

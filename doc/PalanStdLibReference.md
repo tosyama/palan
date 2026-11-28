@@ -1,6 +1,6 @@
 # Palan Standard Library Reference
 
-**Version:** v0.2.7
+**Version:** v0.2.8
 
 The standard library is the library `std`, found with the compiler: `import <std/utf8>;` needs no
 `libpath` (see [Using a Library](PalanReference.md#using-a-library) in the
@@ -12,6 +12,7 @@ known to the compiler.
 ## Modules
 
 - [std/utf8](#stdutf8) — UTF-8 text
+- [std/json](#stdjson) — JSON values, parsed and written
 
 ---
 
@@ -125,3 +126,87 @@ The clusters are the extended grapheme clusters of UAX #29 in Unicode 18.0.0. Ea
 its own, with `s`'s mode and `hadInvalid` as `slice` gives; `i` counts the clusters from 0. An invalid
 part is a cluster of its own. `graphemes` borrows `s`, so what it returns must not outlive `s` or be
 used after `s` is changed. Positions (`find`, `slice` and the others) count code points, not clusters.
+
+---
+
+## std/json
+
+```palan
+cinclude <stdio.h>;
+import <std/json>;
+
+json j = {"name": "palan", "tags": [1, 2.5]};
+if j["name"] is @s { printf("%s\n", s -> cstr()); }     // palan
+printf("%g\n", num(@j["tags"][1]));                       // 2.5
+true -> j["ok"];
+[json.Null, {"k": "v"}] -> j["more"];
+"lang" -> j["tags"][0];
+printf("%s\n", toUtf8(@j) -> cstr());
+// {"name":"palan","tags":["lang",2.5],"ok":true,"more":[null,{"k":"v"}]}
+
+jsonresult r = parseJson("{\"n\": [1, 2]}");
+if r is @err = error { printf("%s at %ld:%ld\n", err.message -> cstr(), err.line, err.col); }
+json p;
+if r is value { r.value ->> p; }
+printf("%s\n", toUtf8(@p) -> cstr());                    // {"n":[1,2]}
+```
+
+`json` is a [union](PalanReference.md#tagged-unions) of a JSON value's kinds. A declared `json` is `Null`.
+std/json [re-exports](PalanReference.md#re-exporting) [std/utf8](#stdutf8), so its text is used without
+importing that too.
+
+```palan
+export type json union { Null; bool b; int64 i; flo64 f; utf8 s; [+]json items; [""]json members; };
+```
+
+It is read with `is` and `j.i` as any union is (`if j is copy i { }`, `if j is { ... }`), and indexed:
+`j["k"]` is a value of `members`, `j[n]` of `items` (a borrow of it, as an array element is). The key
+is what a dictionary's is.
+
+| `j[k]` | Does |
+|--------|------|
+| read, `@!j[k]`, `x -> j[k].i` | the value; another kind, a missing key or a position out of range stops the program |
+| `x -> j["k"]` (and `->>`) | adds `k` or replaces its value in `members`; a `Null` becomes `members` first |
+| `x -> j[n]` (and `->>`) | replaces an element of `items`; it does not add one, which `j.items.push(x)` does |
+
+The checks are made in a release build too. As a dictionary's, a borrow of a value (`@!j["k"]`)
+must not be kept across adding a key.
+
+A literal converts to a `json` wherever one is expected: `true`, a number, a string, an array or
+dictionary literal (`json j = [1, "a", {"b": false}];`), its elements converted the same way.
+`json.Null` is null. A variable converts by calling `json` (`json(n)`), or by naming the kind
+(`json.i(n)`, `json.items(v>>)`).
+
+| Function | Meaning |
+|----------|---------|
+| `json(x)` | `x` as a `json`: `bool`, `int64`, `flo64`, `@[]uint8` and `@utf8` copied, `[+]json` and `[""]json` moved in |
+| `parseJson(@utf8 s, int64 maxDepth = 512) -> jsonresult` | `s` parsed, or why it is not JSON |
+| `toUtf8(@json j, int32 indent = 0) -> utf8` | `j` as JSON text: on one line, or with each element on its own line indented by `indent` spaces |
+| `s << j` | adds `toUtf8(j)` to the `utf8` `s` and gives `s` back |
+| `num(@json j) -> flo64` | an `i` or an `f` as a `flo64`; another kind stops the program |
+| `p == q`, `p != q` | the same kind and contents; an `i` and an `f` are equal when they are the same number exactly, `members` in any order |
+
+```palan
+export type jsonresult union { json value; jsonerror error; };
+export type jsonerror { utf8 message; int64 pos; int64 line; int64 col; };
+```
+
+`pos` counts characters from 0, `line` and `col` from 1.
+
+### Parsing
+
+The text is JSON as RFC 8259 defines it, with nothing added but a leading BOM, which is skipped.
+
+- A number without a fraction or exponent that fits `int64` is an `i`; any other number, and `-0`,
+  an `f`. A number beyond `flo64`'s range is an error.
+- `\u0000`, a surrogate without its pair, and bytes that are not UTF-8 are errors.
+- A repeated key takes the last value, kept at the first's place.
+- Arrays and objects nested deeper than `maxDepth` are an error.
+
+### Writing
+
+Keys are written in the order they were added, and a string escapes only `"`, `\` and the control
+characters; bytes that are not UTF-8 are written as U+FFFD. An `f` is written in the fewest digits
+that read back as the same value, as JavaScript writes numbers, with `.0` when it is whole
+(`100.0`, `1e+21`, `1.5e-7`). An `f` that is NaN or infinite stops the program. Neither parsing nor
+writing depends on the C locale.

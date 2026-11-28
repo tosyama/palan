@@ -44,6 +44,13 @@ cexport func __pln_negative_size()
 	fail("runtime error: negative array size\n", 35);
 }
 
+// A union's tag is its first 4 bytes.
+cexport func __pln_variant(@!void p, uint32 k) -> @!void q
+{
+	if (p as @uint32)[0] != k { fail("runtime error: a union read as a variant it does not hold\n", 58); }
+	p -> q;
+}
+
 // A dictionary's header, in 8-byte words. Its keys are entries {hash, key} in
 // the order they were added; a removed one keeps its place with a NULL key, and
 // so does its position in the table, which lookups probe past. The table holds

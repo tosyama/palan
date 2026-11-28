@@ -672,7 +672,6 @@ TEST(sa_error, dict)
 		{"error_1208_dict_borrow_field_write.pa", ":2:17: error: cannot write through read-only pointer '@T'"},
 		{"error_1209_borrow_field_len_addr.pa", ":2:36: error: 'a' is already a borrow"},
 		{"error_1210_borrow_field_lit_shape.pa", ":2:34: error: array shape '[4]int32' does not match the borrowed array type '@[3]int32'."},
-		{"error_1211_borrow_field_cycle.pa", ":2:1: error: type 'A' depends on itself: A -> B -> A."},
 		{"error_1212_c_arr_ptr_field.pa", ":2:39: error: cannot access field 'rows' of 'CA': its type uses 'array'"},
 		{"error_1213_c_arr_ptr_slots.pa", ":2:33: error: cannot access field 'slots' of 'CA': its type uses 'array'"},
 		{"error_1228_varr_elems_owner.pa", "error: array shape '@![+]@P' does not match '[+]P'"},
@@ -783,15 +782,12 @@ TEST(sa_error, row_layout_mismatch) {
 TEST(sa_error, type_self_cycle) {
 	const vector<pair<string, string>> cases = {
 		{"error_1296_self_owned_field.pa", "error: type 'P' depends on itself: P -> P."},
-		{"error_1297_self_borrow_varr.pa", "error: type 'P' depends on itself: P -> P."},
-		{"error_1298_self_borrow_dict.pa", "error: type 'P' depends on itself: P -> P."},
 		{"error_1299_self_sig_value.pa", "error: type 'P' depends on itself: P -> P."},
 		{"error_1300_self_sig_borrow.pa", "error: type 'P' depends on itself: P -> P."},
-		{"error_1301_self_row_borrow.pa", "error: type 'P' depends on itself: P -> P."},
 		{"error_1302_self_alias.pa", "error: type 'X' depends on itself: X -> X."},
 		{"error_1303_self_sig_alias.pa", "error: type 'F' depends on itself: F -> F."},
 		{"error_1304_self_const.pa", "error: type 'N' depends on itself: N -> N."},
-		{"error_1305_self_local.pa", "error: type 'L' depends on itself: L -> L."},
+		{"error_1375_self_local.pa", "error: type 'L' depends on itself: L -> L."},
 		{"error_1306_ptr_elem_unknown.pa", "error: unknown type 'Z'."},
 		{"error_1307_sig_ptr_unknown.pa", "error: unknown type 'Z'."},
 		{"error_1308_self_embed_borrow.pa", "error: struct 'P' recursively contains itself."},
@@ -866,6 +862,44 @@ TEST(sa_error, dict_elem_mismatch) {
 		{"error_1338_dict_return_as_varr.pa", ":2:5: error: cannot copy '@[\"\"]int32' into '[+]int32'"},
 		{"error_1339_dict_lit_varr_field.pa", ":2:11: error: a '{name: value}' literal can only be used as"},
 		{"error_1340_overload_func_no_func_type.pa", ":3:11: error: 'f' names f(int32), f(flo64); it must be given where a function pointer type chooses one."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+TEST(sa_error, str_lit_bytes) {
+	const vector<pair<string, string>> cases = {
+		{"error_1429_str_lit_too_long.pa", ":1:14: error: array 'a' has size 4 but the string has 5 bytes."},
+		{"error_1430_str_lit_assign_too_long.pa", ":2:1: error: array 'a' has size 4 but the string has 5 bytes."},
+		{"error_1431_str_lit_field_too_long.pa", ":2:8: error: array 'n' has size 2 but the string has 3 bytes."},
+		{"error_1432_str_lit_field_assign_too_long.pa", ":3:1: error: array 'n' has size 2 but the string has 3 bytes."},
+		{"error_1433_str_lit_row_too_long.pa", ":1:24: error: array 'g' has size 3 but the string has 4 bytes."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}
+
+// A string's bytes are read-only, so it cannot be given where they could be written.
+TEST(sa_error, str_lit_read_only) {
+	const vector<pair<string, string>> cases = {
+		{"error_1434_str_lit_to_mutable_arg.pa", ":2:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1435_str_const_to_mutable_arg.pa", ":3:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1436_str_lit_mutable_init.pa", ":1:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1437_str_lit_mutable_rebind.pa", ":3:1: error: cannot bind a read-only pointer '@T' to a mutable pointer '@!T'."},
+		{"error_1438_str_lit_non_const_c_param.pa", ":2:1: error: cannot pass read-only pointer '@T' to non-const parameter '__s' of C function 'strtok'"},
+		{"error_1439_str_const_as_struct.pa", ":3:10: error: cannot cast to 'text'"},
 	};
 	for (auto& [file, expected] : cases) {
 		cleanTestEnv();

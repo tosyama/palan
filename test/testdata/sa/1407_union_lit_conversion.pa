@@ -1,0 +1,7 @@
+type J union { Null; bool b; int64 i; [+]J items; };
+func J(bool v) -> J { return J.b(v); }
+func J(int64 v) -> J { return J.i(v); }
+func J(@[]uint8 cs) -> J { return J.i(0); }
+func J([+]J v) -> J { return J.items(v>>); }
+J a = true;
+J b = [1, [2]];

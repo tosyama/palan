@@ -1023,6 +1023,32 @@ TEST(sa_error, func_ptr)
 	}
 }
 
+// Storage of the function's own, reached through owners alone.
+TEST(sa_error, return_own_borrow)
+{
+	const pair<string, string> cases[] = {
+		{"error_1350_return_own_struct.pa", ":3:23: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1351_return_own_field_elem.pa", ":3:28: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1352_return_own_frame_embed.pa", ":3:24: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1353_return_own_dict_elem.pa", ":3:23: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1354_return_own_prim.pa", ":3:35: error: a borrow of the storage of 'a' cannot be returned; it ends with the function."},
+		{"error_1355_return_own_param.pa", ":3:21: error: a borrow of the storage of 'p' cannot be returned; it ends with the function."},
+		{"error_1356_return_own_cast.pa", ":3:26: error: a borrow of the storage of 'l' cannot be returned; it ends with the function."},
+		{"error_1357_return_own_varr_elem.pa", ":3:26: error: a borrow of the storage of 'v' cannot be returned; it ends with the function."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+	cleanTestEnv();
+	ASSERT_EQ(execTestCommand("palan-gen-ast ../test/testdata/sa/1358_return_reached_borrow.pa -o out/test.ast.json"), "");
+	ASSERT_EQ(execTestCommand("palan-sa out/test.ast.json -o out/test.sa.json"), "");
+}
+
 TEST(sa_error, frame_var)
 {
 	const pair<string, string> cases[] = {
@@ -1070,19 +1096,19 @@ TEST(sa_error, expr_rooted_access)
 
 TEST(sa_error, literal_conversion)
 {
-	const string noCopy = "error: cannot copy '[?]uint8' into 'text'";
+	const string noCopy = "error: cannot copy '@uint8' into 'text'";
 	const string borrowed = "error: a literal converted to 'text' is a temporary value with no owner to borrow from";
 	const pair<string, string> cases[] = {
 		{"error_987_literal_no_conversion.pa", ":2:1: " + noCopy},
 		{"error_988_literal_conversion_needs_args.pa", ":3:1: " + noCopy},
 		{"error_989_literal_conversion_ambiguous.pa", ":4:10: error: Ambiguous function call 'text': it can mean text(@[]uint8), text(@[]uint8, int32 = 0)."},
-		{"error_990_literal_to_writable.pa", ":4:1: error: cannot convert '[?]uint8' to '@!text'."},
+		{"error_990_literal_to_writable.pa", ":4:1: error: cannot convert '@uint8' to '@!text'."},
 		{"error_991_literal_as_struct.pa", ":3:10: error: cannot cast to 'text'"},
 		{"error_992_literal_borrowed_var.pa", ":3:11: " + borrowed},
 		{"error_995_literal_borrowed_return.pa", ":3:28: " + borrowed},
 		{"error_996_literal_borrowed_assign.pa", ":5:1: " + borrowed},
 		{"error_993_literal_conversion_overloads.pa", ":7:1: error: Ambiguous function call 'f': it can mean f(@other), f(@text)."},
-		{"error_994_literal_no_conversion_arg.pa", ":8:1: error: cannot convert '[?]uint8' to '@text'."},
+		{"error_994_literal_no_conversion_arg.pa", ":8:1: error: cannot convert '@uint8' to '@text'."},
 		{"error_1092_numeric_no_conversion.pa", ":2:1: error: cannot copy 'int64' into 'big'"},
 		{"error_1093_numeric_conversion_ambiguous.pa", ":4:9: error: Ambiguous function call 'big': it can mean big(int32), big(int16)."},
 		{"error_1094_numeric_borrowed_var.pa", ":3:10: error: a literal converted to 'big' is a temporary value"},
@@ -1224,6 +1250,8 @@ TEST(sa_error, opaque_type)
 		 "its contents is given by a move: '<<=', '->>', '>>' or 'return'."},
 		{"error_1065_opaque_held_copy.pa", ":4:1: error: 'W' holds an opaque value, and copying one held in "
 		 "another value is not supported in this version."},
+		// Held by a struct laid out in place.
+		{"error_1441_opaque_held_in_place_copy.pa", ":5:1: error: 'V' holds an opaque value"},
 		{"error_1066_release_sig.pa", ":3:1: error: a 'release' function takes one owned opaque type of its "
 		 "module and returns nothing."},
 		{"error_1067_release_place.pa", ":2:1: error: a 'release' function is defined at the top level of the "

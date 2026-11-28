@@ -1,0 +1,6 @@
+type U union { Null; int64 i; };
+type H { @U p; };
+func mk() -> U { return U.i(1); }
+func wrap(@U x) -> H r { @x -> r.p; }
+func get(H k) -> @U { return k.p; }
+if get(wrap(@mk())) is copy i { }

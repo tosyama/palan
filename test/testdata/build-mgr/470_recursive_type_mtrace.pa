@@ -1,0 +1,82 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+type J { int32 v = 7; [+]J items; [""]J members; };
+type Dir { int32 id; [+]File files; };
+type File { int32 size; Dir sub; };
+type L = [+]Al;
+type Al { int32 v; L next; };
+type N { int32 v; [+][+]N deep; [+][2]N pairs; [2][+]N two; $[+]N here; };
+type E { int32 v; [+]E es = []; [+]Q qs = [{w: 3}, {w: 4}]; };
+type Q { int32 w; [""]E by = {}; };
+type C { int32 v; [+]C items; };
+func ->(@C src, @!C dst) {
+	src.v + 100 -> dst.v;
+	src.items -> dst.items;
+}
+func leaf(int32 v) -> J j { v -> j.v; }
+func sum(@J j) -> int32 {
+	int32 s = j.v;
+	for @c in j.items { s + sum(@c) -> s; }
+	return s;
+}
+func f() {
+	J root;
+	J a = leaf(1);
+	root.items.push(a>>);
+	root.items.push(leaf(2));
+	root.items[0].items.push(leaf(3));
+	leaf(4) -> root.members["x"];
+	printf("%d %d %ld\n", sum(@root), root.members["x"].v, len(@root.items));
+	J copy = root;
+	50 -> copy.items[0].items[0].v;
+	printf("%d %d\n", root.items[0].items[0].v, copy.items[0].items[0].v);
+	J last = copy.items.pop();
+	printf("%d %ld\n", last.v, len(@copy.items));
+	J moved <<= root;
+	printf("%d\n", sum(@moved));
+	J d;
+	printf("%d\n", d.v);
+	J lit = {v: 1, items: [{v: 2, items: [], members: {}}], members: {"k": {v: 3, items: [], members: {}}}};
+	printf("%d %d\n", sum(@lit), lit.members["k"].v);
+	Dir dir;
+	File file;
+	9 -> file.size;
+	5 -> file.sub.id;
+	dir.files.push(file);
+	dir.files[0].sub.files.push(file);
+	printf("%d %d\n", dir.files[0].sub.files[0].size, dir.files[0].sub.id);
+	Al l; Al m;
+	3 -> m.v;
+	l.next.push(m);
+	printf("%d\n", l.next[0].v);
+	N n; N k;
+	8 -> k.v;
+	[+]N row;
+	row.push(k);
+	n.deep.push(row);
+	[2]N pair;
+	6 -> pair[1].v;
+	n.pairs.push(pair);
+	n.two[1].push(k);
+	n.here.push(k);
+	N nc = n;
+	printf("%d %d %d %d\n", nc.deep[0][0].v, nc.pairs[0][1].v, nc.two[1][0].v, nc.here[0].v);
+	C c; C ci;
+	2 -> c.v;
+	1 -> ci.v;
+	c.items.push(ci);
+	C cc;
+	c -> cc;
+	printf("%d %d\n", cc.v, cc.items[0].v);
+	E e; E ei;
+	e.es.push(ei);
+	e -> e.qs[0].by["e"];
+	printf("%d %d\n", e.es[0].qs[1].w, e.qs[0].by["e"].qs[0].w);
+	type B { int32 v; [+]B bs; };
+	B b; B bi;
+	4 -> bi.v;
+	b.bs.push(bi);
+	printf("%d\n", b.bs[0].v);
+}
+mtrace();
+f();

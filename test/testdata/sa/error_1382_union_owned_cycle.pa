@@ -1,0 +1,2 @@
+type U union { V v; Null; };
+type V union { U u; int32 n; };

@@ -1,0 +1,5 @@
+cinclude <stdio.h>;
+type json union { Null; bool b; int64 i; };
+json j;
+true -> j.b;
+if j.b { printf("%d\n", j.i); }

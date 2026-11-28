@@ -202,10 +202,23 @@ ArgFit PlnSemanticAnalyzer::typeFit(const json& argVT, const json& paramVT)
 	}
 }
 
+// Whether sa_struct_lit accepts the literal for a struct parameter: an array
+// literal only with a value for each field, none hidden from here.
+bool PlnSemanticAnalyzer::structLitFits(const json& lit, const json& paramVT)
+{
+	if (lit["expr-type"] != "arr-lit") return true;
+	auto it = structDefs_.find(paramVT["base-type"]["type-name"].get<string>());
+	if (it == structDefs_.end()) return true;
+	const StructDef& def = it->second;
+	if (def.isTagged || lit["items"].size() != def.fields.size()) return false;
+	bool hidden = any_of(def.fields.begin(), def.fields.end(), [](const FieldLayout& f) { return !f.access.empty(); });
+	return !(hidden && outsideTypeModule(def.name));
+}
+
 // How an argument fits a parameter. A pending argument is judged by what it
 // can become once the parameter is known: a literal fits any primitive and is
-// exact only for its default type, an aggregate literal fits any pointer or
-// struct it can be read as and is never exact, and a function name is exact when one of its
+// exact only for its default type, an aggregate literal fits a parameter it
+// can be made into and is never exact, and a function name is exact when one of its
 // functions has the parameter's type.
 ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t argIdx,
                                    bool isCFunc, const string& funcName)
@@ -221,7 +234,7 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 	if (!arg.pending) return fitOf(arg.ast, arg.sa);
 	if (isAggregateLitArg(arg.ast)) {
 		// `{x: 1}` is read as a dictionary only when x is a string constant, and
-		// a string key only as a dictionary.
+		// a string key only as a dictionary; otherwise as a struct.
 		const json& lit = isAggregateLit(arg.ast) ? arg.ast : arg.ast["object"];
 		const json& items = lit["items"];
 		bool dictLit = lit["expr-type"] == "dict-lit";
@@ -231,9 +244,16 @@ ArgFit PlnSemanticAnalyzer::argFit(const CallArg& arg, const json& param, size_t
 		}; // LCOV_EXCL_BR_LINE
 		if (isDictPntr(paramVT))
 			return dictLit && all_of(items.begin(), items.end(), constKey) ? ArgFit::Viable : ArgFit::None;
-		if (dictLit && any_of(items.begin(), items.end(), [](const json& item) { return item.contains("key"); }))
+		if (dictLit && (!isStructPntr(paramVT)
+		                || any_of(items.begin(), items.end(), [](const json& item) { return item.contains("key"); })))
 			return ArgFit::None;
-		return paramVT.value("type-kind", "") == "pntr" || isStructStorage(paramVT) ? ArgFit::Viable : ArgFit::None; // LCOV_EXCL_BR_LINE
+		// What sa_lit_arg and ownedBlockArg make the literal into: a struct, a
+		// sized array or a block the callee owns, never an unsized borrow.
+		// A borrowed parameter takes it only as '@[..]', an owned one only bare.
+		bool takes = !isCFunc && (isStructPntr(paramVT) || paramVT.contains("arr-size") || isOwnedBlock(paramVT))
+		             && (arg.ast.value("expr-type", "") == "addr-of") != isOwnedBlock(paramVT)
+		             && (!isStructPntr(paramVT) || structLitFits(lit, paramVT));
+		return takes ? ArgFit::Viable : ArgFit::None;
 	}
 	if (namesOverloadedFunc(arg.ast)) {
 		bool fits = isFuncPtr(paramVT) && !funcsOfType(arg.ast["name"].get<string>(), paramVT).empty();
@@ -477,6 +497,84 @@ json PlnSemanticAnalyzer::sa_operator_call(const json& expr, const string& op,
 	return makeCallNode(call, callee, op, &args);
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
+// The '[]' or '->[]' functions whose container is the struct or union
+// `structVT` points to. A type with any of them is indexed only through them:
+// falling back to a pointer's subscript where none fits would read past it.
+vector<Callee> PlnSemanticAnalyzer::subscriptCallees(const string& op, const json& structVT) const
+{
+	size_t at = op == "[]" ? 0 : 1;
+	vector<Callee> fit;
+	for (auto& c : findCallees(op)) {
+		const json& params = (*c.def)["parameters"];
+		if (params.size() > at && isStructBorrow(params[at]["var-type"])
+		    && params[at]["var-type"]["base-type"] == structVT["base-type"])
+			fit.push_back(c);
+	}
+	return fit;
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// `t[k]` through the '[]' functions in `all`: those taking '@!T' where the
+// element is written or borrowed '@!', those taking '@T' elsewhere, so that a
+// read never needs t writable. t, already analyzed, is given as a borrow; k as
+// an operand is.
+// t, already analyzed, as the borrow a '[]' or '->[]' function takes.
+CallArg PlnSemanticAnalyzer::subscriptContainer(const json& locNode, const json& ast, json saBase, bool forWrite)
+{
+	const json& vt = saBase["value-type"];
+	if (forWrite && isStructBorrow(vt) && !vt["mutable"].get<bool>()) {
+		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_WriteThroughReadOnlyPtr) << endl;
+		exit(1);
+	}
+	// The function may change any of t, as one given `@!t` may.
+	if (forWrite) checkRangeChange(locNode, ast, RangeChange::Borrow);
+	json recv = ast;
+	if (isStructStorage(vt)) {
+		saBase["value-type"]["mutable"] = forWrite;
+		recv = {{"expr-type","addr-of"},{"object",move(recv)},{"mutable",forWrite}}; // LCOV_EXCL_BR_LINE
+	}
+	return CallArg{move(recv), false, move(saBase)};
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+json PlnSemanticAnalyzer::sa_subscript_call(const json& expr, json saBase, const vector<Callee>& all, bool forWrite)
+{
+	vector<CallArg> args;
+	args.push_back(subscriptContainer(expr, expr["array"], move(saBase), forWrite));
+	for (auto& a : analyzeCallArgs(json::array({chainedValue(keyByName(expr["index"]))}))) args.push_back(move(a));
+	json call = {{"expr-type","call"},{"name","[]"},{"args",json::array()}}; // LCOV_EXCL_BR_LINE
+	if (expr.contains("loc")) call["loc"] = expr["loc"];
+	vector<Callee> cands;
+	for (auto& c : all)
+		if (firstParamMutable(*c.def) == forWrite) cands.push_back(c);
+	if (cands.empty()) {
+		cerr << locPrefix(expr) << PlnSaMessage::getMessage(E_NoOperatorFunc, "[]", argTypesText(args)) << endl;
+		exit(1);
+	}
+	Callee callee = selectCallee(call, "[]", cands, args);
+	return makeCallNode(call, callee, "[]", &args);
+} // LCOV_EXCL_LINE -- only exception cleanup is attributed here
+
+// `x -> t[k]` of a type defining '->[]': the call `->[](x, @!t, k)`, whose
+// arguments are evaluated in order, so x before k. A type with any '->[]'
+// stores only through them: which one fits depends on x, and analyzing x to
+// find out, then again for '[]', would evaluate its calls twice.
+json PlnSemanticAnalyzer::sa_subscript_put_stmt(const json& stmt, json saBase, const vector<Callee>& puts)
+{
+	// LCOV_EXCL_BR_START
+	const json& target = stmt["target"];
+	json loc = stmt.value("loc", json::array());
+	json value = stmt["value"];
+	if (stmt.value("ownership-transfer", false))
+		value = {{"expr-type","transfer"},{"value",move(value)},{"loc",loc}};
+	vector<CallArg> args = analyzeCallArgs(json::array({move(value)}));
+	args.push_back(subscriptContainer(stmt, target["array"], move(saBase), true));
+	for (auto& a : analyzeCallArgs(json::array({chainedValue(keyByName(target["index"]))}))) args.push_back(move(a));
+	json call = {{"expr-type","call"},{"name","->[]"},{"args",json::array()},{"loc",loc}};
+	Callee callee = selectCallee(stmt, "->[]", puts, args);
+	json exprStmt = {{"stmt-type","expr"},{"loc",loc}};
+	return discardedValueStmt(exprStmt, makeCallNode(call, callee, "->[]", &args));
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
 // `s << x`: a call of the '<<' functions, given the left operand as a
 // method-form receiver is, or a '@!T' a call returns, so that `s << a << b`
 // chains. The left operand is analyzed once here: analyzing a nested '<<'
@@ -692,6 +790,11 @@ json PlnSemanticAnalyzer::makeCallNode(const json& expr, const Callee& callee, c
 	sa_expr.erase("method");
 	sa_expr.erase("method-form");
 	sa_expr.erase("multi-ret");
+	if (expr.contains("multi-ret")) {
+		json types = json::array();
+		for (auto& r : def["rets"]) types.push_back(r["var-type"]);
+		sa_expr["value-types"] = move(types);
+	}
 	if (callee.isC) {
 		requireSupportedCFuncSig(def, writtenName, expr);
 		sa_expr["func-type"] = "c";
@@ -913,21 +1016,25 @@ vector<Callee> PlnSemanticAnalyzer::forProtocolCallees(const string& name, const
 } // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 
 // What a literal conversion converts `ast` to: the literal it folds to, unless
-// that literal has a type of its own (a bool, a character, a C constant), or
-// null when it folds to none.
-json PlnSemanticAnalyzer::convertibleLiteral(const json& ast)
+// that literal has a type of its own other than bool (a character, a C
+// constant), or null when it folds to none. An array or dictionary literal
+// converts only to a union: a struct already reads one as its fields.
+json PlnSemanticAnalyzer::convertibleLiteral(const json& ast, bool toUnion)
 {
+	if (isAggregateLit(ast)) return toUnion ? ast : json();
 	json lit = foldConstExpr(ast);
 	string et = lit.value("expr-type", "");
 	if (et == "lit-str" || et == "lit-uint" || et == "lit-flo") return lit;
-	if (et == "lit-int" && !lit.contains("value-type") && !lit.contains("char")) return lit;
+	if (et == "lit-int" && !lit.contains("char")
+	    && (!lit.contains("value-type") || lit["value-type"] == boolType())) return lit;
 	return json();
 }
 
 // The functions converting the literal `lit` to the struct `structVT` points
 // to: those visible by the type's name, under any alias since a conversion is
 // never written qualified, returning the struct and callable with the literal
-// alone.
+// alone. `true` converts only by a function taking bool, as a bool widens to
+// any number.
 vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT, const json& lit)
 {
 	const json& structType = structVT["base-type"];
@@ -935,9 +1042,14 @@ vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT, con
 	vector<Callee> found = findCalleesUnderAnyAlias(name);
 
 	// As analyzeCallArgs gives the literal: a number waits for the parameter's type.
-	bool isStr = lit["expr-type"] == "lit-str";
-	vector<CallArg> litArgs{isStr ? CallArg{lit, false, {{"expr-type", "lit-str"}, {"value-type", strLitType()}}} // LCOV_EXCL_BR_LINE
-	                              : CallArg{lit, true, json(), false, literalDefaultType(lit)}}; // LCOV_EXCL_BR_LINE
+	string et = lit["expr-type"];
+	bool isBool = et == "lit-int" && lit.contains("value-type");
+	// LCOV_EXCL_BR_START
+	CallArg litArg = et == "lit-str" ? CallArg{lit, false, {{"expr-type", "lit-str"}, {"value-type", strLitType()}}}
+	               : isBool ? CallArg{lit, false, lit}
+	               : isAggregateLit(lit) ? CallArg{lit, true}
+	               : CallArg{lit, true, json(), false, literalDefaultType(lit)};
+	// LCOV_EXCL_BR_STOP
 	vector<Callee> convs;
 	set<string> seen;
 	for (auto& c : found) {
@@ -950,8 +1062,9 @@ vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT, con
 		const json* variadic = palanVariadicParam(params);
 		size_t fixedCount = params.size() - (variadic ? 1 : 0);
 		if (requiredArgCount(params, fixedCount) > 1) continue;
-		const json& first = fixedCount ? params[0] : variadicElemParam(*variadic);
-		if (argFit(litArgs[0], first, 0, c.isC, name) == ArgFit::None) continue;
+		const json first = fixedCount ? params[0] : variadicElemParam(*variadic);
+		if (isBool && first["var-type"] != boolType()) continue;
+		if (argFit(litArg, first, 0, c.isC, name) == ArgFit::None) continue;
 		if (seen.insert(calleeKey(def, c.isC)).second) convs.push_back(c); // LCOV_EXCL_BR_LINE
 	}
 	return convs;
@@ -963,7 +1076,7 @@ vector<Callee> PlnSemanticAnalyzer::literalConversions(const json& structVT, con
 json PlnSemanticAnalyzer::literalConversion(const json& ast, const json& toVT)
 {
 	if (!isStructPntr(toVT) || toVT.value("mutable", false)) return ast; // LCOV_EXCL_BR_LINE
-	json lit = convertibleLiteral(ast);
+	json lit = convertibleLiteral(ast, isUnionPntr(toVT));
 	if (lit.is_null()) return ast;
 	json storage = toVT;
 	storage.erase("mutable");
@@ -980,6 +1093,15 @@ json PlnSemanticAnalyzer::literalConversion(const json& ast, const json& toVT)
 	return borrow;
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
+
+// Whether `vt` is a union or a borrow of one: what an array or dictionary
+// literal converts to rather than being read as its fields.
+bool PlnSemanticAnalyzer::isUnionPntr(const json& vt) const
+{
+	if (!isStructPntr(vt)) return false;
+	auto def = structDefs_.find(vt["base-type"]["type-name"].get<string>());
+	return def != structDefs_.end() && def->second.isTagged;
+}
 
 json PlnSemanticAnalyzer::sa_expr_call(const json& expr)
 {
@@ -1883,7 +2005,8 @@ json PlnSemanticAnalyzer::sa_expr_member_call(const json& expr)
 	return makeCall(expr, usableCallees(expr, cands), method);
 } // LCOV_EXCL_BR_LINE
 
-const json& PlnSemanticAnalyzer::findMultiRetFunc(const json& stmt, const json& callExpr, size_t recvCount)
+// The errors of a call receiving recvCount values that no candidate can return.
+void PlnSemanticAnalyzer::checkMultiRetCall(const json& stmt, const json& callExpr, size_t recvCount)
 {
 	vector<Callee> cands;
 	string fname;
@@ -1900,32 +2023,15 @@ const json& PlnSemanticAnalyzer::findMultiRetFunc(const json& stmt, const json& 
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleUndefinedFunction, fname) << endl;
 		exit(1);
 	}
-	const json* pFunc = cands[0].def;
-	if (cands.size() > 1) {
-		// The receivers are declared before the arguments choose a function, so
-		// those returning recvCount values must agree on what they return.
-		vector<Callee> multi;
-		for (auto& c : cands)
-			if ((*c.def).value("rets", json::array()).size() == recvCount) multi.push_back(c);
-		if (!multi.empty()) {
-			pFunc = multi[0].def;
-			for (auto& c : multi)
-				if ((*c.def)["rets"] != (*pFunc)["rets"]) {
-					cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_AmbiguousCall,
-						fname, calleesText(fname, multi)) << endl;
-					exit(1);
-				}
-		}
-	}
-	if (!pFunc->contains("rets") || (*pFunc)["rets"].size() < 2) {
+	for (auto& c : cands)
+		if ((*c.def).value("rets", json::array()).size() == recvCount) return;
+	const json& def = *cands[0].def;
+	if (!def.contains("rets") || def["rets"].size() < 2) {
 		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleNeedsMultiRet, fname) << endl;
 		exit(1);
 	}
-	if (recvCount != (*pFunc)["rets"].size()) {
-		cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleVarCountMismatch, fname) << endl;
-		exit(1);
-	}
-	return *pFunc;
+	cerr << locPrefix(stmt) << PlnSaMessage::getMessage(E_TupleVarCountMismatch, fname) << endl;
+	exit(1);
 }
 
 // The call whose return values a multiple-return declaration or assignment

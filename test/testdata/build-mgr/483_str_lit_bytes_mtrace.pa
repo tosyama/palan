@@ -1,0 +1,49 @@
+cinclude <stdio.h>;
+cinclude <mcheck.h>;
+const S = "hi";
+type T { [6]uint8 n; int32 k; };
+type U union { Null; [+]uint8 s; int64 i; };
+// A string given to a union still converts by a function: only a uint8 array takes its bytes.
+func U(@[]uint8 cs) -> U { return U.i(99); }
+global [8]uint8 gl = "glob" for show;
+func show() { printf("%s %d\n", gl, gl[7]); }
+
+mtrace();
+{
+	// With the NUL, without it at the string's length, and zeros after it.
+	[6]uint8 a = "hello";
+	[5]uint8 b = "hello";
+	[8]uint8 c = "abc";
+	[]uint8 d = "xyz";
+	[+]uint8 e = "plus";
+	[]uint8 f = S;
+	[2][6]uint8 g = ["hi", "hello"];
+	printf("%s %d %c%c %d %s %d %d\n", a, len(@a), b[0], b[4], len(@b), c, c[7], len(@c));
+	printf("%s %ld %s %ld %s %s\n", d, len(@d), e, len(@e), f, g[1]);
+
+	"bye" -> a;
+	"wxyz" -> c;
+	"abcdef" -> e;
+	"row" -> g[0];
+	printf("%s %s %s %ld %s\n", a, c, e, len(@e), g[0]);
+
+	T t = ["named", 3];
+	[]T ts = [{n: "one", k: 1}];
+	"field" -> t.n;
+	printf("%s %d %s\n", t.n, t.k, ts[0].n);
+
+	[""][+]uint8 m = {"k": "val"};
+	"other" -> m["j"];
+	printf("%s %s\n", m["k"], m["j"]);
+
+	[]uint8 esc = "\x80\u{E9}\0z";
+	printf("%ld %d %d %d %d %d\n", len(@esc), esc[0], esc[1], esc[2], esc[3], esc[4]);
+	[0x6]uint8 h = "hex";
+	printf("%s %d\n", h, len(@h));
+	U u;
+	"uni" -> u.s;
+	if u is @s { printf("%s %ld\n", s, len(@s)); }
+	U w = "conv";
+	if w is copy i { printf("%ld\n", i); }
+	show();
+}

@@ -452,7 +452,7 @@ const std::map<std::string, std::string>& operatorFuncNames()
     // function name starts with a digit.
     static const std::map<std::string, std::string> names = {
         {"+", "0add"}, {"-", "0sub"}, {"*", "0mul"}, {"/", "0div"}, {"%", "0mod"},
-        {"==", "0eq"}, {"<", "0lt"}, {"<<", "0app"},
+        {"==", "0eq"}, {"<", "0lt"}, {"<<", "0app"}, {"[]", "0idx"}, {"->[]", "0put"},
     };
     // LCOV_EXCL_BR_STOP
     return names;

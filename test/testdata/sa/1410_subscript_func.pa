@@ -1,0 +1,8 @@
+type T { [+]int64 v; };
+type P { int64 x; };
+func [](@T t, int64 i) -> int64 { return t.v[i]; }
+func [](@!T t, int64 i) -> @!int64 { return @!t.v[i]; }
+T t;
+int64 a = t[0];
+3 -> t[1];
+func f(@P p) -> int64 { return p[0].x; }

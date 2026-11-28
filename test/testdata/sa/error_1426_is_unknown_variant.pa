@@ -1,0 +1,3 @@
+type U union { Null; int64 i; };
+U u;
+if u is k { }

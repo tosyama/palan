@@ -1,0 +1,3 @@
+// d and e re-export each other.
+export import "reexport_e.pa";
+export func dval() -> int64 { return 4; }

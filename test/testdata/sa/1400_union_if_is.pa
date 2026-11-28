@@ -1,0 +1,8 @@
+type U union { Null; int64 i; flo64 f; [+]int32 a; };
+U j;
+int64 n = 0;
+if j is {
+	Null { 1 -> n; }
+	i, f { 2 -> n; }
+	@a { len(@a) -> n; }
+}

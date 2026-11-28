@@ -1,0 +1,4 @@
+type T { [+]int64 v; };
+func [](@T t, int64 i) -> @int64 { return @t.v[i]; }
+func mk() -> T { T t; return t; }
+@int64 p = @mk()[0];

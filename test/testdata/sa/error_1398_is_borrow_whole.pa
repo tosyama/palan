@@ -1,0 +1,6 @@
+type U union { Null; int64 i; [+]int32 a; };
+func g(@!U u) { }
+U j;
+if j is @i && i > 0 {
+	g(@!j);
+}

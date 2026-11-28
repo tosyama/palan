@@ -1,0 +1,3 @@
+type T { int64 x; };
+func [](@T t, @[]uint8 k) -> int64 { return t.x; }
+func f(@T p) -> int64 { return p[0]; }

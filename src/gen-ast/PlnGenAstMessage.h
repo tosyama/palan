@@ -20,6 +20,7 @@ enum PlnMessageCode {
 	E_UnexpectedChar,		// character
 	E_InvalidCharLiteral,		// literal text
 	E_InvalidNumberLiteral,		// literal text
+	E_HexLiteralTooLarge,		// literal text
 	E_SyscallNamedReturn,
 	E_ForElemNoMode,		// loop variable name
 	E_ExpectedCopyKeyword,	// identifier
@@ -29,6 +30,8 @@ enum PlnMessageCode {
 	E_InterfaceOtherTarget,	// the target it records
 	E_InterfaceNoTarget,
 	E_NestedCIncludeExport,
+	E_NestedImportExport,
+	E_ExportImportAlias,
 	E_UnexpectedString,		// the identifier before it
 	E_LibpathInInterface,
 	E_BadLibraryImport,		// the path as written
@@ -44,6 +47,7 @@ enum PlnMessageCode {
 	E_ConversionAsStoreLoc,	// the type name
 	E_FrameParamOrRet,
 	E_DictKeyTypeNotEmpty,
+	E_ExpectedIsBinding,	// the variant, the word before it
 };
 
 class PlnGenAstMessage

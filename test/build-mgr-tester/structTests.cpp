@@ -1440,6 +1440,11 @@ TEST(build_mgr, copy_null_elem_mtrace) {
 	expectMtraceRun("432_copy_null_elem_mtrace", "1 2 -1\n1 1\n1\n1 5\n1\n7\n1 2 1\n3\n", 69);
 }
 
+// So it is with a struct's fields.
+TEST(build_mgr, copy_null_field_mtrace) {
+	expectMtraceRun("468_copy_null_field_mtrace", "0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n1 1 1 1 1 1 1 1\n1 1 1 1 1 1 1 1\n0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n0 0 0 0 0 0 0 0\n  1 5 2 3 4 6 7\n1\n101\n1\n", 148);
+}
+
 // '...a' passes a copy the callee may write, '...a>>' the array itself, whose
 // block alone the caller frees after the call.
 TEST(build_mgr, spread_arg_mtrace) {
@@ -1488,4 +1493,62 @@ TEST(build_mgr, field_init_mtrace) {
 TEST(build_mgr, field_init_values_mtrace) {
 	string r = "1 9 2 3 4 1 9\n5 9 7 8 9 9\n3 4 2 3 3 6 1\n";
 	expectMtraceRun("435_field_init_values_mtrace", r + r + r + "3 3 7 1 5\n2 9 3\n3 3 9 1 8\n", 103);
+}
+
+// A union lives as a struct does, its first variant when declared.
+TEST(build_mgr, union_mtrace) {
+	expectMtraceRun("472_union_mtrace", "1\ncopy C\n16 16 56 24 1\n", 60);
+}
+
+// Variants other than the first: stores that change the variant, values read
+// from the union being written, and copies, writes and releases of each.
+TEST(build_mgr, union_variant_mtrace) {
+	expectMtraceRun("473_union_variant_mtrace", "6\n2 7\nitems 2\n8\n7\n2.5\n1\n2 3\n4\n1 1\n", 78);
+}
+
+// `is` and its bindings: through a borrow, a copy (made again on each test, as
+// the body may give it away), a union a call returns, and an element.
+TEST(build_mgr, union_is_mtrace) {
+	expectMtraceRun("475_union_is_mtrace",
+		"null\ni 5\ncopy 0 7\nj 8\ntemp 3 3\nheld 3\nheld 2\nheld 1\nbox 3 9 9\nat 3\npair 2 3\n", 103);
+}
+
+// A binding of each kind of contents: a float, a struct laid out in place or
+// owned, a dictionary.
+TEST(build_mgr, union_is_kinds_mtrace) {
+	expectMtraceRun("476_union_is_kinds_mtrace", "2.5\n3 3 2\n3 3 2\n7 3\nq 3\nq 3\nd 4\n", 46);
+}
+
+// `if x is { }` runs one arm: listed variants, bindings, a union a call
+// returns, and `break`, `continue` and `return` out of an arm.
+TEST(build_mgr, union_if_is_mtrace) {
+	expectMtraceRun("477_union_if_is_mtrace",
+		"null\nb or f\ni 3\nitems 2\nitems 3\nh 3\nk 1\n3\n", 67);
+}
+
+// An aggregate literal fits only the struct parameters that take it: a borrowed
+// one as '@[..]', and as many values as fields.
+TEST(build_mgr, lit_arg_struct_overload_mtrace) {
+	expectMtraceRun("479_lit_arg_struct_overload_mtrace", "1 items 3 1 items \n", 10);
+}
+
+// Literals converted to a union along every path a value takes, nested
+// ones too; an array literal picks pick([+]int64), not the borrowed bytes.
+TEST(build_mgr, union_lit_conversion_mtrace) {
+	expectMtraceRun("478_union_lit_conversion_mtrace",
+		"true\n[1,2.5,\"x\",[true,[]],{k:[3]},{}]\n[2,3]\n[7]\n[1,2]\n[1,\"r\",{z:false}]\n[1]\n{q:1}\n{x:2}\n"
+		"[false]\n[2]\n{}\ntext ints 2 \n", 153);
+}
+
+// '[]' read through '@T' and written through '@!T', chained and borrowed; '->[]'
+// evaluates the value before the key, and makes a Null union an object.
+TEST(build_mgr, subscript_func_mtrace) {
+	expectMtraceRun("481_subscript_func_mtrace",
+		"5 7 7\n3 1 9\n5 10 7\n5\nnum key put a put b put c put b \n5 6 3\n", 76);
+}
+
+// A mutable binding through a field, a union with a struct of numbers in place,
+// '[]' giving a borrowed dictionary, and hexadecimal literals compared.
+TEST(build_mgr, union_hex_paths_mtrace) {
+	expectMtraceRun("484_union_hex_paths_mtrace", "5\n1 2\n7\n2\n15\nbool\nhex\n", 29);
 }

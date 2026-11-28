@@ -200,6 +200,10 @@ json PlnSemanticAnalyzer::sizedArrLevel(const json& locNode, const json& arr, op
 	}
 	string tname = leaf.value("type-name","");
 	bool isStruct = structDefs_.count(tname) > 0;
+	if (awaitsLayout(tname)) {
+		out["base-type"] = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",tname}}}}; // LCOV_EXCL_BR_LINE
+		return out;
+	}
 	if (leaf.value("type-kind","") != "prim") {
 		cerr << locPrefix(locNode) << PlnSaMessage::getMessage(E_ArrBorrowUnsupportedElem) << endl;
 		exit(1);
@@ -308,6 +312,8 @@ json PlnSemanticAnalyzer::valueElemType(const json& locNode, const json& holder)
 		elem = ptrSlotElemType(locNode, base);
 	} else if (!embedded && elemSizeBytes(name) >= 0) {
 		elem = base;
+	} else if (!embedded && awaitsLayout(name)) {
+		elem = {{"type-kind","pntr"},{"base-type",{{"type-kind","struct"},{"type-name",name}}}}; // LCOV_EXCL_BR_LINE
 	} else if (structDefs_.count(name)) {
 		const StructDef& def = !embedded && structDefs_.at(name).isOpaque ? structDefs_.at(name)
 		                     : requireCompleteStruct(name, locNode); // LCOV_EXCL_BR_LINE
@@ -628,6 +634,8 @@ static string allocSymbolIn(const string& allocators, const AllocShapeRef& shape
 		// A run of structs laid out in place comes as a pointer to its first.
 		if (op == "initrun") params = {permPtrTo(shape.elem, true), i64, i64};
 		else if (op == "copy" || op == "assign") params = {permPtrTo(shape.elem, true), permPtrTo(shape.elem, false)};
+		else if (op == "become") params = {permPtrTo(shape.elem, true), {{"type-kind","prim"},{"type-name","uint32"}},
+		                                   {{"type-kind","prim"},{"type-name","bool"}}};
 		else if (op != "alloc") params.push_back(permPtrTo(shape.elem, true));
 	} else if (isDictFamily(shape.family)) {
 		json header = {{"type-kind","struct"},{"type-name","__pln_" + allocShapeKey(shape)}};
@@ -706,16 +714,19 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 	// A struct laid out in it whose parts a type's '->' writes is kept whole
 	// instead, a run of them, so that its own functions build, free, copy and
 	// write it, and copying the bytes around it leaves it alone.
+	// A union has no field initializer function to build what a variant lays
+	// out in place, so each struct laid out in it that is built is a run.
+	bool tagged = structDefs_.at(name).isTagged;
+	auto asRun = [&](const string& sub) {
+		return builtWhole(sub) || (tagged && structDefs_.at(sub).built());
+	}; // LCOV_EXCL_BR_LINE
 	json owned = json::array();
 	json runs = json::array();
-	auto assignsAsStruct = [&](const string& sub) {
-		return assignsByFunc(json{{"type-kind", "struct"}, {"type-name", sub}}); // LCOV_EXCL_BR_LINE
-	}; // LCOV_EXCL_BR_LINE
 	function<void(const StructDef&, int, const string&)> collect = [&](const StructDef& def, int base, const string& prefix) {
 		for (auto& f : def.fields) {
 			if (f.typeKind == "embed") {
 				const StructDef& sub = structDefs_.at(f.typeName);
-				if (assignsAsStruct(f.typeName)) {
+				if (asRun(f.typeName)) {
 					recordAllocShape(f.typeName);
 					runs.push_back({{"offset", base + f.offset}, {"name", f.typeName}, {"count", 1}}); // LCOV_EXCL_BR_LINE
 				} else if (sub.built()) {
@@ -727,7 +738,7 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 				int64_t count = 1;
 				const json* leaf = &f.type;
 				for (; isArrLevel(*leaf); leaf = &(*leaf)["base-type"]) count *= (*leaf)["arr-size"].get<int64_t>();
-				if (leaf->value("type-kind", "") == "struct" && assignsAsStruct((*leaf)["type-name"].get<string>())) { // LCOV_EXCL_BR_LINE
+				if (leaf->value("type-kind", "") == "struct" && asRun((*leaf)["type-name"].get<string>())) { // LCOV_EXCL_BR_LINE
 					string sub = (*leaf)["type-name"];
 					recordAllocShape(sub);
 					runs.push_back({{"offset", base + f.offset}, {"name", sub}, {"count", count}}); // LCOV_EXCL_BR_LINE
@@ -756,18 +767,31 @@ void PlnSemanticAnalyzer::recordAllocShape(const string& name)
 		}
 	}; // LCOV_EXCL_BR_LINE -- closing brace of a lambda with many local json/string temporaries; the branch coverpoints here are compiler-generated destructor dispatch, not source-level conditionals
 	const StructDef& def = structDefs_[name];
-	collect(def, 0, "");
 	// LCOV_EXCL_BR_START
-	json shape = {
-		{"shape-kind",   "struct"},
-		{"shape-name",   name},
-		{"total-size",   def.totalSize},
-		{"owned-fields", move(owned)}
-	};
-	if (def.hasInits) shape["init-func"] = fieldInitSymbol(name);
-	if (!runs.empty()) shape["runs"] = move(runs);
+	json shape = {{"shape-kind", "struct"}, {"shape-name", name}, {"total-size", def.totalSize}};
+	if (def.isTagged) {
+		// Each variant's contents as the only field of a struct, in tag order.
+		json variants = json::array();
+		for (auto& v : def.variants) {
+			owned = json::array();
+			runs = json::array();
+			StructDef one;
+			for (auto& f : def.fields)
+				if (f.name == v) one.fields.push_back(f);
+			collect(one, 0, "");
+			variants.push_back({{"owned-fields", move(owned)}, {"runs", move(runs)}});
+		}
+		shape["owned-fields"] = json::array();
+		shape["tag-size"] = 4;
+		shape["variants"] = move(variants);
+	} else {
+		collect(def, 0, "");
+		shape["owned-fields"] = move(owned);
+		if (!runs.empty()) shape["runs"] = move(runs);
+	}
+	if (def.hasInits && !def.isTagged) shape["init-func"] = fieldInitSymbol(name);
 	if (!def.copyFunc.empty()) shape["copy-func"] = def.copyFunc;
-	if (assignsAsStruct(name)) shape["assigns"] = true;
+	if (assignsByFunc(json{{"type-kind", "struct"}, {"type-name", name}})) shape["assigns"] = true;
 	sa["alloc-shapes"].push_back(move(shape));
 	// LCOV_EXCL_BR_STOP
 } // LCOV_EXCL_BR_LINE
@@ -883,8 +907,7 @@ AllocShapeRef PlnSemanticAnalyzer::dictShape(const json& vt)
 void PlnSemanticAnalyzer::recordElemShape(const AllocShapeRef& shape)
 {
 	string shape_key = allocShapeKey(shape);
-	for (auto& s : sa["alloc-shapes"])
-		if (s.value("shape-key","") == shape_key) return;
+	if (!elemShapeKeys_.insert(shape_key).second) return;
 	// A dictionary's values are a `[+]T`, built and copied by its functions.
 	if (isDictFamily(shape.family)) {
 		AllocShapeRef values{shape.family == AllocFamily::EDict ? AllocFamily::EVarr : AllocFamily::Varr, shape.elem};
@@ -909,19 +932,23 @@ void PlnSemanticAnalyzer::recordArrShape(const json& elem)
 void PlnSemanticAnalyzer::recordVarrShape(const json& vt)
 {
 	if (!builtinTypes_.insert(symbolType(vt)).second) return;
-	AllocShapeRef shape = varrShape(vt);
-	for (auto& def : varrBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
-		builtins_[def["name"].get<string>()].push_back(def);
-	recordElemShape(shape);
+	whenShapesKnown([this, vt] { // LCOV_EXCL_BR_LINE
+		AllocShapeRef shape = varrShape(vt);
+		for (auto& def : varrBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
+			builtins_[def["name"].get<string>()].push_back(def);
+		recordElemShape(shape);
+	});
 }
 
 void PlnSemanticAnalyzer::recordDictShape(const json& vt)
 {
 	if (!builtinTypes_.insert(symbolType(vt)).second) return;
-	AllocShapeRef shape = dictShape(vt);
-	for (auto& def : dictBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
-		builtins_[def["name"].get<string>()].push_back(def);
-	recordElemShape(shape);
+	whenShapesKnown([this, vt] { // LCOV_EXCL_BR_LINE
+		AllocShapeRef shape = dictShape(vt);
+		for (auto& def : dictBuiltinDefs(vt["base-type"], &shape, allocatorsModuleOf(moduleId_)))
+			builtins_[def["name"].get<string>()].push_back(def);
+		recordElemShape(shape);
+	});
 }
 
 // push takes an element by value and pop returns one; a struct or a row goes
@@ -1114,6 +1141,15 @@ json PlnSemanticAnalyzer::elemsFiniStmt(const string& name, const json& arrType)
 	for (auto& len : lenArgs) args.push_back(len);
 	return {{"stmt-type","expr"},{"body",allocHelperCall(arrShape(elem), "fini", move(args))}};
 	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
+
+// A struct laid out in another that its own generated functions build, free,
+// copy and write whole: one a type's '->' writes, or a union, whose tag says
+// which of its overlaid contents there are.
+bool PlnSemanticAnalyzer::builtWhole(const string& structName) const
+{
+	return structDefs_.at(structName).isTagged
+	    || assignsByFunc(json{{"type-kind", "struct"}, {"type-name", structName}}); // LCOV_EXCL_BR_LINE
 } // LCOV_EXCL_BR_LINE
 
 // A borrow is copied as the pointer it is, so what it points to is not.
