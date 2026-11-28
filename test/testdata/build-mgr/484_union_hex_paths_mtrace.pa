@@ -4,6 +4,7 @@ cinclude "356_c_bitfield.h";
 type U union { Null; int64 i; flo64 f; };
 type P { int64 n; U u; };
 type S { int64 a; int64 b; };
+type N union { Null; };
 type V union { Null; $S s; [+]int64 v; };
 type W { [+][""]int64 ds; };
 func [](@W w, int64 i) -> @[""]int64 { return @w.ds[i]; }
@@ -23,6 +24,10 @@ mtrace();
 	V v = V.s(x);
 	V c = v;
 	if c is @s { printf("%ld %ld\n", s.a, s.b); }
+
+	// A union of Null alone is its tag.
+	N z;
+	N z2 = z;
 
 	// '[]' giving a borrowed dictionary.
 	W w;

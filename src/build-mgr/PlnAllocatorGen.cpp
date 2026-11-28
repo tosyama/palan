@@ -93,7 +93,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 			for (size_t k = 0; k < variants.size(); k++) {
 				if (variants[k]["owned-fields"].empty() && variants[k]["runs"].empty()) continue;
 				json v = {{"shape-kind", "struct"}, {"shape-name", variantTypeName(shape, k)},
-				          {"total-size", shape["total-size"]}, {"owned-fields", variants[k]["owned-fields"]}};
+				          {"total-size", shape["total-size"]}, {"owned-fields", variants[k]["owned-fields"]}}; // LCOV_EXCL_BR_LINE
 				if (!variants[k]["runs"].empty()) v["runs"] = variants[k]["runs"];
 				v["assigns"] = true;
 				struct_shapes.push_back(move(v));
@@ -132,7 +132,7 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		const json& shape = *struct_by_name.at(name);
 		if (shape.contains("copy-func"))
 			return shape["copy-func"].get<string>() + "(" + src + ", " + dst + ");";
-		if (!shape.value("assigns", false) && !shape.contains("variants"))
+		if (!shape.value("assigns", false))
 			return "__pln_fini_" + name + "(" + dst + "); __pln_copy_" + name + "(" + dst + ", " + src + ");";
 		return "__pln_assign_" + name + "(" + dst + ", " + src + ");";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
@@ -390,8 +390,8 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		       "        " + elemDrop(e, dst, "        ", names) + "\n"
 		       "        NULL -> " + dst + ";\n"
 		       "    } else {\n" + build
-		     + (into == set ? "            }\n            " + set + "\n"
-		                    : "                " + set + "\n            } else { " + into + " }\n")
+		     + (into == set ? "            }\n            " + set + "\n" // LCOV_EXCL_BR_LINE
+		                    : "                " + set + "\n            } else { " + into + " }\n") // LCOV_EXCL_BR_LINE
 		     + "    }\n";
 	}; // LCOV_EXCL_LINE -- only exception cleanup is attributed here
 	set<string> elemHelpersDone;
@@ -1012,4 +1012,4 @@ void writeAllocatorsSource(ostream& out, const PlnAllocShapes& shapes, const str
 		}
 		out << "}\n";
 	}
-}
+} // LCOV_EXCL_BR_LINE

@@ -1550,5 +1550,5 @@ TEST(build_mgr, subscript_func_mtrace) {
 // A mutable binding through a field, a union with a struct of numbers in place,
 // '[]' giving a borrowed dictionary, and hexadecimal literals compared.
 TEST(build_mgr, union_hex_paths_mtrace) {
-	expectMtraceRun("484_union_hex_paths_mtrace", "5\n1 2\n7\n2\n15\nbool\nhex\n", 27);
+	expectMtraceRun("484_union_hex_paths_mtrace", "5\n1 2\n7\n2\n15\nbool\nhex\n", 29);
 }
