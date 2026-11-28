@@ -67,8 +67,8 @@ Other features include variable-length arrays (`[+]T` with `len`/`push`/`resize`
 dictionaries keyed by C strings (`[""]T`, `{"a": 1}`, `for copy v, k in d`), tagged unions
 (`type U union { ... }`, tested and bound with `if u is @s { }`),
 function overloading, default and variadic arguments, multiple named return values, function
-pointers, enums, field initializers, Unicode character literals, modules (`import`/`export`, with
-module state in `global` variables), libraries (`palan --lib`, `import <...>`) publishing `opaque`
+pointers, enums, field initializers, Unicode character literals, modules (`import`/`export`,
+`export import` passing a module on, with module state in `global` variables), libraries (`palan --lib`, `import <...>`) publishing `opaque`
 types, functions C calls by name (`cexport`), run-time checks left out of a release build, and raw
 Linux syscalls. A library
 type can be used like a built-in one: it defines operators (`+`, `==`, `<`, `<<`, `[]`), its own copy
