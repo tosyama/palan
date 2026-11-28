@@ -1,0 +1,2 @@
+export global []uint8 name = "a\x80";
+export global [8]uint8 buf = "ab";

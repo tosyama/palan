@@ -693,6 +693,8 @@ class PlnSemanticAnalyzer {
 	void emitStructLitAssigns(const json& objAst, const StructDef& def, const json& values, json& out);
 	string arrLitDimSize(const json& stmt, const string& name, json& sizeExpr, size_t count);
 	string fillArrLitSizes(const json& stmt, const string& name, json& varType, const json& items);
+	json   strLitAsBytes(const json& value, const json& astType, const string& name);
+	json   withStrLitBytes(const json& stmt, const json& targetAst, const json& targetType);
 	// Where an array literal's elements go: through its levels, each of a
 	// fixed size or a `[+]T` (size -1, varr its type) as long as its row, to
 	// numeric leaf values or structs (structDef set) given as struct literals.

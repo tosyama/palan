@@ -1,0 +1,2 @@
+[4]uint8 a;
+"hello" -> a;

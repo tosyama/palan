@@ -18,6 +18,7 @@ version: 0.2.8 — tagged unions, and std/json on them
 - Returning a borrow of the function's own storage is an error (of doc/Issues.md #1). Hexadecimal
   literals.
 - `export import` publishes an imported module's declarations as the importer's own (3.7).
+- A string literal initializes a `uint8` array (3.4).
 
 Out of scope: interfaces; an owned field that may be NULL (`node next`); `is {}` on an enum or a
 number, guards and nested patterns; `is {}` as an expression.
@@ -150,6 +151,12 @@ Design:
  back the unit, so the unit's address must be evaluated once, and Palan has no arithmetic shift to
  extend the sign. A bit-field a packed struct lays across two units is left unsupported, since
  none in the C library or Linux headers is laid so.
+ A string literal, or a string constant, where a `uint8` array is expected is replaced by the
+ array literal of its bytes where it meets its target: a declaration, `->`, a struct literal's
+ field or a row of an array literal. Its NUL is kept, dropped or followed by zeros as the size
+ asks, as C sizes it, and the rest of the analysis sees only array literals. A call argument is
+ left as it is, a borrow of the bytes: taking the literal as an array too would make it fit
+ other parameters and change which overload a call chooses.
  A float constant expression is folded in the widest float, flo80, before its context gives it a
  type, so a flo80 constant keeps its precision; a flo32 or flo64 context rounds the folded value
  again, as a C compiler evaluating in x87 does.

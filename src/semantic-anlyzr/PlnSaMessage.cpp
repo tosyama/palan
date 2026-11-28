@@ -427,6 +427,12 @@ string PlnSaMessage::format(PlnSaMessageCode msg_code, string arg1, string arg2,
 			BOOST_ASSERT(arg1 != "\x01");
 			return "array '" + arg1 + "' given an array literal must have a compile-time constant size.";
 
+		case E_StrLitTooLong:
+			BOOST_ASSERT(arg1 != "\x01");
+			BOOST_ASSERT(arg2 != "\x01");
+			BOOST_ASSERT(arg3 != "\x01");
+			return "array '" + arg1 + "' has size " + arg2 + " but the string has " + arg3 + " bytes.";
+
 		case E_ArrLitDimMismatch:
 			BOOST_ASSERT(arg1 != "\x01");
 			return "the array literal's dimensions do not match array '" + arg1 + "'.";

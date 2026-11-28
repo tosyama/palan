@@ -908,3 +908,10 @@ TEST(build_mgr, borrow_bindings) {
 	ASSERT_EQ(execTestCommand("bin/palan ../test/testdata/build-mgr/467_borrow_bindings.pa"),
 		"3 2 1\n1\n2\n2 1 1\n");
 }
+
+// A string initializes a uint8 array, as C sizes it, through every way a value meets one.
+TEST(build_mgr, str_lit_bytes_mtrace) {
+	expectMtraceRun("483_str_lit_bytes_mtrace",
+		"hello 6 ho 5 abc 0 8\nxyz 4 plus 5 hi hello\nbye wxyz abcdef 7 row\nfield 3 one\nval other\n"
+		"6 128 195 169 0 122\nhex 6\nuni 4\n99\nglob 0\n", 32);
+}

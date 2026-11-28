@@ -12,6 +12,7 @@
 #include <vector>
 #include "PlnDefs.h"
 #include "PlnInterface.h"
+#include "PlnStrLit.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -262,7 +263,11 @@ optional<json> sizedArrayType(const json& var, const set<string>& consts)
 	json result = var["var-type"];
 	static const json noRows = json::array();
 	bool hasLiteral = var.contains("init") && var["init"].value("expr-type", "") == "arr-lit";
-	const json* rows = hasLiteral ? &var["init"]["items"] : &noRows;
+	// A string gives a uint8 array its bytes and NUL; palan-sa checks the type.
+	json strRows;
+	if (var.contains("init") && var["init"].value("expr-type", "") == "lit-str") // LCOV_EXCL_BR_LINE
+		strRows = json::array_t(strLitBytes(var["init"]["value"].get<string>()).size() + 1, json::object());
+	const json* rows = hasLiteral ? &var["init"]["items"] : !strRows.is_null() ? &strRows : &noRows;
 	json* level = result["type-kind"] == "embed" ? &result["base-type"] : &result;
 	if (level->value("type-kind", "") != "arr") return nullopt;
 	for (bool top = true; level->value("type-kind", "") == "arr"; top = false) {

@@ -13,6 +13,7 @@
 #include "PlnSaInternal.h"
 #include "../common/PlnDefs.h"
 #include "../common/PlnCBitField.h"
+#include "../common/PlnStrLit.h"
 
 static int alignUp(int val, int align) { return (val + align - 1) & ~(align - 1); }
 
@@ -403,6 +404,7 @@ json PlnSemanticAnalyzer::sa_var_decl(const json& stmt)
 	for (auto& var : stmt2["vars"]) {
 		storage.push_back(takeVarStorage(var["var-type"]));
 		var["var-type"] = resolveKnownType(stmt2, var["var-type"]);
+		if (var.contains("init")) var["init"] = strLitAsBytes(var["init"], var["var-type"], var["name"]);
 		takes = takes || var.value("ownership-transfer", false);
 	}
 	if (!takes)
@@ -657,6 +659,63 @@ string PlnSemanticAnalyzer::fillArrLitSizes(const json& stmt, const string& name
 	}
 	return declared;
 } // LCOV_EXCL_LINE
+
+// A string where a uint8 array is expected is the array literal of its bytes,
+// sized as C sizes it: with its NUL where the array takes its size from the
+// string or has room, without it where the size is the string's length, and
+// zeros after it in a larger array. Rows of an array or dictionary literal are
+// replaced the same way; anything else is returned as it is.
+json PlnSemanticAnalyzer::strLitAsBytes(const json& value, const json& astType, const string& name)
+{
+	string tk = astType.is_object() ? astType.value("type-kind", "") : ""; // LCOV_EXCL_BR_LINE
+	if (tk != "arr" && tk != "dict") return value;
+	const json& elem = astType["base-type"];
+	string et = value.value("expr-type", "");
+	if (et == "arr-lit" || et == "dict-lit") {
+		if (tk == "arr" && et == "dict-lit") return value;
+		json out = value;
+		for (auto& item : out["items"]) {
+			json& row = et == "dict-lit" ? item["value"] : item;
+			row = strLitAsBytes(row, elem, name);
+		}
+		return out;
+	}
+	if (tk != "arr" || elem.value("type-kind", "") != "prim" || elem.value("type-name", "") != "uint8") return value; // LCOV_EXCL_BR_LINE
+	json str = foldConstExpr(value);
+	if (str.value("expr-type", "") != "lit-str") return value;
+	string bytes = strLitBytes(str["value"].get<string>());
+
+	int64_t size = -1;
+	if (astType.value("specifier", "") != "variable" && !astType["size-expr"].is_null()) { // LCOV_EXCL_BR_LINE
+		json n = foldConstExpr(astType["size-expr"]);
+		string nt = n.value("expr-type", "");
+		if (nt == "lit-int" || nt == "lit-uint") {
+			string v = n["value"].get<string>();
+			bool hex = v.size() > 2 && v[0] == '0' && (v[1] == 'x' || v[1] == 'X');
+			size = stoll(v, nullptr, hex ? 16 : 10);
+		}
+	}
+	size_t count = bytes.size() + 1;
+	if (size >= 0) {
+		if (uint64_t(size) < bytes.size()) {
+			cerr << locPrefix(value) << PlnSaMessage::getMessage(E_StrLitTooLong,
+				name, to_string(size), to_string(bytes.size())) << endl;
+			exit(1);
+		}
+		count = size;
+	}
+	// LCOV_EXCL_BR_START
+	json items = json::array();
+	for (size_t i = 0; i < count; i++) {
+		json b = {{"expr-type", "lit-uint"}, {"value", to_string(i < bytes.size() ? (unsigned char)bytes[i] : 0)}};
+		if (value.contains("loc")) b["loc"] = value["loc"];
+		items.push_back(move(b));
+	}
+	json lit = {{"expr-type", "arr-lit"}, {"items", move(items)}};
+	if (value.contains("loc")) lit["loc"] = value["loc"];
+	return lit;
+	// LCOV_EXCL_BR_STOP
+} // LCOV_EXCL_BR_LINE
 
 json PlnSemanticAnalyzer::sa_arr_lit_var_decl(const json& stmt, VarStorage storage)
 {
@@ -1049,6 +1108,8 @@ json PlnSemanticAnalyzer::sa_field_lit_value(const string& structName, const Fie
 	if (!sub.empty())
 		return sa_struct_lit(v, requireCompleteStruct(sub, v));
 	if (isLitArrField(f)) {
+		json bytes = strLitAsBytes(v, astTypeOf(fieldValueType(f)), f.name);
+		if (bytes != v) return sa_field_lit_value(structName, f, bytes);
 		if (v.value("expr-type", "") == "dict-lit" && !isDictStorage(f.type)) {
 			cerr << locPrefix(v) << PlnSaMessage::getMessage(E_DictLitContext) << endl;
 			exit(1);

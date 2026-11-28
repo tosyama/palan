@@ -872,3 +872,21 @@ TEST(sa_error, dict_elem_mismatch) {
 		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
 	}
 }
+
+TEST(sa_error, str_lit_bytes) {
+	const vector<pair<string, string>> cases = {
+		{"error_1429_str_lit_too_long.pa", ":1:14: error: array 'a' has size 4 but the string has 5 bytes."},
+		{"error_1430_str_lit_assign_too_long.pa", ":2:1: error: array 'a' has size 4 but the string has 5 bytes."},
+		{"error_1431_str_lit_field_too_long.pa", ":2:8: error: array 'n' has size 2 but the string has 3 bytes."},
+		{"error_1432_str_lit_field_assign_too_long.pa", ":3:1: error: array 'n' has size 2 but the string has 3 bytes."},
+		{"error_1433_str_lit_row_too_long.pa", ":1:24: error: array 'g' has size 3 but the string has 4 bytes."},
+	};
+	for (auto& [file, expected] : cases) {
+		cleanTestEnv();
+		string ast_out = "out/test.ast.json";
+		ASSERT_EQ(execTestCommand(
+			"palan-gen-ast ../test/testdata/sa/" + file + " -o " + ast_out), "");
+		string sa = execTestCommand("palan-sa " + ast_out + " -o out/test.sa.json");
+		ASSERT_NE(sa.find(expected), string::npos) << file << ": " << sa;
+	}
+}

@@ -142,6 +142,26 @@ A string literal holds bytes, not checked as UTF-8: `\xHH` may give any byte, an
 in the source is taken as it is. `\u{X}` (in a character literal too) must name a code point up to
 `10FFFF` that is not a surrogate (`D800` to `DFFF`).
 
+A string literal, or a string constant, initializes a `uint8` array as the array literal of its
+bytes, wherever an array literal can (a declaration, `->`, a struct literal's field, a row), sized
+as C sizes it:
+
+| Array | `"hello"` (5 bytes) gives |
+|-------|---------------------------|
+| `[]uint8`, `[+]uint8` | 6 elements, the NUL last |
+| `[6]uint8` | the bytes and the NUL |
+| `[5]uint8` | the bytes, without the NUL |
+| `[8]uint8` | the bytes, then zeros |
+| `[4]uint8` | a compile error |
+
+```palan
+[16]uint8 name = "palan";
+[2][4]uint8 rows = ["ab", "cde"];
+"pa" -> name;
+```
+
+A call argument is not converted: a `@[]uint8` parameter borrows the literal's bytes as they are.
+
 **Comments:** `// line comment`
 
 ---
@@ -2262,6 +2282,7 @@ In a comma-separated declaration, each initializer belongs to its own variable:
   error, since `->` to a borrow rebinds it.
 - A given dimension, or every size of the target of `->`, must be a compile-time constant that
   matches the literal's element or row count, and every row of a 2D literal must have the same length.
+- A string can be given for a `uint8` array or row (see [String literals](#2-lexical-rules)).
 - Only numeric (integer and float) and struct element types are supported. Arrays of pointers
   and arrays of three or more dimensions cannot be initialized with a literal.
 - A `{name: value}` literal can only be used as a struct value (an element of an array literal, or

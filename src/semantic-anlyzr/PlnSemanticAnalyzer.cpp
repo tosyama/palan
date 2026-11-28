@@ -1333,8 +1333,9 @@ bool PlnSemanticAnalyzer::fixArrDeclSizes(const json& stmt, const json& var, jso
 		const json& size = (*l)["size-expr"];
 		if (!size.is_null() && (hasCall(size) || firstNonConstName(size))) return false;
 	}
-	if (var.contains("init") && var["init"].value("expr-type", "") == "arr-lit")
-		fillArrLitSizes(stmt, var["name"], vt, var["init"]["items"]);
+	json init = var.contains("init") ? strLitAsBytes(var["init"], vt, var["name"]) : json::object(); // LCOV_EXCL_BR_LINE
+	if (init.value("expr-type", "") == "arr-lit")
+		fillArrLitSizes(stmt, var["name"], vt, init["items"]);
 	return true;
 } // LCOV_EXCL_BR_LINE
 
